@@ -291,7 +291,7 @@ class ShowChannelBug(BaseRule):
         self.name               = LANGUAGE(30143)
         self.description        = LANGUAGE(30144)
         self.optionLabels       = [LANGUAGE(30043),LANGUAGE(30086),LANGUAGE(30112),LANGUAGE(30044),LANGUAGE(30113)]
-        self.optionValues       = [SETTINGS.getSettingBool('Enable_ChannelBug'),SETTINGS.getSettingInt("Channel_Bug_Interval"),SETTINGS.getSetting("Channel_Bug_Position_XY"),SETTINGS.getSetting('DIFFUSE_LOGO'),SETTINGS.getSettingBool('Force_Diffuse')]
+        self.optionValues       = [SETTINGS.getSettingBool('Enable_ChannelBug'),SETTINGS.getSettingInt("Channel_Bug_Interval"),self.getPOS(),SETTINGS.getSetting('DIFFUSE_LOGO'),SETTINGS.getSettingBool('Force_Diffuse')]
         self.optionDescriptions = [LANGUAGE(33043),LANGUAGE(33086),LANGUAGE(33112),LANGUAGE(33044),LANGUAGE(33111)]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
         self.selectBoxOptions   = ["",list(range(-1,16)),"","",""]
@@ -301,6 +301,10 @@ class ShowChannelBug(BaseRule):
     def copy(self):
         return ShowChannelBug()
 
+
+    def getPOS(self):
+        try:    return literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY"))
+        except: return (abs(int(1920 // 8) - 1920) - 128, abs(int(1080 // 16) - 1080) - 128)
 
     def getTitle(self):
         if self.optionValues[0]: return LANGUAGE(30145)%({'-1':'Indefinitely','0':'Randomly'}.get(str(self.optionValues[1]),LANGUAGE(30146)%(self.optionValues[1])),self.optionValues[2],{True:'Forcing',False:''}[self.optionValues[4]],self.optionValues[3])

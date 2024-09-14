@@ -151,7 +151,7 @@ def getIP(wait=5):
     while not MONITOR.abortRequested() and wait > 0:
         ip = xbmc.getIPAddress()
         if ip: return ip
-        elif (MONITOR.waitForAbort(1.0)): break
+        elif MONITOR.waitForAbort(1.0): break
         else: wait -= 1
     return gethostbyname(gethostname())
 

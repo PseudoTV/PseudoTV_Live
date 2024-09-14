@@ -826,7 +826,7 @@ msgid "Library"
 msgstr ""
 
 msgctxt "#32042"
-msgid "Welcome to %s!\nNo Channels found, Would you like to\nAutoTune sample channels?"
+msgid "Welcome to %s!\nNo Channels found, Would you like to\nAutoTune sample channels?\nAutoTune anytime via Utility Menu."
 msgstr ""
 
 msgctxt "#32043"

@@ -695,11 +695,11 @@ class Properties:
 
 
     def hasAutotuned(self):
-        return self.getEXTProperty('hasAutotuned')
+        return self.getCacheSetting('hasAutotuned',checksum=1)
         
         
     def setAutotuned(self, state=True):
-        return self.setEXTProperty('hasAutotuned',state)
+        return self.setCacheSetting('hasAutotuned',state,checksum=1)
 
 
 class ListItems:

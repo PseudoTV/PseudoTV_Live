@@ -643,9 +643,9 @@
 				</setting>               
                 <setting id="Channel_Bug_Position_XY" type="string" label="30112" help="30112" parent="Enable_ChannelBug">
 					<level>3</level>
-					<default>(1556,920)</default>
+					<default>Auto</default>
 					<constraints>
-						<allowempty>false</allowempty>
+						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
 						<dependency type="visible">

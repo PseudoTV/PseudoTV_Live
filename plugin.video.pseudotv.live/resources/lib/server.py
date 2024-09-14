@@ -163,10 +163,10 @@ class RequestHandler(BaseHTTPRequestHandler):
         else:
             fle   = FileAccess.open(path, "r")
             chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
-            fle.close()
             self._set_headers(content,chunk)
             self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
             self.wfile.write(chunk)
+            fle.close()
             self.wfile.close()
             
         

@@ -186,7 +186,7 @@ class Tasks():
             library.importPrompt()
             complete = library.updateLibrary(force)
             del library
-            if not complete: self._que(self.chkLibrary,1,True)
+            if   not complete: self._que(self.chkLibrary,1,True)
             elif not PROPERTIES.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
