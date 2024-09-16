@@ -24,10 +24,10 @@ from xmltvs     import XMLTVS
 class Record:
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         log('Record: __init__, sysARG = %s, fitem = %s\npath = %s'%(sysARG,fitem,listitem.getPath()))
-        self.sysARG         = sysARG
-        self.fitem          = fitem
-        self.listitem       = listitem
-        self.fitem['label'] = (fitem.get('label') or listitem.getLabel())
+        self.sysARG          = sysARG
+        self.fitem           = fitem
+        self.listitem        = listitem
+        self.fitem['label']  = (fitem.get('label') or listitem.getLabel())
         
         
     def add(self):
@@ -50,7 +50,7 @@ class Record:
                 ritem = m3u.getRecordItem(self.fitem,{'1':0,'2':seek}[str(int(retval))])
                 if (m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
-                    togglePVR(False,True)
+                    PROPERTIES.setEXTProperty('chkPVRRefresh','true')
                 del m3u
                 del xmltv
     
@@ -60,10 +60,10 @@ class Record:
             with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
                 m3u   = M3U()
                 xmltv = XMLTVS()
-                ritem = m3u.getRecordItem(self.fitem)
+                ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})
                 if (m3u.delRecording(ritem), xmltv.delRecording(ritem)):
-                    DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)))
-                    togglePVR(False,True)
+                    DIALOG.notificationWait('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
+                    PROPERTIES.setEXTProperty('chkPVRRefresh','true')
                 del m3u
                 del xmltv
             

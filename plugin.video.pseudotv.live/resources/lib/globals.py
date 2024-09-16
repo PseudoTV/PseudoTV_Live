@@ -24,7 +24,6 @@ import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime
 import heapq, requests
-import gzip
 
 from io               import StringIO, BytesIO
 from threading        import Lock, Thread, Event, Timer, BoundedSemaphore
@@ -72,7 +71,7 @@ def slugify(s, lowercase=False):
   return s
         
 def validString(s):
-    return "".join( x for x in s if (x.isalnum() or x in "._- "))
+    return "".join(x for x in s if (x.isalnum() or x not in '\/:*?"<>|'))
         
 def stripNumber(s):
     return re.sub(r'\d+','',s)
@@ -339,9 +338,8 @@ def cleanLabel(text):
     return text.replace(":",'')
   
 def cleanImage(image=LOGO):
-    orgIMG = image
     if not image: image = LOGO
-    if not image.startswith(('image://','resource://','special://')):
+    if not image.startswith(('image://','resource://','special://','smb://','nfs://')):
         realPath = xbmcvfs.translatePath('special://home/addons/')
         if image.startswith(realPath):# convert real path. to vfs
             image = image.replace(realPath,'special://home/addons/').replace('\\','/')
@@ -354,7 +352,6 @@ def cleanGroups(citem, enableGrouping=SETTINGS.getSettingBool('Enable_Grouping')
         citem['group'] = [ADDON_NAME]
     else:
         citem['group'].append(ADDON_NAME)
-            
         if citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']:
             citem['group'].append(LANGUAGE(32019))
         elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']:

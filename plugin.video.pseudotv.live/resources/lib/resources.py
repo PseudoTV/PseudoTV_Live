@@ -30,9 +30,11 @@ STUDIO_RESOURCE = ["resource.images.studios.white"]
 
 class Resources:
     def __init__(self, jsonRPC, cache):
-        self.cache   = cache
-        self.jsonRPC = jsonRPC
-                
+        self.cache     = cache
+        self.jsonRPC   = jsonRPC
+        self.baseURL   = self.jsonRPC.buildWebBase()
+        self.remoteURL = PROPERTIES.getRemoteURL()
+        
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -94,7 +96,7 @@ class Resources:
                     for path, images in list(results.items()):
                         for image in images:
                             name, ext = os.path.splitext(image)
-                            if self.matchName(chname, name, type, select):
+                            if self.matchName(chname, name, type, auto=select):
                                 self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
                                 if select: logos.append('%s/%s'%(path,image))
                                 else: return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
@@ -124,15 +126,25 @@ class Resources:
     def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None:
         if auto: return ((SequenceMatcher(None, chname, name).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name.split(' ')[0]).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name).ratio() > .8) | (SequenceMatcher(None, chname, name.split(' ')[0]).ratio() > .8))
         else:
-            patterns = list(set([chname, getChannelSuffix(chname,type), cleanChannelSuffix(chname, type), stripRegion(chname), splitYear(chname)[0], slugify(chname), slugify(stripRegion(chname))]))
-            for pattern in patterns:
-                if name.lower() == pattern.lower():
-                    return True
-                
+            renames  = list(set([chname, slugify(chname), validString(chname)]))
+            patterns = [getChannelSuffix, cleanChannelSuffix, stripRegion, splitYear]
+            for rename in renames:
+                if rename.lower() == name.lower(): return True
+                for pattern in patterns:
+                    try:    label = pattern(rename,type)
+                    except: label = pattern(rename)
+                    finally:
+                        if isinstance(label,(list,tuple)) and len(label) > 1: label = label[0]
+                        if label.lower() == name.lower(): return True
+            
 
     def buildWebImage(self, image: str) -> str:
-        if image.startswith(('resource://','special://','image://','http://')): return image
-        # return '%s/image/%s'%(self.jsonRPC.buildWebBase(),'image://%s'%(quoteString(image))) #todo debug
+        #convert any local images to url via local server and kodi web server.
+        if image.startswith(LOGO_LOC) and self.remoteURL:
+            image = 'http://%s/images/%s'%(self.remoteURL,quoteString(os.path.split(image)[1]))
+        elif image.startswith('image://') and self.baseURL and ('smb' not in image or 'nfs' not in image):
+            image = '%s/image/%s'%(self.baseURL,quoteString(image))
+        self.log('buildWebImage, returning image = %s'%(image))
         return image
             
             

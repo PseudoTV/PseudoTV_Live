@@ -10,12 +10,12 @@
             <animation effect="fade" delay="20" start="0" end="100" time="200">WindowOpen</animation>
             <animation effect="fade" time="20">WindowClose</animation>
             <control type="image" id="40000">
-                <left>515</left>
+                <description>Replay Progress</description>
+                <left>522</left>
                 <bottom>310</bottom>
-                <width>130</width>
-                <height>25</height>
+                <width>116</width>
+                <height>24</height>
                 <texture>buttons/ButtonFocus.png</texture>
-                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                 <visible>Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]</visible>
             </control>
             <control type="button" id="40001">

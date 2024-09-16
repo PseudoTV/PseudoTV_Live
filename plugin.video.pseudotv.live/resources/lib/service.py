@@ -359,6 +359,7 @@ class Monitor(xbmc.Monitor):
 
 class Service():
     PROPERTIES.getInstanceID()
+    SETTINGS.getMYUUID()
     currentChannels = []
     currentSettings = []
     

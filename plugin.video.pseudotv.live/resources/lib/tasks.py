@@ -96,9 +96,9 @@ class Tasks():
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
             if SETTINGS.hasPVRInstance() == False:
                 with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
-                    SETTINGS.setPVRPath(USER_LOC, validString(self.jsonRPC.getFriendlyName()))
+                    SETTINGS.setPVRPath(USER_LOC, validString(SETTINGS.getFriendlyName()))
         
-        
+
     def _chkQueTimer(self):
         self.log('_chkQueTimer')
         self._chkEpochTimer('chkVersion'    , self.chkVersion    , 7200)
@@ -111,6 +111,7 @@ class Tasks():
         self._chkEpochTimer('chkChannels'   , self.chkChannels   , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkJSONQUE'    , self.chkJSONQUE    , 300)
         
+        self._chkPropTimer('chkPVRRefresh'  , self.chkPVRRefresh)
         self._chkPropTimer('chkFillers'     , self.chkFillers)
         self._chkPropTimer('chkDiscovery'   , self.chkDiscovery)
         self._chkPropTimer('runAutoTune'    , self.runAutoTune)
@@ -157,6 +158,11 @@ class Tasks():
         elif not FileAccess.exists(LOGO_LOC): FileAccess.makedirs(LOGO_LOC) #check logo folder
 
 
+    def chkPVRRefresh(self):
+        self.log('chkPVRRefresh')
+        self._que(togglePVR,1,*(False,True))
+
+
     def chkFillers(self, channels=None):
         self.log('chkFillers')
         if channels is None: channels = self.getChannels()
@@ -187,7 +193,7 @@ class Tasks():
             complete = library.updateLibrary(force)
             del library
             if   not complete: self._que(self.chkLibrary,1,True)
-            elif not PROPERTIES.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            elif not SETTINGS.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
@@ -202,7 +208,7 @@ class Tasks():
                 if PROPERTIES.hasFirstrun(): self._que(self.chkChannels,2)
             else: 
                 self.service.currentChannels = list(channels)
-                if updated: self._que(togglePVR,1,*(False,True))
+                if updated: PROPERTIES.setEXTProperty('chkPVRRefresh','true')
                 if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
@@ -211,7 +217,7 @@ class Tasks():
     def chkPVRservers(self):
         self.log('chkPVRservers')
         if self.multiroom.chkPVRservers():
-            self._que(togglePVR,1,*(False,True))
+            PROPERTIES.setEXTProperty('chkPVRRefresh','true')
 
 
     def chkPVRSettings(self):
@@ -250,7 +256,7 @@ class Tasks():
         try:
             autotune = Autotune(service=self.service)
             complete = autotune._runTune()
-            if complete: PROPERTIES.setAutotuned()
+            if complete: SETTINGS.setAutotuned()
             del autotune
         except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
     

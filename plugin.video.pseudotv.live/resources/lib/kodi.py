@@ -37,6 +37,13 @@ def log(event, level=xbmc.LOGDEBUG):
     if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
     
+def getIP(wait=5):
+    while not MONITOR.abortRequested() and wait > 0:
+        ip = xbmc.getIPAddress()
+        if ip: return ip
+        elif MONITOR.waitForAbort(1.0): break
+        else: wait -= 1
+        
 def convertString2Num(value):
     try:    return literal_eval(value)
     except: return None
@@ -316,16 +323,28 @@ class Settings:
         return xbmcaddon.Addon(id).setSetting(key,value)
         
 
+    def hasAutotuned(self):
+        return self.getCacheSetting('hasAutotuned',checksum=1)
+        
+        
+    def setAutotuned(self, state=True):
+        return self.setCacheSetting('hasAutotuned',state,checksum=1)
+
+
+    def getFriendlyName(self):
+        friendly = self.getCacheSetting('Friendly_Name')
+        if not friendly:
+            from jsonrpc import JSONRPC
+            jsonRPC  = JSONRPC()
+            friendly = self.setCacheSetting('Friendly_Name',jsonRPC.getFriendlyName())
+            del jsonRPC
+        return friendly
+
+
     def getMYUUID(self):
         uuid = self.getCacheSetting('MY_UUID')
         if not uuid:
-            from jsonrpc import JSONRPC
-            jsonRPC  = JSONRPC()
-            friendly = jsonRPC.getFriendlyName()
-            uuid     = genUUID(seed=friendly)
-            self.setCacheSetting('MY_UUID',uuid)
-            self.setCacheSetting('Friendly_Name',friendly)
-            del jsonRPC
+            uuid = self.setCacheSetting('MY_UUID',genUUID(seed=self.getFriendlyName()))
         return uuid
 
 
@@ -532,14 +551,24 @@ class Properties:
     def setInstanceID(self):
         instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
         if instanceID: self.clearTrash(instanceID)
-        self.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4()))
+        return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4()))
 
 
     def getInstanceID(self):
         instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
-        if not instanceID: self.setInstanceID()
-        return self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
+        if not instanceID: instanceID = self.setInstanceID()
+        return instanceID
 
+
+    def getRemoteURL(self):
+        remote = self.getProperty('%s.Remote_URL'%(ADDON_ID))
+        if not remote: remote = self.setRemoteURL(Settings().getSettingInt('TCP_PORT'))
+        return remote
+
+
+    def setRemoteURL(self, value):
+        return self.setProperty('%s.Remote_URL'%(ADDON_ID),value)
+        
 
     def hasFirstrun(self):
         return self.getPropertyBool('hasFirstrun')
@@ -650,7 +679,7 @@ class Properties:
     def setEXTProperty(self, key, value):
         self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((convertString(value)[:128]))))
         xbmcgui.Window(10000).setProperty(key,str(value))
-        return True
+        return value
         
         
     def setProperty(self, key, value):
@@ -692,14 +721,6 @@ class Properties:
         self.log('clearTrash, instanceID = %s'%(instanceID))
         tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
         for prop in tmpDCT.get(instanceID,[]): self.clearEXTProperty(prop)
-
-
-    def hasAutotuned(self):
-        return self.getCacheSetting('hasAutotuned',checksum=1)
-        
-        
-    def setAutotuned(self, state=True):
-        return self.setCacheSetting('hasAutotuned',state,checksum=1)
 
 
 class ListItems:

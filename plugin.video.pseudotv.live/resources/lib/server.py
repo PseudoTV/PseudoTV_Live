@@ -17,6 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
+import gzip, mimetypes
+
 from globals                   import *
 from functools                 import partial
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
@@ -41,7 +43,7 @@ class Discovery:
             with PROPERTIES.setRunning('Discovery'):
                 data = ''
                 try: 
-                    local ='%s:%s'%(getIP(),SETTINGS.getSettingInt('TCP_PORT'))
+                    local = PROPERTIES.getRemoteURL()
                     sock  = socket(AF_INET, SOCK_DGRAM) #create UDP socket
                     sock.bind(('', SETTINGS.getSettingInt('UDP_PORT')))
                     sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
@@ -130,7 +132,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         
         
     def do_GET(self):
-        self.log('do_GET, path = %s'%(self.path))
+        self.log('do_GET, incoming path = %s'%(self.path))
         if self.path.lower() == '/%s'%(M3UFLE.lower()):
             path    = M3UFLEPATH
             content = "application/vnd.apple.mpegurl"
@@ -140,34 +142,51 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif self.path.lower() == '/%s'%(GENREFLE.lower()):
             path    = GENREFLEPATH
             content = "text/plain"
-        else: return
-
-        if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
-            self.log('do_GET, sending = %s'%(path))
-            with FileLock():
-                fle  = FileAccess.open(path, "r")
-                if 'gzip' in self.headers.get('accept-encoding'):
-                    self.log('do_GET, gzip compressing')
-                    data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
-                    self._set_headers(content,data,True)
-                    self.wfile.write(data)
-                else:
-                    self._set_headers(content)
-                    while not self.monitor.abortRequested():
-                        chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                        if not chunk or self.monitor.myService._interrupt(.001): break
-                        self.send_header('content-length', len(content))
-                        self.wfile.write(chunk)
-                fle.close()
+        elif self.path.lower().startswith("/images/"):
+            path    = os.path.join(LOGO_LOC,unquoteString(self.path.replace('/images/','')))
+            content = mimetypes.guess_type(self.path[1:])[0]
+        # elif self.path.endswith(tuple(VIDEO_EXTS)):
+            # path    = os.path.join(FILLER_LOC,self.path)
+            # content = mimetypes.guess_type(self.path)
+        else: self.send_error(404, "Not found")
+        
+        if FileAccess.exists(path):
+            self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
+            if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
+                self.log('do_GET, sending = %s'%(path))
+                with FileLock():
+                    fle  = FileAccess.open(path, "r")
+                    if 'gzip' in self.headers.get('accept-encoding'):
+                        self.log('do_GET, gzip compressing')
+                        data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
+                        self._set_headers(content,data,True)
+                        self.wfile.write(data)
+                    else:
+                        self._set_headers(content)
+                        while not self.monitor.abortRequested():
+                            chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
+                            if not chunk or self.monitor.myService._interrupt(.001): break
+                            self.send_header('content-length', len(content))
+                            self.wfile.write(chunk)
+                    self.wfile.close()
+                    fle.close()
+            elif self.path.lower().startswith("/images/"):
+                fle   = FileAccess.open(path, "rb")
+                chunk = fle.readBytes()
+                self._set_headers(content,chunk)
+                self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
+                self.wfile.write(chunk)
                 self.wfile.close()
-        else:
-            fle   = FileAccess.open(path, "r")
-            chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
-            self._set_headers(content,chunk)
-            self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
-            self.wfile.write(chunk)
-            fle.close()
-            self.wfile.close()
+                fle.close()
+            else:
+                fle   = FileAccess.open(path, "r")
+                chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
+                self._set_headers(content,chunk)
+                self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
+                self.wfile.write(chunk)
+                self.wfile.close()
+                fle.close()
+        else: self.send_error(401, "Not found")
             
         
 class HTTP:
@@ -214,6 +233,7 @@ class HTTP:
                 SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
                 SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
                 SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
+                PROPERTIES.setRemoteURL(LOCAL_HOST)
                 
                 self._server = ThreadedHTTPServer((IP, PORT), partial(RequestHandler,monitor=self.service.monitor))
                 self._server.allow_reuse_address = True

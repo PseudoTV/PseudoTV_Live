@@ -244,7 +244,7 @@ class XMLTVS:
     def findRecording(self, ritem: dict, recordings: list=[]) -> tuple:
         if not recordings: recordings = self.getRecordings()
         for idx, eitem in enumerate(recordings):
-            if (ritem.get('id') == eitem.get('id',str(random.random())) or ritem.get('label').lower() == eitem.get('display-name')[0][0].lower()):
+            if (ritem.get('id') == eitem.get('id',str(random.random()))) or (ritem.get('name').lower() == eitem.get('display-name')[0][0].lower()):
                 self.log('findRecording, found ritem = %s'%(eitem))
                 return idx, eitem
         return None, {}
@@ -265,7 +265,7 @@ class XMLTVS:
 
         fitem['start'] = getUTCstamp()
         fitem['stop']  = fitem['start'] + fitem['duration']
-        if self.addProgram(ritem['id'],self.getProgramItem(ritem,fitem),encodeDESC=False):
+        if self.addProgram(ritem['id'],self.getProgramItem(ritem,fitem),encodeDESC=True):
             return self._save()
         
     

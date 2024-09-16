@@ -110,7 +110,7 @@ class JSONRPC:
         self.log('walkListDirectory, walking %s, depth = %s'%(path,depth))
         subs, files = self.getListDirectory(path,checksum,expiration)
         if   len(files) > 0 and TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
-        elif len(files) > 0 and exts: files = [file for file in files if file.endswith(tuple(exts))]
+        elif len(files) > 0 and exts:       files = [file for file in files if file.endswith(tuple(exts))]
         walk.setdefault(path,[]).extend(list([_f for _f in [_chkfile(path, file) for file in files] if _f]))
         
         for sub in subs:
@@ -478,25 +478,22 @@ class JSONRPC:
         password = ''
         secure   = False
         enabled  = True
-        settings = self.getSetting('control','services')
-        for setting in settings:
-            if setting['id'] == 'services.webserver' and not setting['value']:
+        for setting in self.getSetting('control','services'):
+            if setting.get('id','').lower() == 'services.webserver' and not setting.get('value'):
                 enabled = False
                 DIALOG.notificationDialog(LANGUAGE(32131))
                 break
-            if setting['id'] == 'services.webserverusername':
-                username = setting['value']
-            elif setting['id'] == 'services.webserverport':
-                port = setting['value']
-            elif setting['id'] == 'services.webserverpassword':
-                password = setting['value']
-            elif setting['id'] == 'services.webserverssl' and setting['value']:
-                secure = True
+            if   setting.get('id','').lower() == 'services.webserverusername': username = setting.get('value')
+            elif setting.get('id','').lower() == 'services.webserverport':     port     = setting.get('value')
+            elif setting.get('id','').lower() == 'services.webserverpassword': password = setting.get('value')
+            elif setting.get('id','').lower() == 'services.webserverssl' and setting.get('value'): secure = True
             username = '{0}:{1}@'.format(username, password) if username and password else ''
         protocol = 'https' if secure else 'http'
         if local: ip = 'localhost'
         else:     ip = getIP()
-        return '{0}://{1}{2}:{3}'.format(protocol,ip,username, port) 
+        webURL =  '{0}://{1}{2}:{3}'.format(protocol,ip,username, port)
+        self.log("buildWebBase; returning %s"%(webURL))
+        return webURL
             
             
     def padItems(self, files, page=SETTINGS.getSettingInt('Page_Limit')):

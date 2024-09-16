@@ -139,15 +139,15 @@ class Utilities:
             del channelbug
 
 
-    def togglePVR(self):
+    def _togglePVR(self):
         if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
-            togglePVR(False,True)
+            PROPERTIES.setEXTProperty('chkPVRRefresh','true')
             
 
     def buildMenu(self, select=None):
         items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)              , 'hide':False},#"Rebuild M3U/XMLTV"
                  {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)               , 'hide':False},#"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self.togglePVR                                      , 'hide':False},#"Force PVR reload"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR                                     , 'hide':False},#"Force PVR reload"
                  {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart                                                      , 'hide':False},#"Force PTVL reload"
                  {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)                        , 'hide':False},#"Show M3U"
                  {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)                      , 'hide':False}, #"Show XMLTV"
@@ -186,7 +186,7 @@ class Utilities:
                  for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
         if full: 
-            PROPERTIES.setAutotuned(False)
+            SETTINGS.setAutotuned(False)
             setPendingRestart()
 
 
@@ -201,7 +201,7 @@ class Utilities:
             with BUILTIN.busy_dialog():
                 from jsonrpc import JSONRPC
                 jsonRPC = JSONRPC()
-                if SETTINGS.setPVRPath(USER_LOC,validString(jsonRPC.getFriendlyName()),prompt=True,force=True):
+                if SETTINGS.setPVRPath(USER_LOC,validString(SETTINGS.getFriendlyName()),prompt=True,force=True):
                     DIALOG.notificationDialog(LANGUAGE(32152))
                 else: DIALOG.notificationDialog(LANGUAGE(32165))
                 del jsonRPC

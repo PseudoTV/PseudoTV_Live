@@ -448,18 +448,11 @@ class Builder:
 
     def addChannelStation(self, citem: dict) -> bool:
         self.log('addChannelStation, id: %s'%(citem['id']))
-        if citem['catchup']:
-            citem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
-            citem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}')
-        elif citem['radio']:
-            citem['url'] = RADIO_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),radio=str(citem['radio']),vid='{catchup-id}')
-        else:
-            citem['url'] = TV_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']))
-        
-        citem['logo']  = cleanImage(citem['logo'])
+        citem['logo']  = self.kodiImage(citem['logo'])
         citem['group'] = cleanGroups(citem, self.enableGrouping)
-        self.m3u.addStation(citem)
-        return self.xmltv.addChannel(citem)
+        sitem = self.m3u.getStationItem(citem)
+        self.m3u.addStation(sitem)
+        return self.xmltv.addChannel(sitem)
         
         
     def addChannelProgrammes(self, citem: dict, fileList: list):
@@ -483,3 +476,7 @@ class Builder:
         items = (self.cache.get('kodiTrailers', json_data=True) or {})
         if nitems: items = self.cache.set('kodiTrailers', mergeDictLST(items,nitems), expiration=datetime.timedelta(days=28), json_data=True)
         return items
+
+
+    def kodiImage(self, image):
+        return self.resources.buildWebImage(cleanImage(image))

@@ -36,10 +36,11 @@ class Multiroom:
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG = sysARG
         if service is None: service = Service()
-        self.service  = service
-        self.jsonRPC  = service.jsonRPC
-        self.uuid     = SETTINGS.getMYUUID()
-        self.friendly = self.jsonRPC.getFriendlyName()
+        self.service   = service
+        self.jsonRPC   = service.jsonRPC
+        self.uuid      = SETTINGS.getMYUUID()
+        self.friendly  = SETTINGS.getFriendlyName()
+        self.remoteURL = PROPERTIES.getRemoteURL()
                
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -101,7 +102,7 @@ class Multiroom:
                    'version' :ADDON_VERSION,
                    'uuid'    :self.uuid,
                    'name'    :self.friendly,
-                   'host'    :'%s:%s'%(getIP(),SETTINGS.getSettingInt('TCP_PORT')),
+                   'host'    :self.remoteURL,
                    'settings':__getSettings()}
         payload['md5'] = getMD5(dumpJSON(payload))
         return payload
