@@ -126,23 +126,26 @@ class Resources:
     def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None:
         if auto: return ((SequenceMatcher(None, chname, name).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name.split(' ')[0]).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name).ratio() > .8) | (SequenceMatcher(None, chname, name.split(' ')[0]).ratio() > .8))
         else:
-            renames  = list(set([chname, slugify(chname), validString(chname)]))
+            chnames  = list(set([chname, slugify(chname), validString(chname)]))
+            renames  = list(set([name, slugify(name), validString(name)]))
             patterns = [getChannelSuffix, cleanChannelSuffix, stripRegion, splitYear]
-            for rename in renames:
-                if rename.lower() == name.lower(): return True
-                for pattern in patterns:
-                    try:    label = pattern(rename,type)
-                    except: label = pattern(rename)
-                    finally:
-                        if isinstance(label,(list,tuple)) and len(label) > 1: label = label[0]
-                        if label.lower() == name.lower(): return True
-            
+            for chname in chnames:
+                if chname.lower() == name.lower(): return True
+                for rename in renames:
+                    if chname.lower() == rename.lower(): return True
+                    for pattern in patterns:
+                        try:    label = pattern(rename,type)
+                        except: label = pattern(rename)
+                        finally:
+                            if isinstance(label,(list,tuple)) and len(label) > 1: label = label[0]
+                            if chname.lower() == label.lower(): return True
+        
 
     def buildWebImage(self, image: str) -> str:
-        #convert any local images to url via local server and kodi web server.
+        #convert any local images to url via local server and/or kodi web server.
         if image.startswith(LOGO_LOC) and self.remoteURL:
             image = 'http://%s/images/%s'%(self.remoteURL,quoteString(os.path.split(image)[1]))
-        elif image.startswith('image://') and self.baseURL and ('smb' not in image or 'nfs' not in image):
+        elif image.startswith(('image://','image%3A')) and self.baseURL and not ('smb' in image or 'nfs' in image):
             image = '%s/image/%s'%(self.baseURL,quoteString(image))
         self.log('buildWebImage, returning image = %s'%(image))
         return image

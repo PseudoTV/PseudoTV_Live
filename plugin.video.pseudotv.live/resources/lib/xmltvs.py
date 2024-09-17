@@ -150,21 +150,6 @@ class XMLTVS:
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
              
              
-    def getRecordings(self) -> list:
-        self.log('getRecordings')
-        return self.sortChannels(self.XMLTVDATA.get('recordings',[]))
-                
-                
-    def getChannels(self) -> list:
-        self.log('getChannels')
-        return self.sortChannels(self.XMLTVDATA.get('channels',[]))
-        
-        
-    def getProgrammes(self) -> list:
-        self.log('getProgrammes')
-        return self.sortProgrammes(self.XMLTVDATA.get('programmes',[]))
-
-
     def resetData(self):
         self.log('resetData')
         return {'date'                : datetime.datetime.fromtimestamp(float(time.time())).strftime(DTFORMAT),
@@ -232,6 +217,21 @@ class XMLTVS:
         return programmes
 
 
+    def getRecordings(self) -> list:
+        self.log('getRecordings')
+        return self.sortChannels(self.XMLTVDATA.get('recordings',[]))
+                
+                
+    def getChannels(self) -> list:
+        self.log('getChannels')
+        return self.sortChannels(self.XMLTVDATA.get('channels',[]))
+        
+        
+    def getProgrammes(self) -> list:
+        self.log('getProgrammes')
+        return self.sortProgrammes(self.XMLTVDATA.get('programmes',[]))
+
+
     def findChannel(self, citem: dict, channels: list=[]) -> tuple:
         if not channels: channels = self.getChannels()
         for idx, eitem in enumerate(channels):
@@ -248,8 +248,50 @@ class XMLTVS:
                 self.log('findRecording, found ritem = %s'%(eitem))
                 return idx, eitem
         return None, {}
+
+
+    def getProgramItem(self, citem: dict, fItem: dict) -> dict:
+        ''' Convert fileItem to Programme (XMLTV) item '''
+        item = {}
+        item['channel']       = citem['id']
+        item['radio']         = citem['radio']
+        item['start']         = fItem['start']
+        item['stop']          = fItem['stop']
+        item['title']         = fItem['label']
+        item['desc']          = fItem['plot']
+        item['length']        = fItem['duration']
+        item['sub-title']     = (fItem.get('episodetitle','') or '')
+        item['categories']    = (fItem.get('genre','')        or ['Undefined'])[:5]
+        item['type']          = fItem.get('type','video')
+        item['new']           = int(fItem.get('playcount','1')) == 0
+        item['thumb']         = cleanImage(getThumb(fItem,EPG_ARTWORK)) #unify thumbnail by user preference 
+        fItem.get('art',{})['thumb'] = getThumb(fItem,{0:1,1:0}[EPG_ARTWORK])  #unify thumbnail artwork, opposite of EPG_Artwork
+        item['date']          = fItem.get('premiered','')
+        item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=quoteString(item['title']),chid=quoteString(citem['id']),vid=quoteString(encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=quoteString(citem['name']))
+        fItem['catchup-id']   = item['catchup-id']
+            
+        if (item['type'] != 'movie' and ((fItem.get("season",0) > 0) and (fItem.get("episode",0) > 0))):
+            item['episode-num'] = {'xmltv_ns':'%s.%s'%(fItem.get("season",1)-1,fItem.get("episode",1)-1), # todo support totaleps <episode-num system="xmltv_ns">..44/47</episode-num>https://github.com/kodi-pvr/pvr.iptvsimple/pull/884
+                                   'onscreen':'S%sE%s'%(str(fItem.get("season",0)).zfill(2),str(fItem.get("episode",0)).zfill(2))}
+
+        item['rating']      = cleanMPAA(fItem.get('mpaa','') or 'NA')
+        item['stars']       = (fItem.get('rating','')        or '0')
+        item['writer']      = fItem.get('writer',[])[:5]   #trim list to five
+        item['director']    = fItem.get('director',[])[:5] #trim list to five
+        item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role',LANGUAGE(32020))) for actor in fItem.get('cast',[])[:5] if actor.get('name')]
         
+        fItem['citem']      = citem #channel item (stale data due to xmltv storage) use for reference
+        item['fitem']       = fItem #raw kodi fileitem/listitem, contains citem both passed through 'plot' xmltv param.
         
+        streamdetails = fItem.get('streamdetails',{})
+        if streamdetails:
+            item['subtitle'] = list(set([sub.get('language','')                    for sub in streamdetails.get('subtitle',[]) if sub.get('language')]))
+            item['language'] = ', '.join(list(set([aud.get('language','')          for aud in streamdetails.get('audio',[])    if aud.get('language')])))
+            item['audio']    = True if True in list(set([aud.get('codec','')       for aud in streamdetails.get('audio',[])    if aud.get('channels',0) >= 2])) else False
+            item.setdefault('video',{})['aspect'] = list(set([vid.get('aspect','') for vid in streamdetails.get('video',[])    if vid.get('aspect','')]))
+        return item
+
+
     def addRecording(self, ritem: dict, fitem: dict):
         self.log('addRecording = %s'%(ritem.get('id')))
         sitem = ({'id'           : ritem['id'],
@@ -347,7 +389,7 @@ class XMLTVS:
         self.XMLTVDATA['programmes'].append(pitem)
         return True
 
-    
+
     def delBroadcast(self, citem: dict) -> bool:# remove single channel and all programmes from XMLTVDATA
         channels   = self.XMLTVDATA['channels'].copy()
         programmes = self.XMLTVDATA['programmes'].copy()
@@ -368,7 +410,7 @@ class XMLTVS:
             self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != ritem.get('id')])
             return self._save()
         
-
+        
     def importXMLTV(self, file: str, m3uChannels: dict={}):
         self.log('importXMLTV, file = %s, m3uChannels = %s'%(file,len(m3uChannels)))
         def matchChannel(channel, channels, programmes):
@@ -430,8 +472,8 @@ class XMLTVS:
         except Exception as e: 
             self.log("chkImport, failed! %s"%(e), xbmc.LOGERROR)
         return channels, programmes
-
-
+        
+        
     def buildGenres(self):
         self.log('buildGenres') #todo custom user color selector.
         def parseGenres(plines):
@@ -490,45 +532,3 @@ class XMLTVS:
                         xmlData.close()
                 except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
-
-
-    def getProgramItem(self, citem: dict, fItem: dict) -> dict:
-        ''' Convert fileItem to Programme (XMLTV) item '''
-        item = {}
-        item['channel']       = citem['id']
-        item['radio']         = citem['radio']
-        item['start']         = fItem['start']
-        item['stop']          = fItem['stop']
-        item['title']         = fItem['label']
-        item['desc']          = fItem['plot']
-        item['length']        = fItem['duration']
-        item['sub-title']     = (fItem.get('episodetitle','') or '')
-        item['categories']    = (fItem.get('genre','')        or ['Undefined'])[:5]
-        item['type']          = fItem.get('type','video')
-        item['new']           = int(fItem.get('playcount','1')) == 0
-        item['thumb']         = cleanImage(getThumb(fItem,EPG_ARTWORK)) #unify thumbnail by user preference 
-        fItem.get('art',{})['thumb'] = getThumb(fItem,{0:1,1:0}[EPG_ARTWORK])  #unify thumbnail artwork, opposite of EPG_Artwork
-        item['date']          = fItem.get('premiered','')
-        item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=quoteString(item['title']),chid=quoteString(citem['id']),vid=quoteString(encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=quoteString(citem['name']))
-        fItem['catchup-id']   = item['catchup-id']
-            
-        if (item['type'] != 'movie' and ((fItem.get("season",0) > 0) and (fItem.get("episode",0) > 0))):
-            item['episode-num'] = {'xmltv_ns':'%s.%s'%(fItem.get("season",1)-1,fItem.get("episode",1)-1), # todo support totaleps <episode-num system="xmltv_ns">..44/47</episode-num>https://github.com/kodi-pvr/pvr.iptvsimple/pull/884
-                                   'onscreen':'S%sE%s'%(str(fItem.get("season",0)).zfill(2),str(fItem.get("episode",0)).zfill(2))}
-
-        item['rating']      = cleanMPAA(fItem.get('mpaa','') or 'NA')
-        item['stars']       = (fItem.get('rating','')        or '0')
-        item['writer']      = fItem.get('writer',[])[:5]   #trim list to five
-        item['director']    = fItem.get('director',[])[:5] #trim list to five
-        item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role',LANGUAGE(32020))) for actor in fItem.get('cast',[])[:5] if actor.get('name')]
-        
-        fItem['citem']      = citem #channel item (stale data due to xmltv storage) use for reference
-        item['fitem']       = fItem #raw kodi fileitem/listitem, contains citem both passed through 'plot' xmltv param.
-        
-        streamdetails = fItem.get('streamdetails',{})
-        if streamdetails:
-            item['subtitle'] = list(set([sub.get('language','')                    for sub in streamdetails.get('subtitle',[]) if sub.get('language')]))
-            item['language'] = ', '.join(list(set([aud.get('language','')          for aud in streamdetails.get('audio',[])    if aud.get('language')])))
-            item['audio']    = True if True in list(set([aud.get('codec','')       for aud in streamdetails.get('audio',[])    if aud.get('channels',0) >= 2])) else False
-            item.setdefault('video',{})['aspect'] = list(set([vid.get('aspect','') for vid in streamdetails.get('video',[])    if vid.get('aspect','')]))
-        return item

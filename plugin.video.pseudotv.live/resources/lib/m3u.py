@@ -38,6 +38,7 @@ M3U_TEMP = {"id"                : "",
             "x-tvg-url"         : "",
             "media-dir"         : "",
             "media-size"        : "",
+            "media-type"        : "",
             "catchup-source"    : "",
             "catchup-days"      : "",
             "catchup-correction": "",
@@ -59,7 +60,6 @@ M3U_MIN  = {"id"                : "",
             "label"             : "",
             "url"               : ""}
             
-#todo append overlay/playback rules to m3u using KODIPROP for client parsing.
 class M3U:
     def __init__(self):
         stations, recordings = self.cleanSelf(list(self._load()))
@@ -274,8 +274,8 @@ class M3U:
         return M3U_TEMP.copy()
         
         
-    def getShift(self):
-        self.log('getShift') 
+    def getTZShift(self):
+        self.log('getTZShift')
         return ((time.mktime(time.localtime()) - time.mktime(time.gmtime())) / 60 / 60)
 
     
