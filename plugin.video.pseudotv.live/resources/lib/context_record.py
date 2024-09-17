@@ -50,7 +50,7 @@ class Record:
                 ritem = m3u.getRecordItem(self.fitem,{'1':0,'2':seek}[str(int(retval))])
                 if (m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
-                    PROPERTIES.setEXTProperty('chkPVRRefresh','true')
+                    PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
                 del m3u
                 del xmltv
     
@@ -63,7 +63,7 @@ class Record:
                 ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})
                 if (m3u.delRecording(ritem), xmltv.delRecording(ritem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
-                    PROPERTIES.setEXTProperty('chkPVRRefresh','true')
+                    PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
                 del m3u
                 del xmltv
             

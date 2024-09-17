@@ -234,7 +234,7 @@ class Player(xbmc.Player):
         if state and bool(self.enableReplay) and not self.isIdle and sysInfo.get('fitem'):
             progress = self.getPlayerProgress()
             if (progress >= self.enableReplay and progress < SETTINGS.getSettingInt('Seek_Threshold')):
-                self.replay = Replay("%s.replay.xml"%(ADDON_ID), ADDON_PATH, "default", "1080i", player=self, sysInfo=sysInfo)
+                self.replay = Replay("%s.replay.xml"%(ADDON_ID), ADDON_PATH, "default", "1080i", player=self)
                 self.replay.doModal()
         elif hasattr(self.replay, 'close'): self.replay.close()
         
@@ -247,7 +247,7 @@ class Player(xbmc.Player):
             if hasattr(self.background, 'close'): 
                 self.background = self.background.close()
             if self.isPlaying(): BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
-            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", citem=self.sysInfo.get('citem',{}))
+            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", sysInfo=self.sysInfo)
             
             
 class Monitor(xbmc.Monitor):

@@ -71,7 +71,7 @@ class Resources:
     def getLogoResources(self, chname: str, type: str, select: bool=False) -> dict and None:
         self.log('getLogoResources, chname = %s, type = %s'%(chname, type))
         resources = SETTINGS.getSetting('Resource_Logos').split('|').copy()
-        if type in ["TV Genres","Movie Genres"]:      resources.extend(GENRE_RESOURCE)
+        if   type in ["TV Genres","Movie Genres"]:    resources.extend(GENRE_RESOURCE)
         elif type in ["TV Networks","Movie Studios"]: resources.extend(STUDIO_RESOURCE)
         elif type == "Music Genres":                  resources.extend(MUSIC_RESOURCE)
         else:
@@ -134,11 +134,16 @@ class Resources:
                 for rename in renames:
                     if chname.lower() == rename.lower(): return True
                     for pattern in patterns:
-                        try:    label = pattern(rename,type)
-                        except: label = pattern(rename)
+                        try:
+                            rrename = pattern(rename,type)
+                            rchname = pattern(chname,type)
+                        except: 
+                            rrename = pattern(rename)
+                            rchname = pattern(chname)
                         finally:
-                            if isinstance(label,(list,tuple)) and len(label) > 1: label = label[0]
-                            if chname.lower() == label.lower(): return True
+                            if isinstance(rrename,(list,tuple)) and len(rrename) > 1: rrename = rrename[0]
+                            if isinstance(rchname,(list,tuple)) and len(rchname) > 1: rchname = rchname[0]
+                            if chname.lower() == rrename.lower() or rename.lower() == rchname.lower() or rchname.lower() == rrename.lower(): return True
         
 
     def buildWebImage(self, image: str) -> str:

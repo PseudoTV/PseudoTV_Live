@@ -141,7 +141,7 @@ class Utilities:
 
     def _togglePVR(self):
         if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
-            PROPERTIES.setEXTProperty('chkPVRRefresh','true')
+            PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
             
 
     def buildMenu(self, select=None):

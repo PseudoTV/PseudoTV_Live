@@ -487,7 +487,7 @@ class JSONRPC:
             elif setting.get('id','').lower() == 'services.webserverport':     port     = setting.get('value')
             elif setting.get('id','').lower() == 'services.webserverpassword': password = setting.get('value')
             elif setting.get('id','').lower() == 'services.webserverssl' and setting.get('value'): secure = True
-            username = '{0}:{1}@'.format(username, password) if username and password else ''
+        username = '{0}:{1}@'.format(username, password) if username and password else ''
         protocol = 'https' if secure else 'http'
         if local: ip = 'localhost'
         else:     ip = getIP()

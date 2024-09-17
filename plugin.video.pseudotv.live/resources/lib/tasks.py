@@ -208,7 +208,7 @@ class Tasks():
                 if PROPERTIES.hasFirstrun(): self._que(self.chkChannels,2)
             else: 
                 self.service.currentChannels = list(channels)
-                if updated: PROPERTIES.setEXTProperty('chkPVRRefresh','true')
+                if updated: PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
                 if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
@@ -217,7 +217,7 @@ class Tasks():
     def chkPVRservers(self):
         self.log('chkPVRservers')
         if self.multiroom.chkPVRservers():
-            PROPERTIES.setEXTProperty('chkPVRRefresh','true')
+            PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
 
 
     def chkPVRSettings(self):

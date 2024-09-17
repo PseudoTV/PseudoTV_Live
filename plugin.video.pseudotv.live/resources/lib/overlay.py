@@ -41,15 +41,15 @@ from rules     import RulesList
 class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
-        self.citem = kwargs.get('citem',{})
+        self.sysInfo = kwargs.get('sysInfo',{})
 
 
     def onInit(self):
         try:
-            logo = (self.citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
+            logo = (self.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
             self.getControl(40001).setVisibleCondition('[!Player.Playing]')
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
-            self.getControl(40003).setText(LANGUAGE(32104)%(self.citem.get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
+            self.getControl(40003).setText(LANGUAGE(32104)%(self.sysInfo.get('citem',{}).get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except Exception as e:
             log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.close()
@@ -60,7 +60,6 @@ class Replay(xbmcgui.WindowXMLDialog):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self._closing = False
         self.myPlayer = kwargs.get('player' ,None)
-        self.sysInfo  = kwargs.get('sysInfo',{})
         
         
     def onInit(self):
@@ -71,7 +70,7 @@ class Replay(xbmcgui.WindowXMLDialog):
             self._progressLoop(self.getControl(40000))
             self.setFocusId(40001)
         except Exception as e:
-            log("Replay: onInit, failed! %s\ncitem = %s"%(e,self.sysInfo), xbmc.LOGERROR)
+            log("Replay: onInit, failed! %s\ncitem = %s"%(e,self.myPlayer.sysInfo), xbmc.LOGERROR)
             self._onClose()
 
 
@@ -90,11 +89,11 @@ class Replay(xbmcgui.WindowXMLDialog):
         actionId = act.getId()
         log('Replay: onAction: actionId = %s'%(actionId))
         if actionId in ACTION_SELECT_ITEM and self.getFocusId(40001): 
-            if   self.sysInfo.get('isPlaylist',False): self.myPlayer.seekTime(0)
-            elif self.sysInfo.get('fitem'): 
-                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem',{}))
-                liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-                self.myPlayer.play(self.sysInfo.get('fitem',{}).get('catchup-id'),liz)
+            if   self.myPlayer.sysInfo.get('isPlaylist',False): self.myPlayer.seekTime(0)
+            elif self.myPlayer.sysInfo.get('fitem'): 
+                liz = LISTITEMS.buildItemListItem(self.myPlayer.sysInfo.get('fitem',{}))
+                liz.setProperty('sysInfo',encodeString(dumpJSON(self.myPlayer.sysInfo)))
+                self.myPlayer.play(self.myPlayer.sysInfo.get('fitem',{}).get('catchup-id'),liz)
             else: DIALOG.notificationDialog(LANGUAGE(30154))
         elif actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),time,100,true,false)')
         elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),time,100,true,false)')

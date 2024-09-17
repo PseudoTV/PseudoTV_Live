@@ -301,7 +301,7 @@ class M3U:
                         
     def findRecording(self, ritem):
         for idx, eitem in enumerate(self.M3UDATA.get('recordings',[])):
-            if (ritem.get('id',str(random.random())) == eitem.get('id')) or (ritem.get('label',str(random.random())).lower() == eitem.get('label','').lower()) or (ritem.get('path','').endswith('%s.pvr'%(eitem.get('name')))):
+            if (ritem.get('id',str(random.random())) == eitem.get('id')) or (ritem.get('label',str(random.random())).lower() == eitem.get('label','').lower()) or (ritem.get('path',str(random.random())).endswith('%s.pvr'%(eitem.get('name')))):
                 self.log('findRecording, found eitem = %s'%(eitem))
                 return idx, eitem
         return None, {} 
