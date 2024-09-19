@@ -88,13 +88,6 @@ class Builder:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def migrate(self, citem):#update channel logo and verify labels, migrate changes to citem.
-        self.log('migrate, id: %s'%(citem['id']))
-        citem['name'] = validString(citem['name']) #todo correct existing file names, remove v.0.5.3.
-        citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
-        return citem
-
-
     def verify(self, channels: list=[]):
         if not channels: channels = self.channels.getChannels()
         PROPERTIES.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(len(channels)>0).lower())
@@ -105,7 +98,8 @@ class Builder:
                 self.log('verify, skipping - missing necessary channel meta\n%s'%(citem))
                 continue
             else:
-                citem = self.migrate(citem)
+                citem['name'] = validString(citem['name']) #todo temp. correct existing file names; drop by v.0.6
+                citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
                 self.log('verify, channel %s: %s - %s'%(citem['number'],citem['name'],citem['id']))
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
 

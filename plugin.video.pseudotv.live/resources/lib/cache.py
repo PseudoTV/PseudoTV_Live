@@ -18,8 +18,6 @@
 #
 # -*- coding: utf-8 -*-
 
-import sqlite3
-
 from globals   import *
 from functools import wraps
 try:    from simplecache             import SimpleCache
@@ -88,6 +86,7 @@ class Cache:
         
             
     def clear(self, name, wait=15):
+        import sqlite3
         self.log('clear, name = %s'%self.getname(name))
         sc = xbmcvfs.translatePath(xbmcaddon.Addon(id='script.module.simplecache').getAddonInfo('profile'))
         dbpath = os.path.join(sc, 'simplecache.db')

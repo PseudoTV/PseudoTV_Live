@@ -100,7 +100,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server, monitor):
         self.monitor = monitor
         try: BaseHTTPRequestHandler.__init__(self, request, client_address, server)
-        except (IOError, OSError) as e: self.log('__init__ failed! %s'%(e),xbmc.LOGERROR)
+        except (IOError, OSError) as e: pass
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):

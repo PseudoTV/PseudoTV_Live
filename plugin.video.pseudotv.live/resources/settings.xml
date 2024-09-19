@@ -354,7 +354,7 @@
 			<group id="1">
 				<setting id="Resource_Logos" type="list[addon]" label="30027" help="33160">
 					<level>2</level>
-					<default>resource.images.studios.coloured|resource.images.pseudotv.logos</default>
+					<default>resource.images.pseudotv.logos</default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>

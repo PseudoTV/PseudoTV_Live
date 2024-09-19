@@ -29,7 +29,7 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
     params["chid"]       = (params.get("chid")  or fitem.get('citem',{}).get('id'))
     params['title']      = (params.get('title') or BUILTIN.getInfoLabel('label'))
     params['name']       = (unquoteString(params.get("name",'')) or BUILTIN.getInfoLabel('ChannelName'))
-    params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
+    params['isPlaylist'] = (mode == 'playlist')
     log("Context_Play: run, params = %s"%(params))
     
     if   mode == 'play':     threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])

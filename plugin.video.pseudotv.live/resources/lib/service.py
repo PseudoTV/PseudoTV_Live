@@ -200,17 +200,19 @@ class Player(xbmc.Player):
         self.toggleBackground()
         oldInfo = self.sysInfo
         
-        if oldInfo.get('isPlaylist') and oldInfo.get('nitem'):
-            self.sysInfo = self.getPlayerSysInfo()
-            if oldInfo.get('start',random.random()) != self.sysInfo.get('start',random.random()):
+        if oldInfo.get('isPlaylist'):
+            sysInfo = self.getPlayerSysInfo()
+            if not sysInfo.get('fitem') and self.isPlaying(): return self.myService.tasks._que(self._onChange,1)
+            elif sysInfo.get('fitem',{}).get('label') == oldInfo.get('nitem',{}).get('label',str(random.random())):
+                self.sysInfo = sysInfo
                 self.log('_onChange, updated sysInfo')
                 self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
                 self.setPlayruntime(self.saveDuration,self.sysInfo.get('fitem',{}),sysInfo.get('runtime'))
                 self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
-        else:
-            self.log('_onChange, callback = %s'%(oldInfo['callback']))
-            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(oldInfo['callback']))
-        
+                return
+        self.log('_onChange, callback = %s'%(oldInfo['callback']))
+        threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(oldInfo['callback']))
+    
         
     def _onStop(self):
         self.log('_onStop')

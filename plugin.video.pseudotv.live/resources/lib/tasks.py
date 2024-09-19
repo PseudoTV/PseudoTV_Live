@@ -150,12 +150,11 @@ class Tasks():
 
 
     def chkFiles(self):
-        self.log('chkFiles')
         # check for missing files and run appropriate action to rebuild them only after init. startup.
-        if PROPERTIES.hasFirstrun():
-            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary)
-            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels)
-        elif not FileAccess.exists(LOGO_LOC): FileAccess.makedirs(LOGO_LOC) #check logo folder
+        if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary)
+        if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels)
+        if not FileAccess.exists(LOGO_LOC):   FileAccess.makedirs(LOGO_LOC) #check logo folder
+        if not FileAccess.exists(FILLER_LOC): FileAccess.makedirs(FILLER_LOC) #check fillers folder
 
 
     def chkPVRRefresh(self):
@@ -209,7 +208,7 @@ class Tasks():
             else: 
                 self.service.currentChannels = list(channels)
                 if updated: PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
-                if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
+            if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
 

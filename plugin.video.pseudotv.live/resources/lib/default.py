@@ -33,7 +33,8 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
     params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
     log("Default: run, params = %s"%(params))
 
-    if   mode == 'guide'    and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openGuide()
+    if   PROPERTIES.isRunning('togglePVR'): DIALOG.notificationDialog(LANGUAGE(32000))
+    elif mode == 'guide'    and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openGuide()
     elif mode == 'settings' and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openSettings()
     elif not params["chid"]:       DIALOG.notificationDialog(LANGUAGE(32000))
     elif mode in ['vod','dvr']:    threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
