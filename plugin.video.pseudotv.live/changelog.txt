@@ -1,4 +1,5 @@
 v.0.5.5
+-Tweaked Restart Button settings and labels.
 -Fixed "Play from here" playback.
 -Added Local to URL image converter; hosted via Kodi webserver and PseudoTV Server.
 -Added "Smart" TV-guide loading as the default when launching PseudoTV Live via Kodi UI.

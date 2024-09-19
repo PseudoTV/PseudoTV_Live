@@ -528,18 +528,6 @@
 				</setting>
 			</group>
 			<group id="2" label="30048">
-				<setting id="Enable_Replay" type="integer" label="30153" help="33153">
-					<level>1</level>
-					<default>5</default>
-                    <constraints>
-                        <minimum>0</minimum>
-                        <step>5</step>
-                        <maximum>75</maximum>
-                    </constraints>
-                    <control type="slider" format="percentage">
-                        <popup>false</popup>
-                    </control>
-				</setting>
 				<setting id="Enable_Overlay" type="boolean" label="30042" help="33042">
 					<level>1</level>
 					<default>true</default>
@@ -562,6 +550,23 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>     
+				<setting id="Restart_Percentage" type="integer" label="30153" help="33153" parent="Enable_Overlay">
+					<level>1</level>
+					<default>5</default>
+                    <constraints>
+                        <minimum>0</minimum>
+                        <step>5</step>
+                        <maximum>75</maximum>
+                    </constraints>
+					<dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Enable_Overlay">true</condition>
+						</dependency>
+					</dependencies>
+                    <control type="slider" format="percentage">
+                        <popup>false</popup>
+                    </control>
+				</setting>
 				<setting id="Enable_OnNext" type="boolean" label="30045" help="33045" parent="Enable_Overlay">
 					<level>1</level>
 					<default>true</default>

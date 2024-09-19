@@ -709,7 +709,7 @@ class DisableReplay(BaseRule):
         self.name               = LANGUAGE(30153)
         self.description        = LANGUAGE(33153)
         self.optionLabels       = [LANGUAGE(30153)]
-        self.optionValues       = [SETTINGS.getSettingInt('Enable_Replay')]
+        self.optionValues       = [SETTINGS.getSettingInt('Restart_Percentage')]
         self.optionDescriptions = [LANGUAGE(33153)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [list(range(0,100,5))]
@@ -731,12 +731,12 @@ class DisableReplay(BaseRule):
 
     def runAction(self, actionid, citem, parameter, player):
         if actionid == RULES_ACTION_PLAYER_START:
-            self.storedValues[0] = player.enableReplay
-            player.enableReplay = self.optionValues[0]
+            self.storedValues[0] = player.restartPercentage
+            player.restartPercentage = self.optionValues[0]
             
         elif actionid == RULES_ACTION_PLAYER_STOP:
-            player.enableReplay = self.storedValues[0]
-        self.log("runAction, setting enableReplay = %s"%(player.enableReplay))
+            player.restartPercentage = self.storedValues[0]
+        self.log("runAction, setting restartPercentage = %s"%(player.restartPercentage))
         return parameter
 
 

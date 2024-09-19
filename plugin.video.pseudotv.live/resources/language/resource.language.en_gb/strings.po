@@ -634,7 +634,7 @@ msgid "Resume Later"
 msgstr ""
 
 msgctxt "#30153"
-msgid "Set Replay Percentage"
+msgid "Restart Percentage"
 msgstr ""
 
 msgctxt "#30154"

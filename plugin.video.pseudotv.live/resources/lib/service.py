@@ -43,7 +43,7 @@ class Player(xbmc.Player):
         self.jsonRPC           = jsonRPC
         self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
         self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')#todo adv. rule opt
-        self.enableReplay      = SETTINGS.getSettingInt('Enable_Replay')
+        self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
         self.saveDuration      = SETTINGS.getSettingBool('Store_Duration')
         
         """ 
@@ -69,8 +69,12 @@ class Player(xbmc.Player):
     def onAVChange(self):
         self.log('onAVChange')
         if self.isPseudoTV:
-            self.lastSubState = BUILTIN.isSubtitle()
-            self.isIdle       = self.myService.monitor.chkIdle()
+            self.lastSubState      = BUILTIN.isSubtitle()
+            self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
+            self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')#todo adv. rule opt
+            self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
+            self.saveDuration      = SETTINGS.getSettingBool('Store_Duration')
+            self.isIdle            = self.myService.monitor.chkIdle()
             
         
     def onAVStarted(self):
@@ -232,10 +236,10 @@ class Player(xbmc.Player):
 
 
     def toggleReplay(self, state: bool=True, sysInfo: dict={}):
-        self.log('toggleReplay, state = %s, enableReplay = %s'%(state,self.enableReplay))
-        if state and bool(self.enableReplay) and not self.isIdle and sysInfo.get('fitem'):
+        self.log('toggleReplay, state = %s, restartPercentage = %s'%(state,self.restartPercentage))
+        if state and self.myService.monitor.enableOverlay and bool(self.restartPercentage) and not self.isIdle and sysInfo.get('fitem'):
             progress = self.getPlayerProgress()
-            if (progress >= self.enableReplay and progress < SETTINGS.getSettingInt('Seek_Threshold')):
+            if (progress >= self.restartPercentage and progress < SETTINGS.getSettingInt('Seek_Threshold')):
                 self.replay = Replay("%s.replay.xml"%(ADDON_ID), ADDON_PATH, "default", "1080i", player=self)
                 self.replay.doModal()
         elif hasattr(self.replay, 'close'): self.replay.close()
@@ -355,6 +359,8 @@ class Monitor(xbmc.Monitor):
                 
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged')
+        self.sleepTime                 = (SETTINGS.getSettingInt('Idle_Timer')      or 0)
+        self.enableOverlay             = (SETTINGS.getSettingBool('Enable_Overlay') or True)
         self.myService.currentChannels = self.myService.tasks.chkChannelChange(self.myService.currentChannels)  #check for channel change, rebuild if needed.
         self.myService.currentSettings = self.myService.tasks.chkSettingsChange(self.myService.currentSettings) #check for settings change, take action if needed.
 
