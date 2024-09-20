@@ -33,7 +33,7 @@ class Create:
         if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto the first available %s channel?'%(self.listitem.getLabel(),ADDON_NAME)):
             if not PROPERTIES.isRunning('MANAGER_RUNNING'):
                 with PROPERTIES.setRunning('MANAGER_RUNNING'), BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
-                    manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", start=False)
+                    manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False)
                     channelData = manager.newChannel
                     channelData['type']     = 'Custom'
                     channelData['favorite'] = True
@@ -49,14 +49,14 @@ class Create:
                     PROPERTIES.forceUpdateTime('chkChannels')
                     manager.closeManager()
                     del manager
-                manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=channelData['number'])
+                manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=channelData['number'])
                 del manager
                 
                 
     def open(self):
         if not PROPERTIES.isRunning('MANAGER_RUNNING'):
             with PROPERTIES.setRunning('MANAGER_RUNNING'), BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
-                manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=self.fitem.get('citem',{}).get('number',1))
+                manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=self.fitem.get('citem',{}).get('number',1))
             del manager
         
                 

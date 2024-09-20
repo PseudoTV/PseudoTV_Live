@@ -62,7 +62,9 @@ class CustomQueue:
 
     def __run(self, func, args=(), kwargs=None):
         self.log("__run, func = %s"%(func.__name__))
-        try: return executeit(func)(*args, **kwargs)
+        try:
+            if PROPERTIES.hasFirstrun(): return executeit(func)(*args, **kwargs)
+            else:                        return func(*args, **kwargs)
         except Exception as e: self.log("__run, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
 
                 

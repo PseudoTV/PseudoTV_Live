@@ -339,7 +339,7 @@ def cleanLabel(text):
   
 def cleanImage(image=LOGO):
     if not image: image = LOGO
-    if not image.startswith(('image://','resource://','special://','smb://','nfs://')):
+    if not image.startswith(('image://','resource://','special://','smb://','nfs://','https://','http://')):
         realPath = xbmcvfs.translatePath('special://home/addons/')
         if image.startswith(realPath):# convert real path. to vfs
             image = image.replace(realPath,'special://home/addons/').replace('\\','/')

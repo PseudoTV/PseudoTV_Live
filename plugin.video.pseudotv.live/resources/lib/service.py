@@ -64,6 +64,7 @@ class Player(xbmc.Player):
 
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
+        if self.isPseudoTV: self.onAVChange()
         
 
     def onAVChange(self):
@@ -240,7 +241,7 @@ class Player(xbmc.Player):
         if state and self.myService.monitor.enableOverlay and bool(self.restartPercentage) and not self.isIdle and sysInfo.get('fitem'):
             progress = self.getPlayerProgress()
             if (progress >= self.restartPercentage and progress < SETTINGS.getSettingInt('Seek_Threshold')):
-                self.replay = Replay("%s.replay.xml"%(ADDON_ID), ADDON_PATH, "default", "1080i", player=self)
+                self.replay = Replay(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
                 self.replay.doModal()
         elif hasattr(self.replay, 'close'): self.replay.close()
         
@@ -253,7 +254,7 @@ class Player(xbmc.Player):
             if hasattr(self.background, 'close'): 
                 self.background = self.background.close()
             if self.isPlaying(): BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
-            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", sysInfo=self.sysInfo)
+            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", sysInfo=self.sysInfo)
             
             
 class Monitor(xbmc.Monitor):

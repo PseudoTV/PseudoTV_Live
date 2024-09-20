@@ -314,7 +314,7 @@ class ShowChannelBug(BaseRule):
     def getPosition(self, optionindex):
         self.dialog.notificationDialog(LANGUAGE(32020))
         # from channelbug import ChannelBug
-        # channelbug = ChannelBug("%s.channelbug.xml"%(ADDON_ID), ADDON_PATH, "default")
+        # channelbug = ChannelBug(CHANNELBUG_XML, ADDON_PATH, "default")
         # del  channelbug
         # value = PROPERTIES.getProperty("Channel_Bug_Position_XY")
         # if value: self.optionValues[optionindex] = value

@@ -126,7 +126,7 @@ class Utilities:
         if not PROPERTIES.isRunning('MANAGER_RUNNING'):
             with PROPERTIES.setRunning('MANAGER_RUNNING'), PROPERTIES.suspendActivity():
                 from manager import Manager
-                chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)
+                chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
                 del chmanager
         
         
@@ -134,7 +134,7 @@ class Utilities:
         self.log('openChannelBug')
         if not PROPERTIES.isRunning('OVERLAY_CHANNELBUG_RUNNING'):
             from channelbug import ChannelBug
-            channelbug = ChannelBug("%s.channelbug.xml"%(ADDON_ID), ADDON_PATH, "default")
+            channelbug = ChannelBug(CHANNELBUG_XML, ADDON_PATH, "default")
             SETTINGS.setSetting("Channel_Bug_Position_XY",PROPERTIES.getProperty("Channel_Bug_Position_XY"))
             del channelbug
 

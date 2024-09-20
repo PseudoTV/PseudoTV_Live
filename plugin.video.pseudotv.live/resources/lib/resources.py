@@ -150,7 +150,7 @@ class Resources:
         #convert any local images to url via local server and/or kodi web server.
         if image.startswith(LOGO_LOC) and self.remoteURL:
             image = 'http://%s/images/%s'%(self.remoteURL,quoteString(os.path.split(image)[1]))
-        elif image.startswith(('image://','image%3A')) and self.baseURL and not ('smb' in image or 'nfs' in image):
+        elif image.startswith(('image://','image%3A')) and self.baseURL and not ('smb' in image or 'nfs' in image or 'http' in image):
             image = '%s/image/%s'%(self.baseURL,quoteString(image))
         self.log('buildWebImage, returning image = %s'%(image))
         return image

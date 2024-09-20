@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<window>
+    <defaultcontrol always="true">40001</defaultcontrol>
+    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_REPLAY,true,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_REPLAY,false,10000)</onunload> 
+    <controls>
+        <control type="group">
+            <posx>0</posx>
+            <posy>0</posy>
+            <animation effect="fade" delay="20" start="0" end="100" time="200">WindowOpen</animation>
+            <animation effect="fade" time="20">WindowClose</animation>
+            <control type="image" id="40000">
+                <description>Replay Progress</description>
+                <left>522</left>
+                <bottom>310</bottom>
+                <width>116</width>
+                <height>24</height>
+                <texture>buttons/ButtonFocus.png</texture>
+                <visible>Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]</visible>
+            </control>
+            <control type="button" id="40001">
+                <description>Replay Button</description>
+                <left>480</left>
+                <bottom>270</bottom>
+                <width>200</width>
+                <height>106</height>
+                <colordiffuse>FFFFFFFF</colordiffuse>
+                <shadowcolor>FF696969</shadowcolor>
+                <texturefocus colordiffuse="FF01416b">buttons/restart_button.png</texturefocus>
+                <texturenofocus colordiffuse="FF696969">buttons/restart_button.png</texturenofocus>
+                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+                <label></label>
+                <align>center</align>
+                <aligny>center</aligny>
+                <wrapmultiline>false</wrapmultiline>
+                <font>font32_title</font>
+                <textcolor>FFFFFFFF</textcolor>
+                <focusedcolor>FFFFFFFF</focusedcolor>
+                <disabledcolor>80FFFFFF</disabledcolor>
+                <invalidcolor>FFFFFFFF</invalidcolor>
+                <textoffsetx></textoffsetx>
+                <textoffsety></textoffsety>
+                <pulseonselect>false</pulseonselect>
+                <onclick></onclick>
+                <onfocus></onfocus>
+                <onunfocus></onunfocus>
+                <visible>Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]</visible>
+            </control>
+        </control>
+    </controls>
+</window>

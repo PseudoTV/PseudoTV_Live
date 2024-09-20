@@ -124,7 +124,6 @@ WELCOME_FLE         = os.path.join(ADDON_PATH,'welcome.txt')
 CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
-
 #files
 M3UFLE              = 'pseudotv.m3u'
 XMLTVFLE            = 'pseudotv.xml'
@@ -194,6 +193,12 @@ HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plug
 DUMMY_ICON          = 'https://dummyimage.com/512x512/%s/%s.png&text={text}'%(COLOR_BACKGROUND,COLOR_TEXT)
 MST3K_1             = os.path.join(MEDIA_LOC,'overlays','MST3K_1.gif')
 MST3K_2             = os.path.join(MEDIA_LOC,'overlays','MST3K_2.gif')
+
+#skins
+RESTART_XML    = '%s.restart.xml'%(ADDON_ID)
+BACKGROUND_XML = '%s.background.xml'%(ADDON_ID)
+MANAGER_XML    = '%s.manager.xml'%(ADDON_ID)
+CHANNELBUG_XML = '%s.channelbug.xml'%(ADDON_ID)
 
 # https://github.com/xbmc/xbmc/blob/master/xbmc/addons/kodi-dev-kit/include/kodi/c-api/gui/input/action_ids.h
 

@@ -491,7 +491,7 @@ class JSONRPC:
         protocol = 'https' if secure else 'http'
         if local: ip = 'localhost'
         else:     ip = getIP()
-        webURL =  '{0}://{1}{2}:{3}'.format(protocol,ip,username, port)
+        webURL =  '{0}://{1}{2}:{3}'.format(protocol,username,ip, port)
         self.log("buildWebBase; returning %s"%(webURL))
         return webURL
             
