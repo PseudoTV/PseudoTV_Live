@@ -224,7 +224,7 @@ class Plugin:
         with self.preparingPlayback():
             if self.sysInfo.get('fitem'):#-> live playback from UI incl. listitem
                 liz = LISTITEMS.buildItemListItem(self.sysInfo['fitem'])
-                if (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')) or self.sysInfo.get('seek',0) < self.seekTOL and self.sysInfo.get('progresspercentage',0) < self.seekTHD: #-> live
+                if (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')) or (self.sysInfo.get('seek',0) < self.seekTOL and self.sysInfo.get('progresspercentage',0) < self.seekTHD): #-> live
                     if (self.sysInfo.get('seek',0) > self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < 100 ):
                         self.log('playLive, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
                         liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs

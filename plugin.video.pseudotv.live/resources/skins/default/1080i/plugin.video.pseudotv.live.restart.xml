@@ -16,7 +16,7 @@
                 <width>116</width>
                 <height>24</height>
                 <texture>buttons/ButtonFocus.png</texture>
-                <visible>Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]</visible>
+                <visible>[Control.IsVisible(40001) + Player.Playing] + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]</visible>
             </control>
             <control type="button" id="40001">
                 <description>Replay Button</description>

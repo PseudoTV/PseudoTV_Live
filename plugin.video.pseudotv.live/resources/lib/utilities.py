@@ -38,8 +38,8 @@ class Utilities:
                 fsize = fle.size()
                 fle.close()
                 
-            if (SETTINGS.getCacheSetting('showWelcome', checksum=fsize) or 'true') == 'true':
-                SETTINGS.setCacheSetting('showWelcome', 'false', checksum=fsize)
+            if  SETTINGS.getCacheSetting('showWelcome', checksum=fsize):
+                SETTINGS.setCacheSetting('showWelcome', False, checksum=fsize)
                 DIALOG.textviewer(ftext.format(addon_name = ADDON_NAME,
                                                pvr_name   = PVR_CLIENT_NAME,
                                                m3u        = M3UFLEPATH.replace('special://profile','.'),

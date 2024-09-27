@@ -41,8 +41,8 @@ class Player(xbmc.Player):
         self.log('__init__')
         xbmc.Player.__init__(self)
         self.jsonRPC           = jsonRPC
-        self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
-        self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')#todo adv. rule opt
+        self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt')
+        self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')
         self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
         self.saveDuration      = SETTINGS.getSettingBool('Store_Duration')
         
@@ -118,9 +118,9 @@ class Player(xbmc.Player):
         
     def getPlayerSysInfo(self):
         sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
-        sysInfo['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
-        sysInfo['chfolder']   = BUILTIN.getInfoLabel('Folderpath','Player')
-        sysInfo['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
+        sysInfo['chfile']   = BUILTIN.getInfoLabel('Filename','Player')
+        sysInfo['chfolder'] = BUILTIN.getInfoLabel('Folderpath','Player')
+        sysInfo['chpath']   = BUILTIN.getInfoLabel('Filenameandpath','Player')
         if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
         if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
         sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime' :self.getPlayerTime()})
@@ -161,8 +161,8 @@ class Player(xbmc.Player):
 
     def setTrakt(self, state: bool=SETTINGS.getSettingBool('Disable_Trakt')):
         self.log('setTrakt, state = %s'%(state))
-        if state: PROPERTIES.setEXTProperty('script.trakt.paused',str(state).lower())
-        else:     PROPERTIES.clearEXTProperty('script.trakt.paused')
+        # https://github.com/trakt/script.trakt/blob/d45f1363c49c3e1e83dabacb70729cc3dec6a815/resources/lib/kodiUtilities.py#L104
+        PROPERTIES.setEXTProperty('script.trakt.paused',str(state).lower())
 
 
     def setSubtitles(self, state: bool=True):
@@ -174,7 +174,7 @@ class Player(xbmc.Player):
 
     def setPlaycount(self, state: bool=SETTINGS.getSettingBool('Rollback_Watched'), fitem: dict={}):
         self.log('setPlaycount, state = %s, file = %s, playcount = %s'%(state,fitem.get('file'),fitem.get('playcount',0)))
-        if state and fitem.get('file'): self.myService.tasks._que(self.jsonRPC.quePlaycount,1,fitem)
+        if state: self.jsonRPC.quePlaycount(fitem)
 
 
     def setPlayruntime(self, state: bool=SETTINGS.getSettingBool('Store_Duration'), fitem: dict={}, runtime=0):

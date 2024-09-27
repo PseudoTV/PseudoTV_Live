@@ -248,7 +248,7 @@ class Tasks():
                     elif len(params) > 0: self._que(self.jsonRPC.sendJSON,10,params.pop(0))
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
-                SETTINGS.setCacheSetting('queuePool', checksum=queuePool, json_data=True)
+                SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True, force=True)
 
 
     def runAutoTune(self):

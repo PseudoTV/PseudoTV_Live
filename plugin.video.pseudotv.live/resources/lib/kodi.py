@@ -329,7 +329,7 @@ class Settings:
         
         
     def setAutotuned(self, state=True):
-        return self.setCacheSetting('hasAutotuned', state, checksum=1, force=True)
+        return self.setCacheSetting('hasAutotuned', state, checksum=1)
 
 
     def getFriendlyName(self):

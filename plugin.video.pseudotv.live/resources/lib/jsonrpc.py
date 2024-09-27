@@ -66,7 +66,7 @@ class JSONRPC:
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('setting',''))
         queuePool['params'].reverse() #prioritize setsetting,playcount rollback over duration amendments.
         self.log("queueJSON, queueing = %s\n%s"%(len(queuePool['params']),param))
-        SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
+        SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True, force=True)
 
         
     def cacheJSON(self, param, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, timeout=15):
@@ -367,12 +367,13 @@ class JSONRPC:
                  'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
                  'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}}}
         try:
-            params = param[item['type']]
-            if -1 in params: raise Exception('no dbid found')
-            elif params:
-                id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
-                self.log('quePlaycount, id = %s, media = %s, playcount = %s, resume = %s'%(id,item['type'],item.get('playcount',0),item.get('resume',{})))
-                self.queueJSON(params)
+            if not item.get('file','').startswith(tuple(VFS_TYPES)):
+                params = param[item['type']]
+                if -1 in params: raise Exception('no dbid found')
+                elif params:
+                    id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
+                    self.log('quePlaycount, id = %s, media = %s, playcount = %s, resume = %s'%(id,item['type'],item.get('playcount',0),item.get('resume',{})))
+                    self.queueJSON(params)
         except Exception as e: self.log("quePlaycount, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
 
 
