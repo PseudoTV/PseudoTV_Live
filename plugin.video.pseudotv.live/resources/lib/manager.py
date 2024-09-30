@@ -75,12 +75,12 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.cntrlStates  = {}
             self.showingList  = True
             
-            self.cache        = Cache(mem_cache=True)
+            self.cache        = SETTINGS.cache
             self.channels     = Channels()
             self.eChannels    = self.channels.getChannels() #existing channels
-            self.rules        = RulesList()
-            self.jsonRPC      = JSONRPC()
-            self.resources    = Resources(self.jsonRPC, self.cache)
+            self.rules        = RulesList(self.cache)
+            self.jsonRPC      = JSONRPC(self.cache)
+            self.resources    = Resources(self.jsonRPC)
             self.m3u          = M3U()
             self.xmltv        = XMLTVS()
             
@@ -567,9 +567,10 @@ class Manager(xbmcgui.WindowXMLDialog):
         
             getTime  = 0
             waitTime = 30
-            PLAYER.play(file, liz, windowed=True)
+            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(file))
             while not MONITOR.abortRequested():
                 waitTime -= 1
+                self.log('validatePath _seek, waiting (%s) to seek %s'%(waitTime, item.get('file')))
                 if MONITOR.waitForAbort(1.0) or waitTime < 1: break
                 elif not PLAYER.isPlaying(): continue
                 elif ((int(PLAYER.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
@@ -592,11 +593,11 @@ class Manager(xbmcgui.WindowXMLDialog):
                     else:
                         item = random.choice(items.get(dir,[]))
                         dia  = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',dir,item.get('file','')))
-                        item.update({'duration':self.jsonRPC.getDuration(item.get('file'), item, accurate=True)})
+                        item.update({'duration':self.jsonRPC.getDuration(item.get('file'), item, accurate=bool(SETTINGS.getSettingInt('Duration_Type')))})
                         if item.get('duration',0) == 0: continue
                         dia = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Seeking',dir,item.get('file','')))
                         if _seek(item, citem):
-                            self.log('_vfs, found playable and seek-able file %s'%(item.get('file')))
+                            self.log('validatePath _vfs, found playable and seek-able file %s'%(item.get('file')))
                             valid = True
                             break
                 DIALOG.progressDialog(100,control=dia)

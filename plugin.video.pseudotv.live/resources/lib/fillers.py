@@ -31,7 +31,7 @@ class Fillers:
         self.cache      = builder.cache
         self.jsonRPC    = builder.jsonRPC
         self.runActions = builder.runActions
-        self.resources  = Resources(self.jsonRPC,self.cache)
+        self.resources  = Resources(self.jsonRPC)
         self.fillSources()
         #todo create subfolders for template resources. channels & genres: Build_Post_Folders
         

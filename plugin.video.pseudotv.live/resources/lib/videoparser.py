@@ -71,10 +71,7 @@ class VideoParser:
 
 
     def getVideoLength(self, filename: str, fileitem: dict={}, jsonRPC=None) -> int and float:
-        cacheCHK  = getMD5(filename)
-        cacheName = 'getVideoLength.%s'%(cacheCHK)
-        duration  = (jsonRPC.cache.get(cacheName, checksum=cacheCHK, json_data=False) or 0)
-        
+        duration = jsonRPC._getDuration(filename)
         if duration == 0:
             if not filename: log("VideoParser: getVideoLength, no filename.")
             elif filename.lower().startswith(tuple(self.VFSPaths)):
@@ -103,10 +100,8 @@ class VideoParser:
 
                 if duration == 0:
                     for parser in EXTERNAL_PARSER:
-                        duration = parser().determineLength(filename)
                         if MONITOR.waitForAbort(.001) or duration > 0: break
-                        
-                if duration > 0: jsonRPC.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
-        
+                        duration = parser().determineLength(filename)
+            if duration > 0: duration = jsonRPC._setDuration(filename, fileitem, int(duration))
         log("VideoParser: getVideoLength duration = %s, filename = %s"%(duration,filename))
         return duration

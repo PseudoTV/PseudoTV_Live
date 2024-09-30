@@ -33,8 +33,8 @@ class Tasks():
     def __init__(self, service=None):
         self.log('__init__')
         self.service     = service
+        self.cache       = service.cache
         self.jsonRPC     = service.jsonRPC
-        self.cache       = service.jsonRPC.cache
         self.httpServer  = HTTP(service=service)
         self.multiroom   = Multiroom(service=service)
         self.quePriority = CustomQueue(priority=True,service=self.service)
@@ -51,9 +51,9 @@ class Tasks():
         
 
     def _initialize(self):
-        PROPERTIES.getInstanceID()
-        if SETTINGS.getSettingBool('Bonjour_Startup'): timerit(self.chkDiscovery)(0.1)
-        tasks = [self.chkWelcome,
+        tasks = [self.chkInstanceID,
+                 self.chkDiscovery,
+                 self.chkWelcome,
                  self.chkDebugging,
                  self.chkBackup,
                  self.chkPVRBackend]
@@ -63,7 +63,12 @@ class Tasks():
             self._que(func)
         self.log('_initialize, finished...')
         
-
+        
+    def chkInstanceID(self):
+        self.log('chkInstanceID')
+        PROPERTIES.getInstanceID()
+        
+        
     def chkWelcome(self):
         self.log('chkWelcome')
         BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
@@ -94,7 +99,7 @@ class Tasks():
     def chkPVRBackend(self): 
         self.log('chkPVRBackend')
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
-            if SETTINGS.hasPVRInstance() == False:
+            if not SETTINGS.hasPVRInstance():
                 with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
                     SETTINGS.setPVRPath(USER_LOC, validString(SETTINGS.getFriendlyName()))
         
@@ -146,7 +151,7 @@ class Tasks():
         elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion') or '0.0.0'):
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
-        SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s Version: [B]%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':' '}[str(update)])
+        SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s Version: [B]%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':'None'}[str(update)])
 
 
     def chkFiles(self):
@@ -231,7 +236,7 @@ class Tasks():
         self.log('chkDiscovery')
         self.multiroom.hasServers()
         self.multiroom.pairDiscovery()
-         
+
 
     def chkHTTP(self):
         self.log('chkHTTP')

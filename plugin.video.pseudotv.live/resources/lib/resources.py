@@ -29,9 +29,9 @@ GENRE_RESOURCE  = ["resource.images.moviegenreicons.transparent"]
 STUDIO_RESOURCE = ["resource.images.studios.white"]
 
 class Resources:
-    def __init__(self, jsonRPC, cache):
-        self.cache     = cache
+    def __init__(self, jsonRPC):
         self.jsonRPC   = jsonRPC
+        self.cache     = jsonRPC.cache
         self.baseURL   = self.jsonRPC.buildWebBase()
         self.remoteURL = PROPERTIES.getRemoteURL()
         

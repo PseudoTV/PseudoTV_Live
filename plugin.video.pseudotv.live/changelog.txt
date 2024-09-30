@@ -1,12 +1,15 @@
 v.0.5.5
--Tweaked Restart Button settings and labels.
+-Updated September/October Seasonal channels.
+-Optimized cache initialization
+-Improved STRM duration detection and playback.
+-Removed "Tweak" settings; Moved to "Globals".
 -Fixed "Play from here" playback.
 -Added Local to URL image converter; hosted via Kodi webserver and PseudoTV Server.
--Added "Smart" TV-guide loading as the default when launching PseudoTV Live via Kodi UI.
+-Added "Smart" TV-guide loading as default when launching PseudoTV Live via Kodi UI.
  - If multiple-instances guide will open to "PseudoTV Live [All channels]"
    else the guide will open to your local instance name "PseudoTV Live".
    Fallback to "[All channels]" if not match is found. 
--Improved "Restart" Button.
+-Improved "Restart" Button; Restart Button disabled by default.
 -Improved PVR Backend refresh.
 
 v.0.5.4

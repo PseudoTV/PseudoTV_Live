@@ -25,7 +25,6 @@ from jsonrpc    import JSONRPC
 
 class Player(xbmc.Player):
     sysInfo      = {}
-    myService    = None
     replay       = None
     background   = None
     isPseudoTV   = False
@@ -37,10 +36,11 @@ class Player(xbmc.Player):
     runActions   = rules.runActions
     
     
-    def __init__(self, jsonRPC=None):
+    def __init__(self, service=None):
         self.log('__init__')
         xbmc.Player.__init__(self)
-        self.jsonRPC           = jsonRPC
+        self.myService         = service
+        self.jsonRPC           = service.jsonRPC
         self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt')
         self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')
         self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
@@ -123,7 +123,7 @@ class Player(xbmc.Player):
         sysInfo['chpath']   = BUILTIN.getInfoLabel('Filenameandpath','Player')
         if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
         if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
-        sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime' :self.getPlayerTime()})
+        sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime' :int(self.getPlayerTime())})
         if not sysInfo.get('callback'): sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
         self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
@@ -177,9 +177,9 @@ class Player(xbmc.Player):
         if state: self.jsonRPC.quePlaycount(fitem)
 
 
-    def setPlayruntime(self, state: bool=SETTINGS.getSettingBool('Store_Duration'), fitem: dict={}, runtime=0):
-        self.log('setPlayruntime, state = %s, file = %s, runtime = %s'%(state,fitem.get('file'),runtime))
-        self.jsonRPC.setDuration(fitem.get('file',''), fitem, runtime, state)
+    def setRuntime(self, state: bool=SETTINGS.getSettingBool('Store_Duration'), fitem: dict={}, runtime=0):
+        self.log('setRuntime, state = %s, file = %s, runtime = %s'%(state,fitem.get('file'),runtime))
+        if not fitem.get('file','').startswith(tuple(VFS_TYPES)): self.jsonRPC._setRuntime(fitem, int(runtime), state)
         
         
     def _onPlay(self):
@@ -192,10 +192,10 @@ class Player(xbmc.Player):
         #items that only run once per channel change. ie. set adv. rules and variables. 
         if self.sysInfo.get('chid') != oldInfo.get('chid',random.random()): #playing new channel
             self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), inherited=self)
-            self.setPlayruntime(self.saveDuration,self.sysInfo.get('fitem',{}),self.sysInfo.get('runtime'))
+            self.setRuntime(self.saveDuration,self.sysInfo.get('fitem',{}),self.sysInfo.get('runtime'))
             self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
-            self.toggleReplay(sysInfo=self.sysInfo)
+            self.toggleReplay()
             self.setTrakt(self.disableTrakt)
             
 
@@ -212,7 +212,7 @@ class Player(xbmc.Player):
                 self.sysInfo = sysInfo
                 self.log('_onChange, updated sysInfo')
                 self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
-                self.setPlayruntime(self.saveDuration,self.sysInfo.get('fitem',{}),sysInfo.get('runtime'))
+                self.setRuntime(self.saveDuration,self.sysInfo.get('fitem',{}),sysInfo.get('runtime'))
                 self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
                 return
         self.log('_onChange, callback = %s'%(oldInfo['callback']))
@@ -236,9 +236,9 @@ class Player(xbmc.Player):
         self.onPlayBackStopped()
 
 
-    def toggleReplay(self, state: bool=True, sysInfo: dict={}):
+    def toggleReplay(self, state: bool=True):
         self.log('toggleReplay, state = %s, restartPercentage = %s'%(state,self.restartPercentage))
-        if state and self.myService.monitor.enableOverlay and bool(self.restartPercentage) and not self.isIdle and sysInfo.get('fitem'):
+        if state and self.myService.monitor.enableOverlay and bool(self.restartPercentage) and not self.isIdle and self.sysInfo.get('fitem'):
             progress = self.getPlayerProgress()
             if (progress >= self.restartPercentage and progress < SETTINGS.getSettingInt('Seek_Threshold')):
                 self.replay = Replay(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
@@ -254,7 +254,7 @@ class Player(xbmc.Player):
             if hasattr(self.background, 'close'): 
                 self.background = self.background.close()
             if self.isPlaying(): BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
-            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", sysInfo=self.sysInfo)
+            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self)
             
             
 class Monitor(xbmc.Monitor):
@@ -262,13 +262,13 @@ class Monitor(xbmc.Monitor):
     isIdle     = False
     window     = None
     overlay    = None
-    myService  = None
     
     
-    def __init__(self, jsonRPC=None):
+    def __init__(self, service=None):
         self.log('__init__')
         xbmc.Monitor.__init__(self)
-        self.jsonRPC          = jsonRPC
+        self.myService        = service
+        self.jsonRPC          = service.jsonRPC
         self.pendingSuspend   = False
         self.pendingInterrupt = False
         self.sleepTime        = (SETTINGS.getSettingInt('Idle_Timer')      or 0)
@@ -362,8 +362,8 @@ class Monitor(xbmc.Monitor):
         self.log('_onSettingsChanged')
         self.sleepTime                 = (SETTINGS.getSettingInt('Idle_Timer')      or 0)
         self.enableOverlay             = (SETTINGS.getSettingBool('Enable_Overlay') or True)
-        self.myService.currentChannels = self.myService.tasks.chkChannelChange(self.myService.currentChannels)  #check for channel change, rebuild if needed.
-        self.myService.currentSettings = self.myService.tasks.chkSettingsChange(self.myService.currentSettings) #check for settings change, take action if needed.
+        self.myService.currentChannels = self.myService.tasks.chkChannelChange(self.myService.currentChannels)  #check for channel change, rebuild if needed
+        self.myService.currentSettings = self.myService.tasks.chkSettingsChange(self.myService.currentSettings) #check for settings change, take action if needed
 
 
 class Service():
@@ -371,22 +371,22 @@ class Service():
     SETTINGS.getMYUUID()
     currentChannels = []
     currentSettings = []
-    
-    jsonRPC  = JSONRPC()
-    player   = Player(jsonRPC)
-    monitor  = Monitor(jsonRPC)
-    
+
     def __init__(self):
         self.log('__init__')
-        self.runWhilePlaying   = SETTINGS.getSettingBool('Run_While_Playing')
         self.pendingRestart    = False
-        self.player.myService  = self
-        self.monitor.myService = self
-        self.tasks             = Tasks(self)
+        self.cache             = SETTINGS.cache
+        self.jsonRPC           = JSONRPC(cache=SETTINGS.cacheDB)
+        self.player            = Player(service=self)
+        self.monitor           = Monitor(service=self)
+        self.tasks             = Tasks(service=self)
+        
         self.currentChannels   = self.tasks.getChannels()
         self.currentSettings   = dict(SETTINGS.getCurrentSettings())
-        if not SETTINGS.getSettingBool('Bonjour_Startup'): 
-            DIALOG.notificationWait(LANGUAGE(32054),wait=EPOCH_TIMER)#startup delay; give Kodi PVR time to initialize. 
+        self.runWhilePlaying   = SETTINGS.getSettingBool('Run_While_Playing')
+        
+        self.player.myService  = self
+        self.monitor.myService = self
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -407,8 +407,7 @@ class Service():
 
     def __restart(self) -> bool:
         self.pendingRestart = PROPERTIES.getEXTProperty('pendingRestart') == 'true'
-        if self.pendingRestart: setPendingRestart(False)
-        self.log('_interrupt, pendingRestart = %s'%(self.pendingRestart))
+        self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
         return self.pendingRestart
          
          
@@ -419,6 +418,7 @@ class Service():
 
     def __tasks(self):
         self.log('__tasks')
+        self.tasks._que(self.monitor.chkIdle,1)
         self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,EPOCH_TIMER)
            
                 
@@ -432,7 +432,6 @@ class Service():
         self.log('_start')
         self.__initialize()
         while not self.monitor.abortRequested():
-            self.tasks._que(self.monitor.chkIdle,1)
             if    self._interrupt(1): break
             else: self.__tasks()
         self._stop()

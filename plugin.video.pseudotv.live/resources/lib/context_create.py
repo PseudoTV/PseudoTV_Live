@@ -30,7 +30,7 @@ class Create:
         
     def add(self):
         if not self.listitem.getPath(): return DIALOG.notificationDialog(LANGUAGE(32030))
-        if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto the first available %s channel?'%(self.listitem.getLabel(),ADDON_NAME)):
+        elif DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto the first available %s channel?'%(self.listitem.getLabel(),ADDON_NAME)):
             if not PROPERTIES.isRunning('MANAGER_RUNNING'):
                 with PROPERTIES.setRunning('MANAGER_RUNNING'), BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
                     manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False)

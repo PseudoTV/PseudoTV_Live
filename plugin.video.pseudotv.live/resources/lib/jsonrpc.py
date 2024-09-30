@@ -21,10 +21,9 @@ from globals     import *
 from videoparser import VideoParser
 
 class JSONRPC:
-    def __init__(self, cache=None):
+    def __init__(self, cache=SETTINGS.cacheDB):
         self.videoParser = VideoParser()
-        if cache is None: self.cache = Cache()
-        else:             self.cache = cache
+        self.cache = cache
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -84,7 +83,7 @@ class JSONRPC:
         for idx, item in enumerate(self.getDirectory({"directory":path,"media":media},True,checksum,expiration).get('files',[])):
             if item.get('filetype') == 'file':
                 if chkDuration:
-                    item['duration'] = self.getDuration(item.get('file'),item, accurate=True)
+                    item['duration'] = self.getDuration(item.get('file'),item, accurate=bool(SETTINGS.getSettingInt('Duration_Type')))
                     if item['duration'] == 0: continue
                 walk.setdefault(path,[]).append(item if retItem else item.get('file'))
             elif item.get('filetype') == 'directory' and depth > 0:
@@ -96,7 +95,7 @@ class JSONRPC:
     def walkListDirectory(self, path, exts='', depth=5, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         def _chkfile(path, f):
             if chkDuration:
-                if self.getDuration(os.path.join(path,f), accurate=True) == 0: return
+                if self.getDuration(os.path.join(path,f), accurate=bool(SETTINGS.getSettingInt('Duration_Type'))) == 0: return
             if appendPath: return os.path.join(path,f).replace('\\','/')
             else:          return f
             
@@ -289,69 +288,78 @@ class JSONRPC:
         param = {"method":"PVR.GetBroadcastDetails","params":{"broadcastid":id,"properties":self.getEnums("PVR.Fields.Broadcast", type='items')}}
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
+    
+    def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')):
+        self.cache.set('getRuntime.%s'%(getMD5(item.get('file'))), runtime, checksum=getMD5(item.get('file')), expiration=datetime.timedelta(days=28), json_data=False)
+        if save and item: self.queDuration(item, runtime=runtime)
+        return runtime
+    
+        
+    def _getRuntime(self, item={}):
+        runtime = self.cache.get('getRuntime.%s'%(getMD5(item.get('file'))), checksum=getMD5(item.get('file')), json_data=False)
+        return (runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+        
 
-    def setDuration(self, path='', item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')):
-        self.log("setDuration, path = %s, runtime = %s, save = %s" % (path,runtime,save))
-        self.cache.set('getPlayerLength.%s'%(getMD5(path)), runtime, checksum=getMD5(path), expiration=datetime.timedelta(days=28), json_data=False)
-        if save and not path.startswith(tuple(VFS_TYPES)): self.queDuration(item, runtime)
-        
-        
-    def getRuntime(self, item={}):
-        return (item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration'))
-        
-        
+    def _setDuration(self, path, item={}, duration=0, save=SETTINGS.getSettingBool('Store_Duration')):
+        self.cache.set('getDuration.%s'%(getMD5(path)), duration, checksum=getMD5(path), expiration=datetime.timedelta(days=28), json_data=False)
+        if save and item: self.queDuration(item, duration)
+        return duration
+
+    
+    def _getDuration(self, path):
+        return (self.cache.get('getDuration.%s'%(getMD5(path)), checksum=getMD5(path), json_data=False) or 0)
+
+
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("getDuration, accurate = %s, path = %s, save = %s" % (accurate, path, save))
-        runtime = (self.cache.get('getPlayerLength.%s'%(getMD5(path)), checksum=getMD5(path), json_data=False) or 0)
-        if runtime == 0:
-            runtime = (self.getRuntime(item) or 0)
-            if (runtime == 0 or accurate):
-                duration = 0
-                if isStack(path):# handle "stacked" videos
-                    for file in splitStacks(path): duration += self.parseDuration(file)
-                else: duration = self.parseDuration(path, item, save)
-                if duration > 0: runtime = duration
+        if not item: item = {'file':path}
+        runtime = self._getRuntime(item)
+        if runtime == 0 or accurate:
+            if isStack(path):# handle "stacked" videos
+                for file in splitStacks(path): duration += self.__parseDuration(runtime, file)
+            else: duration = self.__parseDuration(runtime, path, item, save)
+            if duration > 0: runtime = duration
         self.log("getDuration, returning path = %s, runtime = %s" % (path, runtime))
         return runtime
 
 
-    def parseDuration(self, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
-        self.log("parseDuration, path = %s, save = %s" % (path, save))
-        runtime  = (self.getRuntime(item) or 0)
+    def __parseDuration(self, runtime, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
+        self.log("__parseDuration, runtime = %s, path = %s, save = %s" % (runtime, path, save))
         duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
         if not path.startswith(tuple(VFS_TYPES)):
             ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.
             rundiff = int(percentDiff(runtime, duration))
             runsafe = False
-            if (rundiff <= 45 and rundiff > 0) or (rundiff == 100 and (duration == 0 or runtime == 0)) or (rundiff == 0 and (duration > 0 and runtime > 0)) or (duration > runtime):
-                runsafe = True
-            self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
+            if (rundiff <= 45 and rundiff > 0) or (rundiff == 100 and (duration == 0 or runtime == 0)) or (rundiff == 0 and (duration > 0 and runtime > 0)) or (duration > runtime): runsafe = True
+            self.log("__parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
             ## save parsed duration to Kodi database, if enabled.
-            if save and runsafe and item.get('type'): self.queDuration(item, duration)
-            if runsafe: runtime = duration
+            if runsafe:
+                runtime = duration
+                # if save and not path.startswith(tuple(VFS_TYPES)): self.queDuration(item, duration)
         else: runtime = duration
-        self.log("parseDuration, returning runtime = %s" % (runtime))
+        self.log("__parseDuration, returning runtime = %s" % (runtime))
         return runtime
   
   
-    def queDuration(self, item, dur):
-        #overcome inconsistent keys from Kodis jsonRPC.
+    def queDuration(self, item={}, duration=0, runtime=0):
         param = {'video'      : {},
-                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
-                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
-                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
-                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
-                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
-                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
-                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
-                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}}}
+                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}}}
         try:
-            if dur > 0 and 'type' in item:
+            if 'type' in item:
                 params = param[item['type']]
                 if -1 in params: raise Exception('no dbid found')
                 elif params:
+                    if   duration == 0: param['params'].pop('resume')
+                    elif runtime  == 0: param['params'].pop('runtime')
                     id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
-                    self.log('queDuration, id = %s, media = %s, runtime = %s'%(id,item['type'],dur))
+                    self.log('queDuration, id = %s, media = %s, duration = %s, runtime = %s'%(id,item['type'],duration,runtime))
                     self.queueJSON(params)
         except Exception as e: self.log("queDuration, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
         
@@ -422,7 +430,7 @@ class JSONRPC:
 
         param["limits"]          = {}
         param["limits"]["start"] = 0 if limits.get('end', 0) == -1 else limits.get('end', 0)
-        param["limits"]["end"]   = limits.get('end', 0) + page
+        param["limits"]["end"]   = abs(limits.get('end', 0) + page)
         param["sort"] = sort
         self.log('requestList, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
         

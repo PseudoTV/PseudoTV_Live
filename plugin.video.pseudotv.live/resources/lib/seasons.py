@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
+# https://www.holidaysmart.com/holidays/daily/fandom
+# https://www.holidaysmart.com/holidays/daily/tv-movies
+
 TV_QUERY    = {"path":"videodb://tvshows/titles/" ,"limits":{},"sort":{},"filter":{},
                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}
                
@@ -71,10 +74,10 @@ SEASONS = {"January"   : {'1':{'name':"New Years Anthologies"   , 'tagline':"“
                           '5':{'name':''                        , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''}},
                           
            "September" : {'1':{'name':"Star Trek Week"          , 'tagline':"“To Boldly Go...“"                                               , 'keyword':'startrek' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://assets.stickpng.com/images/613794434b96600004f67704.png'},
-                          '2':{'name':"Batman Week"             , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
-                          '3':{'name':"Hobbit Week"             , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
-                          '4':{'name':"Comic Book Week"         , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
-                          '5':{'name':"Comic Book Week"         , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''}},
+                          '2':{'name':"Batman Week"             , 'tagline':'“I am vengeance, I am the night, I am Batman!”'                  , 'keyword':'batman'   , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://wallpapers.com/images/hd/batman-symbol-logo-ynnut5vuvms1d5ge.jpg'},
+                          '3':{'name':"Hobbit Week"             , 'tagline':''                                                                , 'keyword':'lotr'     , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://www.pngall.com/wp-content/uploads/12/Lord-Of-The-Rings-Logo-PNG-Picture.png'},
+                          '4':{'name':"Comic Book Week"         , 'tagline':'Bam! Pow... BOOM!'                                               , 'keyword':'super'    , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://assets.dochipo.com/editor/animations/comic-word-art/e5bbe61b-3b6f-419f-91ff-87e08fa9a74e.gif'},
+                          '5':{'name':"Comic Book Week"         , 'tagline':'Bam! Pow... BOOM!'                                               , 'keyword':'super'    , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://assets.dochipo.com/editor/animations/comic-word-art/e5bbe61b-3b6f-419f-91ff-87e08fa9a74e.gif'}},
                           
            "October"   : {'1':{'name':"Willy Wonka Week"        , 'tagline':"“The Suspense Is Terrible. I Hope It’ll Last.”"                  , 'keyword':'wonka'    , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://1000logos.net/wp-content/uploads/2020/09/Wonka-Logo-1999.png'},
                           '2':{'name':"Back to the Future Week" , 'tagline':"“Great Scott!”"                                                  , 'keyword':'future'   , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://www.pngfind.com/pngs/m/119-1194555_back-to-the-future-back-to-the-future.png'},
@@ -104,10 +107,10 @@ KEYWORDS = {"":{},
             "heros"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"genre"   ,"operator":"contains","value":["Sci-Fi","Science Fiction"]}]}]}}],
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"genre"   ,"operator":"contains","value":["Sci-Fi","Science Fiction"]}]}]}}]},
                          
-            "lotr"     :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit"]}]}]}}],
-                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit"]}]}]}}]},
+            "lotr"     :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien"]}]}]}}]},
                          
             "lego"     :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["LEGO"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["LEGO"]}]}]}}],
@@ -236,11 +239,11 @@ KEYWORDS = {"":{},
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Power Rangers"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Power Rangers"]}]}]}}]},
             
-            "startrek" :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Star Trek"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Star Trek"]}]}]}}],
-                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Star Trek"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Star Trek"]}]}]}}]},
-            
+            "batman"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Batman"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Batman"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Batman","Joker"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Batman"]}]}]}}]},
+                                                                                                                
             "wonka"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Willy Wonka","Wonka"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Willy Wonka","Wonka"]}]}]}}],
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Willy Wonka","Wonka"]},
@@ -254,11 +257,11 @@ KEYWORDS = {"":{},
             "horror"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"genre"   ,"operator":"contains","value":["Horror"]}]}]}}],
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"genre"   ,"operator":"contains","value":["Horror"]}]}]}}]},
             
-            "heros"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Veterans"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Veterans"]},
+            "heros"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Veterans","WWI","WWII","Korean War","Vietnam War","World War I","World War II"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Veterans","WWI","WWII","Korean War","Vietnam War","World War I","World War II"]},
                                                                                                                 {"field":"genre"   ,"operator":"contains","value":["War"]}]}]}}],
-                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Veterans"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Veterans"]},
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Veterans","WWI","WWII","Korean War","Vietnam War","World War I","World War II"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Veterans","WWI","WWII","Korean War","Vietnam War","World War I","World War II"]},
                                                                                                                 {"field":"genre"   ,"operator":"contains","value":["War"]}]}]}}]},
             
             "tardis"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Dr. Who","Doctor Who","Tardis"]},

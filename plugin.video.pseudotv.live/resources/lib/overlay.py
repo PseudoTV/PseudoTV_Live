@@ -41,15 +41,15 @@ from rules     import RulesList
 class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
-        self.sysInfo = kwargs.get('sysInfo',{})
+        self.myPlayer = kwargs.get('player' ,None)
 
 
     def onInit(self):
         try:
-            logo = (self.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
+            logo = (self.myPlayer.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
             self.getControl(40001).setVisibleCondition('[!Player.Playing]')
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
-            self.getControl(40003).setText(LANGUAGE(32104)%(self.sysInfo.get('citem',{}).get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
+            self.getControl(40003).setText(LANGUAGE(32104)%(self.myPlayer.sysInfo.get('citem',{}).get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except Exception as e:
             log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.close()
@@ -113,8 +113,8 @@ class Overlay():
     def __init__(self, jsonRPC, player=None):
         self.jsonRPC      = jsonRPC
         self.player       = player
-        self.resources    = Resources(self.jsonRPC,self.jsonRPC.cache)
-        self.runActions   = RulesList().runActions
+        self.resources    = Resources(self.jsonRPC)
+        self.runActions   = RulesList(self.jsonRPC.cache).runActions
         
         self.window = xbmcgui.Window(12005) 
         self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())

@@ -414,7 +414,7 @@ msgid "TCP Port:"
 msgstr ""
 
 msgctxt "#30099"
-msgid "Servers Added (%s)"
+msgid "Server Added (%s)"
 msgstr ""
 
 msgctxt "#30100"
@@ -646,7 +646,7 @@ msgid "PVR Backend Refresh"
 msgstr ""
 
 msgctxt "#30156"
-msgid "Bonjour announcement on startup"
+msgid "Silence Bonjour announcement"
 msgstr ""
 
 msgctxt "#30157"
@@ -754,7 +754,7 @@ msgid "Channel"
 msgstr ""
 
 msgctxt "#32024"
-msgid "Initializing"
+msgid ""
 msgstr ""
 
 msgctxt "#32025"
@@ -1633,7 +1633,7 @@ msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33121"
-msgid "Group TV shows in blocks. [0 Disabled, 2 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
+msgid "Group TV shows in blocks. [0 Disabled, 3 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
 msgstr ""
 
 msgctxt "#33125"
@@ -1681,7 +1681,7 @@ msgid "Parse Library & Build Channels while playing."
 msgstr ""
 
 msgctxt "#33153"
-msgid "[B]Restart[/B] prompt when media progress above % [0% Disabled, 5% Default]."
+msgid "[B]Restart[/B] prompt when media progress above % [0% Disabled]."
 msgstr ""
 
 msgctxt "#33155"

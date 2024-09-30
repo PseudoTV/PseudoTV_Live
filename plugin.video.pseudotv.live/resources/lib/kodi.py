@@ -133,7 +133,8 @@ def convertString(data):
 class Settings:
     #Kodi often breaks settings API with changes between versions. Stick with core setsettings/getsettings to avoid specifics; that may break.
     def __init__(self):
-        self.cache    = Cache()
+        self.cacheDB  = Cache()
+        self.cache    = Cache(mem_cache=True)
         self.property = Properties()
 
         
@@ -162,7 +163,7 @@ class Settings:
 
         with Builtin().busy_dialog():
             from jsonrpc import JSONRPC
-            jsonRPC = JSONRPC()
+            jsonRPC = JSONRPC(self.cache)
             baseURL = 'pvr://channels/tv/'
             for name in ['%s [All channels]'%(instance), instance, 'All channels']:
                 item = __match(name)
@@ -239,12 +240,7 @@ class Settings:
     
     def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
         return self.cache.get(key, checksum, json_data)
-        
-        
-    def getPropertySetting(self, key):
-        return self.property.getProperty(key)
-    
-    
+
     #SET
     def _setSetting(self, func, key, value):
         try:
@@ -305,11 +301,7 @@ class Settings:
         if force: self.cache.clear(key)
         return self.cache.set(key, value, checksum, life, json_data)
             
-            
-    def setPropertySetting(self, key, value):
-        return self.property.setProperty(key, value)
 
-        
     def getEXTMeta(self, id):
         addon = xbmcaddon.Addon(id)
         properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
@@ -336,7 +328,7 @@ class Settings:
         friendly = self.getCacheSetting('Friendly_Name')
         if not friendly:
             from jsonrpc import JSONRPC
-            jsonRPC  = JSONRPC()
+            jsonRPC  = JSONRPC(self.cache)
             friendly = self.setCacheSetting('Friendly_Name',jsonRPC.getFriendlyName())
             del jsonRPC
         return friendly
@@ -401,7 +393,7 @@ class Settings:
         self.log('setPVRPath, new settings = %s'%(nsettings))
         if self.hasPVRInstance(instance) and not force:
             return self.log('setPVRPath, instance (%s) settings exists.'%(instance))
-        else: return self.chkPluginSettings(PVR_CLIENT_ID,settings,instance,prompt)
+        return self.chkPluginSettings(PVR_CLIENT_ID,settings,instance,prompt)
         
         
     def setPVRRemote(self, host, instance=ADDON_NAME, prompt=False):
@@ -420,7 +412,8 @@ class Settings:
         
         
     def hasPVRInstance(self, instance=ADDON_NAME):
-        return FileAccess.exists(os.path.join(PVR_CLIENT_LOC,'instance-settings-%s.xml'%(self.gePVRInstance(instance))))
+        instancePath = os.path.join(PVR_CLIENT_LOC,'instance-settings-%s.xml'%(self.gePVRInstance(instance)))
+        if FileAccess.exists(instancePath): return instancePath
         
         
     def setPVRInstance(self, instance=ADDON_NAME):
@@ -474,8 +467,9 @@ class Settings:
 
     @cacheit(expiration=datetime.timedelta(minutes=5),json_data=True)
     def getPVRInstanceSettings(self, instance):
-        if self.hasPVRInstance(instance):
-            fle = FileAccess.open(os.path.join(PVR_CLIENT_LOC,'instance-settings-%s.xml'%(self.gePVRInstance(instance))), 'r')
+        instancePath = self.hasPVRInstance(instance)
+        if instancePath:
+            fle = FileAccess.open(instancePath,'r')
             lines = fle.readlines()
             fle.close()
             settings = dict()
@@ -1289,7 +1283,7 @@ class Dialog:
             return params
 
         from jsonrpc import JSONRPC
-        jsonRPC = JSONRPC()
+        jsonRPC = JSONRPC(self.settings.cache)
         try:
             path, params = path.split('?xsp=')
             params = loadJSON(params)

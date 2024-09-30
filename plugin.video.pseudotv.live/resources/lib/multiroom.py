@@ -24,12 +24,10 @@ from server     import Discovery, Announcement
 
 class Service:
     monitor = xbmc.Monitor()
-    jsonRPC = JSONRPC()
+    cache   = SETTINGS.cacheDB
+    jsonRPC = JSONRPC(cache)
     def _interrupt(self, wait: float=.001) -> bool:
         return self.monitor.waitForAbort(wait)
-        
-    def _suspend(self) -> bool:
-        return PROPERTIES.isPendingSuspend()
 
 class Multiroom:
     def __init__(self, sysARG=sys.argv, service=None):
@@ -47,14 +45,14 @@ class Multiroom:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def pairDiscovery(self, wait=DISCOVERY_TIMER, prompt=True):
+    def pairDiscovery(self, wait=DISCOVERY_TIMER, silent=SETTINGS.getSettingBool('Bonjour_Silent')):
         if not PROPERTIES.isRunning('Multiroom'):
             added = False
             with PROPERTIES.setRunning('Multiroom'):
-                self.log('pairDiscovery, wait = %s, prompt = %s'%(wait,prompt))
+                self.log('pairDiscovery, wait = %s, silent = %s'%(wait,silent))
                 sec = 0
-                if prompt: dia = DIALOG.progressBGDialog(message=LANGUAGE(32162)%(wait-sec))
-                else:      dia = None
+                if silent: dia = None
+                else:      dia = DIALOG.progressBGDialog(message=LANGUAGE(32162)%(wait-sec)) 
                 while not self.service.monitor.abortRequested() and (sec < wait):
                     sec += 1  
                     msg = LANGUAGE(32162)%(wait-sec)
@@ -117,9 +115,9 @@ class Multiroom:
 
     def hasServers(self, servers={}):
         if not servers: servers = self.getDiscovery()
-        servers = list(servers.keys())
         self.log('hasServers, servers = %s'%(len(servers)))
-        if len(servers) > 0: SETTINGS.setSetting('Select_server','Found (%s'%(servers))
+        eServers = [v['name'] for v in servers.values() if v['enabled']]
+        SETTINGS.setSetting('Select_server','|'.join(['[COLOR=%s]%s[/COLOR]'%({True:'green',False:'red'}[v.get('online',False)],v['name']) for k, v in servers.items() if v['enabled']]))
         PROPERTIES.setEXTProperty('%s.has.Servers'%(ADDON_ID),str(len(servers) > 0).lower())
 
 
@@ -138,11 +136,10 @@ class Multiroom:
         for server in list(servers.values()):
             server['online'] = True if getURL('http://%s/%s'%(server.get('host'),M3UFLE),header={'Accept': 'text/plain; charset=utf-8'}) else False
             self.log('chkPVRservers, %s online = %s'%(server.get('name'),server['online']))
-            #todo check version, when old trigger update of server info.
-            if SETTINGS.hasPVRInstance(server.get('name')):
-                if server.get('enabled',False): continue
-                else: FileAccess.delete(os.path.join(PVR_CLIENT_LOC,'instance-settings-%s.xml'%(SETTINGS.gePVRInstance(instance))))
-            else: changed = SETTINGS.setPVRRemote(server.get('host'),server.get('name'))
+            #todo check version, when old trigger update of server info
+            instancePath = SETTINGS.hasPVRInstance(server.get('name'))
+            if server.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(server.get('host'),server.get('name'))
+            elif not server.get('enabled',False) and instancePath: FileAccess.delete(instancePath)
         self.setDiscovery(servers)
         return changed
 
@@ -184,12 +181,15 @@ class Multiroom:
             selects = DIALOG.selectDialog(lizlst,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizlst) if loadJSON(listitem.getPath()).get('enabled',False)])
             if not selects is None:
                 for idx, liz in enumerate(lizlst):
+                    instancePath = SETTINGS.hasPVRInstance(liz.getLabel())
                     if idx in selects:
                         if not servers.get(liz.getLabel()).get('enabled',False): DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
                         servers.get(liz.getLabel()).update({'enabled':True})
+                        if not instancePath: SETTINGS.setPVRRemote(servers.get(liz.getLabel()).get('host'),liz.getLabel())
                     else:
                         if servers.get(liz.getLabel()).get('enabled',False): DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
                         servers.get(liz.getLabel()).update({'enabled':False})
+                        if instancePath: FileAccess.delete(instancePath)
                 if self.setDiscovery(servers):
                     return PROPERTIES.setEXTProperty('%s.chkDiscovery'%(ADDON_ID),'true')
 

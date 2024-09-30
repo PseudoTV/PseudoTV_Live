@@ -14,7 +14,7 @@
 					</control>
 				</setting>
 				<setting id="Backup_Channels" type="string" label="32110" help="33110" parent="Select_Channels">
-					<level>1</level>
+					<level>2</level>
 					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -30,7 +30,7 @@
 					</control>
 				</setting>
 				<setting id="Recover_Channels" type="string" label="32107" help="33107" parent="Backup_Channels">
-					<level>1</level>
+					<level>2</level>
 					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -77,7 +77,7 @@
 					</control>
 				</setting>
 				<setting id="iptvsimple" type="action" label="30071" help="">
-					<level>0</level>
+					<level>1</level>
 					<data>Addon.OpenSettings(pvr.iptvsimple)</data>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -105,26 +105,22 @@
                         <close>true</close>
 					</control>
 				</setting>
-                
-                
-                
-                
+                <setting id="Update_Status" type="string" label="32168">
+                    <level>0</level>
+                    <default></default>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition operator="!is" setting="Update_Status">None</condition>
+                        </dependency>
+                    </dependencies>
+                    <control type="button" format="action">
+                        <data></data>
+                    </control>
+                </setting>
 			</group>
-            <setting id="Update_Status" type="string" label="">
-                <level>0</level>
-                <default></default>
-                <constraints>
-                    <allowempty>true</allowempty>
-                </constraints>
-                <dependencies>
-                    <dependency type="enable">
-                        <condition operator="!is" setting="Update_Status"> </condition>
-                    </dependency>
-                </dependencies>
-                <control type="button" format="action">
-                    <data></data>
-                </control>
-            </setting>
         </category>
         
 		<category id="autotune" label="30038" help="33038">
@@ -274,7 +270,7 @@
 					</control>
 				</setting>
 				<setting id="Nearest_Holiday" type="boolean" label="30068" help="33068" parent="Select_Mixed">
-					<level>0</level>
+					<level>2</level>
 					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
@@ -316,7 +312,7 @@
 					</control>
 				</setting>
                 <setting id="Clear_BlackList" type="string" label="30039" help="33039" parent="Select_Services">
-					<level>0</level>
+					<level>2</level>
 					<default/>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -332,7 +328,7 @@
 					</control>
 				</setting>
                 <setting id="Clear_Autotune" type="action" label="30040" help="33040">
-					<level>0</level>
+					<level>2</level>
 					<default/>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -423,7 +419,7 @@
 			</group>               
             <group id="2" label="30011">
                 <setting id="User_Folder" type="path" label="30012" help="33012">
-                    <level>1</level>
+                    <level>2</level>
                     <default>special://profile/addon_data/plugin.video.pseudotv.live/cache</default>
                     <constraints>
                         <sources>
@@ -437,9 +433,9 @@
                 </setting>
 			</group>
 		</category>
-    
-        <category id="tweaks" label="30013" help="">
-            <group id="1" label="30057">
+
+        <category id="globals" label="30041" help="33041">
+			<group id="1" label="30133">
 				<setting id="Playback_Method" type="integer" label="30058" help="33058">
 					<level>1</level>
 					<default>0</default>
@@ -475,39 +471,6 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-			</group>
-			<group id="2" label="30014">
-				<setting id="Min_Days" type="integer" label="30036" help="33036">
-					<level>2</level>
-                    <enable>false</enable>
-					<default>1</default>
-					<constraints>
-						<minimum>1</minimum>
-						<step>1</step>
-						<maximum>3</maximum>
-					</constraints>
-					<control type="slider" format="integer">
-						<popup>false</popup>
-					</control>
-				</setting>
-				<setting id="Max_Days" type="integer" label="30037" help="33036">
-					<level>2</level>
-                    <enable>false</enable>
-					<default>3</default>
-					<constraints>
-						<minimum>1</minimum>
-						<step>1</step>
-						<maximum>31</maximum>
-					</constraints>
-					<control type="slider" format="integer">
-						<popup>false</popup>
-					</control>
-				</setting>
-			</group>
-		</category>
-
-        <category id="globals" label="30041" help="33041">
-			<group id="1" label="30133">
 				<setting id="Disable_Trakt" type="boolean" label="30131" help="33131">
 					<level>1</level>
 					<default>false</default>
@@ -549,10 +512,22 @@
 						<show more="true" details="true">installed</show>
 						<multiselect>true</multiselect>
 					</control>
+				</setting>
+				<setting id="Enable_OnNext" type="boolean" label="30045" help="33045" parent="Enable_Overlay">
+					<level>1</level>
+					<default>true</default>
+                    <dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition operator="is" setting="Enable_Overlay">true</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
 				</setting>     
 				<setting id="Restart_Percentage" type="integer" label="30153" help="33153" parent="Enable_Overlay">
 					<level>1</level>
-					<default>5</default>
+					<default>0</default>
                     <constraints>
                         <minimum>0</minimum>
                         <step>5</step>
@@ -566,18 +541,6 @@
                     <control type="slider" format="percentage">
                         <popup>false</popup>
                     </control>
-				</setting>
-				<setting id="Enable_OnNext" type="boolean" label="30045" help="33045" parent="Enable_Overlay">
-					<level>1</level>
-					<default>true</default>
-                    <dependencies>
-						<dependency type="visible">
-							<and>
-                                <condition operator="is" setting="Enable_Overlay">true</condition>
-                            </and>
-						</dependency>
-					</dependencies>
-					<control type="toggle"/>
 				</setting>
 				<setting id="Enable_ChannelBug" type="boolean" label="30043" help="33043" parent="Enable_Overlay">
 					<level>1</level>
@@ -682,7 +645,7 @@
 					</control>
 				</setting>
 				<setting id="Duration_Type" type="integer" label="30049" help="33049">
-					<level>2</level>
+					<level>3</level>
 					<default>0</default>
 					<constraints>
 						<options>
@@ -719,7 +682,7 @@
 				</setting>
                 <setting id="Enable_Even" type="integer" label="30121" help="33121">
                     <level>1</level>
-                    <default>2</default>
+                    <default>3</default>
                     <constraints>
                         <minimum>0</minimum>
                         <step>1</step>
@@ -729,6 +692,32 @@
                         <popup>false</popup>
                     </control>
                 </setting>
+				<setting id="Min_Days" type="integer" label="30036" help="33036">
+					<level>3</level>
+                    <enable>false</enable>
+					<default>1</default>
+					<constraints>
+						<minimum>1</minimum>
+						<step>1</step>
+						<maximum>3</maximum>
+					</constraints>
+					<control type="slider" format="integer">
+						<popup>false</popup>
+					</control>
+				</setting>
+				<setting id="Max_Days" type="integer" label="30037" help="33036">
+					<level>3</level>
+                    <enable>false</enable>
+					<default>3</default>
+					<constraints>
+						<minimum>1</minimum>
+						<step>1</step>
+						<maximum>31</maximum>
+					</constraints>
+					<control type="slider" format="integer">
+						<popup>false</popup>
+					</control>
+				</setting>
 			</group>
 		</category>
 		<category id="fillers" label="30016" help="33016">
@@ -750,7 +739,7 @@
 					<control type="spinner" format="string"/>
 				</setting>
 				<setting id="Random_Pre_Chance" type="integer" label="30139" help="33134" parent="Enable_Preroll">
-					<level>2</level>
+					<level>3</level>
 					<default>50</default>
 					<constraints>
 						<minimum>0</minimum>
@@ -783,7 +772,7 @@
 					<control type="spinner" format="string"/>
 				</setting>
 				<setting id="Random_Post_Chance" type="integer" label="30134" help="33134" parent="Enable_Postroll">
-					<level>2</level>
+					<level>3</level>
 					<default>50</default>
 					<constraints>
 						<minimum>0</minimum>
@@ -800,7 +789,7 @@
 					</control>
 				</setting>
 				<setting id="Build_Filler_Folders" type="boolean" label="30140" help="33140">
-					<level>1</level>
+					<level>3</level>
 					<default>false</default>
 					<control type="toggle"/>
 					<dependencies>
@@ -863,7 +852,7 @@
 					</control>
 				</setting>
 				<setting id="Include_Adverts_iSpot" type="boolean" label="30136" help="" parent="Resource_Adverts">
-					<level>1</level>
+					<level>2</level>
 					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
@@ -893,7 +882,7 @@
 					</control>
 				</setting>
                 <setting id="Include_Trailers_KODI" type="boolean" label="30126" help="33126" parent="Resource_Trailers">
-					<level>1</level>
+					<level>2</level>
 					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
@@ -903,7 +892,7 @@
 					</dependencies>
 				</setting>
                 <setting id="Include_Trailers_IMDB" type="boolean" label="30125" help="33125" parent="Resource_Trailers">
-					<level>1</level>
+					<level>2</level>
 					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
@@ -993,12 +982,12 @@
 						<heading>30359</heading>
 					</control>
 				</setting>
-                <setting id="Bonjour_Startup" type="boolean" label="30156" help="33156" parent="Bonjour_Status">
+                <setting id="Bonjour_Silent" type="boolean" label="30156" help="33156" parent="Bonjour_Status">
 					<level>1</level>
-					<default>true</default>
+					<default>False</default>
 					<control type="toggle"/>
 				</setting>
-                <setting id="Select_server" type="action" label="32048" help="33048" parent="Bonjour_Status">
+                <setting id="Select_server" type="string" label="32048" help="33048" parent="Bonjour_Status">
 					<level>0</level>
 					<default></default>
 					<constraints>
@@ -1017,8 +1006,8 @@
                         <close>true</close>
 					</control>
 				</setting>
-                <setting id="Remove_server" type="action" label="30046" help="33046" parent="Select_server">
-					<level>0</level>
+                <setting id="Remove_server" type="action" label="30046" help="33046" parent="Bonjour_Status">
+					<level>1</level>
 					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -1055,7 +1044,7 @@
 			</group>
 			<group id="2" label="30072">
 				<setting id="Enable_Debugging" type="boolean" label="30001" help="33001">
-					<level>1</level>
+					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
@@ -1099,7 +1088,7 @@
 					</control>
                 </setting> 
                 <setting id="Run_Logger" type="action" label="30009" help="" parent="Enable_Debugging">
-					<level>1</level>
+					<level>0</level>
 					<default/>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -1162,12 +1151,12 @@
 					<control type="toggle"/>
 				</setting>
                 <setting id="Enable_PVR_RELOAD" type="boolean" label="30155" help="33155" parent="iptvsimple">
-					<level>1</level>
+					<level>3</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
                 <setting id="Apply_PVR_Settings" type="action" label="30074" help="33074" parent="iptvsimple">
-					<level>1</level>
+					<level>3</level>
 					<default/>
 					<constraints>
 						<allowempty>true</allowempty>

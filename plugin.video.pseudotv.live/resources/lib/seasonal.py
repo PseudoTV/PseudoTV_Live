@@ -21,9 +21,6 @@
 from globals     import *
 from seasons     import *
 
-# https://www.holidaysmart.com/holidays/daily/fandom
-# https://www.holidaysmart.com/holidays/daily/tv-movies
-
 FILTER      = {"field":"","operator":"","value":[]}
 SORT        = {"method":"","order":"","ignorearticle":True,"useartistsortname":True}
 KEY_QUERY   = {"method":"","order":"","field":'',"operator":'',"value":[]}

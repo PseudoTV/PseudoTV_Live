@@ -125,7 +125,7 @@ class XMLTVS:
         self.log('loadProgrammes, file = %s'%file)
         try: 
             fle  = FileAccess.open(file, 'r')
-            data = self.sortProgrammes(xmltv.read_programmes(fle) or [])
+            data = (xmltv.read_programmes(fle) or [])
             fle.close()
             return data
         except Exception as e: 
@@ -168,10 +168,10 @@ class XMLTVS:
         if not slug: return items
         channels   = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 32])
         recordings = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 16])
-        if key == 'id':
+        if key == 'id': #stations
             self.log('cleanSelf, slug = %s, key = %s: returning channels = %s, recordings = %s'%(slug,key,len(channels),len(recordings)))
             return self.sortChannels(channels), self.sortChannels(recordings)
-        else:
+        else: #programmes
             programmes = self.cleanProgrammes(channels) + recordings
             self.log('cleanSelf, slug = %s, key = %s: returning programmes = %s'%(slug,key,len(programmes)))
             return self.sortProgrammes(programmes)

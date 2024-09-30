@@ -62,9 +62,7 @@ class CustomQueue:
 
     def __run(self, func, args=(), kwargs=None):
         self.log("__run, func = %s"%(func.__name__))
-        try:
-            if self.service.player.isPlaying(): return func(*args, **kwargs)
-            else:                               return executeit(func)(*args, **kwargs)
+        try: return func(*args, **kwargs)
         except Exception as e: self.log("__run, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
 
                 

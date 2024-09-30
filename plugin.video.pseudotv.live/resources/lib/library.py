@@ -27,28 +27,25 @@ from channels   import Channels
 REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Service:
-    monitor = xbmc.Monitor()
+    monitor = MONITOR
+    cache   = SETTINGS.cacheDB
     from jsonrpc import JSONRPC
-    jsonRPC  = JSONRPC()
+    jsonRPC  = JSONRPC(cache)
     def _interrupt(self, wait: float=.001) -> bool:
         return self.monitor.waitForAbort(wait)
-        
-    def _suspend(self) -> bool:
-        return PROPERTIES.isPendingSuspend()
 
 class Library:
     def __init__(self, service=None):
-        if service is None:
-            service = Service()
+        if service is None: service = Service()
         self.service      = service
         self.parserCount  = 0
         self.parserMSG    = ''
         self.parserDialog = None
-        self.cache        = Cache()
+        self.cache        = service.cache
         self.jsonRPC      = service.jsonRPC
         self.predefined   = Predefined()
         self.channels     = Channels()
-        self.resources    = Resources(self.jsonRPC,self.cache)
+        self.resources    = Resources(self.jsonRPC)
         self.libraryDATA  = getJSON(LIBRARYFLE_DEFAULT)
         self.libraryDATA.update(self._load())
 

@@ -19,7 +19,6 @@
 # -*- coding: utf-8 -*-
 from globals     import *
 from jsonrpc     import JSONRPC
-from infotagger.listitem import ListItemInfoTag
 
 
 class Plugin:
@@ -34,7 +33,7 @@ class Plugin:
     def __init__(self, sysARG=sys.argv, sysInfo={}):
         self.sysARG     = sysARG
         self.sysInfo    = sysInfo
-        self.cache      = Cache(mem_cache=True)
+        self.cache      = SETTINGS.cache
         self.jsonRPC    = JSONRPC(self.cache)
         
         self.pageLimit  = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
@@ -55,7 +54,7 @@ class Plugin:
                 self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
                 self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
 
-            self.sysInfo['duration']  = float(sysInfo.get('duration')  or self.jsonRPC.getRuntime(self.sysInfo['fitem']) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0')
+            self.sysInfo['duration']  = float(sysInfo.get('duration')  or self.jsonRPC._getRuntime(self.sysInfo['fitem']) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')))
         else:
             self.sysInfo['duration']  = float((sysInfo.get('duration') or '-1'))
             
@@ -376,3 +375,7 @@ class Plugin:
         
     def resolveURL(self, found, listitem):
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitem)
+ 
+        
+# if found and listitem.getPath().endswith('.strm'):
+# BUILTIN.executebuiltin('AlarmClock(play,PlayMedia(%s),time,100,true,false)'%(listitem.getPath()))

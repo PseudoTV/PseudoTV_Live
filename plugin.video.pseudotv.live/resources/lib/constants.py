@@ -35,9 +35,10 @@ ADDON_URL           = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
 
 #constants
-OVERLAY_DELAY       = 5   #secs
-DISCOVERY_TIMER     = 60  #secds
-EPOCH_TIMER         = 15  #secs
+OVERLAY_DELAY       = 5     #secs
+DISCOVERY_TIMER     = 60    #secs
+EPOCH_TIMER         = 15    #secs
+EPG_DURATION        = 10800 #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'

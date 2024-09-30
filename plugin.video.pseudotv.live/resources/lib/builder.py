@@ -31,7 +31,6 @@ from seasonal   import Seasonal
 class Builder:
     loopback   = {}
     
-    
     def __init__(self, service=None):
         #global dialog
         self.pDialog    = None
@@ -41,35 +40,34 @@ class Builder:
         self.pErrors    = []
         
         #global rules
+        self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
         self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
         self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
         self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
         self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
-        self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
         self.saveDuration     = SETTINGS.getSettingBool('Store_Duration')
         self.epgArt           = SETTINGS.getSettingInt('EPG_Artwork')
         self.enableGrouping   = SETTINGS.getSettingBool('Enable_Grouping')
+        self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
+        
         self.filters          = {} #{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
         self.sort             = {"ignorearticle":True,"method":"random","order":"ascending","useartistsortname":True}
         self.limits           = {"end":-1,"start":0,"total":0}
+        self.maxDays          = MAX_GUIDEDAYS
+        self.minEPG           = EPG_DURATION
         
-        self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
-
         self.service          = service
-        self.cache            = Cache()
-        self.channels         = Channels()
-        self.rules            = RulesList()
-        self.runActions       = self.rules.runActions
-        
-        self.xmltv            = XMLTVS()
+        self.cache            = service.cache
         self.jsonRPC          = service.jsonRPC
+        self.runActions       = service.player.runActions
+        
+        self.channels         = Channels()
+        self.xmltv            = XMLTVS()
         self.xsp              = XSP()
         self.m3u              = M3U()
-        self.resources        = Resources(self.jsonRPC,self.cache)
+        self.resources        = Resources(self.jsonRPC)
            
-        self.maxDays          = MAX_GUIDEDAYS
-        self.minEPG           = 10800 #Secs., Min. EPG guidedata
         
         self.bctTypes = {"ratings" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
                          "sources" :{"ids":SETTINGS.getSetting('Resource_Ratings').split('|'),"paths":[os.path.join(FILLER_LOC,'Ratings' ,'')]},"items":{}},
@@ -179,32 +177,44 @@ class Builder:
                     'plot'        : (info.get('plot' ,'')        or LANGUAGE(30161)),
                     'genre'       : (info.get('genre','')        or ['Undefined']),
                     'file'        : (info.get('path','')         or '|'.join(citem.get('path'))),
+                    'art'         : (info.get('art','')          or {"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO}),
                     'type'        : type,
                     'duration'    : duration,
                     'start'       : 0,
-                    'stop'        : 0,
-                    'art'         : (info.get('art','') or {"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO})}
+                    'stop'        : 0}
         return [tmpItem.copy() for idx in range(entries)]
 
 
     def addScheduling(self, citem: dict, fileList: list, start: time) -> list:
         self.log("addScheduling; id: %s, fileList = %s, start = %s"%(citem['id'],len(fileList),start))
-        tmpList  = []
+        totDur  = 0
+        tmpList = []
+
         for idx, item in enumerate(self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)):
-            if not item.get('file',''):
-                self.log("addScheduling, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
-                continue
-                
             item["idx"]   = idx
             item['start'] = start
             item['stop']  = start + item['duration']
             start = item['stop']
+            totDur += item['duration']
             tmpList.append(item)
             
+        iters = cycle(fileList) #todo adv. rule and global opt. 
+        while self.service.monitor.abortRequested() and totDur < self.minEPG:
+            if self.service._interrupt(): break
+            else: 
+                idx += 1
+                item = next(iters).copy()
+                item["idx"]   = idx
+                item['start'] = start
+                item['stop']  = start + item['duration']
+                start = item['stop']
+                totDur += item['duration']
+                tmpList.append(item)
+            
         #force removal of channel with no current programmes
-        if len(fileList) > 0:
-            if fileList[-1].get('stop') < getUTCstamp():
-                self.log("addScheduling; id: %s, last stop = %s, returning empty fileList\nNo Current Programs!!"%(citem['id'],fileList[-1].get('stop')))
+        if len(tmpList) > 0:
+            if tmpList[-1].get('stop') < getUTCstamp():
+                self.log("addScheduling; id: %s, last stop = %s, returning empty tmpList\nNo Current Programs!!"%(citem['id'],fileList[-1].get('stop')))
                 tmpList = []
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
