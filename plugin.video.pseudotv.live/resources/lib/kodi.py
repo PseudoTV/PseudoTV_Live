@@ -163,7 +163,7 @@ class Settings:
 
         with Builtin().busy_dialog():
             from jsonrpc import JSONRPC
-            jsonRPC = JSONRPC(self.cache)
+            jsonRPC = JSONRPC()
             baseURL = 'pvr://channels/tv/'
             for name in ['%s [All channels]'%(instance), instance, 'All channels']:
                 item = __match(name)
@@ -328,7 +328,7 @@ class Settings:
         friendly = self.getCacheSetting('Friendly_Name')
         if not friendly:
             from jsonrpc import JSONRPC
-            jsonRPC  = JSONRPC(self.cache)
+            jsonRPC  = JSONRPC()
             friendly = self.setCacheSetting('Friendly_Name',jsonRPC.getFriendlyName())
             del jsonRPC
         return friendly
@@ -1283,7 +1283,7 @@ class Dialog:
             return params
 
         from jsonrpc import JSONRPC
-        jsonRPC = JSONRPC(self.settings.cache)
+        jsonRPC = JSONRPC()
         try:
             path, params = path.split('?xsp=')
             params = loadJSON(params)

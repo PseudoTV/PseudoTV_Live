@@ -217,25 +217,11 @@ def hasAddon(id, install=False, enable=False, force=False, notify=False):
     return False
 
 def openAddonSettings(ctl=(0,1),id=ADDON_ID):
-    ## ctl[0] is the Category (Tab) offset (0=first, 1=second, 2...etc)
-    ## ctl[1] is the Setting (Control) offset (1=first, 2=second, 3...etc)# addonId is the Addon ID
-    ## Example: openAddonSettings((2,3),'plugin.video.name')
-    ## This will open settings dialog focusing on fourth setting (control) inside the third category (tab)
     BUILTIN.executebuiltin('Addon.OpenSettings(%s)'%id)
     xbmc.sleep(100)
-    BUILTIN.executebuiltin('SetFocus(%i)'%(ctl[0]-100))
+    BUILTIN.executebuiltin('SetFocus(%i)'%(ctl[0]-200))
     xbmc.sleep(50)
-    if ctl[1] >= 7: #fix next page focus
-        BUILTIN.executebuiltin('Action(right)')
-        xbmc.sleep(50)
-        for page in range(floor(ctl[1]/7)):
-            BUILTIN.executebuiltin('Action(down)')
-            xbmc.sleep(50)
-        BUILTIN.executebuiltin('Action(left)')
-        xbmc.sleep(50)
-        try:    ctl = (ctl[0],{8:7,11:9}[ctl[1]])
-        except: ctl = (ctl[0],ctl[1] + 1)
-    BUILTIN.executebuiltin('SetFocus(%i)'%(ctl[1]-80))
+    BUILTIN.executebuiltin('SetFocus(%i)'%(ctl[1]-180))
 
 def diffRuntime(dur, roundto=15):
     def ceil_dt(dt, delta):
@@ -307,6 +293,7 @@ def togglePVR(state=True, reverse=False, wait=EPOCH_TIMER):
             log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
             #todo check for open pvr windows, don't toggle when open
             if not BUILTIN.getInfoBool('Playing','Player'):
+                xbmc.sleep(5)
                 isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
                 if (state and isEnabled) or (not state and not isEnabled): return
                 xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
@@ -315,7 +302,7 @@ def togglePVR(state=True, reverse=False, wait=EPOCH_TIMER):
                         timerit(togglePVR)(wait,[not bool(state)])
                         DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
             else: DIALOG.notificationWait(LANGUAGE(30023)%(PVR_CLIENT_NAME))
-
+        
 def isRadio(item):
     if item.get('radio',False) or item.get('type','') == "Music Genres": return True
     for path in item.get('path',[item.get('file','')]):

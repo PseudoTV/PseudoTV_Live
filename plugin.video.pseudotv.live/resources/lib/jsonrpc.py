@@ -21,9 +21,9 @@ from globals     import *
 from videoparser import VideoParser
 
 class JSONRPC:
-    def __init__(self, cache=SETTINGS.cacheDB):
+    def __init__(self):
+        self.cache = SETTINGS.cacheDB
         self.videoParser = VideoParser()
-        self.cache = cache
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

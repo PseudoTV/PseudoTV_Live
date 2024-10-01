@@ -71,10 +71,10 @@ AUTOTUNE_TYPES      = ["Playlists",
                        "Movie Genres",
                        "Movie Studios",
                        "Mixed Genres",
+                       "Music Genres",
                        "Mixed",
                        "Recommended",
-                       "Services",
-                       "Music Genres"]
+                       "Services"]
 
 GROUP_TYPES         = ['Addon', 'Directory', 'TV', 'Movies', 'Music', 'Other', 'PVR', 'Plugin', 'Radio', 'Smartplaylist', 'UPNP', 'IPTV'] + AUTOTUNE_TYPES
 

@@ -208,13 +208,17 @@ class XMLTVS:
 
     def sortChannels(self, channels: list) -> list:
         return sorted(channels, key=itemgetter('display-name'))
-
+        
 
     def sortProgrammes(self, programmes: list) -> list:
-        programmes.sort(key=itemgetter('start'))
-        programmes.sort(key=itemgetter('channel'))
-        self.log('sortProgrammes, programmes = %s'%(len(programmes)))
-        return programmes
+        try:
+            programmes.sort(key=itemgetter('start'))
+            programmes.sort(key=itemgetter('channel'))
+            self.log('sortProgrammes, programmes = %s'%(len(programmes)))
+            return programmes
+        except Exception as e:
+            self.log("sortProgrammes, failed! %s"%(e), xbmc.LOGERROR)
+            return []
 
 
     def getRecordings(self) -> list:

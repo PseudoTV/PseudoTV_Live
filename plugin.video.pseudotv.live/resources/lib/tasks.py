@@ -33,7 +33,6 @@ class Tasks():
     def __init__(self, service=None):
         self.log('__init__')
         self.service     = service
-        self.cache       = service.cache
         self.jsonRPC     = service.jsonRPC
         self.httpServer  = HTTP(service=service)
         self.multiroom   = Multiroom(service=service)

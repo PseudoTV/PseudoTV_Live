@@ -135,7 +135,7 @@ class Utilities:
         if not PROPERTIES.isRunning('OVERLAY_CHANNELBUG_RUNNING'):
             from channelbug import ChannelBug
             channelbug = ChannelBug(CHANNELBUG_XML, ADDON_PATH, "default")
-            SETTINGS.setSetting("Channel_Bug_Position_XY",PROPERTIES.getProperty("Channel_Bug_Position_XY"))
+            SETTINGS.setSetting("Channel_Bug_Position_XY",(PROPERTIES.getProperty("Channel_Bug_Position_XY") or "Auto"))
             del channelbug
 
 
@@ -190,14 +190,13 @@ class Utilities:
             setPendingRestart()
 
 
-    def run(self):  
-        ctl = (7,1) #settings return focus
+    def run(self):
         try:    param = self.sysARG[1]
         except: param = None
         self.log('run, param = %s'%(param))
         
         if param == 'Apply_PVR_Settings':
-            ctl = (7,9)
+            ctl = (6,17)
             with BUILTIN.busy_dialog():
                 from jsonrpc import JSONRPC
                 jsonRPC = JSONRPC()
@@ -209,7 +208,7 @@ class Utilities:
             ctl = (0,1)
             self.openChannelManager()
         elif param.startswith('Move_Channelbug'):
-            ctl = (5,5)
+            ctl = (3,16)
             self.openChannelBug()
         elif param == 'Show_Welcome':
             return self.showWelcome()
@@ -220,6 +219,7 @@ class Utilities:
         elif param == 'User_Groups':
             return self.userGroups()
         elif param == 'Utilities':
+            ctl = (6,1) #settings return focus
             return self.buildMenu()
         return openAddonSettings(ctl)
 

@@ -33,8 +33,8 @@ class Plugin:
     def __init__(self, sysARG=sys.argv, sysInfo={}):
         self.sysARG     = sysARG
         self.sysInfo    = sysInfo
+        self.jsonRPC    = JSONRPC()
         self.cache      = SETTINGS.cache
-        self.jsonRPC    = JSONRPC(self.cache)
         
         self.pageLimit  = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
         self.seekTOL    = SETTINGS.getSettingInt('Seek_Tolerance')
@@ -189,7 +189,7 @@ class Plugin:
         cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s'%(chname,id,radio)))
         cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
         if not cacheResponse:
-            jsonRPC = JSONRPC(self.cache)
+            jsonRPC = JSONRPC()
             pvritem = __match()
             if not pvritem:
                 del jsonRPC
@@ -293,7 +293,7 @@ class Plugin:
             return liz
 
         with BUILTIN.busy_dialog():
-            jsonRPC = JSONRPC(self.cache)
+            jsonRPC = JSONRPC()
             fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])
             del jsonRPC
 

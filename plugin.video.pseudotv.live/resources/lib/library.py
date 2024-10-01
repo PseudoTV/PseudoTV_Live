@@ -28,9 +28,8 @@ REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Service:
     monitor = MONITOR
-    cache   = SETTINGS.cacheDB
     from jsonrpc import JSONRPC
-    jsonRPC  = JSONRPC(cache)
+    jsonRPC  = JSONRPC()
     def _interrupt(self, wait: float=.001) -> bool:
         return self.monitor.waitForAbort(wait)
 
@@ -41,7 +40,7 @@ class Library:
         self.parserCount  = 0
         self.parserMSG    = ''
         self.parserDialog = None
-        self.cache        = service.cache
+        self.cache        = SETTINGS.cacheDB
         self.jsonRPC      = service.jsonRPC
         self.predefined   = Predefined()
         self.channels     = Channels()

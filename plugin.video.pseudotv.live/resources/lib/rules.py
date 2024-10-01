@@ -22,9 +22,8 @@ from seasonal   import Seasonal
 #todo pinlock
 
 class RulesList:
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.log('__init__')
-        self.cache     = cache
         self.ruleList  = [BaseRule(),
                           ShowChannelBug(),
                           ShowOnNext(),
@@ -38,7 +37,7 @@ class RulesList:
                           DurationOptions(),
                           FilterOptions(),
                           ProvisionalRule(),
-                          HandleMethodOrder(self.cache),
+                          HandleMethodOrder(),
                           ForceEpisode(),
                           ForceRandom(),
                           EvenShowsRule()]
@@ -118,7 +117,7 @@ class RulesList:
 class BaseRule:
     dialog = Dialog()
     
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 0
         self.ignore             = False #ignore from manager options, reserved for autotuning.
         self.exclude            = False #applies only to db queries not smartplaylists
@@ -286,7 +285,7 @@ class BaseRule:
                      
 
 class ShowChannelBug(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 1
         self.ignore             = False
         self.exclude            = False
@@ -357,7 +356,7 @@ class ShowChannelBug(BaseRule):
 
 
 class ShowOnNext(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 2
         self.ignore             = False
         self.exclude            = False
@@ -396,7 +395,7 @@ class ShowOnNext(BaseRule):
 
 
 class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize videowindow control
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 3
         self.ignore             = False
         self.exclude            = False
@@ -481,7 +480,7 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
 # Resource_Adverts
   
 class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow control
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 4
         self.ignore             = False
         self.exclude            = False
@@ -544,7 +543,7 @@ class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow cont
         
 
 class DisableOverlay(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 50
         self.ignore             = False
         self.exclude            = False
@@ -584,7 +583,7 @@ class DisableOverlay(BaseRule):
 
 
 class ForceSubtitles(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 51
         self.ignore             = False
         self.exclude            = False
@@ -624,7 +623,7 @@ class ForceSubtitles(BaseRule):
 
 
 class DisableTrakt(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 52
         self.ignore             = False
         self.exclude            = False
@@ -664,7 +663,7 @@ class DisableTrakt(BaseRule):
 
 
 class RollbackPlaycount(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 53
         self.ignore             = False
         self.exclude            = False
@@ -704,7 +703,7 @@ class RollbackPlaycount(BaseRule):
 
 
 class DisableReplay(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 54
         self.ignore             = False
         self.exclude            = False
@@ -743,7 +742,7 @@ class DisableReplay(BaseRule):
 
 
 class DurationOptions(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 500
         self.ignore             = False
         self.exclude            = False
@@ -794,7 +793,7 @@ class DurationOptions(BaseRule):
 
 
 class FilterOptions(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 500
         self.ignore             = False
         self.exclude            = False
@@ -845,7 +844,7 @@ class FilterOptions(BaseRule):
 
 
 class ProvisionalRule(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 800
         self.ignore             = True
         self.exclude            = True
@@ -906,8 +905,7 @@ class ProvisionalRule(BaseRule):
        
        
 class HandleMethodOrder(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
-        self.cache              = cache
+    def __init__(self):
         self.myId               = 950
         self.ignore             = False
         self.exclude            = True
@@ -919,6 +917,7 @@ class HandleMethodOrder(BaseRule):
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(25,525,25)), self.getSort(), self.getOrder(),"",""]
         self.storedValues       = [[],[],[],[],[]]
+        self.cache              = SETTINGS.cacheDB
         
         
     def copy(self):
@@ -931,7 +930,7 @@ class HandleMethodOrder(BaseRule):
 
     def getSort(self):
         from jsonrpc import JSONRPC
-        jsonrpc = JSONRPC(self.cache)
+        jsonrpc = JSONRPC()
         values  = jsonrpc.getEnums("List.Sort",type="method")
         del jsonrpc
         return values
@@ -939,7 +938,7 @@ class HandleMethodOrder(BaseRule):
 
     def getOrder(self):
         from jsonrpc import JSONRPC
-        jsonrpc = JSONRPC(self.cache)
+        jsonrpc = JSONRPC()
         values  = jsonrpc.getEnums("List.Sort",type="order")
         del jsonrpc
         return values
@@ -968,7 +967,7 @@ class HandleMethodOrder(BaseRule):
 
 
 class ForceEpisode(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 998
         self.ignore             = False
         self.exclude            = False
@@ -1037,7 +1036,7 @@ class ForceEpisode(BaseRule):
         
         
 class ForceRandom(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 999
         self.ignore             = False
         self.exclude            = False
@@ -1077,7 +1076,7 @@ class ForceRandom(BaseRule):
         
 
 class EvenShowsRule(BaseRule):
-    def __init__(self, cache=SETTINGS.cache):
+    def __init__(self):
         self.myId               = 1000
         self.ignore             = False
         self.exclude            = False

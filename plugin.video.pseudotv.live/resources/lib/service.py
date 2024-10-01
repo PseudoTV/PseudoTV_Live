@@ -375,8 +375,7 @@ class Service():
     def __init__(self):
         self.log('__init__')
         self.pendingRestart    = False
-        self.cache             = SETTINGS.cache
-        self.jsonRPC           = JSONRPC(cache=SETTINGS.cacheDB)
+        self.jsonRPC           = JSONRPC()
         self.player            = Player(service=self)
         self.monitor           = Monitor(service=self)
         self.tasks             = Tasks(service=self)

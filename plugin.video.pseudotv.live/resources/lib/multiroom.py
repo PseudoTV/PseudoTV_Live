@@ -24,8 +24,7 @@ from server     import Discovery, Announcement
 
 class Service:
     monitor = xbmc.Monitor()
-    cache   = SETTINGS.cacheDB
-    jsonRPC = JSONRPC(cache)
+    jsonRPC = JSONRPC()
     def _interrupt(self, wait: float=.001) -> bool:
         return self.monitor.waitForAbort(wait)
 
@@ -195,20 +194,20 @@ class Multiroom:
 
             
     def run(self):
-        ctl = (7,1) #settings return focus
         try:    param = self.sysARG[1]
         except: param = None
         self.log('run, param = %s'%(param))
         
         if param == 'Select_Server': 
-            ctl = (6,7)
+            ctl = (5,11)
             self.selServer()
         elif param == 'Remove_server': 
-            ctl = (6,6)
+            ctl = (5,12)
             self.delServer()
         elif param == 'Pair_Announcement': 
+            ctl = (5,9)
             with PROPERTIES.suspendActivity():
-                return self.pairAnnouncement(self.getPayload())
+                self.pairAnnouncement(self.getPayload())
         return openAddonSettings(ctl)
 
 

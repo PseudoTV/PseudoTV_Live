@@ -78,8 +78,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.cache        = SETTINGS.cache
             self.channels     = Channels()
             self.eChannels    = self.channels.getChannels() #existing channels
-            self.rules        = RulesList(self.cache)
-            self.jsonRPC      = JSONRPC(self.cache)
+            self.rules        = RulesList()
+            self.jsonRPC      = JSONRPC()
             self.resources    = Resources(self.jsonRPC)
             self.m3u          = M3U()
             self.xmltv        = XMLTVS()

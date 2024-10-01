@@ -114,7 +114,7 @@ class Overlay():
         self.jsonRPC      = jsonRPC
         self.player       = player
         self.resources    = Resources(self.jsonRPC)
-        self.runActions   = RulesList(self.jsonRPC.cache).runActions
+        self.runActions   = RulesList().runActions
         
         self.window = xbmcgui.Window(12005) 
         self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())

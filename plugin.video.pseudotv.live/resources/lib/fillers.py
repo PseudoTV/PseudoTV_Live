@@ -28,10 +28,10 @@ from resources  import Resources
 class Fillers:
     def __init__(self, builder):
         self.builder    = builder
-        self.cache      = builder.cache
         self.jsonRPC    = builder.jsonRPC
         self.runActions = builder.runActions
         self.resources  = Resources(self.jsonRPC)
+        self.cache      = SETTINGS.cacheDB
         self.fillSources()
         #todo create subfolders for template resources. channels & genres: Build_Post_Folders
         

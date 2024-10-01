@@ -57,8 +57,8 @@ class Builder:
         self.maxDays          = MAX_GUIDEDAYS
         self.minEPG           = EPG_DURATION
         
+        self.cache            = SETTINGS.cacheDB
         self.service          = service
-        self.cache            = service.cache
         self.jsonRPC          = service.jsonRPC
         self.runActions       = service.player.runActions
         

@@ -94,7 +94,7 @@ class Backup:
         
         
     def run(self):  
-        ctl = (0,2) #settings return focus
+        ctl = (0,1) #settings return focus
         try:    param = self.sysARG[1]
         except: param = None
         self.log('run, param = %s'%(param))
