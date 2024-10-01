@@ -32,6 +32,7 @@ from server     import HTTP
 class Tasks():
     def __init__(self, service=None):
         self.log('__init__')
+        self.cache       = SETTINGS.cache
         self.service     = service
         self.jsonRPC     = service.jsonRPC
         self.httpServer  = HTTP(service=service)

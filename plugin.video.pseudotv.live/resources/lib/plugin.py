@@ -72,15 +72,15 @@ class Plugin:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO):
+    def quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=BUILTIN.isPlaylistRandom()):
         with BUILTIN.busy_dialog():
             channelPlaylist = xbmc.PlayList(pltype)
             channelPlaylist.clear()
             xbmc.sleep(100) #give channelPlaylist.clear() enough time to clear queue.
             [channelPlaylist.add(liz.getPath(),liz,idx) for idx,liz in enumerate(listitems) if liz.getPath()]
-            while not MONITOR.abortRequested() and channelPlaylist.size() < len(listitems): #lag in playlist que; incomplete playlists can pass to the player. #todo review kodi core.
-                self.log('quePlaylist, waiting to finish playlist que')
-                if MONITOR.waitForAbort(): break
+            self.log('quePlaylist, Playlist size = %s, shuffle = %s'%(channelPlaylist.size(),shuffle))
+            if shuffle: channelPlaylist.shuffle()
+            else:       channelPlaylist.unshuffle()
             return channelPlaylist
 
 
@@ -298,24 +298,17 @@ class Plugin:
             del jsonRPC
 
         if len(fileList) > 0:
-            channelPlaylist = self.quePlaylist(poolit(buildfItem)(randomShuffle(fileList)),pltype=xbmc.PLAYLIST_MUSIC)
-            channelPlaylist.shuffle()
-            self.log('playRadio, Playlist size = %s'%(channelPlaylist.size()))
-            PLAYER.play(channelPlaylist,windowed=True)
-            # BUILTIN.executebuiltin('ReplaceWindow(visualisation)')
-        else: self.resolveURL(False, xbmcgui.ListItem())
+            PLAYER.play(self.quePlaylist(poolit(buildfItem)(randomShuffle(fileList)),pltype=xbmc.PLAYLIST_MUSIC,shuffle=True),windowed=True)
+            BUILTIN.executebuiltin('ReplaceWindow(visualisation)')
+        self.resolveURL(False, xbmcgui.ListItem())
 
 
     def playPlaylist(self, name: str, chid: str):
         self.log('playPlaylist, id = %s'%(chid))
         listitems = self.getPVRItems(name, chid)
         if listitems:
-            channelPlaylist = self.quePlaylist(listitems)
-            self.log('playPlaylist, Playlist size = %s'%(channelPlaylist.size()))
-            if BUILTIN.isPlaylistRandom(): channelPlaylist.unshuffle()
-            PLAYER.play(channelPlaylist,windowed=True)
-            # BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
-        else: self.resolveURL(False, xbmcgui.ListItem())
+            PLAYER.play(self.quePlaylist(listitems),windowed=True)
+        self.resolveURL(False, xbmcgui.ListItem())
 
 
     def playCheck(self, oldInfo: dict={}) -> bool:

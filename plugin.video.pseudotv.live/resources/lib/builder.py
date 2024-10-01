@@ -109,8 +109,8 @@ class Builder:
                 self.log('build, no verified channels found!')
                 return False, False
                 
-            now   = getUTCstamp()
-            start = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour
+            now       = getUTCstamp()
+            start     = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour
             stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
             self.pDialog = DIALOG.progressBGDialog()
             self.completeBuild = True
@@ -126,11 +126,11 @@ class Builder:
                     self.pName  = citem['name']
                     self.pCount = int(idx*100//len(channels))
                     
-                    if stopTimes.get(citem['id'],start) > (now + ((self.maxDays * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
-                    elif stopTimes.get(citem['id']):                                                self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
-                    else:                                                                           self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
+                    if   (stopTimes.get(citem['id']) or start) > (now + ((self.maxDays * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
+                    elif  stopTimes.get(citem['id']):                                                      self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
+                    else:                                                                                  self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
                     
-                    cacheResponse = self.getFileList(citem, now, stopTimes.get(citem['id'],start))# {False:'In-Valid Channel w/o programmes)', True:'Valid Channel that exceeds MAX_DAYS', list:'Valid Channel w/ programmes}
+                    cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel w/o programmes)', True:'Valid Channel that exceeds MAX_DAYS', list:'Valid Channel w/ programmes}
                     if cacheResponse:
                         if self.addChannelStation(citem) and (isinstance(cacheResponse,list) and len(cacheResponse) > 0):
                             updated = self.addChannelProgrammes(citem, cacheResponse) #added xmltv lineup entries.
