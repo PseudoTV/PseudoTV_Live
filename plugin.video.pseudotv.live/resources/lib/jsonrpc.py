@@ -65,7 +65,7 @@ class JSONRPC:
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('setting',''))
         queuePool['params'].reverse() #prioritize setsetting,playcount rollback over duration amendments.
         self.log("queueJSON, queueing = %s\n%s"%(len(queuePool['params']),param))
-        SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True, force=True)
+        SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
 
         
     def cacheJSON(self, param, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, timeout=15):
@@ -520,7 +520,7 @@ class JSONRPC:
         return files
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=5),json_data=False)
+    @cacheit(expiration=datetime.timedelta(seconds=EPOCH_TIMER),json_data=False)
     def getFriendlyName(self):
         with PROPERTIES.suspendActivity():
             fn = self.getSettingValue("services.devicename")

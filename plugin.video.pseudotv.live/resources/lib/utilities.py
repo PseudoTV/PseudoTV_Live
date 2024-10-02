@@ -35,11 +35,10 @@ class Utilities:
             with BUILTIN.busy_dialog():
                 fle   = FileAccess.open(WELCOME_FLE, "r")
                 ftext = fle.read()
-                fsize = fle.size()
                 fle.close()
                 
-            if  SETTINGS.getCacheSetting('showWelcome', checksum=fsize):
-                SETTINGS.setCacheSetting('showWelcome', False, checksum=fsize)
+            if  SETTINGS.getCacheSetting('showWelcome', checksum=len(ftext)):
+                SETTINGS.setCacheSetting('showWelcome', False, checksum=len(ftext))
                 DIALOG.textviewer(ftext.format(addon_name = ADDON_NAME,
                                                pvr_name   = PVR_CLIENT_NAME,
                                                m3u        = M3UFLEPATH.replace('special://profile','.'),

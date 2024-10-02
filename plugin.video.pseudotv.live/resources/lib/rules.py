@@ -367,7 +367,7 @@ class ShowOnNext(BaseRule):
         self.optionDescriptions = [LANGUAGE(30045)]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
         self.selectBoxOptions   = [""]
-        self.storedValues       = [[]]
+        self.storedValues       = [list()]
 
 
     def copy(self):
@@ -594,7 +594,7 @@ class ForceSubtitles(BaseRule):
         self.optionDescriptions = [""]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [""]
-        self.storedValues       = [[]]
+        self.storedValues       = [list()]
 
 
     def copy(self):
@@ -634,7 +634,7 @@ class DisableTrakt(BaseRule):
         self.optionDescriptions = [LANGUAGE(33131)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [""]
-        self.storedValues       = [[]]
+        self.storedValues       = [list()]
 
 
     def copy(self):
@@ -674,7 +674,7 @@ class RollbackPlaycount(BaseRule):
         self.optionDescriptions = [LANGUAGE(33132)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [""]
-        self.storedValues       = [[]]
+        self.storedValues       = [list()]
 
 
     def copy(self):
@@ -855,7 +855,7 @@ class ProvisionalRule(BaseRule):
         self.optionDescriptions = [""]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE]
         self.selectBoxOptions   = [""]
-        self.storedValues       = [[]]
+        self.storedValues       = [list()]
         
 
     def copy(self): 
@@ -900,7 +900,7 @@ class ProvisionalRule(BaseRule):
                                                                                {"field":"episode","operator":"greaterthan","value":"0"}])
                         fileList, dirList = builder.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits=builder.limits, dirItem={}, query=provisional)
                         if len(fileList) > 0: self.storedValues[0].append(fileList)
-                return [_f for _f in self.storedValues.pop(0) if _f]
+                return [fileList for fileList in self.storedValues[0]]
         return parameter
        
        

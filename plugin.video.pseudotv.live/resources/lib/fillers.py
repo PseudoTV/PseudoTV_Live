@@ -88,7 +88,7 @@ class Fillers:
         
         try:
             if path.startswith('resource.'):
-                if   ftype == 'ratings':                return __sortItems(_parseResource(path),'file')
+                if   ftype == 'ratings':                return __sortItems(_parseResource(path))
                 elif ftype == 'bumpers':                return __sortItems(_parseResource(path))
                 elif ftype == 'adverts':                return __sortItems(_parseResource(path))
                 elif ftype == 'trailers':               return __sortItems(_parseResource(path))
@@ -111,6 +111,7 @@ class Fillers:
 
 
     def getSingle(self, type, keys=['resources'], chance=False):
+        self.log('getSingle, type = %s, keys = %s, chance = %s'%(type,keys,chance))
         tmpLST = []
         for key in keys: tmpLST.extend(self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
         if len(tmpLST) > 0: return random.choice(tmpLST)
@@ -124,6 +125,7 @@ class Fillers:
         for key in keys: tmpLST.extend(self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
         if len(tmpLST) > 0: items = setDictLST(random.choices(tmpLST,k=count))
         if len(items) < count and chance: items.extend(self.getMulti(type,count=(count-len(items))))
+        self.log('getMulti, type = %s, keys = %s, count = %s, chance = %s, returning = %s'%(type,keys,count,chance,len(items)))
         return items
     
 
@@ -155,11 +157,11 @@ class Fillers:
                     if not item.get('duration'): continue
                     else:
                         runtime += item.get('duration')
-                        self.log('injectBCTs, adding bumper/ratings %s - %s'%(item.get('file'),item.get('duration')))
+                        self.log('injectBCTs, adding pre-roll %s - %s'%(item.get('file'),item.get('duration')))
                         if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Filling Pre-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
                         item.update({'title':'Pre-Roll','episodetitle':item.get('label'),'genre':['Pre-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
                         nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
-                        
+
                 # original media
                 nfileList.append(fileItem)
                 self.log('injectBCTs, adding media %s - %s'%(fileItem.get('file'),fileItem.get('duration')))
@@ -177,7 +179,7 @@ class Fillers:
 
                 # post roll - adverts/trailers
                 if len(postFileList) > 0:
-                    self.log('injectBCTs, post roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
+                    self.log('injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
                     while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and len(postFileList) > 0 and postFillCount > 0:
                         if self.builder.service._interrupt(): break
                         item = postFileList.pop(0)
@@ -185,7 +187,7 @@ class Fillers:
                         elif postFillRuntime <= 0: break
                         elif postFillRuntime >= item.get('duration'):
                             postFillRuntime -= item.get('duration')
-                            self.log('injectBCTs, post advert/trailer %s - %s'%(item.get('file'),item.get('duration')))
+                            self.log('injectBCTs, post-roll %s - %s'%(item.get('file'),item.get('duration')))
                             if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Filling Post-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
                             item.update({'title':'Post-Roll','episodetitle':item.get('label'),'genre':['Post-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
                             nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])

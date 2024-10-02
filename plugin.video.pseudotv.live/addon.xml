@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.pseudotv.live" version="0.5.4l" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.5.4m" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
         <import addon="pvr.iptvsimple" version="21.8.0"/>
@@ -18,8 +18,6 @@
         <import addon="resource.videos.adverts.pseudotv" optional="true" version="0.0.1"/>
         <import addon="resource.videos.trailers.pseudotv" optional="true" version="0.0.1"/>
         <import addon="resource.videos.ratings.mpaa.classic" optional="true" version="0.0.4"/>
-        <import addon="plugin.video.ispot.tv" optional="true" version="0.0.1"/>
-        <import addon="plugin.video.imdb.trailers" optional="true" version="0.0.1"/>
         <import addon="script.module.youtube.dl"  optional="true" version="23.04.01+matrix.1"/>
         <import addon="script.module.pil" optional="true" version="5.1.0"/>
     </requires>

@@ -662,7 +662,7 @@
 				</setting>
 				<setting id="Enable_Fillers" type="boolean" label="30056" help="33056">
 					<level>1</level>
-					<default>false</default>
+					<default>true</default>
 					<control type="toggle"/>
 				</setting>
 				<setting id="Enable_Extras" type="boolean" label="30053" help="33053">
@@ -762,6 +762,9 @@
 						<options>
 							<option label="30022">-1</option>
 							<option label="30021">0</option>
+							<option label="30026">1</option>
+							<option label="30024">2</option>
+							<option label="30025">3</option>
 						</options>
 					</constraints>
 					<dependencies>
@@ -853,7 +856,7 @@
 				</setting>
 				<setting id="Include_Adverts_iSpot" type="boolean" label="30136" help="" parent="Resource_Adverts">
 					<level>2</level>
-					<default>true</default>
+					<default>false</default>
 					<control type="toggle"/>
 					<dependencies>
 						<dependency type="enable">
@@ -887,16 +890,18 @@
 					<control type="toggle"/>
 					<dependencies>
 						<dependency type="enable">
+                            <condition operator="!is" setting="Enable_Postroll">0</condition>
                             <condition on="property" name="InfoBool">Library.HasContent(Movies)</condition>
 						</dependency>
 					</dependencies>
 				</setting>
                 <setting id="Include_Trailers_IMDB" type="boolean" label="30125" help="33125" parent="Resource_Trailers">
 					<level>2</level>
-					<default>true</default>
+					<default>false</default>
 					<control type="toggle"/>
 					<dependencies>
 						<dependency type="enable">
+                            <condition operator="!is" setting="Enable_Postroll">0</condition>
                             <condition on="property" name="InfoBool">System.HasAddon(plugin.video.imdb.trailers)</condition>
 						</dependency>
 					</dependencies>

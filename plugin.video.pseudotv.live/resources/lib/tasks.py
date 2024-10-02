@@ -148,8 +148,8 @@ class Tasks():
         if ADDON_VERSION < ONLINE_VERSION: 
             update = True
             DIALOG.notificationDialog('%s\nVersion: [B]%s[/B]'%(LANGUAGE(32168),ONLINE_VERSION))
-        elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion') or '0.0.0'):
-            SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
+        elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion', checksum=ADDON_VERSION) or '0.0.0'):
+            SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION, checksum=ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
         SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s Version: [B]%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':'None'}[str(update)])
 
@@ -235,7 +235,7 @@ class Tasks():
     def chkDiscovery(self):
         self.log('chkDiscovery')
         self.multiroom.hasServers()
-        self.multiroom.pairDiscovery()
+        timerit(self.multiroom.pairDiscovery)(1.0)
 
 
     def chkHTTP(self):
@@ -248,12 +248,12 @@ class Tasks():
             with PROPERTIES.setRunning('chkJSONQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
                 params = queuePool.get('params',[])
-                for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
+                for i in list(range(int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))):
                     if   self.service._interrupt(): break
                     elif len(params) > 0: self._que(self.jsonRPC.sendJSON,10,params.pop(0))
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
-                SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True, force=True)
+                SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
 
 
     def runAutoTune(self):

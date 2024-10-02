@@ -238,7 +238,7 @@ class Settings:
         return loadJSON(decodeString(self.getSetting(key)))
     
     
-    def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
+    def getCacheSetting(self, key, checksum=1, json_data=False):
         return self.cache.get(key, checksum, json_data)
 
     #SET
@@ -297,8 +297,7 @@ class Settings:
         return self.setSetting(key,encodeString(dumpJSON(values)))
             
             
-    def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=datetime.timedelta(days=84), json_data=False, force=False):
-        if force: self.cache.clear(key)
+    def setCacheSetting(self, key, value, checksum=1, life=datetime.timedelta(days=84), json_data=False):
         return self.cache.set(key, value, checksum, life, json_data)
             
 
@@ -317,11 +316,11 @@ class Settings:
         
 
     def hasAutotuned(self):
-        return self.getCacheSetting('hasAutotuned', checksum=1)
+        return self.getCacheSetting('hasAutotuned')
         
         
     def setAutotuned(self, state=True):
-        return self.setCacheSetting('hasAutotuned', state, checksum=1)
+        return self.setCacheSetting('hasAutotuned', state)
 
 
     def getFriendlyName(self):

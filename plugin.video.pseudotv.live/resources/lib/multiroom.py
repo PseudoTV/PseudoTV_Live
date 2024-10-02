@@ -115,8 +115,7 @@ class Multiroom:
     def hasServers(self, servers={}):
         if not servers: servers = self.getDiscovery()
         self.log('hasServers, servers = %s'%(len(servers)))
-        eServers = [v['name'] for v in servers.values() if v['enabled']]
-        SETTINGS.setSetting('Select_server','|'.join(['[COLOR=%s]%s[/COLOR]'%({True:'green',False:'red'}[v.get('online',False)],v['name']) for k, v in servers.items() if v['enabled']]))
+        SETTINGS.setSetting('Select_server','|'.join(['[COLOR=%s]%s[/COLOR]'%({True:'green',False:'red'}[v.get('online',False)],v.get('name')) for v in [v for v in servers.values() if v.get('enabled',False)]]))
         PROPERTIES.setEXTProperty('%s.has.Servers'%(ADDON_ID),str(len(servers) > 0).lower())
 
 

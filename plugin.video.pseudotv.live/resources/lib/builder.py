@@ -455,8 +455,8 @@ class Builder:
         citem['logo']  = self.kodiImage(citem['logo'])
         citem['group'] = cleanGroups(citem, self.enableGrouping)
         sitem = self.m3u.getStationItem(citem)
-        self.m3u.addStation(sitem)
-        return self.xmltv.addChannel(sitem)
+        self.xmltv.addChannel(sitem)
+        return self.m3u.addStation(sitem)
         
         
     def addChannelProgrammes(self, citem: dict, fileList: list):
