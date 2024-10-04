@@ -23,7 +23,7 @@ import shutil, subprocess, io
 import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime
-import heapq, requests
+import heapq, requests, pyqrcode
 
 from io               import StringIO, BytesIO
 from threading        import Lock, Thread, Event, Timer, BoundedSemaphore

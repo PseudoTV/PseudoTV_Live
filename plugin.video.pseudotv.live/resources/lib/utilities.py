@@ -23,7 +23,7 @@ from globals import *
 class Utilities:
     def __init__(self, sysARG=sys.argv):
         self.log('__init__, sysARG = %s'%(sysARG))
-        self.sysARG  = sysARG
+        self.sysARG = sysARG
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -92,7 +92,11 @@ class Utilities:
                 fle.close()
             DIALOG.textviewer(txt, heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=90)
         except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
+        
 
+    def qrSupport(self):
+        DIALOG.qrDialog('https://forum.kodi.tv/showthread.php?tid=346803', 'PseudoTV Live Beta Blog, Support & Discussion Thread')
+        
 
     def userGroups(self):
         self.log('userGroups')
@@ -215,6 +219,8 @@ class Utilities:
             return self.showReadme()
         elif param == 'Show_Changelog':
             return self.showChangelog()
+        elif param == 'QR_SUPPORT':
+            return self.qrSupport()
         elif param == 'User_Groups':
             return self.userGroups()
         elif param == 'Utilities':

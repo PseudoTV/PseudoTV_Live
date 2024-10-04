@@ -1126,6 +1126,17 @@
 				</setting>
 			</group>
 			<group id="3" label="30088">
+                <setting id="QR_SUPPORT" type="action" label="30159" help="">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, QR_SUPPORT)</data>
+						<close>true</close>
+					</control>
+                </setting>
                 <setting id="Show_Readme" type="action" label="30089" help="">
 					<level>0</level>
 					<default/>
@@ -1145,7 +1156,7 @@
 					</constraints>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_Changelog)</data>
-						<close>false</close>
+						<close>true</close>
 					</control>
                 </setting>
             </group>

@@ -982,6 +982,39 @@ class Dialog:
             return xbmcgui.Dialog().ok(heading, msg)
 
 
+    def qrDialog(self, url, msg, heading='%s - %s'%(ADDON_NAME,LANGUAGE(30158)), autoclose=AUTOCLOSE_DELAY):
+        class QRCode(xbmcgui.WindowXMLDialog):
+            def __init__(self, *args, **kwargs):
+                self.header    = kwargs["header"]
+                self.image     = kwargs["image"]
+                self.text      = kwargs["text"]
+                self.autoclose = kwargs["atclose"]
+
+
+            def onInit(self):
+                self.getControl(40000).setLabel(self.header)
+                self.getControl(40001).setImage(self.image)
+                self.getControl(40002).setText(self.text)
+                self.getControl(40003).setLabel(LANGUAGE(32062))
+                if self.autoclose > 0: timerit(self.close)(self.autoclose)
+                self.setFocus(self.getControl(40003))
+
+
+            def onClick(self, controlId):
+                if controlId == 40003:
+                    self.close()
+
+        with self.builtin.busy_dialog():
+            imagefile = os.path.join(xbmcvfs.translatePath(TEMP_LOC),'%s.png'%(getMD5(str(url.split('/')[-1]))))
+            if not FileAccess.exists(imagefile):
+                qrIMG = pyqrcode.create(url)
+                qrIMG.png(imagefile, scale=10)
+            
+        qr = QRCode( "plugin.video.pseudotv.live.qrcode.xml" , ADDON_PATH, "default", image=imagefile, text=msg, header=heading, atclose=autoclose)
+        qr.doModal()
+        del qr
+
+        
     def _closeTextViewer(self):
         if self.builtin.getInfoBool('IsActive(textviewer)','Window'):
             self.builtin.executebuiltin('Dialog.Close(textviewer)')

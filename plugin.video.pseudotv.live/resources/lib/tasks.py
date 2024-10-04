@@ -108,7 +108,7 @@ class Tasks():
         self.log('_chkQueTimer')
         self._chkEpochTimer('chkVersion'    , self.chkVersion    , 7200)
         self._chkEpochTimer('chkPVRSettings', self.chkPVRSettings, 900)
-        self._chkEpochTimer('chkPVRservers' , self.chkPVRservers , 900)
+        self._chkEpochTimer('chkPVRservers' , self.chkPVRservers , 300)
         self._chkEpochTimer('chkFiles'      , self.chkFiles      , 300)
         self._chkEpochTimer('chkHTTP'       , self.chkHTTP       , 900)
         self._chkEpochTimer('chkRecommended', self.chkRecommended, 900)
@@ -160,6 +160,7 @@ class Tasks():
         if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels)
         if not FileAccess.exists(LOGO_LOC):   FileAccess.makedirs(LOGO_LOC) #check logo folder
         if not FileAccess.exists(FILLER_LOC): FileAccess.makedirs(FILLER_LOC) #check fillers folder
+        if not FileAccess.exists(TEMP_LOC):   FileAccess.makedirs(TEMP_LOC)
 
 
     def chkPVRRefresh(self):

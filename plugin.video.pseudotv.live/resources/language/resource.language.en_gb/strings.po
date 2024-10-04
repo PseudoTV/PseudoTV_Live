@@ -652,6 +652,15 @@ msgstr ""
 msgctxt "#30157"
 msgid "PVR Settings"
 msgstr ""
+
+msgctxt "#30158"
+msgid "Scan QRCode"
+msgstr ""
+
+msgctxt "#30159"
+msgid "Need Help?"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 

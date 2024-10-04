@@ -154,26 +154,26 @@ class Fillers:
 
                 #pre roll - bumpers/ratings
                 for item in preFileList:
-                    if not item.get('duration'): continue
+                    if (item.get('duration') or 0) == 0: continue
                     else:
                         runtime += item.get('duration')
-                        self.log('injectBCTs, adding pre-roll %s - %s'%(item.get('file'),item.get('duration')))
+                        self.log('injectBCTs, adding pre-roll %s - %s'%(item.get('duration'),item.get('file')))
                         if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Filling Pre-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
                         item.update({'title':'Pre-Roll','episodetitle':item.get('label'),'genre':['Pre-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
                         nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
 
                 # original media
                 nfileList.append(fileItem)
-                self.log('injectBCTs, adding media %s - %s'%(fileItem.get('file'),fileItem.get('duration')))
+                self.log('injectBCTs, adding media %s - %s'%(fileItem.get('duration'),fileItem.get('file')))
                 
                 # post roll
                 postKeys        = [chname, fgenre]
                 postChance      = chanceBool(SETTINGS.getSettingInt('Random_Post_Chance'))
-                postFillRuntime = diffRuntime(runtime) if (self.builder.bctTypes['adverts']['auto'] and self.builder.bctTypes['trailers']['auto']) else (MIN_GUIDEDAYS*3600)
+                postFillRuntime = diffRuntime(runtime) if (self.builder.bctTypes['adverts']['auto'] and self.builder.bctTypes['trailers']['auto']) else EPG_DURATION
                 
                 postFileList    = []
-                if self.builder.bctTypes['adverts'].get('enabled',False)  and chtype not in IGNORE_CHTYPE + MOVIE_CHTYPE: postFileList.extend(self.getMulti('adverts' ,postKeys, PAGE_LIMIT if self.builder.bctTypes['adverts']['auto'] else self.builder.bctTypes['adverts']['max'],postChance))
-                if self.builder.bctTypes['trailers'].get('enabled',False) and chtype not in IGNORE_CHTYPE: postFileList.extend(self.getMulti('trailers',postKeys, PAGE_LIMIT if self.builder.bctTypes['trailers']['auto'] else self.builder.bctTypes['trailers']['max'],postChance))
+                if self.builder.bctTypes['adverts'].get('enabled',False)  and chtype not in IGNORE_CHTYPE + MOVIE_CHTYPE: postFileList.extend(self.getMulti('adverts' ,postKeys, (PAGE_LIMIT * 2) if self.builder.bctTypes['adverts']['auto'] else self.builder.bctTypes['adverts']['max'],postChance))
+                if self.builder.bctTypes['trailers'].get('enabled',False) and chtype not in IGNORE_CHTYPE: postFileList.extend(self.getMulti('trailers',postKeys, (PAGE_LIMIT * 2) if self.builder.bctTypes['trailers']['auto'] else self.builder.bctTypes['trailers']['max'],postChance))
                 postFileList    = randomShuffle(postFileList)
                 postFillCount   = len(postFileList)
 
@@ -183,11 +183,11 @@ class Fillers:
                     while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and len(postFileList) > 0 and postFillCount > 0:
                         if self.builder.service._interrupt(): break
                         item = postFileList.pop(0)
-                        if not item.get('duration'): continue
+                        if (item.get('duration') or 0) == 0: continue
                         elif postFillRuntime <= 0: break
                         elif postFillRuntime >= item.get('duration'):
                             postFillRuntime -= item.get('duration')
-                            self.log('injectBCTs, post-roll %s - %s'%(item.get('file'),item.get('duration')))
+                            self.log('injectBCTs, adding post-roll %s - %s'%(item.get('duration'),item.get('file')))
                             if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Filling Post-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
                             item.update({'title':'Post-Roll','episodetitle':item.get('label'),'genre':['Post-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
                             nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])

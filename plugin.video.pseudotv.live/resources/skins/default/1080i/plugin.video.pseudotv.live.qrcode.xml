@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <defaultcontrol always="true">40003</defaultcontrol>
+    <onload>SetProperty(plugin.video.pseudotv.live.QR_BACKGROUND,true,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.QR_BACKGROUND,false,10000)</onunload> 
+    <controls>
+        <animation type="WindowOpen" reversible="false">
+            <effect type="zoom" start="80" end="100" center="960,540" delay="160" tween="back" time="240" />
+            <effect type="fade" delay="160" end="100" time="240" />
+        </animation>
+        <animation type="WindowClose" reversible="false">
+            <effect type="zoom" start="100" end="80" center="960,540" easing="in" tween="back" time="240" />
+            <effect type="fade" start="100" end="0" time="240" />
+        </animation>
+        <control type="group">
+            <top>270</top>
+            <left>480</left>
+            <width>960</width>
+            <animation type="Visible" reversible="false">
+                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240" />
+                <effect type="fade" delay="160" end="100" time="240" />
+            </animation>
+            <control type="button">
+                <top>80</top>
+                <left>480</left>
+                <width>960</width>
+                <height>540</height>
+                <texturefocus />
+                <texturenofocus />
+                <onclick>Action(close)</onclick>
+            </control>
+            <control type="group">
+                <width>960</width>
+                <height>540</height>
+                <control type="image">
+                    <left>0</left>
+                    <top>0</top>
+                    <right>0</right>
+                    <bottom>0</bottom>
+                    <texture colordiffuse="FF1A2123">colors/white.png</texture>
+                </control>
+                <control type="image">
+                    <left>0</left>
+                    <top>0</top>
+                    <right>0</right>
+                    <height>70</height>
+                    <texture colordiffuse="FF12A0C7" border="2">colors/white70.png</texture>
+                </control>
+                <control type="label" id="40000">
+                    <left>30</left>
+                    <top>0</top>
+                    <right>100</right>
+                    <height>70</height>
+                    <font>font32_title</font>
+                    <label></label>
+                    <aligny>center</aligny>
+                    <shadowcolor>black</shadowcolor>
+                </control>
+                <control type="button" id="22002">
+                    <description>button overlay to avoid closing in dialog area</description>
+                    <left>0</left>
+                    <top>0</top>
+                    <right>0</right>
+                    <bottom>0</bottom>
+                    <texturefocus />
+                    <texturenofocus />
+                    <onclick>noop</onclick>
+                </control>
+                <control type="radiobutton">
+                    <right>10</right>
+                    <top>11</top>
+                    <width>48</width>
+                    <height>48</height>
+                    <radiowidth>48</radiowidth>
+                    <radioheight>48</radioheight>
+                    <texturefocus />
+                    <texturenofocus />
+                    <label></label>
+                    <textureradioofffocus colordiffuse="EEFFFFFF">dialogs/close.png</textureradioofffocus>
+                    <textureradiooffnofocus colordiffuse="EEFFFFFF">special://xbmc/media/vendor_icon.png</textureradiooffnofocus>
+                    <textureradioonfocus colordiffuse="EEFFFFFF">dialogs/close.png</textureradioonfocus>
+                    <textureradioonnofocus colordiffuse="EEFFFFFF">special://xbmc/media/vendor_icon.png</textureradioonnofocus>
+                    <onclick>Action(close)</onclick>
+                    <visible>!Skin.HasSetting(touchmode)</visible>
+                </control>
+                <control type="button">
+                    <right>10</right>
+                    <top>11</top>
+                    <width>48</width>
+                    <height>48</height>
+                    <texturefocus>dialogs/close.png</texturefocus>
+                    <texturenofocus>dialogs/close.png</texturenofocus>
+                    <onclick>Action(close)</onclick>
+                    <visible>Skin.HasSetting(touchmode)</visible>
+                </control>
+            </control>
+            <control type="group" id="3">
+                <control type="image">
+                    <left>200</left>
+                    <top>255</top>
+                    <width>100</width>
+                    <height>100</height>
+                    <aspectratio aligny="center">keep</aspectratio>
+                    <texture colordiffuse="FF000000">dialogs/extendedprogress/loading-back.png</texture>
+                </control>
+                <control type="image">
+                    <left>200</left>
+                    <top>255</top>
+                    <width>100</width>
+                    <height>100</height>
+                    <aspectratio aligny="center">keep</aspectratio>
+                    <texture>dialogs/extendedprogress/loading.png</texture>
+                    <animation effect="rotate" center="auto" start="360" end="0" time="1500" loop="true" condition="true">Conditional</animation>
+                </control>
+                <control type="image" id="40001">
+                    <left>30</left>
+                    <top>85</top>
+                    <width>440</width>
+                    <height>440</height>
+                    <aspectratio aligny="center" align="center">keep</aspectratio>
+                </control>
+                <control type="textbox" id="40002">
+                    <left>510</left>
+                    <top>80</top>
+                    <width>400</width>
+                    <height>375</height>
+                    <font>font12</font>
+                    <align>justify</align>
+                    <aligny>top</aligny>
+                    <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+                </control>
+                <control type="button" id="40003">
+                    <left>660</left>
+                    <top>440</top>
+                    <width>300</width>
+                    <height>100</height>
+                    <label></label>
+                    <font>font25_title</font>
+                    <textoffsetx>20</textoffsetx>
+                    <onclick></onclick>
+                    <align>center</align>
+                    <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
+                    <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
+                </control>
+            </control>
+        </control>
+    </controls>
+</window>
