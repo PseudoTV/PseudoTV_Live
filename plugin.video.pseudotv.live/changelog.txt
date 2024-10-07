@@ -1,4 +1,7 @@
 v.0.5.5
+-Settings reordered and cleaned in preparation for Kodi repository submission. 
+ - Debugging now disabled by default.
+ - Automatic IPTV-Simple PVR Refresh / Configuration disabled by default.
 -Added QR-Code dialog.
 -Updated September/October Seasonal channels.
 -Optimized cache initialization

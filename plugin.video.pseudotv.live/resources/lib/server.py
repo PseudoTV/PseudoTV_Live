@@ -99,6 +99,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     
     def __init__(self, request, client_address, server, monitor):
         self.monitor = monitor
+        self.cache   = SETTINGS.cache
         try: BaseHTTPRequestHandler.__init__(self, request, client_address, server)
         except (IOError, OSError) as e: pass
         
@@ -123,6 +124,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         return out.getvalue()
         
         
+    @cacheit(expiration=datetime.timedelta(minutes=5))
+    def _convert_2_html(self, data):
+        from json2table import convert
+        return convert(data, build_direction="LEFT_TO_RIGHT", table_attributes={"style" : "width:100%", "class" : "table table-striped"})
+        # content = "text/html"
+        # chunk   = self._convert_2_html(SETTINGS.getPayload(inclMeta=True)).encode(encoding=DEFAULT_ENCODING)
+        
+        
     def do_HEAD(self):
         return self._set_headers()
 
@@ -133,7 +142,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         
     def do_GET(self):
         self.log('do_GET, incoming path = %s'%(self.path))
-        if self.path.lower() == '/%s'%(M3UFLE.lower()):
+        if self.path.lower().startswith('/remote.json'):
+            content = "application/json"
+            chunk   = dumpJSON(SETTINGS.getPayload(inclMeta=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
+            self._set_headers(content,chunk)
+            self.log('do_GET, sending = remote payload, size = %s'%(len(chunk)))
+            self.wfile.write(chunk)
+            self.wfile.close()
+            return
+        elif self.path.lower() == '/%s'%(M3UFLE.lower()):
             path    = M3UFLEPATH
             content = "application/vnd.apple.mpegurl"
         elif self.path.lower() == '/%s'%(XMLTVFLE.lower()):
@@ -145,9 +162,6 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif self.path.lower().startswith("/images/"):
             path    = os.path.join(LOGO_LOC,unquoteString(self.path.replace('/images/','')))
             content = mimetypes.guess_type(self.path[1:])[0]
-        # elif self.path.endswith(tuple(VIDEO_EXTS)):
-            # path    = os.path.join(FILLER_LOC,self.path)
-            # content = mimetypes.guess_type(self.path)
         else: self.send_error(404, "Not found")
         
         if FileAccess.exists(path):

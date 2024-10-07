@@ -94,10 +94,11 @@ class JSONRPC:
 
     def walkListDirectory(self, path, exts='', depth=5, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         def _chkfile(path, f):
+            if exts and not f.lower().endswith(tuple(exts)): return
             if chkDuration:
-                if self.getDuration(os.path.join(path,f), accurate=bool(SETTINGS.getSettingInt('Duration_Type'))) == 0: return
-            if appendPath: return os.path.join(path,f).replace('\\','/')
-            else:          return f
+                dur = self.getDuration(os.path.join(path,f), accurate=bool(SETTINGS.getSettingInt('Duration_Type')))
+                if dur == 0: return
+            return {True:os.path.join(path,f).replace('\\','/'),False:f}[appendPath]
             
         def _parseXBT(resource):
             self.log('walkListDirectory, parsing XBT = %s'%(resource))
@@ -106,11 +107,11 @@ class JSONRPC:
 
         walk = dict()
         path = path.replace('\\','/')
-        self.log('walkListDirectory, walking %s, depth = %s'%(path,depth))
         subs, files = self.getListDirectory(path,checksum,expiration)
-        if   len(files) > 0 and TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
-        elif len(files) > 0 and exts:       files = [file for file in files if file.endswith(tuple(exts))]
-        walk.setdefault(path,[]).extend(list([_f for _f in [_chkfile(path, file) for file in files] if _f]))
+        if len(files) > 0 and TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
+        nfiles = [_f for _f in [_chkfile(path, file) for file in files] if _f]
+        self.log('walkListDirectory, walking %s, found = %s, appended = %s, depth = %s, ext = %s'%(path,len(files),len(nfiles),depth,exts))
+        walk.setdefault(path,[]).extend(nfiles)
         
         for sub in subs:
             if depth == 0:break

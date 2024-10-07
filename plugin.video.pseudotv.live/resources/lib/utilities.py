@@ -97,6 +97,10 @@ class Utilities:
     def qrSupport(self):
         DIALOG.qrDialog('https://forum.kodi.tv/showthread.php?tid=346803', 'PseudoTV Live Beta Blog, Support & Discussion Thread')
         
+        
+    def qrRemote(self):
+        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteURL(),REMOTEFLE), 'PseudoTV Live Remote Status')
+        
 
     def userGroups(self):
         self.log('userGroups')
@@ -221,6 +225,8 @@ class Utilities:
             return self.showChangelog()
         elif param == 'QR_SUPPORT':
             return self.qrSupport()
+        elif param == 'QR_REMOTE':
+            return self.qrRemote()
         elif param == 'User_Groups':
             return self.userGroups()
         elif param == 'Utilities':
@@ -230,4 +236,22 @@ class Utilities:
 
 if __name__ == '__main__': Utilities(sys.argv).run()
     
-    
+                    # <setting id="Apply_PVR_Settings" type="action" label="30074" help="33074" parent="IPTV_SIMPLE">
+					# <level>3</level>
+					# <default/>
+					# <constraints>
+						# <allowempty>true</allowempty>
+					# </constraints>
+					# <dependencies>
+						# <dependency type="visible">
+                            # <and>
+                                # <condition on="property" name="InfoBool">System.HasAddon(pvr.iptvsimple)</condition>
+                                # <condition on="property" name="InfoBool">System.AddonIsEnabled(pvr.iptvsimple)</condition>
+                            # </and>
+						# </dependency>
+					# </dependencies>
+					# <control type="button" format="action">
+						# <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Apply_PVR_Settings)</data>
+						# <close>true</close>
+					# </control>
+				# </setting>

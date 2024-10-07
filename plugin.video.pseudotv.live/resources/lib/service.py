@@ -312,12 +312,13 @@ class Monitor(xbmc.Monitor):
 
 
     def triggerSleep(self):
-        conditions = not BUILTIN.isPaused() & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
-        self.log("triggerSleep, conditions = %s"%(conditions))
-        if not conditions: return
-        if self.sleepTimer():
-            self.myService.player.stop()
-            return True
+        if not BUILTIN.isPaused():
+            conditions = self.myService.player.isPlaying() & self.myService.player.isPseudoTV
+            self.log("triggerSleep, conditions = %s"%(conditions))
+            if not conditions: return
+            if self.sleepTimer():
+                self.myService.player.stop()
+                return True
         
         
     def sleepTimer(self):

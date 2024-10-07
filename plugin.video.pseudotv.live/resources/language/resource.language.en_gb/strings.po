@@ -62,7 +62,7 @@ msgid "Options"
 msgstr ""
 
 msgctxt "#30011"
-msgid "[COLOR=red][B]Warning!! [/B]Recommend Flash/SSD users change path to HDD/RAMDISK.[/COLOR]"
+msgid "[COLOR=red][B]Warning!! [/B]It's Recommend Flash/SSD users change path to a HDD or RAMDISK.[/COLOR]"
 msgstr ""
 
 msgctxt "#30012"
@@ -178,7 +178,7 @@ msgid "Clear Recommended Blacklist"
 msgstr ""
 
 msgctxt "#30040"
-msgid "Clear Autotuned Channels"
+msgid "Clear All Autotuned Channels"
 msgstr ""
 
 msgctxt "#30041"
@@ -270,11 +270,11 @@ msgid "Adjust Seek Threshold (Percentage)"
 msgstr ""
 
 msgctxt "#30063"
-msgid "Enable Automatic PVR Grouping"
+msgid "Enable Automatic Guide Grouping"
 msgstr ""
 
 msgctxt "#30064"
-msgid "Enter Custom Channel Groups"
+msgid "Enter Custom Channel Group"
 msgstr ""
 
 msgctxt "#30065"
@@ -314,7 +314,7 @@ msgid ""
 msgstr ""
 
 msgctxt "#30074"
-msgid "Apply Recommended PVR Backend settings."
+msgid "Enable Automatic PVR Configurations"
 msgstr ""
 
 msgctxt "#30075"
@@ -578,7 +578,7 @@ msgid "Random Pre-Roll Filler"
 msgstr ""
 
 msgctxt "#30140"
-msgid "Build Subfolders for Fillers Content"
+msgid "Build Filler Folders"
 msgstr ""
 
 msgctxt "#30141"
@@ -614,7 +614,7 @@ msgid "Select Interval in minutes. [-1 = Indefinitely, 0 = Randomly]"
 msgstr ""
 
 msgctxt "#30149"
-msgid "Enable Automatic PVR Cleaning"
+msgid "Enable Recording Cleanup"
 msgstr ""
 
 msgctxt "#30150"
@@ -642,7 +642,7 @@ msgid "Restart Unavailable..."
 msgstr ""
 
 msgctxt "#30155"
-msgid "PVR Backend Refresh"
+msgid "Enable Automatic PVR Refresh"
 msgstr ""
 
 msgctxt "#30156"
@@ -650,7 +650,7 @@ msgid "Silence Bonjour announcement"
 msgstr ""
 
 msgctxt "#30157"
-msgid "PVR Settings"
+msgid "PVR & Live TV Settings"
 msgstr ""
 
 msgctxt "#30158"
@@ -659,6 +659,30 @@ msgstr ""
 
 msgctxt "#30159"
 msgid "Need Help?"
+msgstr ""
+
+msgctxt "#30160"
+msgid "Editors & Settings"
+msgstr ""
+
+msgctxt "#30161"
+msgid "Manager & Backup"
+msgstr ""
+
+msgctxt "#30162"
+msgid "Miscellaneous Options"
+msgstr ""
+
+msgctxt "#30163"
+msgid "Ratings & Network Bumpers"
+msgstr ""
+
+msgctxt "#30164"
+msgid "Adverts & Trailers"
+msgstr ""
+
+msgctxt "#30165"
+msgid "Instance Status"
 msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins
@@ -1410,6 +1434,10 @@ msgctxt "#32185"
 msgid "Playing VOD:\n%s"
 msgstr ""
 
+msgctxt "#32186"
+msgid "Unable to automatically configure IPTV-Simple, Please check user configurations."
+msgstr ""
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
@@ -1482,7 +1510,7 @@ msgid "Set in Kodi PVR & LiveTV Settings"
 msgstr ""
 
 msgctxt "#33038"
-msgid "If a selection is [COLOR=dimgray][B]dim[/B][/COLOR] either the background task is running or no media found!\nClose settings to resume background tasks."
+msgid "If a selection is [COLOR=dimgray][B]dim[/B][/COLOR] either the background task is running or no media found!\nClose settings to resume background tasks and try again later..."
 msgstr ""
 
 msgctxt "#33039"
@@ -1554,11 +1582,11 @@ msgid "Adjust (by percentage) to ignore loading content near the end of its runt
 msgstr ""
 
 msgctxt "#33063"
-msgid "Group guide data by category."
+msgid "Group PseudoTV Live guide data by category."
 msgstr ""
 
 msgctxt "#33064"
-msgid "Enter custom guide data categories, used by the channel manager."
+msgid "Enter custom guide data categories for use in the channel manager."
 msgstr ""
 
 msgctxt "#33068"
@@ -1569,8 +1597,12 @@ msgctxt "#33070"
 msgid "Allow PseudoTV Live to configure Third-Party plugins (IPTV Simple/IPTV Manager) for optimal usage.\nOptimal changes will be reinforced automatically without a user prompt!"
 msgstr ""
 
+msgctxt "#33071"
+msgid "Open IPTV Simple's settings"
+msgstr ""
+
 msgctxt "#33074"
-msgid "Applying will override select user settings."
+msgid "Automatically configure IPTV-Simple for use with PseudoTV Live [Minimal risk of overriding existing user configurations]."
 msgstr ""
 
 msgctxt "#33078"
@@ -1610,11 +1642,11 @@ msgid "Scan Kodi for Recommended (Supported) Plugins.\nSupport does not imply a 
 msgstr ""
 
 msgctxt "#33107"
-msgid "Create custom channels from Smartplaylists, Nodes, Plugins and more..."
+msgid "Restore the last channel backup."
 msgstr ""
 
 msgctxt "#33109"
-msgid "Adjust delay between JSONRPC requests (in milliseconds) to avoid crashes.\nReducing number improves performance; while adding instability. [1 Default]"
+msgid "Adjust delay between JSONRPC requests (in milliseconds) to avoid crashes.\nIncreading value decreases performance; while adding system stability. [1 Default]"
 msgstr ""
 
 msgctxt "#33110"
@@ -1673,8 +1705,16 @@ msgctxt "#33134"
 msgid "Probability a non-channel specific i.e generic video will be used when no match is found.\n[0% Disabled, 50% Default] [Lower == Less Probable]"
 msgstr ""
 
+msgctxt "#33137"
+msgid "Launch Node Editor"
+msgstr ""
+
+msgctxt "#33138"
+msgid "Open Smartplaylist Editor"
+msgstr ""
+
 msgctxt "#33140"
-msgid "Create local channel & genre subfolders for fillers."
+msgid "Automatically create local channel & genre subfolders for fillers\n./cache/fillers/."
 msgstr ""
 
 msgctxt "#33148"
@@ -1694,7 +1734,11 @@ msgid "[B]Restart[/B] prompt when media progress above % [0% Disabled]."
 msgstr ""
 
 msgctxt "#33155"
-msgid "Force Kodi's PVR Backend to reload after a channel update [May Cause System Instability]."
+msgid "Allow PseudoTV Live to force Kodi's PVR Backend to reload after a channel update [May Cause System Instability]."
+msgstr ""
+
+msgctxt "#33157"
+msgid "Open Kodi's PVR & Live TV settings."
 msgstr ""
 
 msgctxt "#33159"

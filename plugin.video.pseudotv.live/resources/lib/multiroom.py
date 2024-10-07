@@ -85,28 +85,10 @@ class Multiroom:
                     if self.service._interrupt(0.5) or dia is None: break
                 if dia: DIALOG.progressDialog(100,dia)
         else: DIALOG.notificationDialog('Discovery Running, Try again later...')
-    
-    
-    def getPayload(self):
-        def __getSettings():
-            return {'Resource_Logos'    :SETTINGS.getSetting('Resource_Logos'),
-                    'Resource_Bumpers'  :SETTINGS.getSetting('Resource_Bumpers'),
-                    'Resource_Ratings'  :SETTINGS.getSetting('Resource_Ratings'),
-                    'Resource_Adverts'  :SETTINGS.getSetting('Resource_Adverts'),
-                    'Resource_Trailers' :SETTINGS.getSetting('Resource_Trailers')}
-
-        payload = {'id'      :ADDON_ID,
-                   'version' :ADDON_VERSION,
-                   'uuid'    :self.uuid,
-                   'name'    :self.friendly,
-                   'host'    :self.remoteURL,
-                   'settings':__getSettings()}
-        payload['md5'] = getMD5(dumpJSON(payload))
-        return payload
 
 
     def sendResponse(self, payload):
-        npayload = self.getPayload()
+        npayload = SETTINGS.getPayload()
         npayload['received'] = payload.get('host')
         self.log('sendResponse, npayload = %s'%(npayload))
         self.pairAnnouncement(npayload, silent=True, wait=300)
@@ -132,11 +114,12 @@ class Multiroom:
         changed = False
         servers = self.getDiscovery()
         for server in list(servers.values()):
-            server['online'] = True if getURL('http://%s/%s'%(server.get('host'),M3UFLE),header={'Accept': 'text/plain; charset=utf-8'}) else False
-            self.log('chkPVRservers, %s online = %s'%(server.get('name'),server['online']))
-            #todo check version, when old trigger update of server info
+            response = getURL('http://%s/%s'%(server.get('host'),REMOTEFLE),header={'Accept':'application/json'})
+            if response: server.update(loadJSON(response))
+            server['online'] = True if response else False
+            self.log('chkPVRservers, %s online = %s last updated = %s'%(server.get('name'),server['online'],server.get('updated')))
             instancePath = SETTINGS.hasPVRInstance(server.get('name'))
-            if server.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(server.get('host'),server.get('name'))
+            if       server.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(server.get('host'),server.get('name'))
             elif not server.get('enabled',False) and instancePath: FileAccess.delete(instancePath)
         self.setDiscovery(servers)
         return changed
@@ -170,19 +153,25 @@ class Multiroom:
 
     def selServer(self):
         self.log('selServer')
-        def _build(payload):
+        def __chkSettings(settings):
+            for k,v in settings.items():
+                if v.startswith(('resource','plugin')): hasAddon(v,install=True,enable=True)
+
+        def __build(payload):
             return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s'%(payload['host'],{"True":"[COLOR=green]Online[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))]),url=dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
-            lizlst  = poolit(_build)(list(servers.values()))
+            lizlst  = poolit(__build)(list(servers.values()))
             selects = DIALOG.selectDialog(lizlst,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizlst) if loadJSON(listitem.getPath()).get('enabled',False)])
             if not selects is None:
                 for idx, liz in enumerate(lizlst):
                     instancePath = SETTINGS.hasPVRInstance(liz.getLabel())
                     if idx in selects:
-                        if not servers.get(liz.getLabel()).get('enabled',False): DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
-                        servers.get(liz.getLabel()).update({'enabled':True})
+                        if not servers.get(liz.getLabel()).get('enabled',False):
+                            DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
+                            servers.get(liz.getLabel()).update({'enabled':True})
+                            __chkSettings(servers.get(liz.getLabel()).get('settings',{}))
                         if not instancePath: SETTINGS.setPVRRemote(servers.get(liz.getLabel()).get('host'),liz.getLabel())
                     else:
                         if servers.get(liz.getLabel()).get('enabled',False): DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
@@ -206,7 +195,7 @@ class Multiroom:
         elif param == 'Pair_Announcement': 
             ctl = (5,9)
             with PROPERTIES.suspendActivity():
-                self.pairAnnouncement(self.getPayload())
+                self.pairAnnouncement(SETTINGS.getPayload())
         return openAddonSettings(ctl)
 
 

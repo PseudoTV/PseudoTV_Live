@@ -46,6 +46,7 @@ class Library:
         self.channels     = Channels()
         self.resources    = Resources(self.jsonRPC)
         self.libraryDATA  = getJSON(LIBRARYFLE_DEFAULT)
+        self.libraryTEMP  = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
 
         self.enableEvenTV = bool(SETTINGS.getSettingInt('Enable_Even'))
@@ -78,9 +79,10 @@ class Library:
         return self.libraryDATA.get('library',{}).get('Item',{}).copy()
         
         
-    def getLibrary(self, type):
+    def getLibrary(self, type=None):
         self.log('getLibrary, type = %s'%(type))
-        return self.libraryDATA.get('library',{}).get(type,[])
+        if type is None: return self.libraryDATA.get('library',{})
+        else:            return self.libraryDATA.get('library',{}).get(type,[])
         
         
     def setLibrary(self, type, items=[]):

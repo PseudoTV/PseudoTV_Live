@@ -116,8 +116,9 @@ def setJSON(file, data):
 
 def getURL(url, data={}, header=HEADER, json_data=False):
     try:
+        log("Globals: getURL, url = %s"%(url))
         r = requests.get(url, params=data ,headers=HEADER.update(header))
-        log("Globals: getURL, url = %s, status = %s"%(r.url,r.status_code))
+        log("Globals: getURL, status = %s"%(r.status_code))
         if json_data: return r.json()
         else:         return r.text
     except Exception as e: pass

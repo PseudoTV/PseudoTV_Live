@@ -9,7 +9,8 @@
             "settings": {
             },
             "enabled": false,
-            "online": false
+            "online": false,
+            "updated": null
         }
     }
 }

@@ -108,7 +108,7 @@ class Tasks():
         self.log('_chkQueTimer')
         self._chkEpochTimer('chkVersion'    , self.chkVersion    , 7200)
         self._chkEpochTimer('chkPVRSettings', self.chkPVRSettings, 900)
-        self._chkEpochTimer('chkPVRservers' , self.chkPVRservers , 300)
+        self._chkEpochTimer('chkPVRservers' , self.chkPVRservers , 900)
         self._chkEpochTimer('chkFiles'      , self.chkFiles      , 300)
         self._chkEpochTimer('chkHTTP'       , self.chkHTTP       , 900)
         self._chkEpochTimer('chkRecommended', self.chkRecommended, 900)

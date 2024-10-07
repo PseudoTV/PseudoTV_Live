@@ -339,6 +339,43 @@ class Settings:
             uuid = self.setCacheSetting('MY_UUID',genUUID(seed=self.getFriendlyName()))
         return uuid
 
+    
+    @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
+    def getPayload(self, inclMeta: bool=False):
+        self.log("getPayload, inclMeta! %s"%(inclMeta))
+        def __getMeta(payload):
+            try:
+                from channels import Channels
+                from library  import Library
+                from multiroom  import Multiroom
+                payload['urls']     = {'m3u'               :'http://%s/%s'%(payload['host'],M3UFLE),
+                                       'xmltv'             :'http://%s/%s'%(payload['host'],XMLTVFLE),
+                                       'genre'             :'http://%s/%s'%(payload['host'],GENREFLE)}
+                                       
+                payload['settings'] = {'Resource_Logos'    :self.getSetting('Resource_Logos'),
+                                       'Resource_Bumpers'  :self.getSetting('Resource_Bumpers'),
+                                       'Resource_Ratings'  :self.getSetting('Resource_Ratings'),
+                                       'Resource_Adverts'  :self.getSetting('Resource_Adverts'),
+                                       'Resource_Trailers' :self.getSetting('Resource_Trailers')}
+                                       
+                payload['channels'] = Channels().getChannels()
+                payload['library']  = Library().getLibrary()
+                payload['servers']  = Multiroom().getDiscovery()
+            except Exception as e: self.log("getPayload, __getMeta failed! %s"%(e), xbmc.LOGERROR)
+            return payload
+            
+        payload = {'id'      :ADDON_ID,
+                   'version' :ADDON_VERSION,
+                   'uuid'    :self.getMYUUID(),
+                   'name'    :self.getFriendlyName(),
+                   'host'    :self.property.getRemoteURL(),
+                   'remote'  :'http://%s/%s'%(self.property.getRemoteURL(),REMOTEFLE),
+                   'updated' : int(time.time())}
+        
+        if inclMeta: payload = __getMeta(payload)
+        payload['md5'] = getMD5(dumpJSON(payload))
+        return payload
+
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
         return {'kodi_addon_instance_name'      :ADDON_NAME,
@@ -417,7 +454,8 @@ class Settings:
         
     def setPVRInstance(self, instance=ADDON_NAME):
         # todo https://github.com/xbmc/xbmc/pull/23648
-        if not FileAccess.exists(os.path.join(PVR_CLIENT_LOC,'settings.xml')):
+        if   not self.getSettingBool('Enable_PVR_SETTINGS'): Dialog().notificationDialog(LANGUAGE(32186))
+        elif not FileAccess.exists(os.path.join(PVR_CLIENT_LOC,'settings.xml')):
             self.log('setPVRInstance, creating missing default settings.xml')
             return self.chkPluginSettings(PVR_CLIENT_ID,self.IPTV_SIMPLE_SETTINGS(),False)
         else:

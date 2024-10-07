@@ -33,7 +33,6 @@ class Fillers:
         self.resources  = Resources(self.jsonRPC)
         self.cache      = SETTINGS.cacheDB
         self.fillSources()
-        #todo create subfolders for template resources. channels & genres: Build_Post_Folders
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
