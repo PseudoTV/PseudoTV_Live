@@ -86,9 +86,9 @@ class JsonConverter(object):
         """
         html_output = self._table_opening_tag
         if self._build_top_to_bottom:
-            html_output += self._markup_header_row(json_input.keys())
+            html_output += self._markup_header_row(list(json_input.keys()))
             html_output += "<tr>"
-            for value in json_input.values():
+            for value in list(json_input.values()):
                 if isinstance(value, list):
                     # check if all keys in the list are identical
                     # and group all values under a common column
@@ -98,7 +98,7 @@ class JsonConverter(object):
                     html_output += self._markup_table_cell(value)
             html_output += "</tr>"
         else:
-            for key, value in iter(json_input.items()):
+            for key, value in iter(list(json_input.items())):
                 html_output += "<tr><th>{:s}</th>".format(self._markup(key))
                 if isinstance(value, list):
                     html_output += self._maybe_club(value)
@@ -161,7 +161,7 @@ class JsonConverter(object):
         if d is None:
             return ""
 
-        return "".join(" {}=\"{}\"".format(key, value) for key, value in iter(d.items()))
+        return "".join(" {}=\"{}\"".format(key, value) for key, value in iter(list(d.items())))
 
     @staticmethod
     def _list_of_dicts_to_column_headers(list_of_dicts):
@@ -183,9 +183,9 @@ class JsonConverter(object):
         if len(list_of_dicts) < 2 or not all(isinstance(item, dict) for item in list_of_dicts):
             return None
 
-        column_headers = list_of_dicts[0].keys()
+        column_headers = list(list_of_dicts[0].keys())
         for d in list_of_dicts[1:]:
-            if len(d.keys()) != len(column_headers) or not all(header in d for header in column_headers):
+            if len(list(d.keys())) != len(column_headers) or not all(header in d for header in column_headers):
                 return None
         return column_headers
 

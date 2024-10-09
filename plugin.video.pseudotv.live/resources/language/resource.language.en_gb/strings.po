@@ -130,19 +130,19 @@ msgid "Logo Resource"
 msgstr ""
 
 msgctxt "#30028"
-msgid "Ratings"
+msgid "Ratings Resource"
 msgstr ""
 
 msgctxt "#30029"
-msgid "Bumpers"
+msgid "Bumpers Resource"
 msgstr ""
 
 msgctxt "#30030"
-msgid "Adverts"
+msgid "Adverts Resource"
 msgstr ""
 
 msgctxt "#30031"
-msgid "Trailers"
+msgid "Trailers Resource"
 msgstr ""
 
 msgctxt "#30032"
@@ -1287,7 +1287,7 @@ msgid "Please wait for announcements to finish, Try again later..."
 msgstr ""
 
 msgctxt "#32149"
-msgid "[COLOR=orange]Idle[/COLOR]"
+msgid "[COLOR=orange][B]Idle[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32150"
@@ -1323,7 +1323,7 @@ msgid "Pending Changes..."
 msgstr ""
 
 msgctxt "#32158"
-msgid "[COLOR=yellow]Waiting for pairing (%s)[/COLOR]"
+msgid "[COLOR=yellow]Waiting for pairing ([B]%s[/B])[/COLOR]"
 msgstr ""
 
 msgctxt "#32159"
@@ -1762,5 +1762,5 @@ msgid "Force Autotune to run."
 msgstr ""
 
 msgctxt "#33182"
-msgid "When [COLOR=orange]Idle[/COLOR] click to begin beacon; Within 15mins start another Kodi instance w/PseudoTV Live installed\nThe two instances will pair, enabled in Select Server list."
+msgid "When [COLOR=orange][B]Idle[/B][/COLOR] click to begin beacon; Within 15mins start another Kodi instance w/PseudoTV Live installed\nThe two instances will pair, enabled in Select Server list."
 msgstr ""

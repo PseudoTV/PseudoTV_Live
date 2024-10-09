@@ -238,9 +238,11 @@ class Settings:
         return loadJSON(decodeString(self.getSetting(key)))
     
     
-    def getCacheSetting(self, key, checksum=1, json_data=False):
-        return self.cache.get(key, checksum, json_data)
-
+    def getCacheSetting(self, key, checksum=1, json_data=False, revive=True):
+        if revive: return self.setCacheSetting(key, self.cache.get(key, checksum, json_data), checksum, json_data=json_data)
+        else:      return self.cache.get(key, checksum, json_data)
+        
+        
     #SET
     def _setSetting(self, func, key, value):
         try:
@@ -316,6 +318,7 @@ class Settings:
         
 
     def hasAutotuned(self):
+        if self.property.getEXTProperty('%s.has.Channels'%(ADDON_ID)) != "true" and self.property.getEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID)) != "true": return False
         return self.getCacheSetting('hasAutotuned')
         
         
@@ -328,7 +331,7 @@ class Settings:
         if not friendly:
             from jsonrpc import JSONRPC
             jsonRPC  = JSONRPC()
-            friendly = self.setCacheSetting('Friendly_Name',jsonRPC.getFriendlyName())
+            friendly = self.setCacheSetting('Friendly_Name',jsonRPC.InputFriendlyName())
             del jsonRPC
         return friendly
 
@@ -909,12 +912,12 @@ class Builtin:
 
     @contextmanager
     def busy_dialog(self, isPlaying=False):
-        if not self.isBusyDialog() and not isPlaying :
-            self.executebuiltin('ActivateWindow(busydialognocancel)')
-            try: yield
-            finally: self.executebuiltin('Dialog.Close(busydialognocancel)')
-        else: yield
-                   
+        if not self.isBusyDialog() and not isPlaying:
+            xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
+        try: yield
+        finally:
+            xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+       
 
     def getInfoLabel(self, key, param='ListItem', default=''):
         value = (xbmc.getInfoLabel('%s.%s'%(param,key)) or default)
@@ -1026,7 +1029,7 @@ class Dialog:
                 self.header    = kwargs["header"]
                 self.image     = kwargs["image"]
                 self.text      = kwargs["text"]
-                self.autoclose = kwargs["atclose"]
+                self.acThread  = Timer(kwargs["atclose"], self.onClose)
 
 
             def onInit(self):
@@ -1034,20 +1037,32 @@ class Dialog:
                 self.getControl(40001).setImage(self.image)
                 self.getControl(40002).setText(self.text)
                 self.getControl(40003).setLabel(LANGUAGE(32062))
-                if self.autoclose > 0: timerit(self.close)(self.autoclose)
                 self.setFocus(self.getControl(40003))
+                self.acThread.name = "acThread"
+                self.acThread.daemon=True
+                self.acThread.start()
 
 
             def onClick(self, controlId):
                 if controlId == 40003:
-                    self.close()
+                    self.onClose()
+
+
+            def onClose(self):
+                try: 
+                    if self.acThread.is_alive():
+                        self.acThread.cancel()
+                        self.acThread.join()
+                except: pass
+                self.close()
+
 
         with self.builtin.busy_dialog():
-            imagefile = os.path.join(xbmcvfs.translatePath(TEMP_LOC),'%s.png'%(getMD5(str(url.split('/')[-1]))))
+            imagefile = os.path.join(FileAccess.translatePath(TEMP_LOC),'%s.png'%(getMD5(str(url.split('/')[-1]))))
             if not FileAccess.exists(imagefile):
                 qrIMG = pyqrcode.create(url)
                 qrIMG.png(imagefile, scale=10)
-            
+                
         qr = QRCode( "plugin.video.pseudotv.live.qrcode.xml" , ADDON_PATH, "default", image=imagefile, text=msg, header=heading, atclose=autoclose)
         qr.doModal()
         del qr
@@ -1167,49 +1182,49 @@ class Dialog:
         return xbmcgui.Dialog().input(message, default, key, opt, close)
         
 
-    def browseDialog(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', options=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
+    def browseDialog(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', options=[], include=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
+        self.log('browseDialog, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s, options= %s, include= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,options,include))
         def buildMenuItem(option):
             return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=getAbbr(option['label'])))
             
         if prompt: 
-            optTMP = []
-            proOpt = [{"label":"Video Playlists" , "label2":"special://profile/playlists/video/" , "default":"special://profile/playlists/video/" , "mask":".xsp"                            , "type":1    , "multi":False},
-                      {"label":"Music Playlists" , "label2":"special://profile/playlists/music/" , "default":"special://profile/playlists/music/" , "mask":".xsp"                            , "type":1    , "multi":False},
-                      {"label":"Mixed Playlists" , "label2":"special://profile/playlists/mixed/" , "default":"special://profile/playlists/mixed/" , "mask":".xsp"                            , "type":1    , "multi":False},
-                      {"label":"Dynamic Playlist", "label2":"Create Dynamic Smartplaylist"       , "default":""                                   , "mask":""                                , "type":1    , "multi":False},
-                      {"label":"Video"           , "label2":"library://video/"                   , "default":"library://video/"                   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":False},
-                      {"label":"Music"           , "label2":"library://music/"                   , "default":"library://music/"                   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":False},
-                      {"label":"Files"           , "label2":"All Folders & Files"                , "default":""                                   , "mask":mask                              , "type":type , "multi":False},
-                      {"label":"Local"           , "label2":"Local Folders & Files"              , "default":""                                   , "mask":mask                              , "type":type , "multi":False},
-                      {"label":"Network"         , "label2":"Local Drives and Network Share"     , "default":""                                   , "mask":mask                              , "type":type , "multi":False},
-                      {"label":"Pictures"        , "label2":"Picture Sources"                    , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
-                      {"label":"Resources"       , "label2":"Resource Plugins"                   , "default":"resource://"                        , "mask":mask                              , "type":type , "multi":False}
+            proOpt  = [{"label":"Video Playlists" , "label2":"special://profile/playlists/video/" , "default":"special://profile/playlists/video/" , "mask":".xsp"                            , "type":1    , "multi":multi},
+                       {"label":"Music Playlists" , "label2":"special://profile/playlists/music/" , "default":"special://profile/playlists/music/" , "mask":".xsp"                            , "type":1    , "multi":multi},
+                       {"label":"Mixed Playlists" , "label2":"special://profile/playlists/mixed/" , "default":"special://profile/playlists/mixed/" , "mask":".xsp"                            , "type":1    , "multi":multi},
+                       {"label":"Dynamic Playlist", "label2":"Create Dynamic Smartplaylist"       , "default":""                                   , "mask":""                                , "type":1    , "multi":multi},
+                       {"label":"Video"           , "label2":"library://video/"                   , "default":"library://video/"                   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":multi},
+                       {"label":"Music"           , "label2":"library://music/"                   , "default":"library://music/"                   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
+                       {"label":"Files"           , "label2":"All Folders & Files"                , "default":""                                   , "mask":mask                              , "type":type , "multi":multi},
+                       {"label":"Local"           , "label2":"Local Folders & Files"              , "default":""                                   , "mask":mask                              , "type":type , "multi":multi},
+                       {"label":"Network"         , "label2":"Local Drives and Network Share"     , "default":""                                   , "mask":mask                              , "type":type , "multi":multi},
+                       {"label":"Pictures"        , "label2":"Picture Sources"                    , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":multi},
+                       {"label":"Resources"       , "label2":"Resource Plugins"                   , "default":"resource://"                        , "mask":mask                              , "type":type , "multi":multi}
                       ]
 
-            if isinstance(options,list): [optTMP.append(proOpt[idx]) for idx in options]
-            else: optTMP = proOpt
+            if isinstance(include,list): [options.append(proOpt[idx]) for idx in include]
+            elif len(options) > 0: options.extend(proOpt)
+            else: options = proOpt
                 
             if default:
                 default, file = os.path.split(default)
                 if file: type = 1
                 else:    type = 0
-                optTMP.insert(0,{"label":"Current Path", "label2":default, "default":default , "mask":mask, "type":type, "multi":multi})
+                options.insert(0,{"label":"Current Path", "label2":default, "default":default , "mask":mask, "type":type, "multi":multi})
                    
             with self.builtin.busy_dialog():
-                lizLST = poolit(buildMenuItem)(optTMP)
+                lizLST = poolit(buildMenuItem)(options)
                 
             select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
-            if   optTMP[select].get('label') == "Dynamic Playlist": return self.buildDXSP(default)
-            elif optTMP[select].get('label') == "Resource Plugins": return self.buildResource(default, mask)
+            if   options[select].get('label') == "Dynamic Playlist": return self.buildDXSP(default)
+            elif options[select].get('label') == "Resource Plugins": return self.buildResource(default, mask)
             elif select is not None:
-                shares    = optTMP[select]['label'].lower().replace("network","")
-                mask      = optTMP[select]['mask']
-                type      = optTMP[select]['type']
-                multi     = optTMP[select]['multi']
-                default   = optTMP[select]['default']
+                shares    = options[select]['label'].lower().replace("network","")
+                mask      = options[select]['mask']
+                type      = options[select]['type']
+                multi     = options[select]['multi']
+                default   = options[select]['default']
             else: return
-                
-        self.log('browseDialog, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s'%(type, heading, shares, useThumbs, treatAsFolder, default, mask))
+            
         if monitor: self.toggleInfoMonitor(True)
         if multi == True:
             ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4

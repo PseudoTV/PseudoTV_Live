@@ -13,13 +13,13 @@
             <effect type="fade" start="100" end="0" time="240" />
         </animation>
         <control type="group">
-            <top>270</top>
-            <left>480</left>
-            <width>960</width>
             <animation type="Visible" reversible="false">
                 <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240" />
                 <effect type="fade" delay="160" end="100" time="240" />
             </animation>
+            <top>270</top>
+            <left>480</left>
+            <width>960</width>
             <control type="button">
                 <top>80</top>
                 <left>480</left>

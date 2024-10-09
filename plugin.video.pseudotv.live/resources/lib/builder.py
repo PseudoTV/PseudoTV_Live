@@ -383,7 +383,7 @@ class Builder:
                             item['art']  = (item.get('art',{}) or dirItem.get('art',{}))
                             item.get('art',{})['icon'] = citem['logo']
                             
-                            if item.get('trailer') and self.bctTypes['trailers'].get('enabled',False) and self.bctTypes['trailers'].get('incKODI',False):
+                            if item.get('trailer') and self.bctTypes['trailers'].get('enabled',False):
                                 titem = item.copy()
                                 tdur  = self.jsonRPC.getDuration(titem.get('trailer'), accurate=True, save=False)
                                 if tdur > 0:

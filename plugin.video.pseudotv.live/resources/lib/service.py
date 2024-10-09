@@ -69,13 +69,13 @@ class Player(xbmc.Player):
 
     def onAVChange(self):
         self.log('onAVChange')
+        self.isIdle = self.myService.monitor.chkIdle()
         if self.isPseudoTV:
             self.lastSubState      = BUILTIN.isSubtitle()
             self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
             self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')#todo adv. rule opt
             self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
             self.saveDuration      = SETTINGS.getSettingBool('Store_Duration')
-            self.isIdle            = self.myService.monitor.chkIdle()
             
         
     def onAVStarted(self):
@@ -282,7 +282,7 @@ class Monitor(xbmc.Monitor):
     def getIdle(self):
         try: idleTime = (int(xbmc.getGlobalIdleTime()) or 0)
         except: #Kodi raises error after sleep.
-            self.log('getIdleTime, Kodi waking up from sleep...')
+            self.log('getIdle, Kodi waking up from sleep...')
             idleTime = 0
         idleState = (idleTime > OVERLAY_DELAY)
         return idleState, idleTime

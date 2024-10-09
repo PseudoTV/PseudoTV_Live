@@ -4,7 +4,19 @@
     <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_CHANNELBUG_RUNNING,true,10000)</onload>
     <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_CHANNELBUG_RUNNING,false,10000)</onunload> 
     <controls>
+        <animation type="WindowOpen" reversible="false">
+            <effect type="zoom" start="80" end="100" center="960,540" delay="160" tween="back" time="240" />
+            <effect type="fade" delay="160" end="100" time="240" />
+        </animation>
+        <animation type="WindowClose" reversible="false">
+            <effect type="zoom" start="100" end="80" center="960,540" easing="in" tween="back" time="240" />
+            <effect type="fade" start="100" end="0" time="240" />
+        </animation>
         <control type="group" id="40000">
+            <animation type="Visible" reversible="false">
+                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240" />
+                <effect type="fade" delay="160" end="100" time="240" />
+            </animation>
             <posx>0</posx>
             <posy>0</posy>
             <control type="image"> 
@@ -29,33 +41,33 @@
                 <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
                 <texture>backgrounds/ratio.png</texture>
             </control>
-        </control>
-        <control type="grouplist" id="40002">
-            <left>200</left>
-            <bottom>35</bottom>
-            <width>1000</width>
-            <height>80</height>
-            <itemgap>10</itemgap>
-            <orientation>horizontal</orientation>
-            <visible>true</visible>
-            <animation effect="fade" start="100" end="0" time="12000">WindowOpen</animation>
-            <control type="image">
-                <width>50</width> 
-                <height>80</height> 
-                <align>left</align>
-                <aligny>center</aligny>
-                <texture>buttons/dpad.png</texture>
-                <aspectratio scalediffuse="false">keep</aspectratio>
-            </control>
-            <control type="label">
-                <align>left</align>
-                <aligny>center</aligny>
-                <width>auto</width>
+            <control type="grouplist" id="40002">
+                <left>200</left>
+                <bottom>35</bottom>
+                <width>1000</width>
                 <height>80</height>
-                <font>font32_title</font>
-                <textcolor>ffffffff</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <label>Move logo into position.[CR]Back/Enter/Select to save.</label>
+                <itemgap>10</itemgap>
+                <orientation>horizontal</orientation>
+                <visible>true</visible>
+                <animation effect="fade" start="100" end="0" time="12000">WindowOpen</animation>
+                <control type="image">
+                    <width>50</width> 
+                    <height>80</height> 
+                    <align>left</align>
+                    <aligny>center</aligny>
+                    <texture>buttons/dpad.png</texture>
+                    <aspectratio scalediffuse="false">keep</aspectratio>
+                </control>
+                <control type="label">
+                    <align>left</align>
+                    <aligny>center</aligny>
+                    <width>auto</width>
+                    <height>80</height>
+                    <font>font32_title</font>
+                    <textcolor>ffffffff</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <label>Move logo into position.[CR]Back/Enter/Select to save.</label>
+                </control>
             </control>
         </control>
     </controls>

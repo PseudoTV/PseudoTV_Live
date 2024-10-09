@@ -142,48 +142,55 @@ class RequestHandler(BaseHTTPRequestHandler):
         
     def do_GET(self):
         self.log('do_GET, incoming path = %s'%(self.path))
-        if self.path.lower().startswith('/remote.json'):
-            content = "application/json"
-            chunk   = dumpJSON(SETTINGS.getPayload(inclMeta=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
-            self._set_headers(content,chunk)
-            self.log('do_GET, sending = remote payload, size = %s'%(len(chunk)))
-            self.wfile.write(chunk)
-            self.wfile.close()
-            return
+        if self.path.lower().startswith('/remote'):
+            path = self.path.lower()
+            if self.path.lower().endswith('.json'):
+                content = "application/json"
+                chunk   = dumpJSON(SETTINGS.getPayload(inclMeta=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
+            elif self.path.lower().endswith('.html'):
+                from json2table import convert
+                content = "text/html"
+                chunk = convert(SETTINGS.getPayload(inclMeta=True),build_direction="LEFT_TO_RIGHT",table_attributes={"style":"width:25%","class":"table-dark"}).encode(encoding=DEFAULT_ENCODING)
+            else: self.send_error(404, "Not found")
         elif self.path.lower() == '/%s'%(M3UFLE.lower()):
-            path    = M3UFLEPATH
             content = "application/vnd.apple.mpegurl"
+            path    = M3UFLEPATH
         elif self.path.lower() == '/%s'%(XMLTVFLE.lower()):
-            path    = XMLTVFLEPATH
             content = "text/xml"
+            path    = XMLTVFLEPATH
         elif self.path.lower() == '/%s'%(GENREFLE.lower()):
-            path    = GENREFLEPATH
             content = "text/plain"
+            path    = GENREFLEPATH
         elif self.path.lower().startswith("/images/"):
             path    = os.path.join(LOGO_LOC,unquoteString(self.path.replace('/images/','')))
             content = mimetypes.guess_type(self.path[1:])[0]
         else: self.send_error(404, "Not found")
-        
-        if FileAccess.exists(path):
+
+        if not path: return
+        elif path.endswith(('.json','.html')):
             self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
+            self._set_headers(content,chunk)
+            self.log('do_GET, sending = remote payload, size = %s'%(len(chunk)))
+            self.wfile.write(chunk)
+            self.wfile.close()
+        elif FileAccess.exists(path):
             if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
                 self.log('do_GET, sending = %s'%(path))
-                with FileLock():
-                    fle  = FileAccess.open(path, "r")
-                    if 'gzip' in self.headers.get('accept-encoding'):
-                        self.log('do_GET, gzip compressing')
-                        data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
-                        self._set_headers(content,data,True)
-                        self.wfile.write(data)
-                    else:
-                        self._set_headers(content)
-                        while not self.monitor.abortRequested():
-                            chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                            if not chunk or self.monitor.myService._interrupt(.001): break
-                            self.send_header('content-length', len(content))
-                            self.wfile.write(chunk)
-                    self.wfile.close()
-                    fle.close()
+                fle = FileAccess.open(path, "r")
+                if 'gzip' in self.headers.get('accept-encoding'):
+                    self.log('do_GET, gzip compressing')
+                    data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
+                    self._set_headers(content,data,True)
+                    self.wfile.write(data)
+                else:
+                    self._set_headers(content)
+                    while not self.monitor.abortRequested():
+                        chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
+                        if not chunk or self.monitor.myService._interrupt(.001): break
+                        self.send_header('content-length', len(content))
+                        self.wfile.write(chunk)
+                self.wfile.close()
+                fle.close()
             elif self.path.lower().startswith("/images/"):
                 fle   = FileAccess.open(path, "rb")
                 chunk = fle.readBytes()
@@ -254,7 +261,7 @@ class HTTP:
                 self._httpd_thread = Thread(target=self._server.serve_forever)
                 self._httpd_thread.daemon=True
                 self._httpd_thread.start()
-            SETTINGS.setSetting('Remote_Status',{'True':'[COLOR=green]Online[/COLOR]','False':'[COLOR=red]Offline[/COLOR]'}[str(self.isRunning)])
+            SETTINGS.setSetting('Remote_Status',{'True':'[COLOR=green][B]Online[/B][/COLOR]','False':'[COLOR=red][B]Offline[/B][/COLOR]'}[str(self.isRunning)])
         except Exception as e: 
             self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
         

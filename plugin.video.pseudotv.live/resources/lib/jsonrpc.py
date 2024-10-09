@@ -353,15 +353,13 @@ class JSONRPC:
                  'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
                  'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}}}
         try:
-            if 'type' in item:
-                params = param[item['type']]
-                if -1 in params: raise Exception('no dbid found')
-                elif params:
-                    if   duration == 0: param['params'].pop('resume')
-                    elif runtime  == 0: param['params'].pop('runtime')
-                    id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
-                    self.log('queDuration, id = %s, media = %s, duration = %s, runtime = %s'%(id,item['type'],duration,runtime))
-                    self.queueJSON(params)
+            params = param.get(item.get('type'))
+            if params:
+                if   duration == 0: param['params'].pop('resume')
+                elif runtime  == 0: param['params'].pop('runtime')
+                id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
+                self.log('queDuration, id = %s, media = %s, duration = %s, runtime = %s'%(id,item['type'],duration,runtime))
+                self.queueJSON(params)
         except Exception as e: self.log("queDuration, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
         
         
@@ -377,9 +375,8 @@ class JSONRPC:
                  'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}}}
         try:
             if not item.get('file','').startswith(tuple(VFS_TYPES)):
-                params = param[item['type']]
-                if -1 in params: raise Exception('no dbid found')
-                elif params:
+                params = param.get(item.get('type'))
+                if params:
                     id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
                     self.log('quePlaycount, id = %s, media = %s, playcount = %s, resume = %s'%(id,item['type'],item.get('playcount',0),item.get('resume',{})))
                     self.queueJSON(params)
@@ -522,18 +519,18 @@ class JSONRPC:
 
 
     @cacheit(expiration=datetime.timedelta(seconds=EPOCH_TIMER),json_data=False)
-    def getFriendlyName(self):
+    def InputFriendlyName(self):
         with PROPERTIES.suspendActivity():
             fn = self.getSettingValue("services.devicename")
-            self.log("getFriendlyName, name = %s"%(fn))
+            self.log("InputFriendlyName, name = %s"%(fn))
             if not fn or fn.lower() == 'kodi':
                 if DIALOG.okDialog(LANGUAGE(32132)%(fn)):
                     input = DIALOG.inputDialog(LANGUAGE(30122), fn)
                     if not input or input.lower() == 'kodi':
-                        return self.getFriendlyName()
+                        return self.InputFriendlyName()
                     else:
                         self.setSettingValue("services.devicename",input)
-                        self.log('getFriendlyName, setting device name = %s'%(input))
+                        self.log('InputFriendlyName, setting device name = %s'%(input))
                         return input
             return fn
             

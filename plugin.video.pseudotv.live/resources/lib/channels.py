@@ -113,7 +113,7 @@ class Channels:
     
     
     def addChannel(self, citem: dict={}) -> bool:
-        idx, channel   = self.findChannel(citem)
+        idx, channel = self.findChannel(citem)
         if idx is not None:
             for key in ['id','rules','number','favorite','logo']: 
                 if channel.get(key): citem[key] = channel[key] # existing id found, reuse channel meta.

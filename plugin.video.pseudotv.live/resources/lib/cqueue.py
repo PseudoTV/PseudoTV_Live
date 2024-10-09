@@ -62,7 +62,8 @@ class CustomQueue:
 
     def __run(self, func, args=(), kwargs=None):
         self.log("__run, func = %s"%(func.__name__))
-        try: return func(*args, **kwargs)
+        try: return executeit(func)(*args, **kwargs)
+            #return func(*args, **kwargs)
         except Exception as e: self.log("__run, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
 
                 
@@ -72,6 +73,7 @@ class CustomQueue:
             if epackage == package[2]:
                 if epriority <= package[1]: return True
                 else:
+                    self.log("__exists, pop func = %s"%(epackage[0].__name__))
                     self.min_heap.pop(idx)
                     return False
         return False
@@ -81,7 +83,7 @@ class CustomQueue:
         self.log("_push, func = %s"%(package[0].__name__))
         node = LlNode(package, priority, delay)
         if self.__exists((1,priority,package)):
-            self.log("_push, exists... ignoring package")
+            self.log("_push, %s exists; ignoring package"%(package[2]))
             return
         elif self.priority:
             self.qsize += 1
@@ -114,11 +116,10 @@ class CustomQueue:
                     self.log("__pop, The queue is empty!")
                     break
                     
-                if self.priority:
+                elif self.priority:
                     if not self.min_heap:
                         self.log("__pop, The priority queue is empty!")
                         break
-                        
                     min_num, _, package = heapq.heappop(self.min_heap)
                     self.qsize -= 1
                     self.__run(*package)
@@ -135,8 +136,7 @@ class CustomQueue:
                     if self.fifo: self.head = next_node
                     else:         self.tail = next_node
                     
-                    if not self.delay:
-                        package, self.__run(*package)
+                    if not self.delay: package, self.__run(*package)
                     else:
                         popTimer = Timer(curr_node.wait, *package)
                         if popTimer.is_alive(): popTimer.join()

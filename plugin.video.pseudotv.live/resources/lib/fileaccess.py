@@ -50,6 +50,7 @@ class FileAccess:
 
     @staticmethod
     def translatePath(path):
+        if '@' in path: path = path.split('@')[1]
         return xbmcvfs.translatePath(path)
 
 

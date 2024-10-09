@@ -99,7 +99,7 @@ class Utilities:
         
         
     def qrRemote(self):
-        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteURL(),REMOTEFLE), 'PseudoTV Live Remote Status')
+        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteURL(),'remote.html'), 'PseudoTV Live Remote Status')
         
 
     def userGroups(self):
@@ -207,7 +207,7 @@ class Utilities:
             with BUILTIN.busy_dialog():
                 from jsonrpc import JSONRPC
                 jsonRPC = JSONRPC()
-                if SETTINGS.setPVRPath(USER_LOC,validString(SETTINGS.getFriendlyName()),prompt=True,force=True):
+                if SETTINGS.setPVRPath(USER_LOC,SETTINGS.getFriendlyName(),prompt=True,force=True):
                     DIALOG.notificationDialog(LANGUAGE(32152))
                 else: DIALOG.notificationDialog(LANGUAGE(32165))
                 del jsonRPC

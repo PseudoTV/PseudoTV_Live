@@ -101,7 +101,7 @@ class Tasks():
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
             if not SETTINGS.hasPVRInstance():
                 with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
-                    SETTINGS.setPVRPath(USER_LOC, validString(SETTINGS.getFriendlyName()))
+                    SETTINGS.setPVRPath(USER_LOC, SETTINGS.getFriendlyName())
         
 
     def _chkQueTimer(self):
@@ -213,6 +213,7 @@ class Tasks():
                 if PROPERTIES.hasFirstrun(): self._que(self.chkChannels,2)
             else: 
                 self.service.currentChannels = list(channels)
+                PROPERTIES.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(len(self.service.currentChannels) > 0).lower())
                 if updated: PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
             if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
         except Exception as e:

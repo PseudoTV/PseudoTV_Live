@@ -97,8 +97,9 @@ class Multiroom:
     def hasServers(self, servers={}):
         if not servers: servers = self.getDiscovery()
         self.log('hasServers, servers = %s'%(len(servers)))
-        SETTINGS.setSetting('Select_server','|'.join(['[COLOR=%s]%s[/COLOR]'%({True:'green',False:'red'}[v.get('online',False)],v.get('name')) for v in [v for v in servers.values() if v.get('enabled',False)]]))
+        SETTINGS.setSetting('Select_server','|'.join(['[COLOR=%s][B]%s[/B][/COLOR]'%({True:'green',False:'red'}[v.get('online',False)],v.get('name')) for v in [v for v in list(servers.values()) if v.get('enabled',False)]]))
         PROPERTIES.setEXTProperty('%s.has.Servers'%(ADDON_ID),str(len(servers) > 0).lower())
+        PROPERTIES.setEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),str(len([v for v in list(servers.values()) if v.get('enabled',False)]) > 0).lower())
 
 
     def getDiscovery(self):
@@ -139,46 +140,49 @@ class Multiroom:
     def delServer(self):
         self.log('delServer')
         def _build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s'%(payload['host'],{"True":"[COLOR=green]Online[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))]),url=dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload['name'],'[B]%s[/B] - %s: Channels (%s)'%({"True":"[COLOR=green]Online[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
             lizlst  = poolit(_build)(list(servers.values()))
-            selects = DIALOG.selectDialog(lizlst,LANGUAGE(32183))
-            if not selects is None:
-                [servers.pop(liz.getLabel()) for idx, liz in enumerate(lizlst) if idx in selects]
-                if self.setDiscovery(servers):
-                    return DIALOG.notificationDialog(LANGUAGE(30046))
+
+        selects = DIALOG.selectDialog(lizlst,LANGUAGE(32183))
+        if not selects is None:
+            [servers.pop(liz.getLabel()) for idx, liz in enumerate(lizlst) if idx in selects]
+            if self.setDiscovery(servers):
+                return DIALOG.notificationDialog(LANGUAGE(30046))
 
 
     def selServer(self):
         self.log('selServer')
         def __chkSettings(settings):
-            for k,v in settings.items():
+            for k,v in list(settings.items()):
                 if v.startswith(('resource','plugin')): hasAddon(v,install=True,enable=True)
 
         def __build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s'%(payload['host'],{"True":"[COLOR=green]Online[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))]),url=dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload['name'],'[B]%s[/B] - %s: Channels (%s)'%({"True":"[COLOR=green]Online[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
             lizlst  = poolit(__build)(list(servers.values()))
-            selects = DIALOG.selectDialog(lizlst,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizlst) if loadJSON(listitem.getPath()).get('enabled',False)])
-            if not selects is None:
-                for idx, liz in enumerate(lizlst):
-                    instancePath = SETTINGS.hasPVRInstance(liz.getLabel())
-                    if idx in selects:
-                        if not servers.get(liz.getLabel()).get('enabled',False):
-                            DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
-                            servers.get(liz.getLabel()).update({'enabled':True})
-                            __chkSettings(servers.get(liz.getLabel()).get('settings',{}))
-                        if not instancePath: SETTINGS.setPVRRemote(servers.get(liz.getLabel()).get('host'),liz.getLabel())
-                    else:
-                        if servers.get(liz.getLabel()).get('enabled',False): DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
-                        servers.get(liz.getLabel()).update({'enabled':False})
-                        if instancePath: FileAccess.delete(instancePath)
-                if self.setDiscovery(servers):
-                    return PROPERTIES.setEXTProperty('%s.chkDiscovery'%(ADDON_ID),'true')
+            
+        selects = DIALOG.selectDialog(lizlst,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizlst) if loadJSON(listitem.getPath()).get('enabled',False)])
+        if not selects is None:
+            for idx, liz in enumerate(lizlst):
+                instancePath = SETTINGS.hasPVRInstance(liz.getLabel())
+                if idx in selects:
+                    if not servers[liz.getLabel()].get('enabled',False):
+                        DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
+                        servers[liz.getLabel()]['enabled'] = True
+                        __chkSettings(servers[liz.getLabel()].get('settings',{}))
+                    if not instancePath: SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel())
+                else:
+                    if servers[liz.getLabel()].get('enabled',False):
+                        DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
+                        servers[liz.getLabel()]['enabled'] = False
+                    if instancePath: FileAccess.delete(instancePath)
+            if self.setDiscovery(servers):
+                return PROPERTIES.setEXTProperty('%s.chkDiscovery'%(ADDON_ID),'true')
 
             
     def run(self):

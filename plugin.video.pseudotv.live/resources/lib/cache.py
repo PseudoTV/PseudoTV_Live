@@ -88,7 +88,7 @@ class Cache:
     def clear(self, name, wait=15):
         import sqlite3
         self.log('clear, name = %s'%self.getname(name))
-        sc = xbmcvfs.translatePath(xbmcaddon.Addon(id='script.module.simplecache').getAddonInfo('profile'))
+        sc = FileAccess.translatePath(xbmcaddon.Addon(id='script.module.simplecache').getAddonInfo('profile'))
         dbpath = os.path.join(sc, 'simplecache.db')
         connection = sqlite3.connect(dbpath, timeout=wait, isolation_level=None)
         try:

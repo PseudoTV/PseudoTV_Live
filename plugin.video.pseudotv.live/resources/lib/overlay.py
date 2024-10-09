@@ -71,7 +71,7 @@ class Replay(xbmcgui.WindowXMLDialog):
             self.setFocusId(40001)
         except Exception as e:
             log("Replay: onInit, failed! %s\ncitem = %s"%(e,self.myPlayer.sysInfo), xbmc.LOGERROR)
-            self._onClose()
+            self.onClose()
 
 
     def _progressLoop(self, control, wait=OVERLAY_DELAY):
@@ -82,7 +82,7 @@ class Replay(xbmcgui.WindowXMLDialog):
             prog = int((abs(wait-tot)*100)//tot)
             if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
             wait -= 1
-        self._onClose()
+        self.onClose()
 
         
     def onAction(self, act):
@@ -98,10 +98,10 @@ class Replay(xbmcgui.WindowXMLDialog):
         elif actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),time,100,true,false)')
         elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),time,100,true,false)')
         elif actionId in ACTION_PREVIOUS_MENU: BUILTIN.executebuiltin('AlarmClock(back,Action(back),time,100,true,false)')
-        self._onClose()
+        self.onClose()
 
 
-    def _onClose(self):
+    def onClose(self):
         log("Replay: onClose")
         self._closing = True
         self.close()
@@ -233,7 +233,7 @@ class Overlay():
         self._cancelChannelBug()
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
         for control, visible in list(self.controlManager.items()): self._removeControl(control)
-            
+        
 
     def _cancelOnNext(self):
         self.log('_cancelOnNext')
@@ -245,7 +245,7 @@ class Overlay():
             
     def _cancelChannelBug(self):
         self.log('_cancelChannelBug')
-        self._setImage(self._channelBug,'None')
+        self._setImage(self._channelBug,' ')
         self._setVisible(self._channelBug,False)
         if self._channelBugThread.is_alive():
             self._channelBugThread.cancel()
@@ -348,7 +348,7 @@ class Overlay():
             remaining  = floor(self.player.getTimeLabel('TimeRemaining'))
             showTime   = (abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval))
             intTime    = roundupDIV(showTime,interval)
-            showOnNext = remaining <= showTime and totalTime > SELECT_DELAY and not BUILTIN.getInfoLabel('NextGenre','VideoPlayer') in FILLER_TYPE and int((BUILTIN.getInfoLabel('Duration','VideoPlayer') or '0')) > self.minDuration
+            showOnNext = remaining <= showTime and totalTime > SELECT_DELAY and not BUILTIN.getInfoLabel('NextGenre','VideoPlayer') in FILLER_TYPE and self.player.getPlayerTime() > self.minDuration
             
             if remaining < intTime: return getOnNextInterval(interval + 1)
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))

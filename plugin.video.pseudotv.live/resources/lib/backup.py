@@ -34,7 +34,7 @@ class Backup:
         
 
     def getFileDate(self, file: str) -> str:
-        try:    return datetime.datetime.fromtimestamp(pathlib.Path(xbmcvfs.translatePath(file)).stat().st_mtime).strftime(BACKUP_TIME_FORMAT)
+        try:    return datetime.datetime.fromtimestamp(pathlib.Path(FileAccess.translatePath(file)).stat().st_mtime).strftime(BACKUP_TIME_FORMAT)
         except: return LANGUAGE(32105) #Unknown
         
         

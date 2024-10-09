@@ -206,7 +206,7 @@ def hasFile(file):
     else: return FileAccess.exists(file)
 
 def hasAddon(id, install=False, enable=False, force=False, notify=False):
-    id = getIDbyPath(id)
+    if '://' in id: id = getIDbyPath(id)
     if BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'):
         if BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(id),'System'): return True
         elif enable: 
@@ -328,7 +328,7 @@ def cleanLabel(text):
 def cleanImage(image=LOGO):
     if not image: image = LOGO
     if not image.startswith(('image://','resource://','special://','smb://','nfs://','https://','http://')):
-        realPath = xbmcvfs.translatePath('special://home/addons/')
+        realPath = FileAccess.translatePath('special://home/addons/')
         if image.startswith(realPath):# convert real path. to vfs
             image = image.replace(realPath,'special://home/addons/').replace('\\','/')
         elif image.startswith(realPath.replace('\\','/')):
@@ -366,7 +366,7 @@ def getIDbyPath(url):
     try:
         if   url.startswith('special://'): return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(url).group(1)
         elif url.startswith('plugin://'):  return re.compile('plugin://(.*?)/', re.IGNORECASE).search(url).group(1)
-    except Exception as e: log('Globals: getIDbyPath failed! %s'%(e), xbmc.LOGERROR)
+    except Exception as e: log('Globals: getIDbyPath failed! url = %s, %s'%(url,e), xbmc.LOGERROR)
     return url
     
 def combineDicts(dict1={}, dict2={}):

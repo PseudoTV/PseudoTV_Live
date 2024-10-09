@@ -383,7 +383,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                 key, path = lizLST[select].getProperty('key'), lizLST[select].getPath()
                 if key == 'add': 
                     with self.toggleSpinner(self.itemList):
-                        npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),monitor=True), citem)
+                        # opts = [{"label":"STRM Playlist","label2":"STRM containing directories.","default":"","mask":".strm","type":1,"multi":False}]
+                        opts = []
+                        npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),options=opts,monitor=True),citem)
                         pathLST.append(npath)
                 elif key == 'save': 
                     paths = pathLST
