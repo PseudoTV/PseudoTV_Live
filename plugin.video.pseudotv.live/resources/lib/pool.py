@@ -235,18 +235,22 @@ class ThreadPool:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    @timeit
     def executor(self, func, timeout=None, *args, **kwargs):
-        self.log("executor, func = %s"%(func.__name__))
+        self.log("executor, func = %s, timeout = %s"%(func.__name__,timeout))
         with ThreadPoolExecutor(self.ThreadCount) as executor:
-            return executor.submit(func, *args, **kwargs).result(timeout)
+            try: return executor.submit(func, *args, **kwargs).result(timeout)
+            except Exception as e: self.log("executor, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
 
     def executors(self, func, items=[], timeout=None, *args, **kwargs):
-        self.log("executors, items = %s"%(len(items)))
+        self.log("executors, func = %s, items = %s, timeout = %s"%(func.__name__,len(items),timeout))
         with ThreadPoolExecutor(self.ThreadCount) as executor:
-            return [self.executor((wrapped_partial(func, *args, **kwargs)), timeout, item) for item in items]
+            try: return [self.executor((wrapped_partial(func, *args, **kwargs)), timeout, item) for item in items]
+            except Exception as e: self.log("executors, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
 
 
     def generator(self, func, items=[], *args, **kwargs):
         self.log("generator, items = %s"%(len(items)))
-        return [wrapped_partial(func, *args, **kwargs)(i) for i in items]
+        try: return [wrapped_partial(func, *args, **kwargs)(i) for i in items]
+        except Exception as e: self.log("generator, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)

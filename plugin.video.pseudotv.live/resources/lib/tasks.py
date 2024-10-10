@@ -47,7 +47,7 @@ class Tasks():
     def _que(self, func, priority=-1, *args, **kwargs):# priority -1 autostack, 1 Highest, 5 Lowest
         if priority == -1: priority = self.quePriority.qsize + 1
         self.log('_que, priority = %s, func = %s, args = %s, kwargs = %s' % (priority,func.__name__, args, kwargs))
-        self.quePriority._push((func,args,kwargs),priority)
+        self.quePriority._push((func, args, kwargs), priority)
         
 
     def _initialize(self):
@@ -252,7 +252,10 @@ class Tasks():
                 params = queuePool.get('params',[])
                 for i in list(range(int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))):
                     if   self.service._interrupt(): break
-                    elif len(params) > 0: self._que(self.jsonRPC.sendJSON,10,params.pop(0))
+                    elif len(params) > 0:
+                        param = params.pop(0)
+                        self.log("chkJSONQUE, queueing = %s\n%s"%(len(params),param))
+                        self._que(self.jsonRPC.sendJSON,10, param)
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
                 SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)

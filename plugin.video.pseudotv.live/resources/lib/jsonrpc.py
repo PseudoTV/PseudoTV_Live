@@ -64,7 +64,7 @@ class JSONRPC:
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',-1))
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('setting',''))
         queuePool['params'].reverse() #prioritize setsetting,playcount rollback over duration amendments.
-        self.log("queueJSON, queueing = %s\n%s"%(len(queuePool['params']),param))
+        self.log("queueJSON, saving = %s\n%s"%(len(queuePool['params']),param))
         SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
 
         

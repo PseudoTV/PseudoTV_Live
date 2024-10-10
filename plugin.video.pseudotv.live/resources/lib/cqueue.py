@@ -18,6 +18,7 @@
 #
 # -*- coding: utf-8 -*-
 from globals     import *
+from pool        import ThreadPool
 from collections import defaultdict
 
 class LlNode:
@@ -46,6 +47,7 @@ class CustomQueue:
         self.min_heap  = []
         self.itemCount = defaultdict(int)
         self.popThread = Thread(target=self.__pop)
+        self.pool      = ThreadPool()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -60,11 +62,10 @@ class CustomQueue:
             self.popThread.start()
 
 
-    def __run(self, func, args=(), kwargs=None):
+    def __run(self, func, args=None, kwargs=None):
         self.log("__run, func = %s"%(func.__name__))
-        try: return executeit(func)(*args, **kwargs)
-            #return func(*args, **kwargs)
-        except Exception as e: self.log("__run, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
+        try: return self.pool.executor(func, (EPOCH_TIMER*60), *args, *kwargs) # if self.service.player.isPlaying(): return func(*args, **kwargs)
+        except Exception as e: self.log("__run, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
                 
     def __exists(self, package):
