@@ -75,7 +75,8 @@ class CustomQueue:
                 if epriority <= package[1]: return True
                 else:
                     self.log("__exists, pop func = %s"%(epackage[0].__name__))
-                    self.min_heap.pop(idx)
+                    try: self.min_heap.pop(idx)
+                    except: pass
                     return False
         return False
              

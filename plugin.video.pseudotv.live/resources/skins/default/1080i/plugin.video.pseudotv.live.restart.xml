@@ -2,7 +2,7 @@
 <window>
     <defaultcontrol always="true">40001</defaultcontrol>
     <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_REPLAY,true,10000)</onload>
-    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_REPLAY,false,10000)</onunload> 
+    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_REPLAY,false,10000)</onunload>
     <controls>
         <control type="group">
             <posx>0</posx>
@@ -29,7 +29,7 @@
                 <texturefocus colordiffuse="FF01416b">buttons/restart_button.png</texturefocus>
                 <texturenofocus colordiffuse="FF696969">buttons/restart_button.png</texturenofocus>
                 <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
-                <label></label>
+                <label/>
                 <align>center</align>
                 <aligny>center</aligny>
                 <wrapmultiline>false</wrapmultiline>
@@ -38,12 +38,12 @@
                 <focusedcolor>FFFFFFFF</focusedcolor>
                 <disabledcolor>80FFFFFF</disabledcolor>
                 <invalidcolor>FFFFFFFF</invalidcolor>
-                <textoffsetx></textoffsetx>
-                <textoffsety></textoffsety>
+                <textoffsetx/>
+                <textoffsety/>
                 <pulseonselect>false</pulseonselect>
-                <onclick></onclick>
-                <onfocus></onfocus>
-                <onunfocus></onunfocus>
+                <onclick/>
+                <onfocus/>
+                <onunfocus/>
                 <visible>Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]</visible>
             </control>
         </control>

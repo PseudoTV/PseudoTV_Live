@@ -74,7 +74,7 @@ class Tasks():
         BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
               
                   
-    @cacheit(expiration=datetime.timedelta(hours=3),checksum=PROPERTIES.getInstanceID())
+    @cacheit(expiration=datetime.timedelta(hours=1),checksum=PROPERTIES.getInstanceID())
     def getOnlineVersion(self):
         try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(getURL(ADDON_URL)))[0]
         except: ONLINE_VERSON = ADDON_VERSION
@@ -84,11 +84,13 @@ class Tasks():
         
     def chkDebugging(self):
         self.log('chkDebugging')
-        if SETTINGS.getSettingBool('Enable_Debugging'):
+        DEBUG_ENABLED = SETTINGS.getSettingBool('Debug_Enable')
+        if DEBUG_ENABLED:
             if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=4):
                 self.log('_chkDebugging, disabling debugging.')
-                SETTINGS.setSettingBool('Enable_Debugging',False)
+                SETTINGS.setSettingBool('Debug_Enable',False)
                 DIALOG.notificationDialog(LANGUAGE(321423))
+        # self.jsonRPC.setSettingValue("debug.showloginfo",DEBUG_ENABLED)
 
 
     def chkBackup(self):
@@ -310,12 +312,16 @@ class Tasks():
         with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
             nSettings = dict(SETTINGS.getCurrentSettings())
             for setting, value in list(settings.items()):
-                actions = {'User_Folder'     :{'func':self.setUserPath  ,'kwargs':{'old':value,'new':nSettings.get(setting)}},
-                           'UDP_PORT'        :{'func':setPendingRestart},
-                           'TCP_PORT'        :{'func':setPendingRestart},
-                           'Disable_Cache'   :{'func':setPendingRestart},
-                           'Disable_Trakt'   :{'func':setPendingRestart},
-                           'Rollback_Watched':{'func':setPendingRestart}}
+                actions = {'User_Folder'     :{'func':self.setUserPath,'kwargs':{'old':value,'new':nSettings.get(setting)}},
+                           'UDP_PORT'        :{'func':PROPERTIES.setPendingRestart},
+                           'TCP_PORT'        :{'func':PROPERTIES.setPendingRestart},
+                           'Disable_Cache'   :{'func':PROPERTIES.setPendingRestart},
+                           'Disable_Trakt'   :{'func':PROPERTIES.setPendingRestart},
+                           'Rollback_Watched':{'func':PROPERTIES.setPendingRestart},
+                           'Debug_Enable'    :{'func':PROPERTIES.setPendingRestart},
+                           'Debug_Level'     :{'func':PROPERTIES.setPendingRestart},
+                           'Idle_Timer'      :{'func':PROPERTIES.setPendingRestart},
+                           'Overlay_Enable'  :{'func':PROPERTIES.setPendingRestart}}
                            
                 if nSettings.get(setting) != value and actions.get(setting):
                     action = actions.get(setting)
@@ -351,6 +357,6 @@ class Tasks():
                     else:                           dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(nfile))
             DIALOG.progressDialog(100, dia)
             SETTINGS.setPVRPath(new,prompt=True,force=True)
-            setPendingRestart()
+            PROPERTIES.setPendingRestart()
             
         

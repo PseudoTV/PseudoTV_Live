@@ -23,11 +23,6 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from itertools          import repeat, count
 from functools          import partial, wraps, reduce, update_wrapper
 
-def log(event, level=xbmc.LOGDEBUG):
-    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
-    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-
 def roundupDIV(p, q):
     try:
         d, r = divmod(p, q)
@@ -54,7 +49,7 @@ def timeit(method):
     
 def killit(method):
     @wraps(method)
-    def wrapper(wait, *args, **kwargs):
+    def wrapper(wait=15, *args, **kwargs):
         class waiter(Thread):
             def __init__(self):
                 Thread.__init__(self)
@@ -216,7 +211,7 @@ class Cores:
                 dmesg = dmesgProcess.communicate()[0]
 
             res = 0
-            while not MONITOR.abortRequested() and '\ncpu%s:'%(res) in dmesg:
+            while not MONITOR().abortRequested() and '\ncpu%s:'%(res) in dmesg:
                 res += 1
             if res > 0: return res
         except OSError: pass

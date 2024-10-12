@@ -2,20 +2,20 @@
 <window>
     <backgroundcolor>0x00000000</backgroundcolor>
     <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_BACKGROUND,true,10000)</onload>
-    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_BACKGROUND,false,10000)</onunload> 
+    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_BACKGROUND,false,10000)</onunload>
     <controls>
         <animation type="WindowOpen" reversible="false">
-            <effect type="zoom" start="80" end="100" center="960,540" delay="160" tween="back" time="240" />
-            <effect type="fade" delay="160" end="100" time="240" />
+            <effect type="zoom" start="80" end="100" center="960,540" delay="160" tween="back" time="240"/>
+            <effect type="fade" delay="160" end="100" time="240"/>
         </animation>
         <animation type="WindowClose" reversible="false">
-            <effect type="zoom" start="100" end="80" center="960,540" easing="in" tween="back" time="240" />
-            <effect type="fade" start="100" end="0" time="240" />
+            <effect type="zoom" start="100" end="80" center="960,540" easing="in" tween="back" time="240"/>
+            <effect type="fade" start="100" end="0" time="240"/>
         </animation>
         <control type="group" id="40000">
             <animation type="Visible" reversible="false">
-                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240" />
-                <effect type="fade" delay="160" end="100" time="240" />
+                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
+                <effect type="fade" delay="160" end="100" time="240"/>
             </animation>
             <posx>0</posx>
             <posy>0</posy>
@@ -30,7 +30,7 @@
                     <texture>colors/white.png</texture>
                     <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
                 </control>
-                <control type="image"> 
+                <control type="image">
                     <width>auto</width>
                     <height>auto</height>
                     <texture>backgrounds/background.gif</texture>
@@ -49,7 +49,7 @@
                         <width>512</width>
                         <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
                         <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-                        <texture></texture>
+                        <texture/>
                     </control>
                 </control>
                 <control type="textbox" id="40003">
@@ -64,7 +64,7 @@
                     <scrolltime>600</scrolltime>
                     <autoscroll delay="5000" time="1000">false</autoscroll>
                     <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
-                    <label></label>
+                    <label/>
                     <visible>Control.IsVisible(40001)</visible>
                 </control>
                 <control type="grouplist">

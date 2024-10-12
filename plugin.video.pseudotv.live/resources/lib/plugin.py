@@ -41,10 +41,10 @@ class Plugin:
         self.seekTHD    = SETTINGS.getSettingInt('Seek_Threshold')
         
         self.sysInfo['radio'] = sysInfo.get('mode','').lower() == "radio"
-        self.sysInfo['now']   = int(sysInfo.get('now') or int(getUTCstamp()))
-        self.sysInfo['start'] = int(sysInfo.get('start','-1'))
-        self.sysInfo['stop']  = int(sysInfo.get('stop','-1'))
-        self.sysInfo['citem'] = (sysInfo.get('citem') or combineDicts({'id':sysInfo.get("chid")},sysInfo.get('fitem',{}).get('citem',{})))
+        self.sysInfo['now']   = int(sysInfo.get('now')   or int(getUTCstamp()))
+        self.sysInfo['start'] = int(sysInfo.get('start') or '-1')
+        self.sysInfo['stop']  = int(sysInfo.get('stop')  or '-1')
+        self.sysInfo['citem'] = (sysInfo.get('citem')    or combineDicts({'id':sysInfo.get("chid")},sysInfo.get('fitem',{}).get('citem',{})))
         
         if sysInfo.get('fitem'):
             if sysInfo.get("nitem"): self.sysInfo.update({'citem':combineDicts(self.sysInfo["nitem"].pop('citem'),self.sysInfo["fitem"].pop('citem'))})
@@ -293,12 +293,12 @@ class Plugin:
             return liz
 
         with BUILTIN.busy_dialog():
-            jsonRPC = JSONRPC()
+            jsonRPC  = JSONRPC()
             fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])
             del jsonRPC
 
         if len(fileList) > 0:
-            PLAYER.play(self.quePlaylist(poolit(buildfItem)(randomShuffle(fileList)),pltype=xbmc.PLAYLIST_MUSIC,shuffle=True),windowed=True)
+            PLAYER().play(self.quePlaylist(poolit(buildfItem)(randomShuffle(fileList)),pltype=xbmc.PLAYLIST_MUSIC,shuffle=True),windowed=True)
             BUILTIN.executebuiltin('ReplaceWindow(visualisation)')
         self.resolveURL(False, xbmcgui.ListItem())
 
@@ -307,7 +307,7 @@ class Plugin:
         self.log('playPlaylist, id = %s'%(chid))
         listitems = self.getPVRItems(name, chid)
         if listitems:
-            PLAYER.play(self.quePlaylist(listitems),windowed=True)
+            PLAYER().play(self.quePlaylist(listitems),windowed=True)
         self.resolveURL(False, xbmcgui.ListItem())
 
 
@@ -359,7 +359,7 @@ class Plugin:
             with BUILTIN.busy_dialog():
                 DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',0)))
             self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
-            MONITOR.waitForAbort(1.0) #allow a full second to pass beyond any msecs differential.
+            MONITOR().waitForAbort(1.0) #allow a full second to pass beyond any msecs differential.
             return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])) #retry channel
         elif self.sysInfo.get('playcount') == 4: DIALOG.okDialog(LANGUAGE(32134)%(ADDON_NAME))
         else: DIALOG.notificationWait(LANGUAGE(32000))

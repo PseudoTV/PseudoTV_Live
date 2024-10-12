@@ -99,8 +99,49 @@ class Utilities:
         
         
     def qrRemote(self):
-        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteURL(),'remote.html'), 'PseudoTV Live Remote Status')
+        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteURL(),'remote.html'), LANGUAGE(30165))
         
+
+    def qrDebug(self):
+        def cleanPayload(payload):
+            payload['debug']    = loadJSON(cleanLog(dumpJSON(payload.get('debug',{}),idnt=4)))
+            payload['channels'] = loadJSON(cleanLog(dumpJSON(payload.get('channels',[]),idnt=4)))
+            payload['m3u']      = loadJSON(cleanLog(dumpJSON(payload.get('m3u',[]),idnt=4)))
+            [payload.pop(key) for key in ['library','host','servers','remote','remotes'] if key in payload]
+            return payload
+        
+        def cleanLog(content):
+            for pattern, repl in (('//.+?:.+?@','//USER:PASSWORD@'),('<user>.+?</user>','<user>USER</user>'),('<pass>.+?</pass>','<pass>PASSWORD</pass>'),):
+                content = re.sub(pattern, repl, content)
+                return content
+
+        def postLog(data):
+            try:
+                session = requests.Session()
+                response = session.post('https://paste.kodi.tv/' + 'documents', data=data.encode('utf-8'), headers={'User-Agent':'%s: %s'%(ADDON_ID, ADDON_VERSION)})
+                if 'key' in response.json(): return True, 'https://paste.kodi.tv/' + response.json()['key']
+                elif 'message' in response.json():
+                    self.log('qrDebug, upload failed, paste may be too large')
+                    return False, response.json()['message']
+                else:
+                    self.log('qrDebug failed! %s'%response.text)
+                    return False, LANGUAGE("Error posting snapshot.")
+            except:
+                self.log('qrDebug, unable to retrieve the paste url')
+                return False, LANGUAGE("Failed to retrieve the paste url")
+              
+        with BUILTIN.busy_dialog():
+            payload = SETTINGS.getPayload(inclMeta=True)
+            
+        if   not payload.get('debug',{}): return DIALOG.notificationDialog(LANGUAGE(32187))
+        elif not DIALOG.yesnoDialog(message=LANGUAGE(32188)): return
+        
+        with BUILTIN.busy_dialog():
+            succes, data = postLog(dumpJSON(cleanPayload(payload),idnt=4))
+            
+        if succes: DIALOG.qrDialog(data,LANGUAGE(32189)%(data))
+        else:      DIALOG.okDialog(LANGUAGE(32190)%(data))
+                
 
     def userGroups(self):
         self.log('userGroups')
@@ -155,7 +196,7 @@ class Utilities:
         items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)              , 'hide':False},#"Rebuild M3U/XMLTV"
                  {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)               , 'hide':False},#"Clean Start"
                  {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR                                     , 'hide':False},#"Force PVR reload"
-                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart                                                      , 'hide':False},#"Force PTVL reload"
+                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart                                           , 'hide':False},#"Force PTVL reload"
                  {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)                        , 'hide':False},#"Show M3U"
                  {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)                      , 'hide':False}, #"Show XMLTV"
                  {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkLibrary'%(ADDON_ID),'true')  , 'hide':False}, #Rescan library
@@ -194,7 +235,7 @@ class Utilities:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
         if full: 
             SETTINGS.setAutotuned(False)
-            setPendingRestart()
+            PROPERTIES.setPendingRestart()
 
 
     def run(self):
@@ -223,10 +264,12 @@ class Utilities:
             return self.showReadme()
         elif param == 'Show_Changelog':
             return self.showChangelog()
-        elif param == 'QR_SUPPORT':
+        elif param == 'Show_Support_QR':
             return self.qrSupport()
-        elif param == 'QR_REMOTE':
+        elif param == 'Show_Remote_UI':
             return self.qrRemote()
+        elif param == 'Debug_QR':
+            return self.qrDebug()
         elif param == 'User_Groups':
             return self.userGroups()
         elif param == 'Utilities':

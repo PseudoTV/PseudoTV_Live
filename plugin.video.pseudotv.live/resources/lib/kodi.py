@@ -27,22 +27,14 @@ from ast         import literal_eval
 from contextlib  import contextmanager, closing
 from infotagger.listitem import ListItemInfoTag
 
-#variables
-DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
-MONITOR             = xbmc.Monitor()
-DEFAULT_ENCODING    = 'utf-8'
-
-def log(event, level=xbmc.LOGDEBUG):
-    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
-    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-    
 def getIP(wait=5):
-    while not MONITOR.abortRequested() and wait > 0:
+    monitor = MONITOR()
+    while not monitor.abortRequested() and wait > 0:
         ip = xbmc.getIPAddress()
         if ip: return ip
-        elif MONITOR.waitForAbort(1.0): break
+        elif monitor.waitForAbort(1.0): break
         else: wait -= 1
+    del monitor
         
 def convertString2Num(value):
     try:    return literal_eval(value)
@@ -342,42 +334,70 @@ class Settings:
             uuid = self.setCacheSetting('MY_UUID',genUUID(seed=self.getFriendlyName()))
         return uuid
 
+
+    @cacheit(expiration=datetime.timedelta(minutes=2), json_data=True)
+    def getBonjour(self):
+        self.log("getBonjour")
+        payload = {'id'      :ADDON_ID,
+                   'uuid'    :self.getMYUUID(),
+                   'version' :ADDON_VERSION,
+                   'machine' :platform.machine(),
+                   'platform':Builtin().getInfoLabel('OSVersionInfo','System'),
+                   'build'   :Builtin().getInfoLabel('BuildVersion','System'),
+                   'name'    :self.getFriendlyName(),
+                   'host'    :self.property.getRemoteURL(),
+                   'settings':{'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
+                               'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
+                               'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
+                               'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
+                               'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}}
+        payload['updated'] = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
+        payload['md5']     = getMD5(dumpJSON(payload))
+        return payload
     
-    @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
+    
+    @cacheit(expiration=datetime.timedelta(minutes=2), json_data=True)
     def getPayload(self, inclMeta: bool=False):
         self.log("getPayload, inclMeta! %s"%(inclMeta))
         def __getMeta(payload):
+            from m3u        import M3U
+            from xmltvs     import XMLTVS
+            from library    import Library
+            from multiroom  import Multiroom
             try:
-                from channels import Channels
-                from library  import Library
-                from multiroom  import Multiroom
-                payload['urls']     = {'m3u'               :'http://%s/%s'%(payload['host'],M3UFLE),
-                                       'xmltv'             :'http://%s/%s'%(payload['host'],XMLTVFLE),
-                                       'genre'             :'http://%s/%s'%(payload['host'],GENREFLE)}
-                                       
-                payload['settings'] = {'Resource_Logos'    :self.getSetting('Resource_Logos'),
-                                       'Resource_Bumpers'  :self.getSetting('Resource_Bumpers'),
-                                       'Resource_Ratings'  :self.getSetting('Resource_Ratings'),
-                                       'Resource_Adverts'  :self.getSetting('Resource_Adverts'),
-                                       'Resource_Trailers' :self.getSetting('Resource_Trailers')}
-                                       
-                payload['channels'] = Channels().getChannels()
-                payload['library']  = Library().getLibrary()
-                payload['servers']  = Multiroom().getDiscovery()
+                payload['library'] = Library().getLibrary()
+                payload['m3u']     = M3U().getM3U()
+                payload['xmltv']   = {'stations':XMLTVS().getChannels(), 'recordings':XMLTVS().getRecordings()}
+                payload['debug']   = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_NAME))).get('DEBUG',{})
+                payload['servers'] = Multiroom().getDiscovery()
             except Exception as e: self.log("getPayload, __getMeta failed! %s"%(e), xbmc.LOGERROR)
+            
+            del M3U
+            del XMLTVS
+            del Library
+            del Multiroom
             return payload
             
-        payload = {'id'      :ADDON_ID,
-                   'version' :ADDON_VERSION,
-                   'uuid'    :self.getMYUUID(),
-                   'name'    :self.getFriendlyName(),
-                   'host'    :self.property.getRemoteURL(),
-                   'remote'  :'http://%s/%s'%(self.property.getRemoteURL(),REMOTEFLE),
-                   'updated' : int(time.time())}
-        
+        from channels   import Channels
+        payload = self.getBonjour()
+        payload.pop('updated')
+        payload.pop('md5')
+        payload['remotes']   = {'remote':'http://%s/%s'%(payload['host'],REMOTEFLE),
+                                'm3u'   :'http://%s/%s'%(payload['host'],M3UFLE),
+                                'xmltv' :'http://%s/%s'%(payload['host'],XMLTVFLE),
+                                'genre' :'http://%s/%s'%(payload['host'],GENREFLE)}
+        payload['channels']  = Channels().getChannels()
         if inclMeta: payload = __getMeta(payload)
-        payload['md5'] = getMD5(dumpJSON(payload))
+        payload['updated']   = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
+        payload['md5']       = getMD5(dumpJSON(payload))
+        del Channels
         return payload
+
+
+    @cacheit(expiration=datetime.timedelta(minutes=5))
+    def getPayloadUI(self):
+        from json2table import convert
+        return convert(self.getPayload(inclMeta=True),build_direction="LEFT_TO_RIGHT",table_attributes={"style":"width:25%","class":"table-dark"})
 
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
@@ -477,9 +497,10 @@ class Settings:
         
         
     def chkPVRInstance(self, instance=ADDON_NAME):
-        found = False
+        found   = False
+        monitor = MONITOR()
         for file in [filename for filename in FileAccess.listdir(PVR_CLIENT_LOC)[1] if filename.endswith('.xml')]:
-            if MONITOR.waitForAbort(.001): break
+            if monitor.waitForAbort(.001): break
             elif file.startswith('instance-settings-'):
                 try:
                     xml = FileAccess.open(os.path.join(PVR_CLIENT_LOC,file), "r")
@@ -502,6 +523,7 @@ class Settings:
                         FileAccess.delete(os.path.join(PVR_CLIENT_LOC,file))
                         self.log('chkPVRInstance, removing duplicate entry %s'%(file))
                 self.log('chkPVRInstance, found %s file = %s'%(name,found))
+        del monitor
         return found
 
 
@@ -531,15 +553,16 @@ class Settings:
         
     def chkPluginSettings(self, id, nsettings, instance=ADDON_NAME, prompt=False):
         self.log('chkPluginSettings, id = %s, instance = %s, prompt=%s'%(id,instance,prompt))
-        addon  = xbmcaddon.Addon(id)
-        dialog = Dialog()
+        addon   = xbmcaddon.Addon(id)
+        dialog  = Dialog()
+        monitor = MONITOR()
         if addon is None: dialog.notificationDialog(LANGUAGE(32034)%(id))
         else:
             changes = {}
             name = addon.getAddonInfo('name')
             osettings = (self.getPVRInstanceSettings(instance) or {})
             for setting, newvalue in list(nsettings.items()):
-                if MONITOR.waitForAbort(.001): return False
+                if monitor.waitForAbort(.001): return False
                 default, oldvalue = osettings.get(setting,(None,None))
                 if str(newvalue).lower() != str(oldvalue).lower(): 
                     changes[setting] = (oldvalue, newvalue)
@@ -554,7 +577,7 @@ class Settings:
                     return False
                 
             for s, v in list(changes.items()):
-                if MONITOR.waitForAbort(.001): return False
+                if monitor.waitForAbort(.001): return False
                 addon.setSetting(s, v[1])
                 self.log('chkPluginSettings, setting = %s, current value = %s => %s'%(s,oldvalue,v[1]))
             self.setPVRInstance(instance)
@@ -562,6 +585,7 @@ class Settings:
             del dialog
             return True
         del dialog
+        del monitor
         
 
     def getCurrentSettings(self):
@@ -627,6 +651,11 @@ class Properties:
     
     def forceUpdateTime(self, key):
         return self.setPropertyInt(key,0)
+
+
+    def setPendingRestart(self, state=True):
+        if state: Dialog().notificationDialog('%s\n%s'%(LANGUAGE(32157),LANGUAGE(32124)))
+        return self.setEXTProperty('pendingRestart',str(state).lower())
 
 
     @contextmanager
@@ -919,9 +948,15 @@ class Builtin:
             xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
        
 
-    def getInfoLabel(self, key, param='ListItem', default=''):
-        value = (xbmc.getInfoLabel('%s.%s'%(param,key)) or default)
-        self.log('getInfoLabel, key = %s.%s, value = %s'%(param,key,value))
+    def getInfoLabel(self, key, param='ListItem', timeout=EPOCH_TIMER):
+        monitor = MONITOR()
+        value   = xbmc.getInfoLabel('%s.%s'%(param,key))
+        while not monitor.abortRequested() and (value is None or value == 'Busy'):
+            if monitor.waitForAbort(.001) or timeout < 0: break
+            timeout -= .001
+            value = xbmc.getInfoLabel('%s.%s'%(param,key))
+        self.log('getInfoLabel, key = %s.%s, value = %s, time = %s'%(param,key,value,(EPOCH_TIMER-timeout)))
+        del monitor
         return value
         
         
@@ -959,8 +994,10 @@ class Dialog:
 
 
     def doInfoMonitor(self):
-        while not MONITOR.abortRequested():
-            if not self.fillInfoMonitor() or MONITOR.waitForAbort(0.5): break
+        monitor = MONITOR()
+        while not monitor.abortRequested():
+            if not self.fillInfoMonitor() or monitor.waitForAbort(0.5): break
+        del monitor
             
 
     def fillInfoMonitor(self, type='ListItem'):
@@ -1103,7 +1140,7 @@ class Dialog:
             pDialog = self.progressBGDialog(message=message,header=header)
             for idx in range(int(wait)):
                 pDialog = self.progressBGDialog((((idx+1) * 100)//int(wait)),control=pDialog,header=header)
-                if pDialog is None or MONITOR.waitForAbort(1.0): break
+                if pDialog is None or MONITOR().waitForAbort(1.0): break
             if hasattr(pDialog, 'close'): pDialog.close()
         return True
 
@@ -1320,7 +1357,7 @@ class Dialog:
             
         def getRule(params={}, rule={"field":"","operator":"","value":[]}):
             enumSEL = -1
-            while not MONITOR.abortRequested() and not enumSEL is None:
+            while not monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
                 enumSEL = self.selectDialog(enumLST,header="Select method",preselect=-1, multi=False)
                 if not enumSEL is None: rule.update({enumLST[enumSEL].getProperty('key'):({"field":field,"operator":operator,"value":value}[enumLST[enumSEL].getProperty('key')])(params,rule)})
@@ -1328,7 +1365,7 @@ class Dialog:
             
         def getRules(params={}):
             enumSEL = -1
-            while not MONITOR.abortRequested() and not enumSEL is None:
+            while not monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),dumpJSON(params.get('rules',{}).get(key,[])),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key}) for key in ["and","or"]]
                 enumSEL = self.selectDialog(enumLST,header="Edit Rules",multi=False)
                 if not enumSEL is None:
@@ -1336,7 +1373,7 @@ class Dialog:
                         CONSEL  = -1
                         CONLKEY = enumLST[enumSEL].getProperty('key')
                         ruleLST = params.get('rules',{}).get(CONLKEY,[])
-                        while not MONITOR.abortRequested() and not CONSEL is None:
+                        while not monitor.abortRequested() and not CONSEL is None:
                             andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),dumpJSON(value),icon=DUMMY_ICON.format(text=str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
                             andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,props={'key':'add'}))
                             if len(ruleLST) > 0:
@@ -1356,7 +1393,7 @@ class Dialog:
 
         def getOrder(params={}):
             enumSEL = -1
-            while not MONITOR.abortRequested() and not enumSEL is None:
+            while not monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
                 enumLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,props={'key':'save'}))
                 enumSEL = self.selectDialog(enumLST,header="Edit Selection",preselect=-1,multi=False)
@@ -1377,7 +1414,8 @@ class Dialog:
         self.log('buildDXSP, path = %s, params = %s'%(path,params))
         
         enumSEL = -1
-        while not MONITOR.abortRequested() and not enumSEL is None:
+        monitor = MONITOR()
+        while not monitor.abortRequested() and not enumSEL is None:
             enumLST = [self.listitems.buildMenuListItem('Path',path,icon=ICON),self.listitems.buildMenuListItem('Order',dumpJSON(params.get('order',{})),icon=ICON),self.listitems.buildMenuListItem('Rules',dumpJSON(params.get('rules',{})),icon=ICON)]
             enumSEL = self.selectDialog(enumLST,header="Edit Dynamic Path", multi=False)
             if not enumSEL is None:

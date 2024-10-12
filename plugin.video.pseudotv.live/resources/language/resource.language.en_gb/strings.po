@@ -682,7 +682,11 @@ msgid "Adverts & Trailers"
 msgstr ""
 
 msgctxt "#30165"
-msgid "Instance Status"
+msgid "View snapshot"
+msgstr ""
+
+msgctxt "#30166"
+msgid "Submit Snapshot"
 msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins
@@ -1319,7 +1323,7 @@ msgid "Would you like to Install %s?"
 msgstr ""
 
 msgctxt "#32157"
-msgid "Pending Changes..."
+msgid "Changes Detected!"
 msgstr ""
 
 msgctxt "#32158"
@@ -1436,6 +1440,22 @@ msgstr ""
 
 msgctxt "#32186"
 msgid "Unable to automatically configure IPTV-Simple, Please check user configurations."
+msgstr ""
+
+msgctxt "#32187"
+msgid "No errors found in debug snapshot!"
+msgstr ""
+
+msgctxt "#32188"
+msgid "Snapshot uploaded to [B]https://paste.kodi.tv/[/B][CR]Sensitive information removed before upload.[CR]Continue?"
+msgstr ""
+
+msgctxt "#32189"
+msgid "Post this url or QRcode for your snapshot, together with a problem description, on the Kodi forum: %s"
+msgstr ""
+
+msgctxt "#32190"
+msgid "Error posting snapshot[CR]%s"
 msgstr ""
 
 
@@ -1749,6 +1769,18 @@ msgctxt "#33160"
 msgid "Select one or more logo resource packs."
 msgstr ""
 
+msgctxt "#33161"
+msgid "QRCode - Visit Kodi.TV PseudoTV Live Support Forum"
+msgstr ""
+
+msgctxt "#33165"
+msgid "QRCode - View Instance Snapshot."
+msgstr ""
+
+msgctxt "#33166"
+msgid "QRCode - Submit Instance Snapshot for debugging."
+msgstr ""
+
 msgctxt "#33170"
 msgid "Delete channel Path"
 msgstr ""
@@ -1763,4 +1795,16 @@ msgstr ""
 
 msgctxt "#33182"
 msgid "When [COLOR=orange][B]Idle[/B][/COLOR] click to begin beacon; Within 15mins start another Kodi instance w/PseudoTV Live installed\nThe two instances will pair, enabled in Select Server list."
+msgstr ""
+
+msgctxt "#33308"
+msgid "Install Log Uploader."
+msgstr ""
+
+msgctxt "#33309"
+msgid "Submit debugging log for review."
+msgstr ""
+
+msgctxt "#33202"
+msgid "Minimum Debugging Level [LOGERROR - Default]"
 msgstr ""

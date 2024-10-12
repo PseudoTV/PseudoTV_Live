@@ -1,5 +1,10 @@
 v.0.5.5
--Settings reordered and cleaned in preparation for Kodi repository submission. 
+-Added robust debugging with easy log submission and user U.I. (W.I.P).
+ - Minimum Debug level setting - Filter less important entries to reduce file size.
+ - QR-Code PseudoTV Live Forums.
+ - QR-Code Snapshot UI (Unfiltered)
+ - QR-Code "Submit Snapshot" Upload to paste.kodi.tv (filtered, sensitive information stripped before upload).
+-Improved settings; reordered and cleaned in preparation for Kodi repository submission.
  - Debugging now disabled by default.
  - Automatic IPTV-Simple PVR Refresh / Configuration disabled by default.
 -Added QR-Code dialog.

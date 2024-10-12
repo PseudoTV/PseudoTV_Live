@@ -90,7 +90,7 @@ class Backup:
                     library = Library()
                     library.resetLibrary()
                     del library
-                    return setPendingRestart()
+                    return PROPERTIES.setPendingRestart()
         
         
     def run(self):  

@@ -34,6 +34,7 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
     log("Default: run, params = %s"%(params))
 
     if PROPERTIES.isRunning('togglePVR'):   DIALOG.notificationDialog(LANGUAGE(32000))
+    elif params.get('start') == '{utc}':    DIALOG.okDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
     elif mode == 'live':
         if   params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
         elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])

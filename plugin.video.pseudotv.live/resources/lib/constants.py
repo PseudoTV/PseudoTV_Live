@@ -20,7 +20,7 @@
 
 import os
 
-from kodi_six    import xbmc, xbmcaddon
+from kodi_six      import xbmc, xbmcaddon
 
 #info
 ADDON_ID            = 'plugin.video.pseudotv.live'
@@ -33,6 +33,10 @@ SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
 ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
 ADDON_URL           = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/plugin.video.pseudotv.live/addon.xml'
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
+
+#api
+MONITOR             = xbmc.Monitor
+PLAYER              = xbmc.Player
 
 #constants
 OVERLAY_DELAY       = 5     #secs
@@ -130,6 +134,7 @@ M3UFLE              = 'pseudotv.m3u'
 XMLTVFLE            = 'pseudotv.xml'
 GENREFLE            = 'genres.xml'
 REMOTEFLE           = 'remote.json'
+BONJOURFLE          = 'bonjour.json'
 SERVERFLE           = 'servers.json'
 CHANNELFLE          = 'channels.json'
 LIBRARYFLE          = 'library.json'

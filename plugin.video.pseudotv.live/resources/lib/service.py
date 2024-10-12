@@ -272,7 +272,7 @@ class Monitor(xbmc.Monitor):
         self.pendingSuspend   = False
         self.pendingInterrupt = False
         self.sleepTime        = (SETTINGS.getSettingInt('Idle_Timer')      or 0)
-        self.enableOverlay    = (SETTINGS.getSettingBool('Enable_Overlay') or True)
+        self.enableOverlay    = (SETTINGS.getSettingBool('Overlay_Enable') or True)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -361,8 +361,6 @@ class Monitor(xbmc.Monitor):
                 
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged')
-        self.sleepTime                 = (SETTINGS.getSettingInt('Idle_Timer')      or 0)
-        self.enableOverlay             = (SETTINGS.getSettingBool('Enable_Overlay') or True)
         self.myService.currentChannels = self.myService.tasks.chkChannelChange(self.myService.currentChannels)  #check for channel change, rebuild if needed
         self.myService.currentSettings = self.myService.tasks.chkSettingsChange(self.myService.currentSettings) #check for settings change, take action if needed
 

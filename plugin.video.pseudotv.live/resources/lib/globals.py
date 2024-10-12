@@ -19,48 +19,42 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, re, json, struct, errno, zlib
-import shutil, subprocess, io
+import shutil, subprocess, io, platform
 import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime
 import heapq, requests, pyqrcode
 
-from io               import StringIO, BytesIO
-from threading        import Lock, Thread, Event, Timer, BoundedSemaphore
-from threading        import enumerate as thread_enumerate
-from xml.dom.minidom  import parse, parseString, Document
+from six.moves           import urllib 
+from io                  import StringIO, BytesIO
+from threading           import Lock, Thread, Event, Timer, BoundedSemaphore
+from threading           import enumerate as thread_enumerate
+from xml.dom.minidom     import parse, parseString, Document
 
-from variables   import *
-from kodi_six    import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
-from contextlib  import contextmanager, closing
-from socket      import gethostbyname, gethostname
-from itertools   import cycle, chain, zip_longest, islice
-from xml.sax.saxutils import escape, unescape
-from ast         import literal_eval
-from operator    import itemgetter
+from variables           import *
+from kodi_six            import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
+from contextlib          import contextmanager, closing
+from socket              import gethostbyname, gethostname
+from itertools           import cycle, chain, zip_longest, islice
+from xml.sax.saxutils    import escape, unescape
+from ast                 import literal_eval
+from operator            import itemgetter
 
-from logger      import *
-from cache       import Cache, cacheit
-from pool        import killit, timeit, poolit, executeit, timerit, threadit
-from kodi        import *
-from fileaccess  import FileAccess, FileLock
-from collections import defaultdict, Counter, OrderedDict
-from six.moves   import urllib 
-from socket      import timeout
-from math        import ceil,  floor
+from logger              import *
+from cache               import Cache, cacheit
+from pool                import killit, timeit, poolit, executeit, timerit, threadit
+from kodi                import *
+from fileaccess          import FileAccess, FileLock
+from collections         import defaultdict, Counter, OrderedDict
+from six.moves           import urllib 
+from math                import ceil,  floor
 from infotagger.listitem import ListItemInfoTag
 
-MONITOR             = xbmc.Monitor()
-PLAYER              = xbmc.Player()
 DIALOG              = Dialog()
 PROPERTIES          = DIALOG.properties
 SETTINGS            = DIALOG.settings
 LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
-
-def setPendingRestart(state=True):
-    if state: DIALOG.notificationDialog('%s\n%s'%(LANGUAGE(32157),LANGUAGE(32124)))
-    return PROPERTIES.setEXTProperty('pendingRestart',str(state).lower())
 
 def slugify(s, lowercase=False):
   if lowercase: s = s.lower()
@@ -148,11 +142,13 @@ def diffLSTDICT(old, new):
     return setDictLST([loadJSON(e) for e in sDIFF])
 
 def getIP(wait=5):
-    while not MONITOR.abortRequested() and wait > 0:
+    monitor = MONITOR()
+    while not monitor.abortRequested() and wait > 0:
         ip = xbmc.getIPAddress()
         if ip: return ip
-        elif MONITOR.waitForAbort(1.0): break
+        elif monitor.waitForAbort(1.0): break
         else: wait -= 1
+    del monitor
     return gethostbyname(gethostname())
 
 def getChannelID(name, path, number):
@@ -433,7 +429,7 @@ def distribute(*seq):
     #randomly distribute multi-lists of different sizes.
     #['a', 'A', 'B', 1, 2, 'C', 3, 'b', 4, 'D', 'c', 'd', 'e', 'E']
     iters = list(map(iter, seqs))
-    while not MONITOR.abortRequested() and iters:
+    while not MONITOR().abortRequested() and iters:
         it = random.choice(iters)
         try:   yield next(it)
         except StopIteration:

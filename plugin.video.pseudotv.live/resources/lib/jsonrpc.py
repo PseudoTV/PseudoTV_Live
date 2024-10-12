@@ -32,16 +32,18 @@ class JSONRPC:
     
     @contextmanager
     def sendLocker(self): #kodi jsonrpc not thread safe avoid request collision during threading.
+        monitor = MONITOR()
         if PROPERTIES.getPropertyBool('sendLocker'):
-            while not MONITOR.abortRequested():
+            while not monitor.abortRequested():
                 if not PROPERTIES.getPropertyBool('sendLocker'): break
-                elif MONITOR.waitForAbort(.001): break
+                elif monitor.waitForAbort(.001): break
                 self.log('sendLocker, waiting...')
         PROPERTIES.setPropertyBool('sendLocker',True)
         try: yield self.log('sendLocker, Locked!')
         finally:
-            MONITOR.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
+            monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
             PROPERTIES.setPropertyBool('sendLocker',False)
+        del monitor
 
 
     def sendJSON(self, param, timeout=30):
@@ -61,8 +63,8 @@ class JSONRPC:
         queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
         params = queuePool.setdefault('params',[])
         params.append(param)
-        queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',-1))
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('setting',''))
+        queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',-1))
         queuePool['params'].reverse() #prioritize setsetting,playcount rollback over duration amendments.
         self.log("queueJSON, saving = %s\n%s"%(len(queuePool['params']),param))
         SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
@@ -506,15 +508,17 @@ class JSONRPC:
     def padItems(self, files, page=SETTINGS.getSettingInt('Page_Limit')):
         # Balance media limits, by filling with duplicates to meet min. pagination.
         self.log("padItems; files In = %s"%(len(files)))
+        monitor = MONITOR()
         if len(files) < page:
             iters = cycle(files)
-            while not MONITOR.abortRequested() and (len(files) < page and len(files) > 0):
+            while not monitor.abortRequested() and (len(files) < page and len(files) > 0):
                 item = next(iters).copy()
                 if self.getDuration(item.get('file'),item) == 0:
                     try: files.pop(files.index(item))
                     except: break
                 else: files.append(item)
         self.log("padItems; files Out = %s"%(len(files)))
+        del monitor
         return files
 
 

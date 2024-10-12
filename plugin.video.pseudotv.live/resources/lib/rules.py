@@ -550,7 +550,7 @@ class DisableOverlay(BaseRule):
         self.name               = LANGUAGE(30042)
         self.description        = LANGUAGE(33042)
         self.optionLabels       = [LANGUAGE(30042)]
-        self.optionValues       = [SETTINGS.getSettingBool('Enable_Overlay')]
+        self.optionValues       = [SETTINGS.getSettingBool('Overlay_Enable')]
         self.optionDescriptions = [LANGUAGE(33042)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [""]
@@ -1127,7 +1127,7 @@ class EvenShowsRule(BaseRule):
 
         def _mergeShows(shows, movies):
             nfileList = []
-            while not MONITOR.abortRequested() and shows:
+            while not MONITOR().abortRequested() and shows:
                 for show, chunks in list(shows.items()):
                     if   len(chunks) == 0: del shows[show]
                     elif len(chunks) > 0:  nfileList.extend(shows[show].pop(0))

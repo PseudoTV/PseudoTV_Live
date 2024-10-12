@@ -88,7 +88,7 @@ class Multiroom:
 
 
     def sendResponse(self, payload):
-        npayload = SETTINGS.getPayload()
+        npayload = SETTINGS.getBonjour()
         npayload['received'] = payload.get('host')
         self.log('sendResponse, npayload = %s'%(npayload))
         self.pairAnnouncement(npayload, silent=True, wait=300)
@@ -100,15 +100,15 @@ class Multiroom:
         SETTINGS.setSetting('Select_server','|'.join(['[COLOR=%s][B]%s[/B][/COLOR]'%({True:'green',False:'red'}[v.get('online',False)],v.get('name')) for v in [v for v in list(servers.values()) if v.get('enabled',False)]]))
         PROPERTIES.setEXTProperty('%s.has.Servers'%(ADDON_ID),str(len(servers) > 0).lower())
         PROPERTIES.setEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),str(len([v for v in list(servers.values()) if v.get('enabled',False)]) > 0).lower())
-
+        return servers
+        
 
     def getDiscovery(self):
         return getJSON(SERVER_LOC).get('servers',{})
 
 
     def setDiscovery(self, servers={}):
-        self.hasServers(servers)
-        return setJSON(SERVER_LOC,{"servers":servers})
+        return setJSON(SERVER_LOC,{"servers":self.hasServers(servers)})
 
 
     def chkPVRservers(self):
@@ -140,7 +140,7 @@ class Multiroom:
     def delServer(self):
         self.log('delServer')
         def _build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'[B]%s[/B] - %s: Channels (%s)'%({"True":"[COLOR=green]Online[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
+            return LISTITEMS.buildMenuListItem(payload['name'],'[B]%s[/B] - %s: Channels (%s)'%({"True":"[COLOR=green][B]Online[/B][/COLOR]","False":"[COLOR=red][B]Offline[/B][/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
@@ -156,11 +156,10 @@ class Multiroom:
     def selServer(self):
         self.log('selServer')
         def __chkSettings(settings):
-            for k,v in list(settings.items()):
-                if v.startswith(('resource','plugin')): hasAddon(v,install=True,enable=True)
+            [hasAddon(id,install=True,enable=True) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
 
         def __build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'[B]%s[/B] - %s: Channels (%s)'%({"True":"[COLOR=green]Online[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
+            return LISTITEMS.buildMenuListItem(payload['name'],'[B]%s[/B] - %s: Channels (%s)'%({"True":"[COLOR=green][B]Online[/B][/COLOR]","False":"[COLOR=red][B]Offline[/B][/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
@@ -199,7 +198,7 @@ class Multiroom:
         elif param == 'Pair_Announcement': 
             ctl = (5,9)
             with PROPERTIES.suspendActivity():
-                self.pairAnnouncement(SETTINGS.getPayload())
+                self.pairAnnouncement(SETTINGS.getBonjour())
         return openAddonSettings(ctl)
 
 

@@ -29,9 +29,6 @@ from m3u        import M3U
 from xmltvs     import XMLTVS
 from infotagger.listitem import ListItemInfoTag
 
-MONITOR = xbmc.Monitor()
-PLAYER  = xbmc.Player()
-
 # Actions
 ACTION_MOVE_LEFT     = 1
 ACTION_MOVE_RIGHT    = 2
@@ -68,6 +65,8 @@ class Manager(xbmcgui.WindowXMLDialog):
     lockAutotune   = True
     madeChanges    = False
     lastActionTime = time.time()
+    monitor        = MONITOR()
+    player         = PLAYER()
     
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
@@ -370,7 +369,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def getPaths(self, citem: dict={}, paths: list=[]):
         select  = -1
         pathLST = list([_f for _f in paths if _f])
-        while not MONITOR.abortRequested() and not select is None:
+        while not self.monitor.abortRequested() and not select is None:
             with self.toggleSpinner(self.itemList):
                 npath   = None
                 lizLST  = [self.buildListItem('%s|'%(idx+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(idx+1)),items={'citem':citem}) for idx, path in enumerate(pathLST) if path]
@@ -421,7 +420,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         else:            
             select  = -1
             ruleLST = rules.copy()
-            while not MONITOR.abortRequested() and not select is None:
+            while not self.monitor.abortRequested() and not select is None:
                 with self.toggleSpinner(self.itemList):
                     nrule  = None
                     crules = self.rules.loadRules([citem],append=True,incRez=False).get(citem['id'],{}) #all rule instances w/ channel rules
@@ -465,7 +464,7 @@ class Manager(xbmcgui.WindowXMLDialog):
            return DIALOG.notificationDialog(LANGUAGE(32178))
         else:
             select = -1
-            while not MONITOR.abortRequested() and not select is None:
+            while not self.monitor.abortRequested() and not select is None:
                 with self.toggleSpinner(self.itemList):
                     lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],icon=DUMMY_ICON.format(text=str(idx+1)),items={'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
                 select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
@@ -559,7 +558,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         def _seek(item, citem):
             file = item.get('file')
             dur  = item.get('duration')
-            if PLAYER.isPlaying() or not file.startswith(tuple(VFS_TYPES)) and not file.endswith('.strm'): return True
+            if self.player.isPlaying() or not file.startswith(tuple(VFS_TYPES)) and not file.endswith('.strm'): return True
             # todo test seek for support disable via adv. rule if fails.
             # todo set seeklock rule if seek == False
             liz = xbmcgui.ListItem('Seek Test', path=file)
@@ -570,15 +569,15 @@ class Manager(xbmcgui.WindowXMLDialog):
             getTime  = 0
             waitTime = 30
             threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(file))
-            while not MONITOR.abortRequested():
+            while not self.monitor.abortRequested():
                 waitTime -= 1
                 self.log('validatePath _seek, waiting (%s) to seek %s'%(waitTime, item.get('file')))
-                if MONITOR.waitForAbort(1.0) or waitTime < 1: break
-                elif not PLAYER.isPlaying(): continue
-                elif ((int(PLAYER.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
-                    PLAYER.stop()
+                if self.monitor.waitForAbort(1.0) or waitTime < 1: break
+                elif not self.player.isPlaying(): continue
+                elif ((int(self.player.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
+                    self.player.stop()
                     return True
-            PLAYER.stop()
+            self.player.stop()
             return False
             
         def _vfs(path, citem):
@@ -591,7 +590,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     items = self.jsonRPC.walkFileDirectory(path, media, depth=5, retItem=True)
                 
                 for idx, dir in enumerate(items):
-                    if MONITOR.waitForAbort(.001): break
+                    if self.monitor.waitForAbort(.001): break
                     else:
                         item = random.choice(items.get(dir,[]))
                         dia  = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',dir,item.get('file','')))

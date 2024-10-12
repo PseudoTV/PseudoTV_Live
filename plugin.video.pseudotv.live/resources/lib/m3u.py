@@ -64,6 +64,7 @@ class M3U:
     def __init__(self):
         stations, recordings = self.cleanSelf(list(self._load()))
         self.M3UDATA = {'data':'#EXTM3U tvg-shift="" x-tvg-url="" x-tvg-id="" catchup-correction=""', 'stations':stations, 'recordings':recordings}
+        # self.M3UTEMP = getJSON(M3UFLE_DEFAULT)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -268,6 +269,10 @@ class M3U:
 
     def sortStations(self, stations, key='number'):
         return sorted(stations, key=itemgetter(key))
+        
+        
+    def getM3U(self):
+        return self.M3UDATA
         
         
     def getMitem(self):

@@ -122,16 +122,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         f.write(content)
         f.close()
         return out.getvalue()
-        
-        
-    @cacheit(expiration=datetime.timedelta(minutes=5))
-    def _convert_2_html(self, data):
-        from json2table import convert
-        return convert(data, build_direction="LEFT_TO_RIGHT", table_attributes={"style" : "width:100%", "class" : "table table-striped"})
-        # content = "text/html"
-        # chunk   = self._convert_2_html(SETTINGS.getPayload(inclMeta=True)).encode(encoding=DEFAULT_ENCODING)
-        
-        
+
+
     def do_HEAD(self):
         return self._set_headers()
 
@@ -142,7 +134,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         
     def do_GET(self):
         self.log('do_GET, incoming path = %s'%(self.path))
-        if self.path.lower().startswith('/remote'):
+        path = None
+        if self.path.lower() == '/%s'%(BONJOURFLE.lower()):
+            path    = self.path.lower()
+            content = "application/json"
+            chunk   = dumpJSON(SETTINGS.getPayload(inclMeta=False),idnt=4).encode(encoding=DEFAULT_ENCODING)
+        elif self.path.lower().startswith('/remote'):
             path = self.path.lower()
             if self.path.lower().endswith('.json'):
                 content = "application/json"
@@ -150,7 +147,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             elif self.path.lower().endswith('.html'):
                 from json2table import convert
                 content = "text/html"
-                chunk = convert(SETTINGS.getPayload(inclMeta=True),build_direction="LEFT_TO_RIGHT",table_attributes={"style":"width:25%","class":"table-dark"}).encode(encoding=DEFAULT_ENCODING)
+                chunk   = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
             else: self.send_error(404, "Not found")
         elif self.path.lower() == '/%s'%(M3UFLE.lower()):
             content = "application/vnd.apple.mpegurl"
@@ -166,48 +163,50 @@ class RequestHandler(BaseHTTPRequestHandler):
             content = mimetypes.guess_type(self.path[1:])[0]
         else: self.send_error(404, "Not found")
 
-        if not path: return
-        elif path.endswith(('.json','.html')):
-            self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
-            self._set_headers(content,chunk)
-            self.log('do_GET, sending = remote payload, size = %s'%(len(chunk)))
-            self.wfile.write(chunk)
-            self.wfile.close()
-        elif FileAccess.exists(path):
-            if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
-                self.log('do_GET, sending = %s'%(path))
-                fle = FileAccess.open(path, "r")
-                if 'gzip' in self.headers.get('accept-encoding'):
-                    self.log('do_GET, gzip compressing')
-                    data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
-                    self._set_headers(content,data,True)
-                    self.wfile.write(data)
-                else:
-                    self._set_headers(content)
-                    while not self.monitor.abortRequested():
-                        chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                        if not chunk or self.monitor.myService._interrupt(.001): break
-                        self.send_header('content-length', len(content))
+        if not PROPERTIES.isRunning('do_GET'):
+            with PROPERTIES.setRunning('do_GET'):
+                if   path is None: return
+                elif path.endswith(('.json','.html')):
+                    self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
+                    self._set_headers(content,chunk)
+                    self.log('do_GET, sending = remote payload, size = %s'%(len(chunk)))
+                    self.wfile.write(chunk)
+                    self.wfile.close()
+                elif FileAccess.exists(path):
+                    if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
+                        self.log('do_GET, sending = %s'%(path))
+                        fle = FileAccess.open(path, "r")
+                        if 'gzip' in self.headers.get('accept-encoding'):
+                            self.log('do_GET, gzip compressing')
+                            data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
+                            self._set_headers(content,data,True)
+                            self.wfile.write(data)
+                        else:
+                            self._set_headers(content)
+                            while not self.monitor.abortRequested():
+                                chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
+                                if not chunk or self.monitor.myService._interrupt(.001): break
+                                self.send_header('content-length', len(content))
+                                self.wfile.write(chunk)
+                        self.wfile.close()
+                        fle.close()
+                    elif self.path.lower().startswith("/images/"):
+                        fle   = FileAccess.open(path, "rb")
+                        chunk = fle.readBytes()
+                        self._set_headers(content,chunk)
+                        self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
                         self.wfile.write(chunk)
-                self.wfile.close()
-                fle.close()
-            elif self.path.lower().startswith("/images/"):
-                fle   = FileAccess.open(path, "rb")
-                chunk = fle.readBytes()
-                self._set_headers(content,chunk)
-                self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
-                self.wfile.write(chunk)
-                self.wfile.close()
-                fle.close()
-            else:
-                fle   = FileAccess.open(path, "r")
-                chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
-                self._set_headers(content,chunk)
-                self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
-                self.wfile.write(chunk)
-                self.wfile.close()
-                fle.close()
-        else: self.send_error(401, "Not found")
+                        self.wfile.close()
+                        fle.close()
+                    else:
+                        fle   = FileAccess.open(path, "r")
+                        chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
+                        self._set_headers(content,chunk)
+                        self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
+                        self.wfile.write(chunk)
+                        self.wfile.close()
+                        fle.close()
+                else: self.send_error(401, "Not found")
             
         
 class HTTP:

@@ -22,9 +22,10 @@ from constants import *
 
 #variables
 USER_LOC            = REAL_SETTINGS.getSetting('User_Folder')
-DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
-DEBUG_LEVELS        = {0:xbmc.LOGDEBUG,1:xbmc.LOGINFO,2:xbmc.LOGWARNING,3:xbmc.LOGERROR}
-DEBUG_LEVEL         = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debugging_Level') or "1"))]
+DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Debug_Enable').lower() == 'true'
+DEBUG_NAMES         = {0:'LOGDEBUG',1:'LOGINFO',2:'LOGWARNING',3:'LOGERROR',4:'LOGFATAL'}
+DEBUG_LEVELS        = {0:xbmc.LOGDEBUG,1:xbmc.LOGINFO,2:xbmc.LOGWARNING,3:xbmc.LOGERROR,4:xbmc.LOGFATAL}
+DEBUG_LEVEL         = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
 DEBUG_CACHE_ENABLED = REAL_SETTINGS.getSetting('Disable_Cache').lower() == 'true'
 DISABLE_CACHE       = (DEBUG_ENABLED & DEBUG_CACHE_ENABLED) #Only enable DISABLE_CACHE when DEBUG_ENABLED
 

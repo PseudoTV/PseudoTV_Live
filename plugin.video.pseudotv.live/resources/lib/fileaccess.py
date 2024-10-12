@@ -25,14 +25,6 @@ DEFAULT_ENCODING           = "utf-8"
 FILE_LOCK_MAX_FILE_TIMEOUT = 10
 FILE_LOCK_NAME             = "pseudotv"
 
-#variables
-DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
-       
-def log(event, level=xbmc.LOGDEBUG):
-    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
-    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-    
 class FileAccess:
     @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):

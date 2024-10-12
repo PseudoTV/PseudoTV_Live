@@ -27,7 +27,7 @@ from channels   import Channels
 REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Service:
-    monitor = MONITOR
+    monitor = MONITOR()
     from jsonrpc import JSONRPC
     jsonRPC  = JSONRPC()
     def _interrupt(self, wait: float=.001) -> bool:

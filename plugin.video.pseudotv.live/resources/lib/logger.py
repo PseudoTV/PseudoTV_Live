@@ -18,13 +18,18 @@
 #
 # -*- coding: utf-8 -*-
 
-import traceback
+import json,traceback
 
-from variables import *
+from globals import *
 
-#todo add robust logging.
 def log(event, level=xbmc.LOGDEBUG):
-    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return
-    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-  
+    if DEBUG_ENABLED or level >= 3:
+        if level >= 3: event = '%s\n%s'%(event, traceback.format_exc())
+        event = '%s-%s-%s'%(ADDON_ID, ADDON_VERSION, event)
+        if level >= DEBUG_LEVEL:
+            xbmc.log(event,level)
+            try:    entries = json.loads(xbmcgui.Window(10000).getProperty('%s.debug.log'%(ADDON_NAME))).get('DEBUG',{})
+            except: entries = {}
+            entries.setdefault(DEBUG_NAMES[DEBUG_LEVEL],[]).append('%s - %s: %s'%(datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT),DEBUG_NAMES[level],event))
+            xbmcgui.Window(10000).setProperty('%s.debug.log'%(ADDON_NAME),json.dumps({'DEBUG':entries}, indent=4))
+        

@@ -73,7 +73,7 @@ class MP4Parser:
         offset = start_offset
         last_offset = -1
         f.seek(offset, 0)
-        while not MONITOR.abortRequested() and offset < end_offset:
+        while not MONITOR().abortRequested() and offset < end_offset:
             if last_offset == offset: break
             else: last_offset = offset
             data = f.readBytes(8)  # read box header
@@ -116,7 +116,7 @@ class MP4Parser:
 
         data = self.readBlock()
 
-        while not MONITOR.abortRequested() and data.boxtype != 'moov' and data.size > 0:
+        while not MONITOR().abortRequested() and data.boxtype != 'moov' and data.size > 0:
             try:
                 self.File.seek(data.size, 1)
             except:
@@ -127,7 +127,7 @@ class MP4Parser:
 
         data = self.readBlock()
 
-        while not MONITOR.abortRequested() and data.boxtype != 'mvhd' and data.size > 0:
+        while not MONITOR().abortRequested() and data.boxtype != 'mvhd' and data.size > 0:
             try:
                 self.File.seek(data.size, 1)
             except:

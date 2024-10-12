@@ -1,10 +1,11 @@
 {
-    "items": {
+    "item": {
         "id": "",
         "number": 0,
         "name": "",
         "logo": "",
-        "group": [],
+        "group": [
+        ],
         "catchup": "vod",
         "radio": false,
         "favorite": false,
@@ -16,6 +17,7 @@
         "x-tvg-url": "",
         "media-dir": "",
         "media-size": "",
+        "media-type": "",
         "catchup-source": "",
         "catchup-days": "",
         "catchup-correction": "",
@@ -25,14 +27,16 @@
         "provider-countries": "",
         "provider-languages": "",
         "x-playlist-type": "",
-        "kodiprops": []
+        "kodiprops": [
+        ]
     },
     "required": {
         "id": "",
         "number": 0,
         "name": "",
         "logo": "",
-        "group": [],
+        "group": [
+        ],
         "catchup": "vod",
         "radio": false,
         "label": "",
