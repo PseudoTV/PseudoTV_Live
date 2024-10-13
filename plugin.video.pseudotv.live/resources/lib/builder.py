@@ -172,12 +172,12 @@ class Builder:
 
     def buildCells(self, citem: dict={}, duration: int=10800, type: str='video', entries: int=3, info: dict={}) -> list:
         self.log("buildCells; id: %s"%(citem.get('id')))
-        tmpItem  = {'label'       : (info.get('title','')        or citem['name']),
-                    'episodetitle': (info.get('episodetitle','') or '|'.join(citem['group'])),
-                    'plot'        : (info.get('plot' ,'')        or LANGUAGE(30161)),
-                    'genre'       : (info.get('genre','')        or ['Undefined']),
-                    'file'        : (info.get('path','')         or '|'.join(citem.get('path'))),
-                    'art'         : (info.get('art','')          or {"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO}),
+        tmpItem  = {'label'       : (info.get('title')        or citem['name']),
+                    'episodetitle': (info.get('episodetitle') or '|'.join(citem['group'])),
+                    'plot'        : (info.get('plot')         or LANGUAGE(30161)),
+                    'genre'       : (info.get('genre')        or ['Undefined']),
+                    'file'        : (info.get('path')         or '|'.join(citem.get('path'))),
+                    'art'         : (info.get('art')          or {"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO}),
                     'type'        : type,
                     'duration'    : duration,
                     'start'       : 0,
@@ -346,8 +346,8 @@ class Builder:
                             if self.pDialog:
                                 self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
 
-                            title   = (item.get("title",'')     or item.get("label",'') or dirItem.get('label',''))
-                            tvtitle = (item.get("showtitle",'') or item.get("label",'') or dirItem.get('label',''))
+                            title   = (item.get("title")     or item.get("label") or dirItem.get('label') or '')
+                            tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')
 
                             if (item['type'].startswith(tuple(TV_TYPES)) or item.get("showtitle")):# This is a TV show
                                 season  = int(item.get("season","0"))

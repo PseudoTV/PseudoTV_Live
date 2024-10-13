@@ -143,10 +143,8 @@ def read_channels(fp=None, tree=None):
             tree = parse(fp, parser=XMLParser(encoding=locale))
     for elem in tree.findall('channel'):
         channel = elem_to_channel(elem) 
-        try:
-            channel['icon'] = [{'src':elem.findall('icon')[0].get('src')}]
-        except:
-            channel['icon'] = ''  #temp fix
+        try:    channel['icon'] = [{'src':elem.findall('icon')[0].get('src')}]
+        except: channel['icon'] = ''  #temp fix
         channels.append(channel)
     return channels
 

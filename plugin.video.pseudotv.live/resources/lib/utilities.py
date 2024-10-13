@@ -166,7 +166,7 @@ class Utilities:
         #todo generate qrcode to server file location.
         #todo change xmltv to display statistics not raw file.
         try: DIALOG.textviewer(openFile(file), heading=('%s - %s')%(ADDON_NAME,os.path.basename(file)),usemono=True)
-        except Exception as e: self.log('showFile failed! %s'%(e), xbmc.LOGERROR)
+        except Exception as e: self.log('showFile failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
 
 
     def openChannelManager(self, chnum: int=1):

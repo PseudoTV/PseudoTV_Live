@@ -59,13 +59,13 @@ def getThumb(item={},opt=0): #unify thumbnail artwork
     keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
             1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
     for key in keys:
-        art = (item.get('art',{}).get('album.%s'%(key),'')       or 
-               item.get('art',{}).get('albumartist.%s'%(key),'') or 
-               item.get('art',{}).get('artist.%s'%(key),'')      or 
-               item.get('art',{}).get('season.%s'%(key),'')      or 
-               item.get('art',{}).get('tvshow.%s'%(key),'')      or 
-               item.get('art',{}).get(key,'')                    or
-               item.get(key,''))
+        art = (item.get('art',{}).get('album.%s'%(key))       or 
+               item.get('art',{}).get('albumartist.%s'%(key)) or 
+               item.get('art',{}).get('artist.%s'%(key))      or 
+               item.get('art',{}).get('season.%s'%(key))      or 
+               item.get('art',{}).get('tvshow.%s'%(key))      or 
+               item.get('art',{}).get(key)                    or
+               item.get(key) or '')
         if art: return art
     return {0:FANART,1:COLOR_LOGO}[opt]
 

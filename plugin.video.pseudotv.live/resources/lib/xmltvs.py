@@ -44,7 +44,7 @@ class XMLTVS:
 
 
     def _save(self, file: str=XMLTVFLEPATH, reset: bool=True) -> bool:
-        self.log('_save')
+        self.log('_save, file = %s'%(file))
         if reset: data = self.resetData()
         else:     data = self.XMLTVDATA['data']
             
@@ -264,8 +264,8 @@ class XMLTVS:
         item['title']         = fItem['label']
         item['desc']          = fItem['plot']
         item['length']        = fItem['duration']
-        item['sub-title']     = (fItem.get('episodetitle','') or '')
-        item['categories']    = (fItem.get('genre','')        or ['Undefined'])[:5]
+        item['sub-title']     = (fItem.get('episodetitle') or '')
+        item['categories']    = (fItem.get('genre')        or ['Undefined'])[:5]#trim list to five
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
         item['thumb']         = cleanImage(getThumb(fItem,EPG_ARTWORK)) #unify thumbnail by user preference 
@@ -278,8 +278,8 @@ class XMLTVS:
             item['episode-num'] = {'xmltv_ns':'%s.%s'%(fItem.get("season",1)-1,fItem.get("episode",1)-1), # todo support totaleps <episode-num system="xmltv_ns">..44/47</episode-num>https://github.com/kodi-pvr/pvr.iptvsimple/pull/884
                                    'onscreen':'S%sE%s'%(str(fItem.get("season",0)).zfill(2),str(fItem.get("episode",0)).zfill(2))}
 
-        item['rating']      = cleanMPAA(fItem.get('mpaa','') or 'NA')
-        item['stars']       = (fItem.get('rating','')        or '0')
+        item['rating']      = cleanMPAA(fItem.get('mpaa') or 'NA')
+        item['stars']       = (fItem.get('rating')        or '0')
         item['writer']      = fItem.get('writer',[])[:5]   #trim list to five
         item['director']    = fItem.get('director',[])[:5] #trim list to five
         item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role',LANGUAGE(32020))) for actor in fItem.get('cast',[])[:5] if actor.get('name')]

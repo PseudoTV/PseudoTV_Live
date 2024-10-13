@@ -95,8 +95,7 @@ class Cache:
             connection.execute('DELETE FROM simplecache WHERE id LIKE ?', (self.getname(name) + '%',))
             connection.commit()
             connection.close()
-        except sqlite3.Error as e:
-            self.log('clear, failed! %s'%(e), xbmc.LOGERROR)
+        except sqlite3.Error as e: self.log('clear, failed! %s'%(e), xbmc.LOGERROR)
         finally:
             del connection
             del sqlite3

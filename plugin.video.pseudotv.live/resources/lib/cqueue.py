@@ -64,7 +64,7 @@ class CustomQueue:
 
     def __run(self, func, args=None, kwargs=None):
         self.log("__run, func = %s"%(func.__name__))
-        try: return self.pool.executor(func, (EPOCH_TIMER*60), *args, *kwargs) # if self.service.player.isPlaying(): return func(*args, **kwargs)
+        try:   return self.pool.executor(func, (EPOCH_TIMER*60), *args, *kwargs) # if self.service.player.isPlaying(): return func(*args, **kwargs)
         except Exception as e: self.log("__run, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
                 
@@ -75,7 +75,7 @@ class CustomQueue:
                 if epriority <= package[1]: return True
                 else:
                     self.log("__exists, pop func = %s"%(epackage[0].__name__))
-                    try: self.min_heap.pop(idx)
+                    try:    self.min_heap.pop(idx)
                     except: pass
                     return False
         return False

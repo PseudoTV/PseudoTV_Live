@@ -160,9 +160,9 @@ class M3U:
                             nline = lines[nidx].rstrip()
                             if   nline.startswith('#EXTINF:'): break
                             elif nline.startswith('#EXTGRP'):
-                                prop = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
-                                if prop is not None: 
-                                    mitem['group'].append(prop.group(1).split(';'))
+                                grop = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
+                                if grop is not None: 
+                                    mitem['group'].append(grop.group(1).split(';'))
                                     mitem['group'] = sorted(set(mitem['group']))
                             elif nline.startswith('#KODIPROP:'):
                                 prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
@@ -179,16 +179,16 @@ class M3U:
                         except Exception as e: self.log('_load, error parsing m3u! %s'%(e))
                             
                     #Fill missing with similar parameters.
-                    mitem['name']     = (mitem.get('name','')     or mitem.get('label',''))
-                    mitem['label']    = (mitem.get('label','')    or mitem.get('name',''))
-                    mitem['favorite'] = (mitem.get('favorite','') or False)
+                    mitem['name']     = (mitem.get('name')     or mitem.get('label') or '')
+                    mitem['label']    = (mitem.get('label')    or mitem.get('name')  or '')
+                    mitem['favorite'] = (mitem.get('favorite') or False)
                     
                     #Set Fav. based on group value.
                     if LANGUAGE(32019) in mitem['group'] and not mitem['favorite']:
                         mitem['favorite'] = True
                     
                     #Core m3u parameters missing, ignore entry.
-                    if not mitem.get('id','') or not mitem.get('name','') or not mitem.get('number',''): 
+                    if not mitem.get('id') or not mitem.get('name') or not mitem.get('number'): 
                         self.log('_load, SKIPPED MISSING META m3u item = %s'%mitem)
                         continue
                         

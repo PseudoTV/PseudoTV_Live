@@ -130,7 +130,8 @@ class JSONRPC:
                 results = FileAccess.listdir(path)
                 self.cache.set(cacheName, results, checksum, expiration)
                 self.log('getListDirectory path = %s, checksum = %s'%(path, checksum))
-            except: 
+            except Exception as e:
+                self.log("getListDirectory, failed! %s\npath = %s"%(e,path), xbmc.LOGERROR)
                 results = [],[]
         self.log('getListDirectory return dirs = %s, files = %s\n%s'%(len(results[0]), len(results[1]),path))
         return results

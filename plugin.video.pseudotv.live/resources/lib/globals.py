@@ -94,10 +94,11 @@ def unescapeString(text, table=HTML_ESCAPE):
     return unescape(text,{v:k for k, v in list(table.items())})
 
 def getJSON(file):
-    fle  = (FileAccess.open(file, 'r') or '')
     data = {}
-    try: data = loadJSON(fle.read())
-    except Exception as e: log('Globals: getJSON failed! %s'%(e), xbmc.LOGERROR)
+    try: 
+        fle  = FileAccess.open(file,'r')
+        data = loadJSON(fle.read())
+    except Exception as e: log('Globals: getJSON failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
     fle.close()
     return data
 
@@ -115,7 +116,7 @@ def getURL(url, data={}, header=HEADER, json_data=False):
         log("Globals: getURL, status = %s"%(r.status_code))
         if json_data: return r.json()
         else:         return r.text
-    except Exception as e: pass
+    except Exception as e: log('Globals: getURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
      
 def postURL(url, params={}, header=HEADER, json_data=False):
     try:
@@ -123,7 +124,7 @@ def postURL(url, params={}, header=HEADER, json_data=False):
         log("Globals: postURL, url = %s, status = %s"%(r.url,r.status_code))
         if json_data: return r.json()
         else:         return r.text
-    except Exception as e: pass
+    except Exception as e: log('Globals: postURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
      
 def setURL(url, file):
     try:
@@ -132,8 +133,7 @@ def setURL(url, file):
         fle.write(contents)
         fle.close()
         return FileAccess.exists(file)
-    except Exception as e: 
-        log("Globals: saveURL, failed! %s"%e, xbmc.LOGERROR)
+    except Exception as e: log('Globals: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
 
 def diffLSTDICT(old, new):
     sOLD = set([dumpJSON(e) for e in old])
@@ -188,10 +188,10 @@ def cleanChannelSuffix(name, type):
     return name
             
 def getLabel(item, addYear=False):
-    label = (item.get('name','') or item.get('label','') or item.get('showtitle','') or item.get('title',''))
+    label = (item.get('name') or item.get('label') or item.get('showtitle') or item.get('title'))
     if not label: return ''
     label, year = splitYear(label)
-    year = (item.get('year','') or year)
+    year = (item.get('year') or year)
     if year and addYear: return '%s (%s)'%(label, year)
     return label
    
@@ -301,7 +301,7 @@ def togglePVR(state=True, reverse=False, wait=EPOCH_TIMER):
             else: DIALOG.notificationWait(LANGUAGE(30023)%(PVR_CLIENT_NAME))
         
 def isRadio(item):
-    if item.get('radio',False) or item.get('type','') == "Music Genres": return True
+    if item.get('radio',False) or item.get('type') == "Music Genres": return True
     for path in item.get('path',[item.get('file','')]):
         if path.lower().startswith(('musicdb://','special://profile/playlists/music/','special://musicplaylists/')): return True
     return False
