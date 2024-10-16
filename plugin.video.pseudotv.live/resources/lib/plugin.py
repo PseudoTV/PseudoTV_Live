@@ -363,7 +363,8 @@ class Plugin:
             return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])) #retry channel
         elif self.sysInfo.get('playcount') == 4: DIALOG.okDialog(LANGUAGE(32134)%(ADDON_NAME))
         else: DIALOG.notificationWait(LANGUAGE(32000))
-        self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
+        self.resolveURL(False, xbmcgui.ListItem()) #release pending playback
+        DIALOG.closeBusyDialog()
         
         
     def resolveURL(self, found, listitem):

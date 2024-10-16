@@ -248,7 +248,10 @@ class Overlay():
         self._setImage(self._channelBug,' ')
         self._setVisible(self._channelBug,False)
         if self._channelBugThread.is_alive():
-            self._channelBugThread.cancel()
+            try: 
+                self._channelBugThread.cancel()
+                self._channelBugThread.join()
+            except: pass
 
         
     def toggleBackground(self, state: bool=True):
@@ -317,18 +320,17 @@ class Overlay():
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
                     self._channelBug.setVisibleCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
-
+                    self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
+                                                    ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
+                                                
                 logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 
-                if self.channelBugDiffuse: self._channelBug.setColorDiffuse(self.channelBugColor)
-                elif hasAddon('script.module.pil'):
-                    if self.resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
+                if   self.channelBugDiffuse:      self._channelBug.setColorDiffuse(self.channelBugColor)
+                elif self.resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
                 
                 self._setImage(self._channelBug,logo)
                 self._setVisible(self._channelBug,True)
-                self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=False'),
-                                                ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=2000 condition=True reversible=False')])
             else: 
                 self._setVisible(self._channelBug,False)
                 self._setImage(self._channelBug,'None')

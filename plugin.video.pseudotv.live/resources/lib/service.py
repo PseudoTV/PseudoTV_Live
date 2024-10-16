@@ -70,7 +70,7 @@ class Player(xbmc.Player):
 
     def onAVChange(self):
         self.log('onAVChange')
-        self.isIdle = self.service.monitor.chkIdle()
+        if self.isPseudoTV: self._onPlay()
 
         
     def onAVStarted(self):
@@ -181,9 +181,10 @@ class Player(xbmc.Player):
         self.log('_onPlay')
         self.toggleReplay(False)
         self.toggleBackground(False)
+        self.service.monitor.chkIdle()
+        
         oldInfo = self.sysInfo
         self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
-        
         #items that only run once per channel change. ie. set adv. rules and variables. 
         if self.sysInfo.get('chid') != oldInfo.get('chid',random.random()): #playing new channel
             self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), inherited=self)
@@ -244,12 +245,13 @@ class Player(xbmc.Player):
     def toggleBackground(self, state: bool=True):
         self.log('toggleBackground, state = %s'%(state))
         if state:
-            if hasattr(self.background, 'show'): self.background.show()
+            if not hasattr(self.background, 'show'): 
+                self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self)
+                self.background.show()
         else:
             if hasattr(self.background, 'close'):
                 self.background = self.background.close()
                 if self.isPlaying(): BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
-            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self)
             
             
 class Monitor(xbmc.Monitor):
@@ -285,35 +287,29 @@ class Monitor(xbmc.Monitor):
 
     def chkIdle(self):
         self.isIdle, self.idleTime = self.getIdle()
-        if self.sleepTime > 0 and (self.idleTime > (self.sleepTime * 10800)): #3hr increments
-            if self.triggerSleep(): return False
-        if self.isIdle: self.toggleOverlay(True)
-        else:           self.toggleOverlay(False)
-        return self.isIdle
+        if self.service.player.isPlaying() and not BUILTIN.isPaused():
+            if self.sleepTime > 0 and (self.idleTime > (self.sleepTime * 10800)): self.triggerSleep()
+            if self.isIdle: self.toggleOverlay(True)
+            else:           self.toggleOverlay(False)
         
 
     def toggleOverlay(self, state: bool=True):
-        if state:
-            conditions = self.enableOverlay & self.service.player.isPlaying() & self.service.player.isPseudoTV
-            if not self.overlay and conditions:
-                self.log("toggleOverlay, state = %s"%(state))
+        self.log("toggleOverlay, state = %s"%(state))
+        if state and self.enableOverlay:
+            if not hasattr(self.overlay, 'open'):
                 self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
                 self.overlay.open()
         else:
-            if hasattr(self.overlay, 'close'): 
-                self.log("toggleOverlay, state = %s"%(state))
-                self.overlay.close()
-            self.overlay = None
+            if hasattr(self.overlay, 'close'):
+                self.overlay = self.overlay.close()
 
 
     def triggerSleep(self):
-        if not BUILTIN.isPaused():
-            conditions = self.service.player.isPlaying() & self.service.player.isPseudoTV
-            self.log("triggerSleep, conditions = %s"%(conditions))
-            if not conditions: return
-            if self.sleepTimer():
-                self.service.player.stop()
-                return True
+        if not PROPERTIES.isRunning('triggerSleep'):
+            with PROPERTIES.setRunning('triggerSleep'):
+                if self.sleepTimer():
+                    self.service.player.stop()
+                    return True
         
         
     def sleepTimer(self):
@@ -413,7 +409,7 @@ class Service():
 
     def __tasks(self):
         self.log('__tasks')
-        self.tasks._que(self.monitor.chkIdle,1)
+        if self.player.isPseudoTV: self.tasks._que(self.monitor.chkIdle,1)
         self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,EPOCH_TIMER)
            
                 
