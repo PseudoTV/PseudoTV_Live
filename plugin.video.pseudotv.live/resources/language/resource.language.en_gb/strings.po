@@ -1343,7 +1343,7 @@ msgid "[COLOR=yellow][B]- Create Path[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32162"
-msgid "Waiting for pairing: Timeout in %ss"
+msgid "Looking for multi-room instances (%ss)"
 msgstr ""
 
 msgctxt "#32163"
@@ -1457,6 +1457,80 @@ msgstr ""
 msgctxt "#32190"
 msgid "Error posting snapshot[CR]%s"
 msgstr ""
+
+msgctxt "#32191"
+msgid "Video Playlists"
+msgstr ""
+
+msgctxt "#32192"
+msgid "Music Playlists"
+msgstr ""
+
+msgctxt "#32193"
+msgid "Mixed Playlists"
+msgstr ""
+
+msgctxt "#32194"
+msgid "STRM Import"
+msgstr ""
+
+msgctxt "#32195"
+msgid "Dynamic Playlist"
+msgstr ""
+
+msgctxt "#32196"
+msgid "Video Sources"
+msgstr ""
+
+msgctxt "#32197"
+msgid "" 
+msgstr ""
+
+msgctxt "#32198"
+msgid "File Folders"
+msgstr ""
+
+msgctxt "#32199"
+msgid "Local Folders"
+msgstr ""
+
+msgctxt "#32200"
+msgid "Network Folders"
+msgstr ""
+
+msgctxt "#32201"
+msgid "Pictures Sources"
+msgstr ""
+
+msgctxt "#32202"
+msgid "Resources Plugins"
+msgstr ""
+
+msgctxt "#32203"
+msgid "Current Path"
+msgstr ""
+
+msgctxt "#32206"
+msgid "Basic Playlist"
+msgstr ""
+
+msgctxt "#32207"
+msgid "Music Sources"
+msgstr ""
+
+msgctxt "#32208"
+msgid "Parsing Trailer"
+msgstr ""
+
+msgctxt "#32209"
+msgid "Applying Rule"
+msgstr ""
+
+msgctxt "#32210"
+msgid "Parsing Details"
+msgstr ""
+
+
 
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons

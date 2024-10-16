@@ -49,6 +49,7 @@ from collections         import defaultdict, Counter, OrderedDict
 from six.moves           import urllib 
 from math                import ceil,  floor
 from infotagger.listitem import ListItemInfoTag
+from requests.adapters   import HTTPAdapter, Retry
 
 DIALOG              = Dialog()
 PROPERTIES          = DIALOG.properties
@@ -110,25 +111,46 @@ def setJSON(file, data):
     return True
 
 def getURL(url, data={}, header=HEADER, json_data=False):
+    session = requests.Session()
+    retry_strategy = Retry(total=5,backoff_factor=1,status_forcelist=[429, 500, 502, 503, 504])
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
     try:
-        log("Globals: getURL, url = %s"%(url))
-        r = requests.get(url, params=data ,headers=HEADER.update(header))
-        log("Globals: getURL, status = %s"%(r.status_code))
-        if json_data: return r.json()
-        else:         return r.text
-    except Exception as e: log('Globals: getURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
+        response = session.get(url, params=data, headers=HEADER.update(header))
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        log("Globals: getURL, url = %s status = %s"%(url,response.status_code))
+        if json_data: return response.json()
+        else:         return response.content
+    except requests.exceptions.ConnectionError as e:
+        log("Globals: getURL, failed! Error connecting to the server: %s"%(e), xbmc.LOGERROR)
+    except requests.exceptions.HTTPError as e:
+        log("Globals: getURL, failed! HTTP error occurred: %s"%(e), xbmc.LOGERROR)
+    except requests.exceptions.RequestException as e:
+        log("Globals: getURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
      
 def postURL(url, params={}, header=HEADER, json_data=False):
+    session = requests.Session()
+    retry_strategy = Retry(total=5,backoff_factor=1,status_forcelist=[429, 500, 502, 503, 504])
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
     try:
-        r = requests.post(url, data=params ,headers=HEADER.update(header))
-        log("Globals: postURL, url = %s, status = %s"%(r.url,r.status_code))
-        if json_data: return r.json()
-        else:         return r.text
-    except Exception as e: log('Globals: postURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
-     
+        response = session.post(url, data=params, headers=HEADER.update(header))
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        log("Globals: postURL, url = %s status = %s"%(url,response.status_code))
+        if json_data: return response.json()
+        else:         return response.content
+    except requests.exceptions.ConnectionError as e:
+        log("Globals: postURL, failed! Error connecting to the server: %s"%(e), xbmc.LOGERROR)
+    except requests.exceptions.HTTPError as e:
+        log("Globals: postURL, failed! HTTP error occurred: %s"%(e), xbmc.LOGERROR)
+    except requests.exceptions.RequestException as e:
+        log("Globals: postURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
+
 def setURL(url, file):
     try:
-        contents = urllib.request.urlopen(url).read()
+        contents = getURL(url)
         fle = FileAccess.open(file, 'w')
         fle.write(contents)
         fle.close()

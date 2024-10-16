@@ -442,7 +442,7 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
 
     def onAction(self, optionindex):
         if   optionindex == 0: self.onActionToggleBool(optionindex)
-        elif optionindex == 1: self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), include=list(range(6,11)))
+        elif optionindex == 1: self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), include=list(range(7,12)))
         elif optionindex == 2: self.getPosition(optionindex)
         return self.optionValues[optionindex]
 
@@ -885,7 +885,7 @@ class ProvisionalRule(BaseRule):
                                                     "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}]}
 
             if self.optionValues[0]:
-                if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='Applying Rule: %s'%(self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                 if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
                 else:                                  queries = PROVISIONAL_TYPES.get(citem['type'],[])
                 self.log("%s: runAction, id: %s, provisional value = %s\nqueries = %s"%(self.__class__.__name__,citem.get('id'),self.optionValues[0],queries))
@@ -1154,7 +1154,7 @@ class EvenShowsRule(BaseRule):
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST:
             try:
                 if parameter:
-                    if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='Applying Rule: %s'%(self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                     if self.optionValues[2]: fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0)))
                     else:                    fileItems = parameter
                     self.log('runAction, even distribution %s'%(self.optionValues[0]))

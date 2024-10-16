@@ -56,7 +56,7 @@ class Autotune:
         if len(autoChannels) > 0: #rebuild existing autotune. 
             rebuild = True
             PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
-            if DEBUG_ENABLED: DIALOG.notificationDialog(LANGUAGE(32128))
+            if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32128))
         elif len(customChannels) == 0:
             autoEnabled = []
             [autoEnabled.extend(self.library.getEnabled(type)) for type in AUTOTUNE_TYPES]
@@ -76,7 +76,7 @@ class Autotune:
                 elif retval == 2: return Backup().recoverChannels()
                 else: return True
         else:
-            if DEBUG_ENABLED: DIALOG.notificationDialog(LANGUAGE(32058))
+            if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32058))
             return 
         for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
             if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
@@ -105,7 +105,7 @@ class Autotune:
            
         items = self.library.getLibrary(ATtype)
         if len(items) == 0 and (not rebuildChannels and not autoSelect): 
-            if DEBUG_ENABLED: DIALOG.notificationDialog(LANGUAGE(32018)%(ATtype))
+            if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32018)%(ATtype))
             return
         
         with BUILTIN.busy_dialog():

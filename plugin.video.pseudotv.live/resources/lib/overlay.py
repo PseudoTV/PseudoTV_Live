@@ -41,44 +41,45 @@ from rules     import RulesList
 class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
-        self.myPlayer = kwargs.get('player' ,None)
+        self.player = kwargs.get('player' ,None)
 
 
     def onInit(self):
         try:
-            logo = (self.myPlayer.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
+            logo = (self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
             self.getControl(40001).setVisibleCondition('[!Player.Playing]')
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
-            self.getControl(40003).setText(LANGUAGE(32104)%(self.myPlayer.sysInfo.get('citem',{}).get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
+            self.getControl(40003).setText(LANGUAGE(32104)%(self.player.sysInfo.get('citem',{}).get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except Exception as e:
             log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.close()
+
             
             
 class Replay(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self._closing = False
-        self.myPlayer = kwargs.get('player' ,None)
+        self.player   = kwargs.get('player' ,None)
         
         
     def onInit(self):
         log("Replay: onInit")
         try:
             self._closing  = False
-            self.myService = self.myPlayer.myService
+            self.service   = self.player.service
             self._progressLoop(self.getControl(40000))
             self.setFocusId(40001)
         except Exception as e:
-            log("Replay: onInit, failed! %s\ncitem = %s"%(e,self.myPlayer.sysInfo), xbmc.LOGERROR)
+            log("Replay: onInit, failed! %s\ncitem = %s"%(e,self.player.sysInfo), xbmc.LOGERROR)
             self.onClose()
 
 
     def _progressLoop(self, control, wait=OVERLAY_DELAY):
         tot  = wait
         xpos = control.getX()
-        while not self.myService.monitor.abortRequested():
-            if (self.myService._interrupt(1.0) or wait < 0 or self._closing): break
+        while not self.service.monitor.abortRequested():
+            if (self.service._interrupt(1.0) or wait < 0 or self._closing): break
             prog = int((abs(wait-tot)*100)//tot)
             if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
             wait -= 1
@@ -89,11 +90,11 @@ class Replay(xbmcgui.WindowXMLDialog):
         actionId = act.getId()
         log('Replay: onAction: actionId = %s'%(actionId))
         if actionId in ACTION_SELECT_ITEM and self.getFocusId(40001): 
-            if   self.myPlayer.sysInfo.get('isPlaylist',False): self.myPlayer.seekTime(0)
-            elif self.myPlayer.sysInfo.get('fitem'): 
-                liz = LISTITEMS.buildItemListItem(self.myPlayer.sysInfo.get('fitem',{}))
-                liz.setProperty('sysInfo',encodeString(dumpJSON(self.myPlayer.sysInfo)))
-                self.myPlayer.play(self.myPlayer.sysInfo.get('fitem',{}).get('catchup-id'),liz)
+            if   self.player.sysInfo.get('isPlaylist',False): self.player.seekTime(0)
+            elif self.player.sysInfo.get('fitem'): 
+                liz = LISTITEMS.buildItemListItem(self.player.sysInfo.get('fitem',{}))
+                liz.setProperty('sysInfo',encodeString(dumpJSON(self.player.sysInfo)))
+                self.player.play(self.player.sysInfo.get('fitem',{}).get('catchup-id'),liz)
             else: DIALOG.notificationDialog(LANGUAGE(30154))
         elif actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),time,100,true,false)')
         elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),time,100,true,false)')
@@ -221,10 +222,9 @@ class Overlay():
         
     def open(self):
         self.log('open, id = %s'%(self.player.sysInfo.get('citem',{}).get('id')))
-        if not self.player.isPseudoTV: 
-            return self.close()
+        if not self.player.isPseudoTV:  return self.close()
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
-        self.toggleBug(),self.toggleOnNext(),self.toggleBackground(),self.toggleVignette()
+        self.toggleBackground(), self.toggleVignette(), self.toggleBug(), self.toggleOnNext()
             
             
     def close(self):
@@ -356,7 +356,7 @@ class Overlay():
 
         try:
             showOnNext, intTime = getOnNextInterval()
-            wait   = {True:OVERLAY_DELAY,False:float(intTime)}[state]
+            wait   = {True:EPOCH_TIMER,False:float(intTime)}[state]
             nstate = not bool(state)
             try: 
                 if self._onNextThread.is_alive():
@@ -384,7 +384,7 @@ class Overlay():
                     onNext = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
                     self._setText(self._onNext,'%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                     self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
-                    self._onNext.autoScroll(6000, 3000, 5000)
+                    self._onNext.autoScroll(5500, 2500, int(EPOCH_TIMER//3))
                     self._setVisible(self._onNext,True)
                     playSFX(BING_WAV)
             else: 

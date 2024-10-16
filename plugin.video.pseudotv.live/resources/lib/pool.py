@@ -22,15 +22,7 @@ from globals            import *
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from itertools          import repeat, count
 from functools          import partial, wraps, reduce, update_wrapper
-
-def roundupDIV(p, q):
-    try:
-        d, r = divmod(p, q)
-        if r: d += 1
-        return d
-    except ZeroDivisionError: 
-        return 1
-        
+ 
 def wrapped_partial(func, *args, **kwargs):
     partial_func = partial(func, *args, **kwargs)
     update_wrapper(partial_func, func)
@@ -42,7 +34,7 @@ def timeit(method):
         start_time = time.time()
         result     = method(*args, **kwargs)
         end_time   = time.time()
-        if DEBUG_ENABLED:
+        if REAL_SETTINGS.getSetting('Debug_Enable').lower() == 'true':
             log('%s timeit => %.2f ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
         return result
     return wrapper
@@ -73,8 +65,8 @@ def poolit(method):
     @timeit
     @wraps(method)
     def wrapper(items=[], *args, **kwargs):
-        pool = ThreadPool()
         try:
+            pool = ThreadPool()
             name = '%s.%s'%('poolit',method.__qualname__.replace('.',': '))
             log('%s, starting %s'%(method.__qualname__.replace('.',': '),name))
             results = pool.executors(method, items, *args, **kwargs)
@@ -220,11 +212,11 @@ class Cores:
         
 class ThreadPool:
     CPUCount    = Cores().CPUcount()
-    ThreadCount = roundupDIV(CPUCount,2)
+    ThreadCount = CPUCount*8
     
     def __init__(self):
         self.log("__init__, ThreadPool Threads = %s, CPU's = %s"%(self.ThreadCount, self.CPUCount))
-        
+
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -238,10 +230,10 @@ class ThreadPool:
             except Exception as e: self.log("executor, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
 
-    def executors(self, func, items=[], timeout=None, *args, **kwargs):
-        self.log("executors, func = %s, items = %s, timeout = %s"%(func.__name__,len(items),timeout))
+    def executors(self, func, items=[], *args, **kwargs):
+        self.log("executors, func = %s, items = %s"%(func.__name__,len(items)))
         with ThreadPoolExecutor(self.ThreadCount) as executor:
-            try: return [self.executor((wrapped_partial(func, *args, **kwargs)), timeout, item) for item in items]
+            try: return executor.map(wrapped_partial(func, *args, **kwargs), items)
             except Exception as e: self.log("executors, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
 
 

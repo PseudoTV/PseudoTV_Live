@@ -319,7 +319,7 @@ class Plugin:
             elif   self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): return hasAddon(self.sysInfo.get('vid',''))
             elif   FileAccess.exists(self.sysInfo.get('vid','')): return True
             self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))
-            if DEBUG_ENABLED: DIALOG.notificationDialog(LANGUAGE(32167))
+            if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32167))
             return False
             
         def _chkLoop():
@@ -330,19 +330,19 @@ class Plugin:
                     
                     if self.sysInfo['now'] >= self.sysInfo['stop']:
                         self.log('playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo['now'],self.sysInfo['stop']))
-                        if DEBUG_ENABLED: DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']))
+                        if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']))
                         return False
                     elif self.sysInfo['duration'] > self.sysInfo['runtime'] and self.sysInfo['runtime'] > 0:
                         self.log('playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
-                        if DEBUG_ENABLED: DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['duration'],self.sysInfo['runtime']))
+                        if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['duration'],self.sysInfo['runtime']))
                         return False
                     elif self.sysInfo['seek'] >= oldInfo.get('runtime',self.sysInfo['duration']):
                         self.log('playCheck _chkLoop, failed! Seeking to a position (%s) past media runtime (%s).'%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
-                        if DEBUG_ENABLED: DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
+                        if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
                         return False
                     elif self.sysInfo['seek'] == oldInfo.get('seek',self.sysInfo['seek']):
                         self.log('playCheck _chkLoop, failed! Seeking to same position.')
-                        if DEBUG_ENABLED: DIALOG.notificationDialog("Playback Failed: Seeking to same position")
+                        if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog("Playback Failed: Seeking to same position")
                         return False
             return True
 

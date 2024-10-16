@@ -32,7 +32,9 @@ class Multiroom:
     def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG = sysARG
-        if service is None: service = Service()
+        if service is None:
+            service = Service()
+            
         self.service   = service
         self.jsonRPC   = service.jsonRPC
         self.uuid      = SETTINGS.getMYUUID()

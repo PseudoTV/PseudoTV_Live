@@ -171,7 +171,7 @@ class Builder:
 
 
     def buildCells(self, citem: dict={}, duration: int=10800, type: str='video', entries: int=3, info: dict={}) -> list:
-        self.log("buildCells; id: %s"%(citem.get('id')))
+        self.log("buildCells; id: %s, duration = %s, entries = %s"%(citem.get('id'),duration,entries))
         tmpItem  = {'label'       : (info.get('title')        or citem['name']),
                     'episodetitle': (info.get('episodetitle') or '|'.join(citem['group'])),
                     'plot'        : (info.get('plot')         or LANGUAGE(30161)),
@@ -210,7 +210,8 @@ class Builder:
                 start = item['stop']
                 totDur += item['duration']
                 tmpList.append(item)
-            
+                self.log("addScheduling; id: %s, padding tmpList = %s, totDur = %s/%s"%(citem['id'],len(tmpList),totDur,self.minEPG))
+                
         #force removal of channel with no current programmes
         if len(tmpList) > 0:
             if tmpList[-1].get('stop') < getUTCstamp():
@@ -257,7 +258,7 @@ class Builder:
         self.log("buildFileList, id: %s, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
         if path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info
             paths, media, sort, filter, limit = self.xsp.parseXSP(path, media, sort, {}, limit)
-            if len(paths) > 0: return interleave([self.buildFileList(citem, file, media, limit, sort, limits) for file in paths if not self.service._interrupt()])
+            if len(paths) > 0: return interleave([self.buildFileList(citem, file, media, limit, sort, limits) for file in paths if (not self.service._interrupt() or not self.service._suspend())])
             
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
             path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules.
@@ -267,11 +268,12 @@ class Builder:
         self.loopback = {}
         self.log("buildFileList, id: %s, limit = %s, sort = %s, limits = %s\npath = %s"%(citem['id'],limit,sort,limits,path))
         
-        while not self.service.monitor.abortRequested() and (len(fileList) < limit):
+        while not self.service.monitor.abortRequested():
             #Not all results are flat hierarchies; walk all paths until fileList limit is reached. ie. Plugins with [NEXT PAGE]
             if self.service._interrupt() or self.service._suspend():
                 self.completeBuild = False
                 break
+            elif len(fileList) >= limit: break
             elif len(dirList) == 0:
                 self.log('buildFileList, id: %s, no more folders to parse'%(citem['id']))
                 break
@@ -280,9 +282,9 @@ class Builder:
                 subfileList, subdirList = self.buildList(citem, dir.get('file'), media, limit, sort, limits, dir)
                 fileList += subfileList
                 dirList = setDictLST(dirList + subdirList)
-                self.log('buildFileList, id: %s, parsing %s, fileList = %s'%(citem['id'],dir.get('file'),len(fileList)))
+                self.log('buildFileList, id: %s, parsing %s, adding = %s/%s'%(citem['id'],dir.get('file'),len(subfileList),limit))
                
-        self.log("buildFileList, id: %s returning fileList %s / %s"%(citem['id'],len(fileList),limit))
+        self.log("buildFileList, id: %s returning fileList %s/%s"%(citem['id'],len(fileList),limit))
         return fileList
 
 
@@ -310,8 +312,8 @@ class Builder:
                     self.jsonRPC.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #rollback pagination limits
                     return [], []
                 else:
-                    file         = item.get('file','')
-                    fileType     = item.get('filetype','file')
+                    file     = item.get('file','')
+                    fileType = item.get('filetype','file')
                     if not item.get('type'): item['type'] = query.get('key','')
 
                     if fileType == 'directory':
@@ -343,8 +345,7 @@ class Builder:
                             item['media']        = media
                             item['originalpath'] = path #use for path sorting/playback verification 
                             if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554
-                            if self.pDialog:
-                                self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
+                            if self.pDialog: self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
 
                             title   = (item.get("title")     or item.get("label") or dirItem.get('label') or '')
                             tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')

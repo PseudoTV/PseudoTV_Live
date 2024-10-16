@@ -37,7 +37,7 @@ class Tasks():
         self.jsonRPC     = service.jsonRPC
         self.httpServer  = HTTP(service=service)
         self.multiroom   = Multiroom(service=service)
-        self.quePriority = CustomQueue(priority=True,service=self.service)
+        self.quePriority = CustomQueue(priority=True,service=service)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -84,13 +84,12 @@ class Tasks():
         
     def chkDebugging(self):
         self.log('chkDebugging')
-        DEBUG_ENABLED = SETTINGS.getSettingBool('Debug_Enable')
-        if DEBUG_ENABLED:
+        if SETTINGS.getSettingBool('Debug_Enable'):
             if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=4):
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Debug_Enable',False)
                 DIALOG.notificationDialog(LANGUAGE(321423))
-        # self.jsonRPC.setSettingValue("debug.showloginfo",DEBUG_ENABLED)
+        # self.jsonRPC.setSettingValue("debug.showloginfo",SETTINGS.getSettingBool('Debug_Enable'))
 
 
     def chkBackup(self):
@@ -176,7 +175,9 @@ class Tasks():
         with DIALOG.sudo_dialog(LANGUAGE(32179)):
             [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),'')) for ftype in FILLER_TYPES if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),''))]
             for citem in channels:
+                if self.service._interrupt(): break
                 for ftype in FILLER_TYPES[1:]:
+                    if self.service._interrupt(): break
                     [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
                     if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
                         if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
@@ -312,17 +313,7 @@ class Tasks():
         with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
             nSettings = dict(SETTINGS.getCurrentSettings())
             for setting, value in list(settings.items()):
-                actions = {'User_Folder'     :{'func':self.setUserPath,'kwargs':{'old':value,'new':nSettings.get(setting)}},
-                           'UDP_PORT'        :{'func':PROPERTIES.setPendingRestart},
-                           'TCP_PORT'        :{'func':PROPERTIES.setPendingRestart},
-                           'Disable_Cache'   :{'func':PROPERTIES.setPendingRestart},
-                           'Disable_Trakt'   :{'func':PROPERTIES.setPendingRestart},
-                           'Rollback_Watched':{'func':PROPERTIES.setPendingRestart},
-                           'Debug_Enable'    :{'func':PROPERTIES.setPendingRestart},
-                           'Debug_Level'     :{'func':PROPERTIES.setPendingRestart},
-                           'Idle_Timer'      :{'func':PROPERTIES.setPendingRestart},
-                           'Overlay_Enable'  :{'func':PROPERTIES.setPendingRestart}}
-                           
+                actions = {'User_Folder':{'func':self.setUserPath,'kwargs':{'old':value,'new':nSettings.get(setting)}}}
                 if nSettings.get(setting) != value and actions.get(setting):
                     action = actions.get(setting)
                     self.log('chkSettingsChange, detected change in %s - from: %s to: %s\naction = %s'%(setting,value,nSettings.get(setting),action))

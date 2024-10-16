@@ -81,7 +81,7 @@ class Resources:
         
         logos = []
         cacheName = 'getLogoResources.%s.%s'%(getMD5(chname),select)
-        cacheResponse = None# self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
+        cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
                 if MONITOR().waitForAbort(.001): 

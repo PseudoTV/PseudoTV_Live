@@ -425,11 +425,6 @@
                     <level>2</level>
                     <default>true</default>
                     <control type="toggle"/>
-                    <dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed),true)</condition>
-                        </dependency>
-                    </dependencies>
                 </setting>
                 <setting id="Build_Filler_Folders" type="boolean" label="30140" help="33140">
                     <level>3</level>

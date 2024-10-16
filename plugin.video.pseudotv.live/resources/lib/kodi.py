@@ -135,7 +135,7 @@ class Settings:
     
 
     def getRealSettings(self):
-        try:    return xbmcaddon.Addon(id=ADDON_ID)
+        try:    return xbmcaddon.Addon(id=ADDON_ID)#xbmcaddon.Addon('id').getSettings()
         except: return REAL_SETTINGS
 
 
@@ -590,7 +590,7 @@ class Settings:
 
     def getCurrentSettings(self):
         self.log('getCurrentSettings')
-        settings = ['User_Folder','UDP_PORT','TCP_PORT','Disable_Cache','Disable_Trakt','Rollback_Watched']
+        settings = ['User_Folder']
         for setting in settings:
             yield (setting,self.getSetting(setting))
                
@@ -610,7 +610,7 @@ class Properties:
     def setInstanceID(self):
         instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
         if instanceID: self.clearTrash(instanceID)
-        return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4()))
+        return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4())) == "true"
 
 
     def getInstanceID(self):
@@ -630,11 +630,11 @@ class Properties:
         
 
     def hasFirstrun(self):
-        return self.getPropertyBool('hasFirstrun')
+        return self.getEXTProperty('%s.hasFirstrun'%(ADDON_ID))
         
         
     def setFirstrun(self, state=True):
-        return self.setPropertyBool('hasFirstrun',state)
+        return self.setEXTProperty('%s.hasFirstrun'%(ADDON_ID),state) == "true"
                
 
     def isRunning(self, key):
@@ -645,17 +645,13 @@ class Properties:
         return self.getEXTProperty('PseudoTVRunning') == 'True'
 
 
-    def isPendingSuspend(self):
-        return self.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
-
-    
     def forceUpdateTime(self, key):
         return self.setPropertyInt(key,0)
 
 
     def setPendingRestart(self, state=True):
         if state: Dialog().notificationDialog('%s\n%s'%(LANGUAGE(32157),LANGUAGE(32124)))
-        return self.setEXTProperty('pendingRestart',str(state).lower())
+        return self.setEXTProperty('pendingRestart',str(state).lower()) == "true"
 
 
     @contextmanager
@@ -674,10 +670,10 @@ class Properties:
 
     @contextmanager
     def suspendActivity(self): #suspend/quit running background task.
-        self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'true')
+        self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),"true")
         try: yield
         finally:
-            self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'false')
+            self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),"false")
         
         
     def getKey(self, key, instanceID=True):
@@ -1221,65 +1217,63 @@ class Dialog:
 
     def browseDialog(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', options=[], include=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
         self.log('browseDialog, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s, options= %s, include= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,options,include))
-        def buildMenuItem(option):
+        def __buildMenuItem(option):
             return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=getAbbr(option['label'])))
-            
-        if prompt: 
-            proOpt  = [{"label":"Video Playlists" , "label2":"special://profile/playlists/video/" , "default":"special://profile/playlists/video/" , "mask":".xsp"                            , "type":1    , "multi":multi},
-                       {"label":"Music Playlists" , "label2":"special://profile/playlists/music/" , "default":"special://profile/playlists/music/" , "mask":".xsp"                            , "type":1    , "multi":multi},
-                       {"label":"Mixed Playlists" , "label2":"special://profile/playlists/mixed/" , "default":"special://profile/playlists/mixed/" , "mask":".xsp"                            , "type":1    , "multi":multi},
-                       {"label":"Dynamic Playlist", "label2":"Create Dynamic Smartplaylist"       , "default":""                                   , "mask":""                                , "type":1    , "multi":multi},
-                       {"label":"Video"           , "label2":"library://video/"                   , "default":"library://video/"                   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":multi},
-                       {"label":"Music"           , "label2":"library://music/"                   , "default":"library://music/"                   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
-                       {"label":"Files"           , "label2":"All Folders & Files"                , "default":""                                   , "mask":mask                              , "type":type , "multi":multi},
-                       {"label":"Local"           , "label2":"Local Folders & Files"              , "default":""                                   , "mask":mask                              , "type":type , "multi":multi},
-                       {"label":"Network"         , "label2":"Local Drives and Network Share"     , "default":""                                   , "mask":mask                              , "type":type , "multi":multi},
-                       {"label":"Pictures"        , "label2":"Picture Sources"                    , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":multi},
-                       {"label":"Resources"       , "label2":"Resource Plugins"                   , "default":"resource://"                        , "mask":mask                              , "type":type , "multi":multi}
-                      ]
+             
+        def __importSTRM(strm):
+            try:
+                with self.builtin.busy_dialog():
+                    fle = FileAccess.open(strm,'r')
+                    paths = [line for line in fle.readlines() if not line.startswith('#') and '://' in line]
+                    fle.close()
+                select = self.selectDialog(paths, LANGUAGE(32080), useDetails=False, multi=False)
+                self.log("browseDialog, __importSTRM strm = %s found = %s"%(strm,paths))
+                if not select is None: return paths[select]
+            except Exception as e: self.log("browseDialog, __importSTRM failed! %s\n%s"%(e,strm), xbmc.LOGERROR)
+             
+        with self.builtin.busy_dialog():
+            if prompt:
+                opts = [{"label":LANGUAGE(32191), "label2":"special://profile/playlists/video/" , "default":"special://profile/playlists/video/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32192), "label2":"special://profile/playlists/music/" , "default":"special://profile/playlists/music/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32193), "label2":"special://profile/playlists/mixed/" , "default":"special://profile/playlists/mixed/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32206), "label2":"Playlists"                          , "default":""                                   , "shares":""        , "mask":"|".join(ALT_PLAYLISTS)           , "type":1    , "multi":False},#https://kodi.wiki/view/Basic_playlistsv
+                        {"label":LANGUAGE(32194), "label2":"Import paths from STRM"             , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32195), "label2":"Create Dynamic Smartplaylist"       , "default":""                                   , "shares":""        , "mask":""                                , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32196), "label2":"sources://video"                    , "default":"sources://video"                    , "shares":"video"   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":multi},
+                        {"label":LANGUAGE(32207), "label2":"sources://music"                    , "default":"sources://music"                    , "shares":"music"   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
+                        {"label":LANGUAGE(32201), "label2":"Images"                             , "default":""                                   , "shares":"pictures", "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32198), "label2":"All Folders & Files"                , "default":""                                   , "shares":"files"   , "mask":mask                              , "type":type , "multi":multi},
+                        {"label":LANGUAGE(32199), "label2":"Local Folders & Files"              , "default":""                                   , "shares":"local"   , "mask":mask                              , "type":type , "multi":multi},
+                        {"label":LANGUAGE(32200), "label2":"Local Drives and Network Share"     , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi},
+                        {"label":LANGUAGE(32202), "label2":"resource://"                        , "default":"resource://"                        , "shares":shares    , "mask":mask                              , "type":type , "multi":multi}]
 
-            if isinstance(include,list): [options.append(proOpt[idx]) for idx in include]
-            elif len(options) > 0: options.extend(proOpt)
-            else: options = proOpt
-                
-            if default:
-                default, file = os.path.split(default)
-                if file: type = 1
-                else:    type = 0
-                options.insert(0,{"label":"Current Path", "label2":default, "default":default , "mask":mask, "type":type, "multi":multi})
-                   
-            with self.builtin.busy_dialog():
-                lizLST = poolit(buildMenuItem)(options)
+                if isinstance(include,list): options = [opts[idx] for idx in include]
+                else:                        options = opts
+                if default:                  options.insert(0,{"label":LANGUAGE(32203), "label2":default, "default":default, "shares":shares, "mask":mask, "type":type, "multi":multi})
+                lizLST = poolit(__buildMenuItem)(options)
                 
             select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
-            if   options[select].get('label') == "Dynamic Playlist": return self.buildDXSP(default)
-            elif options[select].get('label') == "Resource Plugins": return self.buildResource(default, mask)
+            if   options[select].get('label') == LANGUAGE(32195): return self.buildDXSP(default)
+            elif options[select].get('label') == LANGUAGE(32202): return self.buildResource(default, mask)
             elif select is not None:
-                shares    = options[select]['label'].lower().replace("network","")
+                default   = options[select]['default']
+                shares    = options[select]['shares']
                 mask      = options[select]['mask']
                 type      = options[select]['type']
                 multi     = options[select]['multi']
-                default   = options[select]['default']
             else: return
             
         if monitor: self.toggleInfoMonitor(True)
         if multi == True:
             ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
-            ## type integer - the type of browse dialog.
-            ## 1	ShowAndGetFile
-            ## 2	ShowAndGetImage
             retval = xbmcgui.Dialog().browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
         else:
             ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#gafa1e339e5a98ae4ea4e3d3bb3e1d028c
-            ## type integer - the type of browse dialog.
-            ## 0	ShowAndGetDirectory
-            ## 1	ShowAndGetFile
-            ## 2	ShowAndGetImage
-            ## 3	ShowAndGetWriteableDirectory
             retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
+            if options[select].get('label') == LANGUAGE(32194): retval = __importSTRM(retval)
         if monitor: self.toggleInfoMonitor(False)
-        if options is not None and default == retval: return
-        return retval
+        if len(options) > 0 and default == retval: return
+        if retval: return retval
         
         
     def buildResource(self, path, exts=xbmc.getSupportedMedia('picture')):
@@ -1292,7 +1286,7 @@ class Dialog:
             # "type": "kodi.resource.images"
         # },
         # # special://home/addons/resource.images.overlays.crttv/resources/
-        return default
+        return
         
 
     def buildDXSP(self, path=''):

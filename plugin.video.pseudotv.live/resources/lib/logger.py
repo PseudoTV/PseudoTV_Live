@@ -23,7 +23,11 @@ import json,traceback
 from globals import *
 
 def log(event, level=xbmc.LOGDEBUG):
-    if DEBUG_ENABLED or level >= 3:
+    if REAL_SETTINGS.getSetting('Debug_Enable') == 'true' or level >= 3:
+        DEBUG_NAMES  = {0:'LOGDEBUG',1:'LOGINFO',2:'LOGWARNING',3:'LOGERROR',4:'LOGFATAL'}
+        DEBUG_LEVELS = {0:xbmc.LOGDEBUG,1:xbmc.LOGINFO,2:xbmc.LOGWARNING,3:xbmc.LOGERROR,4:xbmc.LOGFATAL}
+        DEBUG_LEVEL  = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
+        
         if level >= 3: event = '%s\n%s'%(event, traceback.format_exc())
         event = '%s-%s-%s'%(ADDON_ID, ADDON_VERSION, event)
         if level >= DEBUG_LEVEL:

@@ -106,13 +106,14 @@ class CustomQueue:
     
     def __pop(self):
         self.isRunning = True
-        while not xbmc.Monitor().abortRequested():
+        while not self.service.monitor.abortRequested():
             if self.service._interrupt():
                 self.log("__pop, _interrupt == True")
                 break
             elif self.service._suspend():
                 self.log("__pop, _suspend == True")
-                continue
+                if self.service.monitor.waitForAbort(1): break
+                else: continue
             else:
                 if not self.head and not self.priority:
                     self.log("__pop, The queue is empty!")

@@ -111,6 +111,13 @@ HTML_ESCAPE         = {"&": "&amp;",
                        ">": "&gt;",
                        "<": "&lt;"}    
 
+ALT_PLAYLISTS       = [".cue",
+                       ".m3u",
+                       ".m3u8",
+                       ".strm",
+                       ".pls",
+                       ".wpl"] 
+
 TV_URL              = 'plugin://{addon}/?mode=tv&name={name}&chid={chid}.pvr'
 RADIO_URL           = 'plugin://{addon}/?mode=radio&name={name}&chid={chid}&radio={radio}&vid={vid}.pvr'
 LIVE_URL            = 'plugin://{addon}/?mode=live&name={name}&chid={chid}&vid={vid}&now={now}&start={start}&duration={duration}&stop={stop}.pvr'

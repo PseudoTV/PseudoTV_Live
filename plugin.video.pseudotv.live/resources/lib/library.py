@@ -137,12 +137,13 @@ class Library:
             
         complete = True 
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
-        for idx,type in enumerate(AUTOTUNE_TYPES):
+        for idx, type in enumerate(AUTOTUNE_TYPES):
             self.parserDialog = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),self.parserDialog,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
             if self.service._interrupt():
                 complete = False
                 break
-            else: self.setLibrary(type, [__update(type,item) for item in libraryItems.get(type,[])])
+            else: self.setLibrary(type, poolit(__update)(libraryItems.get(type,[]),type))
+            
         self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
         self.log('updateLibrary, force = %s, complete = %s'%(force, complete))
         return complete

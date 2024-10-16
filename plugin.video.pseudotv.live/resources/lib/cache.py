@@ -23,7 +23,7 @@ from functools import wraps
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
 
-ADDON_ID = 'plugin.video.pseudotv.live'
+# ADDON_ID = 'plugin.video.pseudotv.live'
 
 def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VERSION, json_data=False):
     def internal(method):
@@ -57,6 +57,7 @@ class Cache:
     def __init__(self, mem_cache=False, is_json=False):
         self.cache.enable_mem_cache = mem_cache
         self.cache.data_is_json     = is_json  
+        self.disable_cache          = (REAL_SETTINGS.getSettingBool('Debug_Enable') & REAL_SETTINGS.getSettingBool('Disable_Cache'))
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -70,7 +71,7 @@ class Cache:
         
     def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
         # with self.lock:
-        if value and not DISABLE_CACHE and not self.cacheLocked():
+        if value and not self.disable_cache and not self.cacheLocked():
             with self.cacheLocker():
                 self.log('set, name = %s'%self.getname(name))
                 self.cache.set(self.getname(name),value,checksum,expiration,json_data)
@@ -79,7 +80,7 @@ class Cache:
     
     def get(self, name, checksum=ADDON_VERSION, json_data=False):
         # with self.lock:
-        if not DISABLE_CACHE and not self.cacheLocked():
+        if not self.disable_cache and not self.cacheLocked():
             with self.cacheLocker():
                 self.log('get, name = %s'%self.getname(name))
                 return self.cache.get(self.getname(name),checksum,json_data)

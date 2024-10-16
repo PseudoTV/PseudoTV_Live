@@ -21,20 +21,13 @@
 from constants import *
 
 #variables
-USER_LOC            = REAL_SETTINGS.getSetting('User_Folder')
-DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Debug_Enable').lower() == 'true'
-DEBUG_NAMES         = {0:'LOGDEBUG',1:'LOGINFO',2:'LOGWARNING',3:'LOGERROR',4:'LOGFATAL'}
-DEBUG_LEVELS        = {0:xbmc.LOGDEBUG,1:xbmc.LOGINFO,2:xbmc.LOGWARNING,3:xbmc.LOGERROR,4:xbmc.LOGFATAL}
-DEBUG_LEVEL         = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
-DEBUG_CACHE_ENABLED = REAL_SETTINGS.getSetting('Disable_Cache').lower() == 'true'
-DISABLE_CACHE       = (DEBUG_ENABLED & DEBUG_CACHE_ENABLED) #Only enable DISABLE_CACHE when DEBUG_ENABLED
-
 PAGE_LIMIT          = int((REAL_SETTINGS.getSetting('Page_Limit')  or "25"))
 MIN_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Min_Days')    or "1"))
 MAX_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Max_Days')    or "3"))
 EPG_ARTWORK         = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
 
 #file paths
+USER_LOC            = REAL_SETTINGS.getSetting('User_Folder')
 LOGO_LOC            = os.path.join(USER_LOC,'logos')
 FILLER_LOC          = os.path.join(USER_LOC,'fillers')
 M3UFLEPATH          = os.path.join(USER_LOC,M3UFLE)
