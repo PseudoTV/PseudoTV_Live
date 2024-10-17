@@ -85,7 +85,7 @@ class CustomQueue:
         self.log("_push, func = %s"%(package[0].__name__))
         node = LlNode(package, priority, delay)
         if self.__exists((1,priority,package)):
-            self.log("_push, %s exists; ignoring package"%(package))
+            self.log("_push, %s exists; ignoring package"%(package[0].__name__))
             return
         elif self.priority:
             self.qsize += 1
