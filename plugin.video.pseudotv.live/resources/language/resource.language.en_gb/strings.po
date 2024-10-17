@@ -1459,27 +1459,27 @@ msgid "Error posting snapshot[CR]%s"
 msgstr ""
 
 msgctxt "#32191"
-msgid "Video Playlists"
+msgid "Video SmartPlaylists"
 msgstr ""
 
 msgctxt "#32192"
-msgid "Music Playlists"
+msgid "Music SmartPlaylists"
 msgstr ""
 
 msgctxt "#32193"
-msgid "Mixed Playlists"
+msgid "Mixed SmartPlaylists"
 msgstr ""
 
 msgctxt "#32194"
-msgid "STRM Import"
+msgid "STRM Sources"
 msgstr ""
 
 msgctxt "#32195"
-msgid "Dynamic Playlist"
+msgid "Dynamic SmartPlaylist"
 msgstr ""
 
 msgctxt "#32196"
-msgid "Video Sources"
+msgid "Video Library"
 msgstr ""
 
 msgctxt "#32197"
@@ -1515,7 +1515,7 @@ msgid "Basic Playlist"
 msgstr ""
 
 msgctxt "#32207"
-msgid "Music Sources"
+msgid "Music Library"
 msgstr ""
 
 msgctxt "#32208"
@@ -1530,6 +1530,9 @@ msgctxt "#32210"
 msgid "Parsing Details"
 msgstr ""
 
+msgctxt "#32211"
+msgid "%s: [COLOR=%s][B]%s[/B][/COLOR]"
+msgstr ""
 
 
 

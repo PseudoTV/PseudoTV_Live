@@ -278,9 +278,9 @@ class BaseRule:
             self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
                 
           
-    def onActionBrowse(self, optionindex, type=0, heading=ADDON_NAME, shares='', mask='', options=[], include=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
+    def onActionBrowse(self, optionindex, type=0, heading=ADDON_NAME, shares='', mask='', options=[], exclude=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
         log("onActionBrowse")
-        info = self.dialog.browseDialog(type, heading, self.optionValues[optionindex].replace('None',''), shares, mask, options, include, useThumbs, treatAsFolder, prompt, multi, monitor)
+        info = self.dialog.browseDialog(type, heading, self.optionValues[optionindex].replace('None',''), shares, mask, options, exclude, useThumbs, treatAsFolder, prompt, multi, monitor)
         if info is not None: self.optionValues[optionindex] = info 
                      
 
@@ -442,7 +442,7 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
 
     def onAction(self, optionindex):
         if   optionindex == 0: self.onActionToggleBool(optionindex)
-        elif optionindex == 1: self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), include=list(range(7,12)))
+        elif optionindex == 1: self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), exclude=[LANGUAGE(32202),LANGUAGE(32206),LANGUAGE(32195),LANGUAGE(32193),LANGUAGE(32192),LANGUAGE(32191),LANGUAGE(32194)])
         elif optionindex == 2: self.getPosition(optionindex)
         return self.optionValues[optionindex]
 

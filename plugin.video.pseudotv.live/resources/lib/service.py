@@ -70,6 +70,7 @@ class Player(xbmc.Player):
 
     def onAVChange(self):
         self.log('onAVChange')
+        self.service.monitor.chkIdle()
         if self.isPseudoTV: self._onPlay()
 
         
@@ -181,7 +182,6 @@ class Player(xbmc.Player):
         self.log('_onPlay')
         self.toggleReplay(False)
         self.toggleBackground(False)
-        self.service.monitor.chkIdle()
         
         oldInfo = self.sysInfo
         self.sysInfo = self.getPlayerSysInfo() #get current sysInfo

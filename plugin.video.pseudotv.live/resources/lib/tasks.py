@@ -124,11 +124,11 @@ class Tasks():
         
         
     def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
-        if nextrun is None: nextrun = (PROPERTIES.getPropertyInt(key) or 0)# nextrun == 0 => force run
+        if nextrun is None: nextrun = (PROPERTIES.getPropertyInt(key) or 0)# nextrun == 0 => force que
         epoch = int(time.time())
-        run = (epoch >= nextrun)
-        if run and (not self.service._interrupt() and not self.service._suspend()):
-            self.log('_chkEpochTimer, key = %s, run = %s'%(key,run))
+        que   = (epoch >= nextrun)
+        if que and (not self.service._interrupt() and not self.service._suspend()):
+            self.log('_chkEpochTimer, key = %s, que = %s'%(key,que))
             PROPERTIES.setPropertyInt(key,(epoch+runevery))
             return self._que(func)
         
@@ -156,12 +156,11 @@ class Tasks():
 
 
     def chkFiles(self):
-        # check for missing files and run appropriate action to rebuild them only after init. startup.
-        if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary)
-        if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels)
-        if not FileAccess.exists(LOGO_LOC):   FileAccess.makedirs(LOGO_LOC) #check logo folder
-        if not FileAccess.exists(FILLER_LOC): FileAccess.makedirs(FILLER_LOC) #check fillers folder
-        if not FileAccess.exists(TEMP_LOC):   FileAccess.makedirs(TEMP_LOC)
+        self.log('chkFiles')
+        if PROPERTIES.hasFirstrun():
+            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,1)
+            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels,2)
+        [FileAccess.makedirs(folder) for folder in [LOGO_LOC,FILLER_LOC,TEMP_LOC] if not FileAccess.exists(os.path.join(folder,''))]
 
 
     def chkPVRRefresh(self):
@@ -187,6 +186,7 @@ class Tasks():
 
 
     def chkRecommended(self):
+        self.log('chkRecommended')
         try:
             library = Library(service=self.service)
             library.searchRecommended()
@@ -195,29 +195,32 @@ class Tasks():
 
         
     def chkLibrary(self, force=False):
+        self.log('chkLibrary, force = %s'%(force))
         try: 
             library = Library(service=self.service)
             library.importPrompt()
             complete = library.updateLibrary(force)
             del library
-            if   not complete: self._que(self.chkLibrary,1,True)
+            
+            if not complete: self._que(self.chkLibrary,1,True)
             elif not SETTINGS.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
     def chkChannels(self):
+        self.log('chkChannels')
         try:
-            builder  = Builder(self.service)
-            complete, updated = builder.build()
-            channels = builder.verify()
-            if SETTINGS.getSettingBool('Build_Filler_Folders'): self.chkFillers(channels)
+            builder = Builder(self.service)
+            self.service.currentChannels = list(builder.verify())
+            if len(self.service.currentChannels) > 0:
+                complete, updated = builder.build()
+                if not complete and PROPERTIES.hasFirstrun(): self._que(self.chkChannels,2)
+                elif updated: PROPERTIES.setEpochTimer('chkPVRRefresh')
+                if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,10,self.service.currentChannels)
             del builder
-            if not complete:
-                if PROPERTIES.hasFirstrun(): self._que(self.chkChannels,2)
-            else: 
-                self.service.currentChannels = list(channels)
-                PROPERTIES.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(len(self.service.currentChannels) > 0).lower())
-                if updated: PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
+            
+            SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.service.currentChannels)))
+            PROPERTIES.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(len(self.service.currentChannels) > 0).lower())
             if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
@@ -225,11 +228,11 @@ class Tasks():
                 
     def chkPVRservers(self):
         self.log('chkPVRservers')
-        if self.multiroom.chkPVRservers():
-            PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
+        if self.multiroom.chkPVRservers(): PROPERTIES.setEpochTimer('chkPVRRefresh')
 
 
     def chkPVRSettings(self):
+        self.log('chkPVRSettings')
         try:
             with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))): #Kodi PVR & LiveTV Settings
                 if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS: SETTINGS.setSettingInt('Min_Days',min)
@@ -265,6 +268,7 @@ class Tasks():
 
 
     def runAutoTune(self):
+        self.log('runAutoTune')
         try:
             autotune = Autotune(service=self.service)
             complete = autotune._runTune()

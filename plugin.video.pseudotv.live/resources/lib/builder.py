@@ -186,9 +186,10 @@ class Builder:
 
 
     def addScheduling(self, citem: dict, fileList: list, start: time) -> list:
-        self.log("addScheduling; id: %s, fileList = %s, start = %s"%(citem['id'],len(fileList),start))
+        self.log("addScheduling; id: %s, IN fileList = %s, start = %s"%(citem['id'],len(fileList),start))
         totDur  = 0
         tmpList = []
+        nowtime = getUTCstamp()
 
         for idx, item in enumerate(self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)):
             item["idx"]   = idx
@@ -199,8 +200,11 @@ class Builder:
             tmpList.append(item)
             
         iters = cycle(fileList) #todo adv. rule and global opt. 
-        while self.service.monitor.abortRequested() and totDur < self.minEPG:
+        while not self.service.monitor.abortRequested():
             if self.service._interrupt(): break
+            elif tmpList[-1].get('stop') >= (nowtime + self.minEPG): 
+                self.log("addScheduling; id: %s, met minimum guidedata; OUT fileList = %s, now = %s, stop = %s"%(citem['id'],len(tmpList),nowtime,tmpList[-1].get('stop')))
+                break
             else: 
                 idx += 1
                 item = next(iters).copy()
@@ -210,13 +214,8 @@ class Builder:
                 start = item['stop']
                 totDur += item['duration']
                 tmpList.append(item)
-                self.log("addScheduling; id: %s, padding tmpList = %s, totDur = %s/%s"%(citem['id'],len(tmpList),totDur,self.minEPG))
-                
-        #force removal of channel with no current programmes
-        if len(tmpList) > 0:
-            if tmpList[-1].get('stop') < getUTCstamp():
-                self.log("addScheduling; id: %s, last stop = %s, returning empty tmpList\nNo Current Programs!!"%(citem['id'],fileList[-1].get('stop')))
-                tmpList = []
+                if self.pDialog: self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: Extending guidedata %s/%s'%(self.pName,totDur,self.minEPG),header='%s, %s'%(ADDON_NAME,self.pMSG))
+                self.log("addScheduling; id: %s, padding guidedata; fileList = %s, now = %s, totDur = %s/%s, lastStop = %s"%(citem['id'],len(tmpList),nowtime,totDur,self.minEPG,tmpList[-1].get('stop')))
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
         

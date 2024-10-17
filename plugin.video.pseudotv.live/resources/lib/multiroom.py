@@ -117,10 +117,12 @@ class Multiroom:
         changed = False
         servers = self.getDiscovery()
         for server in list(servers.values()):
+            online   = server.get('online',False)
             response = getURL('http://%s/%s'%(server.get('host'),REMOTEFLE),header={'Accept':'application/json'})
             if response: server.update(loadJSON(response))
             server['online'] = True if response else False
-            self.log('chkPVRservers, %s online = %s last updated = %s'%(server.get('name'),server['online'],server.get('updated')))
+            if online != server['online']: DIALOG.notificationDialog(LANGUAGE(32211)%(server.get('name'),{True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)]))
+            self.log('chkPVRservers, %s: online = %s, last updated = %s'%(server.get('name'),server['online'],server.get('updated')))
             instancePath = SETTINGS.hasPVRInstance(server.get('name'))
             if       server.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(server.get('host'),server.get('name'))
             elif not server.get('enabled',False) and instancePath: FileAccess.delete(instancePath)
@@ -183,7 +185,7 @@ class Multiroom:
                         servers[liz.getLabel()]['enabled'] = False
                     if instancePath: FileAccess.delete(instancePath)
             if self.setDiscovery(servers):
-                return PROPERTIES.setEXTProperty('%s.chkDiscovery'%(ADDON_ID),'true')
+                return PROPERTIES.setEpochTimer('chkDiscovery')
 
             
     def run(self):

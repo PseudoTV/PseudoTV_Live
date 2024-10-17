@@ -82,22 +82,24 @@ class CustomQueue:
              
              
     def _push(self, package: tuple, priority: int=0, delay: int=0):
-        self.log("_push, func = %s"%(package[0].__name__))
         node = LlNode(package, priority, delay)
         if self.__exists((1,priority,package)):
-            self.log("_push, %s exists; ignoring package"%(package[0].__name__))
+            self.log("_push, func = %s exists; ignoring package"%(package[0].__name__))
             return
         elif self.priority:
             self.qsize += 1
             item = (priority, package)
             self.itemCount[priority] += 1
+            self.log("_push, func = %s, priority = %s"%(package[0].__name__,priority))
             heapq.heappush(self.min_heap, (item[0], self.itemCount[priority], item[1]))
         elif self.head:
             self.tail.next = node
             node.prev = self.tail
             self.tail = node
+            self.log("_push, func = %s"%(package[0].__name__))
         else:
             self.head = node
+            self.log("_push, func = %s"%(package[0].__name__))
             self.tail = node
             
         if not self.isRunning:

@@ -165,7 +165,8 @@ class Autotune:
                 citem['logo']     = eitem.get('logo',citem.get('logo',LOGO))
                 citem['favorite'] = eitem.get('favorite',False)
             self.channels.addChannel(citem)
-        return self.channels.setChannels()
+        if self.channels.setChannels():
+            PROPERTIES.forceUpdateTime('chkChannels')
        
        
     def clearLibrary(self):

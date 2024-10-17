@@ -649,6 +649,10 @@ class Properties:
         return self.setPropertyInt(key,0)
 
 
+    def setEpochTimer(self, key, state=True):
+        return self.setEXTProperty('%s.%s'%(ADDON_ID,key),str(state).lower())
+
+
     def setPendingRestart(self, state=True):
         if state: Dialog().notificationDialog('%s\n%s'%(LANGUAGE(32157),LANGUAGE(32124)))
         return self.setEXTProperty('pendingRestart',str(state).lower()) == "true"
@@ -1215,8 +1219,8 @@ class Dialog:
         return xbmcgui.Dialog().input(message, default, key, opt, close)
         
 
-    def browseDialog(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', options=[], include=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
-        self.log('browseDialog, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s, options= %s, include= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,options,include))
+    def browseDialog(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', options=[], exclude=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
+        self.log('browseDialog, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s, options= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,options,exclude))
         def __buildMenuItem(option):
             return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=getAbbr(option['label'])))
              
@@ -1233,21 +1237,21 @@ class Dialog:
              
         with self.builtin.busy_dialog():
             if prompt:
-                opts = [{"label":LANGUAGE(32191), "label2":"special://profile/playlists/video/" , "default":"special://profile/playlists/video/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
+                opts = [{"label":LANGUAGE(32196), "label2":"library://video/"                   , "default":"library://video/"                   , "shares":"video"   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":multi},
+                        {"label":LANGUAGE(32207), "label2":"library://music/"                   , "default":"library://music/"                   , "shares":"music"   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
+                        {"label":LANGUAGE(32201), "label2":"Images"                             , "default":""                                   , "shares":"pictures", "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32194), "label2":"Import paths from STRM"             , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32191), "label2":"special://profile/playlists/video/" , "default":"special://profile/playlists/video/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
                         {"label":LANGUAGE(32192), "label2":"special://profile/playlists/music/" , "default":"special://profile/playlists/music/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
                         {"label":LANGUAGE(32193), "label2":"special://profile/playlists/mixed/" , "default":"special://profile/playlists/mixed/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
-                        {"label":LANGUAGE(32206), "label2":"Playlists"                          , "default":""                                   , "shares":""        , "mask":"|".join(ALT_PLAYLISTS)           , "type":1    , "multi":False},#https://kodi.wiki/view/Basic_playlistsv
-                        {"label":LANGUAGE(32194), "label2":"Import paths from STRM"             , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
                         {"label":LANGUAGE(32195), "label2":"Create Dynamic Smartplaylist"       , "default":""                                   , "shares":""        , "mask":""                                , "type":1    , "multi":False},
-                        {"label":LANGUAGE(32196), "label2":"sources://video"                    , "default":"sources://video"                    , "shares":"video"   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":multi},
-                        {"label":LANGUAGE(32207), "label2":"sources://music"                    , "default":"sources://music"                    , "shares":"music"   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
-                        {"label":LANGUAGE(32201), "label2":"Images"                             , "default":""                                   , "shares":"pictures", "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32206), "label2":".cue,.m3u,.m3u8,.strm,.pls,.wpl"    , "default":""                                   , "shares":""        , "mask":"|".join(ALT_PLAYLISTS)           , "type":1    , "multi":False},
                         {"label":LANGUAGE(32198), "label2":"All Folders & Files"                , "default":""                                   , "shares":"files"   , "mask":mask                              , "type":type , "multi":multi},
                         {"label":LANGUAGE(32199), "label2":"Local Folders & Files"              , "default":""                                   , "shares":"local"   , "mask":mask                              , "type":type , "multi":multi},
                         {"label":LANGUAGE(32200), "label2":"Local Drives and Network Share"     , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi},
                         {"label":LANGUAGE(32202), "label2":"resource://"                        , "default":"resource://"                        , "shares":shares    , "mask":mask                              , "type":type , "multi":multi}]
 
-                if isinstance(include,list): options = [opts[idx] for idx in include]
+                if isinstance(exclude,list): options = [opt for opt in opts if not opt.get('label') in exclude]
                 else:                        options = opts
                 if default:                  options.insert(0,{"label":LANGUAGE(32203), "label2":default, "default":default, "shares":shares, "mask":mask, "type":type, "multi":multi})
                 lizLST = poolit(__buildMenuItem)(options)

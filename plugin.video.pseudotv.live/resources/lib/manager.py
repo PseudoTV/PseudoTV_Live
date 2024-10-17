@@ -379,7 +379,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 key, path = lizLST[select].getProperty('key'), lizLST[select].getPath()
                 if key == 'add': 
                     with self.toggleSpinner(self.itemList):
-                        npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),monitor=True),citem)
+                        npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),exclude=[LANGUAGE(32201),LANGUAGE(32202)],monitor=True),citem)
                         if npath: pathLST.append(npath)
                 elif key == 'save': 
                     paths = pathLST
@@ -389,7 +389,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     if retval in [1,2]: pathLST.pop(pathLST.index(path))
                     if retval == 2:
                         with self.toggleSpinner(self.itemList):
-                            npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),default=path,monitor=True), citem)
+                            npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),default=path,exclude=[LANGUAGE(32201),LANGUAGE(32202)],monitor=True), citem)
                             pathLST.append(npath)
         self.log('getPaths, paths = %s'%(paths))
         return paths, citem
@@ -732,7 +732,8 @@ class Manager(xbmcgui.WindowXMLDialog):
 
         def browse(chname):
             with self.toggleSpinner(self.itemList):
-                retval = DIALOG.browseDialog(type=1,heading='%s (%s)'%(LANGUAGE(32066).split('[CR]')[0],chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
+                excLST = [LANGUAGE(32201),LANGUAGE(32202),LANGUAGE(32194),LANGUAGE(32191),LANGUAGE(32192),LANGUAGE(32193),LANGUAGE(32195),LANGUAGE(32206)]
+                retval = DIALOG.browseDialog(type=1,heading='%s (%s)'%(LANGUAGE(32066).split('[CR]')[0],chname),default=channelData.get('icon',''),exclude=excLST, shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
             if FileAccess.copy(cleanLogo(retval), os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
                 if FileAccess.exists(os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
                     return os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')

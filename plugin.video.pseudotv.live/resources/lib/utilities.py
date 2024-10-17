@@ -188,8 +188,7 @@ class Utilities:
 
 
     def _togglePVR(self):
-        if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
-            PROPERTIES.setEXTProperty('%s.chkPVRRefresh'%(ADDON_ID),'true')
+        if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): PROPERTIES.setEpochTimer('chkPVRRefresh')
             
 
     def buildMenu(self, select=None):
@@ -200,22 +199,23 @@ class Utilities:
                  {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)                        , 'hide':False},#"Show M3U"
                  {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)                      , 'hide':False}, #"Show XMLTV"
                  {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkLibrary'%(ADDON_ID),'true')  , 'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkFillers'%(ADDON_ID),'true')  , 'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.runAutoTune'%(ADDON_ID),'true') , 'hide':False}] #Run Autotune
+                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('chkFillers',)                      ,'hide':False}, #Rescan library
+                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('runAutoTune',)                     ,'hide':False}] #Run Autotune
                 
         with BUILTIN.busy_dialog():
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide'))]
             if select is None: select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
             
         if not select is None:
-            try: 
-                selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
-                self.log('buildMenu, selectItem = %s'%selectItem)
-                if selectItem.get('args'): selectItem['func'](*selectItem['args'])
-                else:                      selectItem['func']()
-            except Exception as e: 
-                self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
-                return DIALOG.notificationDialog(LANGUAGE(32000))
+            with PROPERTIES.suspendActivity():
+                try: 
+                    selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
+                    self.log('buildMenu, selectItem = %s'%selectItem)
+                    if selectItem.get('args'): selectItem['func'](*selectItem['args'])
+                    else:                      selectItem['func']()
+                except Exception as e: 
+                    self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
+                    return DIALOG.notificationDialog(LANGUAGE(32000))
         else: openAddonSettings((7,1))
                 
 
@@ -230,7 +230,7 @@ class Utilities:
         keys = list(files.keys())
         if not full: keys = keys[:2]
         if DIALOG.yesnoDialog('%s ?'%(msg)): 
-            with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+            with BUILTIN.busy_dialog():
                  for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
         if full: 

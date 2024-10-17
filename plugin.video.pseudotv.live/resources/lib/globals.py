@@ -112,8 +112,7 @@ def setJSON(file, data):
 
 def getURL(url, data={}, header=HEADER, json_data=False):
     session = requests.Session()
-    retry_strategy = Retry(total=5,backoff_factor=1,status_forcelist=[429, 500, 502, 503, 504])
-    adapter = HTTPAdapter(max_retries=retry_strategy)
+    adapter = HTTPAdapter(max_retries=Retry(total=3,backoff_factor=1,status_forcelist=[429, 500, 502, 503, 504]))
     session.mount("http://", adapter)
     session.mount("https://", adapter)
     try:
@@ -310,9 +309,7 @@ def togglePVR(state=True, reverse=False, wait=EPOCH_TIMER):
     if not PROPERTIES.isRunning('togglePVR') and SETTINGS.getSettingBool('Enable_PVR_RELOAD'):
         with PROPERTIES.setRunning('togglePVR'):
             log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
-            #todo check for open pvr windows, don't toggle when open
-            if not BUILTIN.getInfoBool('Playing','Player'):
-                xbmc.sleep(5)
+            if not BUILTIN.getInfoBool('Playing','Player') or not BUILTIN.getInfoBool('HasMedia','Player'):
                 isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
                 if (state and isEnabled) or (not state and not isEnabled): return
                 xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
