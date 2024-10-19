@@ -36,4 +36,5 @@ def log(event, level=xbmc.LOGDEBUG):
             except: entries = {}
             entries.setdefault(DEBUG_NAMES[DEBUG_LEVEL],[]).append('%s - %s: %s'%(datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT),DEBUG_NAMES[level],event))
             xbmcgui.Window(10000).setProperty('%s.debug.log'%(ADDON_NAME),json.dumps({'DEBUG':entries}, indent=4))
+            if not xbmcgui.Window(10000).getProperty('%s.has.debug'%(ADDON_NAME)) == 'true': xbmcgui.Window(10000).setProperty('%s.has.debug'%(ADDON_NAME),'true')
         

@@ -84,7 +84,7 @@ class Backup:
         if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
             
-        with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+        with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
             if FileAccess.move(CHANNELFLEPATH,CHANNELFLE_RESTORE):
                 if FileAccess.copy(file,CHANNELFLEPATH):
                     library = Library()

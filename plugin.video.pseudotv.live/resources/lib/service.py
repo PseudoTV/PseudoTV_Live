@@ -358,13 +358,14 @@ class Monitor(xbmc.Monitor):
 
 
 class Service():
-    PROPERTIES.getInstanceID()
-    SETTINGS.getMYUUID()
     currentChannels = []
     currentSettings = []
 
     def __init__(self):
         self.log('__init__')
+        PROPERTIES.getInstanceID()
+        SETTINGS.getMYUUID()
+        
         self.pendingRestart    = False
         self.jsonRPC           = JSONRPC()
         self.player            = Player(service=self)
@@ -384,20 +385,19 @@ class Service():
 
 
     def _interrupt(self, wait=.001) -> bool: #break
-        self.monitor.pendingInterrupt = (self.monitor.pendingInterrupt | self.monitor.waitForAbort(wait) | self.__restart())
+        self.monitor.pendingInterrupt = (self.pendingRestart | PROPERTIES.isPendingInterrupt() | self.monitor.waitForAbort(wait))
         self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
         return self.monitor.pendingInterrupt
-
+    
 
     def _suspend(self) -> bool: #continue
-        isPendingSuspend = PROPERTIES.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
-        self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | isPendingSuspend | self.__playing())
+        self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | self.__playing() | PROPERTIES.isPendingSuspend())
         self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))
         return self.monitor.pendingSuspend
 
 
-    def __restart(self) -> bool:
-        self.pendingRestart = PROPERTIES.getEXTProperty('pendingRestart') == 'true'
+    def __restart(self, wait=1.0) -> bool:
+        self.pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart() | self.monitor.waitForAbort(wait) )
         self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
         return self.pendingRestart
          
@@ -423,7 +423,7 @@ class Service():
         self.log('_start')
         self.__initialize()
         while not self.monitor.abortRequested():
-            if    self._interrupt(1): break
+            if    self.__restart(): break
             else: self.__tasks()
         self._stop()
 
@@ -436,6 +436,7 @@ class Service():
                     thread.join(1.0)
                 except: pass
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
-        if self.pendingRestart: Service()._start()
+        PROPERTIES.clrInstanceID()
+        if PROPERTIES.isPendingRestart(): Service()._start()
 
 if __name__ == '__main__': Service()._start()

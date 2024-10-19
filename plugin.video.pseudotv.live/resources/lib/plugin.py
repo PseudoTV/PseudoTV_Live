@@ -24,10 +24,11 @@ from jsonrpc     import JSONRPC
 class Plugin:
     @contextmanager
     def preparingPlayback(self):
-        if self.playCheck(loadJSON(decodeString(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID))))):
-            try: yield
-            finally: PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
-        else: yield self.playError()
+        with PROPERTIES.suspendActivity():
+            if self.playCheck(loadJSON(decodeString(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID))))):
+                try: yield
+                finally: PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
+            else: yield self.playError()
 
 
     def __init__(self, sysARG=sys.argv, sysInfo={}):

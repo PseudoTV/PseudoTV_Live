@@ -185,7 +185,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                             self._set_headers(content)
                             while not self.monitor.abortRequested():
                                 chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                                if not chunk or self.monitor.service._interrupt(.001): break
+                                if not chunk or self.monitor.service._interrupt(): break
                                 self.send_header('content-length', len(content))
                                 self.wfile.write(chunk)
                         self.wfile.close()

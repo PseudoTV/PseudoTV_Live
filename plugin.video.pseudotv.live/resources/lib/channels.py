@@ -106,7 +106,7 @@ class Channels:
          
 
     def delChannel(self, citem: dict={}) -> bool:
-        self.log('delChannel, id = %s'%(citem['id']), xbmc.LOGINFO)
+        self.log('delChannel,[%s]'%(citem['id']), xbmc.LOGINFO)
         idx, channel = self.findChannel(citem)
         if idx is not None: self.channelDATA['channels'].pop(idx)
         return True
@@ -122,10 +122,10 @@ class Channels:
                 citem['group'].append(LANGUAGE(32019))
                 citem['group'] = sorted(set(citem['group']))
                 
-            self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]), xbmc.LOGINFO)
+            self.log('addChannel, [%s] updating channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
             self.channelDATA['channels'][idx] = citem
         else:
-            self.log('addChannel, adding channel %s, id %s'%(citem["number"],citem["id"]), xbmc.LOGINFO)
+            self.log('addChannel, [%s] adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
             self.channelDATA.setdefault('channels',[]).append(citem)
         return True
         

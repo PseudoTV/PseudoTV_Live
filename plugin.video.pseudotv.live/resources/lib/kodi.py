@@ -607,10 +607,15 @@ class Properties:
         log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def setInstanceID(self):
+    def clrInstanceID(self):
         instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
         if instanceID: self.clearTrash(instanceID)
-        return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4())) == "true"
+        self.clearEXTProperty('%s.InstanceID'%(ADDON_ID))
+
+
+    def setInstanceID(self):
+        self.clrInstanceID()
+        return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4()))
 
 
     def getInstanceID(self):
@@ -655,11 +660,19 @@ class Properties:
 
     def setPendingRestart(self, state=True):
         if state: Dialog().notificationDialog('%s\n%s'%(LANGUAGE(32157),LANGUAGE(32124)))
-        return self.setEXTProperty('pendingRestart',str(state).lower()) == "true"
+        return self.setPropertyBool('pendingRestart',state)
+
+
+    def isPseudoTVRunning(self):
+        return self.getEXTProperty('PseudoTVRunning') == 'true'
 
 
     @contextmanager
     def legacy(self):
+        monitor = MONITOR()
+        while not monitor.abortRequested() and self.isPseudoTVRunning():
+            if monitor.waitForAbort(.001): break
+        del monitor
         self.setEXTProperty('PseudoTVRunning','true')
         try: yield
         finally: self.setEXTProperty('PseudoTVRunning','false')
@@ -667,17 +680,44 @@ class Properties:
 
     @contextmanager
     def setRunning(self, key):
+        monitor = MONITOR()
+        while not monitor.abortRequested() and self.isRunning(key):
+            if monitor.waitForAbort(.001): break
+        del monitor
         self.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'true')
         try: yield
         finally: self.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'false')
 
 
     @contextmanager
+    def interruptActivity(self): #suspend/quit running background task.
+        if not self.isPendingInterrupt():
+            self.setPropertyBool('pendingInterrupt',True)
+            try: yield
+            finally:
+                self.setPropertyBool('pendingInterrupt',False)
+        else: yield
+        
+        
+    @contextmanager
     def suspendActivity(self): #suspend/quit running background task.
-        self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),"true")
-        try: yield
-        finally:
-            self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),"false")
+        if not self.isPendingSuspend():
+            self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),"true")
+            try: yield
+            finally:
+                self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),"false")
+        else: yield
+        
+    def isPendingInterrupt(self):
+        return self.getPropertyBool('pendingInterrupt')
+
+
+    def isPendingRestart(self):
+        return self.getPropertyBool('pendingRestart')
+
+        
+    def isPendingSuspend(self):
+        return self.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
         
         
     def getKey(self, key, instanceID=True):
@@ -943,9 +983,10 @@ class Builtin:
     def busy_dialog(self, isPlaying=False):
         if not self.isBusyDialog() and not isPlaying:
             xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
-        try: yield
-        finally:
-            xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+            try: yield
+            finally:
+                xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+        else: yield
        
 
     def getInfoLabel(self, key, param='ListItem', timeout=EPOCH_TIMER):
@@ -1093,16 +1134,17 @@ class Dialog:
                 except: pass
                 self.close()
 
-
-        with self.builtin.busy_dialog():
-            imagefile = os.path.join(FileAccess.translatePath(TEMP_LOC),'%s.png'%(getMD5(str(url.split('/')[-1]))))
-            if not FileAccess.exists(imagefile):
-                qrIMG = pyqrcode.create(url)
-                qrIMG.png(imagefile, scale=10)
-                
-        qr = QRCode( "plugin.video.pseudotv.live.qrcode.xml" , ADDON_PATH, "default", image=imagefile, text=msg, header=heading, atclose=autoclose)
-        qr.doModal()
-        del qr
+        if not self.properties.isRunning('qrDialog'):
+            with self.properties.setRunning('qrDialog'):
+                with self.builtin.busy_dialog():
+                    imagefile = os.path.join(FileAccess.translatePath(TEMP_LOC),'%s.png'%(getMD5(str(url.split('/')[-1]))))
+                    if not FileAccess.exists(imagefile):
+                        qrIMG = pyqrcode.create(url)
+                        qrIMG.png(imagefile, scale=10)
+                        
+            qr = QRCode( "plugin.video.pseudotv.live.qrcode.xml" , ADDON_PATH, "default", image=imagefile, text=msg, header=heading, atclose=autoclose)
+            qr.doModal()
+            del qr
 
         
     def _closeTextViewer(self):

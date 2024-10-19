@@ -689,6 +689,11 @@ msgctxt "#30166"
 msgid "Submit Snapshot"
 msgstr ""
 
+msgctxt "#30167"
+msgid "Enable Log Uploader"
+msgstr ""
+
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -1471,7 +1476,7 @@ msgid "Mixed SmartPlaylists"
 msgstr ""
 
 msgctxt "#32194"
-msgid "STRM Sources"
+msgid "STRM Import"
 msgstr ""
 
 msgctxt "#32195"
@@ -1534,6 +1539,13 @@ msgctxt "#32211"
 msgid "%s: [COLOR=%s][B]%s[/B][/COLOR]"
 msgstr ""
 
+msgctxt "#32212"
+msgid "Running"
+msgstr ""
+
+msgctxt "#32213"
+msgid "Stopping"
+msgstr ""
 
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
@@ -1639,7 +1651,7 @@ msgid "Display On-Next information towards the end of a video.\nIf Playlist Play
 msgstr ""
 
 msgctxt "#33046"
-msgid "Remove paired server from select list."
+msgid "Remove paired server from list below."
 msgstr ""
 
 msgctxt "#33048"

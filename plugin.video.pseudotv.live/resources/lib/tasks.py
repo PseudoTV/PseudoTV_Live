@@ -69,19 +69,17 @@ class Tasks():
         PROPERTIES.getInstanceID()
         
         
+    def chkDiscovery(self):
+        self.log('chkDiscovery')
+        self.multiroom.hasServers()
+        timerit(self.multiroom.pairDiscovery)(1.0)
+
+
     def chkWelcome(self):
         self.log('chkWelcome')
         BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
-              
-                  
-    @cacheit(expiration=datetime.timedelta(hours=1),checksum=PROPERTIES.getInstanceID())
-    def getOnlineVersion(self):
-        try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(getURL(ADDON_URL)))[0]
-        except: ONLINE_VERSON = ADDON_VERSION
-        self.log('getOnlineVersion, ONLINE_VERSON = %s'%(ONLINE_VERSON))
-        return ONLINE_VERSON
-        
-        
+
+
     def chkDebugging(self):
         self.log('chkDebugging')
         if SETTINGS.getSettingBool('Debug_Enable'):
@@ -103,7 +101,7 @@ class Tasks():
             if not SETTINGS.hasPVRInstance():
                 with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
                     SETTINGS.setPVRPath(USER_LOC, SETTINGS.getFriendlyName())
-        
+              
 
     def _chkQueTimer(self):
         self.log('_chkQueTimer')
@@ -140,8 +138,16 @@ class Tasks():
         if run and (not self.service._interrupt() and not self.service._suspend()):
             PROPERTIES.clearEXTProperty(key)
             self._que(func)
-
-
+                  
+                  
+    @cacheit(expiration=datetime.timedelta(hours=1),checksum=PROPERTIES.getInstanceID())
+    def getOnlineVersion(self):
+        try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(getURL(ADDON_URL)))[0]
+        except: ONLINE_VERSON = ADDON_VERSION
+        self.log('getOnlineVersion, ONLINE_VERSON = %s'%(ONLINE_VERSON))
+        return ONLINE_VERSON
+        
+        
     def chkVersion(self):
         self.log('chkVersion')
         update = False
@@ -155,6 +161,20 @@ class Tasks():
         SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s Version: [B]%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':'None'}[str(update)])
 
 
+    def chkPVRSettings(self):
+        self.log('chkPVRSettings')
+        try:
+            with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))): #Kodi PVR & LiveTV Settings
+                if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS: SETTINGS.setSettingInt('Min_Days',min)
+                if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS: SETTINGS.setSettingInt('Max_Days',max)
+        except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
+         
+
+    def chkPVRservers(self):
+        self.log('chkPVRservers')
+        if self.multiroom.chkPVRservers(): PROPERTIES.setEpochTimer('chkPVRRefresh')
+
+
     def chkFiles(self):
         self.log('chkFiles')
         if PROPERTIES.hasFirstrun():
@@ -163,28 +183,11 @@ class Tasks():
         [FileAccess.makedirs(folder) for folder in [LOGO_LOC,FILLER_LOC,TEMP_LOC] if not FileAccess.exists(os.path.join(folder,''))]
 
 
-    def chkPVRRefresh(self):
-        self.log('chkPVRRefresh')
-        self._que(togglePVR,1,*(False,True))
-
-
-    def chkFillers(self, channels=None):
-        self.log('chkFillers')
-        if channels is None: channels = self.getChannels()
-        with DIALOG.sudo_dialog(LANGUAGE(32179)):
-            [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),'')) for ftype in FILLER_TYPES if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),''))]
-            for citem in channels:
-                if self.service._interrupt(): break
-                for ftype in FILLER_TYPES[1:]:
-                    if self.service._interrupt(): break
-                    [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
-                    if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
-                        if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
-                        else:                          IGNORE = IGNORE_CHTYPE
-                        if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE:
-                            FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
-
-
+    def chkHTTP(self):
+        self.log('chkHTTP')
+        timerit(self.httpServer._start)(1.0)
+            
+            
     def chkRecommended(self):
         self.log('chkRecommended')
         try:
@@ -225,31 +228,6 @@ class Tasks():
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
 
-                
-    def chkPVRservers(self):
-        self.log('chkPVRservers')
-        if self.multiroom.chkPVRservers(): PROPERTIES.setEpochTimer('chkPVRRefresh')
-
-
-    def chkPVRSettings(self):
-        self.log('chkPVRSettings')
-        try:
-            with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))): #Kodi PVR & LiveTV Settings
-                if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS: SETTINGS.setSettingInt('Min_Days',min)
-                if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS: SETTINGS.setSettingInt('Max_Days',max)
-        except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
-         
-
-    def chkDiscovery(self):
-        self.log('chkDiscovery')
-        self.multiroom.hasServers()
-        timerit(self.multiroom.pairDiscovery)(1.0)
-
-
-    def chkHTTP(self):
-        self.log('chkHTTP')
-        timerit(self.httpServer._start)(1.0)
-            
             
     def chkJSONQUE(self):
         if not PROPERTIES.isRunning('chkJSONQUE'):
@@ -265,6 +243,28 @@ class Tasks():
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
                 SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
+
+
+    def chkPVRRefresh(self):
+        self.log('chkPVRRefresh')
+        self._que(togglePVR,1,*(False,True))
+
+
+    def chkFillers(self, channels=None):
+        self.log('chkFillers')
+        if channels is None: channels = self.getChannels()
+        with DIALOG.sudo_dialog(LANGUAGE(32179)):
+            [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),'')) for ftype in FILLER_TYPES if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),''))]
+            for citem in channels:
+                if self.service._interrupt(): break
+                for ftype in FILLER_TYPES[1:]:
+                    if self.service._interrupt(): break
+                    [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
+                    if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
+                        if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
+                        else:                          IGNORE = IGNORE_CHTYPE
+                        if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE:
+                            FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
 
 
     def runAutoTune(self):
@@ -326,7 +326,7 @@ class Tasks():
 
 
     def setUserPath(self, old, new, overwrite=False):
-        with PROPERTIES.suspendActivity():
+        with PROPERTIES.interruptActivity():
             self.log('setUserPath, old = %s, new = %s'%(old,new))
             dia = DIALOG.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
             with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):

@@ -32,6 +32,11 @@ class Service:
     jsonRPC  = JSONRPC()
     def _interrupt(self, wait: float=.001) -> bool:
         return self.monitor.waitForAbort(wait)
+        
+        
+    def _suspend(self) -> bool:
+        return PROPERTIES.isPendingSuspend()
+
 
 class Library:
     def __init__(self, service=None):
@@ -142,7 +147,7 @@ class Library:
             if self.service._interrupt():
                 complete = False
                 break
-            else: self.setLibrary(type, poolit(__update)(libraryItems.get(type,[]),type))
+            else: self.setLibrary(type, [__update(type,item) for item in libraryItems.get(type,[])])
             
         self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
         self.log('updateLibrary, force = %s, complete = %s'%(force, complete))

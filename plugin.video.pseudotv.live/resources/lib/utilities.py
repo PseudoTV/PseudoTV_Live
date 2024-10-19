@@ -172,7 +172,7 @@ class Utilities:
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.isRunning('MANAGER_RUNNING'):
-            with PROPERTIES.setRunning('MANAGER_RUNNING'), PROPERTIES.suspendActivity():
+            with PROPERTIES.setRunning('MANAGER_RUNNING'), PROPERTIES.interruptActivity():
                 from manager import Manager
                 chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
                 del chmanager
@@ -207,7 +207,7 @@ class Utilities:
             if select is None: select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
             
         if not select is None:
-            with PROPERTIES.suspendActivity():
+            with PROPERTIES.interruptActivity():
                 try: 
                     selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
                     self.log('buildMenu, selectItem = %s'%selectItem)

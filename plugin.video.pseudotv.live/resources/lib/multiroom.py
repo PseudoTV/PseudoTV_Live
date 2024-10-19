@@ -28,6 +28,11 @@ class Service:
     def _interrupt(self, wait: float=.001) -> bool:
         return self.monitor.waitForAbort(wait)
 
+        
+    def _suspend(self) -> bool:
+        return PROPERTIES.isPendingSuspend()
+        
+        
 class Multiroom:
     def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = %s'%(sysARG))
@@ -144,7 +149,7 @@ class Multiroom:
     def delServer(self):
         self.log('delServer')
         def _build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'[B]%s[/B] - %s: Channels (%s)'%({"True":"[COLOR=green][B]Online[/B][/COLOR]","False":"[COLOR=red][B]Offline[/B][/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
+            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s: Channels (%s)'%({"True":"[COLOR=green][B]Online[/B][/COLOR]","False":"[COLOR=red][B]Offline[/B][/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
@@ -163,29 +168,33 @@ class Multiroom:
             [hasAddon(id,install=True,enable=True) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
 
         def __build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'[B]%s[/B] - %s: Channels (%s)'%({"True":"[COLOR=green][B]Online[/B][/COLOR]","False":"[COLOR=red][B]Offline[/B][/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
+            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s: Channels (%s)'%({"True":"[COLOR=green][B]Online[/B][/COLOR]","False":"[COLOR=red][B]Offline[/B][/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
             lizlst  = poolit(__build)(list(servers.values()))
+            if len(lizlst) > 0: lizlst.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]- %s[/B][/COLOR]'%(LANGUAGE(30046)),LANGUAGE(33046)))
             
         selects = DIALOG.selectDialog(lizlst,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizlst) if loadJSON(listitem.getPath()).get('enabled',False)])
         if not selects is None:
-            for idx, liz in enumerate(lizlst):
-                instancePath = SETTINGS.hasPVRInstance(liz.getLabel())
-                if idx in selects:
-                    if not servers[liz.getLabel()].get('enabled',False):
-                        DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
-                        servers[liz.getLabel()]['enabled'] = True
-                        __chkSettings(servers[liz.getLabel()].get('settings',{}))
-                    if not instancePath: SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel())
-                else:
-                    if servers[liz.getLabel()].get('enabled',False):
-                        DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
-                        servers[liz.getLabel()]['enabled'] = False
-                    if instancePath: FileAccess.delete(instancePath)
-            if self.setDiscovery(servers):
-                return PROPERTIES.setEpochTimer('chkDiscovery')
+            if selects == [0]: return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py,Remove_server)')
+            else:
+                lizlst.pop(0)
+                for idx, liz in enumerate(lizlst):
+                    instancePath = SETTINGS.hasPVRInstance(liz.getLabel())
+                    if idx in selects:
+                        if not servers[liz.getLabel()].get('enabled',False):
+                            DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
+                            servers[liz.getLabel()]['enabled'] = True
+                            __chkSettings(servers[liz.getLabel()].get('settings',{}))
+                        if not instancePath: SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel())
+                    else:
+                        if servers[liz.getLabel()].get('enabled',False):
+                            DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
+                            servers[liz.getLabel()]['enabled'] = False
+                        if instancePath: FileAccess.delete(instancePath)
+                if self.setDiscovery(servers):
+                    return PROPERTIES.setEpochTimer('chkDiscovery')
 
             
     def run(self):

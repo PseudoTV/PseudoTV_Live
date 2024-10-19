@@ -23,8 +23,6 @@ from functools import wraps
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
 
-# ADDON_ID = 'plugin.video.pseudotv.live'
-
 def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VERSION, json_data=False):
     def internal(method):
         @wraps(method)
@@ -42,12 +40,26 @@ def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VE
 class Cache:
     lock  = Lock()
     cache = SimpleCache()
-    
+        
+        
+    def isCacheLocked(self):
+        return xbmcgui.Window(10000).getProperty('cacheLocker') == 'true'
+
+
+    def setCacheLocked(self, state=True):
+        xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),str(state).lower())
+        
+        
     @contextmanager
     def cacheLocker(self): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
-        xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
+        monitor = MONITOR()
+        while not monitor.abortRequested() and self.isCacheLocked():
+            if monitor.waitForAbort(.001): break
+            else: self.log('cacheLocker, waiting...')
+        del monitor
+        self.setCacheLocked(True)
         try: yield self.log('cacheLocker, Locked!')
-        finally: xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'false')
+        finally: self.setCacheLocked(False)
 
 
     def cacheLocked(self):

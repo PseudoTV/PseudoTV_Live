@@ -33,11 +33,9 @@ class JSONRPC:
     @contextmanager
     def sendLocker(self): #kodi jsonrpc not thread safe avoid request collision during threading.
         monitor = MONITOR()
-        if PROPERTIES.getPropertyBool('sendLocker'):
-            while not monitor.abortRequested():
-                if not PROPERTIES.getPropertyBool('sendLocker'): break
-                elif monitor.waitForAbort(.001): break
-                self.log('sendLocker, waiting...')
+        while not monitor.abortRequested() and PROPERTIES.getPropertyBool('sendLocker'):
+            if monitor.waitForAbort(.001): break
+            else: self.log('sendLocker, waiting...')
         PROPERTIES.setPropertyBool('sendLocker',True)
         try: yield self.log('sendLocker, Locked!')
         finally:

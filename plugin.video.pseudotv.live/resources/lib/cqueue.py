@@ -64,7 +64,7 @@ class CustomQueue:
 
     def __run(self, func, args=None, kwargs=None):
         self.log("__run, func = %s"%(func.__name__))
-        try:   return self.pool.executor(func, (EPOCH_TIMER*60), *args, *kwargs) # if self.service.player.isPlaying(): return func(*args, **kwargs)
+        try: return self.pool.executor(func, None, *args, *kwargs)
         except Exception as e: self.log("__run, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
                 
@@ -114,8 +114,7 @@ class CustomQueue:
                 break
             elif self.service._suspend():
                 self.log("__pop, _suspend == True")
-                if self.service.monitor.waitForAbort(1): break
-                else: continue
+                continue
             else:
                 if not self.head and not self.priority:
                     self.log("__pop, The queue is empty!")

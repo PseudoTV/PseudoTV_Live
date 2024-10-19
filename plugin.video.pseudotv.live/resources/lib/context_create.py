@@ -32,7 +32,7 @@ class Create:
         if not self.listitem.getPath(): return DIALOG.notificationDialog(LANGUAGE(32030))
         elif DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto the first available %s channel?'%(self.listitem.getLabel(),ADDON_NAME)):
             if not PROPERTIES.isRunning('MANAGER_RUNNING'):
-                with PROPERTIES.setRunning('MANAGER_RUNNING'), BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+                with PROPERTIES.setRunning('MANAGER_RUNNING'), BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                     manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False)
                     channelData = manager.newChannel
                     channelData['type']     = 'Custom'
@@ -55,7 +55,7 @@ class Create:
                 
     def open(self):
         if not PROPERTIES.isRunning('MANAGER_RUNNING'):
-            with PROPERTIES.setRunning('MANAGER_RUNNING'), BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+            with PROPERTIES.setRunning('MANAGER_RUNNING'), BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                 manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=self.fitem.get('citem',{}).get('number',1))
             del manager
         

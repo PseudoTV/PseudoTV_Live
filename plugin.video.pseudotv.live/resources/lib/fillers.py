@@ -132,7 +132,6 @@ class Fillers:
         nfileList = []
         for idx, fileItem in enumerate(fileList):
             if not fileItem: continue
-            elif self.builder.service._interrupt(): break
             else:
                 runtime = fileItem.get('duration',0)
                 if runtime == 0: continue
@@ -180,8 +179,7 @@ class Fillers:
                 if len(postFileList) > 0:
                     self.log('injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
                     while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and postFillCount > 0:
-                        if self.builder.service._interrupt(): break
-                        elif len(postFileList) == 0: break
+                        if len(postFileList) == 0: break
                         else:
                             item = postFileList.pop(0)
                             if (item.get('duration') or 0) == 0: continue

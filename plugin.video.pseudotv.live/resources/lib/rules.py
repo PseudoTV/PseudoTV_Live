@@ -891,7 +891,6 @@ class ProvisionalRule(BaseRule):
                 self.log("%s: runAction, id: %s, provisional value = %s\nqueries = %s"%(self.__class__.__name__,citem.get('id'),self.optionValues[0],queries))
                 for provisional in queries:
                     if not provisional: continue
-                    elif builder.service._interrupt(): break
                     else:
                         if self.optionValues[0] == "Seasonal": citem['logo'] = provisional.get('holiday',{}).get('logo',citem['logo'])
                         else: provisional["filter"]["and"][0]['value'] = self.optionValues[0]
