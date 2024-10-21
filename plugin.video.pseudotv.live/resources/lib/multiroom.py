@@ -19,16 +19,14 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
-from jsonrpc    import JSONRPC
 from server     import Discovery, Announcement
 
 class Service:
+    from jsonrpc import JSONRPC
     monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
     def _interrupt(self, wait: float=.001) -> bool:
         return self.monitor.waitForAbort(wait)
-
-        
     def _suspend(self) -> bool:
         return PROPERTIES.isPendingSuspend()
         

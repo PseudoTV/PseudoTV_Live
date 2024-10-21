@@ -27,13 +27,11 @@ from channels   import Channels
 REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Service:
-    monitor = MONITOR()
     from jsonrpc import JSONRPC
-    jsonRPC  = JSONRPC()
+    monitor = MONITOR()
+    jsonRPC = JSONRPC()
     def _interrupt(self, wait: float=.001) -> bool:
         return self.monitor.waitForAbort(wait)
-        
-        
     def _suspend(self) -> bool:
         return PROPERTIES.isPendingSuspend()
 

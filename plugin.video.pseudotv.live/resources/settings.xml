@@ -1190,6 +1190,7 @@
                         <dependency type="visible">
                             <and>
                                 <condition on="property" name="InfoBool">!System.HasAddon(script.kodi.loguploader)</condition>
+                                <condition on="property" name="InfoBool">!System.AddonIsEnabled(script.kodi.loguploader)</condition>
                             </and>
                         </dependency>
                     </dependencies>
@@ -1229,12 +1230,12 @@
                         <allowempty>true</allowempty>
                     </constraints>
                     <dependencies>
-                        <dependency type="enable">
+                        <dependency type="visible">
                             <and>
                                 <condition operator="is" setting="Debug_Enable">true</condition>
                             </and>
                         </dependency>
-                        <dependency type="visible">
+                        <dependency type="enable">
                             <and>
                                 <condition on="property" name="InfoBool">System.AddonIsEnabled(script.kodi.loguploader)</condition>
                                 <condition on="property" name="InfoBool">System.HasAddon(script.kodi.loguploader)</condition>

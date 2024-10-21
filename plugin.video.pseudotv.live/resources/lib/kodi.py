@@ -827,6 +827,11 @@ class Properties:
         for prop in tmpDCT.get(instanceID,[]): self.clearEXTProperty(prop)
 
 
+    def __exit__(self):
+        self.log('__exit__')
+        self.clearTrash()
+        
+        
 class ListItems:
     
     def log(self, msg, level=xbmc.LOGDEBUG):

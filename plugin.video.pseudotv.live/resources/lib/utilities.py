@@ -235,6 +235,7 @@ class Utilities:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
         if full: 
             SETTINGS.setAutotuned(False)
+            PROPERTIES.setEpochTimer('chkPVRRefresh')
             PROPERTIES.setPendingRestart()
 
 

@@ -71,7 +71,6 @@ class Player(xbmc.Player):
     def onAVChange(self):
         self.log('onAVChange')
         self.service.monitor.chkIdle()
-        if self.isPseudoTV: self._onPlay()
 
         
     def onAVStarted(self):
@@ -125,10 +124,13 @@ class Player(xbmc.Player):
         self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         return sysInfo
         
-
+        
     def getPlayerItem(self):
-        try:    return self.getPlayingItem()
-        except: return xbmcgui.ListItem()
+        try: return self.getPlayingItem()
+        except:
+            if   self.service._interrupt(0.5): return None
+            elif self.isPlaying():             return self.getPlayerItem()
+            else:                              return xbmcgui.ListItem()
 
 
     def getPlayerFile(self):
@@ -230,13 +232,13 @@ class Player(xbmc.Player):
     def _onError(self):
         self.log('_onError, playing file = %s'%(self.getPlayerFile()))
         self.onPlayBackStopped()
-
+        
 
     def toggleReplay(self, state: bool=True):
         self.log('toggleReplay, state = %s, restartPercentage = %s'%(state,self.restartPercentage))
-        if state and self.service.monitor.enableOverlay and bool(self.restartPercentage) and not self.isIdle and self.sysInfo.get('fitem'):
+        if state and self.service.monitor.enableOverlay and bool(self.restartPercentage):
             progress = self.getPlayerProgress()
-            if (progress >= self.restartPercentage and progress < SETTINGS.getSettingInt('Seek_Threshold')):
+            if (progress >= self.restartPercentage and progress < SETTINGS.getSettingInt('Seek_Threshold')) and not self.isIdle and self.sysInfo.get('fitem'):
                 self.replay = Replay(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
                 self.replay.doModal()
         elif hasattr(self.replay, 'close'): self.replay.close()
@@ -296,7 +298,7 @@ class Monitor(xbmc.Monitor):
     def toggleOverlay(self, state: bool=True):
         self.log("toggleOverlay, state = %s"%(state))
         if state and self.enableOverlay:
-            if not hasattr(self.overlay, 'open'):
+            if not hasattr(self.overlay, 'open') and self.service.player.isPseudoTV:
                 self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
                 self.overlay.open()
         else:
@@ -360,6 +362,7 @@ class Monitor(xbmc.Monitor):
 class Service():
     currentChannels = []
     currentSettings = []
+    PROPERTIES.clrInstanceID()
 
     def __init__(self):
         self.log('__init__')
@@ -397,9 +400,9 @@ class Service():
 
 
     def __restart(self, wait=1.0) -> bool:
-        self.pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart() | self.monitor.waitForAbort(wait) )
+        self.pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart())
         self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
-        return self.pendingRestart
+        return (self.pendingRestart | self.monitor.waitForAbort(wait))
          
          
     def __playing(self) -> bool:
@@ -409,7 +412,6 @@ class Service():
 
     def __tasks(self):
         self.log('__tasks')
-        if self.player.isPseudoTV: self.tasks._que(self.monitor.chkIdle,1)
         self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,EPOCH_TIMER)
            
                 
@@ -423,6 +425,7 @@ class Service():
         self.log('_start')
         self.__initialize()
         while not self.monitor.abortRequested():
+            self.monitor.chkIdle()
             if    self.__restart(): break
             else: self.__tasks()
         self._stop()
@@ -436,7 +439,6 @@ class Service():
                     thread.join(1.0)
                 except: pass
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
-        PROPERTIES.clrInstanceID()
-        if PROPERTIES.isPendingRestart(): Service()._start()
+        if self.pendingRestart: Service()._start()
 
 if __name__ == '__main__': Service()._start()

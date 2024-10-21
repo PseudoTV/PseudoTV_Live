@@ -674,7 +674,7 @@ msgid "Miscellaneous Options"
 msgstr ""
 
 msgctxt "#30163"
-msgid "Ratings & Network Bumpers"
+msgid "Ratings & Bumpers"
 msgstr ""
 
 msgctxt "#30164"

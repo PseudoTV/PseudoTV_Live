@@ -12,16 +12,16 @@
             <control type="image" id="40000">
                 <description>Replay Progress</description>
                 <left>522</left>
-                <bottom>310</bottom>
+                <bottom>360</bottom>
                 <width>116</width>
                 <height>24</height>
                 <texture>buttons/ButtonFocus.png</texture>
-                <visible>[Control.IsVisible(40001) + Player.Playing] + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]</visible>
+                <visible>Control.IsVisible(40001)</visible>
             </control>
             <control type="button" id="40001">
                 <description>Replay Button</description>
                 <left>480</left>
-                <bottom>270</bottom>
+                <bottom>320</bottom>
                 <width>200</width>
                 <height>106</height>
                 <colordiffuse>FFFFFFFF</colordiffuse>
@@ -44,7 +44,9 @@
                 <onclick/>
                 <onfocus/>
                 <onunfocus/>
-                <visible>Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]</visible>
+                <visible>Player.Playing + Window.IsActive(fullscreenvideo)</visible>
+                <visible>!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)</visible>
+                <visible>!Window.IsActive(seekbar) | !Window.IsActive(pvrosdchannels) | !Window.IsActive(pvrchannelguide)</visible>
             </control>
         </control>
     </controls>
