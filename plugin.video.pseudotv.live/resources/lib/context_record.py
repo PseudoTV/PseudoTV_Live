@@ -31,42 +31,42 @@ class Record:
         
         
     def add(self):
-        now   = timeString2Seconds(BUILTIN.getInfoLabel('Time(hh:mm:ss)','System'))
-        start = timeString2Seconds(BUILTIN.getInfoLabel('StartTime').split(' ')[0] +':00')
-        stop  = timeString2Seconds(BUILTIN.getInfoLabel('EndTime').split(' ')[0] +':00')
-        if (now > start and now < stop):
-            opt  ='Incl. Resume'
-            seek = (now - start) - OVERLAY_DELAY #add rollback buffer
-            msg  = '%s or %s'%(LANGUAGE(30119),LANGUAGE(30152))
-        else:
-            opt  = ''
-            seek = 0
-            msg  = LANGUAGE(30119)
-        retval = DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto %s recordings?'%(self.fitem['label'],msg),customlabel=opt)
-        if retval or int(retval) > 0:
-            with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
-                m3u   = M3U()
-                xmltv = XMLTVS()
-                ritem = m3u.getRecordItem(self.fitem,{'1':0,'2':seek}[str(int(retval))])
-                if (m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)):
-                    DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
-                    PROPERTIES.setEpochTimer('chkPVRRefresh')
-                del m3u
-                del xmltv
-    
-    
+        if not PROPERTIES.isRunning('Record.add'):
+            with PROPERTIES.setRunning('Record.add'):
+                now   = timeString2Seconds(BUILTIN.getInfoLabel('Time(hh:mm:ss)','System'))
+                start = timeString2Seconds(BUILTIN.getInfoLabel('StartTime').split(' ')[0] +':00')
+                stop  = timeString2Seconds(BUILTIN.getInfoLabel('EndTime').split(' ')[0] +':00')
+                if (now > start and now < stop):
+                    opt  ='Incl. Resume'
+                    seek = (now - start) - OVERLAY_DELAY #add rollback buffer
+                    msg  = '%s or %s'%(LANGUAGE(30119),LANGUAGE(30152))
+                else:
+                    opt  = ''
+                    seek = 0
+                    msg  = LANGUAGE(30119)
+                retval = DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto %s recordings?'%(self.fitem['label'],msg),customlabel=opt)
+                if retval or int(retval) > 0:
+                    with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
+                        m3u   = M3U()
+                        ritem = m3u.getRecordItem(self.fitem,{'1':0,'2':seek}[str(int(retval))])
+                        if (m3u.addRecording(ritem), XMLTVS().addRecording(ritem,self.fitem)):
+                            DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
+                            PROPERTIES.setEpochTimer('chkPVRRefresh')
+                        del m3u
+        else: DIALOG.notificationDialog(LANGUAGE(32000))
+        
+ 
     def remove(self):
-        if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(self.fitem['label'])):
-            with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
-                m3u   = M3U()
-                xmltv = XMLTVS()
-                ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})
-                if (m3u.delRecording(ritem), xmltv.delRecording(ritem)):
-                    DIALOG.notificationWait('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
-                    PROPERTIES.setEpochTimer('chkPVRRefresh')
-                del m3u
-                del xmltv
-            
+        if not PROPERTIES.isRunning('Record.remove'):
+            with PROPERTIES.setRunning('Record.remove'):
+                if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(self.fitem['label'])):
+                    with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
+                        ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})
+                        if (M3U().delRecording(ritem), XMLTVS().delRecording(ritem)):
+                            DIALOG.notificationWait('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
+                            PROPERTIES.setEpochTimer('chkPVRRefresh')
+        else: DIALOG.notificationDialog(LANGUAGE(32000))
+                
             
 if __name__ == '__main__': 
     try:    param = sys.argv[1]

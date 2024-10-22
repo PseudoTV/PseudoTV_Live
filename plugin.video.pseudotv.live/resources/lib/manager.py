@@ -315,9 +315,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                         'radio'   : LANGUAGE(32084),
                         'favorite': LANGUAGE(32083)}
                           
-            listItems = poolit(__buildItem)(list(self.newChannel.keys()))
-            self.itemList.addItems(listItems)
-            self.itemList.selectItem([idx for idx, liz in enumerate(listItems) if liz.getProperty('key')== focuskey][0])
+            listitems = poolit(__buildItem)(list(self.newChannel.keys()))
+            self.itemList.addItems(listitems)
+            self.itemList.selectItem([idx for idx, liz in enumerate(listitems) if liz.getProperty('key')== focuskey][0])
             self.setFocus(self.itemList)
 
 

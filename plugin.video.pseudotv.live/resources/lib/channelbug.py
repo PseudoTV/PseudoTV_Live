@@ -26,16 +26,17 @@ class ChannelBug(xbmcgui.WindowXML):
     lastActionTime = time.time()
     
     def __init__(self, *args, **kwargs):
-        self.log('__init__')
-        self.window = xbmcgui.Window(12005) 
-        self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())
-        
-        try:    self.userPOSX, self.userPOSY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY"))
-        except: self.userPOSX, self.userPOSY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128)
-        self.posx, self.posy = self.userPOSX, self.userPOSY
-        
-        if BUILTIN.getInfoBool('Playing','Player'):
-            BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
+        xbmcgui.WindowXML.__init__(self, *args, **kwargs)
+        with BUILTIN.busy_dialog():
+            self.window = xbmcgui.Window(12005) 
+            self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())
+            
+            try:    self.userPOSX, self.userPOSY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY"))
+            except: self.userPOSX, self.userPOSY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128)
+            self.posx, self.posy = self.userPOSX, self.userPOSY
+            
+            if BUILTIN.getInfoBool('Playing','Player'):
+                BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
         self.doModal()
         
         

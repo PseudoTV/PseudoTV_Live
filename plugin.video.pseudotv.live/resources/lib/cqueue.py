@@ -114,7 +114,8 @@ class CustomQueue:
                 break
             elif self.service._suspend():
                 self.log("__pop, _suspend == True")
-                continue
+                if self.service._interrupt(OVERLAY_DELAY): break
+                else: continue
             else:
                 if not self.head and not self.priority:
                     self.log("__pop, The queue is empty!")

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <window>
     <defaultcontrol always="true">40001</defaultcontrol>
-    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_REPLAY,true,10000)</onload>
-    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_REPLAY,false,10000)</onunload>
+    <onload>SetProperty(plugin.video.pseudotv.live.Running.OVERLAY_REPLAY,true,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.Running.OVERLAY_REPLAY,false,10000)</onunload>
     <controls>
         <control type="group">
             <posx>0</posx>

@@ -171,20 +171,21 @@ class Utilities:
 
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
-        if not PROPERTIES.isRunning('MANAGER_RUNNING'):
-            with PROPERTIES.setRunning('MANAGER_RUNNING'), PROPERTIES.interruptActivity():
-                from manager import Manager
+        if not PROPERTIES.isRunning('OVERLAY_MANAGER'):
+            with PROPERTIES.setRunning('OVERLAY_MANAGER'), PROPERTIES.interruptActivity():
+                with BUILTIN.busy_dialog(): from manager import Manager
                 chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
                 del chmanager
-        
+    
         
     def openChannelBug(self):
         self.log('openChannelBug')
         if not PROPERTIES.isRunning('OVERLAY_CHANNELBUG_RUNNING'):
-            from channelbug import ChannelBug
-            channelbug = ChannelBug(CHANNELBUG_XML, ADDON_PATH, "default")
-            SETTINGS.setSetting("Channel_Bug_Position_XY",(PROPERTIES.getProperty("Channel_Bug_Position_XY") or "Auto"))
-            del channelbug
+            with PROPERTIES.setRunning('OVERLAY_CHANNELBUG_RUNNING'), PROPERTIES.suspendActivity():
+                with BUILTIN.busy_dialog(): from channelbug import ChannelBug
+                channelbug = ChannelBug(CHANNELBUG_XML, ADDON_PATH, "default")
+                SETTINGS.setSetting("Channel_Bug_Position_XY",(PROPERTIES.getProperty("Channel_Bug_Position_XY") or "Auto"))
+                del channelbug
 
 
     def _togglePVR(self):
