@@ -268,10 +268,10 @@ MUSIC_LISTITEM_TYPES =   {'tracknumber'             : (int,),  #integer (8)
                           'mediatype'               : (str,),  #string - "music", "song", "album", "artist"
                           'dbid'                    : (int,),  #integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
                           'listeners'               : (int,),  #integer (25614)
-                          'musicbrainztrackid'      : (tuple,list),
-                          'musicbrainzartistid'     : (tuple,list),
-                          'musicbrainzalbumid'      : (tuple,list),
-                          'musicbrainzalbumartistid': (tuple,list),
+                          'musicbrainztrackid'      : (str,tuple,list),
+                          'musicbrainzartistid'     : (str,tuple,list),
+                          'musicbrainzalbumid'      : (str,tuple,list),
+                          'musicbrainzalbumartistid': (str,tuple,list),
                           'comment'                 : (str,),  
                           'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
                           # 'size'                    : (int,), #long (1024) - size in bytes
@@ -332,3 +332,9 @@ VIDEO_LISTITEM_TYPES =   {'genre'                   : (tuple,list),
 IGNORE_CHTYPE = ['TV Shows','Mixed','Recommended','Services',"Music Genres"]
 MOVIE_CHTYPE  = ["Movie Genres","Movie Studios"]
 TV_CHTYPE     = ["TV Networks","TV Genres","Mixed Genre"]
+
+PRIMARY_BACKGROUND   = 'FF11375C'
+SECONDARY_BACKGROUND = '334F4F9E'
+DIALOG_TINT          = 'FF181B1E'
+BUTTON_FOCUS         = 'FF2866A4'
+SELECTED             = 'FF5BE5EE'

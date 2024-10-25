@@ -268,7 +268,7 @@ class Plugin:
     def playVOD(self, title: str, vid: str): #-> catchup-id
         self.log('playVOD, title = %s, vid = %s'%(title,vid))
         with self.preparingPlayback():
-            if self.sysInfo.get('fitem'): #-> live playback from UI incl. listitem
+            if self.sysInfo.get('fitem') and self.sysInfo.get('mode','').lower() != 'dvr': #-> live playback from UI incl. listitem
                 liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
                 self.sysInfo["seek"] = -1
                 self.sysInfo["progresspercentage"] = -1
@@ -300,7 +300,7 @@ class Plugin:
 
         if len(fileList) > 0:
             PLAYER().play(self.quePlaylist(poolit(buildfItem)(randomShuffle(fileList)),pltype=xbmc.PLAYLIST_MUSIC,shuffle=True),windowed=True)
-            BUILTIN.executebuiltin('ReplaceWindow(visualisation)')
+            timerit(BUILTIN.executebuiltin)(0.1,['ReplaceWindow(visualisation)'])
         self.resolveURL(False, xbmcgui.ListItem())
 
 
@@ -370,7 +370,3 @@ class Plugin:
         
     def resolveURL(self, found, listitem):
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitem)
- 
-        
-# if found and listitem.getPath().endswith('.strm'):
-# BUILTIN.executebuiltin('AlarmClock(play,PlayMedia(%s),time,100,true,false)'%(listitem.getPath()))

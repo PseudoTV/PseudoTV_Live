@@ -39,13 +39,9 @@ class Player(xbmc.Player):
     def __init__(self, service=None):
         self.log('__init__')
         xbmc.Player.__init__(self)
-        self.service           = service
-        self.jsonRPC           = service.jsonRPC
-        self.lastSubState      = BUILTIN.isSubtitle()
-        self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt')
-        self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')
-        self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
-        self.saveDuration      = SETTINGS.getSettingBool('Store_Duration')
+        self.service = service
+        self.jsonRPC = service.jsonRPC
+        self.updateGlobals()
         
         """ 
         Player() Trigger Order
@@ -62,6 +58,14 @@ class Player(xbmc.Player):
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
+
+    def updateGlobals(self):
+        self.lastSubState      = BUILTIN.isSubtitle()
+        self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt')
+        self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')
+        self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
+        self.saveDuration      = SETTINGS.getSettingBool('Store_Duration')
+        
 
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
@@ -182,6 +186,7 @@ class Player(xbmc.Player):
         
     def _onPlay(self):
         self.log('_onPlay')
+        self.updateGlobals()
         self.toggleReplay(False)
         self.toggleBackground(False)
         

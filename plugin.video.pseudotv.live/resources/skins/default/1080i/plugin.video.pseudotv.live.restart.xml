@@ -46,7 +46,6 @@
                 <onunfocus/>
                 <visible>Player.Playing + Window.IsActive(fullscreenvideo)</visible>
                 <visible>!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)</visible>
-                <visible>!Window.IsActive(seekbar) | !Window.IsActive(pvrosdchannels) | !Window.IsActive(pvrchannelguide)</visible>
             </control>
         </control>
     </controls>

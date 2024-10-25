@@ -67,6 +67,7 @@ class Builder:
         self.xsp              = XSP()
         self.m3u              = M3U()
         self.resources        = Resources(self.jsonRPC)
+        self.completeBuild    = False
            
         
         self.bctTypes = {"ratings" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
@@ -119,7 +120,7 @@ class Builder:
                 self.pMSG   = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
                 self.pName  = citem['name']
                 self.pCount = int(idx*100//len(channels))
-                
+
                 while not self.service.monitor.abortRequested() and self.service._suspend():
                     if self.service._interrupt(OVERLAY_DELAY): 
                         self.completeBuild = False
@@ -131,7 +132,7 @@ class Builder:
                 if self.service._interrupt():
                     self.pErrors = [LANGUAGE(32160)]
                     self.completeBuild = False
-                    if self.pDialog: self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
+                    self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                     break
                 else:
                     self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
@@ -242,8 +243,12 @@ class Builder:
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self)
         if not _validFileList(fileArray):
             for idx, file in enumerate(citem.get('path',[])):
-                if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
-                fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
+                if self.service._interrupt(): 
+                    self.completeBuild = False
+                    break
+                else:
+                    if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
+                    fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
 
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self)
         if not _validFileList(fileArray):#check that at least one fileList in array contains meta

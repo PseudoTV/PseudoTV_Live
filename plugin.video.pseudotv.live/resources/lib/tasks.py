@@ -60,7 +60,7 @@ class Tasks():
 
         for func in tasks:
             if self.service._interrupt(): break
-            self._que(func)
+            else: self._que(func)
         self.log('_initialize, finished...')
         
         
@@ -124,18 +124,16 @@ class Tasks():
     def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
         if nextrun is None: nextrun = (PROPERTIES.getPropertyInt(key) or 0)# nextrun == 0 => force que
         epoch = int(time.time())
-        que   = (epoch >= nextrun)
-        if que and (not self.service._interrupt() and not self.service._suspend()):
-            self.log('_chkEpochTimer, key = %s, que = %s'%(key,que))
+        if epoch >= nextrun:
+            self.log('_chkEpochTimer, key = %s'%(key))
             PROPERTIES.setPropertyInt(key,(epoch+runevery))
             return self._que(func)
         
 
     def _chkPropTimer(self, key, func):
         key = '%s.%s'%(ADDON_ID,key)
-        run = PROPERTIES.getEXTProperty(key) == 'true'
-        self.log('_chkPropTimer, key = %s, run = %s'%(key,run))
-        if run and (not self.service._interrupt() and not self.service._suspend()):
+        if PROPERTIES.getEXTProperty(key) == 'true':
+            self.log('_chkPropTimer, key = %s'%(key))
             PROPERTIES.clearEXTProperty(key)
             self._que(func)
                   
@@ -259,12 +257,13 @@ class Tasks():
                 if self.service._interrupt(): break
                 for ftype in FILLER_TYPES[1:]:
                     if self.service._interrupt(): break
-                    [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
-                    if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
-                        if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
-                        else:                          IGNORE = IGNORE_CHTYPE
-                        if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE:
-                            FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
+                    else:
+                        [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
+                        if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
+                            if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
+                            else:                          IGNORE = IGNORE_CHTYPE
+                            if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE:
+                                FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
 
 
     def runAutoTune(self):

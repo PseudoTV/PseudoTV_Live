@@ -39,6 +39,7 @@ class Service:
 class Library:
     def __init__(self, service=None):
         if service is None: service = Service()
+        self.completeFill = False
         self.service      = service
         self.parserCount  = 0
         self.parserMSG    = ''
@@ -104,6 +105,7 @@ class Library:
         self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
             if self.service._interrupt():
+                self.completeFill = False
                 self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
                 break
             else:
@@ -136,20 +138,20 @@ class Library:
         if force: #clear library cache.
             with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
                 __clear()
-        libraryItems = dict(self.fillItems())
-            
-        complete = True 
+                
+        self.completeFill = True 
+        libraryItems      = dict(self.fillItems())
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
             self.parserDialog = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),self.parserDialog,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
             if self.service._interrupt():
-                complete = False
+                self.completeFill = False
                 break
             else: self.setLibrary(type, [__update(type,item) for item in libraryItems.get(type,[])])
             
         self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
-        self.log('updateLibrary, force = %s, complete = %s'%(force, complete))
-        return complete
+        self.log('updateLibrary, force = %s, complete = %s'%(force,  self.completeFill))
+        return  self.completeFill
         
 
     def resetLibrary(self, ATtypes=AUTOTUNE_TYPES):
