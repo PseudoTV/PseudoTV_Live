@@ -52,7 +52,7 @@ class Builder:
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
         
         self.filters          = {} #{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
-        self.sort             = {"ignorearticle":True,"method":"random","order":"ascending","useartistsortname":True}
+        self.sort             = {"ignorearticle":True,"method":"%s"%(SETTINGS.getSetting('Sort_Method').lower()),"order":"ascending","useartistsortname":True}
         self.limits           = {"end":-1,"start":0,"total":0}
         self.maxDays          = MAX_GUIDEDAYS
         self.minEPG           = EPG_DURATION
@@ -121,7 +121,7 @@ class Builder:
                 self.pName  = citem['name']
                 self.pCount = int(idx*100//len(channels))
 
-                while not self.service.monitor.abortRequested() and self.service._suspend():
+                while self.service._suspend():
                     if self.service._interrupt(OVERLAY_DELAY): 
                         self.completeBuild = False
                         break

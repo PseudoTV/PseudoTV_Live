@@ -42,6 +42,7 @@ PLAYER              = xbmc.Player
 OVERLAY_DELAY       = 5     #secs
 DISCOVERY_TIMER     = 60    #secs
 EPOCH_TIMER         = 15    #secs
+DISCOVER_INTERVAL   = 30
 EPG_DURATION        = 10800 #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
@@ -132,7 +133,6 @@ PVR_CLIENT_LOC      = 'special://profile/addon_data/%s'%(PVR_CLIENT_ID)
 
 #docs
 README_FLE          = os.path.join(ADDON_PATH,'README.md')
-WELCOME_FLE         = os.path.join(ADDON_PATH,'welcome.txt')
 CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
@@ -197,6 +197,12 @@ COLOR_WARNING_CHANNEL     = 'red'
 COLOR_NEW_CHANNEL         = 'green'
 COLOR_RADIO_CHANNEL       = 'cyan'
 COLOR_FAVORITE_CHANNEL    = 'yellow'
+
+#urls
+URL_WIKI                  = 'https://github.com/PseudoTV/PseudoTV_Live/wiki'
+URL_SUPPORT               = 'https://forum.kodi.tv/showthread.php?tid=346803'
+
+
 
 # https://github.com/xbmc/xbmc/blob/master/system/colors.xml
 

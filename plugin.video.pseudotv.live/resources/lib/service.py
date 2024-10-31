@@ -132,9 +132,8 @@ class Player(xbmc.Player):
     def getPlayerItem(self):
         try: return self.getPlayingItem()
         except:
-            if   self.service._interrupt(0.5): return None
-            elif self.isPlaying():             return self.getPlayerItem()
-            else:                              return xbmcgui.ListItem()
+            if self.isPlaying(): return self.getPlayerItem()
+            else:                return xbmcgui.ListItem()
 
 
     def getPlayerFile(self):
@@ -327,7 +326,6 @@ class Monitor(xbmc.Monitor):
         playSFX(NOTE_WAV)
         dia = DIALOG.progressDialog(message=LANGUAGE(30078))
         while not self.abortRequested() and (sec < EPOCH_TIMER):
-            if self.service._interrupt(): break
             sec += 1
             msg = '%s\n%s'%(LANGUAGE(32039),LANGUAGE(32040)%((EPOCH_TIMER-sec)))
             dia = DIALOG.progressDialog((inc*sec),dia, msg)
@@ -392,21 +390,21 @@ class Service():
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _interrupt(self, wait=.001) -> bool: #break
+    def _interrupt(self, wait=.0001) -> bool: #break
         self.monitor.pendingInterrupt = (self.pendingRestart | PROPERTIES.isPendingInterrupt() | self.monitor.waitForAbort(wait))
-        self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
+        self.log('_interrupt, pendingInterrupt = %s'%(PROPERTIES.setPendingInterrupt(self.monitor.pendingInterrupt)))
         return self.monitor.pendingInterrupt
     
 
-    def _suspend(self) -> bool: #continue
+    def _suspend(self, wait=.0001) -> bool: #continue
         self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | self.__playing() | PROPERTIES.isPendingSuspend())
-        self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))
+        self.log('_suspend, pendingSuspend = %s'%(PROPERTIES.setPendingSuspend(self.monitor.pendingSuspend)))
         return self.monitor.pendingSuspend
 
 
     def __restart(self, wait=1.0) -> bool:
         self.pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart())
-        self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
+        self.log('__restart, pendingRestart = %s'%(PROPERTIES.setPendingRestart(self.pendingRestart)))
         return (self.pendingRestart | self.monitor.waitForAbort(wait))
          
          
@@ -422,8 +420,8 @@ class Service():
                 
     def __initialize(self):
         self.log('__initialize')
-        if self.player.isPlaying(): self.player.onAVStarted()
         self.tasks._initialize()
+        if self.player.isPlaying(): self.player.onAVStarted()
         
 
     def _start(self):

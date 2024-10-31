@@ -430,7 +430,7 @@ msgid "Centralized Folder"
 msgstr ""
 
 msgctxt "#30103"
-msgid "Bonjour Information"
+msgid "ZeroConf Information"
 msgstr ""
 
 msgctxt "#30104"
@@ -646,7 +646,7 @@ msgid "Enable Automatic PVR Refresh"
 msgstr ""
 
 msgctxt "#30156"
-msgid "Silence Bonjour announcement"
+msgid "Enable ZeroConf"
 msgstr ""
 
 msgctxt "#30157"
@@ -1428,7 +1428,7 @@ msgid "Run Autotune"
 msgstr ""
 
 msgctxt "#32182"
-msgid "Bonjour Announcement:"
+msgid "ZeroConf Status:"
 msgstr ""
 
 msgctxt "#32183"
@@ -1545,6 +1545,18 @@ msgstr ""
 
 msgctxt "#32213"
 msgid "Stopping"
+msgstr ""
+
+msgctxt "#32214"
+msgid "Sort Method"
+msgstr ""
+
+msgctxt "#32215"
+msgid "Enable Multi-Room Instances?"
+msgstr ""
+
+msgctxt "#32216"
+msgid "Welcome to %s, If you're new please visit our project wiki for help & guides. Thank you for your support, enjoy!"
 msgstr ""
 
 
@@ -1882,8 +1894,12 @@ msgctxt "#33181"
 msgid "Force Autotune to run."
 msgstr ""
 
+msgctxt "#33214"
+msgid "Default Sort Method for all channels, overridden per channel by SmartPlaylist, DynamicPlaylist and Adv. Channel rules."
+msgstr ""
+
 msgctxt "#33182"
-msgid "When [COLOR=orange][B]Idle[/B][/COLOR] click to begin beacon; Within 15mins start another Kodi instance w/PseudoTV Live installed\nThe two instances will pair, enabled in Select Server list."
+msgid "Enabled in discovered servers in the list below."
 msgstr ""
 
 msgctxt "#33308"

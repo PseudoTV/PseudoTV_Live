@@ -30,24 +30,6 @@ class Utilities:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def showWelcome(self):
-        try: 
-            with BUILTIN.busy_dialog():
-                fle   = FileAccess.open(WELCOME_FLE, "r")
-                ftext = fle.read()
-                fle.close()
-                
-            if  SETTINGS.getCacheSetting('showWelcome', checksum=len(ftext)):
-                SETTINGS.setCacheSetting('showWelcome', False, checksum=len(ftext))
-                DIALOG.textviewer(ftext.format(addon_name = ADDON_NAME,
-                                               pvr_name   = PVR_CLIENT_NAME,
-                                               m3u        = M3UFLEPATH.replace('special://profile','.'),
-                                               xmltv      = XMLTVFLEPATH.replace('special://profile','.'),
-                                               genre      = GENREFLEPATH.replace('special://profile','.'),
-                                               logo       = LOGO_LOC.replace('special://profile','.')), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
-        except Exception as e: self.log('showWelcome failed! %s'%(e), xbmc.LOGERROR)
-        
-
     def showChangelog(self):
         try:  
             def addColor(text):
@@ -95,7 +77,7 @@ class Utilities:
         
 
     def qrSupport(self):
-        DIALOG.qrDialog('https://forum.kodi.tv/showthread.php?tid=346803', 'PseudoTV Live Beta Blog, Support & Discussion Thread')
+        DIALOG.qrDialog(URL_SUPPORT, 'PseudoTV Live Beta Blog, Support & Discussion Thread')
         
         
     def qrRemote(self):
@@ -240,28 +222,32 @@ class Utilities:
             PROPERTIES.setPendingRestart()
 
 
+    def sortMethod(self):
+        with BUILTIN.busy_dialog():
+            from jsonrpc import JSONRPC
+            jsonRPC = JSONRPC()
+            values  = sorted([item.title() for item in jsonRPC.getEnums("List.Sort",type="method")])
+            del jsonRPC
+        select = DIALOG.selectDialog(values, LANGUAGE(32214), findItemsInLST(values, [SETTINGS.getSetting('Sort_Method').lower()])[0], False, SELECT_DELAY, False)
+        if not select is None: return SETTINGS.setSetting('Sort_Method',values[select])
+
+
     def run(self):
         try:    param = self.sysARG[1]
         except: param = None
         self.log('run, param = %s'%(param))
-        
         if param == 'Apply_PVR_Settings':
             ctl = (6,17)
             with BUILTIN.busy_dialog():
-                from jsonrpc import JSONRPC
-                jsonRPC = JSONRPC()
                 if SETTINGS.setPVRPath(USER_LOC,SETTINGS.getFriendlyName(),prompt=True,force=True):
                     DIALOG.notificationDialog(LANGUAGE(32152))
                 else: DIALOG.notificationDialog(LANGUAGE(32165))
-                del jsonRPC
         elif param.startswith('Channel_Manager'):
             ctl = (0,1)
             self.openChannelManager()
         elif param.startswith('Move_Channelbug'):
             ctl = (3,16)
             self.openChannelBug()
-        elif param == 'Show_Welcome':
-            return self.showWelcome()
         elif param == 'Show_Readme':  
             return self.showReadme()
         elif param == 'Show_Changelog':
@@ -274,6 +260,9 @@ class Utilities:
             return self.qrDebug()
         elif param == 'User_Groups':
             return self.userGroups()
+        elif param == 'Sort_Method':
+            ctl = (3,16)
+            self.sortMethod()
         elif param == 'Utilities':
             ctl = (6,1) #settings return focus
             return self.buildMenu()

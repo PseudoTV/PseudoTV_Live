@@ -36,7 +36,6 @@ class Tasks():
         self.service     = service
         self.jsonRPC     = service.jsonRPC
         self.httpServer  = HTTP(service=service)
-        self.multiroom   = Multiroom(service=service)
         self.quePriority = CustomQueue(priority=True,service=service)
 
 
@@ -52,14 +51,14 @@ class Tasks():
 
     def _initialize(self):
         tasks = [self.chkInstanceID,
-                 self.chkDiscovery,
                  self.chkWelcome,
                  self.chkDebugging,
                  self.chkBackup,
+                 self.chkServers,
                  self.chkPVRBackend]
 
         for func in tasks:
-            if self.service._interrupt(): break
+            if    self.service.monitor.waitForAbort(.0001): break
             else: self._que(func)
         self.log('_initialize, finished...')
         
@@ -68,17 +67,12 @@ class Tasks():
         self.log('chkInstanceID')
         PROPERTIES.getInstanceID()
         
-        
-    def chkDiscovery(self):
-        self.log('chkDiscovery')
-        self.multiroom.hasServers()
-        timerit(self.multiroom.pairDiscovery)(1.0)
 
-
+    @cacheit(expiration=datetime.timedelta(days=28))
     def chkWelcome(self):
         self.log('chkWelcome')
-        BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
-
+        return DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME))
+        
 
     def chkDebugging(self):
         self.log('chkDebugging')
@@ -95,6 +89,11 @@ class Tasks():
         Backup().hasBackup()
 
 
+    def chkServers(self):
+        self.log('chkServers')
+        Multiroom(service=self.service).hasServers()
+
+
     def chkPVRBackend(self): 
         self.log('chkPVRBackend')
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
@@ -105,20 +104,21 @@ class Tasks():
 
     def _chkQueTimer(self):
         self.log('_chkQueTimer')
-        self._chkEpochTimer('chkVersion'    , self.chkVersion    , 7200)
-        self._chkEpochTimer('chkPVRSettings', self.chkPVRSettings, 900)
-        self._chkEpochTimer('chkPVRservers' , self.chkPVRservers , 900)
-        self._chkEpochTimer('chkFiles'      , self.chkFiles      , 300)
-        self._chkEpochTimer('chkHTTP'       , self.chkHTTP       , 900)
-        self._chkEpochTimer('chkRecommended', self.chkRecommended, 900)
-        self._chkEpochTimer('chkLibrary'    , self.chkLibrary    , (MAX_GUIDEDAYS*3600))
-        self._chkEpochTimer('chkChannels'   , self.chkChannels   , (MAX_GUIDEDAYS*3600))
-        self._chkEpochTimer('chkJSONQUE'    , self.chkJSONQUE    , 300)
+        self._chkEpochTimer('chkVersion'      , self.chkVersion      , 900)
+        self._chkEpochTimer('chkPVRSettings'  , self.chkPVRSettings  , 900)
+        self._chkEpochTimer('chkPVRservers'   , self.chkPVRservers   , 900)
+        self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
+        self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 900)
+        self._chkEpochTimer('chkAnnouncement' , self.chkAnnouncement , 60)
+        self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 60)
+        self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 900)
+        self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , (MAX_GUIDEDAYS*3600))
+        self._chkEpochTimer('chkChannels'     , self.chkChannels     , (MAX_GUIDEDAYS*3600))
+        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
         
-        self._chkPropTimer('chkPVRRefresh'  , self.chkPVRRefresh)
-        self._chkPropTimer('chkFillers'     , self.chkFillers)
-        self._chkPropTimer('chkDiscovery'   , self.chkDiscovery)
-        self._chkPropTimer('runAutoTune'    , self.runAutoTune)
+        self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh)
+        self._chkPropTimer('chkFillers'       , self.chkFillers)
+        self._chkPropTimer('runAutoTune'      , self.runAutoTune)
         
         
     def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
@@ -138,7 +138,7 @@ class Tasks():
             self._que(func)
                   
                   
-    @cacheit(expiration=datetime.timedelta(hours=1),checksum=PROPERTIES.getInstanceID())
+    @cacheit(expiration=datetime.timedelta(minutes=10))
     def getOnlineVersion(self):
         try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(getURL(ADDON_URL)))[0]
         except: ONLINE_VERSON = ADDON_VERSION
@@ -170,21 +170,33 @@ class Tasks():
 
     def chkPVRservers(self):
         self.log('chkPVRservers')
-        if self.multiroom.chkPVRservers(): PROPERTIES.setEpochTimer('chkPVRRefresh')
+        if Multiroom(service=self.service)._chkPVRservers(): PROPERTIES.setEpochTimer('chkPVRRefresh')
 
 
     def chkFiles(self):
         self.log('chkFiles')
         if PROPERTIES.hasFirstrun():
-            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,1)
-            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels,2)
+            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,2)
+            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels,3)
         [FileAccess.makedirs(folder) for folder in [LOGO_LOC,FILLER_LOC,TEMP_LOC] if not FileAccess.exists(os.path.join(folder,''))]
 
 
     def chkHTTP(self):
         self.log('chkHTTP')
         timerit(self.httpServer._start)(1.0)
+              
+              
+    def chkAnnouncement(self):
+        self.log('chkAnnouncement')
+        if not PROPERTIES.isRunning('Discovery'): timerit(Multiroom(service=self.service)._chkAnnouncement)(1.0)
+        else: self._que(self.chkAnnouncement,1)
             
+            
+    def chkDiscovery(self):
+        self.log('chkDiscovery')
+        if not PROPERTIES.isRunning('Announcement'): timerit(Multiroom(service=self.service)._chkDiscovery)(1.0)
+        else: self._que(self.chkDiscovery,1)
+        
             
     def chkRecommended(self):
         self.log('chkRecommended')
@@ -202,22 +214,21 @@ class Tasks():
             library.importPrompt()
             complete = library.updateLibrary(force)
             del library
-            
-            if not complete: self._que(self.chkLibrary,1,True)
+            if   not complete: self._que(self.chkLibrary,2,True)
             elif not SETTINGS.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
     def chkChannels(self):
-        self.log('chkChannels')
         try:
             builder = Builder(self.service)
-            self.service.currentChannels = list(builder.verify())
+            self.service.currentChannels = sorted(builder.verify(), key=itemgetter('number'))
+            self.log('chkChannels, channels = %s'%(len(self.service.currentChannels)))
             if len(self.service.currentChannels) > 0:
                 complete, updated = builder.build()
-                if not complete and PROPERTIES.hasFirstrun(): self._que(self.chkChannels,2)
+                if not complete and PROPERTIES.hasFirstrun(): self._que(self.chkChannels,3)
                 elif updated: PROPERTIES.setEpochTimer('chkPVRRefresh')
-                if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,10,self.service.currentChannels)
+                if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,self.service.currentChannels)
             del builder
             
             SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.service.currentChannels)))
@@ -237,7 +248,7 @@ class Tasks():
                     elif len(params) > 0:
                         param = params.pop(0)
                         self.log("chkJSONQUE, queueing = %s\n%s"%(len(params),param))
-                        self._que(self.jsonRPC.sendJSON,10, param)
+                        self._que(self.jsonRPC.sendJSON,-1, param)
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
                 SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
@@ -254,10 +265,9 @@ class Tasks():
         with DIALOG.sudo_dialog(LANGUAGE(32179)):
             [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),'')) for ftype in FILLER_TYPES if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),''))]
             for citem in channels:
-                if self.service._interrupt(): break
-                for ftype in FILLER_TYPES[1:]:
-                    if self.service._interrupt(): break
-                    else:
+                if self.service.monitor.waitForAbort(.0001): break
+                else:
+                    for ftype in FILLER_TYPES[1:]:
                         [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
                         if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
                             if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
@@ -290,12 +300,12 @@ class Tasks():
     
 
     def getChannels(self):
-        self.log('getChannels')
         try:
             builder  = Builder(self.service)
-            channels = builder.verify()
+            channels = sorted(builder.verify(), key=itemgetter('number'))
             del builder
-            return list(channels)
+            self.log('getChannels, channels = %s'%(len(channels)))
+            return channels
         except Exception as e: 
             self.log('getChannels failed! %s'%(e), xbmc.LOGERROR)
             return []
@@ -305,7 +315,7 @@ class Tasks():
         with DIALOG.sudo_dialog(msg='%s %ss'%(LANGUAGE(32028),LANGUAGE(32023))):
             nChannels = self.getChannels()
             if channels != nChannels:
-                self.log('chkChannelChange, resetting chkChannels')
+                self.log('chkChannelChange, channels changed %s => %s: queueing chkChannels'%(len(channels),len(nChannels)))
                 self._que(self.chkChannels)
                 return nChannels
             return channels

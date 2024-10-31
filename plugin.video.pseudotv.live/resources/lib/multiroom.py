@@ -25,8 +25,8 @@ class Service:
     from jsonrpc import JSONRPC
     monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
-    def _interrupt(self, wait: float=.001) -> bool:
-        return self.monitor.waitForAbort(wait)
+    def _interrupt(self, wait: float=.0001) -> bool:
+        return (PROPERTIES.isPendingInterrupt() | self.monitor.waitForAbort(wait))
     def _suspend(self) -> bool:
         return PROPERTIES.isPendingSuspend()
         
@@ -37,73 +37,34 @@ class Multiroom:
         self.sysARG = sysARG
         if service is None:
             service = Service()
-            
-        self.service   = service
-        self.jsonRPC   = service.jsonRPC
-        self.uuid      = SETTINGS.getMYUUID()
-        self.friendly  = SETTINGS.getFriendlyName()
-        self.remoteURL = PROPERTIES.getRemoteURL()
-               
         
+        self.service    = service
+        self.jsonRPC    = service.jsonRPC
+        self.uuid       = SETTINGS.getMYUUID()
+        self.friendly   = SETTINGS.getFriendlyName()
+        self.remoteURL  = PROPERTIES.getRemoteURL()
+        self.payload    = SETTINGS.getBonjour()
+
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def pairDiscovery(self, wait=DISCOVERY_TIMER, silent=SETTINGS.getSettingBool('Bonjour_Silent')):
-        if not PROPERTIES.isRunning('Multiroom'):
-            added = False
-            with PROPERTIES.setRunning('Multiroom'):
-                self.log('pairDiscovery, wait = %s, silent = %s'%(wait,silent))
-                sec = 0
-                if silent: dia = None
-                else:      dia = DIALOG.progressBGDialog(message=LANGUAGE(32162)%(wait-sec)) 
-                while not self.service.monitor.abortRequested() and (sec < wait):
-                    sec += 1  
-                    msg = LANGUAGE(32162)%(wait-sec)
-                    if dia: dia = DIALOG.progressBGDialog(int((sec)*100//wait),dia, msg)
-                    SETTINGS.setSetting('Bonjour_Status',(LANGUAGE(32158)%(wait-sec)))
-                    payload = Discovery()._start()
-                    added   = self.addServer(payload)
-                    if self.service._interrupt(0.5) or dia is None or added: break
-                SETTINGS.setSetting('Bonjour_Status',LANGUAGE(32149))
-                if dia: DIALOG.progressBGDialog(100,dia)
-            if added: self.sendResponse(payload)
-        else: DIALOG.notificationDialog('Announcement Running, Try again later...')
-            
-
-    def pairAnnouncement(self, payload, silent=False, wait=900):
-        if SETTINGS.getSetting('Bonjour_Status') !=LANGUAGE(32149): return DIALOG.notificationDialog(LANGUAGE(32148))
-        if not PROPERTIES.isRunning('Multiroom'):
-            with PROPERTIES.setRunning('Multiroom'):
-                sec = 0
-                inc = int(100/wait)
-                if not silent: dia = DIALOG.progressDialog(message=(LANGUAGE(32163)%(self.friendly,(wait-sec))))
-                else:          dia = False
-                while not self.service.monitor.abortRequested() and (sec < wait):
-                    self.log('pairAnnouncement, payload = %s, wait = %s, sec = %s'%(payload,wait,sec))
-                    sec += 1
-                    msg = (LANGUAGE(32163)%(self.friendly,(wait-sec)))
-                    if dia: dia = DIALOG.progressDialog((inc*sec),dia, msg) 
-                    Announcement(payload)
-                    npayload = Discovery()._start()
-                    if self.addServer(npayload): break
-                    if self.service._interrupt(0.5) or dia is None: break
-                if dia: DIALOG.progressDialog(100,dia)
-        else: DIALOG.notificationDialog('Discovery Running, Try again later...')
+    def _chkAnnouncement(self):
+        self.log('_chkAnnouncement')
+        Announcement(service=self.service, payload=self.payload)
 
 
-    def sendResponse(self, payload):
-        npayload = SETTINGS.getBonjour()
-        npayload['received'] = payload.get('host')
-        self.log('sendResponse, npayload = %s'%(npayload))
-        self.pairAnnouncement(npayload, silent=True, wait=300)
-
+    def _chkDiscovery(self):
+        self.log('_chkDiscovery')
+        Discovery(service=self.service, multiroom=self)
+                
 
     def hasServers(self, servers={}):
         if not servers: servers = self.getDiscovery()
         self.log('hasServers, servers = %s'%(len(servers)))
         SETTINGS.setSetting('Select_server','|'.join(['[COLOR=%s][B]%s[/B][/COLOR]'%({True:'green',False:'red'}[v.get('online',False)],v.get('name')) for v in [v for v in list(servers.values()) if v.get('enabled',False)]]))
-        PROPERTIES.setEXTProperty('%s.has.Servers'%(ADDON_ID),str(len(servers) > 0).lower())
+        PROPERTIES.setServers(len(servers) > 0)
         PROPERTIES.setEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),str(len([v for v in list(servers.values()) if v.get('enabled',False)]) > 0).lower())
         return servers
         
@@ -116,7 +77,7 @@ class Multiroom:
         return setJSON(SERVER_LOC,{"servers":self.hasServers(servers)})
 
 
-    def chkPVRservers(self):
+    def _chkPVRservers(self):
         changed = False
         servers = self.getDiscovery()
         for server in list(servers.values()):
@@ -125,7 +86,7 @@ class Multiroom:
             if response: server.update(loadJSON(response))
             server['online'] = True if response else False
             if online != server['online']: DIALOG.notificationDialog(LANGUAGE(32211)%(server.get('name'),{True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)]))
-            self.log('chkPVRservers, %s: online = %s, last updated = %s'%(server.get('name'),server['online'],server.get('updated')))
+            self.log('_chkPVRservers, %s: online = %s, last updated = %s'%(server.get('name'),server['online'],server.get('updated')))
             instancePath = SETTINGS.hasPVRInstance(server.get('name'))
             if       server.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(server.get('host'),server.get('name'))
             elif not server.get('enabled',False) and instancePath: FileAccess.delete(instancePath)
@@ -134,14 +95,13 @@ class Multiroom:
 
 
     def addServer(self, payload={}):
-        if payload:
-            servers = self.getDiscovery()
-            if not servers.get(payload.get('name')):
-                self.log('addServer, payload = %s'%(payload))
-                servers.update({payload.get('name'):payload})
-                DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
-                if self.setDiscovery(servers):
-                    return True
+        if not payload: return False
+        servers  = self.getDiscovery()
+        self.log('addServer, payload = %s'%(payload))
+        servers.update({payload.get('name'):payload})
+        DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
+        if self.setDiscovery(servers):
+            return True
 
 
     def delServer(self):
@@ -184,15 +144,14 @@ class Multiroom:
                         if not servers[liz.getLabel()].get('enabled',False):
                             DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
                             servers[liz.getLabel()]['enabled'] = True
-                            __chkSettings(servers[liz.getLabel()].get('settings',{}))
+                            __chkSettings(loadJSON(servers[liz.getLabel()].get('settings')))
                         if not instancePath: SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel())
                     else:
                         if servers[liz.getLabel()].get('enabled',False):
                             DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
                             servers[liz.getLabel()]['enabled'] = False
                         if instancePath: FileAccess.delete(instancePath)
-                if self.setDiscovery(servers):
-                    return PROPERTIES.setEpochTimer('chkDiscovery')
+                self.setDiscovery(servers)
 
             
     def run(self):
@@ -206,10 +165,6 @@ class Multiroom:
         elif param == 'Remove_server': 
             ctl = (5,12)
             self.delServer()
-        elif param == 'Pair_Announcement': 
-            ctl = (5,9)
-            with PROPERTIES.suspendActivity():
-                self.pairAnnouncement(SETTINGS.getBonjour())
         return openAddonSettings(ctl)
 
 

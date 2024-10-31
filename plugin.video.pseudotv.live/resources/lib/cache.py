@@ -85,7 +85,7 @@ class Cache:
         # with self.lock:
         if value and not self.disable_cache and not self.cacheLocked():
             with self.cacheLocker():
-                self.log('set, name = %s'%self.getname(name))
+                self.log('set, name = %s, value = %s'%(self.getname(name),'%s...'%(str(value)[:128])))
                 self.cache.set(self.getname(name),value,checksum,expiration,json_data)
         return value
         
@@ -94,9 +94,10 @@ class Cache:
         # with self.lock:
         if not self.disable_cache and not self.cacheLocked():
             with self.cacheLocker():
-                self.log('get, name = %s'%self.getname(name))
-                return self.cache.get(self.getname(name),checksum,json_data)
-        
+                value = self.cache.get(self.getname(name),checksum,json_data)
+                self.log('get, name = %s, value = %s'%(self.getname(name),'%s...'%(str(value)[:128])))
+                return value
+            
             
     def clear(self, name, wait=15):
         import sqlite3

@@ -83,9 +83,7 @@ class CustomQueue:
              
     def _push(self, package: tuple, priority: int=0, delay: int=0):
         node = LlNode(package, priority, delay)
-        if self.__exists((1,priority,package)):
-            self.log("_push, func = %s exists; ignoring package"%(package[0].__name__))
-            return
+        if   self.__exists((1,priority,package)): self.log("_push, func = %s exists; ignoring package"%(package[0].__name__))
         elif self.priority:
             self.qsize += 1
             item = (priority, package)
@@ -109,13 +107,16 @@ class CustomQueue:
     def __pop(self):
         self.isRunning = True
         while not self.service.monitor.abortRequested():
-            if self.service._interrupt():
-                self.log("__pop, _interrupt == True")
+            if self.service.monitor.waitForAbort(.0001): 
+                self.log("__pop, waitForAbort")
                 break
             elif self.service._suspend():
-                self.log("__pop, _suspend == True")
-                if self.service._interrupt(OVERLAY_DELAY): break
-                else: continue
+                if self.service._interrupt(OVERLAY_DELAY): 
+                    self.log("__pop, _interrupt")
+                    break
+                else: 
+                    self.log("__pop, _suspend")
+                    continue
             else:
                 if not self.head and not self.priority:
                     self.log("__pop, The queue is empty!")

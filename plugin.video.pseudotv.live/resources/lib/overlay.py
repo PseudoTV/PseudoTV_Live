@@ -79,7 +79,7 @@ class Replay(xbmcgui.WindowXMLDialog):
         tot  = wait
         xpos = control.getX()
         while not self.service.monitor.abortRequested():
-            if (self.service._interrupt(1.0) or wait < 0 or self._closing): break
+            if (self.service.monitor.waitForAbort(1.0) or wait < 0 or self._closing): break
             prog = int((abs(wait-tot)*100)//tot)
             if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
             wait -= 1
@@ -97,7 +97,7 @@ class Replay(xbmcgui.WindowXMLDialog):
                 self.player.play(self.player.sysInfo.get('fitem',{}).get('catchup-id'),liz)
             else: DIALOG.notificationDialog(LANGUAGE(30154))
         elif actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),.1,true,false)')
-        elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.1true,false)')
+        elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.1,true,false)')
         elif actionId in ACTION_PREVIOUS_MENU: BUILTIN.executebuiltin('AlarmClock(back,Action(back),.1,true,false)')
         self.onClose()
 

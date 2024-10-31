@@ -680,6 +680,17 @@
                 </setting>
             </group>
             <group id="3" label="32021">
+                <setting id="Sort_Method" type="string" label="32214" help="33214">
+                    <level>3</level>
+                    <default>Random</default>
+                    <constraints>
+                        <allowempty>false</allowempty>
+                    </constraints>
+                    <control type="button" format="action">
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Sort_Method)</data>
+                        <close>true</close>
+                    </control>
+                </setting>
                 <setting id="Page_Limit" type="integer" label="30015" help="33015">
                     <level>3</level>
                     <default>25</default>
@@ -1003,18 +1014,17 @@
                 </setting>
             </group>
             <group id="2" label="30103">
-                <setting id="Bonjour_Status" type="string" label="32182" help="33182">
+                <setting id="ZeroConf_Status" type="string" label="32182" help="33182">
                     <level>0</level>
-                    <default>[COLOR=orange][B]Idle[/B][/COLOR]</default>
+                    <default>[COLOR=red][B]Offline[/B][/COLOR]</default>
                     <constraints>
                         <allowempty>true</allowempty>
                     </constraints>
                     <control type="button" format="action">
-                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Pair_Announcement)</data>
-                        <close>true</close>
+                        <data/>
                     </control>
                 </setting>
-                <setting id="UDP_PORT" type="integer" label="30097" help="33097" parent="Bonjour_Status">
+                <setting id="UDP_PORT" type="integer" label="30097" help="33097" parent="ZeroConf_Status">
                     <level>3</level>
                     <default>50000</default>
                     <constraints>
@@ -1024,12 +1034,7 @@
                         <heading>30359</heading>
                     </control>
                 </setting>
-                <setting id="Bonjour_Silent" type="boolean" label="30156" help="33156" parent="Bonjour_Status">
-                    <level>1</level>
-                    <default>False</default>
-                    <control type="toggle"/>
-                </setting>
-                <setting id="Select_server" type="string" label="32048" help="33048" parent="Bonjour_Status">
+                <setting id="Select_server" type="string" label="32048" help="33048" parent="ZeroConf_Status">
                     <level>0</level>
                     <default/>
                     <constraints>

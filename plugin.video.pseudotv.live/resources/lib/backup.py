@@ -39,20 +39,17 @@ class Backup:
         
         
     def hasBackup(self, file: str=CHANNELFLE_BACKUP) -> bool:
-        with BUILTIN.busy_dialog():
-            self.log('hasBackup')
-            if FileAccess.exists(file):
-                if file == CHANNELFLE_BACKUP:#main backup file, set meta.
-                    PROPERTIES.setEXTProperty('%s.has.Backup'%(ADDON_ID),"true")
-                    if (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown') == 'Last Backup: Unknown':
-                        SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),self.getFileDate(file)))
-                    if not SETTINGS.getSetting('Recover_Channels'):
-                        SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
-                return True
-            PROPERTIES.setEXTProperty('%s.has.Backup'%(ADDON_ID),"false")
-            SETTINGS.setSetting('Backup_Channels' ,'')
-            SETTINGS.setSetting('Recover_Channels','')
-            return False
+        self.log('hasBackup')
+        if PROPERTIES.setBackup(FileAccess.exists(file)):
+            if file == CHANNELFLE_BACKUP:#main backup file, set meta.
+                if (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown') == 'Last Backup: Unknown':
+                    SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),self.getFileDate(file)))
+                if not SETTINGS.getSetting('Recover_Channels'):
+                    SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
+            return True
+        SETTINGS.setSetting('Backup_Channels' ,'')
+        SETTINGS.setSetting('Recover_Channels','')
+        return False
             
             
     def getChannels(self, file: str=CHANNELFLE_BACKUP) -> list:
@@ -72,7 +69,7 @@ class Backup:
         with BUILTIN.busy_dialog():
             if FileAccess.copy(CHANNELFLEPATH,file):
                 if file == CHANNELFLE_BACKUP: #main backup file, set meta.
-                    PROPERTIES.setEXTProperty('%s.has.Backup'%(ADDON_ID),"true")
+                    PROPERTIES.setBackup(True)
                     SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
                     SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
                 return DIALOG.notificationDialog('%s %s'%(LANGUAGE(32110),LANGUAGE(32025)))

@@ -1,4 +1,11 @@
 v.0.5.6
+-Added Zeroconf Multi-Room configuration replacing the previous pairing method.
+ - No pairing procedures required; ignore past methods.
+-Added New welcome dialog.
+-Added Multi-Room option to auto-tuning.
+-Added Global sort method to settings.
+ - Set the default method for all channels with exceptions below.
+ - Per channel sort method is overridden by Smartplaylists, Dynamicplaylists and Advanced channel rules containing an existing sort method.
 -Moved "Remove Server" to "Select Server" list.
 -Tweaked Multiprocessing and cache.
 -Improved filling guidedata for channels with limited or short duration media.

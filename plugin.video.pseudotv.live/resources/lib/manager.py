@@ -39,28 +39,6 @@ ACTION_INVALID       = 999
 ACTION_SHOW_INFO     = [11,24,401]
 ACTION_PREVIOUS_MENU = [92, 10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61448]
      
-def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
-    if not values: return [-1]
-    matches = []
-    def _match(fkey,fvalue):
-        if fkey.lower() == fvalue.lower():
-            matches.append(idx if index else item)
-                    
-    for value in values:
-        if isinstance(value,dict): 
-            value = value.get(val_key,'')
-            
-        for idx, item in enumerate(items): 
-            if isinstance(item,xbmcgui.ListItem): 
-                if item_key == 'getLabel':  
-                    _match(item.getLabel() ,value)
-                elif item_key == 'getLabel2': 
-                    _match(item.getLabel2(),value)
-            elif isinstance(item,dict):       
-                _match(item.get(item_key,''),value)
-            else: _match(item,value)
-    return matches
-
 class Manager(xbmcgui.WindowXMLDialog):
     
     def __init__(self, *args, **kwargs):
@@ -647,7 +625,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def viewChannel(self, citem): #todo preview uncached filelist for visual breakdown of channel content.
         self.log('viewChannel, id = %s'%(citem['id']))
-        # [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.limits) for file in citem['path'] if not self.service._interrupt()]
+        # [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.limits) for file in citem['path']]
 
 
     def getMontiorList(self):

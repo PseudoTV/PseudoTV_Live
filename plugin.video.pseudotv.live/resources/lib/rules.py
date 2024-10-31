@@ -911,7 +911,7 @@ class HandleMethodOrder(BaseRule):
         self.name               = "Limits & Sort Methods"
         self.description        = "Change content limits and sorting methods."
         self.optionLabels       = ['Page Limit','Method','Order','Ignore Folders','Ignore Artist Sort Name']
-        self.optionValues       = [REAL_SETTINGS.getSettingInt('Page_Limit'),'random','ascending',True,True]
+        self.optionValues       = [REAL_SETTINGS.getSettingInt('Page_Limit'),SETTINGS.getSetting('Sort_Method').lower(),'ascending',True,True]
         self.optionDescriptions = ["","","","",""]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(25,525,25)), self.getSort(), self.getOrder(),"",""]

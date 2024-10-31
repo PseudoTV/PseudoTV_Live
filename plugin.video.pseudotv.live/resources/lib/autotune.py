@@ -68,12 +68,19 @@ class Autotune:
             if samples:
                 opt = ''
                 msg = (LANGUAGE(32042)%ADDON_NAME)
-                if Backup().hasBackup():
+                hasBackup  = PROPERTIES.hasBackup()
+                hasServers = PROPERTIES.hasServers()
+                if hasBackup:
                     opt = LANGUAGE(32112)
                     msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
+                elif hasServers:
+                    opt = LANGUAGE(30092)
+                    msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32215))
                 retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
                 if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-                elif retval == 2: return Backup().recoverChannels()
+                elif retval == 2:
+                    if   hasBackup:  return Backup().recoverChannels()
+                    elif hasServers: return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Select_Server)')
                 else: return True
         else:
             if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32058))

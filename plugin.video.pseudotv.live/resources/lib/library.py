@@ -28,18 +28,16 @@ REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Service:
     from jsonrpc import JSONRPC
-    monitor = MONITOR()
+    monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
-    def _interrupt(self, wait: float=.001) -> bool:
-        return self.monitor.waitForAbort(wait)
+    def _interrupt(self, wait: float=.0001) -> bool:
+        return (PROPERTIES.isPendingInterrupt() | self.monitor.waitForAbort(wait))
     def _suspend(self) -> bool:
         return PROPERTIES.isPendingSuspend()
-
 
 class Library:
     def __init__(self, service=None):
         if service is None: service = Service()
-        self.completeFill = False
         self.service      = service
         self.parserCount  = 0
         self.parserMSG    = ''
@@ -100,23 +98,6 @@ class Library:
     def getEnabled(self, type):
         return [item for item in self.getLibrary(type) if item.get('enabled',False)]
 
-    
-    def fillItems(self):
-        self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-        for idx, type in enumerate(AUTOTUNE_TYPES):
-            if self.service._interrupt():
-                self.completeFill = False
-                self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
-                break
-            else:
-                self.parserMSG    = AUTOTUNE_TYPES[idx]
-                self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
-                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-                try:    items = self.libraryFUNCS[type]()
-                except: items = []
-                self.log('fillItems, returning %s (%s)'%(type,len(items)))
-                yield (type,items)
-
 
     def updateLibrary(self, force: bool=False) -> bool:
         def __clear():
@@ -133,25 +114,43 @@ class Library:
             entry = self.getTemplate()
             entry.update(item)
             return entry
+            
+        def _fill(type, func):
+            try:
+                items = func()
+                if items: self.cache.set(cacheName, items, expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
+            except Exception as e:
+                self.log("fillItems, %s failed! %s"%(type,e), xbmc.LOGERROR)
+                items = []
+            self.log('_fill, returning %s (%s)'%(type,len(items)))
+            return items
 
-        msg = LANGUAGE(32022)
         if force: #clear library cache.
             with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
                 __clear()
                 
-        self.completeFill = True 
-        libraryItems      = dict(self.fillItems())
-        self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
+        complete = True 
+        self.parserDialog = DIALOG.progressBGDialog()
+        
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            self.parserDialog = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),self.parserDialog,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
             if self.service._interrupt():
-                self.completeFill = False
+                complete = False
                 break
-            else: self.setLibrary(type, [__update(type,item) for item in libraryItems.get(type,[])])
-            
+            else:
+                msg = LANGUAGE(30014)
+                func = self.libraryFUNCS[type]
+                cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
+                items = self.cache.get(cacheName)
+                if not items: msg = LANGUAGE(32022)
+                self.parserMSG    = AUTOTUNE_TYPES[idx]
+                self.parserCount  = int(idx*100//len(AUTOTUNE_TYPES))
+                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
+                if not items: items = _fill(type, func)
+                self.setLibrary(type, [__update(type,item) for item in items])
+
         self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
-        self.log('updateLibrary, force = %s, complete = %s'%(force,  self.completeFill))
-        return  self.completeFill
+        self.log('updateLibrary, force = %s, complete = %s'%(force,  complete))
+        return  complete
         
 
     def resetLibrary(self, ATtypes=AUTOTUNE_TYPES):
@@ -162,37 +161,30 @@ class Library:
             self.setLibrary(ATtype, items)
 
 
-    @cacheit(json_data=True)
     def getNetworks(self):
         return self.getTVInfo().get('studios',[])
         
         
-    @cacheit(json_data=True)
     def getTVGenres(self):
         return self.getTVInfo().get('genres',[])
  
  
-    @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS),json_data=True)
     def getTVShows(self):
         return self.getTVInfo().get('shows',[])
         
         
-    @cacheit(json_data=True)
     def getMovieStudios(self):
         return self.getMovieInfo().get('studios',[])
         
         
-    @cacheit(json_data=True)
     def getMovieGenres(self):
         return self.getMovieInfo().get('genres',[])
               
  
-    @cacheit(json_data=True)
     def getMusicGenres(self):
         return self.getMusicInfo().get('genres',[])
  
          
-    @cacheit(json_data=True)
     def getMixedGenres(self):
         MixedGenreList = []
         for tv in [tv for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.get('name','').lower() == movie.get('name','').lower()]:
@@ -203,7 +195,6 @@ class Library:
         return sorted(MixedGenreList,key=itemgetter('name'))
 
 
-    @cacheit(json_data=True)
     def getMixed(self):
         def hasRecordings():
             return self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/',appendPath=True) #todo add infobool to Kodi core.
@@ -222,7 +213,7 @@ class Library:
         return sorted(MixedList,key=itemgetter('name'))
     
     
-    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS),json_data=True)
+    @cacheit(expiration=datetime.timedelta(minutes=5),json_data=True)
     def getPlaylists(self):
         PlayList = []
         types    = ['video','mixed','music']

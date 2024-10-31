@@ -17,81 +17,99 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import gzip, mimetypes
+import gzip, mimetypes, socket, time
 
+from zeroconf                  import *
 from globals                   import *
 from functools                 import partial
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
-from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR, SOCK_STREAM
             
 #todo proper REST API to handle server/client communication incl. sync/update triggers.
 #todo incorporate experimental webserver UI to master branch.
 
+ZEROCONF_SERVICE = "_%s._tcp.local."%(slugify(ADDON_NAME,lowercase=True))
+
 class Discovery:
+    def __init__(self, service=None, multiroom=None):
+        self.service   = service
+        self.multiroom = multiroom
+        self._start()
+                
+                
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-        
 
-    def __decodeString(self, base64_bytes):
-        message_bytes = base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING))
-        return message_bytes.decode(DEFAULT_ENCODING)
-    
-    
+        
+    class MyListener(object):
+        def __init__(self, multiroom=None):
+            self.r = Zeroconf()
+            self.multiroom = multiroom
+
+        def removeService(self, zeroconf, type, name):
+            self.log("removeService, Service %s removed"%(name))
+            
+        def addService(self, zeroconf, type, name):
+            info = self.r.getServiceInfo(type, name)
+            if info:
+                prop = info.getProperties()
+                if not prop: return
+                elif prop.get('name','') != SETTINGS.getFriendlyName():
+                    self.log("addService, Service %s added"%(name))
+                    self.log("addService, Address is %s:%d"%(socket.inet_ntoa(info.getAddress()), info.getPort()))
+                    self.log("addService, Weight is %d, Priority is %d"%(info.getWeight(), info.getPriority()))
+                    self.log("addService, Server is %s"%info.getServer())
+                    self.log("addService, Properties are %s"%(prop))
+                    self.multiroom.addServer(prop)
+                
+                
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
     def _start(self):
         if not PROPERTIES.isRunning('Discovery'):
             with PROPERTIES.setRunning('Discovery'):
-                data = ''
-                try: 
-                    local = PROPERTIES.getRemoteURL()
-                    sock  = socket(AF_INET, SOCK_DGRAM) #create UDP socket
-                    sock.bind(('', SETTINGS.getSettingInt('UDP_PORT')))
-                    sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
-                    data, addr = sock.recvfrom(1024) #wait for a packet
-                    data = data.decode(DEFAULT_ENCODING)
-                except: pass #ignore except TimeoutError: timed out
-                if data.startswith(ADDON_ID):
-                    response = data[len(ADDON_ID):]
-                    if response:
-                        self.log('_start: response from %s\n%s'%(addr,response))
-                        payload = loadJSON(self.__decodeString(response))
-                        host = payload.get('host','')
-                        if host != local and 'md5' in payload:
-                            self.log('_start: discovered new server @ host = %s'%(host),xbmc.LOGINFO)
-                            if payload.pop('md5') == getMD5(dumpJSON(payload)) or payload.pop('received') == local:
-                                self.log('_start: discovered new server confirmed! received payload ',xbmc.LOGINFO)
-                                return payload 
-                else: self.log('_start: waiting for response...')
-        return {}
-        
-                                
+                r = Zeroconf()
+                self.log("_start, Multicast DNS Service Discovery (%s)"%(ZEROCONF_SERVICE))
+                lastState =  SETTINGS.getSetting('ZeroConf_Status')
+                SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]Discovering...[/B][/COLOR]')
+                ServiceBrowser(r, ZEROCONF_SERVICE, self.MyListener(self.multiroom))
+                self.service.monitor.waitForAbort(DISCOVER_INTERVAL)
+                SETTINGS.setSetting('ZeroConf_Status',lastState)
+                r.close()
+                        
+                
 class Announcement:
-    def __init__(self, payload={}):
-        self._start(payload)
+    def __init__(self, service=None, payload={}):
+        self.service = service
+        self.payload = payload
+        self._start()
             
             
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def __encodeString(self, text):
-        base64_bytes = base64.b64encode(text.encode(DEFAULT_ENCODING))
-        return base64_bytes.decode(DEFAULT_ENCODING)
-
-        
-    def _start(self, payload):
+    def _start(self):
         if not PROPERTIES.isRunning('Announcement'):
             with PROPERTIES.setRunning('Announcement'):
-                try:
-                    data = '%s%s'%(ADDON_ID,self.__encodeString(dumpJSON(payload)))
-                    sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
-                    sock.bind(('', 0))
-                    sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-                    sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1) #this is a broadcast socket
-                    sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
-                    sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
-                    self.log('_start, sending service announcements: %s\n%s'%(data[len(ADDON_ID):],data.encode()),xbmc.LOGINFO)
-                except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
+                ZEROCONF_NAME = "%s.%s"%(slugify(self.payload.get('name'),lowercase=True),ZEROCONF_SERVICE)
+                info = ServiceInfo(ZEROCONF_SERVICE, 
+                                   ZEROCONF_NAME, 
+                                   socket.inet_aton(socket.gethostbyname(socket.gethostname())), 
+                                   port=SETTINGS.getSettingInt('UDP_PORT'), 
+                                   properties=self.payload)
+                r = Zeroconf()
+                self.log("_start, Registration of a service (%s)"%(ZEROCONF_NAME))
+                SETTINGS.setSetting('ZeroConf_Status','[COLOR=green][B]Online[/B][/COLOR]')
+                r.registerService(info)
+                self.service.monitor.waitForAbort(300)
+                self.log("_start, Unregistering (%s)"%(ZEROCONF_NAME))
+                SETTINGS.setSetting('ZeroConf_Status','[COLOR=red][B]Offline[/B][/COLOR]')
+                r.unregisterService(info)
+                r.close()
+        else: PROPERTIES.forceUpdateTime('chkAnnouncement')
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -185,7 +203,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                             self._set_headers(content)
                             while not self.monitor.abortRequested():
                                 chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                                if not chunk or self.monitor.service._interrupt(): break
+                                if not chunk or self.monitor.waitForAbort(.0001): break
                                 self.send_header('content-length', len(content))
                                 self.wfile.write(chunk)
                         self.wfile.close()
@@ -224,14 +242,14 @@ class HTTP:
     def chkPort(self, port=0, redirect=False):
         try:
             state = False
-            with closing(socket(AF_INET, SOCK_STREAM)) as s:
+            with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
                 s.bind(("127.0.0.1", port))
                 state = True
         except Exception as e:
             if redirect and (e.errno == errno.EADDRINUSE):
-                with closing(socket(AF_INET, SOCK_STREAM)) as s:
+                with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
                     s.bind(("127.0.0.1", 0))
-                    s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     port  = s.getsockname()[1]
                     state = True
             else: port = None
@@ -241,7 +259,7 @@ class HTTP:
 
     def _start(self):
         try:
-            if self.service._interrupt(): self._stop()
+            if self.service.monitor.waitForAbort(.0001): self._stop()
             elif not self.isRunning:
                 self.isRunning = True
                 IP  = getIP()

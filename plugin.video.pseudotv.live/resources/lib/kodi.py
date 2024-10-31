@@ -114,14 +114,7 @@ def getMD5(text,hash=0,hexit=True):
 
 def getCRC32(text):
     return binascii.crc32(text.encode('utf8'))
-    
-def convertString(data):
-    if isinstance(data, dict):      return dumpJSON(data)
-    elif isinstance(data, list):    return ', '.join(data)
-    elif isinstance(data, bytes):   return data.decode(DEFAULT_ENCODING)
-    elif not isinstance(data, str): return str(data)
-    else:                           return data
-             
+   
 class Settings:
     #Kodi often breaks settings API with changes between versions. Stick with core setsettings/getsettings to avoid specifics; that may break.
     def __init__(self):
@@ -176,7 +169,7 @@ class Settings:
     def _getSetting(self, func, key):
         try: 
             value = func(key)
-            self.log('%s, key = %s, value = %s'%(func.__name__,key,'%s...'%((convertString(value)[:128]))))
+            self.log('%s, key = %s, value = %s'%(func.__name__,key,'%s...'%((str(value)[:128]))))
             return value
         except Exception as e: 
             self.log("_getSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
@@ -238,7 +231,7 @@ class Settings:
     #SET
     def _setSetting(self, func, key, value):
         try:
-            self.log('%s, key = %s, value = %s'%(func.__name__,key,'%s...'%((convertString(value)[:128]))))
+            self.log('%s, key = %s, value = %s'%(func.__name__,key,'%s...'%((str(value)[:128]))))
             return func(key, value)
         except Exception as e: 
             self.log("_setSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
@@ -345,12 +338,7 @@ class Settings:
                    'platform':Builtin().getInfoLabel('OSVersionInfo','System'),
                    'build'   :Builtin().getInfoLabel('BuildVersion','System'),
                    'name'    :self.getFriendlyName(),
-                   'host'    :self.property.getRemoteURL(),
-                   'settings':{'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
-                               'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
-                               'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
-                               'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
-                               'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}}
+                   'host'    :self.property.getRemoteURL()}
         payload['updated'] = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         payload['md5']     = getMD5(dumpJSON(payload))
         return payload
@@ -365,11 +353,16 @@ class Settings:
             from library    import Library
             from multiroom  import Multiroom
             try:
-                payload['library'] = Library().getLibrary()
-                payload['m3u']     = M3U().getM3U()
-                payload['xmltv']   = {'stations':XMLTVS().getChannels(), 'recordings':XMLTVS().getRecordings()}
-                payload['debug']   = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_NAME))).get('DEBUG',{})
-                payload['servers'] = Multiroom().getDiscovery()
+                payload['library']  = Library().getLibrary()
+                payload['m3u']      = M3U().getM3U()
+                payload['xmltv']    = {'stations':XMLTVS().getChannels(), 'recordings':XMLTVS().getRecordings()}
+                payload['debug']    = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_NAME))).get('DEBUG',{})
+                payload['servers']  = Multiroom().getDiscovery(),
+                payload['settings'] = {'Resource_Logos'   :self.getSetting('Resource_Logos').split('|'),
+                                      'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
+                                      'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
+                                      'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
+                                      'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}
             except Exception as e: self.log("getPayload, __getMeta failed! %s"%(e), xbmc.LOGERROR)
             
             del M3U
@@ -658,11 +651,27 @@ class Properties:
         return self.setEXTProperty('%s.%s'%(ADDON_ID,key),str(state).lower())
 
 
+    def setBackup(self, state=True):
+        return self.setEXTProperty('%s.has.Backup'%(ADDON_ID),str(state).lower())
+
+
+    def setServers(self, state=True):
+        return self.setEXTProperty('%s.has.Servers'%(ADDON_ID),str(state).lower())
+        
+        
     def setPendingRestart(self, state=True):
         if state: Dialog().notificationDialog('%s\n%s'%(LANGUAGE(32157),LANGUAGE(32124)))
         return self.setPropertyBool('pendingRestart',state)
+        
 
+    def setPendingInterrupt(self, state=True):
+        return self.setPropertyBool('pendingInterrupt',state)
 
+        
+    def setPendingSuspend(self, state=True):
+        return self.setPropertyBool('pendingSuspend',state)
+        
+        
     def isPseudoTVRunning(self):
         return self.getEXTProperty('PseudoTVRunning') == 'true'
 
@@ -692,21 +701,28 @@ class Properties:
     @contextmanager
     def interruptActivity(self): #suspend/quit running background task.
         if not self.isPendingInterrupt():
-            self.setPropertyBool('pendingInterrupt',True)
+            self.setPendingInterrupt(True)
             try: yield
-            finally:
-                self.setPropertyBool('pendingInterrupt',False)
+            finally: self.setPendingInterrupt(False)
         else: yield
         
         
     @contextmanager
     def suspendActivity(self): #suspend/quit running background task.
         if not self.isPendingSuspend():
-            self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),"true")
+            self.setPendingSuspend(True)
             try: yield
-            finally:
-                self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),"false")
+            finally: self.setPendingSuspend(False)
         else: yield
+
+
+    def hasBackup(self):
+        return self.getEXTProperty('%s.has.Backup'%(ADDON_ID)) == "true"
+        
+
+    def hasServers(self):
+        return self.getEXTProperty('%s.has.Servers'%(ADDON_ID)) == "true"
+        
         
     def isPendingInterrupt(self):
         return self.getPropertyBool('pendingInterrupt')
@@ -717,7 +733,7 @@ class Properties:
 
         
     def isPendingSuspend(self):
-        return self.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
+        return self.getPropertyBool('pendingSuspend')
         
         
     def getKey(self, key, instanceID=True):
@@ -748,14 +764,14 @@ class Properties:
     #GET
     def getEXTProperty(self, key):
         value = xbmcgui.Window(10000).getProperty(key)
-        self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%(convertString(value)[:128])))
+        self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%(str(value)[:128])))
         return value
         
         
     def getProperty(self, key):
         key   = self.getKey(key)
         value = self.window.getProperty(key)
-        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%(convertString(value)[:128])))
+        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%(str(value)[:128])))
         return value
         
         
@@ -781,14 +797,14 @@ class Properties:
 
     #SET
     def setEXTProperty(self, key, value):
-        self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((convertString(value)[:128]))))
+        self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((str(value)[:128]))))
         xbmcgui.Window(10000).setProperty(key,str(value))
         return value
         
         
     def setProperty(self, key, value):
         key = self.getKey(key)
-        self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%((convertString(value)[:128]))))
+        self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%((str(value)[:128]))))
         self.window.setProperty(key, str(value))
         return value
         
@@ -999,7 +1015,7 @@ class Builtin:
         value   = xbmc.getInfoLabel('%s.%s'%(param,key))
         while not monitor.abortRequested() and (value is None or value == 'Busy'):
             if monitor.waitForAbort(.001) or timeout < 0: break
-            timeout -= .001
+            timeout -= .0001
             value = xbmc.getInfoLabel('%s.%s'%(param,key))
         self.log('getInfoLabel, key = %s.%s, value = %s, time = %s'%(param,key,value,(EPOCH_TIMER-timeout)))
         del monitor
@@ -1150,6 +1166,7 @@ class Dialog:
             qr = QRCode( "plugin.video.pseudotv.live.qrcode.xml" , ADDON_PATH, "default", image=imagefile, text=msg, header=heading, atclose=autoclose)
             qr.doModal()
             del qr
+            return True
 
         
     def _closeTextViewer(self):
@@ -1165,8 +1182,9 @@ class Dialog:
         if usethread: return self._textViewer(msg, heading, usemono, autoclose)
         else:
             if autoclose > 0: timerit(self._closeTextViewer)(autoclose)
-            return xbmcgui.Dialog().textviewer(heading, msg, usemono)
-        
+            xbmcgui.Dialog().textviewer(heading, msg, usemono)
+            return True
+            
         
     def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=AUTOCLOSE_DELAY): 
         if customlabel:
