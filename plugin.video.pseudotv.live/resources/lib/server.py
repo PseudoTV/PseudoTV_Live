@@ -28,41 +28,40 @@ from six.moves.socketserver    import ThreadingMixIn
 #todo proper REST API to handle server/client communication incl. sync/update triggers.
 #todo incorporate experimental webserver UI to master branch.
 
-ZEROCONF_SERVICE = "_%s._tcp.local."%(slugify(ADDON_NAME,lowercase=True))
+ZEROCONF_SERVICE = "_xbmc-jsonrpc-h._tcp.local."
 
 class Discovery:
+    class MyListener(object):
+        def __init__(self, multiroom=None):
+            self.zServers  = dict()
+            self.zeroconf  = Zeroconf()
+            self.multiroom = multiroom
+
+        def log(self, msg, level=xbmc.LOGDEBUG):
+            return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+        def removeService(self, zeroconf, type, name):
+            self.log("getService, type = %s, name = %s"%(type,name))
+             
+        def addService(self, zeroconf, type, name):
+            self.log("addService, type = %s, name = %s"%(type,name))
+            info = self.zeroconf.getServiceInfo(type, name)
+            if info:
+                IP = socket.inet_ntoa(info.getAddress())
+                if IP == getIP(): return
+                else:
+                    server = info.getServer()
+                    self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(IP,info.getPort()),'remote':'http://%s:%s/%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
+                    self.log("addService, found zeroconf %s @ %s using using remote %s"%(server,self.zServers[server]['host'],self.zServers[server]['remote']))
+                    self.multiroom.addServer(self.multiroom.getRemote(self.zServers[server]['remote']))
+            
+             
     def __init__(self, service=None, multiroom=None):
         self.service   = service
         self.multiroom = multiroom
         self._start()
-                
-                
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+                   
 
-        
-    class MyListener(object):
-        def __init__(self, multiroom=None):
-            self.r = Zeroconf()
-            self.multiroom = multiroom
-
-        def removeService(self, zeroconf, type, name):
-            self.log("removeService, Service %s removed"%(name))
-            
-        def addService(self, zeroconf, type, name):
-            info = self.r.getServiceInfo(type, name)
-            if info:
-                prop = info.getProperties()
-                if not prop: return
-                elif prop.get('name','') != SETTINGS.getFriendlyName():
-                    self.log("addService, Service %s added"%(name))
-                    self.log("addService, Address is %s:%d"%(socket.inet_ntoa(info.getAddress()), info.getPort()))
-                    self.log("addService, Weight is %d, Priority is %d"%(info.getWeight(), info.getPriority()))
-                    self.log("addService, Server is %s"%info.getServer())
-                    self.log("addService, Properties are %s"%(prop))
-                    self.multiroom.addServer(prop)
-                
-                
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -70,48 +69,16 @@ class Discovery:
     def _start(self):
         if not PROPERTIES.isRunning('Discovery'):
             with PROPERTIES.setRunning('Discovery'):
-                r = Zeroconf()
+                zconf = Zeroconf()
                 self.log("_start, Multicast DNS Service Discovery (%s)"%(ZEROCONF_SERVICE))
-                lastState =  SETTINGS.getSetting('ZeroConf_Status')
-                SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]Discovering...[/B][/COLOR]')
-                ServiceBrowser(r, ZEROCONF_SERVICE, self.MyListener(self.multiroom))
+                lastState = SETTINGS.getSetting('ZeroConf_Status')
+                SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32158))
+                ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
                 self.service.monitor.waitForAbort(DISCOVER_INTERVAL)
                 SETTINGS.setSetting('ZeroConf_Status',lastState)
-                r.close()
+                zconf.close()
                         
-                
-class Announcement:
-    def __init__(self, service=None, payload={}):
-        self.service = service
-        self.payload = payload
-        self._start()
             
-            
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
-        
-
-    def _start(self):
-        if not PROPERTIES.isRunning('Announcement'):
-            with PROPERTIES.setRunning('Announcement'):
-                ZEROCONF_NAME = "%s.%s"%(slugify(self.payload.get('name'),lowercase=True),ZEROCONF_SERVICE)
-                info = ServiceInfo(ZEROCONF_SERVICE, 
-                                   ZEROCONF_NAME, 
-                                   socket.inet_aton(socket.gethostbyname(socket.gethostname())), 
-                                   port=SETTINGS.getSettingInt('UDP_PORT'), 
-                                   properties=self.payload)
-                r = Zeroconf()
-                self.log("_start, Registration of a service (%s)"%(ZEROCONF_NAME))
-                SETTINGS.setSetting('ZeroConf_Status','[COLOR=green][B]Online[/B][/COLOR]')
-                r.registerService(info)
-                self.service.monitor.waitForAbort(300)
-                self.log("_start, Unregistering (%s)"%(ZEROCONF_NAME))
-                SETTINGS.setSetting('ZeroConf_Status','[COLOR=red][B]Offline[/B][/COLOR]')
-                r.unregisterService(info)
-                r.close()
-        else: PROPERTIES.forceUpdateTime('chkAnnouncement')
-
-
 class RequestHandler(BaseHTTPRequestHandler):
     CHUNK_SIZE = 64 * 1024
     
@@ -156,7 +123,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path.lower() == '/%s'%(BONJOURFLE.lower()):
             path    = self.path.lower()
             content = "application/json"
-            chunk   = dumpJSON(SETTINGS.getPayload(inclMeta=False),idnt=4).encode(encoding=DEFAULT_ENCODING)
+            chunk   = dumpJSON(SETTINGS.getPayload(),idnt=4).encode(encoding=DEFAULT_ENCODING)
         elif self.path.lower().startswith('/remote'):
             path = self.path.lower()
             if self.path.lower().endswith('.json'):
@@ -279,7 +246,8 @@ class HTTP:
                 self._httpd_thread = Thread(target=self._server.serve_forever)
                 self._httpd_thread.daemon=True
                 self._httpd_thread.start()
-            SETTINGS.setSetting('Remote_Status',{'True':'[COLOR=green][B]Online[/B][/COLOR]','False':'[COLOR=red][B]Offline[/B][/COLOR]'}[str(self.isRunning)])
+            SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[self.isRunning]))
+            
         except Exception as e: 
             self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
         

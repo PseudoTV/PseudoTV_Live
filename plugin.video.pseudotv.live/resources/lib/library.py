@@ -31,9 +31,9 @@ class Service:
     monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
     def _interrupt(self, wait: float=.0001) -> bool:
-        return (PROPERTIES.isPendingInterrupt() | self.monitor.waitForAbort(wait))
+        return (PROPERTIES.isInterrupt() | self.monitor.waitForAbort(wait))
     def _suspend(self) -> bool:
-        return PROPERTIES.isPendingSuspend()
+        return PROPERTIES.isSuspend()
 
 class Library:
     def __init__(self, service=None):

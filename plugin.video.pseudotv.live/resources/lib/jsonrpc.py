@@ -34,7 +34,7 @@ class JSONRPC:
     def sendLocker(self): #kodi jsonrpc not thread safe avoid request collision during threading.
         monitor = MONITOR()
         while not monitor.abortRequested() and PROPERTIES.getPropertyBool('sendLocker'):
-            if monitor.waitForAbort(.001): break
+            if monitor.waitForAbort(.0001): break
             else: self.log('sendLocker, waiting...')
         PROPERTIES.setPropertyBool('sendLocker',True)
         try: yield self.log('sendLocker, Locked!')
@@ -159,13 +159,13 @@ class JSONRPC:
         return self.sendJSON(param).get('result') == 'OK'
 
 
-    def getSetting(self, category, section, cache=False):
+    def getSetting(self, category, section, cache=True):
         param = {"method":"Settings.GetSettings","params":{"filter":{"category":category,"section":section}}}
         if cache: return self.cacheJSON(param).get('result',{}).get('settings',[])
         else:     return self.sendJSON(param).get('result', {}).get('settings',[])
 
 
-    def getSettingValue(self, key, cache=False):
+    def getSettingValue(self, key, cache=True):
         param = {"method":"Settings.GetSettingValue","params":{"setting":key}}
         if cache: return self.cacheJSON(param).get('result',{}).get('value','')
         else:     return self.sendJSON(param).get('result',{}).get('value','')
@@ -176,7 +176,7 @@ class JSONRPC:
         self.queueJSON(param)
 
 
-    def getSources(self, media='video', cache=False):
+    def getSources(self, media='video', cache=True):
         param = {"method":"Files.GetSources","params":{"media":media}}
         if cache: return self.cacheJSON(param).get('result', {}).get('sources', [])
         else:     return self.sendJSON(param).get('result', {}).get('sources', [])
@@ -315,8 +315,9 @@ class JSONRPC:
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("getDuration, accurate = %s, path = %s, save = %s" % (accurate, path, save))
         if not item: item = {'file':path}
-        runtime = self._getRuntime(item)
+        runtime  = self._getRuntime(item)
         if runtime == 0 or accurate:
+            duration = 0
             if isStack(path):# handle "stacked" videos
                 for file in splitStacks(path): duration += self.__parseDuration(runtime, file)
             else: duration = self.__parseDuration(runtime, path, item, save)
@@ -355,7 +356,7 @@ class JSONRPC:
                  'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}}}
         try:
             params = param.get(item.get('type'))
-            if params:
+            if params and params.get('params'):
                 if   duration == 0: param['params'].pop('resume')
                 elif runtime  == 0: param['params'].pop('runtime')
                 id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))

@@ -42,7 +42,7 @@ PLAYER              = xbmc.Player
 OVERLAY_DELAY       = 5     #secs
 DISCOVERY_TIMER     = 60    #secs
 EPOCH_TIMER         = 15    #secs
-DISCOVER_INTERVAL   = 30
+DISCOVER_INTERVAL   = 30   #secs
 EPG_DURATION        = 10800 #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
@@ -201,7 +201,8 @@ COLOR_FAVORITE_CHANNEL    = 'yellow'
 #urls
 URL_WIKI                  = 'https://github.com/PseudoTV/PseudoTV_Live/wiki'
 URL_SUPPORT               = 'https://forum.kodi.tv/showthread.php?tid=346803'
-
+URL_WIN_BONJOUR           = 'https://support.apple.com/en-us/106380'
+URL_README                = 'https://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/README.md'
 
 
 # https://github.com/xbmc/xbmc/blob/master/system/colors.xml
@@ -274,10 +275,10 @@ MUSIC_LISTITEM_TYPES =   {'tracknumber'             : (int,),  #integer (8)
                           'mediatype'               : (str,),  #string - "music", "song", "album", "artist"
                           'dbid'                    : (int,),  #integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
                           'listeners'               : (int,),  #integer (25614)
-                          'musicbrainztrackid'      : (str,tuple,list),
-                          'musicbrainzartistid'     : (str,tuple,list),
-                          'musicbrainzalbumid'      : (str,tuple,list),
-                          'musicbrainzalbumartistid': (str,tuple,list),
+                          'musicbrainztrackid'      : (str,list),
+                          'musicbrainzartistid'     : (str,list),
+                          'musicbrainzalbumid'      : (str,list),
+                          'musicbrainzalbumartistid': (str,list),
                           'comment'                 : (str,),  
                           'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
                           # 'size'                    : (int,), #long (1024) - size in bytes

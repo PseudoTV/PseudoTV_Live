@@ -121,8 +121,8 @@ def getURL(url, data={}, header=HEADER, json_data=False):
         log("Globals: getURL, url = %s status = %s"%(url,response.status_code))
         if json_data: return response.json()
         else:         return response.content
-    except requests.exceptions.ConnectionError as e:
-        log("Globals: getURL, failed! Error connecting to the server: %s"%(e), xbmc.LOGERROR)
+    except requests.exceptions.ConnectionError as e: pass
+        # log("Globals: getURL, failed! Error connecting to the server: %s"%(e), xbmc.LOGERROR)
     except requests.exceptions.HTTPError as e:
         log("Globals: getURL, failed! HTTP error occurred: %s"%(e), xbmc.LOGERROR)
     except requests.exceptions.RequestException as e:

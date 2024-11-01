@@ -37,6 +37,7 @@ class MP4MovieHeader:
 class MP4Parser:
     def __init__(self):
         self.MovieHeader = MP4MovieHeader()
+        self.monitor     = MONITOR()
 
 
     def determineLength(self, filename: str) -> int and float:
@@ -73,15 +74,17 @@ class MP4Parser:
         offset = start_offset
         last_offset = -1
         f.seek(offset, 0)
-        while not MONITOR().abortRequested() and offset < end_offset:
-            if last_offset == offset: break
-            else: last_offset = offset
-            data = f.readBytes(8)  # read box header
-            if data == b"": break  # EOF
-            length, text = s.unpack(data)
-            f.seek(length - 8, 1)  # skip to next box
-            boxes[text] = (offset, offset + length)
-            offset += length
+        while not self.monitor.abortRequested() and offset < end_offset:
+            try:
+                if last_offset == offset: break
+                else: last_offset = offset
+                data = f.readBytes(8)  # read box header
+                if data == b"": break  # EOF
+                length, text = s.unpack(data)
+                f.seek(length - 8, 1)  # skip to next box
+                boxes[text] = (offset, offset + length)
+                offset += length
+            except: pass
         return boxes
 
 
@@ -116,9 +119,8 @@ class MP4Parser:
 
         data = self.readBlock()
 
-        while not MONITOR().abortRequested() and data.boxtype != 'moov' and data.size > 0:
-            try:
-                self.File.seek(data.size, 1)
+        while not self.monitor.abortRequested() and data.boxtype != 'moov' and data.size > 0:
+            try: self.File.seek(data.size, 1)
             except:
                 log('MP4Parser: Error while seeking')
                 return 0
@@ -127,9 +129,8 @@ class MP4Parser:
 
         data = self.readBlock()
 
-        while not MONITOR().abortRequested() and data.boxtype != 'mvhd' and data.size > 0:
-            try:
-                self.File.seek(data.size, 1)
+        while not self.monitor.abortRequested() and data.boxtype != 'mvhd' and data.size > 0:
+            try: self.File.seek(data.size, 1)
             except:
                 log('MP4Parser: Error while seeking')
                 return 0

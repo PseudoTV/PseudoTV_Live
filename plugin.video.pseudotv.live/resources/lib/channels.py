@@ -79,7 +79,7 @@ class Channels:
         if len(channels) == 0: channels = self.channelDATA['channels']
         self.channelDATA['channels'] = channels
         SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
-        PROPERTIES.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(len(channels)>0).lower())
+        PROPERTIES.setChannels(len(channels)>0)
         return self._save()
 
     

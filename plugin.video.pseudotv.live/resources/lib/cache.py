@@ -54,7 +54,7 @@ class Cache:
     def cacheLocker(self): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
         monitor = MONITOR()
         while not monitor.abortRequested() and self.isCacheLocked():
-            if monitor.waitForAbort(.001): break
+            if monitor.waitForAbort(.0001): break
             else: self.log('cacheLocker, waiting...')
         del monitor
         self.setCacheLocked(True)

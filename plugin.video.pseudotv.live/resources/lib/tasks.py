@@ -51,6 +51,7 @@ class Tasks():
 
     def _initialize(self):
         tasks = [self.chkInstanceID,
+                 self.chkFiles,
                  self.chkWelcome,
                  self.chkDebugging,
                  self.chkBackup,
@@ -105,12 +106,11 @@ class Tasks():
     def _chkQueTimer(self):
         self.log('_chkQueTimer')
         self._chkEpochTimer('chkVersion'      , self.chkVersion      , 900)
-        self._chkEpochTimer('chkPVRSettings'  , self.chkPVRSettings  , 900)
+        self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
         self._chkEpochTimer('chkPVRservers'   , self.chkPVRservers   , 900)
         self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 900)
-        self._chkEpochTimer('chkAnnouncement' , self.chkAnnouncement , 60)
-        self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 60)
+        self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 900)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkChannels'     , self.chkChannels     , (MAX_GUIDEDAYS*3600))
@@ -118,7 +118,7 @@ class Tasks():
         
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh)
         self._chkPropTimer('chkFillers'       , self.chkFillers)
-        self._chkPropTimer('runAutoTune'      , self.runAutoTune)
+        self._chkPropTimer('chkAutoTune'      , self.chkAutoTune)
         
         
     def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
@@ -159,18 +159,16 @@ class Tasks():
         SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s Version: [B]%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':'None'}[str(update)])
 
 
-    def chkPVRSettings(self):
-        self.log('chkPVRSettings')
-        try:
-            with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))): #Kodi PVR & LiveTV Settings
-                if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS: SETTINGS.setSettingInt('Min_Days',min)
-                if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS: SETTINGS.setSettingInt('Max_Days',max)
-        except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
+    def chkKodiSettings(self):
+        self.log('chkKodiSettings')
+        if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1): SETTINGS.setSettingInt('Min_Days',min)
+        if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3): SETTINGS.setSettingInt('Max_Days',max)
+        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.jsonRPC.getSettingValue("services.zeroconf")],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[self.jsonRPC.getSettingValue("services.zeroconf")]))
          
 
     def chkPVRservers(self):
         self.log('chkPVRservers')
-        if Multiroom(service=self.service)._chkPVRservers(): PROPERTIES.setEpochTimer('chkPVRRefresh')
+        Multiroom(service=self.service)._chkPVRservers()
 
 
     def chkFiles(self):
@@ -185,17 +183,10 @@ class Tasks():
         self.log('chkHTTP')
         timerit(self.httpServer._start)(1.0)
               
-              
-    def chkAnnouncement(self):
-        self.log('chkAnnouncement')
-        if not PROPERTIES.isRunning('Discovery'): timerit(Multiroom(service=self.service)._chkAnnouncement)(1.0)
-        else: self._que(self.chkAnnouncement,1)
-            
-            
+
     def chkDiscovery(self):
         self.log('chkDiscovery')
-        if not PROPERTIES.isRunning('Announcement'): timerit(Multiroom(service=self.service)._chkDiscovery)(1.0)
-        else: self._que(self.chkDiscovery,1)
+        timerit(Multiroom(service=self.service)._chkDiscovery)(1.0)
         
             
     def chkRecommended(self):
@@ -214,8 +205,8 @@ class Tasks():
             library.importPrompt()
             complete = library.updateLibrary(force)
             del library
-            if   not complete: self._que(self.chkLibrary,2,True)
-            elif not SETTINGS.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            if complete: self.chkAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            else: self._que(self.chkLibrary,2,force)
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
@@ -232,7 +223,7 @@ class Tasks():
             del builder
             
             SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.service.currentChannels)))
-            PROPERTIES.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(len(self.service.currentChannels) > 0).lower())
+            PROPERTIES.setChannels(len(self.service.currentChannels) > 0)
             if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
@@ -262,28 +253,30 @@ class Tasks():
     def chkFillers(self, channels=None):
         self.log('chkFillers')
         if channels is None: channels = self.getChannels()
-        with DIALOG.sudo_dialog(LANGUAGE(32179)):
-            [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),'')) for ftype in FILLER_TYPES if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),''))]
-            for citem in channels:
-                if self.service.monitor.waitForAbort(.0001): break
-                else:
-                    for ftype in FILLER_TYPES[1:]:
-                        [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
-                        if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
-                            if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
-                            else:                          IGNORE = IGNORE_CHTYPE
-                            if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE:
-                                FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
+        pDialog = DIALOG.progressBGDialog()
+        for idx, ftype in enumerate(FILLER_TYPES):
+            pDialog = DIALOG.progressBGDialog(int(idx*50//len(ftype)), pDialog, message='%s: %s'%(ftype,int(idx*100//len(ftype)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+            if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),'')): FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),''))
+            
+        for idx, citem in enumerate(channels):
+            pDialog = DIALOG.progressBGDialog(int(idx*50//len(channels)), pDialog, message='%s: %s'%(citem.get('name'),int(idx*100//len(channels)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+            for ftype in FILLER_TYPES[1:]:
+                [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
+                if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
+                    if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
+                    else:                          IGNORE = IGNORE_CHTYPE
+                    if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE: FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
+        pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+    
 
-
-    def runAutoTune(self):
-        self.log('runAutoTune')
+    def chkAutoTune(self):
+        self.log('chkAutoTune')
         try:
             autotune = Autotune(service=self.service)
             complete = autotune._runTune()
-            if complete: SETTINGS.setAutotuned()
+            if complete: PROPERTIES.setAutotuned()
             del autotune
-        except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
+        except Exception as e: self.log('chkAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
     
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
@@ -312,26 +305,24 @@ class Tasks():
         
 
     def chkChannelChange(self, channels=[]):
-        with DIALOG.sudo_dialog(msg='%s %ss'%(LANGUAGE(32028),LANGUAGE(32023))):
-            nChannels = self.getChannels()
-            if channels != nChannels:
-                self.log('chkChannelChange, channels changed %s => %s: queueing chkChannels'%(len(channels),len(nChannels)))
-                self._que(self.chkChannels)
-                return nChannels
-            return channels
+        nChannels = self.getChannels()
+        if channels != nChannels:
+            self.log('chkChannelChange, channels changed %s => %s: queueing chkChannels'%(len(channels),len(nChannels)))
+            self._que(self.chkChannels)
+            return nChannels
+        return channels
 
         
     def chkSettingsChange(self, settings={}):
         self.log('chkSettingsChange, settings = %s'%(settings))
-        with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
-            nSettings = dict(SETTINGS.getCurrentSettings())
-            for setting, value in list(settings.items()):
-                actions = {'User_Folder':{'func':self.setUserPath,'kwargs':{'old':value,'new':nSettings.get(setting)}}}
-                if nSettings.get(setting) != value and actions.get(setting):
-                    action = actions.get(setting)
-                    self.log('chkSettingsChange, detected change in %s - from: %s to: %s\naction = %s'%(setting,value,nSettings.get(setting),action))
-                    self._que(action.get('func'),1,*action.get('args',()),**action.get('kwargs',{}))
-            return nSettings
+        nSettings = dict(SETTINGS.getCurrentSettings())
+        for setting, value in list(settings.items()):
+            actions = {'User_Folder':{'func':self.setUserPath,'kwargs':{'old':value,'new':nSettings.get(setting)}}}
+            if nSettings.get(setting) != value and actions.get(setting):
+                action = actions.get(setting)
+                self.log('chkSettingsChange, detected change in %s - from: %s to: %s\naction = %s'%(setting,value,nSettings.get(setting),action))
+                self._que(action.get('func'),1,*action.get('args',()),**action.get('kwargs',{}))
+        return nSettings
 
 
     def setUserPath(self, old, new, overwrite=False):

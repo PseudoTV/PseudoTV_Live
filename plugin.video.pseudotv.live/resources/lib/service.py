@@ -391,20 +391,26 @@ class Service():
 
 
     def _interrupt(self, wait=.0001) -> bool: #break
-        self.monitor.pendingInterrupt = (self.pendingRestart | PROPERTIES.isPendingInterrupt() | self.monitor.waitForAbort(wait))
-        self.log('_interrupt, pendingInterrupt = %s'%(PROPERTIES.setPendingInterrupt(self.monitor.pendingInterrupt)))
+        pendingInterrupt = (self.pendingRestart | PROPERTIES.isPendingInterrupt() | self.monitor.waitForAbort(wait))
+        if pendingInterrupt != self.monitor.pendingInterrupt:
+            self.monitor.pendingInterrupt = PROPERTIES.setInterrupt(pendingInterrupt)
+            self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
         return self.monitor.pendingInterrupt
     
 
     def _suspend(self, wait=.0001) -> bool: #continue
-        self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | self.__playing() | PROPERTIES.isPendingSuspend())
-        self.log('_suspend, pendingSuspend = %s'%(PROPERTIES.setPendingSuspend(self.monitor.pendingSuspend)))
-        return self.monitor.pendingSuspend
+        pendingSuspend = (self.monitor.isSettingsOpened() | self.__playing() | PROPERTIES.isPendingSuspend())
+        if pendingSuspend != self.monitor.pendingSuspend:
+            self.monitor.pendingSuspend = PROPERTIES.setSuspend(pendingSuspend)
+            self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))
+        return (self.monitor.pendingSuspend | self.monitor.waitForAbort(wait))
 
 
     def __restart(self, wait=1.0) -> bool:
-        self.pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart())
-        self.log('__restart, pendingRestart = %s'%(PROPERTIES.setPendingRestart(self.pendingRestart)))
+        pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart())
+        if pendingRestart != self.pendingRestart:
+            self.pendingRestart = PROPERTIES.setRestart(self.pendingRestart)
+            self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
         return (self.pendingRestart | self.monitor.waitForAbort(wait))
          
          

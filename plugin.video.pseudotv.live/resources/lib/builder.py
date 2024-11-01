@@ -67,6 +67,7 @@ class Builder:
         self.xsp              = XSP()
         self.m3u              = M3U()
         self.resources        = Resources(self.jsonRPC)
+        self.fillers          = Fillers(builder=self)
         self.completeBuild    = False
            
         
@@ -89,7 +90,7 @@ class Builder:
 
     def verify(self, channels: list=[]):
         if not channels: channels = self.channels.getChannels()
-        PROPERTIES.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(len(channels)>0).lower())
+        PROPERTIES.setChannels(len(channels)>0)
         
         for idx, citem in enumerate(channels):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
@@ -117,24 +118,19 @@ class Builder:
             
             updated = False
             for idx, citem in enumerate(channels):
-                self.pMSG   = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
-                self.pName  = citem['name']
-                self.pCount = int(idx*100//len(channels))
-
-                while self.service._suspend():
-                    if self.service._interrupt(OVERLAY_DELAY): 
-                        self.completeBuild = False
-                        break
-                    else:
-                        self.log('build, waiting for suspend release')
-                        self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
-                
                 if self.service._interrupt():
                     self.pErrors = [LANGUAGE(32160)]
                     self.completeBuild = False
                     self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                     break
+                elif self.service._suspend():
+                    channels.insert(idx,citem)
+                    self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
+                    continue
                 else:
+                    self.pMSG   = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
+                    self.pName  = citem['name']
+                    self.pCount = int(idx*100//len(channels))
                     self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
                     if   (stopTimes.get(citem['id']) or start) > (now + ((self.maxDays * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
                     elif  stopTimes.get(citem['id']):                                                      self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
@@ -161,6 +157,7 @@ class Builder:
         self.log('getFileList, [%s] start = %s'%(citem['id'],start))
         try:
             if start > (now + ((self.maxDays * 86400) - 43200)): #max guidedata days to seconds.
+                if self.pDialog: self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message=self.pName, header='%s, %s'%(ADDON_NAME,self.pMSG))
                 self.log('getFileList, [%s] programmes over MAX_DAYS! start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
             
@@ -173,7 +170,7 @@ class Builder:
             else:     cacheResponse = self.buildChannel(citem)
             
             if cacheResponse:
-                if self.fillBCTs and not radio: cacheResponse = Fillers(self).injectBCTs(citem, cacheResponse)
+                if self.fillBCTs and not radio: cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
                 return sorted(self.addScheduling(citem, cacheResponse, start), key=itemgetter('start'))
             return cacheResponse
         except Exception as e: self.log("getFileList, [%s] failed! %s"%(citem['id'],e), xbmc.LOGERROR)
@@ -205,7 +202,6 @@ class Builder:
             item['start'] = start
             item['stop']  = start + item['duration']
             start = item['stop']
-            totDur += item['duration']
             tmpList.append(item)
 
         iters = cycle(fileList) #todo adv. rule and global opt. 
@@ -243,12 +239,8 @@ class Builder:
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self)
         if not _validFileList(fileArray):
             for idx, file in enumerate(citem.get('path',[])):
-                if self.service._interrupt(): 
-                    self.completeBuild = False
-                    break
-                else:
-                    if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
-                    fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
+                if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
+                fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
 
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self)
         if not _validFileList(fileArray):#check that at least one fileList in array contains meta

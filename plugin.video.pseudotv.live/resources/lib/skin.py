@@ -17,24 +17,24 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from globals import *
+# from globals import *
 
-class Service:
-    from jsonrpc import JSONRPC
-    monitor = MONITOR()
-    jsonRPC = JSONRPC()
-    def _interrupt(self, wait: float=.001) -> bool:
-        return self.monitor.waitForAbort(wait)
-    def _suspend(self) -> bool:
-        return PROPERTIES.isPendingSuspend()
+# class Service:
+    # from jsonrpc import JSONRPC
+    # monitor = MONITOR()
+    # jsonRPC = JSONRPC()
+    # def _interrupt(self, wait: float=.0001) -> bool:
+        # return self.monitor.waitForAbort(wait)
+    # def _suspend(self) -> bool:
+        # return PROPERTIES.isPendingSuspend()
 
-class Skin:
-    def __init__(self, service=None):
-        if service is None: service = Service()
-        self.jsonRPC = service.jsonRPC
+# class Skin:
+    # def __init__(self, service=None):
+        # if service is None: service = Service()
+        # self.jsonRPC = service.jsonRPC
 
 
 
-lookandfeel.skincolors
-{"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"lookandfeel.skincolors"}.get('value')
-{"jsonrpc":"2.0","method":"Files.GetDirectory","params":{"directory":"special://skin/colors/"}..get('files')
+# lookandfeel.skincolors
+# {"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"lookandfeel.skincolors"}.get('value')
+# {"jsonrpc":"2.0","method":"Files.GetDirectory","params":{"directory":"special://skin/colors/"}..get('files')

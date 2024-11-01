@@ -300,15 +300,6 @@ class Settings:
         
     def setEXTSetting(self, id, key, value):
         return xbmcaddon.Addon(id).setSetting(key,value)
-        
-
-    def hasAutotuned(self):
-        if self.property.getEXTProperty('%s.has.Channels'%(ADDON_ID)) != "true" and self.property.getEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID)) != "true": return False
-        return self.getCacheSetting('hasAutotuned')
-        
-        
-    def setAutotuned(self, state=True):
-        return self.setCacheSetting('hasAutotuned', state)
 
 
     def getFriendlyName(self):
@@ -357,33 +348,25 @@ class Settings:
                 payload['m3u']      = M3U().getM3U()
                 payload['xmltv']    = {'stations':XMLTVS().getChannels(), 'recordings':XMLTVS().getRecordings()}
                 payload['debug']    = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_NAME))).get('DEBUG',{})
-                payload['servers']  = Multiroom().getDiscovery(),
-                payload['settings'] = {'Resource_Logos'   :self.getSetting('Resource_Logos').split('|'),
-                                      'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
-                                      'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
-                                      'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
-                                      'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}
+                payload['servers']  = Multiroom().getDiscovery()
             except Exception as e: self.log("getPayload, __getMeta failed! %s"%(e), xbmc.LOGERROR)
-            
-            del M3U
-            del XMLTVS
-            del Library
-            del Multiroom
             return payload
             
         from channels   import Channels
         payload = self.getBonjour()
-        payload.pop('updated')
-        payload.pop('md5')
         payload['remotes']   = {'remote':'http://%s/%s'%(payload['host'],REMOTEFLE),
                                 'm3u'   :'http://%s/%s'%(payload['host'],M3UFLE),
                                 'xmltv' :'http://%s/%s'%(payload['host'],XMLTVFLE),
                                 'genre' :'http://%s/%s'%(payload['host'],GENREFLE)}
+        payload['settings']  = {'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
+                                'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
+                                'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
+                                'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
+                                'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}
         payload['channels']  = Channels().getChannels()
         if inclMeta: payload = __getMeta(payload)
         payload['updated']   = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         payload['md5']       = getMD5(dumpJSON(payload))
-        del Channels
         return payload
 
 
@@ -493,7 +476,7 @@ class Settings:
         found   = False
         monitor = MONITOR()
         for file in [filename for filename in FileAccess.listdir(PVR_CLIENT_LOC)[1] if filename.endswith('.xml')]:
-            if monitor.waitForAbort(.001): break
+            if monitor.waitForAbort(.0001): break
             elif file.startswith('instance-settings-'):
                 try:
                     xml = FileAccess.open(os.path.join(PVR_CLIENT_LOC,file), "r")
@@ -555,7 +538,7 @@ class Settings:
             name = addon.getAddonInfo('name')
             osettings = (self.getPVRInstanceSettings(instance) or {})
             for setting, newvalue in list(nsettings.items()):
-                if monitor.waitForAbort(.001): return False
+                if monitor.waitForAbort(.0001): return False
                 default, oldvalue = osettings.get(setting,(None,None))
                 if str(newvalue).lower() != str(oldvalue).lower(): 
                     changes[setting] = (oldvalue, newvalue)
@@ -570,7 +553,7 @@ class Settings:
                     return False
                 
             for s, v in list(changes.items()):
-                if monitor.waitForAbort(.001): return False
+                if monitor.waitForAbort(.0001): return False
                 addon.setSetting(s, v[1])
                 self.log('chkPluginSettings, setting = %s, current value = %s => %s'%(s,oldvalue,v[1]))
             self.setPVRInstance(instance)
@@ -628,11 +611,11 @@ class Properties:
         
 
     def hasFirstrun(self):
-        return self.getEXTProperty('%s.hasFirstrun'%(ADDON_ID))
+        return self.getEXTProperty('%s.has.Firstrun'%(ADDON_ID))
         
         
     def setFirstrun(self, state=True):
-        return self.setEXTProperty('%s.hasFirstrun'%(ADDON_ID),state) == "true"
+        return self.setEXTProperty('%s.has.Firstrun'%(ADDON_ID),state) == "true"
                
 
     def isRunning(self, key):
@@ -651,12 +634,24 @@ class Properties:
         return self.setEXTProperty('%s.%s'%(ADDON_ID,key),str(state).lower())
 
 
+    def setAutotuned(self, state=True):
+        return self.setEXTProperty('%s.has.Autotuned'%(ADDON_ID),str(state).lower())
+
+
+    def setChannels(self, state=True):
+        return self.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(state).lower())
+
+
     def setBackup(self, state=True):
         return self.setEXTProperty('%s.has.Backup'%(ADDON_ID),str(state).lower())
 
 
     def setServers(self, state=True):
         return self.setEXTProperty('%s.has.Servers'%(ADDON_ID),str(state).lower())
+        
+        
+    def setEnabledServers(self, state=True):
+        return self.setEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),str(state).lower())
         
         
     def setPendingRestart(self, state=True):
@@ -671,6 +666,18 @@ class Properties:
     def setPendingSuspend(self, state=True):
         return self.setPropertyBool('pendingSuspend',state)
         
+                
+    def setRestart(self, state=True):
+        return self.setPropertyBool('Restart',state)
+        
+
+    def setInterrupt(self, state=True):
+        return self.setPropertyBool('Interrupt',state)
+
+        
+    def setSuspend(self, state=True):
+        return self.setPropertyBool('Suspend',state)
+        
         
     def isPseudoTVRunning(self):
         return self.getEXTProperty('PseudoTVRunning') == 'true'
@@ -680,7 +687,7 @@ class Properties:
     def legacy(self):
         monitor = MONITOR()
         while not monitor.abortRequested() and self.isPseudoTVRunning():
-            if monitor.waitForAbort(.001): break
+            if monitor.waitForAbort(.0001): break
         del monitor
         self.setEXTProperty('PseudoTVRunning','true')
         try: yield
@@ -691,7 +698,7 @@ class Properties:
     def setRunning(self, key):
         monitor = MONITOR()
         while not monitor.abortRequested() and self.isRunning(key):
-            if monitor.waitForAbort(.001): break
+            if monitor.waitForAbort(.0001): break
         del monitor
         self.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'true')
         try: yield
@@ -715,6 +722,14 @@ class Properties:
             finally: self.setPendingSuspend(False)
         else: yield
 
+        
+    def hasAutotuned(self):
+        return self.getEXTProperty('%s.has.Autotuned'%(ADDON_ID)) == "true"
+        
+        
+    def hasChannels(self):
+        return self.getEXTProperty('%s.has.Channels'%(ADDON_ID)) == "true"
+
 
     def hasBackup(self):
         return self.getEXTProperty('%s.has.Backup'%(ADDON_ID)) == "true"
@@ -722,6 +737,10 @@ class Properties:
 
     def hasServers(self):
         return self.getEXTProperty('%s.has.Servers'%(ADDON_ID)) == "true"
+        
+        
+    def hasEnabledServers(self):
+        return self.getEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID)) == "true"
         
         
     def isPendingInterrupt(self):
@@ -734,6 +753,18 @@ class Properties:
         
     def isPendingSuspend(self):
         return self.getPropertyBool('pendingSuspend')
+        
+        
+    def isInterrupt(self):
+        return self.getPropertyBool('Interrupt')
+
+
+    def isRestart(self):
+        return self.getPropertyBool('Restart')
+
+        
+    def isSuspend(self):
+        return self.getPropertyBool('Suspend')
         
         
     def getKey(self, key, instanceID=True):
@@ -1014,7 +1045,7 @@ class Builtin:
         monitor = MONITOR()
         value   = xbmc.getInfoLabel('%s.%s'%(param,key))
         while not monitor.abortRequested() and (value is None or value == 'Busy'):
-            if monitor.waitForAbort(.001) or timeout < 0: break
+            if monitor.waitForAbort(.0001) or timeout < 0: break
             timeout -= .0001
             value = xbmc.getInfoLabel('%s.%s'%(param,key))
         self.log('getInfoLabel, key = %s.%s, value = %s, time = %s'%(param,key,value,(EPOCH_TIMER-timeout)))
@@ -1321,17 +1352,17 @@ class Dialog:
                 if default:                  options.insert(0,{"label":LANGUAGE(32203), "label2":default, "default":default, "shares":shares, "mask":mask, "type":type, "multi":multi})
                 lizLST = poolit(__buildMenuItem)(options)
                 
-            select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
-            if   options[select].get('label') == LANGUAGE(32195): return self.buildDXSP(default)
-            elif options[select].get('label') == LANGUAGE(32202): return self.buildResource(default, mask)
-            elif select is not None:
-                default   = options[select]['default']
-                shares    = options[select]['shares']
-                mask      = options[select]['mask']
-                type      = options[select]['type']
-                multi     = options[select]['multi']
-            else: return
-            
+                select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
+                if   options[select].get('label') == LANGUAGE(32195): return self.buildDXSP(default)
+                elif options[select].get('label') == LANGUAGE(32202): return self.buildResource(default, mask)
+                elif select is not None:
+                    default   = options[select]['default']
+                    shares    = options[select]['shares']
+                    mask      = options[select]['mask']
+                    type      = options[select]['type']
+                    multi     = options[select]['multi']
+                else: return
+                
         if monitor: self.toggleInfoMonitor(True)
         if multi == True:
             ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4

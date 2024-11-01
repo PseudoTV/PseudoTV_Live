@@ -565,7 +565,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     items = self.jsonRPC.walkFileDirectory(path, media, depth=5, retItem=True)
                 
                 for idx, dir in enumerate(items):
-                    if MONITOR().waitForAbort(.001): break
+                    if MONITOR().waitForAbort(.0001): break
                     else:
                         item = random.choice(items.get(dir,[]))
                         dia  = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',dir,item.get('file','')))
@@ -673,18 +673,20 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def moveChannel(self, citem, channelPOS):
         self.log('moveChannel, channelPOS = %s'%(channelPOS))
-        retval = int(DIALOG.inputDialog(LANGUAGE(32137), key=xbmcgui.INPUT_NUMERIC, opt=citem['number']))
-        if retval and (retval > 0 and retval < CHANNEL_LIMIT) and retval != channelPOS + 1:
-            if DIALOG.yesnoDialog('%s %s %s from [B]%s[/B] to [B]%s[/B]?'%(LANGUAGE(32136),citem['name'],LANGUAGE(32023),citem['number'],retval)):
-                if retval in [channel.get('number') for channel in self.newChannels if channel.get('path')]:
-                    DIALOG.notificationDialog(LANGUAGE(32138))
-                else:
-                    self.madeChanges = True
-                    nitem = self.newChannel.copy()
-                    nitem['number'] = channelPOS + 1
-                    self.newChannels[channelPOS] = nitem
-                    citem['number'] = retval
-                    self.saveChannelItems(citem)
+        retval = DIALOG.inputDialog(LANGUAGE(32137), key=xbmcgui.INPUT_NUMERIC, opt=citem['number'])
+        if retval:
+            retval = int(retval)
+            if (retval > 0 and retval < CHANNEL_LIMIT) and retval != channelPOS + 1:
+                if DIALOG.yesnoDialog('%s %s %s from [B]%s[/B] to [B]%s[/B]?'%(LANGUAGE(32136),citem['name'],LANGUAGE(32023),citem['number'],retval)):
+                    if retval in [channel.get('number') for channel in self.newChannels if channel.get('path')]:
+                        DIALOG.notificationDialog(LANGUAGE(32138))
+                    else:
+                        self.madeChanges = True
+                        nitem = self.newChannel.copy()
+                        nitem['number'] = channelPOS + 1
+                        self.newChannels[channelPOS] = nitem
+                        citem['number'] = retval
+                        self.saveChannelItems(citem)
         return citem, channelPOS
 
 

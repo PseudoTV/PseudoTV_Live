@@ -57,12 +57,12 @@ class Autotune:
             rebuild = True
             PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
             if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32128))
-        elif len(customChannels) == 0:
+        elif len(customChannels) == 0 and not PROPERTIES.hasAutotuned():
             autoEnabled = []
             [autoEnabled.extend(self.library.getEnabled(type)) for type in AUTOTUNE_TYPES]
             if len(autoEnabled) > 0:
                 self.log('_runTune, library enabled items = %s; recovering enabled items'%(len(autoEnabled)))
-                rebuild = True #recover empty channels.json with enabled library.json items.
+                rebuild = True   #recover empty channels.json with enabled library.json items.
             else: samples = True #create sample channels "autotune".
             
             if samples:

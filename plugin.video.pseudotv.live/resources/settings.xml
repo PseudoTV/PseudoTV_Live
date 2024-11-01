@@ -969,16 +969,6 @@
                         <data/>
                     </control>
                 </setting>
-                <setting id="TCP_PORT" type="integer" label="30098" help="33097" parent="Remote_Status">
-                    <level>3</level>
-                    <default>50001</default>
-                    <constraints>
-                        <allowempty>false</allowempty>
-                    </constraints>
-                    <control type="edit" format="integer">
-                        <heading>40001</heading>
-                    </control>
-                </setting>
                 <setting id="Remote_M3U" type="string" label="30094" parent="Remote_Status">
                     <level>0</level>
                     <default/>
@@ -1012,26 +1002,31 @@
                         <heading/>
                     </control>
                 </setting>
+                <setting id="TCP_PORT" type="integer" label="30098" help="33097" parent="Remote_Status">
+                    <level>3</level>
+                    <default>50001</default>
+                    <constraints>
+                        <allowempty>false</allowempty>
+                    </constraints>
+                    <control type="edit" format="integer">
+                        <heading>40001</heading>
+                    </control>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Debug_Enable">true</condition>
+                        </dependency>
+                    </dependencies>
+                </setting>
             </group>
             <group id="2" label="30103">
                 <setting id="ZeroConf_Status" type="string" label="32182" help="33182">
                     <level>0</level>
                     <default>[COLOR=red][B]Offline[/B][/COLOR]</default>
                     <constraints>
-                        <allowempty>true</allowempty>
+                        <allowempty>false</allowempty>
                     </constraints>
                     <control type="button" format="action">
                         <data/>
-                    </control>
-                </setting>
-                <setting id="UDP_PORT" type="integer" label="30097" help="33097" parent="ZeroConf_Status">
-                    <level>3</level>
-                    <default>50000</default>
-                    <constraints>
-                        <allowempty>false</allowempty>
-                    </constraints>
-                    <control type="edit" format="integer">
-                        <heading>30359</heading>
                     </control>
                 </setting>
                 <setting id="Select_server" type="string" label="32048" help="33048" parent="ZeroConf_Status">
@@ -1053,6 +1048,40 @@
                         <close>true</close>
                     </control>
                 </setting>
+                <setting id="Show_Bonjour_QR" type="action" label="32217" parent="ZeroConf_Status">
+                    <level>0</level>
+                    <default/>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="ZeroConf_Status">[COLOR=red][B]Offline[/B][/COLOR]</condition>
+                                <condition on="property" name="InfoBool">System.Platform.Windows</condition>
+                            </and>
+                        </dependency>
+                    </dependencies>
+                    <control type="button" format="action">
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Debug_QR)</data>
+                        <close>true</close>
+                    </control>
+                </setting>
+                <setting id="UDP_PORT" type="integer" label="30097" help="33097" parent="ZeroConf_Status">
+                    <level>3</level>
+                    <default>50000</default>
+                    <constraints>
+                        <allowempty>false</allowempty>
+                    </constraints>
+                    <control type="edit" format="integer">
+                        <heading>30359</heading>
+                    </control>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Debug_Enable">true</condition>
+                        </dependency>
+                    </dependencies>
+                </setting>
             </group>
         </category>
         <category id="Miscellaneous" label="30000" help="33000">
@@ -1070,19 +1099,23 @@
                 </setting>
             </group>
             <group id="2" label="30088">
+                <setting id="Show_Bonjour_QR" type="action" label="30168" help="33168">
+                    <level>0</level>
+                    <default/>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <control type="button" format="action">
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_Bonjour_QR)</data>
+                        <close>true</close>
+                    </control>
+                </setting>
                 <setting id="Show_Support_QR" type="action" label="30159" help="33161">
                     <level>0</level>
                     <default/>
                     <constraints>
                         <allowempty>true</allowempty>
                     </constraints>
-                    <dependencies>
-                        <dependency type="enable">
-                            <and>
-                                <condition operator="is" setting="Remote_Status">[COLOR=green][B]Online[/B][/COLOR]</condition>
-                            </and>
-                        </dependency>
-                    </dependencies>
                     <control type="button" format="action">
                         <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_Support_QR)</data>
                         <close>true</close>
@@ -1106,14 +1139,14 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <setting id="Show_Readme" type="action" label="30089" help="">
+                <setting id="Show_Readme" type="action" label="30089" help="33089">
                     <level>0</level>
                     <default/>
                     <constraints>
                         <allowempty>true</allowempty>
                     </constraints>
                     <control type="button" format="action">
-                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_Readme)</data>
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_Readme_QR)</data>
                         <close>true</close>
                     </control>
                 </setting>

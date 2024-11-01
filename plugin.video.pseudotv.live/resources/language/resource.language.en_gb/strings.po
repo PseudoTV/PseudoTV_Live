@@ -534,7 +534,7 @@ msgid "Searching for %s logo"
 msgstr ""
 
 msgctxt "#30129"
-msgid "Start Announcement"
+msgid "Offline"
 msgstr ""
 
 msgctxt "#30130"
@@ -658,7 +658,7 @@ msgid "Scan QRCode"
 msgstr ""
 
 msgctxt "#30159"
-msgid "Need Help?"
+msgid "Visit Support Forum"
 msgstr ""
 
 msgctxt "#30160"
@@ -682,7 +682,7 @@ msgid "Adverts & Trailers"
 msgstr ""
 
 msgctxt "#30165"
-msgid "View snapshot"
+msgid "View Snapshot"
 msgstr ""
 
 msgctxt "#30166"
@@ -693,6 +693,9 @@ msgctxt "#30167"
 msgid "Enable Log Uploader"
 msgstr ""
 
+msgctxt "#30168"
+msgid "Visit Project Wiki"
+msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins
 
@@ -1332,7 +1335,7 @@ msgid "Changes Detected!"
 msgstr ""
 
 msgctxt "#32158"
-msgid "[COLOR=yellow]Waiting for pairing ([B]%s[/B])[/COLOR]"
+msgid "[COLOR=yellow][B]Discovering...[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32159"
@@ -1416,7 +1419,7 @@ msgid "Sort & Filter rules do not apply to Smartplaylist"
 msgstr ""
 
 msgctxt "#32179"
-msgid "Building Filler Folders"
+msgid "Building Filler Folder"
 msgstr ""
 
 msgctxt "#32180"
@@ -1536,7 +1539,7 @@ msgid "Parsing Details"
 msgstr ""
 
 msgctxt "#32211"
-msgid "%s: [COLOR=%s][B]%s[/B][/COLOR]"
+msgid "[COLOR=%s][B]%s[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32212"
@@ -1559,6 +1562,13 @@ msgctxt "#32216"
 msgid "Welcome to %s, If you're new please visit our project wiki for help & guides. Thank you for your support, enjoy!"
 msgstr ""
 
+msgctxt "#32217"
+msgid "Download Bonjour Print Services for Windows"
+msgstr ""
+
+msgctxt "#32218"
+msgid "Not Needed..."
+msgstr ""
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
@@ -1742,6 +1752,10 @@ msgctxt "#33086"
 msgid "Interval between channel Bug appearances (Minutes). [-1 Indefinitely, 0 Random]"
 msgstr ""
 
+msgctxt "#33089"
+msgid "QRCode - Visit PseudoTV Live Readme"
+msgstr ""
+
 msgctxt "#33092"
 msgid "Multi-room help"
 msgstr ""
@@ -1811,7 +1825,7 @@ msgid "Server Status:"
 msgstr ""
 
 msgctxt "#33130"
-msgid "Announcement Received by %s"
+msgid "Online"
 msgstr ""
 
 msgctxt "#33131"
@@ -1871,7 +1885,7 @@ msgid "Select one or more logo resource packs."
 msgstr ""
 
 msgctxt "#33161"
-msgid "QRCode - Visit Kodi.TV PseudoTV Live Support Forum"
+msgid "QRCode - Visit Kodi.TV PseudoTV Live Support Forum."
 msgstr ""
 
 msgctxt "#33165"
@@ -1880,6 +1894,10 @@ msgstr ""
 
 msgctxt "#33166"
 msgid "QRCode - Submit Instance Snapshot for debugging."
+msgstr ""
+
+msgctxt "#33168"
+msgid "QRCode - Visit PseudoTV Live Wiki."
 msgstr ""
 
 msgctxt "#33170"

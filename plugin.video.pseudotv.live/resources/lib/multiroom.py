@@ -19,16 +19,16 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
-from server     import Discovery, Announcement
+from server     import Discovery
 
 class Service:
     from jsonrpc import JSONRPC
     monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
     def _interrupt(self, wait: float=.0001) -> bool:
-        return (PROPERTIES.isPendingInterrupt() | self.monitor.waitForAbort(wait))
+        return (PROPERTIES.isInterrupt() | self.monitor.waitForAbort(wait))
     def _suspend(self) -> bool:
-        return PROPERTIES.isPendingSuspend()
+        return PROPERTIES.isSuspend()
         
         
 class Multiroom:
@@ -40,19 +40,14 @@ class Multiroom:
         
         self.service    = service
         self.jsonRPC    = service.jsonRPC
+        self.cache      = SETTINGS.cache
         self.uuid       = SETTINGS.getMYUUID()
         self.friendly   = SETTINGS.getFriendlyName()
         self.remoteURL  = PROPERTIES.getRemoteURL()
-        self.payload    = SETTINGS.getBonjour()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-
-
-    def _chkAnnouncement(self):
-        self.log('_chkAnnouncement')
-        Announcement(service=self.service, payload=self.payload)
 
 
     def _chkDiscovery(self):
@@ -63,43 +58,53 @@ class Multiroom:
     def hasServers(self, servers={}):
         if not servers: servers = self.getDiscovery()
         self.log('hasServers, servers = %s'%(len(servers)))
-        SETTINGS.setSetting('Select_server','|'.join(['[COLOR=%s][B]%s[/B][/COLOR]'%({True:'green',False:'red'}[v.get('online',False)],v.get('name')) for v in [v for v in list(servers.values()) if v.get('enabled',False)]]))
+        enabledServers = [server for server in list(servers.values()) if server.get('enabled',False)]
         PROPERTIES.setServers(len(servers) > 0)
-        PROPERTIES.setEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),str(len([v for v in list(servers.values()) if v.get('enabled',False)]) > 0).lower())
+        PROPERTIES.setEnabledServers(len(enabledServers) > 0)
+        SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in enabledServers]))
         return servers
         
-
+            
+    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
+    def getRemote(self, remote):
+        self.log("getRemote, remote = %s"%(remote))
+        return getURL(remote,header={'Accept':'application/json'},json_data=True)
+           
+           
     def getDiscovery(self):
         return getJSON(SERVER_LOC).get('servers',{})
 
 
     def setDiscovery(self, servers={}):
-        return setJSON(SERVER_LOC,{"servers":self.hasServers(servers)})
+        if setJSON(SERVER_LOC,{"servers":self.hasServers(servers)}):
+            return PROPERTIES.forceUpdateTime('chkPVRservers')
 
 
-    def _chkPVRservers(self):
+    def _chkPVRservers(self, servers={}):
         changed = False
-        servers = self.getDiscovery()
+        if not servers: servers = self.getDiscovery()
         for server in list(servers.values()):
             online   = server.get('online',False)
-            response = getURL('http://%s/%s'%(server.get('host'),REMOTEFLE),header={'Accept':'application/json'})
+            response = self.getRemote('http://%s/%s'%(server.get('host'),REMOTEFLE))
             if response: server.update(loadJSON(response))
             server['online'] = True if response else False
-            if online != server['online']: DIALOG.notificationDialog(LANGUAGE(32211)%(server.get('name'),{True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)]))
+            if online != server['online']: DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[server.get('online',False)])))
             self.log('_chkPVRservers, %s: online = %s, last updated = %s'%(server.get('name'),server['online'],server.get('updated')))
             instancePath = SETTINGS.hasPVRInstance(server.get('name'))
             if       server.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(server.get('host'),server.get('name'))
-            elif not server.get('enabled',False) and instancePath: FileAccess.delete(instancePath)
-        self.setDiscovery(servers)
-        return changed
-
+            elif not server.get('enabled',False) and instancePath:     changed = FileAccess.delete(instancePath)
+        if self.setDiscovery(servers) and changed: PROPERTIES.setEpochTimer('chkPVRRefresh')
+            
 
     def addServer(self, payload={}):
         if not payload: return False
-        servers  = self.getDiscovery()
-        self.log('addServer, payload = %s'%(payload))
+        servers = self.getDiscovery()
+        if not servers.get(payload.get('name')): 
+            self.log('addServer, payload = %s'%(payload))
+            payload['enabled'] = True #set enabled by default
+            DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
+        payload['online'] = True
         servers.update({payload.get('name'):payload})
-        DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
         if self.setDiscovery(servers):
             return True
 
@@ -107,7 +112,7 @@ class Multiroom:
     def delServer(self):
         self.log('delServer')
         def _build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s: Channels (%s)'%({"True":"[COLOR=green][B]Online[/B][/COLOR]","False":"[COLOR=red][B]Offline[/B][/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
+            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[payload.get('online',False)]),payload['host'],len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
@@ -126,7 +131,7 @@ class Multiroom:
             [hasAddon(id,install=True,enable=True) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
 
         def __build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s: Channels (%s)'%({"True":"[COLOR=green][B]Online[/B][/COLOR]","False":"[COLOR=red][B]Offline[/B][/COLOR]"}[str(payload.get('online',False))],payload['host'],len(payload.get('channels',[]))))
+            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[payload.get('online',False)]),payload['host'],len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
@@ -145,7 +150,8 @@ class Multiroom:
                             DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
                             servers[liz.getLabel()]['enabled'] = True
                             __chkSettings(loadJSON(servers[liz.getLabel()].get('settings')))
-                        if not instancePath: SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel())
+                        if not instancePath: 
+                            if SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel()): PROPERTIES.setEpochTimer('chkPVRRefresh')
                     else:
                         if servers[liz.getLabel()].get('enabled',False):
                             DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))

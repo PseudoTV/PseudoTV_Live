@@ -56,26 +56,14 @@ class Utilities:
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
 
-    def showReadme(self):
-        try: 
-            def convertMD2TXT(md):
-                markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
-                markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
-                markdown = re.sub(r'\[!\[(.*?)\]\((.*?)\)]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '[B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(3)), markdown, flags=re.M)
-                markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(2) else '- [B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(2)), markdown, flags=re.M)
-                markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
-                markdown = '\n'.join(list([filelist for filelist in markdown.split('\n') if filelist[:2] not in ['![','[!','!.','!-','ht']]))
-                return markdown
-                
-            with BUILTIN.busy_dialog():
-                openAddonSettings((7,1))
-                fle = FileAccess.open(README_FLE, "r")
-                txt = convertMD2TXT(fle.read())
-                fle.close()
-            DIALOG.textviewer(txt, heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=90)
-        except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
+    def qrReadme(self):
+        DIALOG.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
+    
+    
+    def qrBonjour(self):
+        DIALOG.qrDialog(URL_WIN_BONJOUR, LANGUAGE(32217))
         
-
+        
     def qrSupport(self):
         DIALOG.qrDialog(URL_SUPPORT, 'PseudoTV Live Beta Blog, Support & Discussion Thread')
         
@@ -183,7 +171,7 @@ class Utilities:
                  {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)                      , 'hide':False}, #"Show XMLTV"
                  {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkLibrary'%(ADDON_ID),'true')  , 'hide':False}, #Rescan library
                  {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('chkFillers',)                      ,'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('runAutoTune',)                     ,'hide':False}] #Run Autotune
+                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('chkAutoTune',)                     ,'hide':False}] #Run Autotune
                 
         with BUILTIN.busy_dialog():
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide'))]
@@ -248,8 +236,8 @@ class Utilities:
         elif param.startswith('Move_Channelbug'):
             ctl = (3,16)
             self.openChannelBug()
-        elif param == 'Show_Readme':  
-            return self.showReadme()
+        elif param == 'Show_Readme_QR':  
+            return self.qrReadme()
         elif param == 'Show_Changelog':
             return self.showChangelog()
         elif param == 'Show_Support_QR':
@@ -258,6 +246,8 @@ class Utilities:
             return self.qrRemote()
         elif param == 'Debug_QR':
             return self.qrDebug()
+        elif param == 'Bonjour_QR':
+            return self.qrBonjour()
         elif param == 'User_Groups':
             return self.userGroups()
         elif param == 'Sort_Method':

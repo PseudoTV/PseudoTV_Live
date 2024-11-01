@@ -1,8 +1,17 @@
 v.0.5.6
--Added Zeroconf Multi-Room configuration replacing the previous pairing method.
+-Fixed User reported issues with browsing channel logos, parsing stacked MP4 files and moving channels within the channel manager.
+-Added Zeroconf Multi-Room configuration; replacing the previous pairing method.
+ - To use multi-room "Zeroconf" must be enabled under Kodi "Services/General" settings. 
+   (Windows users must install Apple's Bonjour service https://support.apple.com/en-us/106380)
+ - Announcement & Discovery are fully automated, New instances are enabled by default.
  - No pairing procedures required; ignore past methods.
--Added New welcome dialog.
+ - Receive notifications when new instances are detected.
+ - Previous pairings are unchanged, no user action required.
+-Notice All multi-room ports TCP/UDP are required to be identical on each instance of PseudoTV. 
+ - It's recommended you leave ports unchanged. Ports settings are hidden and can be unlocked by enabling "Debugging" in settings.
+-Added New welcome QRdialog to work in progress wiki (Currently unavailable).
 -Added Multi-Room option to auto-tuning.
+ - When no channel backups are found and multi-room instances are available. 
 -Added Global sort method to settings.
  - Set the default method for all channels with exceptions below.
  - Per channel sort method is overridden by Smartplaylists, Dynamicplaylists and Advanced channel rules containing an existing sort method.
