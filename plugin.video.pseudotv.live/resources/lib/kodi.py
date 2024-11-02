@@ -314,12 +314,11 @@ class Settings:
 
     def getMYUUID(self):
         uuid = self.getCacheSetting('MY_UUID')
-        if not uuid:
-            uuid = self.setCacheSetting('MY_UUID',genUUID(seed=self.getFriendlyName()))
+        if not uuid: uuid = self.setCacheSetting('MY_UUID',genUUID(seed=self.getFriendlyName()))
         return uuid
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=2), json_data=True)
+    @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
     def getBonjour(self):
         self.log("getBonjour")
         payload = {'id'      :ADDON_ID,
@@ -335,7 +334,7 @@ class Settings:
         return payload
     
     
-    @cacheit(expiration=datetime.timedelta(minutes=2), json_data=True)
+    @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
     def getPayload(self, inclMeta: bool=False):
         self.log("getPayload, inclMeta! %s"%(inclMeta))
         def __getMeta(payload):

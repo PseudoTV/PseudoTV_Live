@@ -30,9 +30,9 @@ STUDIO_RESOURCE = ["resource.images.studios.white"]
 
 class Resources:
     def __init__(self, jsonRPC):
-        self.cache     = SETTINGS.cacheDB
         self.jsonRPC   = jsonRPC
-        self.baseURL   = self.jsonRPC.buildWebBase()
+        self.cache     = jsonRPC.cache
+        self.baseURL   = jsonRPC.buildWebBase()
         self.remoteURL = PROPERTIES.getRemoteURL()
         
         

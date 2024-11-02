@@ -42,8 +42,8 @@ class Library:
         self.parserCount  = 0
         self.parserMSG    = ''
         self.parserDialog = None
-        self.cache        = SETTINGS.cacheDB
         self.jsonRPC      = service.jsonRPC
+        self.cache        = service.jsonRPC.cache
         self.predefined   = Predefined()
         self.channels     = Channels()
         self.resources    = Resources(self.jsonRPC)

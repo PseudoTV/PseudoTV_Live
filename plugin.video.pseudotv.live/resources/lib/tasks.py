@@ -107,7 +107,6 @@ class Tasks():
         self.log('_chkQueTimer')
         self._chkEpochTimer('chkVersion'      , self.chkVersion      , 900)
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
-        self._chkEpochTimer('chkPVRservers'   , self.chkPVRservers   , 900)
         self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 900)
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
@@ -165,11 +164,6 @@ class Tasks():
         if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3): SETTINGS.setSettingInt('Max_Days',max)
         SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.jsonRPC.getSettingValue("services.zeroconf")],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[self.jsonRPC.getSettingValue("services.zeroconf")]))
          
-
-    def chkPVRservers(self):
-        self.log('chkPVRservers')
-        Multiroom(service=self.service)._chkPVRservers()
-
 
     def chkFiles(self):
         self.log('chkFiles')

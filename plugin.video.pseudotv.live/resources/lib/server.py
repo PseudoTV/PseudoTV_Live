@@ -44,7 +44,6 @@ class Discovery:
             self.log("getService, type = %s, name = %s"%(type,name))
              
         def addService(self, zeroconf, type, name):
-            self.log("addService, type = %s, name = %s"%(type,name))
             info = self.zeroconf.getServiceInfo(type, name)
             if info:
                 IP = socket.inet_ntoa(info.getAddress())

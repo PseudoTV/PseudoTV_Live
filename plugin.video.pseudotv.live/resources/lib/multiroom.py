@@ -40,7 +40,7 @@ class Multiroom:
         
         self.service    = service
         self.jsonRPC    = service.jsonRPC
-        self.cache      = SETTINGS.cache
+        self.cache      = service.jsonRPC.cache
         self.uuid       = SETTINGS.getMYUUID()
         self.friendly   = SETTINGS.getFriendlyName()
         self.remoteURL  = PROPERTIES.getRemoteURL()
@@ -65,47 +65,47 @@ class Multiroom:
         return servers
         
             
-    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
-    def getRemote(self, remote):
-        self.log("getRemote, remote = %s"%(remote))
-        return getURL(remote,header={'Accept':'application/json'},json_data=True)
-           
-           
     def getDiscovery(self):
         return getJSON(SERVER_LOC).get('servers',{})
 
 
     def setDiscovery(self, servers={}):
-        if setJSON(SERVER_LOC,{"servers":self.hasServers(servers)}):
-            return PROPERTIES.forceUpdateTime('chkPVRservers')
+        return setJSON(SERVER_LOC,{"servers":self.hasServers(servers)})
 
 
-    def _chkPVRservers(self, servers={}):
-        changed = False
-        if not servers: servers = self.getDiscovery()
-        for server in list(servers.values()):
-            online   = server.get('online',False)
-            response = self.getRemote('http://%s/%s'%(server.get('host'),REMOTEFLE))
-            if response: server.update(loadJSON(response))
-            server['online'] = True if response else False
-            if online != server['online']: DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[server.get('online',False)])))
-            self.log('_chkPVRservers, %s: online = %s, last updated = %s'%(server.get('name'),server['online'],server.get('updated')))
-            instancePath = SETTINGS.hasPVRInstance(server.get('name'))
-            if       server.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(server.get('host'),server.get('name'))
-            elif not server.get('enabled',False) and instancePath:     changed = FileAccess.delete(instancePath)
-        if self.setDiscovery(servers) and changed: PROPERTIES.setEpochTimer('chkPVRRefresh')
-            
-
+    @cacheit(expiration=datetime.timedelta(minutes=30),json_data=True)   
+    def getRemote(self, remote):
+        self.log("getRemote, remote = %s"%(remote))
+        cacheName = 'getRemote.%s'%(remote)
+        response  = getURL(remote,header={'Accept':'application/json'},json_data=True)
+        if response: 
+            response = self.cache.set(cacheName, response, expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
+            response['online'] = True
+        else:        
+            response = (self.cache.get(cacheName, json_data=True) or {}) #retrieve cached response incase server is temporarily offline
+            if not response: response['online'] = False
+        return response
+           
+         
     def addServer(self, payload={}):
-        if not payload: return False
-        servers = self.getDiscovery()
-        if not servers.get(payload.get('name')): 
-            self.log('addServer, payload = %s'%(payload))
-            payload['enabled'] = True #set enabled by default
-            DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
-        payload['online'] = True
-        servers.update({payload.get('name'):payload})
-        if self.setDiscovery(servers):
+        if payload:
+            servers = self.getDiscovery()
+            server  = servers.get(payload.get('name'),{})
+            if not server: 
+                self.log('addServer, payload = %s'%(payload))
+                payload['enabled'] = True #set enabled by default
+                DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
+            else:
+                payload['enabled'] = server.get('enabled',False)
+                if payload['enabled']:
+                    DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[payload.get('online',False)])))
+            servers.update({payload.get('name'):payload})
+            if self.setDiscovery(servers):
+                instancePath = SETTINGS.hasPVRInstance(server.get('name'))
+                if       payload.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(payload.get('host'),payload.get('name'))
+                elif not payload.get('enabled',False) and instancePath:     changed = FileAccess.delete(instancePath)
+                else:                                                       changed = False
+                if changed: PROPERTIES.setEpochTimer('chkPVRRefresh')
             return True
 
 
@@ -137,13 +137,14 @@ class Multiroom:
             servers = self.getDiscovery()
             lizlst  = poolit(__build)(list(servers.values()))
             if len(lizlst) > 0: lizlst.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]- %s[/B][/COLOR]'%(LANGUAGE(30046)),LANGUAGE(33046)))
+            else: return
             
         selects = DIALOG.selectDialog(lizlst,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizlst) if loadJSON(listitem.getPath()).get('enabled',False)])
         if not selects is None:
-            if selects == [0]: return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py,Remove_server)')
+            if 0 in selects: return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py,Remove_server)')
             else:
-                lizlst.pop(0)
                 for idx, liz in enumerate(lizlst):
+                    if idx == 0: continue
                     instancePath = SETTINGS.hasPVRInstance(liz.getLabel())
                     if idx in selects:
                         if not servers[liz.getLabel()].get('enabled',False):
@@ -157,7 +158,7 @@ class Multiroom:
                             DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
                             servers[liz.getLabel()]['enabled'] = False
                         if instancePath: FileAccess.delete(instancePath)
-                self.setDiscovery(servers)
+                return self.setDiscovery(servers)
 
             
     def run(self):
