@@ -62,6 +62,11 @@ class Multiroom:
         PROPERTIES.setServers(len(servers) > 0)
         PROPERTIES.setEnabledServers(len(enabledServers) > 0)
         SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in enabledServers]))
+        for server in enabledServers:
+            online = server.get('online',False)
+            if self.getRemote(server['remotes'].get('remote')): server['online'] = True
+            else:                                           server['online'] = False
+            if online != server['online']: DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[server.get('online',False)])))
         return servers
         
             
@@ -73,33 +78,29 @@ class Multiroom:
         return setJSON(SERVER_LOC,{"servers":self.hasServers(servers)})
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=30),json_data=True)   
+    @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
     def getRemote(self, remote):
         self.log("getRemote, remote = %s"%(remote))
         cacheName = 'getRemote.%s'%(remote)
         response  = getURL(remote,header={'Accept':'application/json'},json_data=True)
-        if response: 
-            response = self.cache.set(cacheName, response, expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
-            response['online'] = True
-        else:        
-            response = (self.cache.get(cacheName, json_data=True) or {}) #retrieve cached response incase server is temporarily offline
-            if not response: response['online'] = False
-        return response
-           
+        if response: return self.cache.set(cacheName, response, expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
+        else:        return self.cache.get(cacheName, json_data=True) #retrieve cached response incase server is temporarily offline
+        
          
     def addServer(self, payload={}):
         if payload:
+            payload['online'] = True
             servers = self.getDiscovery()
             server  = servers.get(payload.get('name'),{})
             if not server: 
                 self.log('addServer, payload = %s'%(payload))
                 payload['enabled'] = True #set enabled by default
                 DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
+                servers.update({payload.get('name'):payload})
             else:
                 payload['enabled'] = server.get('enabled',False)
-                if payload['enabled']:
-                    DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[payload.get('online',False)])))
-            servers.update({payload.get('name'):payload})
+                if payload.get('md5',server.get('md5')) != server.get('md5'): servers.update({payload.get('name'):payload})
+            
             if self.setDiscovery(servers):
                 instancePath = SETTINGS.hasPVRInstance(server.get('name'))
                 if       payload.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(payload.get('host'),payload.get('name'))

@@ -69,7 +69,7 @@ class Tasks():
         PROPERTIES.getInstanceID()
         
 
-    @cacheit(expiration=datetime.timedelta(days=28))
+    @cacheit(expiration=datetime.timedelta(days=28), checksum=1)
     def chkWelcome(self):
         self.log('chkWelcome')
         return DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME))

@@ -6,6 +6,8 @@
             "uuid": "",
             "name": "",
             "host": "",
+            "remotes": {
+            },
             "settings": {
             },
             "enabled": false,
