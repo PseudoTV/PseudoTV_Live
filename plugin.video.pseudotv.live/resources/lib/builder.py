@@ -57,6 +57,18 @@ class Builder:
         self.maxDays          = MAX_GUIDEDAYS
         self.minEPG           = EPG_DURATION
         
+        self.bctTypes = {"ratings" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
+                         "sources" :{"ids":SETTINGS.getSetting('Resource_Ratings').split('|'),"paths":[os.path.join(FILLER_LOC,'Ratings' ,'')]},"items":{}},
+                         "bumpers" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
+                         "sources" :{"ids":SETTINGS.getSetting('Resource_Bumpers').split('|'),"paths":[os.path.join(FILLER_LOC,'Bumpers' ,'')]},"items":{}},
+                         "adverts" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Postroll'),"auto":SETTINGS.getSettingInt('Enable_Postroll') == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')),
+                         "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{},
+                         "incIspot":SETTINGS.getSettingBool('Include_Adverts_iSpot')},
+                         "trailers":{"min":-1,"max":SETTINGS.getSettingInt('Enable_Postroll'),"auto":SETTINGS.getSettingInt('Enable_Postroll') == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')),
+                         "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{},
+                         "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI'),
+                         "incIMDB":SETTINGS.getSettingBool('Include_Trailers_IMDB')}}
+        
         self.service          = service
         self.jsonRPC          = service.jsonRPC
         self.cache            = service.jsonRPC.cache
@@ -69,19 +81,6 @@ class Builder:
         self.resources        = Resources(self.jsonRPC)
         self.fillers          = Fillers(builder=self)
         self.completeBuild    = False
-           
-        
-        self.bctTypes = {"ratings" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
-                         "sources" :{"ids":SETTINGS.getSetting('Resource_Ratings').split('|'),"paths":[os.path.join(FILLER_LOC,'Ratings' ,'')]},"items":{}},
-                         "bumpers" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
-                         "sources" :{"ids":SETTINGS.getSetting('Resource_Bumpers').split('|'),"paths":[os.path.join(FILLER_LOC,'Bumpers' ,'')]},"items":{}},
-                         "adverts" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Postroll'),"auto":SETTINGS.getSettingInt('Enable_Postroll') == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')),
-                         "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{},
-                         "incIspot":SETTINGS.getSettingBool('Include_Adverts_iSpot')},
-                         "trailers":{"min":-1,"max":SETTINGS.getSettingInt('Enable_Postroll'),"auto":SETTINGS.getSettingInt('Enable_Postroll') == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')),
-                         "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{},
-                         "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI'),
-                         "incIMDB":SETTINGS.getSettingBool('Include_Trailers_IMDB')}}
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

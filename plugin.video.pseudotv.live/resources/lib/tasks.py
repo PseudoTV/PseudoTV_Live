@@ -72,7 +72,7 @@ class Tasks():
     @cacheit(expiration=datetime.timedelta(days=28), checksum=1)
     def chkWelcome(self):
         self.log('chkWelcome')
-        return DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME))
+        return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_Wiki_QR)')
         
 
     def chkDebugging(self):
@@ -162,7 +162,7 @@ class Tasks():
         self.log('chkKodiSettings')
         if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1): SETTINGS.setSettingInt('Min_Days',min)
         if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3): SETTINGS.setSettingInt('Max_Days',max)
-        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.jsonRPC.getSettingValue("services.zeroconf")],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[self.jsonRPC.getSettingValue("services.zeroconf")]))
+        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.jsonRPC.getSettingValue("services.zeroconf")],{True:'Online',False:'Offline'}[self.jsonRPC.getSettingValue("services.zeroconf")]))
          
 
     def chkFiles(self):

@@ -78,7 +78,6 @@ class CustomQueue:
                         self.min_heap.pop(idx)
                         self.log("__exists, pop func = %s"%(epackage[0].__name__))
                     except: 
-                        print(idx, item,self.min_heap,len(self.min_heap))
                         self.log("__exists, pop failed func = %s, idx = %s"%(epackage[0].__name__,idx))
                     return False
         return False

@@ -56,6 +56,9 @@ class Multiroom:
                 
 
     def hasServers(self, servers={}):
+        def __chkSettings(settings):
+            [hasAddon(id,install=True,enable=True) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
+            
         if not servers: servers = self.getDiscovery()
         self.log('hasServers, servers = %s'%(len(servers)))
         enabledServers = [server for server in list(servers.values()) if server.get('enabled',False)]
@@ -65,8 +68,9 @@ class Multiroom:
         for server in enabledServers:
             online = server.get('online',False)
             if self.getRemote(server['remotes'].get('remote')): server['online'] = True
-            else:                                           server['online'] = False
-            if online != server['online']: DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[server.get('online',False)])))
+            else:                                               server['online'] = False
+            __chkSettings(loadJSON(server.get('settings')))
+            if online != server.get('online',False): DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)])))
         return servers
         
             
@@ -88,7 +92,7 @@ class Multiroom:
         
          
     def addServer(self, payload={}):
-        if payload:
+        if payload and payload.get('name'):
             payload['online'] = True
             servers = self.getDiscovery()
             server  = servers.get(payload.get('name'),{})
@@ -113,7 +117,7 @@ class Multiroom:
     def delServer(self):
         self.log('delServer')
         def _build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[payload.get('online',False)]),payload['host'],len(payload.get('channels',[]))))
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:'Online',False:'Offline'}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
@@ -128,11 +132,8 @@ class Multiroom:
 
     def selServer(self):
         self.log('selServer')
-        def __chkSettings(settings):
-            [hasAddon(id,install=True,enable=True) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
-
         def __build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[payload.get('online',False)]),payload['host'],len(payload.get('channels',[]))))
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:'Online',False:'Offline'}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
@@ -151,7 +152,6 @@ class Multiroom:
                         if not servers[liz.getLabel()].get('enabled',False):
                             DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
                             servers[liz.getLabel()]['enabled'] = True
-                            __chkSettings(loadJSON(servers[liz.getLabel()].get('settings')))
                         if not instancePath: 
                             if SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel()): PROPERTIES.setEpochTimer('chkPVRRefresh')
                     else:
@@ -161,18 +161,29 @@ class Multiroom:
                         if instancePath: FileAccess.delete(instancePath)
                 return self.setDiscovery(servers)
 
+
+    def enableZeroConf(self):
+        self.log('enableZeroConf')
+        if SETTINGS.getSetting('ZeroConf_Status') == '[COLOR=red][B]Offline[/B][/COLOR]':
+            if BUILTIN.getInfoLabel('Platform.Windows','System'): 
+                return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_ZeroConf_QR)')
+            elif DIALOG.yesnoDialog(message=LANGUAGE(30129)):
+                if self.jsonRPC.setSettingValue("services.zeroconf","true"):
+                    PROPERTIES.forceUpdateTime('chkKodiSettings')
+                    
             
     def run(self):
         try:    param = self.sysARG[1]
         except: param = None
         self.log('run, param = %s'%(param))
-        
-        if param == 'Select_Server': 
+        if param == 'Enable_ZeroConf': 
+            ctl = (5,1)
+            self.enableZeroConf()
+        elif param == 'Select_Server': 
             ctl = (5,11)
             self.selServer()
         elif param == 'Remove_server': 
             ctl = (5,12)
-            self.delServer()
         return openAddonSettings(ctl)
 
 

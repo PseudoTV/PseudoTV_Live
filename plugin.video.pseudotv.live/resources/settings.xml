@@ -1026,7 +1026,8 @@
                         <allowempty>false</allowempty>
                     </constraints>
                     <control type="button" format="action">
-                        <data/>
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Enable_ZeroConf)</data>
+                        <close>true</close>
                     </control>
                 </setting>
                 <setting id="Select_server" type="string" label="32048" help="33048" parent="ZeroConf_Status">
@@ -1048,7 +1049,7 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <setting id="Show_Bonjour_QR" type="action" label="32217" parent="ZeroConf_Status">
+                <setting id="Show_ZeroConf_QR" type="action" label="32217" parent="ZeroConf_Status">
                     <level>0</level>
                     <default/>
                     <constraints>
@@ -1063,7 +1064,7 @@
                         </dependency>
                     </dependencies>
                     <control type="button" format="action">
-                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Debug_QR)</data>
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_ZeroConf_QR)</data>
                         <close>true</close>
                     </control>
                 </setting>
@@ -1099,14 +1100,14 @@
                 </setting>
             </group>
             <group id="2" label="30088">
-                <setting id="Show_Bonjour_QR" type="action" label="30168" help="33168">
+                <setting id="Show_Wiki_QR" type="action" label="30168" help="33168">
                     <level>0</level>
                     <default/>
                     <constraints>
                         <allowempty>true</allowempty>
                     </constraints>
                     <control type="button" format="action">
-                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_Bonjour_QR)</data>
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_Wiki_QR)</data>
                         <close>true</close>
                     </control>
                 </setting>

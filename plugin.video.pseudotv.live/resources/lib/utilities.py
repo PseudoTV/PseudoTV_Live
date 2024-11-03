@@ -29,7 +29,27 @@ class Utilities:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
+   
+    def qrWiki(self):
+        DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME))
 
+
+    def qrSupport(self):
+        DIALOG.qrDialog(URL_SUPPORT, 'PseudoTV Live Beta Blog, Support & Discussion Thread')
+        
+        
+    def qrRemote(self):
+        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteURL(),'remote.html'), LANGUAGE(30165))
+        
+
+    def qrReadme(self):
+        DIALOG.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
+    
+    
+    def qrBonjourDL(self):
+        DIALOG.qrDialog(URL_WIN_BONJOUR, LANGUAGE(32217))
+        
+        
     def showChangelog(self):
         try:  
             def addColor(text):
@@ -54,23 +74,7 @@ class Utilities:
                 fle.close()
             DIALOG.textviewer(txt, heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
-   
 
-    def qrReadme(self):
-        DIALOG.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
-    
-    
-    def qrBonjour(self):
-        DIALOG.qrDialog(URL_WIN_BONJOUR, LANGUAGE(32217))
-        
-        
-    def qrSupport(self):
-        DIALOG.qrDialog(URL_SUPPORT, 'PseudoTV Live Beta Blog, Support & Discussion Thread')
-        
-        
-    def qrRemote(self):
-        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteURL(),'remote.html'), LANGUAGE(30165))
-        
 
     def qrDebug(self):
         def cleanPayload(payload):
@@ -118,26 +122,6 @@ class Utilities:
         retval = DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups'))
         if retval: SETTINGS.setSetting('User_Groups',retval)
                 
-                
-    def showFile(self, file):
-        with BUILTIN.busy_dialog():
-            def openFile(fle):
-                if fle.lower().endswith('xml'):
-                    fle = FileAccess.open(fle, "r")
-                    dom = parse(fle) # or xml.dom.minidom.parseString(xml_string)
-                    fle.close()
-                    return dom.toprettyxml()
-                else:
-                    fle = FileAccess.open(fle, "r")
-                    ppstring = fle.read()
-                    fle.close()
-                    return ppstring.replace('#EXTINF:','\n[COLOR=cyan][B]#EXTINF:[/B][/COLOR]')
-        openAddonSettings((7,1))
-        #todo generate qrcode to server file location.
-        #todo change xmltv to display statistics not raw file.
-        try: DIALOG.textviewer(openFile(file), heading=('%s - %s')%(ADDON_NAME,os.path.basename(file)),usemono=True)
-        except Exception as e: self.log('showFile failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
-
 
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
@@ -167,8 +151,6 @@ class Utilities:
                  {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)               , 'hide':False},#"Clean Start"
                  {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR                                     , 'hide':False},#"Force PVR reload"
                  {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart                                           , 'hide':False},#"Force PTVL reload"
-                 {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)                        , 'hide':False},#"Show M3U"
-                 {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)                      , 'hide':False}, #"Show XMLTV"
                  {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkLibrary'%(ADDON_ID),'true')  , 'hide':False}, #Rescan library
                  {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('chkFillers',)                      ,'hide':False}, #Rescan library
                  {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('chkAutoTune',)                     ,'hide':False}] #Run Autotune
@@ -187,7 +169,7 @@ class Utilities:
                 except Exception as e: 
                     self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
                     return DIALOG.notificationDialog(LANGUAGE(32000))
-        else: openAddonSettings((7,1))
+        else: openAddonSettings((6,1))
                 
 
     def deleteFiles(self, msg, full: bool=False):
@@ -221,61 +203,59 @@ class Utilities:
 
 
     def run(self):
-        try:    param = self.sysARG[1]
+        ctl = (0,1)
+        try:
+            param = self.sysARG[1]
+            self.log('run, param = %s'%(param))
+            #Channels
+            if param.startswith('Channel_Manager'):
+                ctl = (0,1)
+                self.openChannelManager()
+
+            #Options
+            elif param == 'User_Groups':
+                ctl = (2,10)
+                self.userGroups()
+                
+            #Globals
+            elif param.startswith('Move_Channelbug'):
+                ctl = (3,15)
+                self.openChannelBug()
+            elif param == 'Sort_Method':
+                ctl = (3,16)
+                self.sortMethod()
+                
+            #Multi-Room
+            elif param == 'Show_ZeroConf_QR':
+                ctl = (5,5)
+                self.qrBonjourDL()
+
+            #Misc.Docs
+            elif param == 'Utilities':
+                ctl = (6,1)
+                return self.buildMenu()
+            elif param == 'Show_Wiki_QR':
+                ctl = (6,4)
+                return self.qrWiki()
+            elif param == 'Show_Support_QR':
+                ctl = (6,5)
+                self.qrSupport()
+            elif param == 'Show_Remote_UI':
+                ctl = (6,6)
+                self.qrRemote()
+            elif param == 'Show_Readme_QR':  
+                ctl = (6,7)
+                self.qrReadme()
+            elif param == 'Show_Changelog':
+                ctl = (6,8)
+                return self.showChangelog()
+                
+            #Misc. Debug
+            elif param == 'Debug_QR':
+                ctl = (6,1)
+                self.qrDebug()
         except: param = None
-        self.log('run, param = %s'%(param))
-        if param == 'Apply_PVR_Settings':
-            ctl = (6,17)
-            with BUILTIN.busy_dialog():
-                if SETTINGS.setPVRPath(USER_LOC,SETTINGS.getFriendlyName(),prompt=True,force=True):
-                    DIALOG.notificationDialog(LANGUAGE(32152))
-                else: DIALOG.notificationDialog(LANGUAGE(32165))
-        elif param.startswith('Channel_Manager'):
-            ctl = (0,1)
-            self.openChannelManager()
-        elif param.startswith('Move_Channelbug'):
-            ctl = (3,16)
-            self.openChannelBug()
-        elif param == 'Show_Readme_QR':  
-            return self.qrReadme()
-        elif param == 'Show_Changelog':
-            return self.showChangelog()
-        elif param == 'Show_Support_QR':
-            return self.qrSupport()
-        elif param == 'Show_Remote_UI':
-            return self.qrRemote()
-        elif param == 'Debug_QR':
-            return self.qrDebug()
-        elif param == 'Bonjour_QR':
-            return self.qrBonjour()
-        elif param == 'User_Groups':
-            return self.userGroups()
-        elif param == 'Sort_Method':
-            ctl = (3,16)
-            self.sortMethod()
-        elif param == 'Utilities':
-            ctl = (6,1) #settings return focus
-            return self.buildMenu()
         return openAddonSettings(ctl)
 
 if __name__ == '__main__': Utilities(sys.argv).run()
-    
-                    # <setting id="Apply_PVR_Settings" type="action" label="30074" help="33074" parent="IPTV_SIMPLE">
-					# <level>3</level>
-					# <default/>
-					# <constraints>
-						# <allowempty>true</allowempty>
-					# </constraints>
-					# <dependencies>
-						# <dependency type="visible">
-                            # <and>
-                                # <condition on="property" name="InfoBool">System.HasAddon(pvr.iptvsimple)</condition>
-                                # <condition on="property" name="InfoBool">System.AddonIsEnabled(pvr.iptvsimple)</condition>
-                            # </and>
-						# </dependency>
-					# </dependencies>
-					# <control type="button" format="action">
-						# <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Apply_PVR_Settings)</data>
-						# <close>true</close>
-					# </control>
-				# </setting>
+   

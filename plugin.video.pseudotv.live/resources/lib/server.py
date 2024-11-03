@@ -245,7 +245,7 @@ class HTTP:
                 self._httpd_thread = Thread(target=self._server.serve_forever)
                 self._httpd_thread.daemon=True
                 self._httpd_thread.start()
-            SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(33130),False:LANGUAGE(30129)}[self.isRunning]))
+            SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:'Online',False:'Offline'}[self.isRunning]))
             
         except Exception as e: 
             self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)

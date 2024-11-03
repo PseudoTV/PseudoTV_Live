@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.5.5l" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.5.5m" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
         <import addon="pvr.iptvsimple" version="21.8.0"/>
