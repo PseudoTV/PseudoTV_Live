@@ -92,16 +92,17 @@ class Multiroom:
         
          
     def addServer(self, payload={}):
+        self.log('addServer, payload = %s'%(payload))
         if payload and payload.get('name'):
             payload['online'] = True
             servers = self.getDiscovery()
             server  = servers.get(payload.get('name'),{})
             if not server: 
-                self.log('addServer, payload = %s'%(payload))
-                payload['enabled'] = True #set enabled by default
+                payload['enabled'] = not bool(SETTINGS.getSettingBool('Debug_Enable'))  #set enabled by default when not debugging.
                 DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
                 servers.update({payload.get('name'):payload})
             else:
+                self.log('addServer, updating server = %s'%(server))
                 payload['enabled'] = server.get('enabled',False)
                 if payload.get('md5',server.get('md5')) != server.get('md5'): servers.update({payload.get('name'):payload})
             
@@ -111,6 +112,7 @@ class Multiroom:
                 elif not payload.get('enabled',False) and instancePath:     changed = FileAccess.delete(instancePath)
                 else:                                                       changed = False
                 if changed: PROPERTIES.setEpochTimer('chkPVRRefresh')
+                self.log('addServer, payload changed, chkPVRRefresh = %s'%(changed))
             return True
 
 

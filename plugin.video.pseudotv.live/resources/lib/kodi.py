@@ -447,7 +447,9 @@ class Settings:
         
     def hasPVRInstance(self, instance=ADDON_NAME):
         instancePath = os.path.join(PVR_CLIENT_LOC,'instance-settings-%s.xml'%(self.gePVRInstance(instance)))
-        if FileAccess.exists(instancePath): return instancePath
+        if FileAccess.exists(instancePath): 
+            self.log('hasPVRInstance, instance = %s, instancePath = %s'%(instance, instancePath))
+            return instancePath
         
         
     def setPVRInstance(self, instance=ADDON_NAME):
@@ -1033,10 +1035,10 @@ class Builtin:
     @contextmanager
     def busy_dialog(self, isPlaying=False):
         if not self.isBusyDialog() and not isPlaying:
-            xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
+            self.executebuiltin('ActivateWindow(busydialognocancel)')
             try: yield
             finally:
-                xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+                self.executebuiltin('Dialog.Close(busydialognocancel)')
         else: yield
        
 

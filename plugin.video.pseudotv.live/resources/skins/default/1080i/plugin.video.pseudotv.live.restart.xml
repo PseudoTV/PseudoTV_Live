@@ -12,7 +12,7 @@
             <control type="image" id="40000">
                 <description>Replay Progress</description>
                 <left>522</left>
-                <bottom>360</bottom>
+                <bottom>40</bottom>
                 <width>116</width>
                 <height>24</height>
                 <texture>buttons/ButtonFocus.png</texture>
@@ -21,7 +21,7 @@
             <control type="button" id="40001">
                 <description>Replay Button</description>
                 <left>480</left>
-                <bottom>320</bottom>
+                <bottom>0</bottom>
                 <width>200</width>
                 <height>106</height>
                 <colordiffuse>FFFFFFFF</colordiffuse>

@@ -39,7 +39,6 @@ MONITOR             = xbmc.Monitor
 PLAYER              = xbmc.Player
 
 #constants
-OVERLAY_DELAY       = 5     #secs
 DISCOVERY_TIMER     = 60    #secs
 EPOCH_TIMER         = 15    #secs
 DISCOVER_INTERVAL   = 30   #secs

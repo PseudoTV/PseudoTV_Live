@@ -41,7 +41,7 @@ class Player(xbmc.Player):
         xbmc.Player.__init__(self)
         self.service = service
         self.jsonRPC = service.jsonRPC
-        self.updateGlobals()
+        self.__updateGlobals()
         
         """ 
         Player() Trigger Order
@@ -59,14 +59,17 @@ class Player(xbmc.Player):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def updateGlobals(self):
+    def __updateGlobals(self):
         self.lastSubState      = BUILTIN.isSubtitle()
+        self.enableOverlay     = SETTINGS.getSettingBool('Overlay_Enable')
+        self.infoOnChange      = SETTINGS.getSettingBool('Enable_OnInfo')
         self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt')
         self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')
         self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
         self.saveDuration      = SETTINGS.getSettingBool('Store_Duration')
+        self.sleepTime         = SETTINGS.getSettingInt('Idle_Timer')
         
-
+        
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
         self.onAVChange()
@@ -75,6 +78,7 @@ class Player(xbmc.Player):
     def onAVChange(self):
         self.log('onAVChange')
         self.service.monitor.chkIdle()
+        if self.isPseudoTV: self.__updateGlobals()
 
         
     def onAVStarted(self):
@@ -185,7 +189,6 @@ class Player(xbmc.Player):
         
     def _onPlay(self):
         self.log('_onPlay')
-        self.updateGlobals()
         self.toggleReplay(False)
         self.toggleBackground(False)
         
@@ -199,7 +202,16 @@ class Player(xbmc.Player):
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             self.toggleReplay()
             self.setTrakt(self.disableTrakt)
+        elif self.service.player.enableOverlay and self.infoOnChange: timerit(self._onInfo)(0.1)
             
+    
+    def _onInfo(self):
+        self.log('_onInfo')
+        if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
+        BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
+        self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('OSD_Timer')))
+        if BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'): BUILTIN.executebuiltin('Action(back)')            
+
 
     def _onChange(self):
         self.log('_onChange')
@@ -240,12 +252,12 @@ class Player(xbmc.Player):
 
     def toggleReplay(self, state: bool=True):
         self.log('toggleReplay, state = %s, restartPercentage = %s'%(state,self.restartPercentage))
-        if state and self.service.monitor.enableOverlay and bool(self.restartPercentage):
+        if state and self.service.player.enableOverlay and bool(self.restartPercentage):
             progress = self.getPlayerProgress()
             if (progress >= self.restartPercentage and progress < SETTINGS.getSettingInt('Seek_Threshold')) and not self.isIdle and self.sysInfo.get('fitem'):
                 self.replay = Replay(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
                 self.replay.doModal()
-        elif hasattr(self.replay, 'close'): self.replay.close()
+        elif hasattr(self.replay, 'onClose'): self.replay.onClose()
         
         
     def toggleBackground(self, state: bool=True):
@@ -274,8 +286,6 @@ class Monitor(xbmc.Monitor):
         self.jsonRPC          = service.jsonRPC
         self.pendingSuspend   = False
         self.pendingInterrupt = False
-        self.sleepTime        = (SETTINGS.getSettingInt('Idle_Timer')      or 0)
-        self.enableOverlay    = (SETTINGS.getSettingBool('Overlay_Enable') or True)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -287,21 +297,21 @@ class Monitor(xbmc.Monitor):
         except: #Kodi raises error after sleep.
             self.log('getIdle, Kodi waking up from sleep...')
             idleTime = 0
-        idleState = (idleTime > OVERLAY_DELAY)
+        idleState = (idleTime > SETTINGS.getSettingInt('OSD_Timer'))
         return idleState, idleTime
 
 
     def chkIdle(self):
         self.isIdle, self.idleTime = self.getIdle()
         if self.service.player.isPlaying() and not BUILTIN.isPaused():
-            if self.sleepTime > 0 and (self.idleTime > (self.sleepTime * 10800)): self.triggerSleep()
+            if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)): self.triggerSleep()
             if self.isIdle: self.toggleOverlay(True)
             else:           self.toggleOverlay(False)
         
 
     def toggleOverlay(self, state: bool=True):
         self.log("toggleOverlay, state = %s"%(state))
-        if state and self.enableOverlay:
+        if state and self.service.player.enableOverlay:
             if not hasattr(self.overlay, 'open') and self.service.player.isPseudoTV:
                 self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
                 self.overlay.open()
@@ -445,7 +455,7 @@ class Service():
             if thread.name != "MainThread" and thread.is_alive():
                 try:
                     thread.cancel()
-                    thread.join(1.0)
+                    thread.join(2.0)
                 except: pass
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
         if self.pendingRestart: Service()._start()

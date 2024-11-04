@@ -75,7 +75,7 @@ class Replay(xbmcgui.WindowXMLDialog):
             self.onClose()
 
 
-    def _progressLoop(self, control, wait=OVERLAY_DELAY):
+    def _progressLoop(self, control, wait=SETTINGS.getSettingInt('OSD_Timer')):
         tot  = wait
         xpos = control.getX()
         while not self.service.monitor.abortRequested():
@@ -348,7 +348,7 @@ class Overlay():
             #split totalTime time into quarters, last quarter triggers nextup split by equal intervals of 3. ie. display 3 times in the last quarter of show.
             totalTime  = int(self.player.getPlayerTime())
             remaining  = floor(self.player.getTimeLabel('TimeRemaining'))
-            showTime   = (abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval))
+            showTime   = (abs(totalTime - (totalTime * .75)) - (SETTINGS.getSettingInt('OSD_Timer') * interval))
             intTime    = roundupDIV(showTime,interval)
             showOnNext = remaining <= showTime and totalTime > SELECT_DELAY and not BUILTIN.getInfoLabel('NextGenre','VideoPlayer') in FILLER_TYPE and self.player.getPlayerTime() > self.minDuration
             

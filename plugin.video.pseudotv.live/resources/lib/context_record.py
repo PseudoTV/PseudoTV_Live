@@ -38,7 +38,7 @@ class Record:
                 stop  = timeString2Seconds(BUILTIN.getInfoLabel('EndTime').split(' ')[0] +':00')
                 if (now > start and now < stop):
                     opt  ='Incl. Resume'
-                    seek = (now - start) - OVERLAY_DELAY #add rollback buffer
+                    seek = (now - start) - SETTINGS.getSettingInt('OSD_Timer') #add rollback buffer
                     msg  = '%s or %s'%(LANGUAGE(30119),LANGUAGE(30152))
                 else:
                     opt  = ''

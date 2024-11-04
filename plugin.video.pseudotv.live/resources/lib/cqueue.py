@@ -113,7 +113,7 @@ class CustomQueue:
                 self.log("__pop, waitForAbort")
                 break
             elif self.service._suspend():
-                if self.service._interrupt(OVERLAY_DELAY): 
+                if self.service._interrupt(SETTINGS.getSettingInt('OSD_Timer')): 
                     self.log("__pop, _interrupt")
                     break
                 else: 

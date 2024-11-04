@@ -31,6 +31,7 @@ class RulesList:
                           MST3k(),
                           DisableOverlay(),
                           DisableReplay(),
+                          DisableOnChange(),
                           ForceSubtitles(),
                           DisableTrakt(),
                           RollbackPlaycount(),
@@ -106,7 +107,8 @@ class RulesList:
     def runActions(self, action, citem={}, parameter=None, inherited=None):
         if inherited is None: inherited = self
         self.log("runActions, %s action = %s, id = %s"%(inherited.__class__.__name__,action,citem.get('id')))
-        rules = (self.ruleItems.get(citem.get('id','')) or self.loadRules([citem]).get(citem.get('id','')) or {})
+        rules = self.ruleItems.get(citem.get('id',''))
+        if not rules: rules = (self.loadRules([citem]).get(citem.get('id','')) or {})
         for myId, rule in list(sorted(rules.items())):
             if action in rule.actions:
                 self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
@@ -547,9 +549,9 @@ class DisableOverlay(BaseRule):
         self.myId               = 50
         self.ignore             = False
         self.exclude            = False
-        self.name               = LANGUAGE(30042)
+        self.name               = LANGUAGE(30170)
         self.description        = LANGUAGE(33042)
-        self.optionLabels       = [LANGUAGE(30042)]
+        self.optionLabels       = [LANGUAGE(30170)]
         self.optionValues       = [SETTINGS.getSettingBool('Overlay_Enable')]
         self.optionDescriptions = [LANGUAGE(33042)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
@@ -562,8 +564,8 @@ class DisableOverlay(BaseRule):
 
 
     def getTitle(self):
-        if self.optionValues[0]: return LANGUAGE(30042)
-        else:                    return LANGUAGE(30142)
+        if self.optionValues[0]: return LANGUAGE(30170)
+        else:                    return LANGUAGE(30170)
 
 
     def onAction(self, optionindex):
@@ -738,6 +740,46 @@ class DisableReplay(BaseRule):
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.restartPercentage = self.storedValues[0]
         self.log("runAction, setting restartPercentage = %s"%(player.restartPercentage))
+        return parameter
+
+        
+class DisableOnChange(BaseRule):
+    def __init__(self):
+        self.myId               = 55
+        self.ignore             = False
+        self.exclude            = False
+        self.name               = LANGUAGE(30170)
+        self.description        = LANGUAGE(33171)
+        self.optionLabels       = [LANGUAGE(30170)]
+        self.optionValues       = [SETTINGS.getSettingBool('Enable_OnInfo')]
+        self.optionDescriptions = [LANGUAGE(33171)]
+        self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
+        self.selectBoxOptions   = [""]
+        self.storedValues       = [list() for idx in self.optionValues]
+
+
+    def copy(self):
+        return DisableOverlay()
+
+
+    def getTitle(self):
+        if self.optionValues[0]: return LANGUAGE(30170)
+        else:                    return LANGUAGE(30171)
+
+
+    def onAction(self, optionindex):
+        self.onActionToggleBool(optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, citem, parameter, player):
+        if actionid == RULES_ACTION_PLAYER_START:
+            self.storedValues[0] = player.infoOnChange
+            player.infoOnChange = self.optionValues[0]
+            
+        elif actionid == RULES_ACTION_PLAYER_STOP:
+            player.infoOnChange = self.storedValues[0]
+        self.log("runAction, setting infoOnChange = %s"%(player.infoOnChange))
         return parameter
 
 

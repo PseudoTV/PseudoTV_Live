@@ -581,6 +581,18 @@
                     </dependencies>
                     <control type="toggle"/>
                 </setting>
+                <setting id="Enable_OnInfo" type="boolean" label="30170" help="33171" parent="Overlay_Enable">
+                    <level>1</level>
+                    <default>true</default>
+                    <dependencies>
+                        <dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="Overlay_Enable">true</condition>
+                            </and>
+                        </dependency>
+                    </dependencies>
+                    <control type="toggle"/>
+                </setting>
                 <setting id="Restart_Percentage" type="integer" label="30153" help="33153" parent="Overlay_Enable">
                     <level>1</level>
                     <default>0</default>
@@ -772,6 +784,19 @@
                         <minimum>1</minimum>
                         <step>1</step>
                         <maximum>31</maximum>
+                    </constraints>
+                    <control type="slider" format="integer">
+                        <popup>false</popup>
+                    </control>
+                </setting>
+                <setting id="OSD_Timer" type="integer" label="30169" help="33036">
+                    <level>3</level>
+                    <enable>false</enable>
+                    <default>5</default>
+                    <constraints>
+                        <minimum>0</minimum>
+                        <step>5</step>
+                        <maximum>30</maximum>
                     </constraints>
                     <control type="slider" format="integer">
                         <popup>false</popup>

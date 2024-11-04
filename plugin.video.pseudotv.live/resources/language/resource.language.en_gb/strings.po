@@ -697,6 +697,18 @@ msgctxt "#30168"
 msgid "Visit Project Wiki"
 msgstr ""
 
+msgctxt "#30169"
+msgid "OSD Display Time"
+msgstr ""
+
+msgctxt "#30170"
+msgid "Show OSD on change"
+msgstr ""
+
+msgctxt "#30171"
+msgid "Hide OSD on change"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -1902,6 +1914,10 @@ msgstr ""
 
 msgctxt "#33170"
 msgid "Delete channel Path"
+msgstr ""
+
+msgctxt "#33171"
+msgid "Display OSD on change"
 msgstr ""
 
 msgctxt "#33180"

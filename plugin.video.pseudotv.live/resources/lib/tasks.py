@@ -160,8 +160,9 @@ class Tasks():
 
     def chkKodiSettings(self):
         self.log('chkKodiSettings')
-        if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1): SETTINGS.setSettingInt('Min_Days',min)
-        if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3): SETTINGS.setSettingInt('Max_Days',max)
+        SETTINGS.setSettingInt('Min_Days' ,(self.jsonRPC.getSettingValue('epg.pastdaystodisplay')      or 1))
+        SETTINGS.setSettingInt('Max_Days' ,(self.jsonRPC.getSettingValue('epg.futuredaystodisplay')    or 3))
+        SETTINGS.setSettingInt('OSD_Timer',(self.jsonRPC.getSettingValue('pvrmenu.displaychannelinfo') or 5))
         SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.jsonRPC.getSettingValue("services.zeroconf")],{True:'Online',False:'Offline'}[self.jsonRPC.getSettingValue("services.zeroconf")]))
          
 

@@ -1,4 +1,5 @@
 v.0.5.6
+-Added New global rule "Show OSD on change"; Display OSD Info when new channel content starts. Advanced Channel Rules available.
 -Fixed User reported issues with browsing channel logos, parsing stacked MP4 files and moving channels within the channel manager.
 -Added Zeroconf Multi-Room configuration; replacing the previous pairing method.
  - To use multi-room "Zeroconf" must be enabled under Kodi "Services/General" settings. 
