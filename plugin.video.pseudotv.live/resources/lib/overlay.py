@@ -80,9 +80,10 @@ class Replay(xbmcgui.WindowXMLDialog):
         xpos = control.getX()
         while not self.service.monitor.abortRequested():
             if (self.service.monitor.waitForAbort(1.0) or wait < 0 or self._closing): break
-            prog = int((abs(wait-tot)*100)//tot)
-            if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
-            wait -= 1
+            else:
+                prog = int((abs(wait-tot)*100)//tot)
+                if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
+                wait -= 1
         self.onClose()
 
         

@@ -45,15 +45,19 @@ class Fillers:
             except: folder = 'special://profile/addon_data/%s/resources/'%(id)
             self.log('getAdvertPath, folder = %s'%(folder))
             return folder
-        return ''
        
 
     def fillSources(self):
         for ftype, values in list(self.builder.bctTypes.items()):
             if not values.get('enabled',False) or self.builder.service._interrupt(): continue
-            if self.builder.bctTypes['adverts'].get('incIspot',False) and ftype == 'adverts':  self.builder.bctTypes["adverts"]["sources"]["paths"].append(self.getAdvertPath())
-            if self.builder.bctTypes['trailers'].get('incIMDB',False) and ftype == 'trailers': self.builder.bctTypes["trailers"]["sources"]["paths"].extend(IMDB_PATHS) 
-            if self.builder.bctTypes['trailers'].get('incKODI',False) and ftype == 'trailers': self.builder.bctTypes['trailers']['items'] = mergeDictLST(self.builder.bctTypes['trailers']['items'],self.builder.kodiTrailers())
+            if self.builder.bctTypes.get(ftype,{}).get("incIspot",False):
+                self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).append(self.getAdvertPath())
+                
+            if self.builder.bctTypes.get(ftype,{}).get('incIMDB',False):
+                self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).extend(IMDB_PATHS) 
+                
+            if self.builder.bctTypes.get(ftype,{}).get('incKODI',False):
+                self.builder.bctTypes.get(ftype,{})["items"] = mergeDictLST(self.builder.bctTypes.get(ftype,{}).get("items",[]), self.builder.kodiTrailers())
 
             for id   in values["sources"].get("ids",[]):   values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,id))   #parse resource packs
             for path in values["sources"].get("paths",[]): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,path)) #parse vfs paths

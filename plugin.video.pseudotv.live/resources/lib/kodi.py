@@ -371,8 +371,8 @@ class Settings:
 
     @cacheit(expiration=datetime.timedelta(minutes=5))
     def getPayloadUI(self):
-        from json2table import convert
-        return convert(self.getPayload(inclMeta=True),build_direction="LEFT_TO_RIGHT",table_attributes={"style":"width:25%","class":"table-dark"})
+        from json2html import Json2Html
+        return Json2Html().convert(self.getPayload(inclMeta=True))
 
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings

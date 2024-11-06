@@ -128,29 +128,31 @@ class CustomQueue:
                     if not self.min_heap:
                         self.log("__pop, The priority queue is empty!")
                         break
-                    min_num, _, package = heapq.heappop(self.min_heap)
-                    self.qsize -= 1
-                    self.__run(*package)
+                    else:
+                        min_num, _, package = heapq.heappop(self.min_heap)
+                        self.qsize -= 1
+                        self.__run(*package)
                         
                 elif self.fifo or self.lifo:
                     curr_node = self.head if self.fifo else self.tail
                     if curr_node is None: break
-                    package = curr_node.package
-                    self.log('__pop, fifo/lifo package = %s'%(package))
-                    next_node = curr_node.__next__ if self.fifo else curr_node.prev
-                    if next_node:      next_node.prev = curr_node.prev if self.fifo else next_node.prev
-                    if curr_node.prev: curr_node.prev.next = curr_node.__next__ if self.fifo else curr_node.prev
-    
-                    if self.fifo: self.head = next_node
-                    else:         self.tail = next_node
-                    
-                    if not self.delay: package, self.__run(*package)
                     else:
-                        popTimer = Timer(curr_node.wait, *package)
-                        if popTimer.is_alive(): popTimer.join()
+                        package = curr_node.package
+                        self.log('__pop, fifo/lifo package = %s'%(package))
+                        next_node = curr_node.__next__ if self.fifo else curr_node.prev
+                        if next_node:      next_node.prev = curr_node.prev if self.fifo else next_node.prev
+                        if curr_node.prev: curr_node.prev.next = curr_node.__next__ if self.fifo else curr_node.prev
+        
+                        if self.fifo: self.head = next_node
+                        else:         self.tail = next_node
+                        
+                        if not self.delay: package, self.__run(*package)
                         else:
-                            popTimer.daemon = True
-                            popTimer.start()
+                            popTimer = Timer(curr_node.wait, *package)
+                            if popTimer.is_alive(): popTimer.join()
+                            else:
+                                popTimer.daemon = True
+                                popTimer.start()
                 else:
                     self.log("__pop, queue undefined!")
                     break
