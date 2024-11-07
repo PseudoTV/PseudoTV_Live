@@ -27,7 +27,6 @@ class Channels:
         self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP = getJSON(CHANNEL_ITEM)
         self.channelDATA.update(self._load())
-        self.chkUUID()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -40,7 +39,16 @@ class Channels:
         return channelDATA
     
     
+    def _verify(self, channels: list=[]):
+        for idx, citem in enumerate(self.channelDATA.get('channels',[])):
+            if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
+                self.log('_verify, in-valid citem [%s]\n%s'%(citem.get('id'),citem))
+                continue
+            else: yield citem
+                
+                
     def _save(self, file=CHANNELFLEPATH) -> bool:
+        self.channelDATA['uuid'] = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = sorted(self.channelDATA['channels'], key=itemgetter('number'))
         self.log('_save, channels = %s'%(len(self.channelDATA['channels'])))
         return setJSON(file,self.channelDATA)
@@ -90,16 +98,7 @@ class Channels:
     def setImports(self, data: list=[]) -> bool:
         self.channelDATA['imports'] = data
         return self.setChannels()
-        
-        
-    def chkUUID(self) -> str:
-        return self.channelDATA.get('uuid',SETTINGS.getMYUUID())
-        
-        
-    def setUUID(self, uuid: str='') -> bool:
-        self.channelDATA['uuid'] = uuid
-        return self._save()
-         
+
          
     def clearChannels(self):
         self.channelDATA['channels'] = []

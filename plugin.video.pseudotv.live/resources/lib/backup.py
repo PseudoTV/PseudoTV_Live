@@ -94,8 +94,6 @@ class Backup:
         ctl = (0,1) #settings return focus
         try:    param = self.sysARG[1]
         except: param = None
-        self.log('run, param = %s'%(param))
-
         if   param == 'Backup_Channels':  self.backupChannels()
         elif param == 'Recover_Channels': self.recoverChannels()
         return openAddonSettings(ctl)

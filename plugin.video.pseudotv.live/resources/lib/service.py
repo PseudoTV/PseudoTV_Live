@@ -400,34 +400,35 @@ class Service():
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _interrupt(self, wait=.0001) -> bool: #break
-        pendingInterrupt = (self.pendingRestart | PROPERTIES.isPendingInterrupt() | self.monitor.waitForAbort(wait))
-        if pendingInterrupt != self.monitor.pendingInterrupt:
-            self.monitor.pendingInterrupt = PROPERTIES.setInterrupt(pendingInterrupt)
-            self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
-        return self.monitor.pendingInterrupt
-    
-
-    def _suspend(self, wait=.0001) -> bool: #continue
-        pendingSuspend = (self.monitor.isSettingsOpened() | self.__playing() | PROPERTIES.isPendingSuspend())
-        if pendingSuspend != self.monitor.pendingSuspend:
-            self.monitor.pendingSuspend = PROPERTIES.setSuspend(pendingSuspend)
-            self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))
-        return (self.monitor.pendingSuspend | self.monitor.waitForAbort(wait))
-
-
-    def __restart(self, wait=1.0) -> bool:
-        pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart())
-        if pendingRestart != self.pendingRestart:
-            self.pendingRestart = PROPERTIES.setRestart(self.pendingRestart)
-            self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
-        return (self.pendingRestart | self.monitor.waitForAbort(wait))
-         
-         
     def __playing(self) -> bool:
         if self.player.isPlaying() and not self.runWhilePlaying: return True
         return False
     
+    
+    def __restart(self, wait=1.0) -> bool:
+        pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart() | self.monitor.waitForAbort(wait))
+        if pendingRestart != self.pendingRestart:
+            self.pendingRestart = PROPERTIES.setPendingRestart(self.pendingRestart)
+            self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
+        return self.pendingRestart
+         
+
+    def _interrupt(self) -> bool: #break
+        pendingInterrupt = (self.pendingRestart | PROPERTIES.isInterruptActivity())
+        if pendingInterrupt != self.monitor.pendingInterrupt:
+            self.monitor.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
+            self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
+        return self.monitor.pendingInterrupt
+    
+
+    def _suspend(self) -> bool: #continue
+        if self.monitor.pendingInterrupt: pendingSuspend = False
+        else: pendingSuspend = (self.monitor.isSettingsOpened() | self.__playing() | PROPERTIES.isSuspendActivity())
+        if pendingSuspend != self.monitor.pendingSuspend:
+            self.monitor.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
+            self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))
+        return self.monitor.pendingSuspend
+
 
     def __tasks(self):
         self.log('__tasks')

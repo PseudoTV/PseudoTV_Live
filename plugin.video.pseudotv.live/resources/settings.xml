@@ -30,6 +30,22 @@
                         <close>true</close>
                     </control>
                 </setting>
+                <setting id="Default_Channels" type="string" label="30172" help="33172" parent="Select_Channels">
+                    <level>3</level>
+                    <default>Auto</default>
+                    <constraints>
+                        <allowempty>false</allowempty>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Enabled_Servers),true)</condition>
+                        </dependency>
+                    </dependencies>
+                    <control type="button" format="action">
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Default_Channels)</data>
+                        <close>true</close>
+                    </control>
+                </setting>
                 <setting id="Backup_Channels" type="string" label="32110" help="33110" parent="Select_Channels">
                     <level>2</level>
                     <default/>

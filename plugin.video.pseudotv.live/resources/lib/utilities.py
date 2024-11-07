@@ -81,13 +81,16 @@ class Utilities:
             payload['debug']    = loadJSON(cleanLog(dumpJSON(payload.get('debug',{}),idnt=4)))
             payload['channels'] = loadJSON(cleanLog(dumpJSON(payload.get('channels',[]),idnt=4)))
             payload['m3u']      = loadJSON(cleanLog(dumpJSON(payload.get('m3u',[]),idnt=4)))
-            [payload.pop(key) for key in ['library','host','servers','remote','remotes'] if key in payload]
+            [payload.pop(key) for key in ['host','remotes','bonjour','library','servers'] if key in payload]
             return payload
         
-        def cleanLog(content):
-            for pattern, repl in (('//.+?:.+?@','//USER:PASSWORD@'),('<user>.+?</user>','<user>USER</user>'),('<pass>.+?</pass>','<pass>PASSWORD</pass>'),):
-                content = re.sub(pattern, repl, content)
-                return content
+        def cleanLog(content):           
+            content = re.sub('//.+?:.+?@'                  ,'//USER:PASSWORD@'     , content)
+            content = re.sub('<user>.+?</user>'            ,'<user>USER</user>'    , content)
+            content = re.sub('<pass>.+?</pass>'            ,'<pass>PASSWORD</pass>', content)
+            content = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", '0.0.0.0'             , content)
+            return content
+                
 
         def postLog(data):
             try:
@@ -104,9 +107,7 @@ class Utilities:
                 self.log('qrDebug, unable to retrieve the paste url')
                 return False, LANGUAGE("Failed to retrieve the paste url")
               
-        with BUILTIN.busy_dialog():
-            payload = SETTINGS.getPayload(inclMeta=True)
-            
+        with BUILTIN.busy_dialog(): payload = SETTINGS.getPayload(inclDebug=True)
         if   not payload.get('debug',{}): return DIALOG.notificationDialog(LANGUAGE(32187))
         elif not DIALOG.yesnoDialog(message=LANGUAGE(32188)): return
         
@@ -193,68 +194,79 @@ class Utilities:
 
 
     def sortMethod(self):
+        self.log('sortMethod')
         with BUILTIN.busy_dialog():
             from jsonrpc import JSONRPC
-            jsonRPC = JSONRPC()
-            values  = sorted([item.title() for item in jsonRPC.getEnums("List.Sort",type="method")])
-            del jsonRPC
+            values  = sorted([item.title() for item in JSONRPC().getEnums("List.Sort",type="method")])
         select = DIALOG.selectDialog(values, LANGUAGE(32214), findItemsInLST(values, [SETTINGS.getSetting('Sort_Method').lower()])[0], False, SELECT_DELAY, False)
         if not select is None: return SETTINGS.setSetting('Sort_Method',values[select])
 
 
+    def defaultChannels(self):
+        self.log('defaultChannels')
+        with BUILTIN.busy_dialog():
+            values = [cleanLabel(value) for value in SETTINGS.getSettingList('Select_server')]
+            values.insert(0,'Auto')
+            values.insert(1,'Ask')
+        select = DIALOG.selectDialog(values, LANGUAGE(30173), findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
+        if not select is None: return SETTINGS.setSetting('Default_Channels',values[select])
+        else:                  return SETTINGS.setSetting('Default_Channels','Auto')
+
+
     def run(self):
         ctl = (0,1)
-        try:
-            param = self.sysARG[1]
-            self.log('run, param = %s'%(param))
-            #Channels
-            if param.startswith('Channel_Manager'):
-                ctl = (0,1)
-                self.openChannelManager()
-
-            #Options
-            elif param == 'User_Groups':
-                ctl = (2,10)
-                self.userGroups()
-                
-            #Globals
-            elif param.startswith('Move_Channelbug'):
-                ctl = (3,15)
-                self.openChannelBug()
-            elif param == 'Sort_Method':
-                ctl = (3,16)
-                self.sortMethod()
-                
-            #Multi-Room
-            elif param == 'Show_ZeroConf_QR':
-                ctl = (5,5)
-                self.qrBonjourDL()
-
-            #Misc.Docs
-            elif param == 'Utilities':
-                ctl = (6,1)
-                return self.buildMenu()
-            elif param == 'Show_Wiki_QR':
-                ctl = (6,4)
-                return self.qrWiki()
-            elif param == 'Show_Support_QR':
-                ctl = (6,5)
-                self.qrSupport()
-            elif param == 'Show_Remote_UI':
-                ctl = (6,6)
-                self.qrRemote()
-            elif param == 'Show_Readme_QR':  
-                ctl = (6,7)
-                self.qrReadme()
-            elif param == 'Show_Changelog':
-                ctl = (6,8)
-                return self.showChangelog()
-                
-            #Misc. Debug
-            elif param == 'Debug_QR':
-                ctl = (6,1)
-                self.qrDebug()
+        try:    param = self.sysARG[1]
         except: param = None
+        #Channels
+        if param.startswith('Channel_Manager'):
+            ctl = (0,1)
+            self.openChannelManager()
+        elif param.startswith('Default_Channels'):
+            ctl = (0,2)
+            self.defaultChannels()
+            
+        #Options
+        elif param == 'User_Groups':
+            ctl = (2,10)
+            self.userGroups()
+            
+        #Globals
+        elif param.startswith('Move_Channelbug'):
+            ctl = (3,15)
+            self.openChannelBug()
+        elif param == 'Sort_Method':
+            ctl = (3,16)
+            self.sortMethod()
+            
+        #Multi-Room
+        elif param == 'Show_ZeroConf_QR':
+            ctl = (5,5)
+            self.qrBonjourDL()
+
+        #Misc.Docs
+        elif param == 'Utilities':
+            ctl = (6,1)
+            return self.buildMenu()
+        elif param == 'Show_Wiki_QR':
+            ctl = (6,4)
+            return self.qrWiki()
+        elif param == 'Show_Support_QR':
+            ctl = (6,5)
+            self.qrSupport()
+        elif param == 'Show_Remote_UI':
+            ctl = (6,6)
+            self.qrRemote()
+        elif param == 'Show_Readme_QR':  
+            ctl = (6,7)
+            self.qrReadme()
+        elif param == 'Show_Changelog':
+            ctl = (6,8)
+            return self.showChangelog()
+            
+        #Misc. Debug
+        elif param == 'Debug_QR':
+            ctl = (6,1)
+            self.qrDebug()
         return openAddonSettings(ctl)
 
 if __name__ == '__main__': Utilities(sys.argv).run()

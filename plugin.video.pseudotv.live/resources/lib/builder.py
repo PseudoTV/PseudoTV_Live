@@ -120,13 +120,14 @@ class Builder:
             updated = False
             for idx, citem in enumerate(channels):
                 if self.service._interrupt():
-                    self.pErrors = [LANGUAGE(32160)]
                     self.completeBuild = False
+                    self.pErrors = [LANGUAGE(32160)]
                     self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                     break
                 elif self.service._suspend():
                     channels.insert(idx,citem)
                     self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
+                    self.service.monitor.waitForAbort(EPOCH_TIMER)
                     continue
                 else:
                     self.pMSG   = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
@@ -239,9 +240,12 @@ class Builder:
                 
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self)
         if not _validFileList(fileArray):
-            for idx, file in enumerate(citem.get('path',[])):
-                if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
-                fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
+            paths = citem.get('path',[])
+            for idx, file in enumerate(paths):
+                if self.service._interrupt(): return []
+                else:
+                    if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
+                    fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
 
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self)
         if not _validFileList(fileArray):#check that at least one fileList in array contains meta
@@ -272,7 +276,8 @@ class Builder:
         
         while not self.service.monitor.abortRequested():
             #Not all results are flat hierarchies; walk all paths until fileList limit is reached. ie. Plugins with [NEXT PAGE]
-            if   len(fileList) >= limit: break
+            if self.service._interrupt(): return []
+            elif len(fileList) >= limit:  break
             elif len(dirList) == 0:
                 self.log('buildFileList, [%s] no more folders to parse'%(citem['id']))
                 break
@@ -291,7 +296,10 @@ class Builder:
         self.log("buildList, [%s] media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
         dirList, fileList, seasoneplist, trailersdict = [], [], [], {}
         items, nlimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
-        if errors.get('message'):
+        if self.service._interrupt():
+            self.jsonRPC.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #rollback pagination limits
+            return [], []
+        elif errors.get('message'):
             self.pErrors.append(errors['message'])
             return fileList, dirList
         elif items == self.loopback and limits != nlimits:# malformed jsonrpc queries will return root response, catch a re-parse and return.

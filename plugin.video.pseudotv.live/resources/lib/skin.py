@@ -21,19 +21,19 @@
 
 # class Service:
     # from jsonrpc import JSONRPC
-    # monitor = MONITOR()
+    # monitor = xbmc.Monitor()
     # jsonRPC = JSONRPC()
-    # def _interrupt(self, wait: float=.0001) -> bool:
-        # return self.monitor.waitForAbort(wait)
+    # def _interrupt(self) -> bool:
+        # return PROPERTIES.isPendingInterrupt()
     # def _suspend(self) -> bool:
         # return PROPERTIES.isPendingSuspend()
-
+        
 # class Skin:
     # def __init__(self, service=None):
         # if service is None: service = Service()
         # self.jsonRPC = service.jsonRPC
 
-
+# #todo match kodi skin color scheme/profile by parsing json values and creating skin vars.
 
 # lookandfeel.skincolors
 # {"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"lookandfeel.skincolors"}.get('value')

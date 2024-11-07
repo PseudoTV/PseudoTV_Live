@@ -44,11 +44,13 @@ class Manager(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         with BUILTIN.busy_dialog():
+            self.server         = {}
             self.lockAutotune   = True
             self.madeChanges    = False
             self.lastActionTime = time.time()
             self.cntrlStates    = {}
             self.showingList    = True
+            self.startChannel   = kwargs.get('channel',-1)
             
             self.cache          = SETTINGS.cache
             self.channels       = Channels()
@@ -56,12 +58,11 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.resources      = Resources(self.jsonRPC)
             self.rule           = RulesList()
             
-            self.eChannels      = self.channels.getChannels() #existing channels
             self.newChannel     = self.channels.getTemplate()
+            self.eChannels      = self.__loadChannels(SETTINGS.getSetting('Default_Channels'))
             self.channelList    = sorted(self.createChannelList(self.buildArray(), self.eChannels), key=itemgetter('number'))
             self.newChannels    = self.channelList.copy()
             
-            self.startChannel   = kwargs.get('channel',-1)
             if self.startChannel == -1:            self.startChannel = self.getFirstAvailChannel()
             if self.startChannel <= CHANNEL_LIMIT: self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
             else:                                  self.focusIndex   = self.findChannelIDXbyNum(self.startChannel)
@@ -78,6 +79,38 @@ class Manager(xbmcgui.WindowXMLDialog):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
+    def __loadChannels(self, name=''):
+        self.log('__loadChannels, name = %s'%(name))
+        with BUILTIN.busy_dialog():
+            from multiroom  import Multiroom
+            channels = self.channels.getChannels()
+            servers  = Multiroom().getDiscovery()
+            enabled  = SETTINGS.getSettingList('Select_server')
+            friendly = SETTINGS.getFriendlyName()
+            
+        if name == 'Auto':
+            if   len(channels) > 0: return channels
+            elif len(enabled) > 0:
+                for name in enabled:
+                    if servers.get(name,{}).get('online',False):
+                        self.server = servers.get(name,{})
+                        return self.server.get('channels',[])
+            return self.__loadChannels('Ask')
+        elif name == 'Ask':
+            def __build(idx, server):
+                return LISTITEMS.buildMenuListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)]),server.get('host'),len(server.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)))
+      
+            lizlst = [__build(idx+1, server) for idx, server in enumerate(list(servers.values())) if server.get('online',False)]
+            lizlst.insert(0,LISTITEMS.buildMenuListItem(friendly,'%s: Channels (%s)'%('Local',len(channels)),icon=DUMMY_ICON.format(text=str(1))))
+            select = DIALOG.selectDialog(lizlst, LANGUAGE(30173), None, True, SELECT_DELAY, False)
+            if not select is None: return self.__loadChannels(lizlst[select].getLabel())
+        elif name == friendly: return channels
+        elif name:
+            self.server = servers.get(name,{})
+            return self.server.get('channels',[])
+        return channels
+    
+        
     def onInit(self):
         try:
             self.focusItems    = dict()
@@ -166,7 +199,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     elif isFavorite:     channelColor = COLOR_FAVORITE_CHANNEL
                     elif isRadio:        channelColor = COLOR_RADIO_CHANNEL
                     else:                channelColor = COLOR_AVAILABLE_CHANNEL
-            return self.buildListItem('[COLOR=%s][B]%s|[/COLOR][/B]'%(channelColor,citem["number"]),'[COLOR=%s]%s[/COLOR]'%(labelColor,citem.get("name",'')),items={'citem':citem,'description':LANGUAGE(32169)%(citem["number"])})
+            return self.buildListItem('[COLOR=%s][B]%s|[/COLOR][/B]'%(channelColor,citem["number"]),'[COLOR=%s]%s[/COLOR]'%(labelColor,citem.get("name",'')),items={'citem':citem,'description':LANGUAGE(32169)%('%s on %s'%(citem["number"],self.server.get('name','local')))})
                 
         ## Fill chanList listitem for display. *reset draws new control list. *focus list index for channel position.
         self.togglechanList(True,reset=reset)
@@ -657,7 +690,11 @@ class Manager(xbmcgui.WindowXMLDialog):
         if   not self.madeChanges: return
         elif not DIALOG.yesnoDialog(LANGUAGE(32076)): return
         with self.toggleSpinner(self.chanList):
-            self.channels.setChannels(self.validateChannels(self.newChannels))
+            if self.server:
+                payload = {'uuid':SETTINGS.getMYUUID(),'name':SETTINGS.getFriendlyName(),'channels':self.validateChannels(self.newChannels)}
+                print(postURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), params=dumpJSON(payload), header=HEADER))
+                #todo write tmp file if post fails, add to que to repost when url online.
+            else: self.channels.setChannels(self.validateChannels(self.newChannels))
         self.closeManager()
             
         

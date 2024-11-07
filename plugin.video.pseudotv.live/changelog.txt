@@ -1,4 +1,10 @@
 v.0.5.6
+-Added Multi-Room channels to the channel manager w/ default server option in settings.
+ - W.I.P there will be bugs (remote save disabled until finished.); For proper system setup info can be found on the wiki under "Recommend Prerequisites".
+ - All Kodi instances are required to broadcast Zeroconf for two way communication between PseudoTV Live instances.
+ - Default Channel List:
+   - Auto: Local if available then, first online server from enabled server list else, ask.
+   - Ask: Select from any Zeroconf online instance found.
 -Added New global rule "Show OSD on change"; Display OSD Info when new channel content starts. Advanced Channel Rules available.
 -Fixed User reported issues with browsing channel logos, parsing stacked MP4 files and moving channels within the channel manager.
 -Added Zeroconf Multi-Room configuration; replacing the previous pairing method.

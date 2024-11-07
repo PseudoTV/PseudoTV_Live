@@ -92,7 +92,7 @@ class Tasks():
 
     def chkServers(self):
         self.log('chkServers')
-        Multiroom(service=self.service).hasServers()
+        Multiroom(service=self.service).chkServers()
 
 
     def chkPVRBackend(self): 

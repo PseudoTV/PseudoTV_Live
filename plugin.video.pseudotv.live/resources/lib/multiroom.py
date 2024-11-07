@@ -25,10 +25,10 @@ class Service:
     from jsonrpc import JSONRPC
     monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
-    def _interrupt(self, wait: float=.0001) -> bool:
-        return (PROPERTIES.isInterrupt() | self.monitor.waitForAbort(wait))
+    def _interrupt(self) -> bool:
+        return PROPERTIES.isPendingInterrupt()
     def _suspend(self) -> bool:
-        return PROPERTIES.isSuspend()
+        return PROPERTIES.isPendingSuspend()
         
         
 class Multiroom:
@@ -55,40 +55,50 @@ class Multiroom:
         Discovery(service=self.service, multiroom=self)
                 
 
-    def hasServers(self, servers={}):
+    def chkServers(self, servers={}):
         def __chkSettings(settings):
             [hasAddon(id,install=True,enable=True) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
             
         if not servers: servers = self.getDiscovery()
-        self.log('hasServers, servers = %s'%(len(servers)))
-        enabledServers = [server for server in list(servers.values()) if server.get('enabled',False)]
         PROPERTIES.setServers(len(servers) > 0)
-        PROPERTIES.setEnabledServers(len(enabledServers) > 0)
-        SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in enabledServers]))
-        for server in enabledServers:
+        for server in list(servers.values()):
             online = server.get('online',False)
-            if self.getRemote(server['remotes'].get('remote')): server['online'] = True
-            else:                                               server['online'] = False
-            __chkSettings(loadJSON(server.get('settings')))
-            if online != server.get('online',False): DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)])))
+            if self.getRemote(server['remotes'].get('bonjour')): server['online'] = True
+            else:                                                server['online'] = False
+            if server.get('enabled',False):
+                if online != server.get('online',False): DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)])))
+                __chkSettings(loadJSON(server.get('settings')))
+        SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
+        self.log('chkServers, servers = %s'%(len(servers)))
         return servers
-        
-            
+
+
     def getDiscovery(self):
         return getJSON(SERVER_LOC).get('servers',{})
 
 
     def setDiscovery(self, servers={}):
-        return setJSON(SERVER_LOC,{"servers":self.hasServers(servers)})
+        return setJSON(SERVER_LOC,{"servers":self.chkServers(servers)})
+            
+            
+    def getEnabled(self, servers={}):
+        if not servers: servers = self.getDiscovery()
+        enabled = [server for server in list(servers.values()) if server.get('enabled',False)]
+        PROPERTIES.setEnabledServers(len(enabled) > 0)
+        return enabled
+            
+            
+    @cacheit(expiration=datetime.timedelta(minutes=EPOCH_TIMER), json_data=True)
+    def getURL(self, remote):
+        return getURL(remote,header={'Accept':'application/json'},json_data=True)
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
     def getRemote(self, remote):
         self.log("getRemote, remote = %s"%(remote))
         cacheName = 'getRemote.%s'%(remote)
-        response  = getURL(remote,header={'Accept':'application/json'},json_data=True)
-        if response: return self.cache.set(cacheName, response, expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
-        else:        return self.cache.get(cacheName, json_data=True) #retrieve cached response incase server is temporarily offline
+        response  = self.getURL(remote)
+        if response: return self.cache.set(cacheName, response, checksum=self.uuid, expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
+        else:        return self.cache.get(cacheName, checksum=self.uuid, json_data=True) #retrieve cached response incase server is temporarily offline
         
          
     def addServer(self, payload={}):
@@ -99,12 +109,14 @@ class Multiroom:
             server  = servers.get(payload.get('name'),{})
             if not server: 
                 payload['enabled'] = not bool(SETTINGS.getSettingBool('Debug_Enable'))  #set enabled by default when not debugging.
+                self.log('addServer, adding server = %s'%(payload))
                 DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
-                servers.update({payload.get('name'):payload})
+                servers[payload['name']] = payload
             else:
-                self.log('addServer, updating server = %s'%(server))
                 payload['enabled'] = server.get('enabled',False)
-                if payload.get('md5',server.get('md5')) != server.get('md5'): servers.update({payload.get('name'):payload})
+                if payload.get('md5',server.get('md5')) != server.get('md5'): 
+                    self.log('addServer, updating server = %s'%(server))
+                    servers.update({payload['name']:payload})
             
             if self.setDiscovery(servers):
                 instancePath = SETTINGS.hasPVRInstance(server.get('name'))
@@ -116,14 +128,14 @@ class Multiroom:
             return True
 
 
-    def delServer(self):
+    def delServer(self, servers={}):
         self.log('delServer')
-        def _build(payload):
-            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:'Online',False:'Offline'}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))))
+        def __build(idx, payload):
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:'Online',False:'Offline'}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
-            servers = self.getDiscovery()
-            lizlst  = poolit(_build)(list(servers.values()))
+            if not servers: servers = self.getDiscovery()
+            lizlst  = [__build(idx, server) for idx, server in enumerate(list(servers.values()))]
 
         selects = DIALOG.selectDialog(lizlst,LANGUAGE(32183))
         if not selects is None:
@@ -134,18 +146,18 @@ class Multiroom:
 
     def selServer(self):
         self.log('selServer')
-        def __build(payload):
-            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:'Online',False:'Offline'}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))))
+        def __build(idx, payload):
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:'Online',False:'Offline'}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
-            lizlst  = poolit(__build)(list(servers.values()))
+            lizlst  = [__build(idx, server) for idx, server in enumerate(list(servers.values()))]
             if len(lizlst) > 0: lizlst.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]- %s[/B][/COLOR]'%(LANGUAGE(30046)),LANGUAGE(33046)))
             else: return
             
         selects = DIALOG.selectDialog(lizlst,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizlst) if loadJSON(listitem.getPath()).get('enabled',False)])
         if not selects is None:
-            if 0 in selects: return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py,Remove_server)')
+            if 0 in selects: return self.delServer(servers)
             else:
                 for idx, liz in enumerate(lizlst):
                     if idx == 0: continue
@@ -161,7 +173,8 @@ class Multiroom:
                             DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
                             servers[liz.getLabel()]['enabled'] = False
                         if instancePath: FileAccess.delete(instancePath)
-                return self.setDiscovery(servers)
+                with BUILTIN.busy_dialog():
+                    return self.setDiscovery(servers)
 
 
     def enableZeroConf(self):
@@ -171,13 +184,14 @@ class Multiroom:
                 return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_ZeroConf_QR)')
             elif DIALOG.yesnoDialog(message=LANGUAGE(30129)):
                 if self.jsonRPC.setSettingValue("services.zeroconf","true"):
+                    DIALOG.notificationDialog(LANGUAGE(32219)%('ZeroConf'))
                     PROPERTIES.forceUpdateTime('chkKodiSettings')
+        else: DIALOG.notificationDialog(LANGUAGE(32219)%('ZeroConf Already'))
                     
             
     def run(self):
         try:    param = self.sysARG[1]
         except: param = None
-        self.log('run, param = %s'%(param))
         if param == 'Enable_ZeroConf': 
             ctl = (5,1)
             self.enableZeroConf()

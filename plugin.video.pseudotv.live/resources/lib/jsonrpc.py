@@ -523,20 +523,19 @@ class JSONRPC:
 
 
     @cacheit(expiration=datetime.timedelta(seconds=EPOCH_TIMER),json_data=False)
-    def InputFriendlyName(self):
+    def inputFriendlyName(self):
         with PROPERTIES.suspendActivity():
-            fn = self.getSettingValue("services.devicename")
-            self.log("InputFriendlyName, name = %s"%(fn))
-            if not fn or fn.lower() == 'kodi':
-                if DIALOG.okDialog(LANGUAGE(32132)%(fn)):
-                    input = DIALOG.inputDialog(LANGUAGE(30122), fn)
-                    if not input or input.lower() == 'kodi':
-                        return self.InputFriendlyName()
+            friendly = self.getSettingValue("services.devicename")
+            self.log("inputFriendlyName, name = %s"%(friendly))
+            if not friendly or friendly.lower() == 'kodi':
+                if DIALOG.okDialog(LANGUAGE(32132)%(friendly)):
+                    friendly = DIALOG.inputDialog(LANGUAGE(30122), friendly)
+                    if not friendly or friendly.lower() == 'kodi':
+                        return self.inputFriendlyName()
                     else:
-                        self.setSettingValue("services.devicename",input)
-                        self.log('InputFriendlyName, setting device name = %s'%(input))
-                        return input
-            return fn
+                        self.setSettingValue("services.devicename",friendly)
+                        self.log('inputFriendlyName, setting device name = %s'%(friendly))
+            return friendly
             
             
     def getCallback(self, sysInfo={}):

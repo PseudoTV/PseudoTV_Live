@@ -190,7 +190,6 @@ class Autotune:
         ctl = (1,1) #settings return focus
         try:    param = self.sysARG[1]
         except: param = None
-        self.log('run, param = %s'%(param))
         if param.replace('_',' ') in AUTOTUNE_TYPES:
             ctl = (1,AUTOTUNE_TYPES.index(param.replace('_',' '))+1)
             self.selectAUTOTUNE(param.replace('_',' '))

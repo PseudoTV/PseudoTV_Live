@@ -709,6 +709,14 @@ msgctxt "#30171"
 msgid "Hide OSD on change"
 msgstr ""
 
+msgctxt "#30172"
+msgid "Channel List"
+msgstr ""
+
+msgctxt "#30173"
+msgid "Select Server"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -1582,6 +1590,14 @@ msgctxt "#32218"
 msgid "Not Needed..."
 msgstr ""
 
+msgctxt "#32219"
+msgid "%s Enabled"
+msgstr ""
+
+msgctxt "#32220"
+msgid "%s Disabled"
+msgstr ""
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"
@@ -1918,6 +1934,10 @@ msgstr ""
 
 msgctxt "#33171"
 msgid "Display OSD on change"
+msgstr ""
+
+msgctxt "#33172"
+msgid "Default Channel List the Channel Manager starts with."
 msgstr ""
 
 msgctxt "#33180"

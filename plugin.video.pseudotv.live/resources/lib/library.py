@@ -30,11 +30,12 @@ class Service:
     from jsonrpc import JSONRPC
     monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
-    def _interrupt(self, wait: float=.0001) -> bool:
-        return (PROPERTIES.isInterrupt() | self.monitor.waitForAbort(wait))
+    def _interrupt(self) -> bool:
+        return PROPERTIES.isPendingInterrupt()
     def _suspend(self) -> bool:
-        return PROPERTIES.isSuspend()
-
+        return PROPERTIES.isPendingSuspend()
+        
+        
 class Library:
     def __init__(self, service=None):
         if service is None: service = Service()
@@ -89,6 +90,7 @@ class Library:
         
     def setLibrary(self, type, items=[]):
         self.log('setLibrary')
+        self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
         self.libraryDATA['library'][type] = items
         PROPERTIES.setEXTProperty('%s.has.%s'%(ADDON_ID,slugify(type)),str(len(items)>0).lower())
         SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabled(type)),len(items)))
@@ -132,10 +134,15 @@ class Library:
         complete = True 
         self.parserDialog = DIALOG.progressBGDialog()
         
-        for idx, type in enumerate(AUTOTUNE_TYPES):
+        types = AUTOTUNE_TYPES
+        for idx, type in enumerate(types):
             if self.service._interrupt():
                 complete = False
                 break
+            elif self.service._suspend():
+                types.insert(idx,type)
+                self.service.monitor.waitForAbort(EPOCH_TIMER)
+                continue
             else:
                 msg = LANGUAGE(30014)
                 func = self.libraryFUNCS[type]

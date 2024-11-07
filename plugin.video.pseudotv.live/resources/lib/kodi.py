@@ -22,6 +22,7 @@ import json, uuid, zlib, base64
 from globals     import *
 from six.moves   import urllib 
 from fileaccess  import FileAccess
+from json2html   import Json2Html
 from collections import Counter, OrderedDict
 from ast         import literal_eval
 from contextlib  import contextmanager, closing
@@ -147,7 +148,7 @@ class Settings:
                 if item.get('label','').lower().startswith(instance.lower()): return item
 
         with Builtin().busy_dialog():
-            from jsonrpc import JSONRPC
+            from jsonrpc     import JSONRPC
             jsonRPC = JSONRPC()
             baseURL = 'pvr://channels/tv/'
             for name in ['%s [All channels]'%(instance), instance, 'All channels']:
@@ -303,24 +304,20 @@ class Settings:
 
 
     def getFriendlyName(self):
-        friendly = self.getCacheSetting('Friendly_Name')
-        if not friendly:
-            from jsonrpc import JSONRPC
-            jsonRPC  = JSONRPC()
-            friendly = self.setCacheSetting('Friendly_Name',jsonRPC.InputFriendlyName())
-            del jsonRPC
-        return friendly
+        from jsonrpc     import JSONRPC
+        return JSONRPC().inputFriendlyName()
 
 
     def getMYUUID(self):
-        uuid = self.getCacheSetting('MY_UUID')
-        if not uuid: uuid = self.setCacheSetting('MY_UUID',genUUID(seed=self.getFriendlyName()))
+        friendly = self.getFriendlyName()
+        uuid = self.getCacheSetting('MY_UUID', checksum=friendly)
+        if not uuid: uuid = self.setCacheSetting('MY_UUID', genUUID(seed=self.getFriendlyName()), checksum=friendly)
         return uuid
 
 
     @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
-    def getBonjour(self):
-        self.log("getBonjour")
+    def getBonjour(self, inclChannels=False):
+        self.log("getBonjour, inclChannels = %s"%(inclChannels))
         payload = {'id'      :ADDON_ID,
                    'uuid'    :self.getMYUUID(),
                    'version' :ADDON_VERSION,
@@ -329,41 +326,45 @@ class Settings:
                    'build'   :Builtin().getInfoLabel('BuildVersion','System'),
                    'name'    :self.getFriendlyName(),
                    'host'    :self.property.getRemoteURL()}
+                   
+        payload['remotes']   = {'bonjour':'http://%s/%s'%(payload['host'],BONJOURFLE),
+                                'remote' :'http://%s/%s'%(payload['host'],REMOTEFLE),
+                                'm3u'    :'http://%s/%s'%(payload['host'],M3UFLE),
+                                'xmltv'  :'http://%s/%s'%(payload['host'],XMLTVFLE),
+                                'genre'  :'http://%s/%s'%(payload['host'],GENREFLE)}
+                              
+        payload['settings']  = {'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
+                                'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
+                                'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
+                                'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
+                                'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}
+                                
+        if inclChannels: 
+            from channels    import Channels
+            payload['channels'] = Channels().getChannels()
         payload['updated'] = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         payload['md5']     = getMD5(dumpJSON(payload))
         return payload
     
     
     @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
-    def getPayload(self, inclMeta: bool=False):
-        self.log("getPayload, inclMeta! %s"%(inclMeta))
+    def getPayload(self, inclDebug: bool=False):
+        self.log("getPayload, inclDebug! %s"%(inclDebug))
         def __getMeta(payload):
-            from m3u        import M3U
-            from xmltvs     import XMLTVS
-            from library    import Library
-            from multiroom  import Multiroom
-            try:
-                payload['library']  = Library().getLibrary()
-                payload['m3u']      = M3U().getM3U()
-                payload['xmltv']    = {'stations':XMLTVS().getChannels(), 'recordings':XMLTVS().getRecordings()}
-                payload['debug']    = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_NAME))).get('DEBUG',{})
-                payload['servers']  = Multiroom().getDiscovery()
-            except Exception as e: self.log("getPayload, __getMeta failed! %s"%(e), xbmc.LOGERROR)
+            from m3u         import M3U
+            from xmltvs      import XMLTVS
+            from library     import Library
+            from multiroom   import Multiroom
+            payload.pop('updated')
+            payload.pop('md5')
+            payload['library'] = Library().getLibrary()
+            payload['m3u']     = M3U().getM3U()
+            payload['xmltv']   = {'stations':XMLTVS().getChannels(), 'recordings':XMLTVS().getRecordings()}
+            payload['servers'] = Multiroom().getDiscovery()
             return payload
-            
-        from channels   import Channels
-        payload = self.getBonjour()
-        payload['remotes']   = {'remote':'http://%s/%s'%(payload['host'],REMOTEFLE),
-                                'm3u'   :'http://%s/%s'%(payload['host'],M3UFLE),
-                                'xmltv' :'http://%s/%s'%(payload['host'],XMLTVFLE),
-                                'genre' :'http://%s/%s'%(payload['host'],GENREFLE)}
-        payload['settings']  = {'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
-                                'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
-                                'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
-                                'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
-                                'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}
-        payload['channels']  = Channels().getChannels()
-        if inclMeta: payload = __getMeta(payload)
+
+        payload = __getMeta(self.getBonjour(inclChannels=True))
+        if inclDebug: payload['debug'] = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_NAME))).get('DEBUG',{})
         payload['updated']   = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         payload['md5']       = getMD5(dumpJSON(payload))
         return payload
@@ -371,8 +372,7 @@ class Settings:
 
     @cacheit(expiration=datetime.timedelta(minutes=5))
     def getPayloadUI(self):
-        from json2html import Json2Html
-        return Json2Html().convert(self.getPayload(inclMeta=True))
+        return Json2Html().convert(self.getPayload(inclDebug=True))
 
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
@@ -664,20 +664,16 @@ class Properties:
         return self.setPropertyBool('pendingInterrupt',state)
 
         
+    def setInterruptActivity(self, state=True):
+        return self.setPropertyBool('interruptActivity',state)
+        
+        
     def setPendingSuspend(self, state=True):
         return self.setPropertyBool('pendingSuspend',state)
         
-                
-    def setRestart(self, state=True):
-        return self.setPropertyBool('Restart',state)
-        
 
-    def setInterrupt(self, state=True):
-        return self.setPropertyBool('Interrupt',state)
-
-        
-    def setSuspend(self, state=True):
-        return self.setPropertyBool('Suspend',state)
+    def setSuspendActivity(self, state=True):
+        return self.setPropertyBool('suspendActivity',state)
         
         
     def isPseudoTVRunning(self):
@@ -708,19 +704,19 @@ class Properties:
 
     @contextmanager
     def interruptActivity(self): #suspend/quit running background task.
-        if not self.isPendingInterrupt():
-            self.setPendingInterrupt(True)
+        if not self.isInterruptActivity():
+            self.setInterruptActivity(True)
             try: yield
-            finally: self.setPendingInterrupt(False)
+            finally: self.setInterruptActivity(False)
         else: yield
         
         
     @contextmanager
     def suspendActivity(self): #suspend/quit running background task.
-        if not self.isPendingSuspend():
-            self.setPendingSuspend(True)
+        if not self.isSuspendActivity():
+            self.setSuspendActivity(True)
             try: yield
-            finally: self.setPendingSuspend(False)
+            finally: self.setSuspendActivity(False)
         else: yield
 
         
@@ -744,30 +740,26 @@ class Properties:
         return self.getEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID)) == "true"
         
         
-    def isPendingInterrupt(self):
-        return self.getPropertyBool('pendingInterrupt')
-
-
     def isPendingRestart(self):
         return self.getPropertyBool('pendingRestart')
 
         
+    def isPendingInterrupt(self):
+        return self.getPropertyBool('pendingInterrupt')
+
+
+    def isInterruptActivity(self):
+        return self.getPropertyBool('interruptActivity')
+
+
     def isPendingSuspend(self):
         return self.getPropertyBool('pendingSuspend')
-        
-        
-    def isInterrupt(self):
-        return self.getPropertyBool('Interrupt')
 
 
-    def isRestart(self):
-        return self.getPropertyBool('Restart')
+    def isSuspendActivity(self):
+        return self.getPropertyBool('suspendActivity')
 
-        
-    def isSuspend(self):
-        return self.getPropertyBool('Suspend')
-        
-        
+
     def getKey(self, key, instanceID=True):
         if not isinstance(key,str): key = str(key)
         if self.winID == 10000 and not key.startswith(ADDON_ID): #create unique id 
@@ -1499,7 +1491,7 @@ class Dialog:
                     else: params['order'].update({enumLST[enumSEL].getLabel().lower(): not enumLST[enumSEL].getLabel2() == 'True'})
             return params
 
-        from jsonrpc import JSONRPC
+        from jsonrpc     import JSONRPC
         jsonRPC = JSONRPC()
         try:
             path, params = path.split('?xsp=')

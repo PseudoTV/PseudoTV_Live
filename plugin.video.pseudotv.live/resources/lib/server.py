@@ -50,9 +50,9 @@ class Discovery:
                 if IP == getIP(): return
                 else:
                     server = info.getServer()
-                    self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(IP,info.getPort()),'remote':'http://%s:%s/%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
-                    self.log("addService, found zeroconf %s @ %s using using remote %s"%(server,self.zServers[server]['host'],self.zServers[server]['remote']))
-                    self.multiroom.addServer(self.multiroom.getRemote(self.zServers[server]['remote']))
+                    self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(IP,info.getPort()),'bonjour':'http://%s:%s/%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
+                    self.log("addService, found zeroconf %s @ %s using using bonjour %s"%(server,self.zServers[server]['host'],self.zServers[server]['bonjour']))
+                    self.multiroom.addServer(self.multiroom.getURL(self.zServers[server]['bonjour']))
             
              
     def __init__(self, service=None, multiroom=None):
@@ -113,57 +113,68 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 
     def do_POST(self):
+        def _verifyUUID(uuid):
+            from multiroom  import Multiroom
+            for server in list(Multiroom().getDiscovery().values()):
+                if server.get('uuid') == uuid: return True
+            return False
+            
         self.log('do_POST, incoming path = %s'%(self.path))
-        if self.path.lower().endswith('.json'):
-            content = "application/json"
-            if self.path.lower() == '/%s'%(CHANNELFLE.lower()):
-                from channels import Channels
-                channels = Channels()
-                channels.setChannels(self.rfile.read(int(self.headers['content-length'])))
-                del channels
-            elif  self.path.lower() == '/%s'%(LIBRARYFLE.lower()): 
-                from library import Library
-                data = self.rfile.read(int(self.headers['content-length']))
-                library = Library()
-                [library.setLibrary(type, items) for type, items in list(data.items())]
-                del library
-            else: return self.send_error(401, "Not found")
-            self.send_response(200)
-        else: self.do_GET()
+        if not PROPERTIES.isRunning('do_POST'):
+            with PROPERTIES.setRunning('do_POST'):
+                if self.path.lower().endswith('.json'):
+                    try:    incoming = loadJSON(self.rfile.read(int(self.headers['content-length'])).decode())
+                    except: incoming = {}
+                    if _verifyUUID(incoming.get('uuid')):
+                        self.log('do_POST verified incoming uuid = %s'%(incoming.get('uuid')))
+                        if self.path.lower() == '/%s'%(CHANNELFLE.lower()):
+                            with PROPERTIES.interruptActivity():
+                                from channels import Channels
+                                myChannels = Channels()
+                                channels = list(myChannels._verify(incoming))
+                                print(channels)
+                                self.log('do_POST incoming verified channels = %s'%(len(channels)))
+                                # if myChannels.setChannels(self.rfile.read(int(self.headers['content-length']))):
+                                DIALOG.notificationDialog('Channels updated by %s'%(incoming.get('name',ADDON_NAME)))
+                                del myChannels
+                            return self.send_response(200, "OK")
+                        else: self.send_error(401, "Not found")
+                    return self.send_error(401, "Not verified")
+                else: return self.do_GET()
         
         
     def do_GET(self):
         self.log('do_GET, incoming path = %s'%(self.path))
-        path = None
-        if self.path.lower() == '/%s'%(BONJOURFLE.lower()):
-            path    = self.path.lower()
-            content = "application/json"
-            chunk   = dumpJSON(SETTINGS.getPayload(),idnt=4).encode(encoding=DEFAULT_ENCODING)
-        elif self.path.lower().startswith('/remote'):
-            path = self.path.lower()
-            if self.path.lower().endswith('.json'):
-                content = "application/json"
-                chunk   = dumpJSON(SETTINGS.getPayload(inclMeta=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
-            elif self.path.lower().endswith('.html'):
-                content = "text/html"
-                chunk   = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
-            else: self.send_error(404, "Not found")
-        elif self.path.lower() == '/%s'%(M3UFLE.lower()):
-            content = "application/vnd.apple.mpegurl"
-            path    = M3UFLEPATH
-        elif self.path.lower() == '/%s'%(XMLTVFLE.lower()):
-            content = "text/xml"
-            path    = XMLTVFLEPATH
-        elif self.path.lower() == '/%s'%(GENREFLE.lower()):
-            content = "text/plain"
-            path    = GENREFLEPATH
-        elif self.path.lower().startswith("/images/"):
-            path    = os.path.join(LOGO_LOC,unquoteString(self.path.replace('/images/','')))
-            content = mimetypes.guess_type(self.path[1:])[0]
-        else: self.send_error(404, "Not found")
-
         if not PROPERTIES.isRunning('do_GET'):
             with PROPERTIES.setRunning('do_GET'):
+                path = None
+                if self.path.lower() == '/%s'%(BONJOURFLE.lower()):
+                    path    = self.path.lower()
+                    content = "application/json"
+                    chunk   = dumpJSON(SETTINGS.getBonjour(inclChannels=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
+                elif self.path.lower().startswith('/remote'):
+                    path = self.path.lower()
+                    if self.path.lower().endswith('.json'):
+                        content = "application/json"
+                        chunk   = dumpJSON(SETTINGS.getPayload(),idnt=4).encode(encoding=DEFAULT_ENCODING)
+                    elif self.path.lower().endswith('.html'):
+                        content = "text/html"
+                        chunk   = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
+                    else: self.send_error(404, "Not found")
+                elif self.path.lower() == '/%s'%(M3UFLE.lower()):
+                    content = "application/vnd.apple.mpegurl"
+                    path    = M3UFLEPATH
+                elif self.path.lower() == '/%s'%(XMLTVFLE.lower()):
+                    content = "text/xml"
+                    path    = XMLTVFLEPATH
+                elif self.path.lower() == '/%s'%(GENREFLE.lower()):
+                    content = "text/plain"
+                    path    = GENREFLEPATH
+                elif self.path.lower().startswith("/images/"):
+                    path    = os.path.join(LOGO_LOC,unquoteString(self.path.replace('/images/','')))
+                    content = mimetypes.guess_type(self.path[1:])[0]
+                else: self.send_error(404, "Not found")
+
                 if   path is None: return
                 elif path.endswith(('.json','.html')):
                     self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
@@ -203,7 +214,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                             self.wfile.write(chunk)
                             self.wfile.close()
                 else: self.send_error(401, "Not found")
-            
+        
 class HTTP:
     isRunning = False
 
