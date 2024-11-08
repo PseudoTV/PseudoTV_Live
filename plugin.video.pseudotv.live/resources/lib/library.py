@@ -132,7 +132,7 @@ class Library:
                 __clear()
                 
         complete = True 
-        self.parserDialog = DIALOG.progressBGDialog()
+        self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32041)))
         
         types = AUTOTUNE_TYPES
         for idx, type in enumerate(types):
@@ -141,7 +141,7 @@ class Library:
                 break
             elif self.service._suspend():
                 types.insert(idx,type)
-                self.service.monitor.waitForAbort(EPOCH_TIMER)
+                self.service.monitor.waitForAbort(SUSPEND_TIMER)
                 continue
             else:
                 msg = LANGUAGE(30014)
@@ -151,7 +151,7 @@ class Library:
                 if not items: msg = LANGUAGE(32022)
                 self.parserMSG    = AUTOTUNE_TYPES[idx]
                 self.parserCount  = int(idx*100//len(AUTOTUNE_TYPES))
-                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
+                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
                 if not items: items = _fill(type, func)
                 self.setLibrary(type, [__update(type,item) for item in items])
 

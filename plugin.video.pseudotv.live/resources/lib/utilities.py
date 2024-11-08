@@ -39,7 +39,7 @@ class Utilities:
         
         
     def qrRemote(self):
-        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteURL(),'remote.html'), LANGUAGE(30165))
+        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteHost(),'remote.html'), LANGUAGE(30165))
         
 
     def qrReadme(self):
@@ -128,9 +128,10 @@ class Utilities:
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.isRunning('OVERLAY_MANAGER'):
             with PROPERTIES.setRunning('OVERLAY_MANAGER'), PROPERTIES.interruptActivity():
-                with BUILTIN.busy_dialog(): from manager import Manager
-                chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
-                del chmanager
+                with BUILTIN.busy_dialog():
+                    from manager import Manager
+                    chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
+                    del chmanager
     
         
     def openChannelBug(self):

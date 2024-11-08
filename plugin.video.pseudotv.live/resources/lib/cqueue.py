@@ -87,11 +87,13 @@ class CustomQueue:
         node = LlNode(package, priority, delay)
         if   self.__exists((1,priority,package)): self.log("_push, func = %s exists; ignoring package"%(package[0].__name__))
         elif self.priority:
-            self.qsize += 1
-            item = (priority, package)
-            self.itemCount[priority] += 1
-            self.log("_push, func = %s, priority = %s"%(package[0].__name__,priority))
-            heapq.heappush(self.min_heap, (item[0], self.itemCount[priority], item[1]))
+            try:
+                self.qsize += 1
+                item = (priority, package)
+                self.itemCount[priority] += 1
+                self.log("_push, func = %s, priority = %s"%(package[0].__name__,priority))
+                heapq.heappush(self.min_heap, (item[0], self.itemCount[priority], item[1]))
+            except Exception as e: self.log("_push, func = %s failed! %s"%(func.__name__,e), xbmc.LOGFATAL)
         elif self.head:
             self.tail.next = node
             node.prev = self.tail
@@ -114,7 +116,7 @@ class CustomQueue:
                 break
             elif self.service._interrupt() or self.service._suspend():
                 self.log("__pop, _interrupt/_suspend")
-                self.service.monitor.waitForAbort(EPOCH_TIMER)
+                self.service.monitor.waitForAbort(SUSPEND_TIMER)
                 continue
             elif not self.head and not self.priority:
                 self.log("__pop, The queue is empty!")

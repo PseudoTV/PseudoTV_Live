@@ -141,22 +141,27 @@ class Player(xbmc.Player):
 
 
     def getPlayerFile(self):
-        try:    return self.getPlayingFile()
+        try:    return (self.sysInfo.get('fitem',{}).get('file') or self.getPlayingFile())
         except: return ''
 
 
     def getPlayerTime(self):
-        try:    return self.getTotalTime()
+        try:    return (self.sysInfo.get('fitem',{}).get('runtime') or self.getTotalTime())
         except: return 0
-                
-                
-    def getPlayerProgress(self):
-        try:    return int((self.getTimeLabel()*100)//self.getPlayerTime())
+            
+            
+    def getElapsedTime(self):
+        try:    return int((self.sysInfo.get('seek') or self.getTime() // 1000))
         except: return -1
 
 
-    def getElapsedTime(self):
-        try:    return int(self.getTime() // 1000)
+    def getRemainingTime(self):
+        try:    return int(self.getPlayerTime() - self.getElapsedTime())
+        except: return -1
+
+       
+    def getPlayerProgress(self):
+        try:    return int((self.getElapsedTime() / self.getPlayerTime()) * 100)
         except: return -1
 
 
@@ -251,9 +256,10 @@ class Player(xbmc.Player):
         
 
     def toggleReplay(self, state: bool=True):
-        self.log('toggleReplay, state = %s, restartPercentage = %s'%(state,self.restartPercentage))
+        self.log('toggleReplay, state = %s'%(state))
         if state and self.service.player.enableOverlay and bool(self.restartPercentage):
             progress = self.getPlayerProgress()
+            self.log('toggleReplay, progress = %s, restartPercentage = %s'%(progress,self.restartPercentage))
             if (progress >= self.restartPercentage and progress < SETTINGS.getSettingInt('Seek_Threshold')) and not self.isIdle and self.sysInfo.get('fitem'):
                 self.replay = Replay(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
                 self.replay.doModal()

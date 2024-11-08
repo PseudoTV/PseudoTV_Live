@@ -248,19 +248,25 @@ class Tasks():
     def chkFillers(self, channels=None):
         self.log('chkFillers')
         if channels is None: channels = self.getChannels()
-        pDialog = DIALOG.progressBGDialog()
+        pDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
         for idx, ftype in enumerate(FILLER_TYPES):
-            pDialog = DIALOG.progressBGDialog(int(idx*50//len(ftype)), pDialog, message='%s: %s'%(ftype,int(idx*100//len(ftype)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
-            if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),'')): FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),''))
+            if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),'')): 
+                pDialog = DIALOG.progressBGDialog(int(idx*50//len(ftype)), pDialog, message='%s: %s'%(ftype,int(idx*100//len(ftype)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+                FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),''))
             
         for idx, citem in enumerate(channels):
-            pDialog = DIALOG.progressBGDialog(int(idx*50//len(channels)), pDialog, message='%s: %s'%(citem.get('name'),int(idx*100//len(channels)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
             for ftype in FILLER_TYPES[1:]:
-                [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
+                for genre in self.getGenreNames():
+                    if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),'')):
+                        pDialog = DIALOG.progressBGDialog(int(idx*50//len(channels)), pDialog, message='%s: %s'%(genre,int(idx*100//len(channels)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+                        FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower()))
+                
                 if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
                     if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
                     else:                          IGNORE = IGNORE_CHTYPE
-                    if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE: FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
+                    if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE: 
+                        pDialog = DIALOG.progressBGDialog(int(idx*50//len(channels)), pDialog, message='%s: %s'%(citem.get('name'),int(idx*100//len(channels)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+                        FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
         pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
     
 

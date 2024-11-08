@@ -43,7 +43,7 @@ class Multiroom:
         self.cache      = service.jsonRPC.cache
         self.uuid       = SETTINGS.getMYUUID()
         self.friendly   = SETTINGS.getFriendlyName()
-        self.remoteURL  = PROPERTIES.getRemoteURL()
+        self.remoteHost = PROPERTIES.getRemoteHost()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

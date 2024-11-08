@@ -30,10 +30,10 @@ STUDIO_RESOURCE = ["resource.images.studios.white"]
 
 class Resources:
     def __init__(self, jsonRPC):
-        self.jsonRPC   = jsonRPC
-        self.cache     = jsonRPC.cache
-        self.baseURL   = jsonRPC.buildWebBase()
-        self.remoteURL = PROPERTIES.getRemoteURL()
+        self.jsonRPC    = jsonRPC
+        self.cache      = jsonRPC.cache
+        self.baseURL    = jsonRPC.buildWebBase()
+        self.remoteHost = PROPERTIES.getRemoteHost()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -148,8 +148,8 @@ class Resources:
 
     def buildWebImage(self, image: str) -> str:
         #convert any local images to url via local server and/or kodi web server.
-        if image.startswith(LOGO_LOC) and self.remoteURL:
-            image = 'http://%s/images/%s'%(self.remoteURL,quoteString(os.path.split(image)[1]))
+        if image.startswith(LOGO_LOC) and self.remoteHost:
+            image = 'http://%s/images/%s'%(self.remoteHost,quoteString(os.path.split(image)[1]))
         elif image.startswith(('image://','image%3A')) and self.baseURL and not ('smb' in image or 'nfs' in image or 'http' in image):
             image = '%s/image/%s'%(self.baseURL,quoteString(image))
         self.log('buildWebImage, returning image = %s'%(image))

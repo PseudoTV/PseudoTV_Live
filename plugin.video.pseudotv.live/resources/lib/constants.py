@@ -41,7 +41,8 @@ PLAYER              = xbmc.Player
 #constants
 DISCOVERY_TIMER     = 60    #secs
 EPOCH_TIMER         = 15    #secs
-DISCOVER_INTERVAL   = 30   #secs
+SUSPEND_TIMER       = 15    #secs
+DISCOVER_INTERVAL   = 30    #secs
 EPG_DURATION        = 10800 #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'

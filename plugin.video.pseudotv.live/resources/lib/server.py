@@ -255,12 +255,12 @@ class HTTP:
                 PORT= self.chkPort(TCP,redirect=True)
                 if   PORT is None: raise Exception('Port: %s In-Use!'%(PORT))
                 elif PORT != TCP: SETTINGS.setSettingInt('TCP_PORT',PORT)
-                LOCAL_HOST ='%s:%s'%(IP,PORT)
+                LOCAL_HOST = PROPERTIES.setRemoteHost('%s:%s'%(IP,PORT))
                 self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
                 SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
                 SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
                 SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
-                PROPERTIES.setRemoteURL(LOCAL_HOST)
+                
                 
                 self._server = ThreadedHTTPServer((IP, PORT), partial(RequestHandler,monitor=self.service.monitor))
                 self._server.allow_reuse_address = True

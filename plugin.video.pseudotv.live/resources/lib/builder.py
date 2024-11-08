@@ -127,7 +127,7 @@ class Builder:
                 elif self.service._suspend():
                     channels.insert(idx,citem)
                     self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
-                    self.service.monitor.waitForAbort(EPOCH_TIMER)
+                    self.service.monitor.waitForAbort(SUSPEND_TIMER)
                     continue
                 else:
                     self.pMSG   = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))

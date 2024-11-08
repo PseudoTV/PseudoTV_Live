@@ -117,11 +117,9 @@ def getCRC32(text):
     return binascii.crc32(text.encode('utf8'))
    
 class Settings:
-    #Kodi often breaks settings API with changes between versions. Stick with core setsettings/getsettings to avoid specifics; that may break.
     def __init__(self):
         self.cacheDB  = Cache()
         self.cache    = Cache(mem_cache=True)
-        self.property = Properties()
 
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -147,7 +145,7 @@ class Settings:
             for item in items:
                 if item.get('label','').lower().startswith(instance.lower()): return item
 
-        with Builtin().busy_dialog():
+        with self.builtin.busy_dialog():
             from jsonrpc     import JSONRPC
             jsonRPC = JSONRPC()
             baseURL = 'pvr://channels/tv/'
@@ -157,8 +155,8 @@ class Settings:
             del jsonRPC
             if not item: item = {'file':baseURL}
         self.log('openGuide, opening %s'%(item.get('file',baseURL)))
-        Builtin().executebuiltin("Dialog.Close(all)") 
-        Builtin().executebuiltin("ReplaceWindow(TVGuide,%s)"%(item.get('file',baseURL)))
+        self.builtin.executebuiltin("Dialog.Close(all)") 
+        self.builtin.executebuiltin("ReplaceWindow(TVGuide,%s)"%(item.get('file',baseURL)))
                 
         
     def openSettings(self):
@@ -322,10 +320,10 @@ class Settings:
                    'uuid'    :self.getMYUUID(),
                    'version' :ADDON_VERSION,
                    'machine' :platform.machine(),
-                   'platform':Builtin().getInfoLabel('OSVersionInfo','System'),
-                   'build'   :Builtin().getInfoLabel('BuildVersion','System'),
+                   'platform':self.builtin.getInfoLabel('OSVersionInfo','System'),
+                   'build'   :self.builtin.getInfoLabel('BuildVersion','System'),
                    'name'    :self.getFriendlyName(),
-                   'host'    :self.property.getRemoteURL()}
+                   'host'    :self.property.getRemoteHost()}
                    
         payload['remotes']   = {'bonjour':'http://%s/%s'%(payload['host'],BONJOURFLE),
                                 'remote' :'http://%s/%s'%(payload['host'],REMOTEFLE),
@@ -454,7 +452,7 @@ class Settings:
         
     def setPVRInstance(self, instance=ADDON_NAME):
         # todo https://github.com/xbmc/xbmc/pull/23648
-        if   not self.getSettingBool('Enable_PVR_SETTINGS'): Dialog().notificationDialog(LANGUAGE(32186))
+        if   not self.getSettingBool('Enable_PVR_SETTINGS'): self.dialog.notificationDialog(LANGUAGE(32186))
         elif not FileAccess.exists(os.path.join(PVR_CLIENT_LOC,'settings.xml')):
             self.log('setPVRInstance, creating missing default settings.xml')
             return self.chkPluginSettings(PVR_CLIENT_ID,self.IPTV_SIMPLE_SETTINGS(),False)
@@ -601,14 +599,14 @@ class Properties:
         return instanceID
 
 
-    def getRemoteURL(self):
-        remote = self.getProperty('%s.Remote_URL'%(ADDON_ID))
-        if not remote: remote = self.setRemoteURL(Settings().getSettingInt('TCP_PORT'))
+    def getRemoteHost(self):
+        remote = self.getProperty('%s.Remote_Host'%(ADDON_ID))
+        if not remote: remote = self.setRemoteHost('%s:%s'%(getIP(),Settings().getSettingInt('TCP_PORT')))
         return remote
 
 
-    def setRemoteURL(self, value):
-        return self.setProperty('%s.Remote_URL'%(ADDON_ID),value)
+    def setRemoteHost(self, value):
+        return self.setProperty('%s.Remote_Host'%(ADDON_ID),value)
         
 
     def hasFirstrun(self):
@@ -1065,7 +1063,9 @@ class Dialog:
     builtin    = Builtin()
     
     def __init__(self):
-        self.settings.dialog = self
+        self.settings.dialog   = self
+        self.settings.property = self.properties
+        self.settings.builtin  = self.builtin
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -1316,7 +1316,7 @@ class Dialog:
         def __importSTRM(strm):
             try:
                 with self.builtin.busy_dialog():
-                    fle = FileAccess.open(strm,'r')
+                    fle   = FileAccess.open(strm,'r')
                     paths = [line for line in fle.readlines() if not line.startswith('#') and '://' in line]
                     fle.close()
                 select = self.selectDialog(paths, LANGUAGE(32080), useDetails=False, multi=False)
@@ -1326,19 +1326,20 @@ class Dialog:
              
         with self.builtin.busy_dialog():
             if prompt:
-                opts = [{"label":LANGUAGE(32196), "label2":"library://video/"                   , "default":"library://video/"                   , "shares":"video"   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":multi},
-                        {"label":LANGUAGE(32207), "label2":"library://music/"                   , "default":"library://music/"                   , "shares":"music"   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
-                        {"label":LANGUAGE(32201), "label2":"Images"                             , "default":""                                   , "shares":"pictures", "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
-                        {"label":LANGUAGE(32194), "label2":"Import paths from STRM"             , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
-                        {"label":LANGUAGE(32191), "label2":"special://profile/playlists/video/" , "default":"special://profile/playlists/video/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
-                        {"label":LANGUAGE(32192), "label2":"special://profile/playlists/music/" , "default":"special://profile/playlists/music/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
-                        {"label":LANGUAGE(32193), "label2":"special://profile/playlists/mixed/" , "default":"special://profile/playlists/mixed/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
-                        {"label":LANGUAGE(32195), "label2":"Create Dynamic Smartplaylist"       , "default":""                                   , "shares":""        , "mask":""                                , "type":1    , "multi":False},
-                        {"label":LANGUAGE(32206), "label2":".cue,.m3u,.m3u8,.strm,.pls,.wpl"    , "default":""                                   , "shares":""        , "mask":"|".join(ALT_PLAYLISTS)           , "type":1    , "multi":False},
-                        {"label":LANGUAGE(32198), "label2":"All Folders & Files"                , "default":""                                   , "shares":"files"   , "mask":mask                              , "type":type , "multi":multi},
-                        {"label":LANGUAGE(32199), "label2":"Local Folders & Files"              , "default":""                                   , "shares":"local"   , "mask":mask                              , "type":type , "multi":multi},
-                        {"label":LANGUAGE(32200), "label2":"Local Drives and Network Share"     , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi},
-                        {"label":LANGUAGE(32202), "label2":"resource://"                        , "default":"resource://"                        , "shares":shares    , "mask":mask                              , "type":type , "multi":multi}]
+                optlabel = "%s"%({'0':'Folders','1':'Files'}[str(type)])  if multi else "%s"%({'0':'Folder','1':'File'}[str(type)])
+                opts = [{"label":'%s %s'%(LANGUAGE(32196),optlabel), "label2":"library://video/"                      , "default":"library://video/"                   , "shares":"video"   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":multi},
+                        {"label":'%s %s'%(LANGUAGE(32207),optlabel), "label2":"library://music/"                      , "default":"library://music/"                   , "shares":"music"   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
+                        {"label":LANGUAGE(32191)                   , "label2":"special://profile/playlists/video/"    , "default":"special://profile/playlists/video/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32192)                   , "label2":"special://profile/playlists/music/"    , "default":"special://profile/playlists/music/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32193)                   , "label2":"special://profile/playlists/mixed/"    , "default":"special://profile/playlists/mixed/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32195)                   , "label2":"Create Dynamic Smartplaylist"          , "default":""                                   , "shares":""        , "mask":""                                , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32194)                   , "label2":"Import directory paths from STRM"      , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32206)                   , "label2":"Media from basic playlists"            , "default":""                                   , "shares":""        , "mask":"|".join(ALT_PLAYLISTS)           , "type":1    , "multi":False},
+                        {"label":'%s %s'%(LANGUAGE(32198),optlabel), "label2":""                                      , "default":""                                   , "shares":"files"   , "mask":mask                              , "type":type , "multi":multi},
+                        {"label":'%s %s'%(LANGUAGE(32199),optlabel), "label2":""                                      , "default":""                                   , "shares":"local"   , "mask":mask                              , "type":type , "multi":multi},
+                        {"label":'%s %s'%(LANGUAGE(32200),optlabel), "label2":""                                      , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi},
+                        {"label":LANGUAGE(32201)                   , "label2":""                                      , "default":""                                   , "shares":"pictures", "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
+                        {"label":LANGUAGE(32202)                   , "label2":"resource://"                           , "default":"resource://"                        , "shares":shares    , "mask":mask                              , "type":type , "multi":multi}]
 
                 if isinstance(exclude,list): options = [opt for opt in opts if not opt.get('label') in exclude]
                 else:                        options = opts
@@ -1564,18 +1565,18 @@ class Dialog:
                              # "album"          : (self.selectDialog,jsonRPC.getAlbums),
                              # "studio"         : (self.selectDialog,(jsonRPC.getMovieStudios,jsonRPC.getNetworks))}
 
-        def getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([unquoteString(value) for value in rule.get('value',[])]))
-        def getBrowse(): return self.browseDialog(default='|'.join([unquoteString(value) for value in rule.get('value',[])]))
-        def getSelect(): return self.notificationDialog(LANGUAGE(32020))
+        def __getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([unquoteString(value) for value in rule.get('value',[])]))
+        def __getBrowse(): return self.browseDialog(default='|'.join([unquoteString(value) for value in rule.get('value',[])]))
+        def __getSelect(): return self.notificationDialog(LANGUAGE(32020))
         enumLST = sorted(['Enter', 'Browse', 'Select'])
-        enumKEY = {'Enter':{'func':getInput},'Browse':{'func':getBrowse},'Select':{'func':getSelect}}
+        enumKEY = {'Enter':{'func':__getInput},'Browse':{'func':__getBrowse},'Select':{'func':__getSelect}}
         enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
         if not enumSEL is None: return [quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
 
 
     @contextmanager
     def sudo_dialog(self, msg):
-        dia = self.progressBGDialog((int(time.time()) % 60),Dialog().progressBGDialog(message=msg))
+        dia = self.progressBGDialog((int(time.time()) % 60),self.progressBGDialog(message=msg))
         try:
             yield
         finally: 

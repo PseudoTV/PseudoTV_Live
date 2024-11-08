@@ -348,7 +348,7 @@ class Overlay():
         def getOnNextInterval(interval=3):
             #split totalTime time into quarters, last quarter triggers nextup split by equal intervals of 3. ie. display 3 times in the last quarter of show.
             totalTime  = int(self.player.getPlayerTime())
-            remaining  = floor(self.player.getTimeLabel('TimeRemaining'))
+            remaining  = floor(self.player.getRemainingTime())
             showTime   = (abs(totalTime - (totalTime * .75)) - (SETTINGS.getSettingInt('OSD_Timer') * interval))
             intTime    = roundupDIV(showTime,interval)
             showOnNext = remaining <= showTime and totalTime > SELECT_DELAY and not BUILTIN.getInfoLabel('NextGenre','VideoPlayer') in FILLER_TYPE and self.player.getPlayerTime() > self.minDuration
@@ -386,7 +386,7 @@ class Overlay():
                     onNow  = '%s on %s'%(nowTitle,chname) if chname not in nowTitle else fitem.get('showlabel',nowTitle)
                     onNext = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
                     self._setText(self._onNext,'%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
-                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
+                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=%s delay=%s condition=True reversible=True'%(int(wait//4)*1000,int(wait//4)*1000))])
                     self._onNext.autoScroll(5500, 2500, int(EPOCH_TIMER//3))
                     self._setVisible(self._onNext,True)
                     playSFX(BING_WAV)

@@ -1507,7 +1507,7 @@ msgid "Dynamic SmartPlaylist"
 msgstr ""
 
 msgctxt "#32196"
-msgid "Video Library"
+msgid "Video"
 msgstr ""
 
 msgctxt "#32197"
@@ -1515,19 +1515,19 @@ msgid ""
 msgstr ""
 
 msgctxt "#32198"
-msgid "File Folders"
+msgid "All"
 msgstr ""
 
 msgctxt "#32199"
-msgid "Local Folders"
+msgid "Local"
 msgstr ""
 
 msgctxt "#32200"
-msgid "Network Folders"
+msgid "Shared"
 msgstr ""
 
 msgctxt "#32201"
-msgid "Pictures Sources"
+msgid "Image Sources"
 msgstr ""
 
 msgctxt "#32202"
@@ -1543,7 +1543,7 @@ msgid "Basic Playlist"
 msgstr ""
 
 msgctxt "#32207"
-msgid "Music Library"
+msgid "Music"
 msgstr ""
 
 msgctxt "#32208"
