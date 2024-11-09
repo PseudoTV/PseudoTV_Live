@@ -23,6 +23,7 @@ from rules      import RulesList
 from tasks      import Tasks
 from jsonrpc    import JSONRPC
 
+
 class Player(xbmc.Player):
     sysInfo      = {}
     replay       = None
@@ -195,8 +196,6 @@ class Player(xbmc.Player):
     def _onPlay(self):
         self.log('_onPlay')
         self.toggleReplay(False)
-        self.toggleBackground(False)
-        
         oldInfo = self.sysInfo
         self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
         #items that only run once per channel change. ie. set adv. rules and variables. 
@@ -205,25 +204,22 @@ class Player(xbmc.Player):
             self.setRuntime(self.saveDuration,self.sysInfo.get('fitem',{}),self.sysInfo.get('runtime'))
             self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
-            self.toggleReplay()
             self.setTrakt(self.disableTrakt)
-        elif self.service.player.enableOverlay and self.infoOnChange: timerit(self._onInfo)(0.1)
+            self.toggleBackground(False)
+            self.toggleReplay()
+        elif self.service.player.enableOverlay and self.infoOnChange:
+            self.toggleBackground(False)
+            self.toggleInfo()
+        else: 
+            self.toggleBackground(False)
             
-    
-    def _onInfo(self):
-        self.log('_onInfo')
-        if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
-        BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
-        self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('OSD_Timer')))
-        if BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'): BUILTIN.executebuiltin('Action(back)')            
-
-
+            
     def _onChange(self):
         self.log('_onChange')
-        self.toggleReplay(False)
         self.toggleBackground()
-        oldInfo = self.sysInfo
+        self.toggleReplay(False)
         
+        oldInfo = self.sysInfo
         if oldInfo.get('isPlaylist'):
             sysInfo = self.getPlayerSysInfo()
             if not sysInfo.get('fitem') and self.isPlaying(): return self.service.tasks._que(self._onChange,1)
@@ -254,6 +250,14 @@ class Player(xbmc.Player):
         self.log('_onError, playing file = %s'%(self.getPlayerFile()))
         self.onPlayBackStopped()
         
+    
+    def toggleInfo(self):
+        self.log('toggleInfo')
+        if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
+        BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
+        self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('OSD_Timer')))
+        if BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'): BUILTIN.executebuiltin('Action(back)')            
+
 
     def toggleReplay(self, state: bool=True):
         self.log('toggleReplay, state = %s'%(state))

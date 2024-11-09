@@ -94,9 +94,13 @@ class Cache:
         # with self.lock:
         if not self.disable_cache and not self.cacheLocked():
             with self.cacheLocker():
-                value = self.cache.get(self.getname(name),checksum,json_data)
-                self.log('get, name = %s, value = %s'%(self.getname(name),'%s...'%(str(value)[:128])))
-                return value
+                try: 
+                    value = self.cache.get(self.getname(name),checksum,json_data)
+                    self.log('get, name = %s, value = %s'%(self.getname(name),'%s...'%(str(value)[:128])))
+                    return value
+                except Exception as e:
+                    self.log("get, name = %s failed! simplecacheDB %s"%(self.getname(name),e), xbmc.LOGERROR)
+                    self.clear(name)
             
             
     def clear(self, name, wait=15):

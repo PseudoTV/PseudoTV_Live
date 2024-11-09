@@ -55,7 +55,7 @@ class Background(xbmcgui.WindowXML):
             self.close()
 
             
-            
+           
 class Replay(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
@@ -222,8 +222,8 @@ class Overlay():
     
         
     def open(self):
-        self.log('open, id = %s'%(self.player.sysInfo.get('citem',{}).get('id')))
         if not self.player.isPseudoTV:  return self.close()
+        self.log('open, id = %s'%(self.player.sysInfo.get('citem',{}).get('id')))
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
         self.toggleBackground(), self.toggleVignette(), self.toggleBug(), self.toggleOnNext()
             
@@ -258,10 +258,10 @@ class Overlay():
     def toggleBackground(self, state: bool=True):
         self.log('toggleBackground, state = %s'%(state))
         if state:
-            if not self._hasControl(self._background):
-                self._addControl(self._background)
+            if not self._hasControl(self._background): self._addControl(self._background)
             self._setImage(self._background,os.path.join(MEDIA_LOC,'colors','white.png'))
             self._background.setVisibleCondition('[!Player.Playing]', True)
+            # self._background.setAnimations([('VisibleChange', 'effect=fade start=100 end=0 time=1000 delay=500')])
             self._setVisible(self._background,True)
         else:
             self._setImage(self._background,'None')
@@ -386,13 +386,11 @@ class Overlay():
                     onNow  = '%s on %s'%(nowTitle,chname) if chname not in nowTitle else fitem.get('showlabel',nowTitle)
                     onNext = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
                     self._setText(self._onNext,'%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
-                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=%s delay=%s condition=True reversible=True'%(int(wait//4)*1000,int(wait//4)*1000))])
+                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=%s delay=%s condition=True reversible=True'%(ceil(wait//4)*1000,ceil(wait//4)*1000))])
                     self._onNext.autoScroll(5500, 2500, int(EPOCH_TIMER//3))
                     self._setVisible(self._onNext,True)
                     playSFX(BING_WAV)
-            else: 
-                self._setVisible(self._onNext,False)
-            
+            else: self._setVisible(self._onNext,False)
             self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
             self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
             self._onNextThread.name = "onNextThread"
@@ -406,33 +404,33 @@ class Overlay():
         try:
             # https://github.com/im85288/service.upnext/wiki/Example-source-code
             data            = dict()
-            current_episode = {"current_episode":{"episodeid" :(nowItem.get("id"           ,"") or ""),
-                                                  "tvshowid"  :(nowItem.get("tvshowid"     ,"") or ""),
-                                                  "title"     :(nowItem.get("title"        ,"") or ""),
-                                                  "art"       :(nowItem.get("art"          ,"") or ""),
-                                                  "season"    :(nowItem.get("season"       ,"") or ""),
-                                                  "episode"   :(nowItem.get("episode"      ,"") or ""),
-                                                  "showtitle" :(nowItem.get("tvshowtitle"  ,"") or ""),
-                                                  "plot"      :(nowItem.get("plot"         ,"") or ""),
-                                                  "playcount" :(nowItem.get("playcount"    ,"") or ""),
-                                                  "rating"    :(nowItem.get("rating"       ,"") or ""),
-                                                  "firstaired":(nowItem.get("firstaired"   ,"") or ""),
-                                                  "runtime"   :(nowItem.get("runtime"      ,"") or "")}}
+            current_episode = {"current_episode":{"episodeid" :(nowItem.get("id")            or ""),
+                                                  "tvshowid"  :(nowItem.get("tvshowid")      or ""),
+                                                  "title"     :(nowItem.get("title")         or ""),
+                                                  "art"       :(nowItem.get("art")           or ""),
+                                                  "season"    :(nowItem.get("season")        or ""),
+                                                  "episode"   :(nowItem.get("episode")       or ""),
+                                                  "showtitle" :(nowItem.get("tvshowtitle")   or ""),
+                                                  "plot"      :(nowItem.get("plot")          or ""),
+                                                  "playcount" :(nowItem.get("playcount")     or ""),
+                                                  "rating"    :(nowItem.get("rating")        or ""),
+                                                  "firstaired":(nowItem.get("firstaired")    or ""),
+                                                  "runtime"   :(nowItem.get("runtime")       or "")}}
             data.update(current_episode)
         except: pass
         try:
-            next_episode    = {"next_episode"   :{"episodeid" :(nextItem.get("id"          ,"") or ""),
-                                                  "tvshowid"  :(nextItem.get("tvshowid"    ,"") or ""),
-                                                  "title"     :(nextItem.get("title"       ,"") or ""),
-                                                  "art"       :(nextItem.get("art"         ,"") or ""),
-                                                  "season"    :(nextItem.get("season"      ,"") or ""),
-                                                  "episode"   :(nextItem.get("episode"     ,"") or ""),
-                                                  "showtitle" :(nextItem.get("tvshowtitle" ,"") or ""),
-                                                  "plot"      :(nextItem.get("plot"        ,"") or ""),
-                                                  "playcount" :(nextItem.get("playcount"   ,"") or ""),
-                                                  "rating"    :(nextItem.get("rating"      ,"") or ""),
-                                                  "firstaired":(nextItem.get("firstaired"  ,"") or ""),
-                                                  "runtime"   :(nextItem.get("runtime"     ,"") or "")}}
+            next_episode    = {"next_episode"   :{"episodeid" :(nextItem.get("id")           or ""),
+                                                  "tvshowid"  :(nextItem.get("tvshowid")     or ""),
+                                                  "title"     :(nextItem.get("title")        or ""),
+                                                  "art"       :(nextItem.get("art")          or ""),
+                                                  "season"    :(nextItem.get("season")       or ""),
+                                                  "episode"   :(nextItem.get("episode")      or ""),
+                                                  "showtitle" :(nextItem.get("tvshowtitle")  or ""),
+                                                  "plot"      :(nextItem.get("plot" )        or ""),
+                                                  "playcount" :(nextItem.get("playcount")    or ""),
+                                                  "rating"    :(nextItem.get("rating")       or ""),
+                                                  "firstaired":(nextItem.get("firstaired")   or ""),
+                                                  "runtime"   :(nextItem.get("runtime")      or "")}}
             data.update(next_episode)
         except: pass
         self.jsonRPC.notifyAll(message='upnext_data', data=binascii.hexlify(json.dumps(data).encode('utf-8')).decode('utf-8'), sender='%s.SIGNAL'%(ADDON_ID))
