@@ -1,4 +1,7 @@
 v.0.5.6
+-Improved MediaInfo support for external mediainfo.xml file parsing.
+-Fixed Issue with disappearing channels from m3u.
+-Tweaked Background overlay.
 -Added Multi-Room channels to the channel manager w/ default server option in settings.
  - W.I.P there will be bugs (remote save disabled until finished.); For proper system setup info can be found on the wiki under "Recommend Prerequisites".
  - All Kodi instances are required to broadcast Zeroconf for two way communication between PseudoTV Live instances.

@@ -46,7 +46,7 @@ class Record:
                     msg  = LANGUAGE(30119)
                 retval = DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto %s recordings?'%(self.fitem['label'],msg),customlabel=opt)
                 if retval or int(retval) > 0:
-                    with PROPERTIES.interruptActivity(), BUILTIN.busy_dialog():
+                    with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                         m3u   = M3U()
                         ritem = m3u.getRecordItem(self.fitem,{'1':0,'2':seek}[str(int(retval))])
                         if (m3u.addRecording(ritem), XMLTVS().addRecording(ritem,self.fitem)):
@@ -60,7 +60,7 @@ class Record:
         if not PROPERTIES.isRunning('Record.remove'):
             with PROPERTIES.setRunning('Record.remove'):
                 if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(self.fitem['label'])):
-                    with PROPERTIES.interruptActivity(), BUILTIN.busy_dialog():
+                    with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                         ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})
                         log('Record: remove, ritem = %s'%(ritem))
                         if (M3U().delRecording(ritem), XMLTVS().delRecording(ritem)):

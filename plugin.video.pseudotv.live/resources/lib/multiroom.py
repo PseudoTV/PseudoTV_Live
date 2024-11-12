@@ -88,7 +88,7 @@ class Multiroom:
         return enabled
             
             
-    @cacheit(expiration=datetime.timedelta(minutes=EPOCH_TIMER), json_data=True)
+    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN), json_data=True)
     def getURL(self, remote):
         return getURL(remote,header={'Accept':'application/json'},json_data=True)
 

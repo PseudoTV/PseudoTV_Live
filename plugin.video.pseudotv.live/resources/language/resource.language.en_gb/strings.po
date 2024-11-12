@@ -1459,7 +1459,7 @@ msgid "Select server to remove."
 msgstr ""
 
 msgctxt "#32184"
-msgid "Replay Percentage (%s)"
+msgid "Restart Percentage (%s)"
 msgstr ""
 
 msgctxt "#32185"

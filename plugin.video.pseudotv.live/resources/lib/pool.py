@@ -54,7 +54,8 @@ def killit(method):
         timer.name = '%s.%s'%('killit',method.__qualname__.replace('.',': '))
         timer.daemon=True
         timer.start()
-        timer.join(wait)
+        try: timer.join(wait)
+        except: pass
         log('%s, starting %s'%(method.__qualname__.replace('.',': '),timer.name))
         if (timer.is_alive() or timer.error):
             log('%s, Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),timer.error), xbmc.LOGERROR)
@@ -81,8 +82,14 @@ def threadit(method):
     @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
+        thread_name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
+        for thread in thread_enumerate():
+            if thread.name == thread_name and thread.is_alive():
+                thread.cancel()
+                log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
+                
         thread = Thread(None, method, None, args, kwargs)
-        thread.name = '%s.%s'%('threadit',method.__qualname__.replace('.',': '))
+        thread.name = thread_name
         thread.daemon=True
         thread.start()
         log('%s, starting %s'%(method.__qualname__.replace('.',': '),thread.name))
@@ -93,19 +100,16 @@ def timerit(method):
     @timeit
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
-        thread_name = '%s.%s'%('timerit',method.__qualname__.replace('.',': '))
+        thread_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
         for timer in thread_enumerate():
             if timer.name == thread_name and timer.is_alive():
-                try: 
-                    timer.cancel()
-                    timer.join()
-                    log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
+                timer.cancel()
+                try: timer.join()
                 except: pass
+                log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
         timer = Timer(wait, method, *args, **kwargs)
         timer.name = thread_name
         timer.start()
-        # try: timer.join()
-        # except: pass
         log('%s, starting %s wait = %s'%(method.__qualname__.replace('.',': '),thread_name,wait))
         return timer
     return wrapper  

@@ -165,10 +165,10 @@ class JSONRPC:
         else:     return self.sendJSON(param).get('result', {}).get('settings',[])
 
 
-    def getSettingValue(self, key, cache=True):
+    def getSettingValue(self, key, default='', cache=True):
         param = {"method":"Settings.GetSettingValue","params":{"setting":key}}
-        if cache: return self.cacheJSON(param).get('result',{}).get('value','')
-        else:     return self.sendJSON(param).get('result',{}).get('value','')
+        if cache: return (self.cacheJSON(param).get('result',{}).get('value') or default)
+        else:     return (self.sendJSON(param).get('result',{}).get('value')  or default)
 
 
     def setSettingValue(self, key, value):
@@ -522,9 +522,9 @@ class JSONRPC:
         return files
 
 
-    @cacheit(expiration=datetime.timedelta(seconds=EPOCH_TIMER),json_data=False)
+    @cacheit(expiration=datetime.timedelta(seconds=FIFTEEN),json_data=False)
     def inputFriendlyName(self):
-        with PROPERTIES.suspendActivity():
+        with PROPERTIES.interruptActivity():
             friendly = self.getSettingValue("services.devicename")
             self.log("inputFriendlyName, name = %s"%(friendly))
             if not friendly or friendly.lower() == 'kodi':
@@ -546,7 +546,7 @@ class JSONRPC:
                 for result in results:
                     if result.get('label','').lower().startswith(dir.lower()):
                         self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
-                        channels = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=EPOCH_TIMER)).get('files',[])
+                        channels = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=FIFTEEN)).get('files',[])
                         for item in channels:
                             if item.get('label','').lower() == sysInfo.get('name','').lower() and decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
                                 self.log('getCallback: _matchJSON, id = %s, found file = %s'%(sysInfo.get('chid'),item.get('file')))

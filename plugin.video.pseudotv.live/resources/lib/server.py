@@ -132,7 +132,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                                 from channels import Channels
                                 myChannels = Channels()
                                 channels = list(myChannels._verify(incoming))
-                                print(channels)
                                 self.log('do_POST incoming verified channels = %s'%(len(channels)))
                                 # if myChannels.setChannels(self.rfile.read(int(self.headers['content-length']))):
                                 DIALOG.notificationDialog('Channels updated by %s'%(incoming.get('name',ADDON_NAME)))
@@ -234,12 +233,15 @@ class HTTP:
                 s.bind(("127.0.0.1", port))
                 state = True
         except Exception as e:
-            if redirect and (e.errno == errno.EADDRINUSE):
-                with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-                    s.bind(("127.0.0.1", 0))
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    port  = s.getsockname()[1]
-                    state = True
+            self.log("chkPort, port = %s, failed! = %s"%(port,e))
+            if redirect:
+                try:
+                    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+                        s.bind(("127.0.0.1", 0))
+                        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        port  = s.getsockname()[1]
+                        state = True
+                except Exception as e: self.log("chkPort, port = %s, failed! = %s"%(port,e))
             else: port = None
         self.log("chkPort, port = %s, available = %s"%(port,state))
         return port
@@ -281,7 +283,8 @@ class HTTP:
                 self._server.server_close()
                 self._server.socket.close()
                 if self._httpd_thread.is_alive():
-                    self._httpd_thread.join(5)
+                    try: self._httpd_thread.join(5)
+                    except: pass
         except Exception as e: self.log("_stop, Failed! %s"%(e), xbmc.LOGERROR)
         self.isRunning = False
 

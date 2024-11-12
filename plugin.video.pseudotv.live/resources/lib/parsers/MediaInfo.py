@@ -21,9 +21,24 @@ from globals    import *
 class MediaInfo:
     def determineLength(self, filename: str) -> int and float:
         try:
-            from pymediainfo import MediaInfo
             log("MediaInfo: determineLength %s"%(filename))
-            dur = MediaInfo.parse(xbmcvfs.translatePath(filename)).tracks[0].duration // 1000
+            from pymediainfo import MediaInfo
+            dur = 0
+            mi  = None
+            fileXML = filename.replace('.%s'%(filename.rsplit('.',1)[1]),'-mediainfo.xml')
+            if FileAccess.exists(fileXML):
+                log("MediaInfo: parsing XML %s"%(fileXML))
+                with xbmcvfs.File(fileXML) as fle:
+                    mi = pymediainfo.MediaInfo(fle.read())
+            else:
+                try:
+                    mi = MediaInfo.parse(xbmcvfs.translatePath(filename))
+                    log("MediaInfo: parsing %s"%(filename))
+                except: 
+                    with xbmcvfs.File(filename) as fle:
+                        mi = MediaInfo.parse(xbmcvfs.translatePath(fle.read())
+                        log("MediaInfo: reading %s"%(filename))
+            if not mi is None: dur = (mi.tracks[0].duration // 1000 or 0)
             log('MediaInfo: Duration is %s'%(dur))
             return dur
         except Exception as e:

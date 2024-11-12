@@ -71,11 +71,11 @@ class Json2Html:
         or not hasattr(json_input, '__getitem__') \
         or not hasattr(json_input[0], 'keys'):
             return None
-        column_headers = json_input[0].keys()
+        column_headers = list(json_input[0].keys())
         for entry in json_input:
             if not hasattr(entry, 'keys') \
             or not hasattr(entry, '__iter__') \
-            or len(entry.keys()) != len(column_headers):
+            or len(list(entry.keys())) != len(column_headers):
                 return None
             for header in column_headers:
                 if header not in entry:
@@ -168,7 +168,7 @@ class Json2Html:
                 self.convert_json_node(k),
                 self.convert_json_node(v)
             )
-            for k, v in json_input.items()
+            for k, v in list(json_input.items())
         ])
         converted_output += '</tr></table>'
         return converted_output

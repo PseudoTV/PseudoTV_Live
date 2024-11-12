@@ -174,7 +174,8 @@ class Builder:
             if cacheResponse:
                 if self.fillBCTs and not radio: cacheResponse = Fillers(builder=self).injectBCTs(citem, cacheResponse)
                 return sorted(self.addScheduling(citem, cacheResponse, start), key=itemgetter('start'))
-            return cacheResponse
+            elif  self.service._interrupt(): return True
+            else: return cacheResponse
         except Exception as e: self.log("getFileList, [%s] failed! %s"%(citem['id'],e), xbmc.LOGERROR)
         return False
 

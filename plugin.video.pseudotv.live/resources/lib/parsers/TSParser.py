@@ -30,7 +30,8 @@ class TSPacket:
 
 class TSParser:
     def __init__(self):
-        pass
+        self.monitor = MONITOR()
+        
 
     def determineLength(self, filename: str) -> int and float:
         log("TSParser: determineLength " + filename)
@@ -69,7 +70,7 @@ class TSParser:
         self.packetLength = 0
 
         
-        while not MONITOR().abortRequested() and maxbytes > 0:
+        while not self.monitor.abortRequested() and maxbytes > 0:
             maxbytes -= 1
 
             try:
@@ -119,7 +120,7 @@ class TSParser:
         except:
             return 0
 
-        while not MONITOR().abortRequested() and maxpackets > 0:
+        while not self.monitor.abortRequested() and maxpackets > 0:
             packet = self.readTSPacket()
             maxpackets -= 1
 
@@ -148,7 +149,7 @@ class TSParser:
 
         maxpackets = 12000
 
-        while not MONITOR().abortRequested() and maxpackets > 0:
+        while not self.monitor.abortRequested() and maxpackets > 0:
             packet = self.readTSPacket()
             maxpackets -= 1
 

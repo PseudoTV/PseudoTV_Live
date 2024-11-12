@@ -38,16 +38,17 @@ from rules     import RulesList
         # xbmcgui.unlock()
 
 
-class Background(xbmcgui.WindowXML):
+class Background(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
-        xbmcgui.WindowXML.__init__(self, *args, **kwargs)
-        self.player = kwargs.get('player' ,None)
+        xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
+        self.player = kwargs.get('player', None)
 
 
     def onInit(self):
         try:
+            log("Background: onInit")
             logo = (self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
-            self.getControl(40001).setVisibleCondition('[!Player.Playing]')
+            # self.getControl(40001).setVisibleCondition('[!Player.Playing]')
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
             self.getControl(40003).setText(LANGUAGE(32104)%(self.player.sysInfo.get('citem',{}).get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except Exception as e:
@@ -56,72 +57,110 @@ class Background(xbmcgui.WindowXML):
 
             
            
-class Replay(xbmcgui.WindowXMLDialog):
+class Restart(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self._closing = False
-        self.player   = kwargs.get('player' ,None)
+        self.closing = False
+        self.player  = kwargs.get('player', None)
         
         
     def onInit(self):
-        log("Replay: onInit")
         try:
-            self._closing  = False
-            self.service   = self.player.service
+            log("Restart: onInit")
+            self.closing = False
+            self.service = self.player.service
             self._progressLoop(self.getControl(40000))
             self.setFocusId(40001)
         except Exception as e:
-            log("Replay: onInit, failed! %s\ncitem = %s"%(e,self.player.sysInfo), xbmc.LOGERROR)
+            log("Restart: onInit, failed! %s\ncitem = %s"%(e,self.player.sysInfo), xbmc.LOGERROR)
             self.onClose()
 
 
     def _progressLoop(self, control, wait=SETTINGS.getSettingInt('OSD_Timer')):
         tot  = wait
         xpos = control.getX()
+        control.setVisibleCondition('Player.Playing')
         while not self.service.monitor.abortRequested():
-            if (self.service.monitor.waitForAbort(1.0) or wait < 0 or self._closing): break
+            if (self.service.monitor.waitForAbort(1.0) or wait < 0 or self.closing or self.player.isPlaying() != True): break
             else:
                 prog = int((abs(wait-tot)*100)//tot)
                 if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
                 wait -= 1
+        control.setAnimations([('Conditional', 'effect=fade start=100 end=0 time=240 condition=True')])
+        self.service.monitor.waitForAbort(1.0)
+        control.setVisible(False)
         self.onClose()
 
         
     def onAction(self, act):
         actionId = act.getId()
-        log('Replay: onAction: actionId = %s'%(actionId))
+        log('Restart: onAction: actionId = %s'%(actionId))
         if actionId in ACTION_SELECT_ITEM and self.getFocusId(40001): 
-            if   self.player.sysInfo.get('isPlaylist',False): self.player.seekTime(0)
-            elif self.player.sysInfo.get('fitem'): 
-                liz = LISTITEMS.buildItemListItem(self.player.sysInfo.get('fitem',{}))
-                liz.setProperty('sysInfo',encodeString(dumpJSON(self.player.sysInfo)))
-                self.player.play(self.player.sysInfo.get('fitem',{}).get('catchup-id'),liz)
+            sysInfo = self.player.sysInfo
+            if   sysInfo.get('isPlaylist',False): self.player.seekTime(0)
+            elif sysInfo.get('fitem'): 
+                liz = LISTITEMS.buildItemListItem(sysInfo.get('fitem',{}))
+                liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
+                self.player.sysInfo = {}
+                self.player.play(sysInfo.get('fitem',{}).get('catchup-id'),liz)
             else: DIALOG.notificationDialog(LANGUAGE(30154))
-        elif actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),.1,true,false)')
-        elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.1,true,false)')
-        elif actionId in ACTION_PREVIOUS_MENU: BUILTIN.executebuiltin('AlarmClock(back,Action(back),.1,true,false)')
+        elif actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),.5,true,false)')
+        elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
+        elif actionId in ACTION_PREVIOUS_MENU: BUILTIN.executebuiltin('AlarmClock(back,Action(back),.5,true,false)')
         self.onClose()
 
 
     def onClose(self):
-        log("Replay: onClose")
-        self._closing = True
+        log("Restart: onClose")
+        self.closing = True
         self.close()
   
   
 class Overlay():
-    controlManager = dict()
+    restart    = None
+    blackout   = None
+    background = None
     
+    class Player(PLAYER):
+        def __init__(self, overlay=None):
+            PLAYER.__init__(self)
+            self.overlay = overlay
+            
+            
+        def onAVStarted(self):
+            self.overlay.log('onAVStarted')
+            self.overlay.toggleOnNext(False)
+            self.overlay.toggleBackground(False)
+            timerit(self.overlay.toggleReplay)(float(SETTINGS.getSettingInt('OSD_Timer')))
+            timerit(self.overlay.toggleBug)(float(SETTINGS.getSettingInt('OSD_Timer')))
+            timerit(self.overlay.toggleVignette)(float(SETTINGS.getSettingInt('OSD_Timer')))
+            
+            
+        def onPlayBackEnded(self):
+            self.overlay.log('onPlayBackEnded')
+            self.overlay.toggleReplay(False)
+            self.overlay.toggleBackground()
+            
+            
+        def onPlayBackStopped(self):
+            self.overlay.log('onPlayBackStopped')
+            self.overlay._cancelOnNext()
+            self.overlay._cancelChannelBug()
+            self.overlay.toggleReplay(False)
+            self.overlay.toggleBackground(False)
+
+
     def __init__(self, jsonRPC, player=None):
-        self.jsonRPC      = jsonRPC
-        self.player       = player
-        self.resources    = Resources(self.jsonRPC)
-        self.runActions   = RulesList().runActions
+        self.controlManager = dict()
+        self.jsonRPC        = jsonRPC
+        self.player         = player
+        self.resources      = Resources(self.jsonRPC)
+        self.runActions     = self.player.runActions
         
         self.window = xbmcgui.Window(12005) 
-        self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())
+        self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())   
         
-        self._vinImage = 'None'
+        self._vinImage    = 'None'
         self._vinOffsetX, self._vinOffsetY = (0,0) 
         
         self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection
@@ -130,6 +169,7 @@ class Overlay():
         self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
         self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.minDuration        = SETTINGS.getSettingInt('Seek_Tolerance')
+        self.restartPercentage  = SETTINGS.getSettingInt('Restart_Percentage')
         
         try:    self.channelBugX, self.channelBugY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
         except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
@@ -137,11 +177,15 @@ class Overlay():
         #init controls
         self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, 'None', aspectRatio=2)
         self._onNext     = xbmcgui.ControlTextBox(int(self.window_w // 8), abs(int(self.window_h // 16) - self.window_h), 1920, 36, 'font12', '0xFFFFFFFF')
-        self._background = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, 'None', aspectRatio=2, colorDiffuse='black')
         self._vignette   = xbmcgui.ControlImage(self._vinOffsetX, self._vinOffsetY, self.window_w, self.window_h, 'None', aspectRatio=0)
+        
+        self._blackout   = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
+        self._blackout.setAnimations([('VisibleChange', 'condition=True effect=fade start=100 end=0 time=240 delay=160 reversible=True')])  
+        self._blackout.setVisibleCondition('[!Player.Playing]', True)
         
         self._channelBugThread = Timer(0.1, self.toggleBug, [False])
         self._onNextThread     = Timer(0.1, self.toggleOnNext, [False])
+        self.myPlayer          = self.Player(overlay=self)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -222,18 +266,17 @@ class Overlay():
     
         
     def open(self):
-        if not self.player.isPseudoTV:  return self.close()
+        if not self.player.isPseudoTV or not self.player.isPlaying(): return self.close()
         self.log('open, id = %s'%(self.player.sysInfo.get('citem',{}).get('id')))
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
-        self.toggleBackground(), self.toggleVignette(), self.toggleBug(), self.toggleOnNext()
+        self.myPlayer.onAVStarted()
             
             
     def close(self):
         self.log('close')
-        self._cancelOnNext()
-        self._cancelChannelBug()
+        self.myPlayer.onPlayBackStopped()
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
-        for control, visible in list(self.controlManager.items()): self._removeControl(control)
+        [self._removeControl(control) for control, visible in list(self.controlManager.items()) if self._hasControl(control)]
         
 
     def _cancelOnNext(self):
@@ -242,6 +285,8 @@ class Overlay():
         self._setVisible(self._onNext,False)
         if self._onNextThread.is_alive():
             self._onNextThread.cancel()
+            try: self._onNextThread.join()
+            except: pass
             
             
     def _cancelChannelBug(self):
@@ -249,23 +294,42 @@ class Overlay():
         self._setImage(self._channelBug,' ')
         self._setVisible(self._channelBug,False)
         if self._channelBugThread.is_alive():
-            try: 
-                self._channelBugThread.cancel()
-                self._channelBugThread.join()
+            self._channelBugThread.cancel()
+            try: self._channelBugThread.join()
             except: pass
 
-        
+
+    def toggleBlackout(self, state: bool=True):
+        self.log('toggleBlackout, state = %s'%(state))
+        if not self._hasControl(self._blackout):   self._addControl(self._blackout)
+        if self._isVisible(self._blackout) != state: self._setVisible(self._blackout,state)
+        if self.player.isPlaying() and not BUILTIN.getInfoBool('IsTopMost(fullscreeninfo)','Window'):
+            BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+
+
     def toggleBackground(self, state: bool=True):
-        self.log('toggleBackground, state = %s'%(state))
-        if state:
-            if not self._hasControl(self._background): self._addControl(self._background)
-            self._setImage(self._background,os.path.join(MEDIA_LOC,'colors','white.png'))
-            self._background.setVisibleCondition('[!Player.Playing]', True)
-            # self._background.setAnimations([('VisibleChange', 'effect=fade start=100 end=0 time=1000 delay=500')])
-            self._setVisible(self._background,True)
-        else:
-            self._setImage(self._background,'None')
-            self._setVisible(self._background,False)
+        if state and not hasattr(self.background, 'doModal'): 
+            self.log('toggleBackground, state = %s'%(state))
+            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self.player)
+            self.background.doModal()
+        elif not state and hasattr(self.background, 'close'):      
+            self.log('toggleBackground, state = %s'%(state))
+            self.background = self.background.close()
+
+        if self.player.isPlaying() and not BUILTIN.getInfoBool('IsTopMost(fullscreeninfo)','Window'):
+            BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+            
+           
+    def toggleReplay(self, state: bool=True):
+        self.log('toggleReplay, state = %s'%(state))
+        if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
+        if state and bool(self.restartPercentage) and not hasattr(self.restart, 'doModal'): 
+            progress = self.player.getPlayerProgress()
+            self.log('toggleReplay, progress = %s, restartPercentage = %s'%(progress,self.restartPercentage))
+            if (progress >= self.restartPercentage and progress < SETTINGS.getSettingInt('Seek_Threshold')) and not self.player.isIdle and self.player.sysInfo.get('fitem'):
+                self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self.player)
+                self.restart.doModal()
+        elif not state and hasattr(self.restart, 'onClose'): self.restart = self.restart.onClose()
         
 
     def toggleVignette(self, state: bool=True):
@@ -305,9 +369,8 @@ class Overlay():
             nstate = not bool(state)
             
             if self._channelBugThread.is_alive():
-                try: 
-                    self._channelBugThread.cancel()
-                    self._channelBugThread.join()
+                self._channelBugThread.cancel()
+                try: self._channelBugThread.join()
                 except: pass
                   
             try: 
@@ -359,13 +422,12 @@ class Overlay():
 
         try:
             showOnNext, intTime = getOnNextInterval()
-            wait   = {True:EPOCH_TIMER,False:float(intTime)}[state]
+            wait   = {True:FIFTEEN,False:float(intTime)}[state]
             nstate = not bool(state)
-            try: 
-                if self._onNextThread.is_alive():
-                    self._onNextThread.cancel()
-                    self._onNextThread.join()
-            except: pass
+            if self._onNextThread.is_alive():
+                self._onNextThread.cancel()
+                try: self._onNextThread.join()
+                except: pass
                 
             if state and showOnNext and self.player.isPseudoTV and self.enableOnNext:
                 citem = self.player.sysInfo.get('citem',{})
@@ -387,7 +449,7 @@ class Overlay():
                     onNext = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
                     self._setText(self._onNext,'%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                     self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=%s delay=%s condition=True reversible=True'%(ceil(wait//4)*1000,ceil(wait//4)*1000))])
-                    self._onNext.autoScroll(5500, 2500, int(EPOCH_TIMER//3))
+                    self._onNext.autoScroll(5500, 2500, int(FIFTEEN//3))
                     self._setVisible(self._onNext,True)
                     playSFX(BING_WAV)
             else: self._setVisible(self._onNext,False)
@@ -397,8 +459,8 @@ class Overlay():
             self._onNextThread.daemon=True
             self._onNextThread.start()
         except Exception as e: self.log("toggleOnNext, failed! %s"%(e), xbmc.LOGERROR)
-
-
+        
+        
     def _updateUpNext(self, nowItem: dict={}, nextItem: dict={}):
         self.log('_updateUpNext')
         try:

@@ -121,7 +121,7 @@ class Tasks():
         
         
     def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
-        if nextrun is None: nextrun = (PROPERTIES.getPropertyInt(key) or 0)# nextrun == 0 => force que
+        if nextrun is None: nextrun = PROPERTIES.getPropertyInt(key,default=0)# nextrun == 0 => force que
         epoch = int(time.time())
         if epoch >= nextrun:
             self.log('_chkEpochTimer, key = %s'%(key))
@@ -160,10 +160,11 @@ class Tasks():
 
     def chkKodiSettings(self):
         self.log('chkKodiSettings')
-        SETTINGS.setSettingInt('Min_Days' ,(self.jsonRPC.getSettingValue('epg.pastdaystodisplay')      or 1))
-        SETTINGS.setSettingInt('Max_Days' ,(self.jsonRPC.getSettingValue('epg.futuredaystodisplay')    or 3))
-        SETTINGS.setSettingInt('OSD_Timer',(self.jsonRPC.getSettingValue('pvrmenu.displaychannelinfo') or 5))
-        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.jsonRPC.getSettingValue("services.zeroconf")],{True:'Online',False:'Offline'}[self.jsonRPC.getSettingValue("services.zeroconf")]))
+        SETTINGS.setSettingInt('Min_Days' ,self.jsonRPC.getSettingValue('epg.pastdaystodisplay',default=1))
+        SETTINGS.setSettingInt('Max_Days' ,self.jsonRPC.getSettingValue('epg.futuredaystodisplay',default=3))
+        SETTINGS.setSettingInt('OSD_Timer',self.jsonRPC.getSettingValue('pvrmenu.displaychannelinfo',default=5))
+        zeroconf = self.jsonRPC.getSettingValue("services.zeroconf",default=False)
+        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zeroconf],{True:'Online',False:'Offline'}[zeroconf]))
          
 
     def chkFiles(self):

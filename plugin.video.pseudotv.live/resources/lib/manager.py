@@ -695,7 +695,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         with self.toggleSpinner(self.chanList):
             if self.server:
                 payload = {'uuid':SETTINGS.getMYUUID(),'name':SETTINGS.getFriendlyName(),'channels':self.validateChannels(self.newChannels)}
-                print(postURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), params=dumpJSON(payload), header=HEADER))
+                postURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), params=dumpJSON(payload), header=HEADER)
                 #todo write tmp file if post fails, add to que to repost when url online.
             else: self.channels.setChannels(self.validateChannels(self.newChannels))
         self.closeManager()
@@ -876,8 +876,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         # during certain times we just want to discard all input
         if lastaction < .5 and actionId not in ACTION_PREVIOUS_MENU: action = ACTION_INVALID
         else:
-            self.log('onAction: actionId = %s'%(actionId))
             if actionId in ACTION_PREVIOUS_MENU:
+                self.log('onAction: actionId = %s'%(actionId))
                 if   xbmcgui.getCurrentWindowDialogId() == "13001": BUILTIN.executebuiltin("Action(Back)")
                 elif self.isVisible(self.ruleList): self.toggleruleList(False)
                 elif self.isVisible(self.itemList): self.togglechanList(True,focus=self.getFocusItems().get('position'))

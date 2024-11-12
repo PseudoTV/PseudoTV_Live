@@ -305,7 +305,7 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
             # 'epg.epgupdate':120,
            'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
-def togglePVR(state=True, reverse=False, wait=EPOCH_TIMER):
+def togglePVR(state=True, reverse=False, wait=FIFTEEN):
     if not PROPERTIES.isRunning('togglePVR') and SETTINGS.getSettingBool('Enable_PVR_RELOAD'):
         with PROPERTIES.setRunning('togglePVR'):
             log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))

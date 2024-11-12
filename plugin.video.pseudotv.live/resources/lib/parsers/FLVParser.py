@@ -46,6 +46,10 @@ class FLVTagHeader:
 
 
 class FLVParser:
+    def __init__(self):
+        self.monitor = MONITOR()    
+    
+    
     def determineLength(self, filename: str) -> int and float:
         log("FLVParser: determineLength " + filename)
 
@@ -95,7 +99,7 @@ class FLVParser:
         if maximum < 0:
             maximum = 8
 
-        while not MONITOR().abortRequested() and curloc > maximum:
+        while not self.monitor.abortRequested() and curloc > maximum:
             try:
                 self.File.seek(-4, 1)
                 data = int(struct.unpack('>I', self.File.readBytes(4))[0])

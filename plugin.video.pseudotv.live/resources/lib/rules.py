@@ -30,7 +30,7 @@ class RulesList:
                           SetScreenVingette(),
                           MST3k(),
                           DisableOverlay(),
-                          DisableReplay(),
+                          DisableRestart(),
                           DisableOnChange(),
                           ForceSubtitles(),
                           DisableTrakt(),
@@ -536,9 +536,8 @@ class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow cont
             overlay._vinImage    = self.storedValues[0]
             overlay._vinOffsetX, overlay._vinOffsetY  = self.storedValues[1]
             if self.threadTimer.is_alive():
-                try: 
-                    self.threadTimer.cancel()
-                    self.threadTimer.join()
+                self.threadTimer.cancel()
+                try: self.threadTimer.join()
                 except: pass
         self.log("runAction, setting overlay image to %s (%s,%s)"%(overlay._vinImage,overlay._vinOffsetX,overlay._vinOffsetY))
         return parameter
@@ -704,7 +703,7 @@ class RollbackPlaycount(BaseRule):
         return parameter
 
 
-class DisableReplay(BaseRule):
+class DisableRestart(BaseRule):
     def __init__(self):
         self.myId               = 54
         self.ignore             = False
@@ -714,13 +713,13 @@ class DisableReplay(BaseRule):
         self.optionLabels       = [LANGUAGE(30153)]
         self.optionValues       = [SETTINGS.getSettingInt('Restart_Percentage')]
         self.optionDescriptions = [LANGUAGE(33153)]
-        self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
-        self.selectBoxOptions   = [list(range(0,100,5))]
+        self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
+        self.selectBoxOptions   = [list(range(25,100,5))]
         self.storedValues       = [list() for idx in self.optionValues]
 
 
     def copy(self):
-        return DisableReplay()
+        return DisableRestart()
 
 
     def getTitle(self):
@@ -732,14 +731,14 @@ class DisableReplay(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, citem, parameter, player):
-        if actionid == RULES_ACTION_PLAYER_START:
-            self.storedValues[0] = player.restartPercentage
-            player.restartPercentage = self.optionValues[0]
+    def runAction(self, actionid, citem, parameter, overlay):
+        if actionid == RULES_ACTION_OVERLAY_OPEN:
+            self.storedValues[0] = overlay.restartPercentage
+            overlay.restartPercentage = self.optionValues[0]
             
-        elif actionid == RULES_ACTION_PLAYER_STOP:
-            player.restartPercentage = self.storedValues[0]
-        self.log("runAction, setting restartPercentage = %s"%(player.restartPercentage))
+        elif actionid == RULES_ACTION_OVERLAY_CLOSE:
+            overlay.restartPercentage = self.storedValues[0]
+        self.log("runAction, setting restartPercentage = %s"%(overlay.restartPercentage))
         return parameter
 
         

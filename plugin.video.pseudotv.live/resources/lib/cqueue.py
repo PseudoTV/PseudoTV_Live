@@ -126,7 +126,10 @@ class CustomQueue:
                     self.log("__pop, The priority queue is empty!")
                     break
                 else:
-                    min_num, _, package = heapq.heappop(self.min_heap)
+                    try: min_num, _, package = heapq.heappop(self.min_heap)
+                    except Exception as e:
+                        self.log("__pop, heappop failed! %s\nmin_heap = %s"%(e,self.min_heap), xbmc.LOGERROR)
+                        continue
                     self.qsize -= 1
                     self.__run(*package)
                     
@@ -146,7 +149,9 @@ class CustomQueue:
                     if not self.delay: package, self.__run(*package)
                     else:
                         popTimer = Timer(curr_node.wait, *package)
-                        if popTimer.is_alive(): popTimer.join()
+                        if popTimer.is_alive(): 
+                            try: popTimer.join()
+                            except: pass
                         else:
                             popTimer.daemon = True
                             popTimer.start()

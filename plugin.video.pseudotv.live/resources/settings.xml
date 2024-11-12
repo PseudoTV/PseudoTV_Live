@@ -135,7 +135,7 @@
                         </dependency>
                     </dependencies>
                     <control type="button" format="action">
-                        <close>false</close>
+                        <close>true</close>
                     </control>
                 </setting>
                 <setting id="Enable_PVR_RELOAD" type="boolean" label="30155" help="33155" parent="IPTV_SIMPLE">
@@ -611,11 +611,11 @@
                 </setting>
                 <setting id="Restart_Percentage" type="integer" label="30153" help="33153" parent="Overlay_Enable">
                     <level>1</level>
-                    <default>0</default>
+                    <default>85</default>
                     <constraints>
-                        <minimum>0</minimum>
+                        <minimum>25</minimum>
                         <step>5</step>
-                        <maximum>75</maximum>
+                        <maximum>95</maximum>
                     </constraints>
                     <dependencies>
                         <dependency type="visible">
@@ -811,8 +811,8 @@
                     <default>5</default>
                     <constraints>
                         <minimum>0</minimum>
-                        <step>5</step>
-                        <maximum>30</maximum>
+                        <step>1</step>
+                        <maximum>15</maximum>
                     </constraints>
                     <control type="slider" format="integer">
                         <popup>false</popup>

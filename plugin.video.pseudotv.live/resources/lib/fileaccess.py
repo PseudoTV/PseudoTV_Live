@@ -35,6 +35,12 @@ class FileAccess:
         return fle
 
 
+    @contextmanager
+    def sopen(filename, mode, encoding=DEFAULT_ENCODING):
+        with xbmcvfs.File(filename, mode) as fle:
+            yield fle
+
+
     @staticmethod
     def listdir(path):
         return xbmcvfs.listdir(path)

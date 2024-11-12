@@ -38,8 +38,10 @@ def getIP(wait=5):
     del monitor
         
 def convertString2Num(value):
-    try:    return literal_eval(value)
-    except: return None
+    try: return literal_eval(value)
+    except Exception as e:
+        log("convertString2Num, failed! value = %s %s"%(value,e), xbmc.LOGERROR)
+        return None
     
 def encodeString(text):
     base64_bytes = base64.b64encode(zlib.compress(text.encode(DEFAULT_ENCODING)))
@@ -187,7 +189,7 @@ class Settings:
 
 
     def getSettingInt(self, key):
-        return convertString2Num(self.getSetting(key))
+        return int(convertString2Num(self.getSetting(key)))
               
               
     def getSettingIntList(self, key):
@@ -211,7 +213,7 @@ class Settings:
        
        
     def getSettingFloat(self, key):
-        return convertString2Num(self.getSetting(key))
+        return float(convertString2Num(self.getSetting(key)))
               
               
     def getSettingFloatList(self, key):
@@ -546,7 +548,8 @@ class Settings:
                 self.log('chkPluginSettings, no changes detected!')
                 return False
             elif prompt:
-                dialog.textviewer('%s\n\n%s'%((LANGUAGE(32035)%(name)),('\n'.join(['Modifying %s: [COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(setting,newvalue[0],newvalue[1]) for setting, newvalue in list(changes.items())]))))
+                modified = '\n'.join(['Modifying %s: [COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(setting,newvalue[0],newvalue[1]) for setting, newvalue in list(changes.items())])
+                dialog.textviewer('%s\n\n%s'%(LANGUAGE(32035)%(name),modified))
                 if not dialog.yesnoDialog((LANGUAGE(32036)%name)): 
                     dialog.notificationDialog(LANGUAGE(32046))
                     return False
@@ -809,12 +812,16 @@ class Properties:
         return loadJSON(decodeString(self.getProperty(key)))
         
         
-    def getPropertyInt(self, key):
-        return convertString2Num(self.getProperty(key))
+    def getPropertyInt(self, key, default=-1):
+        value = self.getProperty(key)
+        if value: return int(convertString2Num(value))
+        else:     return default
             
         
-    def getPropertyFloat(self, key):
-        return float(convertString2Num(self.getProperty(key)))
+    def getPropertyFloat(self, key, default=-1):
+        value = self.getProperty(key)
+        if value: return float(convertString2Num(value))
+        else:     return default
         
 
     #SET
@@ -1032,14 +1039,14 @@ class Builtin:
         else: yield
        
 
-    def getInfoLabel(self, key, param='ListItem', timeout=EPOCH_TIMER):
+    def getInfoLabel(self, key, param='ListItem', timeout=FIFTEEN):
         monitor = MONITOR()
         value   = xbmc.getInfoLabel('%s.%s'%(param,key))
         while not monitor.abortRequested() and (value is None or value == 'Busy'):
             if monitor.waitForAbort(.0001) or timeout < 0: break
             timeout -= .0001
             value = xbmc.getInfoLabel('%s.%s'%(param,key))
-        self.log('getInfoLabel, key = %s.%s, value = %s, time = %s'%(param,key,value,(EPOCH_TIMER-timeout)))
+        self.log('getInfoLabel, key = %s.%s, value = %s, time = %s'%(param,key,value,(FIFTEEN-timeout)))
         del monitor
         return value
         
@@ -1172,11 +1179,9 @@ class Dialog:
 
 
             def onClose(self):
-                try: 
-                    if self.acThread.is_alive():
-                        self.acThread.cancel()
-                        self.acThread.join()
-                except: pass
+                if self.acThread.is_alive():
+                    self.acThread.cancel()
+                    self.acThread.join()
                 self.close()
 
         if not self.properties.isRunning('qrDialog'):
