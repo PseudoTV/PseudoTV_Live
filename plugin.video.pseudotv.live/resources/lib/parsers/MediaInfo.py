@@ -36,7 +36,7 @@ class MediaInfo:
                     log("MediaInfo: parsing %s"%(filename))
                 except: 
                     with xbmcvfs.File(filename) as fle:
-                        mi = MediaInfo.parse(xbmcvfs.translatePath(fle.read())
+                        mi = MediaInfo.parse(xbmcvfs.translatePath(fle.read()))
                         log("MediaInfo: reading %s"%(filename))
             if not mi is None: dur = (mi.tracks[0].duration // 1000 or 0)
             log('MediaInfo: Duration is %s'%(dur))

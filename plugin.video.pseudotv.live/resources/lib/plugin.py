@@ -238,11 +238,11 @@ class Plugin:
                     # DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
                     # timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(url)])
                     # self.resolveURL(False, xbmcgui.ListItem())
-                # else: 
-                    # DIALOG.notificationDialog(LANGUAGE(32000))
-                    # timerit(BUILTIN.executebuiltin)(0.1,['Action(stop)'])
-                    # self.resolveURL(False, xbmcgui.ListItem())
-                else: self.resolveURL(False, xbmcgui.ListItem())
+                else: 
+                    DIALOG.notificationDialog(LANGUAGE(32000))
+                    timerit(BUILTIN.executebuiltin)(0.1,['Action(stop)'])
+                    self.resolveURL(False, xbmcgui.ListItem())
+                #else: self.resolveURL(False, xbmcgui.ListItem())
             else:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
                 liz = xbmcgui.ListItem(name,path=vid)
                 liz.setProperty("IsPlayable","true")

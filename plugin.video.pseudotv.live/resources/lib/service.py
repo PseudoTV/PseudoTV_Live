@@ -241,7 +241,7 @@ class Player(xbmc.Player):
         if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
         BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
         self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('OSD_Timer')))
-        if BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'): BUILTIN.executebuiltin('Action(back)')            
+        if BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'): BUILTIN.executebuiltin('Action(back)')         
 
 
 class Monitor(xbmc.Monitor):
