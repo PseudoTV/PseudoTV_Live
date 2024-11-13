@@ -18,7 +18,7 @@
 #
 # -*- coding: utf-8 -*-
 from globals    import *
-from overlay    import Overlay
+from overlay    import Overlay, Restart
 from rules      import RulesList
 from tasks      import Tasks
 from jsonrpc    import JSONRPC
@@ -30,6 +30,7 @@ class Player(xbmc.Player):
     lastSubState = False
     isIdle       = False
     minDuration  = None
+    restart      = None
     accurateDuration = None
     rules        = RulesList()
     runActions   = rules.runActions
@@ -59,13 +60,14 @@ class Player(xbmc.Player):
 
 
     def __updateGlobals(self):
-        self.lastSubState      = BUILTIN.isSubtitle()
-        self.enableOverlay     = SETTINGS.getSettingBool('Overlay_Enable')
-        self.infoOnChange      = SETTINGS.getSettingBool('Enable_OnInfo')
-        self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt')
-        self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')
-        self.saveDuration      = SETTINGS.getSettingBool('Store_Duration')
-        self.sleepTime         = SETTINGS.getSettingInt('Idle_Timer')
+        self.lastSubState       = BUILTIN.isSubtitle()
+        self.enableOverlay      = SETTINGS.getSettingBool('Overlay_Enable')
+        self.infoOnChange       = SETTINGS.getSettingBool('Enable_OnInfo')
+        self.disableTrakt       = SETTINGS.getSettingBool('Disable_Trakt')
+        self.rollbackPlaycount  = SETTINGS.getSettingBool('Rollback_Watched')
+        self.saveDuration       = SETTINGS.getSettingBool('Store_Duration')
+        self.sleepTime          = SETTINGS.getSettingInt('Idle_Timer')
+        self.restartPercentage  = SETTINGS.getSettingInt('Restart_Percentage')
         
         
     def onPlayBackStarted(self):
@@ -201,12 +203,15 @@ class Player(xbmc.Player):
             self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             self.setTrakt(self.disableTrakt)
+            self.toggleRestart()
         elif self.service.player.enableOverlay and self.infoOnChange: self.toggleInfo()
          
                 
     def _onChange(self):
         self.log('_onChange')
         oldInfo = self.sysInfo
+        self.toggleInfo(False)
+        self.toggleRestart(False)
         if oldInfo.get('isPlaylist'):
             sysInfo = self.getPlayerSysInfo()
             if not sysInfo.get('fitem') and self.isPlaying(): return self.service.tasks._que(self._onChange,1)
@@ -224,6 +229,8 @@ class Player(xbmc.Player):
     def _onStop(self):
         self.log('_onStop')
         self.setTrakt(False)
+        self.toggleInfo(False)
+        self.toggleRestart(False)
         self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
         if self.sysInfo.get('isPlaylist'): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), inherited=self)
@@ -236,13 +243,29 @@ class Player(xbmc.Player):
         self.onPlayBackStopped()
         
     
-    def toggleInfo(self):
-        self.log('toggleInfo')
+    def toggleInfo(self, state: bool=True):
         if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
-        BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
-        self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('OSD_Timer')))
-        if BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'): BUILTIN.executebuiltin('Action(back)')         
+        elif state:
+            self.log('toggleInfo, state = %s'%(state))
+            BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
+            timerit(self.toggleInfo)(float(SETTINGS.getSettingInt('OSD_Timer')),[False])
+        elif BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'): BUILTIN.executebuiltin('Action(back)')  
 
+            
+    def toggleRestart(self, state: bool=True):
+        if state and bool(self.restartPercentage):
+            if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
+            progress = self.getPlayerProgress()
+            seekTHD = SETTINGS.getSettingInt('Seek_Threshold')
+            self.log('toggleRestart, progress = %s, restartPercentage = %s, seekTHD = %s'%(progress,self.restartPercentage,seekTHD))
+            if (progress >= self.restartPercentage and progress < seekTHD) and self.sysInfo.get('fitem'):
+                if not hasattr(self.restart, 'doModal'): self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
+                self.log('toggleRestart, state = %s'%(state))
+                self.restart.doModal()
+        elif not state and hasattr(self.restart, 'onClose'):
+            self.log('toggleRestart, state = %s'%(state))
+            self.restart = self.restart.onClose()
+        
 
 class Monitor(xbmc.Monitor):
     idleTime   = 0
@@ -302,7 +325,7 @@ class Monitor(xbmc.Monitor):
         sec = 0
         cnx = False
         inc = int(100/FIFTEEN)
-        playSFX(NOTE_WAV)
+        timerit(playSFX)(0.1,[NOTE_WAV])
         dia = DIALOG.progressDialog(message=LANGUAGE(30078))
         while not self.abortRequested() and (sec < FIFTEEN):
             sec += 1
@@ -314,15 +337,13 @@ class Monitor(xbmc.Monitor):
         DIALOG.progressDialog(100,dia)
         return not bool(cnx)
 
-        
+
     def onNotification(self, sender, method, data):
         self.log("onNotification, sender %s - method: %s  - data: %s" % (sender, method, data))
             
             
     def isSettingsOpened(self) -> bool:
-        state = (BUILTIN.getInfoBool('IsVisible(addonsettings)','Window') | BUILTIN.getInfoBool('IsVisible(selectdialog)' ,'Window'))
-        self.log("isSettingsOpened, state = %s"%(state))
-        return state
+        return (BUILTIN.getInfoBool('IsVisible(addonsettings)','Window') | BUILTIN.getInfoBool('IsVisible(selectdialog)' ,'Window'))
 
   
     def onSettingsChanged(self):
@@ -400,7 +421,6 @@ class Service():
 
 
     def __tasks(self):
-        self.log('__tasks')
         self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
            
                 

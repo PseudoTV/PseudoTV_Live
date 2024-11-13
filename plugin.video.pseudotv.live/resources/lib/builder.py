@@ -183,7 +183,7 @@ class Builder:
     def buildCells(self, citem: dict={}, duration: int=10800, type: str='video', entries: int=3, info: dict={}) -> list:
         tmpItem  = {'label'       : (info.get('title')        or citem['name']),
                     'episodetitle': (info.get('episodetitle') or '|'.join(citem['group'])),
-                    'plot'        : (info.get('plot')         or LANGUAGE(30161)),
+                    'plot'        : (info.get('plot')         or LANGUAGE(32020)),
                     'genre'       : (info.get('genre')        or ['Undefined']),
                     'file'        : (info.get('path')         or '|'.join(citem.get('path'))),
                     'art'         : (info.get('art')          or {"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO}),
@@ -377,7 +377,7 @@ class Builder:
                         if item.get('year',0) == 0 and spYear: #replace missing item year with one parsed from show title
                             item['year'] = spYear
                             
-                        item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
+                        item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(32020)).strip()
                         if query.get('holiday'):
                             citem['holiday'] = query.get('holiday')
                             holiday = "[B]%s[/B] - [I]%s[/I]"%(query["holiday"]["name"],query["holiday"]["tagline"]) if query["holiday"]["tagline"] else "[B]%s[/B]"%(query["holiday"]["name"])

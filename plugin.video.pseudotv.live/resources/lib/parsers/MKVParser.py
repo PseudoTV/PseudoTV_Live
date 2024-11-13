@@ -21,10 +21,7 @@ from globals import *
 class MKVParser:
     def determineLength(self, filename):
         log("MKVParser: determineLength " + filename)
-
-        try:
-            # self.File = xbmcvfs.File(filename, "r")
-            self.File = FileAccess.open(filename, "rb", None)
+        try: self.File = FileAccess.open(filename, "rb", None)
         except:
             log("MKVParser: Unable to open the file")
             log(traceback.format_exc(), xbmc.LOGERROR)

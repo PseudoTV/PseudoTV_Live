@@ -35,8 +35,7 @@ class ChannelBug(xbmcgui.WindowXML):
             except: self.userPOSX, self.userPOSY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128)
             self.posx, self.posy = self.userPOSX, self.userPOSY
             
-            if BUILTIN.getInfoBool('Playing','Player'):
-                BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
+            if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
         self.doModal()
         
         

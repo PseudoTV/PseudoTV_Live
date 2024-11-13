@@ -213,8 +213,8 @@ class Library:
             if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
             MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':rules}) #"Seasonal"
 
-        if hasRecordings():
-            MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
+        # if hasRecordings(): #broken paths no longer play, Kodi jsonrpc doesn't return valid file and uses unknown vfs assignment
+            # MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
         
         self.log('getMixed, mixed = %s' % (len(MixedList)))
         return sorted(MixedList,key=itemgetter('name'))

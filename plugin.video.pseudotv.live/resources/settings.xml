@@ -1109,21 +1109,6 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <setting id="UDP_PORT" type="integer" label="30097" help="33097" parent="ZeroConf_Status">
-                    <level>3</level>
-                    <default>50000</default>
-                    <constraints>
-                        <allowempty>false</allowempty>
-                    </constraints>
-                    <control type="edit" format="integer">
-                        <heading>30359</heading>
-                    </control>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Debug_Enable">true</condition>
-                        </dependency>
-                    </dependencies>
-                </setting>
             </group>
         </category>
         <category id="Miscellaneous" label="30000" help="33000">

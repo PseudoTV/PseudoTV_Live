@@ -184,34 +184,37 @@ class RequestHandler(BaseHTTPRequestHandler):
                 elif FileAccess.exists(path):
                     if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
                         self.log('do_GET, sending = %s'%(path))
-                        with xbmcvfs.File(path) as fle:
-                            if 'gzip' in self.headers.get('accept-encoding'):
-                                self.log('do_GET, gzip compressing')
-                                data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
-                                self._set_headers(content,data,True)
-                                self.wfile.write(data)
-                            else:
-                                self._set_headers(content)
-                                while not self.monitor.abortRequested():
-                                    chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                                    if not chunk or self.monitor.waitForAbort(.0001): break
-                                    self.send_header('content-length', len(chunk))
-                                    self.wfile.write(chunk)
-                            self.wfile.close()
+                        fle = FileAccess.open(path, "r")
+                        if 'gzip' in self.headers.get('accept-encoding'):
+                            self.log('do_GET, gzip compressing')
+                            data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
+                            self._set_headers(content,data,True)
+                            self.wfile.write(data)
+                        else:
+                            self._set_headers(content)
+                            while not self.monitor.abortRequested():
+                                chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
+                                if not chunk or self.monitor.waitForAbort(.0001): break
+                                self.send_header('content-length', len(chunk))
+                                self.wfile.write(chunk)
+                        self.wfile.close()
+                        fle.close()
                     elif self.path.lower().startswith("/images/"):
-                        with xbmcvfs.File(path) as fle:
-                            chunk = fle.readBytes()
-                            self._set_headers(content,chunk)
-                            self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
-                            self.wfile.write(chunk)
-                            self.wfile.close()
+                        fle = FileAccess.open(path, "r")
+                        chunk = fle.readBytes()
+                        self._set_headers(content,chunk)
+                        self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
+                        self.wfile.write(chunk)
+                        self.wfile.close()
+                        fle.close()
                     else:
-                        with xbmcvfs.File(path) as fle:
-                            chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
-                            self._set_headers(content,chunk)
-                            self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
-                            self.wfile.write(chunk)
-                            self.wfile.close()
+                        fle = FileAccess.open(path, "r")
+                        chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
+                        self._set_headers(content,chunk)
+                        self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
+                        self.wfile.write(chunk)
+                        self.wfile.close()
+                        fle.close()
                 else: self.send_error(401, "Not found")
         
 class HTTP:
@@ -262,8 +265,7 @@ class HTTP:
                 SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
                 SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
                 SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
-                
-                
+
                 self._server = ThreadedHTTPServer((IP, PORT), partial(RequestHandler,monitor=self.service.monitor))
                 self._server.allow_reuse_address = True
                 self._httpd_thread = Thread(target=self._server.serve_forever)

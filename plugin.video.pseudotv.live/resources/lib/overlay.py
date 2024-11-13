@@ -117,7 +117,6 @@ class Restart(xbmcgui.WindowXMLDialog):
   
   
 class Overlay():
-    restart    = None
     blackout   = None
     background = None
     
@@ -129,25 +128,18 @@ class Overlay():
             
         def onAVStarted(self):
             self.overlay.log('onAVStarted')
-            self.overlay.toggleOnNext(False)
             self.overlay.toggleBackground(False)
-            timerit(self.overlay.toggleReplay)(float(SETTINGS.getSettingInt('OSD_Timer')))
-            timerit(self.overlay.toggleBug)(float(SETTINGS.getSettingInt('OSD_Timer')))
-            timerit(self.overlay.toggleVignette)(float(SETTINGS.getSettingInt('OSD_Timer')))
+            if not self.overlay.player.isPseudoTV: return self.onPlayBackStopped()
             
             
         def onPlayBackEnded(self):
             self.overlay.log('onPlayBackEnded')
-            self.overlay.toggleReplay(False)
             self.overlay.toggleBackground()
             
             
         def onPlayBackStopped(self):
             self.overlay.log('onPlayBackStopped')
-            self.overlay._cancelOnNext()
-            self.overlay._cancelChannelBug()
-            self.overlay.toggleReplay(False)
-            self.overlay.toggleBackground(False)
+            sefl.overlay.close()
 
 
     def __init__(self, jsonRPC, player=None):
@@ -169,7 +161,6 @@ class Overlay():
         self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
         self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.minDuration        = SETTINGS.getSettingInt('Seek_Tolerance')
-        self.restartPercentage  = SETTINGS.getSettingInt('Restart_Percentage')
         
         try:    self.channelBugX, self.channelBugY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
         except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
@@ -269,12 +260,14 @@ class Overlay():
         if not self.player.isPseudoTV or not self.player.isPlaying(): return self.close()
         self.log('open, id = %s'%(self.player.sysInfo.get('citem',{}).get('id')))
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
+        self.toggleBug(), self.toggleOnNext(), self.toggleVignette()
         self.myPlayer.onAVStarted()
             
             
     def close(self):
         self.log('close')
-        self.myPlayer.onPlayBackStopped()
+        self.toggleBackground(False), self.toggleVignette(False)
+        self._cancelChannelBug(), self._cancelOnNext()
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
         [self._removeControl(control) for control, visible in list(self.controlManager.items()) if self._hasControl(control)]
         
@@ -301,36 +294,22 @@ class Overlay():
 
     def toggleBlackout(self, state: bool=True):
         self.log('toggleBlackout, state = %s'%(state))
-        if not self._hasControl(self._blackout):   self._addControl(self._blackout)
+        if not self._hasControl(self._blackout): self._addControl(self._blackout)
         if self._isVisible(self._blackout) != state: self._setVisible(self._blackout,state)
-        if self.player.isPlaying() and not BUILTIN.getInfoBool('IsTopMost(fullscreeninfo)','Window'):
-            BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
 
 
     def toggleBackground(self, state: bool=True):
-        if state and not hasattr(self.background, 'doModal'): 
+        if state:
+            if not hasattr(self.background, 'doModal'): 
+                self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self.player)
             self.log('toggleBackground, state = %s'%(state))
-            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self.player)
             self.background.doModal()
-        elif not state and hasattr(self.background, 'close'):      
+        else:      
             self.log('toggleBackground, state = %s'%(state))
-            self.background = self.background.close()
+            if hasattr(self.background, 'close'): self.background = self.background.close()
+            if self.player.isPlaying() and not BUILTIN.getInfoBool('IsTopMost(fullscreeninfo)','Window'):
+                BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
 
-        if self.player.isPlaying() and not BUILTIN.getInfoBool('IsTopMost(fullscreeninfo)','Window'):
-            BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
-            
-           
-    def toggleReplay(self, state: bool=True):
-        self.log('toggleReplay, state = %s'%(state))
-        if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
-        if state and bool(self.restartPercentage) and not hasattr(self.restart, 'doModal'): 
-            progress = self.player.getPlayerProgress()
-            self.log('toggleReplay, progress = %s, restartPercentage = %s'%(progress,self.restartPercentage))
-            if (progress >= self.restartPercentage and progress < SETTINGS.getSettingInt('Seek_Threshold')) and not self.player.isIdle and self.player.sysInfo.get('fitem'):
-                self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self.player)
-                self.restart.doModal()
-        elif not state and hasattr(self.restart, 'onClose'): self.restart = self.restart.onClose()
-        
 
     def toggleVignette(self, state: bool=True):
         self.log('toggleVignette, state = %s'%(state))
@@ -380,8 +359,9 @@ class Overlay():
                 self._channelBug.setPosition(self.channelBugX, self.channelBugY)
             except: pass
             
-            if state and self.player.isPseudoTV and self.enableChannelBug and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
-                if not self._hasControl(self._channelBug):
+            if state and self.enableChannelBug:
+                if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
+                elif not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
                     self._channelBug.setVisibleCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
                     self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
@@ -429,15 +409,15 @@ class Overlay():
                 try: self._onNextThread.join()
                 except: pass
                 
-            if state and showOnNext and self.player.isPseudoTV and self.enableOnNext:
+            if state and showOnNext and self.enableOnNext:
                 citem = self.player.sysInfo.get('citem',{})
                 if not self._hasControl(self._onNext):
                     self._addControl(self._onNext)
                     self._onNext.setVisibleCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
                              
-                citem = self.player.sysInfo.get('citem',{})
-                fitem = self.player.sysInfo.get('fitem',{})
-                nitem = self.player.sysInfo.get('nitem',{})
+                citem = self.player.sysInfo.get('citem',{}) #channel
+                fitem = self.player.sysInfo.get('fitem',{}) #onnow
+                nitem = self.player.sysInfo.get('nitem',{}) #onnext
                 
                 if self.player.sysInfo.get('isPlaylist',False): self._updateUpNext(fitem,nitem)
                 else:
@@ -448,10 +428,11 @@ class Overlay():
                     onNow  = '%s on %s'%(nowTitle,chname) if chname not in nowTitle else fitem.get('showlabel',nowTitle)
                     onNext = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
                     self._setText(self._onNext,'%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
-                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=%s delay=%s condition=True reversible=True'%(ceil(wait//4)*1000,ceil(wait//4)*1000))])
+                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=%s delay=%s condition=True reversible=True'%(ceil(wait//4)*1000,(
+                    ceil(wait//4)-2)*1000))])
                     self._onNext.autoScroll(5500, 2500, int(FIFTEEN//3))
                     self._setVisible(self._onNext,True)
-                    playSFX(BING_WAV)
+                    timerit(playSFX)(0.1,[BING_WAV])
             else: self._setVisible(self._onNext,False)
             self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
             self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])

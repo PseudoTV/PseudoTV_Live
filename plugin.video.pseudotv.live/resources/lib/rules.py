@@ -713,7 +713,7 @@ class DisableRestart(BaseRule):
         self.optionLabels       = [LANGUAGE(30153)]
         self.optionValues       = [SETTINGS.getSettingInt('Restart_Percentage')]
         self.optionDescriptions = [LANGUAGE(33153)]
-        self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
+        self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [list(range(25,100,5))]
         self.storedValues       = [list() for idx in self.optionValues]
 
@@ -732,11 +732,11 @@ class DisableRestart(BaseRule):
 
 
     def runAction(self, actionid, citem, parameter, overlay):
-        if actionid == RULES_ACTION_OVERLAY_OPEN:
+        if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0] = overlay.restartPercentage
             overlay.restartPercentage = self.optionValues[0]
             
-        elif actionid == RULES_ACTION_OVERLAY_CLOSE:
+        elif actionid == RULES_ACTION_PLAYER_STOP:
             overlay.restartPercentage = self.storedValues[0]
         self.log("runAction, setting restartPercentage = %s"%(overlay.restartPercentage))
         return parameter
