@@ -282,7 +282,7 @@ class BaseRule:
           
     def onActionBrowse(self, optionindex, type=0, heading=ADDON_NAME, shares='', mask='', options=[], exclude=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
         log("onActionBrowse")
-        info = self.dialog.browseDialog(type, heading, self.optionValues[optionindex].replace('None',''), shares, mask, options, exclude, useThumbs, treatAsFolder, prompt, multi, monitor)
+        info = self.dialog.browseDialog(type, heading, self.optionValues[optionindex], shares, mask, options, exclude, useThumbs, treatAsFolder, prompt, multi, monitor)
         if info is not None: self.optionValues[optionindex] = info 
                      
 
@@ -404,12 +404,12 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
         self.name               = "Screen Vignette"
         self.description        = "Add Channel Overlay to create a immersive viewing experience."
         self.optionLabels       = ['Enable Screen Vignette','Vignette Image','Vignette Image offset']
-        self.optionValues       = [False,'None',"(0,0)"]
+        self.optionValues       = [SETTINGS.getSettingBool('Enable_Vignette'),SETTINGS.getSetting('Vignette_Image'),"(0,0)",SETTINGS.getSettingFloat('Vignette_Zoom')]
         self.optionDescriptions = ["Show Screen Vignette","Change Vignette Image","Change Vignette Offset"]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
-        self.selectBoxOptions   = ["",self.optionValues[1],""]
-        self.storedValues       = [[],[],[]]
-
+        self.selectBoxOptions   = [[True,False],'','',list(frange(5,21,1))]
+        self.storedValues       = [list() for idx in self.optionValues]
+        
 
     def copy(self):
         return SetScreenVingette()
@@ -423,22 +423,25 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
     def getPosition(self, optionindex):
         self.dialog.notificationDialog(LANGUAGE(32020))
 
+            
+    def getZoom(self, optionindex): #todo set zoom via utility or dialog 
+        self.dialog.notificationDialog(LANGUAGE(32020))
 
-    def getImage(self, image='None'):
-        if not image is None:
-            self.log('getImage, In image = %s'%(image))
-            day    = re.compile('\_Day(.*?)', re.IGNORECASE).search(image)
-            night  = re.compile('\_Night(.*?)', re.IGNORECASE).search(image)
-            mytime = time.localtime()
-            if mytime.tm_hour < 6 or mytime.tm_hour > 18:
-                if day:
-                    nImage = image.replace(day.group(),'_Night')
-                    if FileAccess.exists(nImage): image = nImage
-            else:
-                if night:
-                    nImage = image.replace(night.group(),'_Day')
-                    if FileAccess.exists(nImage): image = nImage
-            self.log('getImage, Out image = %s'%(image))
+
+    def getImage(self, image=''):
+        self.log('getImage, In image = %s'%(image))
+        day    = re.compile('\_Day(.*?)', re.IGNORECASE).search(image)
+        night  = re.compile('\_Night(.*?)', re.IGNORECASE).search(image)
+        mytime = time.localtime()
+        if mytime.tm_hour < 6 or mytime.tm_hour > 18:
+            if day:
+                nImage = image.replace(day.group(),'_Night')
+                if FileAccess.exists(nImage): image = nImage
+        else:
+            if night:
+                nImage = image.replace(night.group(),'_Day')
+                if FileAccess.exists(nImage): image = nImage
+        self.log('getImage, Out image = %s'%(image))
         return image
 
 
@@ -446,21 +449,28 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
         if   optionindex == 0: self.onActionToggleBool(optionindex)
         elif optionindex == 1: self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), exclude=[LANGUAGE(32202),LANGUAGE(32206),LANGUAGE(32195),LANGUAGE(32193),LANGUAGE(32192),LANGUAGE(32191),LANGUAGE(32194)])
         elif optionindex == 2: self.getPosition(optionindex)
+        elif optionindex == 3: self.getZoom(optionindex)
         return self.optionValues[optionindex]
 
 
     def runAction(self, actionid, citem, parameter, overlay):
         if actionid == RULES_ACTION_OVERLAY_OPEN:
+            self.storedValues[0] = overlay.enableVignette
             self.storedValues[1] = overlay._vinImage
-            self.storedValues[2] = (overlay._vinOffsetX,overlay._vinOffsetY)
+            self.storedValues[2] = overlay._vinOffsetXY
+            self.storedValues[3] = overlay._vinZoom
             
-            overlay._vinImage    = self.getImage(self.optionValues[1])
-            overlay._vinOffsetX, overlay._vinOffsetY = literal_eval(self.optionValues[2])
+            overlay.enableVignette = self.optionValues[1]
+            overlay._vinImage      = self.getImage(self.optionValues[1])
+            overlay._vinOffsetXY   = literal_eval(self.optionValues[2])
+            overlay._vinZoom       = self.optionValues[3]
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
-            overlay._vinImage    = self.storedValues[1]
-            overlay._vinOffsetX, overlay._vinOffsetY = self.storedValues[2]
-        self.log("runAction, setting overlay image to %s (%s,%s)"%(overlay._vinImage,overlay._vinOffsetX,overlay._vinOffsetY))
+            overlay.enableVignette = self.storedValues[0]
+            overlay._vinImage      = self.storedValues[1]
+            overlay._vinOffsetXY   = self.storedValues[2]
+            overlay._vinZoom       = self.storedValues[3]
+        self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
         return parameter
         
 

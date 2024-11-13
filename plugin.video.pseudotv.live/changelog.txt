@@ -1,4 +1,6 @@
 v.0.5.6
+-Improved Vignette (W.I.P):
+ -Global settings added for default vignette image, zoom. Per-Channel settings available in Advanced Channel Rules.
 -Improved MediaInfo support for external mediainfo.xml file parsing.
 -Fixed Issue with disappearing channels from m3u.
 -Tweaked Background overlay.

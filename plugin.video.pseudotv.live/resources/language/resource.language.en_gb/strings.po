@@ -717,6 +717,18 @@ msgctxt "#30173"
 msgid "Select Server"
 msgstr ""
 
+msgctxt "#30174"
+msgid "Enable Vignette"
+msgstr ""
+
+msgctxt "#30175"
+msgid "Vignette Image"
+msgstr ""
+
+msgctxt "#30176"
+msgid "Vignette Zoom"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -1939,6 +1951,23 @@ msgstr ""
 msgctxt "#33172"
 msgid "Default Channel List the Channel Manager starts with."
 msgstr ""
+
+msgctxt "#33174"
+msgid "Enable Vignette"
+msgstr ""
+
+msgctxt "#33175"
+msgid "Set Vignette Image"
+msgstr ""
+
+msgctxt "#33176"
+msgid "Set Vignette Zoom"
+msgstr ""
+
+msgctxt "#33178"
+msgid "Select Vignette Image"
+msgstr ""
+
 
 msgctxt "#33180"
 msgid "Build Filler Template folders based on your channels."

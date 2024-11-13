@@ -408,6 +408,9 @@ def compareDict(dict1,dict2,sortKey):
     b = sorted(dict2, key=itemgetter(sortKey))
     return a == b
     
+def frange(start,stop,inc):
+    return map(lambda x: x/10.0, range(start,stop,inc))
+    
 def timeString2Seconds(string): #hh:mm:ss
     try:    return int(sum(x*y for x, y in zip(list(map(float, string.split(':')[::-1])), (1, 60, 3600, 86400))))
     except: return -1

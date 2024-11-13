@@ -41,7 +41,7 @@ def convertString2Num(value):
     try: return literal_eval(value)
     except Exception as e:
         log("convertString2Num, failed! value = %s %s"%(value,e), xbmc.LOGERROR)
-        return None
+        return value
     
 def encodeString(text):
     base64_bytes = base64.b64encode(zlib.compress(text.encode(DEFAULT_ENCODING)))
@@ -1046,7 +1046,7 @@ class Builtin:
             if monitor.waitForAbort(.0001) or timeout < 0: break
             timeout -= .0001
             value = xbmc.getInfoLabel('%s.%s'%(param,key))
-        self.log('getInfoLabel, key = %s.%s, value = %s, time = %s'%(param,key,value,(FIFTEEN-timeout)))
+        self.log('getInfoLabel, key = %s.%s, value = %s, wait = %s'%(param,key,value,(FIFTEEN-timeout)))
         del monitor
         return value
         
