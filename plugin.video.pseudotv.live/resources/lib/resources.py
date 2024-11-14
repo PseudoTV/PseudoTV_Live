@@ -73,7 +73,7 @@ class Resources:
         resources = SETTINGS.getSetting('Resource_Logos').split('|').copy()
         if   type in ["TV Genres","Movie Genres"]:    resources.extend(GENRE_RESOURCE)
         elif type in ["TV Networks","Movie Studios"]: resources.extend(STUDIO_RESOURCE)
-        elif type == "Music Genres":                  resources.extend(MUSIC_RESOURCE)
+        elif type in ["Music Genres","Radio"]:        resources.extend(MUSIC_RESOURCE)
         else:
             resources.extend(GENRE_RESOURCE)
             resources.extend(STUDIO_RESOURCE)

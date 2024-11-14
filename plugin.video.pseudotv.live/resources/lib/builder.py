@@ -119,6 +119,7 @@ class Builder:
             
             updated = False
             for idx, citem in enumerate(channels):
+                self.log('build, id = %s, rules = %s'%(citem.get('id'),citem.get('rules',{})))
                 if self.service._interrupt():
                     self.completeBuild = False
                     self.pErrors = [LANGUAGE(32160)]

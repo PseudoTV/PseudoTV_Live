@@ -29,8 +29,8 @@ class Player(xbmc.Player):
     isPseudoTV   = False
     lastSubState = False
     isIdle       = False
-    minDuration  = None
     restart      = None
+    minDuration  = None
     accurateDuration = None
     rules        = RulesList()
     runActions   = rules.runActions
@@ -107,8 +107,9 @@ class Player(xbmc.Player):
         
         
     def isPseudoTVPlaying(self):
-        state = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo'))).get('chid') != None
-        self.log('isPseudoTVPlaying = %s'%(state))
+        chid  = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo'))).get('chid','')
+        state = '@%s'%(slugify(ADDON_NAME)) in chid
+        self.log('isPseudoTVPlaying = %s, id = %s'%(state,chid))
         return state
         
         
@@ -193,9 +194,9 @@ class Player(xbmc.Player):
         
         
     def _onPlay(self):
-        self.log('_onPlay')
         oldInfo = self.sysInfo
         self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
+        self.log('_onPlay, id = %s, rules = %s'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo.get('rules',{})))
         #items that only run once per channel change. ie. set adv. rules and variables. 
         if self.sysInfo.get('chid') != oldInfo.get('chid',random.random()): #playing new channel
             self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), inherited=self)
@@ -235,7 +236,6 @@ class Player(xbmc.Player):
         if self.sysInfo.get('isPlaylist'): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), inherited=self)
         self.sysInfo = {}
-        self.isPseudoTV = False
 
 
     def _onError(self):
@@ -249,20 +249,22 @@ class Player(xbmc.Player):
             self.log('toggleInfo, state = %s'%(state))
             BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
             timerit(self.toggleInfo)(float(SETTINGS.getSettingInt('OSD_Timer')),[False])
-        elif BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'): BUILTIN.executebuiltin('Action(back)')  
+        elif not state and BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
+            BUILTIN.executebuiltin('Action(back)')  
 
-            
+                 
     def toggleRestart(self, state: bool=True):
         if state and bool(self.restartPercentage):
             if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
             progress = self.getPlayerProgress()
             seekTHD = SETTINGS.getSettingInt('Seek_Threshold')
             self.log('toggleRestart, progress = %s, restartPercentage = %s, seekTHD = %s'%(progress,self.restartPercentage,seekTHD))
-            if (progress >= self.restartPercentage and progress < seekTHD) and self.sysInfo.get('fitem'):
-                if not hasattr(self.restart, 'doModal'): self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
+            #todo apply zoom to to posxy
+            if self.restart is None and (progress >= self.restartPercentage and progress < seekTHD) and self.sysInfo.get('fitem'):
+                self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
                 self.log('toggleRestart, state = %s'%(state))
-                self.restart.doModal()
-        elif not state and hasattr(self.restart, 'onClose'):
+                self.restart = self.restart.doModal()
+        elif not state and hasattr(self.restart,'onClose'):
             self.log('toggleRestart, state = %s'%(state))
             self.restart = self.restart.onClose()
         
@@ -296,20 +298,24 @@ class Monitor(xbmc.Monitor):
 
     def chkIdle(self):
         self.isIdle, self.idleTime = self.getIdle()
-        if self.service.player.isPlaying() and not BUILTIN.isPaused():
-            if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)): self.triggerSleep()
-            if self.isIdle: self.toggleOverlay(True)
-            else:           self.toggleOverlay(False)
+        if SETTINGS.getSettingBool('Debug_Enable'):
+            self.log('chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
+        if self.isIdle: self.toggleOverlay(True)
+        else:           self.toggleOverlay(False)
+        if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)):
+            self.triggerSleep()
         
 
     def toggleOverlay(self, state: bool=True):
-        if state and not hasattr(self.overlay, 'open') and self.service.player.enableOverlay:
-            self.log("toggleOverlay, state = %s"%(state))
-            self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
-            self.overlay.open()
-        elif not state and hasattr(self.overlay, 'close'): 
+        if state and self.service.player.enableOverlay and self.service.player.isPseudoTV:
+            if self.overlay is None and self.service.player.isPlaying():
+                self.log("toggleOverlay, state = %s"%(state))
+                self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
+                self.overlay.open()
+        elif not state and not self.overlay is None:
             self.log("toggleOverlay, state = %s"%(state))
             self.overlay = self.overlay.close()
+        else: print('toggleOverlay',self.overlay)
 
 
     def triggerSleep(self):
@@ -421,6 +427,7 @@ class Service():
 
 
     def __tasks(self):
+        if SETTINGS.getSettingBool('Debug_Enable'): self.log('__tasks')
         self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
            
                 

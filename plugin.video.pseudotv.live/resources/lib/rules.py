@@ -403,9 +403,9 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
         self.exclude            = False
         self.name               = "Screen Vignette"
         self.description        = "Add Channel Overlay to create a immersive viewing experience."
-        self.optionLabels       = ['Enable Screen Vignette','Vignette Image','Vignette Image offset']
+        self.optionLabels       = ['Enable Screen Vignette','Vignette Image','Vignette Image offset','Vignette Image Zoom']
         self.optionValues       = [SETTINGS.getSettingBool('Enable_Vignette'),SETTINGS.getSetting('Vignette_Image'),"(0,0)",SETTINGS.getSettingFloat('Vignette_Zoom')]
-        self.optionDescriptions = ["Show Screen Vignette","Change Vignette Image","Change Vignette Offset"]
+        self.optionDescriptions = ["Show Screen Vignette","Change Vignette Image","Change Vignette Offset","Change Vignette Zoom"]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
         self.selectBoxOptions   = [[True,False],'','',list(frange(5,21,1))]
         self.storedValues       = [list() for idx in self.optionValues]
@@ -416,7 +416,7 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
 
 
     def getTitle(self):
-        if self.optionValues[0]: return 'Show Screen Vignette w/%s offset\n%s'%(self.optionValues[2],self.getImage(self.optionValues[1]))
+        if self.optionValues[0]: return 'Show Screen Vignette w/%s\noffset = %s, zoom = %s'%(self.getImage(self.optionValues[1]),self.optionValues[2],self.optionValues[3])
         else:                    return 'Hide Screen Vignette'
             
             
@@ -470,6 +470,7 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
             overlay._vinImage      = self.storedValues[1]
             overlay._vinOffsetXY   = self.storedValues[2]
             overlay._vinZoom       = self.storedValues[3]
+        
         self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
         return parameter
         
@@ -741,14 +742,14 @@ class DisableRestart(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, citem, parameter, overlay):
+    def runAction(self, actionid, citem, parameter, player):
         if actionid == RULES_ACTION_PLAYER_START:
-            self.storedValues[0] = overlay.restartPercentage
-            overlay.restartPercentage = self.optionValues[0]
+            self.storedValues[0] = player.restartPercentage
+            player.restartPercentage = self.optionValues[0]
             
         elif actionid == RULES_ACTION_PLAYER_STOP:
-            overlay.restartPercentage = self.storedValues[0]
-        self.log("runAction, setting restartPercentage = %s"%(overlay.restartPercentage))
+            player.restartPercentage = self.storedValues[0]
+        self.log("runAction, setting restartPercentage = %s"%(player.restartPercentage))
         return parameter
 
         
