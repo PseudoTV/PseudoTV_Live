@@ -1610,6 +1610,14 @@ msgctxt "#32220"
 msgid "%s Disabled"
 msgstr ""
 
+msgctxt "#32221"
+msgid "Add"
+msgstr ""
+
+msgctxt "#32222"
+msgid "Save"
+msgstr ""
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"
@@ -1837,11 +1845,11 @@ msgid "Change the onscreen Channel Bug position. [(1556,920) Default]"
 msgstr ""
 
 msgctxt "#33113"
-msgid "Add path to channel"
+msgid "Add path"
 msgstr ""
 
 msgctxt "#33114"
-msgid "Save channel paths"
+msgid "Save paths"
 msgstr ""
 
 msgctxt "#33115"
@@ -1849,7 +1857,7 @@ msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33121"
-msgid "Group TV shows in blocks. [0 Disabled, 3 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
+msgid "Group Autotuned channel TV shows in blocks. [0 Disabled, 3 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
 msgstr ""
 
 msgctxt "#33125"

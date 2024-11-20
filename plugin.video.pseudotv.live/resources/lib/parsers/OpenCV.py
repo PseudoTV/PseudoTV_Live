@@ -23,7 +23,7 @@ class OpenCV:
         try:
             import cv2
             log("OpenCV: determineLength %s"%(filename))
-            dur = cv2.VideoCapture(xbmcvfs.translatePath(filename)).get(cv2.CAP_PROP_POS_MSEC)
+            dur = cv2.VideoCapture(FileAccess.translatePath(filename)).get(cv2.CAP_PROP_POS_MSEC)
             log('OpenCV: Duration is %s'%(dur))
             return dur
         except Exception as e:

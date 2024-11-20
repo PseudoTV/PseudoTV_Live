@@ -1,4 +1,8 @@
 v.0.5.6
+-Improved Channel Manager's Path browser, now includes resource paths.
+-Refactored Pre-Roll/Post-Roll Fillers.
+-Added Pre-Roll/Post-Roll options to Adv. Channel rules.
+-Improved Advanced Channel rules.
 -Fixed Overlay issues introduced in previous versions.
 -Improved Vignette (W.I.P):
  -Global settings added for default vignette image, zoom. Per-Channel settings available in Advanced Channel Rules.

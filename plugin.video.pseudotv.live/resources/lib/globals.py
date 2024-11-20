@@ -37,7 +37,6 @@ from contextlib          import contextmanager, closing
 from socket              import gethostbyname, gethostname
 from itertools           import cycle, chain, zip_longest, islice
 from xml.sax.saxutils    import escape, unescape
-from ast                 import literal_eval
 from operator            import itemgetter
 
 from logger              import *
@@ -470,25 +469,3 @@ def percentDiff(org, new):
 def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
-     
-def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
-    if not values: return [-1]
-    matches = []
-    def _match(fkey,fvalue):
-        if str(fkey).lower() == str(fvalue).lower():
-            matches.append(idx if index else item)
-                    
-    for value in values:
-        if isinstance(value,dict): 
-            value = value.get(val_key,'')
-            
-        for idx, item in enumerate(items): 
-            if isinstance(item,xbmcgui.ListItem): 
-                if item_key == 'getLabel':  
-                    _match(item.getLabel() ,value)
-                elif item_key == 'getLabel2': 
-                    _match(item.getLabel2(),value)
-            elif isinstance(item,dict):       
-                _match(item.get(item_key,''),value)
-            else: _match(item,value)
-    return matches

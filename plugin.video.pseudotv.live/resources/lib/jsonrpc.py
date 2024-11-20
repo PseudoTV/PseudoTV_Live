@@ -263,6 +263,19 @@ class JSONRPC:
         return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
 
+    def getFileDetails(self, file, media='video', properties=["duration","runtime"]):
+        return self.sendJSON({"method":"Files.GetFileDetails","params":{"file":file,"media":media,"properties":properties}})
+
+
+    def getPlayerAttr(self, attr='zoom'):
+        #{"nonlinearstretch":false,"pixelratio":1,"verticalshift":0,"viewmode":"custom","zoom": 1.0}
+        return self.sendJSON({"method":"Player.GetViewMode","params":{}}).get(attr)
+
+
+    def setPlayerZoom(self, zoom=1.0):
+        return self.sendJSON({"method":"Player.SetViewMode","params":{"viewmode":{"zoom":zoom}}})
+
+
     def getPlayerItem(self, playlist=False):
         self.log('getPlayerItem, playlist = %s' % (playlist))
         if playlist: param = {"method":"Playlist.GetItems","params":{"playlistid":self.getActivePlaylist(),"properties":self.getEnums("List.Fields.All", type='items')}}

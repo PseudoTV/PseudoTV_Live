@@ -597,7 +597,7 @@
                 </setting>
                 <setting id="Vignette_Image" type="path" label="30175" help="33175" parent="Enable_Vignette">
                     <level>1</level>
-                    <default>special://home/addons/resource.images.overlays.crttv/resources/exodus_Samsung_Day.png</default>
+                    <default>special://home/addons/plugin.video.pseudotv.live/resources/skins/default/media/overlays/scanlines.png</default>
                     <constraints>
                         <sources>
                             <source>pictures</source>
@@ -619,7 +619,7 @@
                 </setting>
                 <setting id="Vignette_Zoom" type="number" label="30176" help="33176" parent="Enable_Vignette">
                     <level>1</level>
-                    <default>0.8</default>
+                    <default>1.0</default>
                     <constraints>
                         <minimum>0.5</minimum>
                         <step>0.1</step>

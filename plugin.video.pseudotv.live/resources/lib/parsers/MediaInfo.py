@@ -29,14 +29,14 @@ class MediaInfo:
             if FileAccess.exists(fileXML):
                 log("MediaInfo: parsing XML %s"%(fileXML))
                 with xbmcvfs.File(fileXML) as fle:
-                    mi = pymediainfo.MediaInfo(fle.read())
+                    mi = MediaInfo(fle.read())
             else:
                 try:
-                    mi = MediaInfo.parse(xbmcvfs.translatePath(filename))
+                    mi = MediaInfo.parse(FileAccess.translatePath(filename))
                     log("MediaInfo: parsing %s"%(filename))
                 except: 
                     with xbmcvfs.File(filename) as fle:
-                        mi = MediaInfo.parse(xbmcvfs.translatePath(fle.read()))
+                        mi = MediaInfo.parse(FileAccess.translatePath(fle.read()))
                         log("MediaInfo: reading %s"%(filename))
             if not mi is None: dur = (mi.tracks[0].duration // 1000 or 0)
             log('MediaInfo: Duration is %s'%(dur))

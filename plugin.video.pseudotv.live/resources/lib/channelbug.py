@@ -19,7 +19,6 @@
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
-from ast       import literal_eval
 from globals   import *
 
 class ChannelBug(xbmcgui.WindowXML):
@@ -35,7 +34,7 @@ class ChannelBug(xbmcgui.WindowXML):
             # self._vinImage    = SETTINGS.getSetting('Vignette_Image')
             # self._vinZoom     = SETTINGS.getSettingFloat('Vignette_Zoom')
             #todo add default overlay to channelbug tool.
-            try:    self.userPOSX, self.userPOSY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY"))
+            try:    self.userPOSX, self.userPOSY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY"))
             except: self.userPOSX, self.userPOSY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128)
             self.posx, self.posy = self.userPOSX, self.userPOSY
             

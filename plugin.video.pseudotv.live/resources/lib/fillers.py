@@ -28,7 +28,7 @@ from resources  import Resources
 class Fillers:
     def __init__(self, builder):
         self.builder    = builder
-        self.cache      = builder.cache
+        self.cache      = SETTINGS.cacheDB
         self.jsonRPC    = builder.jsonRPC
         self.runActions = builder.runActions
         self.resources  = Resources(self.jsonRPC)
@@ -90,11 +90,7 @@ class Fillers:
             return tmpDCT
         
         try:
-            if path.startswith('resource.'):
-                if   ftype == 'ratings':                return __sortItems(_parseResource(path))
-                elif ftype == 'bumpers':                return __sortItems(_parseResource(path))
-                elif ftype == 'adverts':                return __sortItems(_parseResource(path))
-                elif ftype == 'trailers':               return __sortItems(_parseResource(path))
+            if       path.startswith('resource.'):      return __sortItems(_parseResource(path))
             elif     path.startswith('plugin://'):      return __sortItems(_parseVFS(path),'plugin')
             elif not path.startswith(tuple(VFS_TYPES)): return __sortItems(_parseLocal(path))
             else:                                       return {}
@@ -103,31 +99,33 @@ class Fillers:
         
         
     def convertMPAA(self, ompaa):
-        tmpLST = ompaa.split(' / ')
-        tmpLST.append(ompaa.upper())
-        try:    mpaa = re.compile(":(.*?)/", re.IGNORECASE).search(ompaa.upper()).group(1).strip()
-        except: mpaa = ompaa.upper()
-        #https://www.spherex.com/tv-ratings-vs-movie-ratings, #https://www.spherex.com/which-is-more-regulated-film-or-tv
+        try:
+            ompaa = ompaa.upper()
+            mpaa  = re.compile(":(.*?)/", re.IGNORECASE).search(ompaa).group(1).strip()
+        except: return ompaa
         mpaa = mpaa.replace('TV-Y','G').replace('TV-Y7','G').replace('TV-G','G').replace('NA','NR').replace('TV-PG','PG').replace('TV-14','PG-13').replace('TV-MA','R')
-        tmpLST.append(mpaa)
-        return mpaa, tmpLST
+        return mpaa
 
 
     def getSingle(self, type, keys=['resources'], chance=False):
-        self.log('getSingle, type = %s, keys = %s, chance = %s'%(type,keys,chance))
-        tmpLST = []
-        for key in keys: tmpLST.extend(self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
-        if len(tmpLST) > 0: return random.choice(tmpLST)
-        elif chance:        return self.getSingle(type)
-        else:               return {}
-
+        items  = []
+        for key in keys:
+            tmpLST = self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[])
+            if len(tmpLST) > 0: items.append(random.choice(tmpLST))
+        if len(items) ==  0 and chance: items.extend(self.getSingle(type))#parse root for anything
+        items = setDictLST(items)
+        self.log('getSingle, type = %s, keys = %s, chance = %s, returning = %s'%(type,keys,chance,len(items)))
+        return items
+        
 
     def getMulti(self, type, keys=['resources'], count=1, chance=False):
         items  = []
         tmpLST = []
         for key in keys: tmpLST.extend(self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
-        if len(tmpLST) > 0: items = setDictLST(random.choices(tmpLST,k=count))
-        if len(items) < count and chance: items.extend(self.getMulti(type,count=(count-len(items))))
+        if   len(tmpLST) >= count: items = random.sample(tmpLST, count)
+        elif len(tmpLST) > 0:      items = setDictLST(random.choices(tmpLST,k=count))
+        if len(items) < count and chance: items.extend(self.getMulti(type,count=(count-len(items))))#parse root for anything
+        items = setDictLST(items)
         self.log('getMulti, type = %s, keys = %s, count = %s, chance = %s, returning = %s'%(type,keys,count,chance,len(items)))
         return items
     
@@ -143,18 +141,19 @@ class Fillers:
                 chtype  = citem.get('type','')
                 chname  = citem.get('name','')
                 fitem   = fileItem.copy()
-                ftype   = fileItem.get('type','')
+                dbtype  = fileItem.get('type','')
                 fgenre  = (fileItem.get('genre') or citem.get('group') or '')
+                fmpaa   = (self.convertMPAA(fileItem.get('mpaa')) or 'NR')
+                fcodec  = (fileItem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')
                 if isinstance(fgenre,list) and len(fgenre) > 0: fgenre = fgenre[0]
                 
-                # pre roll
-                preFileList = []
-                preKeys     = [chname, fgenre]
-                if self.builder.bctTypes['bumpers'].get('enabled',False) and ftype.startswith(tuple(TV_TYPES))    and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('bumpers',preKeys,chanceBool(SETTINGS.getSettingInt('Random_Pre_Chance'))))
-                if self.builder.bctTypes['bumpers'].get('enabled',False) and ftype.startswith(tuple(MOVIE_TYPES)) and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('bumpers',[(fitem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')]))
-                if self.builder.bctTypes['ratings'].get('enabled',False) and ftype.startswith(tuple(MOVIE_TYPES)) and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('ratings',self.convertMPAA(fileItem.get('mpaa','NR'))[1]))
-
                 #pre roll - bumpers/ratings
+                preFileList = []
+                for ftype in ['ratings','bumpers']:
+                    preIncludeTypes = {'ratings':MOVIE_TYPES ,'bumpers':TV_TYPES}[ftype]
+                    preKeys = {'ratings':[fmpaa, fcodec],'bumpers':[chname, fgenre]}[ftype]
+                    if self.builder.bctTypes[ftype].get('enabled',False) and dbtype.startswith(tuple(preIncludeTypes)) and chtype not in IGNORE_CHTYPE: preFileList.extend(self.getSingle(ftype, preKeys, chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
+
                 for item in preFileList:
                     if (item.get('duration') or 0) == 0: continue
                     else:
@@ -168,18 +167,16 @@ class Fillers:
                 nfileList.append(fileItem)
                 self.log('injectBCTs, adding media %s - %s'%(fileItem.get('duration'),fileItem.get('file')))
                 
-                # post roll
-                postKeys        = [chname, fgenre]
-                postChance      = chanceBool(SETTINGS.getSettingInt('Random_Post_Chance'))
-                postFillRuntime = diffRuntime(runtime) if (self.builder.bctTypes['adverts']['auto'] and self.builder.bctTypes['trailers']['auto']) else EPG_DURATION
-                
-                postFileList    = []
-                if self.builder.bctTypes['adverts'].get('enabled',False)  and chtype not in IGNORE_CHTYPE + MOVIE_CHTYPE: postFileList.extend(self.getMulti('adverts' ,postKeys, (PAGE_LIMIT * 2) if self.builder.bctTypes['adverts']['auto'] else self.builder.bctTypes['adverts']['max'],postChance))
-                if self.builder.bctTypes['trailers'].get('enabled',False) and chtype not in IGNORE_CHTYPE: postFileList.extend(self.getMulti('trailers',postKeys, (PAGE_LIMIT * 2) if self.builder.bctTypes['trailers']['auto'] else self.builder.bctTypes['trailers']['max'],postChance))
-                postFileList    = randomShuffle(postFileList)
-                postFillCount   = len(postFileList)
-
                 # post roll - adverts/trailers
+                postFileList = []
+                for ftype in ['adverts','trailers']:
+                    postIgnoreTypes = {'adverts':IGNORE_CHTYPE + MOVIE_CHTYPE,'trailers':IGNORE_CHTYPE}[ftype]
+                    postFillRuntime = diffRuntime(runtime) if self.builder.bctTypes[ftype]['auto'] else self.builder.bctTypes[ftype]['max']
+                    if self.builder.bctTypes[ftype].get('enabled',False) and chtype not in postIgnoreTypes:
+                        postFileList.extend(self.getMulti(ftype, [chname, fgenre], (PAGE_LIMIT * 2) if self.builder.bctTypes[ftype]['auto'] else self.builder.bctTypes[ftype]['min'],chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
+                    postFileList  = randomShuffle(postFileList)
+                    postFillCount = len(postFileList)
+
                 if len(postFileList) > 0:
                     self.log('injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
                     while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and postFillCount > 0:

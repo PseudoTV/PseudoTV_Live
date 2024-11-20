@@ -77,23 +77,23 @@ class CustomQueue:
                     try:
                         self.min_heap.pop(idx)
                         self.log("__exists, pop func = %s"%(epackage[0].__name__))
-                    except: 
-                        self.log("__exists, pop failed func = %s, idx = %s"%(epackage[0].__name__,idx))
+                    except: self.log("__exists, pop failed func = %s, idx = %s"%(epackage[0].__name__,idx))
                     return False
         return False
              
              
     def _push(self, package: tuple, priority: int=0, delay: int=0):
         node = LlNode(package, priority, delay)
-        if   self.__exists((1,priority,package)): self.log("_push, func = %s exists; ignoring package"%(package[0].__name__))
-        elif self.priority:
-            try:
-                self.qsize += 1
-                item = (priority, package)
-                self.itemCount[priority] += 1
-                self.log("_push, func = %s, priority = %s"%(package[0].__name__,priority))
-                heapq.heappush(self.min_heap, (item[0], self.itemCount[priority], item[1]))
-            except Exception as e: self.log("_push, func = %s failed! %s"%(func.__name__,e), xbmc.LOGFATAL)
+        if self.priority:
+            if not self.__exists((1,priority,package)):
+                try:
+                    self.qsize += 1
+                    item = (priority, package)
+                    self.itemCount[priority] += 1
+                    self.log("_push, func = %s, priority = %s"%(package[0].__name__,priority))
+                    heapq.heappush(self.min_heap, (item[0], self.itemCount[priority], item[1]))
+                except Exception as e: self.log("_push, func = %s failed! %s"%(func.__name__,e), xbmc.LOGFATAL)
+            else: self.log("_push, func = %s exists; ignoring package"%(package[0].__name__))
         elif self.head:
             self.tail.next = node
             node.prev = self.tail

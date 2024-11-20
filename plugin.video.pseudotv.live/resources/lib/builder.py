@@ -58,17 +58,17 @@ class Builder:
         self.minEPG           = EPG_DURATION
         self.completeBuild    = False
         
-        self.bctTypes         = {"ratings" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
+        self.bctTypes         = {"ratings" :{"min":-1, "max":SETTINGS.getSettingInt('Enable_Preroll'), "auto":SETTINGS.getSettingInt('Enable_Preroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')), "chance":SETTINGS.getSettingInt('Random_Pre_Chance'),
                                  "sources" :{"ids":SETTINGS.getSetting('Resource_Ratings').split('|'),"paths":[os.path.join(FILLER_LOC,'Ratings' ,'')]},"items":{}},
                                  
-                                 "bumpers" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
+                                 "bumpers" :{"min":-1, "max":SETTINGS.getSettingInt('Enable_Preroll'), "auto":SETTINGS.getSettingInt('Enable_Preroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')), "chance":SETTINGS.getSettingInt('Random_Pre_Chance'),
                                  "sources" :{"ids":SETTINGS.getSetting('Resource_Bumpers').split('|'),"paths":[os.path.join(FILLER_LOC,'Bumpers' ,'')]},"items":{}},
                                  
-                                 "adverts" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Postroll'),"auto":SETTINGS.getSettingInt('Enable_Postroll') == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')),
+                                 "adverts" :{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":EPG_DURATION, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
                                  "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{},
                                  "incIspot":SETTINGS.getSettingBool('Include_Adverts_iSpot')},
                                  
-                                 "trailers":{"min":-1,"max":SETTINGS.getSettingInt('Enable_Postroll'),"auto":SETTINGS.getSettingInt('Enable_Postroll') == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')),
+                                 "trailers":{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":EPG_DURATION, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
                                  "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{},
                                  "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI'),
                                  "incIMDB":SETTINGS.getSettingBool('Include_Trailers_IMDB')}}
@@ -120,7 +120,8 @@ class Builder:
             updated = False
             for idx, citem in enumerate(channels):
                 self.log('build, id = %s, rules = %s'%(citem.get('id'),citem.get('rules',{})))
-                if self.service._interrupt():
+                if not citem.get('id'): continue
+                elif self.service._interrupt():
                     self.completeBuild = False
                     self.pErrors = [LANGUAGE(32160)]
                     self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)

@@ -23,7 +23,7 @@ class FFProbe:
         try:
             import ffmpeg
             log("FFProbe: determineLength %s"%(filename))
-            dur  = ffmpeg.probe(xbmcvfs.translatePath(filename))["format"]["duration"]
+            dur  = ffmpeg.probe(FileAccess.translatePath(filename))["format"]["duration"]
             log('FFProbe: Duration is %s'%(dur))
             return dur
         except Exception as e:

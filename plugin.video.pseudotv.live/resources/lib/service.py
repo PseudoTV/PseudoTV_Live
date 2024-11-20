@@ -263,7 +263,8 @@ class Player(xbmc.Player):
             if self.restart is None and (progress >= self.restartPercentage and progress < seekTHD) and self.sysInfo.get('fitem'):
                 self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
                 self.log('toggleRestart, state = %s'%(state))
-                self.restart = self.restart.doModal()
+                self.restart.doModal()
+                self.restart = None
         elif not state and hasattr(self.restart,'onClose'):
             self.log('toggleRestart, state = %s'%(state))
             self.restart = self.restart.onClose()
@@ -311,12 +312,11 @@ class Monitor(xbmc.Monitor):
             if self.overlay is None and self.service.player.isPlaying():
                 self.log("toggleOverlay, state = %s"%(state))
                 self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
-                self.overlay.open()
+                self.overlay.show()
         elif not state and not self.overlay is None:
             self.log("toggleOverlay, state = %s"%(state))
             self.overlay = self.overlay.close()
-        else: print('toggleOverlay',self.overlay)
-
+            
 
     def triggerSleep(self):
         if not PROPERTIES.isRunning('triggerSleep'):

@@ -23,7 +23,7 @@ class VFSParser:
         log("VFSParser: determineLength, file = %s\nitem = %s"%(filename,fileitem))
         duration = (fileitem.get('resume',{}).get('total') or fileitem.get('runtime') or fileitem.get('duration') or (fileitem.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         if duration == 0 and not filename.lower().startswith(fileitem.get('originalpath','').lower()) and not filename.lower().startswith(tuple(self.VFSPaths)):
-            metadata = self.jsonRPC.sendJSON({"method":"Files.GetFileDetails","params":{"file":fileitem.get('originalpath'),"media":"video","properties":["duration","runtime"]}})
+            metadata = self.jsonRPC.getFileDetails((fileitem.get('originalpath') or fileitem.get('file') or filename))
             duration = (metadata.get('resume',{}).get('total') or metadata.get('runtime') or metadata.get('duration') or (metadata.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         log("VFSParser: Duration is %s"%(duration))
         return duration

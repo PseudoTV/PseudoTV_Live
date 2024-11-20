@@ -41,7 +41,7 @@ from rules     import RulesList
 class Background(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.player = kwargs.get('player', None)
+        self.player  = kwargs.get('player', None)
 
 
     def onInit(self):
@@ -54,7 +54,6 @@ class Background(xbmcgui.WindowXMLDialog):
         except Exception as e:
             log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.close()
-
             
            
 class Restart(xbmcgui.WindowXMLDialog):
@@ -68,7 +67,7 @@ class Restart(xbmcgui.WindowXMLDialog):
         try:
             log("Restart: onInit")
             self.closing = False
-            self.service = self.player.service
+            self.monitor = self.player.service.monitor
             self._progressLoop(self.getControl(40000))
             self.setFocusId(40001)
         except Exception as e:
@@ -81,16 +80,16 @@ class Restart(xbmcgui.WindowXMLDialog):
         tot  = wait
         xpos = control.getX()
         control.setVisibleCondition('Player.Playing')
-        while not self.service.monitor.abortRequested():
-            if (self.service.monitor.waitForAbort(1.0) or wait < 0 or self.closing or not self.player.isPlaying()): break
+        while not self.monitor.abortRequested():
+            if (self.monitor.waitForAbort(1.0) or wait < 0 or self.closing or not self.player.isPlaying()): break
             else:
                 prog = int((abs(wait-tot)*100)//tot)
                 if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
                 wait -= 1
         control.setAnimations([('Conditional', 'effect=fade start=%s end=0 time=240 condition=True'%(prog))])
-        self.service.monitor.waitForAbort(0.240)
+        self.monitor.waitForAbort(0.240)
         control.setVisible(False)
-        self.onClose()
+        self.close()
 
         
     def onAction(self, act):
@@ -114,7 +113,6 @@ class Restart(xbmcgui.WindowXMLDialog):
     def onClose(self):
         log("Restart: onClose")
         self.closing = True
-        self.close()
   
   
 class Overlay():
@@ -144,17 +142,14 @@ class Overlay():
 
     def __init__(self, jsonRPC, player=None):
         self.jsonRPC        = jsonRPC
+        self.cache          = jsonRPC.cache
         self.player         = player
         self.resources      = Resources(self.jsonRPC)
         self.runActions     = self.player.runActions
         
         self.window = xbmcgui.Window(12005) 
-        self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())   
-        
-        self._vinImage    = SETTINGS.getSetting('Vignette_Image')
-        self._vinZoom     = SETTINGS.getSettingFloat('Vignette_Zoom')
-        self._vinOffsetXY = (0,0)
-        
+        self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())
+                
         self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection
         self.enableOnNext       = SETTINGS.getSettingBool('Enable_OnNext')
         self.enableChannelBug   = SETTINGS.getSettingBool('Enable_ChannelBug')
@@ -163,23 +158,34 @@ class Overlay():
         self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.minDuration        = SETTINGS.getSettingInt('Seek_Tolerance')
         
-        try:    self.channelBugX, self.channelBugY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-        except: self.channelBugX, self.channelBugY = subZoom(abs(int(self.window_w // 8) - self.window_w) - 128, self._vinZoom), subZoom(abs(int(self.window_h // 16) - self.window_h) - 128, self._vinZoom) #auto w/ zoom offset
-         
         #init controls
-        self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, 'None', aspectRatio=2)
-        self._onNext     = xbmcgui.ControlTextBox(addZoom((self.window_w // 8),self._vinZoom,50), subZoom(abs(int(self.window_h // 16) - self.window_h),self._vinZoom), 1920, 36, 'font12', '0xFFFFFFFF')
-        self._vignette   = xbmcgui.ControlImage(self._vinOffsetXY[0], self._vinOffsetXY[1], self.window_w, self.window_h, self._vinImage, aspectRatio=0)
-        self._blackout   = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
+        try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+        except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
+        self._channelBug  = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
+        self._defZoom     = self._getZoom()
+        self._vinImage    = SETTINGS.getSetting('Vignette_Image')
+        self._vinZoom     = SETTINGS.getSettingFloat('Vignette_Zoom') if self.enableVignette else self._defZoom
+        self._vinOffsetXY = (0,0) #todo
+        self._vignette    = xbmcgui.ControlImage(self._vinOffsetXY[0], self._vinOffsetXY[1], self.window_w, self.window_h, ' ', aspectRatio=0)
+        self._onNext      = xbmcgui.ControlTextBox(abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h), 1920, 36, 'font12', '0xFFFFFFFF')
+        self._blackout    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
         
-        self._bugThread = Timer(0.1, self.toggleBug, [False])
-        self._onNextThread     = Timer(0.1, self.toggleOnNext, [False])
+        #thread timers
+        self._bugThread    = Timer(0.1, self.toggleBug, [False])
+        self._onNextThread = Timer(0.1, self.toggleOnNext, [False])
         
         self.myPlayer = self.Player(overlay=self)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    def _getZoom(self):
+        zoom = (self.jsonRPC.getPlayerAttr('zoom') or 1.0)
+        self.log('_getZoom, zoom = %s'%(zoom))
+        return zoom
 
 
     def _hasControl(self, control):
@@ -253,8 +259,8 @@ class Overlay():
         else: return (self._getControl(control) or False)
     
         
-    def open(self):
-        self.log('open, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
+    def show(self):
+        self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
         self.toggleVignette(), self.toggleOnNext(), self.toggleBug()
         
@@ -280,6 +286,7 @@ class Overlay():
                 self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self.player)
                 self.log('toggleBackground, state = %s'%(state))
                 self.background.doModal()
+                self.background = None
         elif not state and not self.background is None:
             self.background = self.background.close()
             
@@ -290,18 +297,21 @@ class Overlay():
     def toggleVignette(self, state: bool=True):
         if state and self.enableVignette:
             if not self._hasControl(self._vignette):
+                self._vignette = xbmcgui.ControlImage(self._vinOffsetXY[0], self._vinOffsetXY[1], self.window_w, self.window_h, self._vinImage, aspectRatio=0)
                 self._addControl(self._vignette)
+                
                 self._vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
-            timerit(self.jsonRPC.sendJSON)(0.1,[{"method":"Player.SetViewMode","params":{"viewmode":{"zoom":self._vinZoom}}}])
-            self._setImage(self._vignette,self._vinImage)
-            self._vignette.setPosition(self._vinOffsetXY[0], self._vinOffsetXY[1])
-            self._setVisible(self._vignette,True)
-            self.log('toggleVignette, state = %s, set = %s @ (%s) x %s'%(state, self._vinImage,self._vinOffsetXY, self._vinZoom))
+                self._vignette.setPosition(self._vinOffsetXY[0], self._vinOffsetXY[1])
+                timerit(self.jsonRPC.setPlayerZoom)(0.1,[self._vinZoom])
+                
+                self._setImage(self._vignette,self._vinImage)
+                self._setVisible(self._vignette,True)
+                self.log('toggleVignette, state = %s, set = %s @ (%s) x %s'%(state, self._vinImage,self._vinOffsetXY, self._vinZoom))
+                
         elif not state and self._hasControl(self._vignette):
+            timerit(self.jsonRPC.setPlayerZoom)(0.1,[self._defZoom])
             self._removeControl(self._vignette)
-            self._vinZoom = 1.0 #todo deal with restoring default zoom one close.
-            timerit(self.jsonRPC.sendJSON)(0.1,[{"method":"Player.SetViewMode","params":{"viewmode":{"zoom":self._vinZoom}}}])
-            self.log('toggleVignette, state = %s, set = %s @ (%s) x %s'%(state, self._vinImage,self._vinOffsetXY, self._vinZoom))
+            self.log('toggleVignette, state = %s, set = %s @ (%s) x %s'%(state, self._vinImage,self._vinOffsetXY, self._defZoom))
             
                 
     def _cancelBug(self):
@@ -334,17 +344,22 @@ class Overlay():
         wait   = _getWait(state, remaining)
         nstate = not bool(state)
         
-        try:    self.channelBugX, self.channelBugY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY"))
-        except: self.channelBugX, self.channelBugY = subZoom(abs(int(self.window_w // 8) - self.window_w) - 128, self._vinZoom), subZoom(abs(int(self.window_h // 16) - self.window_h) - 128, self._vinZoom) #auto w/ zoom offset
-         
-        self.log('toggleBug, channelbug POSXX (%s,%s)'%(self.channelBugX, self.channelBugY))
-        self._channelBug.setPosition(self.channelBugX, self.channelBugY)
-        
         if state and self.enableChannelBug:
-            if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return  self.log('toggleBug, Filler Playing') 
-            elif self.player.getPlayerProgress() >= SETTINGS.getSettingInt('Seek_Threshold'): return  self.log('toggleBug, remaining time greater than threshold') 
+            if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
+                return  self.log('toggleBug, Filler Playing') 
+                
+            elif self.player.getPlayerProgress() >= SETTINGS.getSettingInt('Seek_Threshold'):
+                return  self.log('toggleBug, remaining time greater than threshold') 
+                
             elif not self._hasControl(self._channelBug):
+                try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+                except: self.channelBugX, self.channelBugY = subZoom(abs(int(self.window_w // 8) - self.window_w) - 128, self._vinZoom), subZoom(abs(int(self.window_h // 16) - self.window_h) - 128, self._vinZoom) #auto w/ zoom offset
+                
+                self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, 'None', aspectRatio=2)
                 self._addControl(self._channelBug)
+                self.log('toggleBug, channelbug POSXY (%s,%s)'%(self.channelBugX, self.channelBugY))
+                
+                self._channelBug.setPosition(self.channelBugX, self.channelBugY)
                 self._channelBug.setVisibleCondition('[!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
                 self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
                                                 ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
@@ -398,6 +413,7 @@ class Overlay():
             if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return  self.log('toggleOnNext, Filler Playing') 
             elif self.player.getPlayerProgress() >= SETTINGS.getSettingInt('Seek_Threshold'): return  self.log('toggleOnNext, remaining time greater than threshold') 
             elif not self._hasControl(self._onNext):
+                self._onNext = xbmcgui.ControlTextBox(addZoom((self.window_w // 8),self._vinZoom,50), subZoom(abs(int(self.window_h // 16) - self.window_h),self._vinZoom), 1920, 36, 'font12', '0xFFFFFFFF')
                 self._addControl(self._onNext)
                 self._onNext.setVisibleCondition('[!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
             
@@ -463,4 +479,4 @@ class Overlay():
                                                   "runtime"   :(nextItem.get("runtime")      or "")}}
             data.update(next_episode)
         except: pass
-        self.jsonRPC.notifyAll(message='upnext_data', data=binascii.hexlify(json.dumps(data).encode('utf-8')).decode('utf-8'), sender='%s.SIGNAL'%(ADDON_ID))
+        timerit(self.jsonRPC.notifyAll)(0.1,['upnext_data', binascii.hexlify(json.dumps(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)])

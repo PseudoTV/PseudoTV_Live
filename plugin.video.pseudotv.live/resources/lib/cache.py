@@ -18,8 +18,10 @@
 #
 # -*- coding: utf-8 -*-
 
-from globals   import *
-from functools import wraps
+from globals    import *
+from functools  import wraps
+from fileaccess import FileAccess
+
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
 

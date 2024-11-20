@@ -29,17 +29,17 @@ from parsers    import YTParser
  
 EXTERNAL_PARSER = [NFOParser.NFOParser]
 try:
+    import pymediainfo
+    from parsers import MediaInfo
+    EXTERNAL_PARSER.append(MediaInfo.MediaInfo)
+except: pass
+
+try:
     import hachoir
     from parsers import Hachoir
     EXTERNAL_PARSER.append(Hachoir.Hachoir)
 except: pass
-    
-try:
-    import ffmpeg
-    from parsers import FFProbe
-    EXTERNAL_PARSER.append(FFProbe.FFProbe)
-except: pass
-    
+
 try:
     import cv2
     from parsers import OpenCV
@@ -50,12 +50,6 @@ try:
     import moviepy
     from parsers import MoviePY
     EXTERNAL_PARSER.append(MoviePY.MoviePY)
-except: pass
-    
-try:
-    import pymediainfo
-    from parsers import MediaInfo
-    EXTERNAL_PARSER.append(MediaInfo.MediaInfo)
 except: pass
     
 class VideoParser:

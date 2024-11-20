@@ -23,7 +23,6 @@ from channels   import Channels
 from jsonrpc    import JSONRPC
 from rules      import RulesList
 from resources  import Resources
-from ast        import literal_eval
 from xsp        import XSP
 from m3u        import M3U
 from xmltvs     import XMLTVS
@@ -379,23 +378,29 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def getPaths(self, citem: dict={}, paths: list=[]):
         select  = -1
+        epaths  = paths.copy()
         pathLST = list([_f for _f in paths if _f])
+        lastOPT = None
         while not MONITOR().abortRequested() and not select is None:
             with self.toggleSpinner(self.itemList):
                 npath   = None
-                lizLST  = [self.buildListItem('%s|'%(idx+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(idx+1)),items={'citem':citem}) for idx, path in enumerate(pathLST) if path]
-                lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,items={'key':'add' ,'citem':citem}))
-                if len(pathLST) > 0:
-                    lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32101)),LANGUAGE(33114),icon=ICON,items={'key':'save','citem':citem}))
+                lizLST  = [self.buildListItem('%s|'%(idx+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(idx+1)),items={'citem':citem,'idx':idx+1}) for idx, path in enumerate(pathLST) if path]
+                lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,items={'key':'add','citem':citem,'idx':0}))
+                if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32101)),LANGUAGE(33114),icon=ICON,items={'key':'save','citem':citem}))
                 
-            select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32086), multi=False)
+            select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32086), preselect=lastOPT, multi=False)
             if not select is None:
                 key, path = lizLST[select].getProperty('key'), lizLST[select].getPath()
+                try:    lastOPT = int(lizLST[select].getProperty('idx'))
+                except: lastOPT = None
                 if key == 'add': 
                     with self.toggleSpinner(self.itemList):
-                        npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),exclude=[LANGUAGE(32201),LANGUAGE(32202)],monitor=True),citem)
-                        if npath: pathLST.append(npath)
+                        retval = DIALOG.browseSources(heading=LANGUAGE(32080),exclude=[21],monitor=True)
+                        if not retval is None:
+                            npath, citem = self.validatePath(retval,citem)
+                            if npath: pathLST.append(npath)
                 elif key == 'save': 
+                    self.madeChanges = True
                     paths = pathLST
                     break
                 elif path in pathLST:
@@ -403,7 +408,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     if retval in [1,2]: pathLST.pop(pathLST.index(path))
                     if retval == 2:
                         with self.toggleSpinner(self.itemList):
-                            npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),default=path,exclude=[LANGUAGE(32201),LANGUAGE(32202)],monitor=True), citem)
+                            npath, citem = self.validatePath(DIALOG.browseSources(heading=LANGUAGE(32080),default=path,monitor=True,exclude=[21]), citem)
                             pathLST.append(npath)
         self.log('getPaths, paths = %s'%(paths))
         return paths, citem
@@ -419,7 +424,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     
     
     def getBool(self, citem: dict={}, state: str='True'):
-        state = not literal_eval(state)
+        state = not bool(state)
         self.log('getBool, state = %s'%(state))
         return state, citem
 
@@ -427,30 +432,35 @@ class Manager(xbmcgui.WindowXMLDialog):
     def getRules(self, citem: dict={}, rules: dict={}):
         if citem.get('id') is None or len(citem.get('path',[])) == 0: DIALOG.notificationDialog(LANGUAGE(32071))
         else:            
-            select    = -1
-            ruleLST   = rules.copy()
+            select  = -1
+            erules  = rules.copy()
+            ruleLST = rules.copy()
+            lastIDX = None
+            lastXID = None
             while not MONITOR().abortRequested() and not select is None:
                 with self.toggleSpinner(self.itemList):
                     nrule  = None
                     crules = self.rule.loadRules([citem],append=True,incRez=False).get(citem['id'],{}) #all rule instances w/ channel rules
                     arules = [rule for key, rule in list(crules.items()) if not ruleLST.get(key)] #all unused rule instances
-                    
-                    lizLST = [self.buildListItem(rule.name,rule.getTitle(),icon=DUMMY_ICON.format(text=str(rule.myId)),items={'myId':rule.myId,'citem':citem}) for key, rule in list(ruleLST.items()) if rule.myId]
-                    lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,items={'key':'add' ,'citem':citem}))
-                    if len(ruleLST) > 0:
-                        lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,items={'key':'save','citem':citem}))
+                    lizLST = [self.buildListItem(rule.name,rule.getTitle(),icon=DUMMY_ICON.format(text=str(rule.myId)),items={'myId':rule.myId,'citem':citem,'idx':list(ruleLST.keys()).index(key)+1}) for key, rule in list(ruleLST.items()) if rule.myId]
+                    lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,items={'key':'add' ,'citem':citem,'idx':0}))
+                    if len(ruleLST) > 0 and erules != ruleLST: lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,items={'key':'save','citem':citem}))
                             
-                select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32095), multi=False)
+                select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32095), preselect=lastIDX, multi=False)
                 if not select is None:
                     key, myId = lizLST[select].getProperty('key'), int(lizLST[select].getProperty('myId') or '-1')
-                    
+                    try:    lastIDX = int(lizLST[select].getProperty('idx'))
+                    except: lastIDX = None
                     if key == 'add':
                         with self.toggleSpinner(self.itemList):
                             lizLST = [self.buildListItem(rule.name,rule.description,icon=DUMMY_ICON.format(text=str(rule.myId)),items={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
-                        select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32072), multi=False)
-                        nrule, citem = self.getRule(citem, arules[int(lizLST[select].getProperty('idx') or "-1")])
+                        select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32072), preselect=lastXID, multi=False)
+                        try:    lastXID = int(lizLST[select].getProperty('idx'))
+                        except: lastXID = -1
+                        nrule, citem = self.getRule(citem, arules[lastXID])
                         if not nrule is None: ruleLST.update({str(nrule.myId):nrule})
                     elif key == 'save':
+                        self.madeChanges = True
                         rules = ruleLST
                         break
                     elif ruleLST.get(str(myId)):
@@ -480,7 +490,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if not select is None:
                     try:
                         rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
-                        self.madeChanges = True
                     except Exception as e:
                         self.log("getRule, onAction failed! %s"%(e), xbmc.LOGERROR)
                         DIALOG.okDialog(LANGUAGE(32000))
@@ -752,8 +761,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
         def browse(chname):
             with self.toggleSpinner(self.itemList):
-                excLST = [LANGUAGE(32201),LANGUAGE(32202),LANGUAGE(32194),LANGUAGE(32191),LANGUAGE(32192),LANGUAGE(32193),LANGUAGE(32195),LANGUAGE(32206)]
-                retval = DIALOG.browseDialog(type=1,heading='%s (%s)'%(LANGUAGE(32066).split('[CR]')[0],chname),default=channelData.get('icon',''),exclude=excLST, shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
+                retval = DIALOG.browseSources(type=1,heading='%s (%s)'%(LANGUAGE(32066).split('[CR]')[0],chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),exclude=[12,13,14,15,16,17,21,22])
             if FileAccess.copy(cleanLogo(retval), os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
                 if FileAccess.exists(os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
                     return os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')
@@ -859,8 +867,10 @@ class Manager(xbmcgui.WindowXMLDialog):
                 spos  = -1
                 sitem = xbmcgui.ListItem()
             if sitem:
+                try:    chlnum = int(cleanLabel(sitem.getLabel()))
+                except: chlnum = None
                 citem = loadJSON(sitem.getProperty('citem'))
-                chnum = (citem.get('number') or literal_eval(cleanLabel(sitem.getLabel())) or (spos+1))
+                chnum = (citem.get('number') or chlnum or (spos+1))
                 self.focusItems.update({'label':label,'label2':label2,'number':chnum,'position':spos,'item':sitem,'citem':citem})
                 self.log('getFocusItems, controlId = %s, focusItems = %s'%(controlId,self.focusItems))
         return self.focusItems

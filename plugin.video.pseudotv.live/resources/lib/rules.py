@@ -20,7 +20,25 @@
 from globals    import *
 from seasonal   import Seasonal
 #todo pinlock
+        
 
+# Enable_Fillers
+# Enable_Preroll
+# Random_Pre_Chance
+# Enable_Postroll
+# Random_Post_Chance
+# Build_Post_Folders
+# Include_Adverts_iSpot
+# Resource_Trailers
+# Include_Trailers_KODI
+# Include_Trailers_IMDB
+
+
+# Resource_Overlay
+# Resource_Ratings
+# Resource_Bumpers
+# Resource_Adverts
+  
 class RulesList:
     def __init__(self):
         self.log('__init__')
@@ -30,13 +48,15 @@ class RulesList:
                           SetScreenVingette(),
                           MST3k(),
                           DisableOverlay(),
-                          DisableRestart(),
-                          DisableOnChange(),
                           ForceSubtitles(),
                           DisableTrakt(),
                           RollbackPlaycount(),
+                          DisableRestart(),
+                          DisableOnChange(),
                           DurationOptions(),
                           FilterOptions(),
+                          PreRoll(),
+                          PostRoll(),
                           ProvisionalRule(),
                           HandleMethodOrder(),
                           ForceEpisode(),
@@ -271,20 +291,40 @@ class BaseRule:
             self.optionValues[optionindex] = info
 
 
-    def onActionSelect(self, optionindex, header=ADDON_NAME, preselect=-1, useDetails=False, autoclose=SELECT_DELAY, multi=False, custom=False):
-        log("onActionSelect")
-        self.selectBoxOptions[optionindex] = list(sorted(self.selectBoxOptions[optionindex]))
-        if preselect < 0 and multi: preselect = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]]
-        select = self.dialog.selectDialog(list(sorted([str(v).title() for v in self.selectBoxOptions[optionindex]])), header, preselect, useDetails, autoclose, multi, custom)
-        if select is not None: 
-            self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
+    def onActionSelect(self, optionindex, header=ADDON_NAME, preselect=None, useDetails=False, autoclose=SELECT_DELAY, multi=False):
+        log("onActionSelect, optionindex = %s, type = %s"%(optionindex,type(self.selectBoxOptions[optionindex])))
+        if isinstance(self.selectBoxOptions[optionindex],dict):
+            selectBoxOptions = list(self.selectBoxOptions[optionindex].keys())
+            preselect = findItemsInLST(list(self.selectBoxOptions[optionindex].values()), self.optionValues[optionindex])
+        else:
+            selectBoxOptions = self.selectBoxOptions[optionindex]
+            preselect = findItemsInLST(self.selectBoxOptions[optionindex], self.optionValues[optionindex])
+        
+        select = self.dialog.selectDialog([str(v).title() for v in selectBoxOptions], header, preselect, useDetails, autoclose, multi)
+        if not select is None: 
+            if isinstance(self.selectBoxOptions[optionindex],dict):
+                self.optionValues[optionindex] = self.selectBoxOptions[optionindex].get(selectBoxOptions[select])
+            else:
+                self.optionValues[optionindex] = selectBoxOptions[select]
                 
           
-    def onActionBrowse(self, optionindex, type=0, heading=ADDON_NAME, shares='', mask='', options=[], exclude=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
+    def onActionBrowse(self, optionindex, type=0, heading=ADDON_NAME, shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, options=[], exclude=[]):
         log("onActionBrowse")
-        info = self.dialog.browseDialog(type, heading, self.optionValues[optionindex], shares, mask, options, exclude, useThumbs, treatAsFolder, prompt, multi, monitor)
+        info = self.dialog.browseSources(type, heading, self.optionValues[optionindex], shares, mask, useThumbs, treatAsFolder, multi, monitor, options, exclude)
         if info is not None: self.optionValues[optionindex] = info 
-                     
+    
+    
+    def onActionMultiBrowse(self, optionindex, header=ADDON_NAME, exclude=[], monitor=True):
+        log("onActionMultiBrowse")
+        info = self.dialog.multiBrowse(self.optionValues[optionindex], header, exclude, monitor)
+        if info is not None: self.optionValues[optionindex] = info 
+
+
+    def onActionResources(self, optionindex, ftype=''):
+        log("onActionResources")
+        info = self.dialog.browseResources(self.optionValues[optionindex].split('|'), ftype=ftype)
+        if not info is None: self.optionValues[optionindex] = '|'.join(info)
+
 
 class ShowChannelBug(BaseRule):
     def __init__(self):
@@ -306,8 +346,9 @@ class ShowChannelBug(BaseRule):
 
 
     def getPOS(self):
-        try:    return literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY"))
+        try:    return tuple(SETTINGS.getSetting("Channel_Bug_Position_XY"))
         except: return (abs(int(1920 // 8) - 1920) - 128, abs(int(1080 // 16) - 1080) - 128)
+
 
     def getTitle(self):
         if self.optionValues[0]: return LANGUAGE(30145)%({'-1':'Indefinitely','0':'Randomly'}.get(str(self.optionValues[1]),LANGUAGE(30146)%(self.optionValues[1])),self.optionValues[2],{True:'Forcing',False:''}[self.optionValues[4]],self.optionValues[3])
@@ -342,9 +383,10 @@ class ShowChannelBug(BaseRule):
             
             overlay.enableChannelBug   = self.optionValues[0]
             overlay.channelBugInterval = self.optionValues[1]
-            overlay.channelBugX, overlay.channelBugY = literal_eval(self.optionValues[2])
+            overlay.channelBugX, overlay.channelBugY = tuple(self.optionValues[2])
             overlay.channelBugColor    = '0x%s'%(self.optionValues[3])
             overlay.channelBugDiffuse  = self.optionValues[4]
+            self.log("runAction, setting enableChannelBug = %s, channelBugInterval = %s, channelBugInterval = %s, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.enableChannelBug,overlay.channelBugInterval,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
             overlay.enableChannelBug   = self.storedValues[0]
@@ -352,8 +394,7 @@ class ShowChannelBug(BaseRule):
             overlay.channelBugX, overlay.channelBugY = self.storedValues[2]
             overlay.channelBugColor   = self.storedValues[3]
             overlay.channelBugDiffuse = self.storedValues[4]
-            self.log("runAction, enableChannelBug = %s, channelBugInterval = %s, channelBugInterval = %s"%(overlay.enableChannelBug,overlay.channelBugInterval,(overlay.channelBugX, overlay.channelBugY)))
-            self.log("runAction, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.channelBugColor,overlay.channelBugDiffuse))
+            self.log("runAction, restoring enableChannelBug = %s, channelBugInterval = %s, channelBugInterval = %s, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.enableChannelBug,overlay.channelBugInterval,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse))
         return parameter
 
 
@@ -368,8 +409,7 @@ class ShowOnNext(BaseRule):
         self.optionValues       = [SETTINGS.getSettingBool('Enable_OnNext')]
         self.optionDescriptions = [LANGUAGE(30045)]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
-        self.selectBoxOptions   = [""]
-        self.storedValues       = [list()]
+        self.storedValues       = [[]]
 
 
     def copy(self):
@@ -389,10 +429,11 @@ class ShowOnNext(BaseRule):
         if actionid == RULES_ACTION_OVERLAY_OPEN:
             self.storedValues[0] = overlay.enableOnNext
             overlay.enableOnNext = self.optionValues[0]
+            self.log("runAction, setting enableOnNext = %s"%(overlay.enableOnNext))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
             overlay.enableOnNext = self.storedValues[0]
-        self.log("runAction, setting enableOnNext = %s"%(overlay.enableOnNext))
+            self.log("runAction, restoring enableOnNext = %s"%(overlay.enableOnNext))
         return parameter
 
 
@@ -423,10 +464,6 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
     def getPosition(self, optionindex):
         self.dialog.notificationDialog(LANGUAGE(32020))
 
-            
-    def getZoom(self, optionindex): #todo set zoom via utility or dialog 
-        self.dialog.notificationDialog(LANGUAGE(32020))
-
 
     def getImage(self, image=''):
         self.log('getImage, In image = %s'%(image))
@@ -447,9 +484,9 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
 
     def onAction(self, optionindex):
         if   optionindex == 0: self.onActionToggleBool(optionindex)
-        elif optionindex == 1: self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), exclude=[LANGUAGE(32202),LANGUAGE(32206),LANGUAGE(32195),LANGUAGE(32193),LANGUAGE(32192),LANGUAGE(32191),LANGUAGE(32194)])
+        elif optionindex == 1: self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), exclude=[12,13,14,15,16,17,22])
         elif optionindex == 2: self.getPosition(optionindex)
-        elif optionindex == 3: self.getZoom(optionindex)
+        elif optionindex == 3: self.onActionSelect(optionindex, self.optionLabels[optionindex])
         return self.optionValues[optionindex]
 
 
@@ -462,36 +499,19 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
             
             overlay.enableVignette = self.optionValues[1]
             overlay._vinImage      = self.getImage(self.optionValues[1])
-            overlay._vinOffsetXY   = literal_eval(self.optionValues[2])
+            overlay._vinOffsetXY   = tuple(self.optionValues[2])
             overlay._vinZoom       = self.optionValues[3]
+            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
             overlay.enableVignette = self.storedValues[0]
             overlay._vinImage      = self.storedValues[1]
             overlay._vinOffsetXY   = self.storedValues[2]
             overlay._vinZoom       = self.storedValues[3]
-        
-        self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
+            self.log("runAction, restoring overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
         return parameter
-        
-
-# Enable_Fillers
-# Enable_Preroll
-# Random_Pre_Chance
-# Enable_Postroll
-# Random_Post_Chance
-# Build_Post_Folders
-# Include_Adverts_iSpot
-# Resource_Trailers
-# Include_Trailers_KODI
-# Include_Trailers_IMDB
 
 
-# Resource_Overlay
-# Resource_Ratings
-# Resource_Bumpers
-# Resource_Adverts
-  
 class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow control
     def __init__(self):
         self.myId               = 4
@@ -503,9 +523,8 @@ class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow cont
         self.optionValues       = [False]
         self.optionDescriptions = ["Enable Silhouette"]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_OPEN+.1,RULES_ACTION_OVERLAY_CLOSE]
-        self.selectBoxOptions   = [""]
-        self.storedValues       = [[],[]]
-        self.threadTimer = Timer(5.0, self.runAction)
+        self.storedValues       = [[],[],[]]
+        self.threadTimer        = Timer(5.0, self.runAction)
         
 
     def copy(self):
@@ -534,23 +553,29 @@ class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow cont
     def runAction(self, actionid, citem, parameter, overlay):
         if actionid == RULES_ACTION_OVERLAY_OPEN:
             self.storedValues[0] = overlay._vinImage
-            self.storedValues[1] = overlay._vinOffsetX,overlay._vinOffsetY
+            self.storedValues[1] = overlay._vinOffsetXY
+            self.storedValues[2] = overlay._vinZoom
             
             overlay._vinImage    = self.setImage(actionid+.1, citem, overlay, MST3K_1)
-            overlay._vinOffsetX, overlay._vinOffsetY  = (0,0)
+            overlay._vinOffsetXY = (0,0)
+            overlay._vinZoom     = 1.0
+            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
             
         elif actionid == RULES_ACTION_OVERLAY_OPEN+.1:
             overlay._vinImage = self.setImage(actionid, citem, overlay, MST3K_2)
-            overlay.setImage(overlay._vignette,overlay._vinImage)
+            overlay._setImage(overlay._vignette,overlay._vinImage)
+            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
             overlay._vinImage    = self.storedValues[0]
-            overlay._vinOffsetX, overlay._vinOffsetY  = self.storedValues[1]
+            overlay._vinOffsetXY = self.storedValues[1]
+            overlay._vinZoom     = self.storedValues[2]
+            self.log("runAction, restoring overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
+            
             if self.threadTimer.is_alive():
-                self.threadTimer.cancel()
+                if hasattr(thread, 'cancel'): self.threadTimer.cancel()
                 try: self.threadTimer.join()
                 except: pass
-        self.log("runAction, setting overlay image to %s (%s,%s)"%(overlay._vinImage,overlay._vinOffsetX,overlay._vinOffsetY))
         return parameter
         
 
@@ -565,8 +590,7 @@ class DisableOverlay(BaseRule):
         self.optionValues       = [SETTINGS.getSettingBool('Overlay_Enable')]
         self.optionDescriptions = [LANGUAGE(33042)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
-        self.selectBoxOptions   = [""]
-        self.storedValues       = [list() for idx in self.optionValues]
+        self.storedValues       = [[]]
 
 
     def copy(self):
@@ -587,10 +611,11 @@ class DisableOverlay(BaseRule):
         if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0] = player.enableOverlay
             player.enableOverlay = self.optionValues[0]
+            self.log("runAction, setting enableOverlay = %s"%(player.enableOverlay))
             
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.enableOverlay = self.storedValues[0]
-        self.log("runAction, setting enableOverlay = %s"%(player.enableOverlay))
+            self.log("runAction, restore enableOverlay = %s"%(player.enableOverlay))
         return parameter
 
 
@@ -605,8 +630,7 @@ class ForceSubtitles(BaseRule):
         self.optionValues       = [BUILTIN.isSubtitle()]
         self.optionDescriptions = [""]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
-        self.selectBoxOptions   = [""]
-        self.storedValues       = [list()]
+        self.storedValues       = [[]]
 
 
     def copy(self):
@@ -627,10 +651,11 @@ class ForceSubtitles(BaseRule):
         if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0] = player.lastSubState
             player.lastSubState  = self.optionValues[0]
+            self.log("runAction, setting lastSubState = %s"%(player.lastSubState))
             
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.lastSubState = self.storedValues[0]
-        self.log("runAction, setting lastSubState = %s"%(player.lastSubState))
+            self.log("runAction, restoring lastSubState = %s"%(player.lastSubState))
         return pvritem
 
 
@@ -645,8 +670,7 @@ class DisableTrakt(BaseRule):
         self.optionValues       = [SETTINGS.getSettingBool('Disable_Trakt')]
         self.optionDescriptions = [LANGUAGE(33131)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
-        self.selectBoxOptions   = [""]
-        self.storedValues       = [list()]
+        self.storedValues       = [[]]
 
 
     def copy(self):
@@ -667,10 +691,11 @@ class DisableTrakt(BaseRule):
         if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0] = player.disableTrakt
             player.disableTrakt = self.optionValues[0]
+            self.log("runAction, setting disableTrakt = %s"%(player.disableTrakt))
             
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.disableTrakt = self.storedValues[0]
-        self.log("runAction, setting disableTrakt = %s"%(player.disableTrakt))
+            self.log("runAction, restoring disableTrakt = %s"%(player.disableTrakt))
         return parameter
 
 
@@ -685,8 +710,7 @@ class RollbackPlaycount(BaseRule):
         self.optionValues       = [SETTINGS.getSettingBool('Rollback_Watched')]
         self.optionDescriptions = [LANGUAGE(33132)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
-        self.selectBoxOptions   = [""]
-        self.storedValues       = [list()]
+        self.storedValues       = [[]]
 
 
     def copy(self):
@@ -707,10 +731,11 @@ class RollbackPlaycount(BaseRule):
         if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0] = player.rollbackPlaycount
             player.rollbackPlaycount = self.optionValues[0]
+            self.log("runAction, setting rollbackPlaycount = %s"%(player.rollbackPlaycount))
             
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.rollbackPlaycount = self.storedValues[0]
-        self.log("runAction, setting rollbackPlaycount = %s"%(player.rollbackPlaycount))
+            self.log("runAction, restoring rollbackPlaycount = %s"%(player.rollbackPlaycount))
         return parameter
 
 
@@ -726,7 +751,7 @@ class DisableRestart(BaseRule):
         self.optionDescriptions = [LANGUAGE(33153)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [list(range(25,100,5))]
-        self.storedValues       = [list() for idx in self.optionValues]
+        self.storedValues       = [[]]
 
 
     def copy(self):
@@ -746,10 +771,11 @@ class DisableRestart(BaseRule):
         if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0] = player.restartPercentage
             player.restartPercentage = self.optionValues[0]
+            self.log("runAction, setting restartPercentage = %s"%(player.restartPercentage))
             
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.restartPercentage = self.storedValues[0]
-        self.log("runAction, setting restartPercentage = %s"%(player.restartPercentage))
+            self.log("runAction, restoring restartPercentage = %s"%(player.restartPercentage))
         return parameter
 
         
@@ -764,8 +790,7 @@ class DisableOnChange(BaseRule):
         self.optionValues       = [SETTINGS.getSettingBool('Enable_OnInfo')]
         self.optionDescriptions = [LANGUAGE(33171)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
-        self.selectBoxOptions   = [""]
-        self.storedValues       = [list() for idx in self.optionValues]
+        self.storedValues       = [[]]
 
 
     def copy(self):
@@ -786,10 +811,11 @@ class DisableOnChange(BaseRule):
         if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0] = player.infoOnChange
             player.infoOnChange = self.optionValues[0]
+            self.log("runAction, setting infoOnChange = %s"%(player.infoOnChange))
             
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.infoOnChange = self.storedValues[0]
-        self.log("runAction, setting infoOnChange = %s"%(player.infoOnChange))
+            self.log("runAction, restoring infoOnChange = %s"%(player.infoOnChange))
         return parameter
 
 
@@ -833,20 +859,19 @@ class DurationOptions(BaseRule):
             inherited.accurateDuration = self.optionValues[0]
             inherited.saveDuration     = self.optionValues[1]
             inherited.minDuration      = self.optionValues[2]
+            self.log("runAction, setting accurateDuration = %s, saveDuration = %s, minDuration = %s"%(inherited.accurateDuration,inherited.saveDuration,inherited.minDuration))
             
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             inherited.accurateDuration = self.storedValues[0]
             inherited.saveDuration     = self.storedValues[1]
             inherited.minDuration      = self.storedValues[2]
-        self.log("runAction, setting accurateDuration = %s"%(inherited.accurateDuration))
-        self.log("runAction, setting saveDuration = %s"%(inherited.saveDuration))
-        self.log("runAction, setting minDuration = %s"%(inherited.minDuration))
+            self.log("runAction, restoring accurateDuration = %s, saveDuration = %s, minDuration = %s"%(inherited.accurateDuration,inherited.saveDuration,inherited.minDuration))
         return parameter
 
 
 class FilterOptions(BaseRule):
     def __init__(self):
-        self.myId               = 500
+        self.myId               = 501
         self.ignore             = False
         self.exclude            = False
         self.name               = "Filter Options"
@@ -855,7 +880,6 @@ class FilterOptions(BaseRule):
         self.optionValues       = [SETTINGS.getSettingBool('Enable_Extras'),SETTINGS.getSettingBool('Enable_Strms'),SETTINGS.getSettingBool('Enable_3D')]
         self.optionDescriptions = [LANGUAGE(33053),LANGUAGE(33054),LANGUAGE(33055)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions   = [""]
         self.storedValues       = [[],[],[]]
 
 
@@ -884,16 +908,106 @@ class FilterOptions(BaseRule):
             builder.incExtras = self.optionValues[0]
             builder.incStrms  = self.optionValues[1]
             builder.inc3D     = self.optionValues[2]
+            self.log("runAction, setting incExtras = %s, incStrms = %s, inc3D = %s"%(builder.incExtras,builder.incStrms,builder.inc3D))
             
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             builder.incExtras = self.storedValues[0]
             builder.incStrms  = self.storedValues[1]
             builder.inc3D     = self.storedValues[2]
-        self.log("runAction, setting incExtras = %s"%(builder.incExtras))
-        self.log("runAction, setting incStrms = %s"%(builder.incStrms))
-        self.log("runAction, setting inc3D = %s"%(builder.inc3D))
+            self.log("runAction, restoring incExtras = %s, incStrms = %s, inc3D = %s"%(builder.incExtras,builder.incStrms,builder.inc3D))
         return parameter
 
+
+class PreRoll(BaseRule):
+    def __init__(self):
+        self.myId               = 502
+        self.ignore             = False
+        self.exclude            = False
+        self.name               = "Pre-Roll"
+        self.description        = "Pre-Roll Options"
+        self.optionLabels       = [LANGUAGE(30017),LANGUAGE(30139),LANGUAGE(30028),LANGUAGE(30029),"Ratings Folder","Bumpers Folder"]
+        self.optionValues       = [SETTINGS.getSettingInt('Enable_Preroll'),SETTINGS.getSettingInt('Random_Pre_Chance'),SETTINGS.getSetting('Resource_Ratings'),SETTINGS.getSetting('Resource_Bumpers'),[os.path.join(FILLER_LOC,'Ratings','')],[os.path.join(FILLER_LOC,'Bumpers','')]]
+        self.optionDescriptions = [LANGUAGE(30018),LANGUAGE(33134),LANGUAGE(33028),LANGUAGE(33029),"",""]
+        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
+        self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0},list(range(0,101,1)),"","","",""]
+        self.storedValues       = [{},{}]
+
+
+    def copy(self):
+        return PreRoll()
+
+
+    def getTitle(self):
+        return self.name
+        
+        
+    def onAction(self, optionindex):
+        if   optionindex in [0,1]: self.onActionSelect(optionindex)
+        elif optionindex in [2,3]: self.onActionResources(optionindex, ftype={"2":"ratings","3":"bumpers"}[str(optionindex)])
+        elif optionindex in [4,5]: self.onActionMultiBrowse(optionindex, header="Select Path for %s"%({"4":"Ratings","5":"Bumpers"}[str(optionindex)]), exclude=[12,13,14,15,16,21,22])
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, citem, parameter, builder):
+        if actionid == RULES_ACTION_CHANNEL_START:
+            self.storedValues[0] = builder.bctTypes.get('ratings',{})
+            self.storedValues[1] = builder.bctTypes.get('bumpers',{})
+            builder.bctTypes['ratings'].update({"max":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[2].split('|'),"paths":self.optionValues[4]}})
+            builder.bctTypes['bumpers'].update({"max":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[3].split('|'),"paths":self.optionValues[5]}})
+            self.log("runAction, setting bctTypes = %s"%(builder.bctTypes))
+
+        elif actionid == RULES_ACTION_CHANNEL_STOP:
+            builder.bctTypes['ratings'] = self.storedValues[0]
+            builder.bctTypes['bumpers'] = self.storedValues[1]
+            self.log("runAction, restoring bctTypes = %s"%(builder.bctTypes))
+        return parameter
+        
+                            
+class PostRoll(BaseRule):
+    def __init__(self):
+        self.myId               = 503
+        self.ignore             = False
+        self.exclude            = False
+        self.name               = "Post-Roll"
+        self.description        = "Post-Roll Options"
+        self.optionLabels       = [LANGUAGE(30019),LANGUAGE(30134),LANGUAGE(30030),"Adverts Folder",LANGUAGE(30136),LANGUAGE(30031),"Trailers Folder",LANGUAGE(30126),LANGUAGE(30125)]
+        self.optionValues       = [SETTINGS.getSettingInt('Enable_Postroll'),SETTINGS.getSettingInt('Random_Post_Chance'),SETTINGS.getSetting('Resource_Adverts'),[os.path.join(FILLER_LOC,'Adverts','')],SETTINGS.getSettingBool('Include_Adverts_iSpot'),SETTINGS.getSetting('Resource_Trailers'),[os.path.join(FILLER_LOC,'Trailers','')],SETTINGS.getSettingBool('Include_Trailers_KODI'),SETTINGS.getSettingBool('Include_Trailers_IMDB')]
+        self.optionDescriptions = [LANGUAGE(30020),LANGUAGE(33134),LANGUAGE(33030),"",LANGUAGE(33136),LANGUAGE(33031),"",LANGUAGE(33126),LANGUAGE(33125)]
+        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
+        self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0,LANGUAGE(30026):1,LANGUAGE(30024):2,LANGUAGE(30025):3},list(range(0,101,1)),[]]
+        self.storedValues       = [{},{}]
+
+
+    def copy(self):
+        return PostRoll()
+
+
+    def getTitle(self):
+        return self.name
+
+
+    def onAction(self, optionindex):
+        if   optionindex in [0,1]:   self.onActionSelect(optionindex)
+        elif optionindex in [2,5]:   self.onActionResources(optionindex, ftype={"2":"adverts","5":"trailers"}[str(optionindex)])
+        elif optionindex in [3,6]:   self.onActionMultiBrowse(optionindex, header="Select Path for %s"%({"3":"Adverts","6":"Trailers"}[str(optionindex)]), exclude=[12,13,14,15,16,21,22])
+        elif optionindex in [4,7,8]: self.onActionToggleBool(optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, citem, parameter, builder):
+        if actionid == RULES_ACTION_CHANNEL_START:
+            self.storedValues[0] = builder.bctTypes.get('adverts',{})
+            self.storedValues[1] = builder.bctTypes.get('trailers',{})
+            builder.bctTypes['adverts'].update({"min":self.optionValues[0] , "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[2].split('|'),"paths":self.optionValues[3], "incIspot":self.optionValues[4]}})
+            builder.bctTypes['trailers'].update({"min":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[5].split('|'),"paths":self.optionValues[6], "incKODI":self.optionValues[7] ,"incIMDB":self.optionValues[8]}})
+            self.log("runAction, setting bctTypes = %s"%(builder.bctTypes))
+
+        elif actionid == RULES_ACTION_CHANNEL_STOP:
+            builder.bctTypes['adverts']  = self.storedValues[0]
+            builder.bctTypes['trailers'] = self.storedValues[1]
+            self.log("runAction, restoring bctTypes = %s"%(builder.bctTypes))
+        return parameter
+        
 
 class ProvisionalRule(BaseRule):
     def __init__(self):
@@ -906,7 +1020,6 @@ class ProvisionalRule(BaseRule):
         self.optionValues       = [""]
         self.optionDescriptions = [""]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE]
-        self.selectBoxOptions   = [""]
         self.storedValues       = [list()]
         
 
@@ -918,40 +1031,46 @@ class ProvisionalRule(BaseRule):
         if len(self.optionValues[0]) > 0: return "%s (%s)"%(self.name, self.optionValues[0])
         else:                             return self.name
             
+            
+    def _getProvisional(self, citem):
+        PROVISIONAL_TYPES = {"TV Shows"     : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
+                                                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
+                             "TV Networks"  : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"} ,"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
+                             "Movie Studios": [{"path":"videodb://movies/titles/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"} ,"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                                "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
+                             "TV Genres"    : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
+                             "Movie Genres" : [{"path":"videodb://movies/titles/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
+                             "Mixed Genres" : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"},
+                                               {"path":"videodb://movies/titles/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}]}
+        return PROVISIONAL_TYPES.get(citem.get('type',''),[])
+            
   
     def runAction(self, actionid, citem, parameter, builder):
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
-            PROVISIONAL_TYPES = {"TV Shows"     : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
-                                                    "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                                 "TV Networks"  : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"} ,"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
-                                                    "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                                 "Movie Studios": [{"path":"videodb://movies/titles/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"} ,"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
-                                                    "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
-                                 "TV Genres"    : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                    "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                                 "Movie Genres" : [{"path":"videodb://movies/titles/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                    "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
-                                 "Mixed Genres" : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                    "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"},
-                                                   {"path":"videodb://movies/titles/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                    "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}]}
-
             if self.optionValues[0]:
-                if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
-                if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
-                else:                                  queries = PROVISIONAL_TYPES.get(citem['type'],[])
-                self.log("%s: runAction, id: %s, provisional value = %s\nqueries = %s"%(self.__class__.__name__,citem.get('id'),self.optionValues[0],queries))
-                for provisional in queries:
-                    if not provisional: continue
-                    else:
-                        if self.optionValues[0] == "Seasonal": citem['logo'] = provisional.get('holiday',{}).get('logo',citem['logo'])
-                        else: provisional["filter"]["and"][0]['value'] = self.optionValues[0]
-                        if not builder.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
-                            provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
-                                                                               {"field":"episode","operator":"greaterthan","value":"0"}])
-                        fileList, dirList = builder.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits=builder.limits, dirItem={}, query=provisional)
-                        if len(fileList) > 0: self.storedValues[0].append(fileList)
-                return [fileList for fileList in self.storedValues[0]]
+                try:
+                    if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
+                    else:                                  queries = self._getProvisional(citem)
+                    self.log("%s: runAction, id: %s, provisional value = %s\nqueries = %s"%(self.__class__.__name__,citem.get('id'),self.optionValues[0],queries))
+                    for provisional in queries:
+                        if not provisional: continue
+                        else:
+                            if self.optionValues[0] == "Seasonal": citem['logo'] = provisional.get('holiday',{}).get('logo',citem['logo'])
+                            else: provisional["filter"]["and"][0]['value'] = self.optionValues[0]
+                            if not builder.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
+                                provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
+                                                                                   {"field":"episode","operator":"greaterthan","value":"0"}])
+                            fileList, dirList = builder.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits=builder.limits, dirItem={}, query=provisional)
+                            if len(fileList) > 0: self.storedValues[0].append(fileList)
+                    return [fileList for fileList in self.storedValues[0] if fileList]
+                except Exception as e: self.log("runAction, failed! %s"%(e), xbmc.LOGERROR)
+                return []
         return parameter
        
        
@@ -966,9 +1085,8 @@ class HandleMethodOrder(BaseRule):
         self.optionValues       = [REAL_SETTINGS.getSettingInt('Page_Limit'),SETTINGS.getSetting('Sort_Method').lower(),'ascending',True,True]
         self.optionDescriptions = ["","","","",""]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions   = [list(range(25,525,25)), self.getSort(), self.getOrder(),"",""]
+        self.selectBoxOptions   = [list(range(25,525,25)), self.getSort(), self.getOrder()]
         self.storedValues       = [[],[],[],[],[]]
-        self.cache              = SETTINGS.cacheDB
         
         
     def copy(self):
@@ -981,18 +1099,12 @@ class HandleMethodOrder(BaseRule):
 
     def getSort(self):
         from jsonrpc import JSONRPC
-        jsonrpc = JSONRPC()
-        values  = jsonrpc.getEnums("List.Sort",type="method")
-        del jsonrpc
-        return values
+        return JSONRPC().getEnums("List.Sort",type="method")
 
 
     def getOrder(self):
         from jsonrpc import JSONRPC
-        jsonrpc = JSONRPC()
-        values  = jsonrpc.getEnums("List.Sort",type="order")
-        del jsonrpc
-        return values
+        return JSONRPC().getEnums("List.Sort",type="order")
 
 
     def onAction(self, optionindex):
@@ -1006,14 +1118,13 @@ class HandleMethodOrder(BaseRule):
             self.storedValues[0] = builder.limit
             self.storedValues[1] = builder.sort
             builder.limit = self.optionValues[0]
-            builder.sort.update({"ignorearticle":self.optionValues[2],"method":self.optionValues[0],"order":self.optionValues[1],"useartistsortname":self.optionValues[3]})
+            builder.sort.update({"method":self.optionValues[1],"order":self.optionValues[2],"ignorearticle":self.optionValues[3],"useartistsortname":self.optionValues[4]})
+            self.log("runAction, setting limit to %s and sort to %s"%(builder.limit,builder.sort))
             
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             builder.limit = self.storedValues[0]
             builder.sort  = self.storedValues[1]
-            
-        self.log("runAction, setting limit = %s"%(builder.limit))
-        self.log("runAction, setting sort = %s"%(builder.sort))
+            self.log("runAction, restoring limit to %s and sort to %s"%(builder.limit,builder.sort))
         return citem
 
 
@@ -1023,12 +1134,11 @@ class ForceEpisode(BaseRule):
         self.ignore             = False
         self.exclude            = False
         self.name               = "Force Episode Ordering"
-        self.description        = "Force TV to episodes order, Movies to year."
+        self.description        = "Force TV to episode order, Movies to year."
         self.optionLabels       = ['Force Random','Interleave TV & Movies']
         self.optionValues       = [True,True]
         self.optionDescriptions = ["",""]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST]
-        self.selectBoxOptions   = ["",""]
         self.storedValues       = [dict(),dict(),list(),list(),list()]
 
 
@@ -1045,30 +1155,38 @@ class ForceEpisode(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, citem, parameter, builder):
-        def _episodeSort(showArray: dict={}):
+    def _episodeSort(self, showArray: dict={}):
+        try:
             for show, fileItems in list(showArray.items()):
                 self.storedValues[3] = []
                 for item in fileItems:
-                    if (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
+                    if (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: #episode
                         self.storedValues[3].append([int(item.get("season","0")), int(item.get("episode","0")), item])
                     else:
-                        self.storedValues[2].append(item)
+                        self.storedValues[2].append(item) #movie
                     
                 self.storedValues[3].sort(key=lambda seep: seep[1])
                 self.storedValues[3].sort(key=lambda seep: seep[0])
                 for seepitem in self.storedValues[3]: self.storedValues[4].append(seepitem[2])
             return self.storedValues[4]
+        except Exception as e: self.log("runAction, _episodeSort failed! %s"%(e), xbmc.LOGERROR)
+        return []
 
-        def _sortShows(fileList: list=[]): #group by type & show; no duplicates. 
+
+    def _sortShows(self, fileList: list=[]): #group by type & show; no duplicates. 
+        try:
             for fileItem in fileList:
                 if fileItem.get('type').startswith(tuple(TV_TYPES)):
                     if fileItem not in self.storedValues[1].setdefault(fileItem['showtitle'],[]):
                         self.storedValues[1].setdefault(fileItem['showtitle'],[]).append(fileItem)
                 else:
                     if fileItem not in self.storedValues[2]: self.storedValues[2].append(fileItem)
-            return _episodeSort(self.storedValues[1]), sorted(self.storedValues[2], key=lambda k: k.get('year',0))
+            return self._episodeSort(self.storedValues[1]), sorted(self.storedValues[2], key=lambda k: k.get('year',0))
+        except Exception as e: self.log("runAction, _sortShows failed! %s"%(e), xbmc.LOGERROR)
+        return []
 
+
+    def runAction(self, actionid, citem, parameter, builder):
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
             self.storedValues[0] = builder.sort
         elif actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
@@ -1081,8 +1199,8 @@ class ForceEpisode(BaseRule):
             builder.sort = self.storedValues[0]
             self.log("runAction, restoring sort and forcing episode/year ordering (%s)"%(len(parameter)))
             fileList = list(sorted(parameter, key=lambda k: k.get('year',0)))
-            if self.optionValues[1]: return interleave(list(_sortShows(fileList)))
-            else:                    return [j for i in _sortShows(fileList) for j in i]
+            if self.optionValues[1]: return interleave(list(self._sortShows(fileList)))
+            else:                    return [j for i in self._sortShows(fileList) for j in i]
         return parameter
         
         
@@ -1097,7 +1215,6 @@ class ForceRandom(BaseRule):
         self.optionValues       = [True]
         self.optionDescriptions = [""]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST]
-        self.selectBoxOptions   = [""]
         self.storedValues       = [dict()]
 
 
@@ -1137,7 +1254,7 @@ class EvenShowsRule(BaseRule):
         self.optionValues       = [SETTINGS.getSettingInt('Enable_Even'),SETTINGS.getSettingInt('Page_Limit'),True]
         self.optionDescriptions = [LANGUAGE(33121),"",""]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST,RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST]
-        self.selectBoxOptions   = [list(range(1,6)),list(range(25,501,25)),list()]
+        self.selectBoxOptions   = [list(range(1,6)),list(range(25,501,25)),""]
         self.storedValues       = [dict(),list(),SETTINGS.getSettingInt('Page_Limit')]
         
 
@@ -1152,45 +1269,47 @@ class EvenShowsRule(BaseRule):
     def onAction(self, optionindex):
         if optionindex in [0,1]:
             self.onActionSelect(optionindex,self.optionLabels[optionindex])
-            self.validate(optionindex)
-        elif optionindex ==2:    self.onActionToggleBool(optionindex)
+        elif optionindex ==2:
+            self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
 
 
-    def validate(self, optionindex):
-        if   optionindex == 0: self.validateDigitBox(optionindex, 0, 5, self.optionValues[optionindex])
-        elif optionindex == 1: self.validateDigitBox(optionindex, 25, 500, self.optionValues[optionindex])
+    def _chunkShows(self, showArray: dict={}):
+        for show, episodes in list(showArray.items()):
+            yield show,[episodes[i:i+self.optionValues[0]] for i in range(0,len(episodes),self.optionValues[0])]
 
 
-    def runAction(self, actionid, citem, parameter, builder):
-        def _chunkShows(showArray: dict={}):
-            for show, episodes in list(showArray.items()):
-                yield show,[episodes[i:i+self.optionValues[0]] for i in range(0,len(episodes),self.optionValues[0])]
-
-        def _sortShows(fileItems): #group by type & show; no duplicates. 
+    def _sortShows(self, fileItems): #group by type & show; no duplicates. 
+        try:
             for fileItem in fileItems:
                 if fileItem.get('type').startswith(tuple(TV_TYPES)):
                     if fileItem not in self.storedValues[0].setdefault(fileItem['showtitle'],[]):
                         self.storedValues[0].setdefault(fileItem['showtitle'],[]).append(fileItem)
-                else:
-                    if fileItem not in self.storedValues[1]: self.storedValues[1].append(fileItem)
-            return dict(_chunkShows(self.storedValues[0])), self.storedValues[1]
+                elif fileItem not in self.storedValues[1]: self.storedValues[1].append(fileItem)
+            return dict(self._chunkShows(self.storedValues[0])), self.storedValues[1]
+        except Exception as e: self.log("runAction, _sortShows failed! %s"%(e), xbmc.LOGERROR)
+        return {}
 
-        def _mergeShows(shows, movies):
-            nfileList = []
+
+    def _mergeShows(self, shows, movies):
+        nfileList = []
+        try:
             while not MONITOR().abortRequested() and shows:
                 for show, chunks in list(shows.items()):
+                    if   len(movies) > 0:  nfileList.append(movies.pop(0))
                     if   len(chunks) == 0: del shows[show]
                     elif len(chunks) > 0:  nfileList.extend(shows[show].pop(0))
-                    if len(movies) > 0:    nfileList.append(movies.pop(0))
                     
             if len(movies) > 0:
                 self.log('runAction, _mergeShows appending remaining movies, movie count = %s'%(len(movies)))
-                nfileList.extend(movies) #add any remaning movies to the end of sets.
-                
+                nfileList.extend(movies) #add any remaining movies to the end of sets.
             self.log('runAction, _mergeShows returning items = %s'%(len(nfileList)))
             return [_f for _f in nfileList if _f]
-                
+        except Exception as e: self.log("runAction, _mergeShows failed! %s"%(e), xbmc.LOGERROR)
+        return []
+        
+            
+    def runAction(self, actionid, citem, parameter, builder):
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
             self.storedValues[2] = builder.limit # store global pagination limit
             self.log('runAction, saving limit %s'%(builder.limit))
@@ -1203,14 +1322,12 @@ class EvenShowsRule(BaseRule):
             self.log('runAction, changing limit %s'%(builder.limit))
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST:
-            try:
-                if parameter:
-                    if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
-                    if self.optionValues[2]: fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0)))
-                    else:                    fileItems = parameter
-                    self.log('runAction, even distribution %s'%(self.optionValues[0]))
-                    return _mergeShows(*(_sortShows(fileItems)))
-            except Exception as e: log("runAction, failed! %s"%(e), xbmc.LOGERROR)
+            if parameter:
+                if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                if self.optionValues[2]: fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0)))
+                else:                    fileItems = parameter
+                self.log('runAction, even distribution %s'%(self.optionValues[0]))
+                return self._mergeShows(*(self._sortShows(fileItems)))
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST:
             builder.limit = self.storedValues[2] # restore global pagination limit

@@ -23,7 +23,7 @@ class MoviePY:
         try:
             from moviepy.editor import VideoFileClip
             log("MoviePY: determineLength %s"%(filename))
-            dur = VideoFileClip(xbmcvfs.translatePath(filename)).duration
+            dur = VideoFileClip(FileAccess.translatePath(filename)).duration
             log('MoviePY: Duration is %s'%(dur))
             return dur
         except Exception as e:
