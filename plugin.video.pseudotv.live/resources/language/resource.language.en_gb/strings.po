@@ -2074,7 +2074,7 @@ msgid "Default Sort Method for all channels, overridden per channel by SmartPlay
 msgstr ""
 
 msgctxt "#33215"
-msgid "Interleave individual paths in sets of x *see wiki for details"
+msgid "Interleave individual paths in sets of x *see wiki for details [0 Disabled, 1 Default]"
 msgstr ""
 
 msgctxt "#33308"

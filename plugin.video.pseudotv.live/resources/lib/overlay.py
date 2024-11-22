@@ -141,6 +141,9 @@ class Overlay():
         self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.minDuration        = SETTINGS.getSettingInt('Seek_Tolerance')
         
+        try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+        except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
+        
         #init controls
         self._defZoom     = self._getZoom()
         self._vinImage    = SETTINGS.getSetting('Vignette_Image')
@@ -150,9 +153,6 @@ class Overlay():
         self._onNext      = xbmcgui.ControlTextBox(abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h), 1920, 36, 'font12', '0xFFFFFFFF')
         self._blackout    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
         self._channelBug  = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
-        
-        try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-        except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
         
         #thread timers
         self._bugThread    = Timer(0.1, self.toggleBug, [False])

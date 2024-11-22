@@ -266,7 +266,8 @@ class Builder:
             return False
             
         self.log("buildChannel, [%s] fileArray arrays = %s"%(citem['id'],len(fileArray)))
-        fileList = interleave(fileArray, self.interleaveValue) #todo move intervleaving to adv. rules. RULES_ACTION_CHANNEL_BUILD_FILELIST
+        if bool(self.interleaveValue): fileList = interleave(fileArray, self.interleaveValue) #todo move intervleaving to adv. rules. RULES_ACTION_CHANNEL_BUILD_FILELIST
+        else:                          fileList = chain(*fileArray)
         #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
         fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST, citem, fileList, inherited=self)
         self.log('buildChannel, [%s] fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
