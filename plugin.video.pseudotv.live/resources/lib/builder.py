@@ -20,7 +20,6 @@
 
 from globals    import *
 from channels   import Channels
-from rules      import RulesList
 from xmltvs     import XMLTVS
 from xsp        import XSP
 from m3u        import M3U
@@ -41,6 +40,8 @@ class Builder:
         
         #global rules
         self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
+        self.enableEvenDistro = bool(SETTINGS.getSettingInt('Enable_Even'))
+        self.interleaveValue  = SETTINGS.getSettingInt('Interleave_Value')
         self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
         self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
         self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
@@ -100,10 +101,11 @@ class Builder:
             else:
                 citem['name'] = validString(citem['name']) #todo temp. correct existing file names; drop by v.0.6
                 citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
+                    
                 self.log('verify, [%s] VERIFIED - channel %s: %s'%(citem['id'],citem['number'],citem['name']))
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
 
-            
+
     def build(self):
         with PROPERTIES.legacy():
             channels = sorted(self.verify(self.channels.getChannels()), key=itemgetter('number'))
@@ -240,7 +242,15 @@ class Builder:
         def _validFileList(fileArray):
             for fileList in fileArray:
                 if len(fileList) > 0: return True
-                
+            
+        def _injectRules(citem):
+            def __chkEvenDistro(citem):
+                if self.enableEvenDistro and not citem.get('rules',{}).get("1000"):
+                    citem.setdefault('rules',{}).update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":SETTINGS.getSettingBool('Enable_Even_Force')}}})
+                return citem
+            return __chkEvenDistro(citem)
+
+        citem = _injectRules(citem) #inject global adv. rules here
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self)
         if not _validFileList(fileArray):
             paths = citem.get('path',[])
@@ -256,7 +266,7 @@ class Builder:
             return False
             
         self.log("buildChannel, [%s] fileArray arrays = %s"%(citem['id'],len(fileArray)))
-        fileList = interleave(fileArray) #todo move intervleaving to adv. rules. RULES_ACTION_CHANNEL_BUILD_FILELIST
+        fileList = interleave(fileArray, self.interleaveValue) #todo move intervleaving to adv. rules. RULES_ACTION_CHANNEL_BUILD_FILELIST
         #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
         fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST, citem, fileList, inherited=self)
         self.log('buildChannel, [%s] fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)

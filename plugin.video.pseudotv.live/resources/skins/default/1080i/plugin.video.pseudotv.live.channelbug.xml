@@ -35,11 +35,10 @@
                 <visible>Player.Playing</visible>
             </control>
             <control type="image" id="40001">
-                <description>Background Ratio</description>
+                <description>Background Overlay</description>
                 <width>auto</width>
                 <height>auto</height>
-                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
-                <texture>backgrounds/ratio.png</texture>
+                <aspectratio scalediffuse="true" align="center" aligny="center">stretch</aspectratio>
             </control>
             <control type="grouplist" id="40002">
                 <left>200</left>

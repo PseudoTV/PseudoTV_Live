@@ -1142,7 +1142,7 @@ class Dialog:
                                     self.builtin.getInfoLabel('Thumb'                ,type))}
             if item.get('label'):
                 montiorList = self.getInfoMonitor()
-                montiorList.insert(0,item)
+                if item.get('label') not in montiorList: montiorList.insert(0,item)
                 self.setInfoMonitor(montiorList)
             return True
         except Exception as e:

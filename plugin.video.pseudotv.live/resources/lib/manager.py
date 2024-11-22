@@ -56,7 +56,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.jsonRPC        = JSONRPC()
             self.resources      = Resources(self.jsonRPC)
             self.rule           = RulesList()
-            
+
             self.newChannel     = self.channels.getTemplate()
             self.eChannels      = self.__loadChannels(SETTINGS.getSetting('Default_Channels'))
             if self.eChannels is None: self.closeManager()

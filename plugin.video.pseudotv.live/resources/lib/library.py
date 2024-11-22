@@ -52,7 +52,6 @@ class Library:
         self.libraryTEMP  = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
 
-        self.enableEvenTV = bool(SETTINGS.getSettingInt('Enable_Even'))
         self.libraryFUNCS = {"Playlists"    :self.getPlaylists,
                              "TV Networks"  :self.getNetworks,
                              "TV Shows"     :self.getTVShows,
@@ -139,10 +138,10 @@ class Library:
             if self.service._interrupt():
                 complete = False
                 break
-            elif self.service._suspend():
-                types.insert(idx,type)
-                self.service.monitor.waitForAbort(SUSPEND_TIMER)
-                continue
+            # elif self.service._suspend():
+                # types.insert(idx,type)
+                # self.service.monitor.waitForAbort(SUSPEND_TIMER)
+                # continue
             else:
                 msg = LANGUAGE(30014)
                 func = self.libraryFUNCS[type]
@@ -196,7 +195,6 @@ class Library:
         MixedGenreList = []
         for tv in [tv for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.get('name','').lower() == movie.get('name','').lower()]:
             rules = {"800":{"values":{"0":tv.get('name')}}}
-            if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
             MixedGenreList.append({'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createGenreMixedPlaylist(tv.get('name')),'logo':tv.get('logo'),'rules':rules})
         self.log('getMixedGenres, genres = %s' % (len(MixedGenreList)))
         return sorted(MixedGenreList,key=itemgetter('name'))
@@ -210,7 +208,6 @@ class Library:
         if BUILTIN.hasTV() or BUILTIN.hasMovie():
             MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo(LANGUAGE(32001),"Mixed")}) #"Recently Added"
             rules = {"800":{"values":{"0":LANGUAGE(32002)}}}
-            if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
             MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':rules}) #"Seasonal"
 
         # if hasRecordings(): #broken paths no longer play, Kodi jsonrpc doesn't return valid file and uses unknown vfs assignment
@@ -273,14 +270,12 @@ class Library:
             nNetworkList = []
             for network in NetworkList:
                 rules = {"800":{"values":{"0":network}}}
-                if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
                 nNetworkList.append({'name':network, 'type':"TV Networks", 'path': self.predefined.createNetworkPlaylist(network),'logo':self.resources.getLogo(network,"TV Networks"),'rules':rules})
             NetworkList = nNetworkList
             
             nShowGenreList = []
             for tvgenre in ShowGenreList:
                 rules = {"800":{"values":{"0":tvgenre}}}
-                if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
                 nShowGenreList.append({'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createTVGenrePlaylist(tvgenre),'logo':self.resources.getLogo(tvgenre,"TV Genres"),'rules':rules})
             ShowGenreList = nShowGenreList
             

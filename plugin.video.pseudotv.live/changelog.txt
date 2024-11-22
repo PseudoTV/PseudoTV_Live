@@ -1,4 +1,7 @@
 v.0.5.6
+-Added Global Interleaving value and Advanced Interleaving Channel rule. 
+-Improved Even Distribution, now includes "Force Episode Ordering".
+-Improved Channel Bug position tool, now includes overlay vignette if applicable.
 -Improved Channel Manager's Path browser, now includes resource paths.
 -Refactored Pre-Roll/Post-Roll Fillers.
 -Added Pre-Roll/Post-Roll options to Adv. Channel rules.

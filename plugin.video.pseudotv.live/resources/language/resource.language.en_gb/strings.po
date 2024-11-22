@@ -454,7 +454,7 @@ msgid "Channels"
 msgstr ""
 
 msgctxt "#30109"
-msgid "Edit Channel %s\n[COLOR=white][B]In-use[/B][/COLOR] | [COLOR=dimgray][B]Unused[/B][/COLOR] | [COLOR=yellow][B]Favorite[/B][/COLOR] | [COLOR=cyan][B]Radio[/B][/COLOR] | [COLOR=orange][B]Uneditable[/B][/COLOR] | [COLOR=red][B]Warning[/B][/COLOR] *see readme for details."
+msgid "Edit Channel %s\n[COLOR=white][B]In-use[/B][/COLOR] | [COLOR=dimgray][B]Unused[/B][/COLOR] | [COLOR=yellow][B]Favorite[/B][/COLOR] | [COLOR=cyan][B]Radio[/B][/COLOR] | [COLOR=orange][B]Uneditable[/B][/COLOR] | [COLOR=red][B]Warning[/B][/COLOR] *see wiki for details."
 msgstr ""
 
 msgctxt "#30110"
@@ -590,7 +590,7 @@ msgid "Disable Overlay"
 msgstr ""
 
 msgctxt "#30143"
-msgid "Channel Bug Options"
+msgid "Channel Bug Rules"
 msgstr ""
 
 msgctxt "#30144"
@@ -729,6 +729,39 @@ msgctxt "#30176"
 msgid "Vignette Zoom"
 msgstr ""
 
+msgctxt "#30177"
+msgid "Vignette Rules"
+msgstr ""
+
+msgctxt "#30178"
+msgid "Vignette Offset"
+msgstr ""
+
+msgctxt "#30179"
+msgid "Interleave Sets"
+msgstr ""
+
+msgctxt "#30180"
+msgid "Group TV shows in blocks"
+msgstr ""
+
+msgctxt "#30181"
+msgid "Force Episode Ordering"
+msgstr ""
+
+msgctxt "#30182"
+msgid "Force Random Ordering"
+msgstr ""
+
+msgctxt "#30183"
+msgid "Interleave TV & Movies after Ordering"
+msgstr ""
+
+msgctxt "#30184"
+msgid "Enabled"
+msgstr ""
+
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -819,7 +852,7 @@ msgid "Unavailable"
 msgstr ""
 
 msgctxt "#32021"
-msgid "Building"
+msgid "Parsing"
 msgstr ""
 
 msgctxt "#32022"
@@ -1019,7 +1052,7 @@ msgid "No Logo Found!"
 msgstr "" 
 
 msgctxt "#32071"
-msgid "Please save changes before creating channel rules."
+msgid "Please finish configurations before creating channel rules."
 msgstr ""
 
 msgctxt "#32072"
@@ -1618,6 +1651,30 @@ msgctxt "#32222"
 msgid "Save"
 msgstr ""
 
+msgctxt "#32223"
+msgid "Select One %s"
+msgstr ""
+
+msgctxt "#32224"
+msgid "Indefinitely"
+msgstr ""
+
+msgctxt "#32225"
+msgid "Randomly"
+msgstr ""
+
+msgctxt "#32226"
+msgid "Forcing"
+msgstr ""
+
+msgctxt "#32227"
+msgid "Show Screen Vignette"
+msgstr ""
+
+msgctxt "#32228"
+msgid "Hide Screen Vignette"
+msgstr ""
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"
@@ -1677,7 +1734,7 @@ msgid "Pagination Limit, How many entries are requested and parsed per call. [25
 msgstr ""
 
 msgctxt "#33016"
-msgid "Global Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nChanges will propagate slowly over time and may not be instantaneous."
+msgid "Global Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see wiki for details.\nChanges will propagate slowly over time and may not be instantaneous."
 msgstr ""
 
 msgctxt "#33023"
@@ -1701,7 +1758,7 @@ msgid "Clear all Pre-defined selections and remove their channels."
 msgstr ""
 
 msgctxt "#33041"
-msgid "Global rules set the default for all channels, Advanced Channel Rules apply per channel. *see readme for details.\nGlobals are the default setting for every channel."
+msgid "Global rules set the default for all channels, Advanced Channel Rules apply per channel. *see wiki for details.\nGlobals are the default setting for every channel."
 msgstr ""
 
 msgctxt "#33042"
@@ -1713,11 +1770,11 @@ msgid "Display the channel logo at the bottom corner of your screen."
 msgstr ""
 
 msgctxt "#33044"
-msgid "Select Color to apply to channel logo [#FFFFFFFF Default]"
+msgid "Select Color to apply to monochromatic channel logos [#FFFFFFFF Default]"
 msgstr ""
 
 msgctxt "#33045"
-msgid "Display On-Next information towards the end of a video.\nIf Playlist Playback & Up-Next service installed; support meta is provided."
+msgid "Display On-Next information towards the end of programme.\nIf Playlist Playback & Up-Next service installed; support meta is provided."
 msgstr ""
 
 msgctxt "#33046"
@@ -1729,11 +1786,11 @@ msgid "Enable/Disable paired servers."
 msgstr ""
 
 msgctxt "#33049"
-msgid "Prefer Kodi Metadata - Use less accurate runtimes from meta-providers.\nPrefer File Metadata - Parse file for accurate runtimes.\nCan impact system performance! *see readme for details."
+msgid "Prefer Kodi Metadata - Use less accurate runtimes from meta-providers.\nPrefer File Metadata - Parse file for accurate runtimes.\nCan impact system performance! *see wiki for details."
 msgstr ""
 
 msgctxt "#33052"
-msgid "Save parsed file duration meta to the Kodi library. Improves runtime accuracy. *see readme for details."
+msgid "Save parsed file duration meta to the Kodi library. Improves runtime accuracy. *see wiki for details."
 msgstr ""
 
 msgctxt "#33053"
@@ -1741,23 +1798,27 @@ msgid "Include Specials and Extras.\nSeason 00 & Movie Extras"
 msgstr ""
 
 msgctxt "#33054"
-msgid "Include .strm files *see readme for details."
+msgid "Include .strm files *see wiki for details."
+msgstr ""
+
+msgctxt "#33055"
+msgid "Include 3D Media."
 msgstr ""
 
 msgctxt "#33056"
-msgid "Include content fillers (Ratings/Bumpers/Adverts/Trailers) in-between channel content\nDownload Filler Resources for content\nLocal directories will be automatically created.. *see readme for details."
+msgid "Include content fillers (Ratings/Bumpers/Adverts/Trailers) in-between channel content\nDownload Filler Resources for content\nLocal directories will be automatically created.. *see wiki for details."
 msgstr ""
 
 msgctxt "#33058"
-msgid "PVR Callback - Play channel as if from a PVR backend.\nPlaylist - Queue channel as a Playlist *see readme for details."
+msgid "PVR Callback - Play channel as if from a PVR backend.\nPlaylist - Queue channel as a Playlist *see wiki for details."
 msgstr ""
 
 msgctxt "#33061"
-msgid "Adjust (in seconds) to ignore differentials between load times and live offset. [60secs Default] *see readme for details."
+msgid "Adjust (in seconds) to ignore differentials between load times and live offset. [60secs Default] *see wiki for details."
 msgstr ""
 
 msgctxt "#33062"
-msgid "Adjust (by percentage) to ignore loading content near the end of its runtime. [98% Default] / [100% Disables]. *see readme for details."
+msgid "Adjust (by percentage) to ignore loading content near the end of its runtime. [98% Default] / [100% Disables]. *see wiki for details."
 msgstr ""
 
 msgctxt "#33063"
@@ -1801,7 +1862,7 @@ msgid "Interval between channel Bug appearances (Minutes). [-1 Indefinitely, 0 R
 msgstr ""
 
 msgctxt "#33089"
-msgid "QRCode - Visit PseudoTV Live Readme"
+msgid "QRCode - Visit PseudoTV Live Wiki"
 msgstr ""
 
 msgctxt "#33092"
@@ -1841,7 +1902,7 @@ msgid "Apply diffuse color to channel bug regardless of monochromatics"
 msgstr ""
 
 msgctxt "#33112"
-msgid "Change the onscreen Channel Bug position. [(1556,920) Default]"
+msgid "Change the onscreen Channel Bug position. [Auto Default]"
 msgstr ""
 
 msgctxt "#33113"
@@ -1972,10 +2033,17 @@ msgctxt "#33176"
 msgid "Set Vignette Zoom"
 msgstr ""
 
+msgctxt "#33177"
+msgid "Set Various Vignette Attributes to create a immersive viewing experience"
+msgstr ""
+
 msgctxt "#33178"
 msgid "Select Vignette Image"
 msgstr ""
 
+msgctxt "#33179"
+msgid "Change Vignette Offset"
+msgstr ""
 
 msgctxt "#33180"
 msgid "Build Filler Template folders based on your channels."
@@ -1985,12 +2053,28 @@ msgctxt "#33181"
 msgid "Force Autotune to run."
 msgstr ""
 
+msgctxt "#33182"
+msgid "Enabled in discovered servers in the list below."
+msgstr ""
+
+msgctxt "#33202"
+msgid "Minimum Debugging Level [LOGERROR - Default]"
+msgstr ""
+
+msgctxt "#33230"
+msgid "Force TV in Episode order, Movies in Year order\nBased on available content provided by your channel configuration."
+msgstr ""
+
+msgctxt "#33231"
+msgid "Random sort & shuffle channel content."
+msgstr ""
+
 msgctxt "#33214"
 msgid "Default Sort Method for all channels, overridden per channel by SmartPlaylist, DynamicPlaylist and Adv. Channel rules."
 msgstr ""
 
-msgctxt "#33182"
-msgid "Enabled in discovered servers in the list below."
+msgctxt "#33215"
+msgid "Interleave individual paths in sets of x *see wiki for details"
 msgstr ""
 
 msgctxt "#33308"
@@ -1999,8 +2083,4 @@ msgstr ""
 
 msgctxt "#33309"
 msgid "Submit debugging log for review to http://paste.kodi.tv."
-msgstr ""
-
-msgctxt "#33202"
-msgid "Minimum Debugging Level [LOGERROR - Default]"
 msgstr ""

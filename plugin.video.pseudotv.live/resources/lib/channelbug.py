@@ -21,23 +21,31 @@
 # -*- coding: utf-8 -*-
 from globals   import *
 
-class ChannelBug(xbmcgui.WindowXML):
+
+class ChannelBug(xbmcgui.WindowXMLDialog):
+    overlays = ["Bug","Vig","Next"]
     lastActionTime = time.time()
     
     def __init__(self, *args, **kwargs):
-        xbmcgui.WindowXML.__init__(self, *args, **kwargs)
+        xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         with BUILTIN.busy_dialog():
             self.window = xbmcgui.Window(12005) 
             self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())
-            # self.enableVignette     = SETTINGS.getSettingBool('Enable_Vignette')
-            # self._vignette = xbmcgui.ControlImage(self._vinOffsetXY[0], self._vinOffsetXY[1], self.window_w, self.window_h, 'None', aspectRatio=0)
-            # self._vinImage    = SETTINGS.getSetting('Vignette_Image')
-            # self._vinZoom     = SETTINGS.getSettingFloat('Vignette_Zoom')
-            #todo add default overlay to channelbug tool.
-            try:    self.userPOSX, self.userPOSY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY"))
-            except: self.userPOSX, self.userPOSY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128)
-            self.posx, self.posy = self.userPOSX, self.userPOSY
             
+            self.advRule = True if kwargs.get("Channel_Bug_Position_XY") else False
+            self.autoPOSX, self.autoPOSY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128)
+            try:    self.userPOSX, self.userPOSY = tuple(kwargs.get("Channel_Bug_Position_XY",SETTINGS.getSetting("Channel_Bug_Position_XY")))
+            except: self.userPOSX, self.userPOSY = self.autoPOSX, self.autoPOSY
+
+            #todo add vignette and on next POS controls, use adv. and global rules to set value.
+            # self._vinEnabled = (kwargs.get("Enable_Vignette") or SETTINGS.getSettingBool('Enable_Vignette'))
+            # self._vinImage   = (kwargs.get("Vignette_Image")  or SETTINGS.getSetting('Vignette_Image'))
+            # self._vinZoom    = (kwargs.get("Vignette_Zoom")   or SETTINGS.getSettingFloat('Vignette_Zoom'))
+            
+            # SETTINGS.getSettingBool('Enable_OnNext')
+            # self._onNext      = xbmcgui.ControlTextBox(abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h), 1920, 36, 'font12', '0xFFFFFFFF')
+
+            self.posx, self.posy = self.userPOSX, self.userPOSY
             if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
         self.doModal()
         
@@ -51,7 +59,17 @@ class ChannelBug(xbmcgui.WindowXML):
             DIALOG.okDialog(LANGUAGE(32097)%(BUILTIN.getInfoLabel('ScreenResolution','System')))
             
         self.log('onInit, channelbug posx,posy = (%s,%s)'%(self.userPOSX,self.userPOSY))
-        self._channelBug  = xbmcgui.ControlImage(self.userPOSX, self.userPOSY, 128, 128, COLOR_LOGO, aspectRatio=2)
+        self.overlayControl = self.getControl(40001)
+        self.overlayControl.setVisible(False)
+        self.overlayControl.setImage(os.path.join(MEDIA_LOC,'backgrounds','ratio.png'))
+        # if self._vinEnabled: 
+            # self.overlayControl.setPosition(self._vinOffsetXY[0], self._vinOffsetXY[1])
+            # self.overlayControl.setHeight(self.window_h)
+            # self.overlayControl.setWidth(self.window_w)
+            # self.overlayControl.setImage(self._vinImage)
+        self.overlayControl.setVisible(True)
+
+        self._channelBug = xbmcgui.ControlImage(self.userPOSX, self.userPOSY, 128, 128, COLOR_LOGO, aspectRatio=2)
         self.addControl(self._channelBug)
         self.posx, self.posy = (self._channelBug.getX(),self._channelBug.getY())
 
@@ -59,11 +77,19 @@ class ChannelBug(xbmcgui.WindowXML):
     def save(self):
         self.log('save')
         if (self.posx != self.userPOSX or self.posy != self.userPOSY):
-            if DIALOG.yesnoDialog(LANGUAGE(32096)%(self.posx, self.posy)):
-                self.log('save, channelbug posx,posy = (%s,%s)'%(self.posx, self.posy))
-                PROPERTIES.setProperty("Channel_Bug_Position_XY","(%s,%s)"%(self.posx, self.posy))
-                # SETTINGS.setSetting("Channel_Bug_Position_XY","(%s,%s)"%(self.posx, self.posy))
+            if   self.posx == self.autoPOSX and self.posy == self.autoPOSY:  self.set(self.posx, self.posy, auto=True)
+            elif DIALOG.yesnoDialog(LANGUAGE(32096)%(self.posx, self.posy)): self.set(self.posx, self.posy, auto=False)
         self.close()
+
+    
+    def set(self, posx, posy, auto=False):
+        self.log('set, channelbug posx,posy = (%s,%s) Auto? %s'%(posx, posy, auto))
+        if self.advRule: 
+            if auto: PROPERTIES.setProperty("Channel_Bug_Position_XY","Auto")
+            else:    PROPERTIES.setProperty("Channel_Bug_Position_XY","(%s,%s)"%(posx, posy))
+        else:  
+            if auto: SETTINGS.setSetting("Channel_Bug_Position_XY","Auto")
+            else:    SETTINGS.setSetting("Channel_Bug_Position_XY","(%s,%s)"%(posx, posy))
 
         
     def onAction(self, act):

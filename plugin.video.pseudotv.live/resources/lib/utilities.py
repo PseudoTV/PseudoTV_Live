@@ -140,7 +140,6 @@ class Utilities:
             with PROPERTIES.setRunning('OVERLAY_CHANNELBUG_RUNNING'), PROPERTIES.suspendActivity():
                 with BUILTIN.busy_dialog(): from channelbug import ChannelBug
                 channelbug = ChannelBug(CHANNELBUG_XML, ADDON_PATH, "default")
-                SETTINGS.setSetting("Channel_Bug_Position_XY",(PROPERTIES.getProperty("Channel_Bug_Position_XY") or "Auto"))
                 del channelbug
 
 
@@ -257,9 +256,6 @@ class Utilities:
         elif param == 'Show_Remote_UI':
             ctl = (6,6)
             self.qrRemote()
-        elif param == 'Show_Readme_QR':  
-            ctl = (6,7)
-            self.qrReadme()
         elif param == 'Show_Changelog':
             ctl = (6,8)
             return self.showChangelog()

@@ -275,7 +275,8 @@ def getGMTstamp():
 
 def randomShuffle(items=[]):
     if len(items) > 0:
-        random.seed(random.randint(0,999999999999)) #reseed random for a "greater sudo random".
+        #reseed random for a "greater sudo random".
+        random.seed(random.randint(0,999999999999))
         random.shuffle(items)
     return items
     
@@ -437,31 +438,15 @@ def roundupDIV(p, q):
     except ZeroDivisionError: 
         return 1
        
-def interleave(seqs): 
-    #evenly interleave multi-lists of different sizes, while preserving seqs order
-    #[1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 'e', 'E']
-    return [_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f]
+def interleave(seqs, sets=1): 
+    #evenly interleave multi-lists of different sizes, while preserving seq order and by sets of x
+    # In         [[1,2,3,4,5],['a','b','c','d'],['A','B','C','D','E']]
+    # Out sets=1 [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 5, 'E'] 
+    # Out sets=4 [1, 2, 3, 4, 'a', 'b', 'c', 'd', 'A', 'B', 'C', 'D', 5, 'E'] 
+    seqs = [list(zip_longest(*[iter(seqs)] * sets, fillvalue=None)) for seqs in seqs]
+    return list(filter(None,sum([_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f], ())))
         
-def intersperse(*seqs):
-    #interleave multi-lists, while preserving order distribution
-    def distribute(seq):
-        for i, x in enumerate(seq, 1):
-            yield i/(len(seq) + 1), x
-    distributions = list(map(distribute, seqs))
-    #['a', 'A', 1, 'b', 'B', 2, 'c', 'C', 3, 'd', 'D', 4, 'e', 'E']
-    for _, x in sorted(chain(*distributions), key=itemgetter(0)):
-        yield x
-        
-def distribute(*seq):
-    #randomly distribute multi-lists of different sizes.
-    #['a', 'A', 'B', 1, 2, 'C', 3, 'b', 4, 'D', 'c', 'd', 'e', 'E']
-    iters = list(map(iter, seqs))
-    while not MONITOR().abortRequested() and iters:
-        it = random.choice(iters)
-        try:   yield next(it)
-        except StopIteration:
-            iters.remove(it)
-            
+
 def percentDiff(org, new):
     try: return (abs(float(org) - float(new)) / float(new)) * 100.0
     except ZeroDivisionError: return -1

@@ -21,34 +21,17 @@
 # -*- coding: utf-8 -*-
 from globals   import *
 from resources import Resources
-from rules     import RulesList
-
-# class Video(xbmcgui.WindowXML):
-    # #todo adv. rule apply overlay ie. scanline, etc to videowindow.
-    # def onInit(self):
-        # xbmcgui.lock()
-        # self.videoWindow  = self.getControl(41000)
-        # self.videoWindow.setPosition(0, 0)
-        # self.videoWindow.setHeight(self.videoWindow.getHeight())
-        # self.videoWindow.setWidth(self.videoWindow.getWidth())
-        # self.videoOverlay = self.getControl(41005)
-        # self.videoOverlay.setPosition(0, 0)
-        # self.videoOverlay.setHeight(0)
-        # self.videoOverlay.setWidth(0)
-        # xbmcgui.unlock()
-
 
 class Background(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.player  = kwargs.get('player', None)
+        self.player = kwargs.get('player', None)
 
 
     def onInit(self):
         try:
             log("Background: onInit")
             logo = (self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
-            # self.getControl(40001).setVisibleCondition('[!Player.Playing]')
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
             self.getControl(40003).setText(LANGUAGE(32104)%(self.player.sysInfo.get('citem',{}).get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except Exception as e:
@@ -141,16 +124,16 @@ class Overlay():
             
 
     def __init__(self, jsonRPC, player=None):
-        self.jsonRPC        = jsonRPC
-        self.cache          = jsonRPC.cache
-        self.player         = player
-        self.resources      = Resources(self.jsonRPC)
-        self.runActions     = self.player.runActions
+        self.jsonRPC    = jsonRPC
+        self.cache      = jsonRPC.cache
+        self.player     = player
+        self.resources  = Resources(jsonRPC)
+        self.runActions = self.player.runActions
         
         self.window = xbmcgui.Window(12005) 
         self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())
                 
-        self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection
+        self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF'))
         self.enableOnNext       = SETTINGS.getSettingBool('Enable_OnNext')
         self.enableChannelBug   = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.enableVignette     = SETTINGS.getSettingBool('Enable_Vignette')
@@ -159,9 +142,6 @@ class Overlay():
         self.minDuration        = SETTINGS.getSettingInt('Seek_Tolerance')
         
         #init controls
-        try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-        except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
-        self._channelBug  = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
         self._defZoom     = self._getZoom()
         self._vinImage    = SETTINGS.getSetting('Vignette_Image')
         self._vinZoom     = SETTINGS.getSettingFloat('Vignette_Zoom') if self.enableVignette else self._defZoom
@@ -169,12 +149,16 @@ class Overlay():
         self._vignette    = xbmcgui.ControlImage(self._vinOffsetXY[0], self._vinOffsetXY[1], self.window_w, self.window_h, ' ', aspectRatio=0)
         self._onNext      = xbmcgui.ControlTextBox(abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h), 1920, 36, 'font12', '0xFFFFFFFF')
         self._blackout    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
+        self._channelBug  = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
+        
+        try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+        except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
         
         #thread timers
         self._bugThread    = Timer(0.1, self.toggleBug, [False])
         self._onNextThread = Timer(0.1, self.toggleOnNext, [False])
         
-        self.myPlayer = self.Player(overlay=self)
+        self._myPlayer     = self.Player(overlay=self)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
