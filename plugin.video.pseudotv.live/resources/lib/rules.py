@@ -1022,7 +1022,7 @@ class InterleaveValue(BaseRule):
         self.optionValues       = [SETTINGS.getSettingInt('Interleave_Value')]
         self.optionDescriptions = [LANGUAGE(33233)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions   = [list(range(1,26,1))]
+        self.selectBoxOptions   = [list(range(0,26,1))]
         self.storedValues       = [[]]
 
 
@@ -1179,11 +1179,11 @@ class ForceEpisode(BaseRule):
         self.name               = LANGUAGE(30181)
         self.description        = LANGUAGE(33230)
         self.optionLabels       = [LANGUAGE(30181),LANGUAGE(30183)]
-        self.optionValues       = [False,True]
-        self.optionDescriptions = ["",""]
+        self.optionValues       = [False,SETTINGS.getSettingInt('Interleave_Value')]
+        self.optionDescriptions = ["",LANGUAGE(33215)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST]
-        self.storedValues       = [{},{},[],[],[]]
-
+        self.storedValues       = [{},{},[],[],[],[]]
+        self.selectBoxOptions   = ["",list(range(0,26,1))]
 
     def copy(self):
         return ForceEpisode()
@@ -1194,7 +1194,8 @@ class ForceEpisode(BaseRule):
 
 
     def onAction(self, optionindex):
-        self.onActionToggleBool(optionindex)
+        if   optionindex == 0: self.onActionToggleBool(optionindex)
+        elif optionindex == 1: self.onActionSelect(optionindex)
         return self.optionValues[optionindex]
 
 
@@ -1243,8 +1244,7 @@ class ForceEpisode(BaseRule):
             builder.sort = self.storedValues[0]
             self.log("runAction, restoring sort and forcing episode/year ordering (%s)"%(len(parameter)))
             fileList = list(sorted(parameter, key=lambda k: k.get('year',0)))
-            if self.optionValues[1]: return interleave(list(self._sortShows(fileList)))
-            else:                    return [j for i in self._sortShows(fileList) for j in i]
+            return interleave(list(self._sortShows(fileList)),self.optionValues[1])
         return parameter
         
         
@@ -1378,8 +1378,8 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-~]
                 return self._mergeShows(*(self._sortShows(fileItems)))
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST:
-            builder.enableEvenDistro = bool(SETTINGS.getSettingInt('Enable_Even')) #_injectedRules don't retain stored values
-            builder.limit            = SETTINGS.getSettingInt('Page_Limit')        #_injectedRules don't retain stored values
+            builder.enableEvenDistro = bool(SETTINGS.getSettingInt('Enable_Even')) #_injectedRules don't retain stored values use globals
+            builder.limit            = SETTINGS.getSettingInt('Page_Limit')        #_injectedRules don't retain stored values use globals
             self.log('runAction, enableEvenDistro = %s, restoring limit = %s'%(builder.enableEvenDistro,builder.limit))
         return parameter
         

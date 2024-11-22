@@ -8,9 +8,13 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 
 [Changelog](https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/changelog.txt)
 
-[Forum: Kodi.TV](https://forum.kodi.tv/showthread.php?tid=355549)
+[Wiki: Github](https://github.com/PseudoTV/PseudoTV_Live/wiki)
 
-[Discussion: Kodi.TV](https://forum.kodi.tv/showthread.php?tid=346803)
+[Forum: Kodi](https://forum.kodi.tv/showthread.php?tid=355549)
+
+[Discussion: Kodi](https://forum.kodi.tv/showthread.php?tid=346803)
+
+[Discussion: Github](https://github.com/PseudoTV/PseudoTV_Live/discussions)
 
 [![PseudoTV Live](https://opengraph.githubassets.com/b515e27858c045536f54116a571f79bda90cde077f4a9e87af8908cb0801b6a2/PseudoTV/PseudoTV_Live)](https://opengraph.githubassets.com/b515e27858c045536f54116a571f79bda90cde077f4a9e87af8908cb0801b6a2/PseudoTV/PseudoTV_Live)
 

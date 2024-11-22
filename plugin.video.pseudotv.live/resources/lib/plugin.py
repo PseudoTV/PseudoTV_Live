@@ -299,7 +299,7 @@ class Plugin:
 
         with BUILTIN.busy_dialog():
             jsonRPC  = JSONRPC()
-            fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])
+            fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')], SETTINGS.getSettingInt('Interleave_Value'))
             del jsonRPC
 
         if len(fileList) > 0:

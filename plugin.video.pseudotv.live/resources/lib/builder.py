@@ -250,7 +250,7 @@ class Builder:
                 return citem
             return __chkEvenDistro(citem)
 
-        citem = _injectRules(citem) #inject global adv. rules here
+        citem = _injectRules(citem) #inject temporary global adv. rules here
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self)
         if not _validFileList(fileArray):
             paths = citem.get('path',[])
@@ -266,10 +266,8 @@ class Builder:
             return False
             
         self.log("buildChannel, [%s] fileArray arrays = %s"%(citem['id'],len(fileArray)))
-        if bool(self.interleaveValue): fileList = interleave(fileArray, self.interleaveValue) #todo move intervleaving to adv. rules. RULES_ACTION_CHANNEL_BUILD_FILELIST
-        else:                          fileList = chain(*fileArray)
         #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
-        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST, citem, fileList, inherited=self)
+        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST, citem, interleave(fileArray, self.interleaveValue), inherited=self)
         self.log('buildChannel, [%s] fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
         return fileList
 
@@ -278,7 +276,7 @@ class Builder:
         self.log("buildFileList, [%s] media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
         if path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info
             paths, media, sort, filter, limit = self.xsp.parseXSP(path, media, sort, {}, limit)
-            if len(paths) > 0: return interleave([self.buildFileList(citem, file, media, limit, sort, limits) for file in paths])
+            if len(paths) > 0: return interleave([self.buildFileList(citem, file, media, limit, sort, limits) for file in paths], self.interleaveValue)
             
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
             path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules.

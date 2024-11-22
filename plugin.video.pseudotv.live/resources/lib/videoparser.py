@@ -52,6 +52,12 @@ try:
     EXTERNAL_PARSER.append(MoviePY.MoviePY)
 except: pass
     
+try:
+    import ffmpeg
+    from parsers import FFProbe
+    EXTERNAL_PARSER.append(FFProbe.FFProbe)
+except: pass
+    
 class VideoParser:
     def __init__(self):
         self.AVIExts   = ['.avi']

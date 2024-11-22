@@ -182,7 +182,7 @@ msgid "Clear All Autotuned Channels"
 msgstr ""
 
 msgctxt "#30041"
-msgid "Globals"
+msgid "Global"
 msgstr ""
 
 msgctxt "#30042"
@@ -738,7 +738,7 @@ msgid "Vignette Offset"
 msgstr ""
 
 msgctxt "#30179"
-msgid "Interleave Sets"
+msgid "Interleave set value"
 msgstr ""
 
 msgctxt "#30180"

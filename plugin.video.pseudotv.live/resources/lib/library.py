@@ -201,8 +201,8 @@ class Library:
 
 
     def getMixed(self):
-        def hasRecordings():
-            return self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/',appendPath=True) #todo add infobool to Kodi core.
+        def __hasRecordings():
+            return self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/',appendPath=True)
                
         MixedList = []
         if BUILTIN.hasTV() or BUILTIN.hasMovie():
@@ -210,7 +210,7 @@ class Library:
             rules = {"800":{"values":{"0":LANGUAGE(32002)}}}
             MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':rules}) #"Seasonal"
 
-        # if hasRecordings(): #broken paths no longer play, Kodi jsonrpc doesn't return valid file and uses unknown vfs assignment
+        # if __hasRecordings(): #broken paths no longer play, Kodi jsonrpc doesn't return valid file and uses unknown vfs assignment
             # MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
         
         self.log('getMixed, mixed = %s' % (len(MixedList)))

@@ -433,7 +433,7 @@
                     <control type="spinner" format="string"/>
                 </setting>
                 <setting id="Enable_Recommended" type="boolean" label="30105" help="33105">
-                    <level>1</level>
+                    <level>2</level>
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
@@ -453,17 +453,17 @@
                     </dependencies>
                 </setting>
                 <setting id="Clean_Recordings" type="boolean" label="30149" help="33148">
-                    <level>2</level>
+                    <level>3</level>
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
                 <setting id="Enable_Grouping" type="boolean" label="30063" help="33063">
-                    <level>1</level>
+                    <level>2</level>
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
                 <setting id="User_Groups" type="string" label="30064" help="33064" parent="Enable_Grouping">
-                    <level>1</level>
+                    <level>2</level>
                     <default/>
                     <constraints>
                         <allowempty>true</allowempty>
@@ -586,7 +586,7 @@
                     </control>
                 </setting>
                 <setting id="Enable_Vignette" type="boolean" label="30174" help="33174" parent="Overlay_Enable">
-                    <level>1</level>
+                    <level>2</level>
                     <default>false</default>
                     <control type="toggle"/>
                     <dependencies>
@@ -596,7 +596,7 @@
                     </dependencies>
                 </setting>
                 <setting id="Vignette_Image" type="path" label="30175" help="33175" parent="Enable_Vignette">
-                    <level>1</level>
+                    <level>2</level>
                     <default>special://home/addons/plugin.video.pseudotv.live/resources/skins/default/media/overlays/scanlines.png</default>
                     <constraints>
                         <sources>
@@ -618,7 +618,7 @@
                     </control>
                 </setting>
                 <setting id="Vignette_Zoom" type="number" label="30176" help="33176" parent="Enable_Vignette">
-                    <level>1</level>
+                    <level>3</level>
                     <default>1.0</default>
                     <constraints>
                         <minimum>0.5</minimum>
@@ -662,7 +662,7 @@
                     <control type="toggle"/>
                 </setting>
                 <setting id="Restart_Percentage" type="integer" label="30153" help="33153" parent="Overlay_Enable">
-                    <level>1</level>
+                    <level>2</level>
                     <default>85</default>
                     <constraints>
                         <minimum>25</minimum>
@@ -691,7 +691,7 @@
                     <control type="toggle"/>
                 </setting>
                 <setting id="DIFFUSE_LOGO" type="string" label="30044" help="33044" parent="Enable_ChannelBug">
-                    <level>1</level>
+                    <level>2</level>
                     <default>FFFFFFFF</default>
                     <control type="colorbutton"/>
                     <dependencies>
@@ -707,7 +707,7 @@
                     </dependencies>
                 </setting>
                 <setting id="Force_Diffuse" type="boolean" label="30113" help="33111" parent="DIFFUSE_LOGO">
-                    <level>1</level>
+                    <level>3</level>
                     <default>false</default>
                     <dependencies>
                         <dependency type="visible">
@@ -720,7 +720,7 @@
                     <control type="toggle"/>
                 </setting>
                 <setting id="Channel_Bug_Interval" type="integer" label="30086" help="33086" parent="Enable_ChannelBug">
-                    <level>1</level>
+                    <level>2</level>
                     <default>0</default>
                     <dependencies>
                         <dependency type="visible">
@@ -820,7 +820,7 @@
                     <control type="toggle"/>
                 </setting>
                 <setting id="Interleave_Value" type="integer" label="30179" help="33215">
-                    <level>1</level>
+                    <level>3</level>
                     <default>1</default>
                     <constraints>
                         <minimum>0</minimum>
@@ -832,7 +832,7 @@
                     </control>
                 </setting>
                 <setting id="Enable_Even" type="integer" label="30121" help="33121">
-                    <level>1</level>
+                    <level>2</level>
                     <default>3</default>
                     <constraints>
                         <minimum>0</minimum>
@@ -844,7 +844,7 @@
                     </control>
                 </setting>
                 <setting id="Enable_Even_Force" type="boolean" label="30181" help="33230" parent="Enable_Even">
-                    <level>1</level>
+                    <level>2</level>
                     <default>false</default>
                     <dependencies>
                         <dependency type="visible">
@@ -1146,7 +1146,7 @@
                     </control>
                 </setting>
                 <setting id="Select_server" type="string" label="32048" help="33048" parent="ZeroConf_Status">
-                    <level>0</level>
+                    <level>2</level>
                     <default/>
                     <constraints>
                         <allowempty>true</allowempty>

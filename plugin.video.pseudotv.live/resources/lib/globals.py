@@ -441,12 +441,14 @@ def roundupDIV(p, q):
 def interleave(seqs, sets=1): 
     #evenly interleave multi-lists of different sizes, while preserving seq order and by sets of x
     # In         [[1,2,3,4,5],['a','b','c','d'],['A','B','C','D','E']]
-    # Out sets=1 [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 5, 'E'] 
-    # Out sets=4 [1, 2, 3, 4, 'a', 'b', 'c', 'd', 'A', 'B', 'C', 'D', 5, 'E'] 
-    seqs = [list(zip_longest(*[iter(seqs)] * sets, fillvalue=None)) for seqs in seqs]
-    return list(filter(None,sum([_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f], ())))
+    # Out sets=0 [1, 2, 3, 4, 5, 'a', 'b', 'c', 'd', 'A', 'B', 'C', 'D', 'E']
+    # Out sets=1 [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 5, 'E']
+    # Out sets=2 [1, 2, 'a', 'b', 'A', 'B', 3, 4, 'c', 'd', 'C', 'D', 5, 'E']
+    if sets > 0:
+        seqs = [list(zip_longest(*[iter(seqs)] * sets, fillvalue=None)) for seqs in seqs]
+        return list(filter(None,sum([_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f], ())))
+    else: return list(chain.from_iterable(seqs))
         
-
 def percentDiff(org, new):
     try: return (abs(float(org) - float(new)) / float(new)) * 100.0
     except ZeroDivisionError: return -1
