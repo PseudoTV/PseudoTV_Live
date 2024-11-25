@@ -152,7 +152,7 @@ class Overlay():
         
         #init controls
         self._defViewMode = self._getViewMode()
-        self._vinViewMode = self.defViewMode
+        self._vinViewMode = self._defViewMode
         self._vinImage    = SETTINGS.getSetting('Vignette_Image')
         self._vignette    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
         

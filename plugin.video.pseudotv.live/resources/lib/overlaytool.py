@@ -42,9 +42,9 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             self.advRule  = (kwargs.get("ADV_RULES") or False)
             self.focusIDX = (kwargs.get("Focus_IDX") or 1)
             
-            self.defViewMode = self._getViewMode()
-            self.vinViewMode = (kwargs.get("Vignette_VideoMode") or self.defViewMode)
-            self.vinImage    = (kwargs.get("Vignette_Image")     or os.path.join(MEDIA_LOC,'overlays','ratio.png'))
+            self._defViewMode = self._getViewMode()
+            self._vinViewMode = (kwargs.get("Vignette_VideoMode") or self._defViewMode)
+            self._vinImage    = (kwargs.get("Vignette_Image")     or os.path.join(MEDIA_LOC,'overlays','ratio.png'))
             
             self.channelBugDiffuse = '0x%s'%((kwargs.get("ChannelBug_Color") or SETTINGS.getSetting('ChannelBug_Color')))
             self.autoBugX, self.autoBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128)
@@ -80,7 +80,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         if not BUILTIN.getInfoBool('IsFullscreen','System'):
             DIALOG.okDialog(LANGUAGE(32097)%(BUILTIN.getInfoLabel('ScreenResolution','System')))
             
-        self._overlayControl = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, self.vinImage, aspectRatio=0) #IDX 0
+        self._overlayControl = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, self._vinImage, aspectRatio=0) #IDX 0
         self._addCntrl(self._overlayControl)  
         
         self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, COLOR_LOGO, 2, self.channelBugDiffuse) #IDX 1
@@ -131,7 +131,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             posx, posy = cntrl.getX(), cntrl.getY()
             if  cntrl == self._channelBug:
                 if (posx != self.channelBugX or posy != self.channelBugY):
-                    changes[cntrl] = cntrl, posx, posy, (posx == self.autoBugX & posy == self.autoBugY)
+                    changes[cntrl] = posx, posy, (posx == self.autoBugX & posy == self.autoBugY)
             elif cntrl == self._onNext:
                 if (posx != self.onNextX or posy != self.onNextY):
                     changes[cntrl] = posx, posy, (posx == self.autoNextX & posy == self.autoNextY)
