@@ -131,7 +131,7 @@ class Overlay():
         self.runActions = self.player.runActions
         
         self.window = xbmcgui.Window(12005) 
-        self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())
+        self.window_h, self.window_w = (self.window.getHeight(), self.window.getWidth())
                 
         self.enableVignette     = False
         self.enableOnNext       = SETTINGS.getSettingBool('Enable_OnNext')
@@ -151,11 +151,10 @@ class Overlay():
         self._onNext = xbmcgui.ControlTextBox(self.onNextX, self.onNextY, abs(int(self.window_w // 2)), abs(int(self.window_h // 32)), 'font12', self.onNextColor)
         
         #init controls
-        self._defViewMode = self._getViewMode()
+        self._defViewMode = self.jsonRPC.getViewMode()
         self._vinViewMode = self._defViewMode
         self._vinImage    = SETTINGS.getSetting('Vignette_Image')
         self._vignette    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
-        
         self._blackout    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
         
         #thread timers
@@ -167,13 +166,6 @@ class Overlay():
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-
-
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
-    def _getViewMode(self):
-        response = self.jsonRPC.getViewMode()
-        self.log('_getViewMode, response = %s'%(response))
-        return response
 
 
     def _hasControl(self, control):

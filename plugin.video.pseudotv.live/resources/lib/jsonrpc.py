@@ -268,8 +268,10 @@ class JSONRPC:
 
 
     def getViewMode(self):
-        #{"nonlinearstretch":false,"pixelratio":1,"verticalshift":0,"viewmode":"custom","zoom": 1.0}
-        return self.sendJSON({"method":"Player.GetViewMode","params":{}})
+        default = {"nonlinearstretch":False,"pixelratio":1,"verticalshift":0,"viewmode":"custom","zoom": 1.0}
+        response = self.cacheJSON({"method":"Player.GetViewMode","params":{}}).get('result',default)
+        self.log('getViewMode, response = %s'%(response))
+        return response
         
 
     def setViewMode(self, params={}):
