@@ -139,7 +139,7 @@ class Overlay():
         self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         self.enableChannelBug   = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
-        self.channelBugDiffuse  = SETTINGS.getSettingBoolf('Force_Diffuse')
+        self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.minDuration        = SETTINGS.getSettingInt('Seek_Tolerance')
         
         try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user

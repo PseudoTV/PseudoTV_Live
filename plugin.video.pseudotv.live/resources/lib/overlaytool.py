@@ -139,7 +139,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         if changes:
             self.log('save, saving %s'%(changes))
             if DIALOG.yesnoDialog(LANGUAGE(32096)): 
-                for cntrl, value in changes.items(): self.set(cntrl,value[0],value[1],value[2])
+                for cntrl, value in list(changes.items()): self.set(cntrl,value[0],value[1],value[2])
         self.close()
 
     

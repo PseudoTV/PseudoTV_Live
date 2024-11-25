@@ -446,7 +446,7 @@ def interleave(seqs, sets=1):
     # Out sets=2 [1, 2, 'a', 'b', 'A', 'B', 3, 4, 'c', 'd', 'C', 'D', 5, 'E']
     if sets > 0:
         seqs = [list(zip_longest(*[iter(seqs)] * sets, fillvalue=None)) for seqs in seqs]
-        return list(filter(None,sum([_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f], ())))
+        return list([_f for _f in sum([_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f], ()) if _f])
     else: return list(chain.from_iterable(seqs))
         
 def percentDiff(org, new):
