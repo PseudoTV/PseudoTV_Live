@@ -63,7 +63,7 @@ class Multiroom:
         PROPERTIES.setServers(len(servers) > 0)
         for server in list(servers.values()):
             online = server.get('online',False)
-            if self.getRemote(server['remotes'].get('bonjour')): server['online'] = True
+            if self.getRemote(server.get('remotes',{}).get('bonjour')): server['online'] = True
             else:                                                server['online'] = False
             if server.get('enabled',False):
                 if online != server.get('online',False): DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)])))

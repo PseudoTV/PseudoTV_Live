@@ -585,58 +585,6 @@
                         <multiselect>true</multiselect>
                     </control>
                 </setting>
-                <setting id="Enable_Vignette" type="boolean" label="30174" help="33174" parent="Overlay_Enable">
-                    <level>2</level>
-                    <default>false</default>
-                    <control type="toggle"/>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Overlay_Enable">true</condition>
-                        </dependency>
-                    </dependencies>
-                </setting>
-                <setting id="Vignette_Image" type="path" label="30175" help="33175" parent="Enable_Vignette">
-                    <level>2</level>
-                    <default>special://home/addons/plugin.video.pseudotv.live/resources/skins/default/media/overlays/scanlines.png</default>
-                    <constraints>
-                        <sources>
-                            <source>pictures</source>
-                        </sources>
-                        <writable>false</writable>
-                        <allowempty>true</allowempty>
-                    </constraints>
-                    <dependencies>
-                        <dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Overlay_Enable">true</condition>
-                                <condition operator="is" setting="Enable_Vignette">true</condition>
-                            </and>
-                        </dependency>
-                    </dependencies>
-                    <control type="button" format="path">
-                        <heading>33178</heading>
-                    </control>
-                </setting>
-                <setting id="Vignette_Zoom" type="number" label="30176" help="33176" parent="Enable_Vignette">
-                    <level>3</level>
-                    <default>1.0</default>
-                    <constraints>
-                        <minimum>0.5</minimum>
-                        <step>0.1</step>
-                        <maximum>2.0</maximum>
-                    </constraints>
-                    <dependencies>
-                        <dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Overlay_Enable">true</condition>
-                                <condition operator="is" setting="Enable_Vignette">true</condition>
-                            </and>
-                        </dependency>
-                    </dependencies>
-                    <control type="slider" format="number">
-                        <popup>false</popup>
-                    </control>
-                </setting>
                 <setting id="Enable_OnNext" type="boolean" label="30045" help="33045" parent="Overlay_Enable">
                     <level>1</level>
                     <default>true</default>
@@ -648,6 +596,41 @@
                         </dependency>
                     </dependencies>
                     <control type="toggle"/>
+                </setting>
+                <setting id="ON_Next_Color" type="string" label="30044" help="33044" parent="Enable_OnNext">
+                    <level>2</level>
+                    <default>FFFFFFFF</default>
+                    <control type="colorbutton"/>
+                    <dependencies>
+                        <dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="Overlay_Enable">true</condition>
+                                <condition operator="is" setting="Enable_OnNext">true</condition>
+                            </and>
+                        </dependency>
+                        <dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(System.BuildVersion,20)</condition>
+                        </dependency>
+                    </dependencies>
+                </setting>
+                <setting id="On_Next_Position_XY" type="string" label="32229" help="33229" parent="Enable_OnNext">
+                    <level>3</level>
+                    <default>Auto</default>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="Overlay_Enable">true</condition>
+                                <condition operator="is" setting="Enable_OnNext">true</condition>
+                            </and>
+                        </dependency>
+                    </dependencies>
+                    <control type="button" format="action">
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Move_OnNext)</data>
+                        <close>true</close>
+                    </control>
                 </setting>
                 <setting id="Enable_OnInfo" type="boolean" label="30170" help="33171" parent="Overlay_Enable">
                     <level>1</level>
@@ -690,7 +673,7 @@
                     </dependencies>
                     <control type="toggle"/>
                 </setting>
-                <setting id="DIFFUSE_LOGO" type="string" label="30044" help="33044" parent="Enable_ChannelBug">
+                <setting id="ChannelBug_Color" type="string" label="30044" help="33044" parent="Enable_ChannelBug">
                     <level>2</level>
                     <default>FFFFFFFF</default>
                     <control type="colorbutton"/>
@@ -706,7 +689,7 @@
                         </dependency>
                     </dependencies>
                 </setting>
-                <setting id="Force_Diffuse" type="boolean" label="30113" help="33111" parent="DIFFUSE_LOGO">
+                <setting id="Force_Diffuse" type="boolean" label="30113" help="33111" parent="ChannelBug_Color">
                     <level>3</level>
                     <default>false</default>
                     <dependencies>
@@ -739,7 +722,7 @@
                         <popup>false</popup>
                     </control>
                 </setting>
-                <setting id="Channel_Bug_Position_XY" type="string" label="30112" help="30112" parent="Enable_ChannelBug">
+                <setting id="Channel_Bug_Position_XY" type="string" label="30112" help="33112" parent="Enable_ChannelBug">
                     <level>3</level>
                     <default>Auto</default>
                     <constraints>
@@ -797,6 +780,11 @@
                 <setting id="Store_Duration" type="boolean" label="30052" help="33052" parent="Duration_Type">
                     <level>3</level>
                     <default>false</default>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Duration_Type">1</condition>
+                        </dependency>
+                    </dependencies>
                     <control type="toggle"/>
                 </setting>
                 <setting id="Enable_Fillers" type="boolean" label="30056" help="33056">

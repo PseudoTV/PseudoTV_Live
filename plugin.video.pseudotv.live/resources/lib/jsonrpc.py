@@ -267,13 +267,13 @@ class JSONRPC:
         return self.sendJSON({"method":"Files.GetFileDetails","params":{"file":file,"media":media,"properties":properties}})
 
 
-    def getPlayerAttr(self, attr='zoom'):
+    def getViewMode(self):
         #{"nonlinearstretch":false,"pixelratio":1,"verticalshift":0,"viewmode":"custom","zoom": 1.0}
-        return self.sendJSON({"method":"Player.GetViewMode","params":{}}).get(attr)
+        return self.sendJSON({"method":"Player.GetViewMode","params":{}})
+        
 
-
-    def setPlayerZoom(self, zoom=1.0):
-        return self.sendJSON({"method":"Player.SetViewMode","params":{"viewmode":{"zoom":zoom}}})
+    def setViewMode(self, params={}):
+        return self.sendJSON({"method":"Player.SetViewMode","params":params})
 
 
     def getPlayerItem(self, playlist=False):
@@ -358,24 +358,24 @@ class JSONRPC:
   
   
     def queDuration(self, item={}, duration=0, runtime=0):
-        param = {'video'      : {},
-                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
-                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
-                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
-                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
-                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
-                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
-                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
-                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}}}
+        mtypes = {'video'      : {},
+                  'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                  'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                  'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                  'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                  'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                  'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                  'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
+                  'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}}}
         try:
-            params = param.get(item.get('type'))
-            if params and params.get('params'):
-                if   duration == 0: param['params'].pop('resume')
-                elif runtime  == 0: param['params'].pop('runtime')
+            mtype = mtypes.get(item.get('type'))
+            if mtype.get('params'):
+                if   duration == 0: mtype['params'].pop('resume')  #save file duration meta
+                elif runtime  == 0: mtype['params'].pop('runtime') #save player runtime meta
                 id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
                 self.log('queDuration, id = %s, media = %s, duration = %s, runtime = %s'%(id,item['type'],duration,runtime))
-                self.queueJSON(params)
-        except Exception as e: self.log("queDuration, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
+                self.queueJSON(mtype['params'])
+        except Exception as e: self.log("queDuration, failed! %s\nmtype = %s\nitem = %s"%(e,mtype,item), xbmc.LOGERROR)
         
         
     def quePlaycount(self, item):

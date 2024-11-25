@@ -363,7 +363,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         elif citem.get('rules',{}).get("1"):
             if (self.getRuleAbbr(citem,1,4) or self.resources.isMono(citem['logo'])):
                 return self.getRuleAbbr(citem,1,3)
-        return SETTINGS.getSetting('DIFFUSE_LOGO')
+        return SETTINGS.getSetting('ChannelBug_Color')
         
    
     def getRuleAbbr(self, citem, myId, optionindex):

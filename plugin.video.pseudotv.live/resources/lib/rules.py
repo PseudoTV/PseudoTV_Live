@@ -339,7 +339,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
         self.name               = LANGUAGE(30143)
         self.description        = LANGUAGE(30144)
         self.optionLabels       = [LANGUAGE(30043),LANGUAGE(30086),LANGUAGE(30112),LANGUAGE(30044),LANGUAGE(30113)]
-        self.optionValues       = [SETTINGS.getSettingBool('Enable_ChannelBug'),SETTINGS.getSettingInt("Channel_Bug_Interval"),SETTINGS.getSetting("Channel_Bug_Position_XY"),SETTINGS.getSetting('DIFFUSE_LOGO'),SETTINGS.getSettingBool('Force_Diffuse')]
+        self.optionValues       = [SETTINGS.getSettingBool('Enable_ChannelBug'),SETTINGS.getSettingInt("Channel_Bug_Interval"),SETTINGS.getSetting("Channel_Bug_Position_XY"),SETTINGS.getSetting('ChannelBug_Color'),SETTINGS.getSettingBool('Force_Diffuse')]
         self.optionDescriptions = [LANGUAGE(33043),LANGUAGE(33086),LANGUAGE(33112),LANGUAGE(33044),LANGUAGE(33111)]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
         self.selectBoxOptions   = ["",list(range(-1,16)),[LANGUAGE(30022),LANGUAGE(32136)],"",""]
@@ -356,14 +356,18 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
 
 
     def getPosition(self, optionindex):
+        orgvalue = self.optionValues[optionindex]
         self.onActionSelect(optionindex, LANGUAGE(32223)%(''))
         if self.optionValues[optionindex] == self.selectBoxOptions[optionindex][1]:
-            from channelbug import ChannelBug
-            channelbug = ChannelBug(CHANNELBUG_XML, ADDON_PATH, "default", Channel_Bug_Position_XY=self.optionValues[optionindex])
-            del channelbug
+            from overlaytool import OverlayTool
+            overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=1, Channel_Bug_Position_XY=self.optionValues[optionindex], ChannelBug_Color=self.optionValues[3])
+            del overlaytool
             value = PROPERTIES.getProperty("Channel_Bug_Position_XY")
             PROPERTIES.clearProperty("Channel_Bug_Position_XY")
             if value: self.optionValues[optionindex] = value
+            else:     self.optionValues[optionindex] = orgvalue
+        elif self.optionValues[optionindex] != self.selectBoxOptions[optionindex][0]:
+            self.optionValues[optionindex] = orgvalue
 
 
     def onAction(self, optionindex):
@@ -407,11 +411,12 @@ class ShowOnNext(BaseRule):
         self.exclude            = False
         self.name               = LANGUAGE(30045)
         self.description        = LANGUAGE(33045)
-        self.optionLabels       = [LANGUAGE(30045)]
-        self.optionValues       = [SETTINGS.getSettingBool('Enable_OnNext')]
-        self.optionDescriptions = [LANGUAGE(30045)]
+        self.optionLabels       = [LANGUAGE(30045),LANGUAGE(32229),LANGUAGE(30044)]
+        self.optionValues       = [SETTINGS.getSettingBool('Enable_OnNext'),SETTINGS.getSetting("On_Next_Position_XY"),SETTINGS.getSetting("ON_Next_Color")]
+        self.optionDescriptions = [LANGUAGE(30045),LANGUAGE(33229),LANGUAGE(33044)]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
-        self.storedValues       = [[]]
+        self.selectBoxOptions   = ["",[LANGUAGE(30022),LANGUAGE(32136)],""]
+        self.storedValues       = [[],[],[]]
 
 
     def copy(self):
@@ -422,20 +427,44 @@ class ShowOnNext(BaseRule):
         return '%s (%s)'%(LANGUAGE(30045), self.optionValues[0])
 
 
+    def getPosition(self, optionindex):
+        orgvalue = self.optionValues[optionindex]
+        self.onActionSelect(optionindex, LANGUAGE(32223)%(''))
+        if self.optionValues[optionindex] == self.selectBoxOptions[optionindex][1]:
+            from overlaytool import OverlayTool
+            overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=0, On_Next_Position_XY=self.optionValues[optionindex], ON_Next_Color=self.optionValues[2])
+            del overlaytool
+            value = PROPERTIES.getProperty("On_Next_Position_XY")
+            PROPERTIES.clearProperty("On_Next_Position_XY")
+            if value: self.optionValues[optionindex] = value
+            else:     self.optionValues[optionindex] = orgvalue
+        elif self.optionValues[optionindex] != self.selectBoxOptions[optionindex][0]:
+            self.optionValues[optionindex] = orgvalue
+
+
     def onAction(self, optionindex):
-        self.onActionToggleBool(optionindex)
+        if   optionindex == 0: self.onActionToggleBool(optionindex)
+        elif optionindex == 1: self.getPosition(optionindex)
+        elif optionindex == 2: self.onActionPickColor(optionindex)
         return self.optionValues[optionindex]
 
 
     def runAction(self, actionid, citem, parameter, overlay):
         if actionid == RULES_ACTION_OVERLAY_OPEN:
             self.storedValues[0] = overlay.enableOnNext
-            overlay.enableOnNext = self.optionValues[0]
-            self.log("runAction, setting enableOnNext = %s"%(overlay.enableOnNext))
+            self.storedValues[1] = (overlay.onNextX, overlay.onNextY)
+            self.storedValues[2] = overlay.onNextColor
+
+            overlay.enableOnNext             = self.optionValues[0]
+            overlay.onNextX, overlay.onNextY = tuple(self.optionValues[1])
+            overlay.onNextColor              = '0x%s'%(self.optionValues[2])
+            self.log("runAction, setting enableOnNext = %s, onNextX = %s, onNextY = %s, onNextColor = %s"%(overlay.enableOnNext, overlay.onNextX, overlay.onNextY, overlay.onNextColor))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
-            overlay.enableOnNext = self.storedValues[0]
-            self.log("runAction, restoring enableOnNext = %s"%(overlay.enableOnNext))
+            overlay.enableOnNext             = self.storedValues[0]
+            overlay.onNextX, overlay.onNextY = self.storedValues[1]
+            overlay.onNextColor              = self.storedValues[2]
+            self.log("runAction, restoring enableOnNext = %s, onNextX = %s, onNextY = %s, onNextColor = %s"%(overlay.enableOnNext, overlay.onNextX, overlay.onNextY, overlay.onNextColor))
         return parameter
 
 
@@ -446,12 +475,12 @@ class SetScreenVingette(BaseRule):
         self.exclude            = False
         self.name               = LANGUAGE(30177)
         self.description        = LANGUAGE(33177)
-        self.optionLabels       = [LANGUAGE(30174),LANGUAGE(30175),LANGUAGE(30176),LANGUAGE(30178)]
-        self.optionValues       = [SETTINGS.getSettingBool('Enable_Vignette'),SETTINGS.getSetting('Vignette_Image'),"(0,0)",SETTINGS.getSettingFloat('Vignette_Zoom')]
-        self.optionDescriptions = [LANGUAGE(33174),LANGUAGE(33175),LANGUAGE(33176),LANGUAGE(33179)]
+        self.optionLabels       = [LANGUAGE(30174),LANGUAGE(30175),LANGUAGE(30176),LANGUAGE(30178),LANGUAGE(30185),LANGUAGE(30186)]
+        self.optionValues       = [False,' ',1.00,0.00,1.00,False]
+        self.optionDescriptions = [LANGUAGE(33174),LANGUAGE(33175),LANGUAGE(33176),LANGUAGE(33179),LANGUAGE(33185),LANGUAGE(34186)]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
-        self.selectBoxOptions   = [[],'','',list(frange(5,21,1))]
-        self.storedValues       = [[],[],[],[]]
+        self.selectBoxOptions   = ['','',list(frange(5,21,1)),list(range(-2,3,1)),list(frange(5,21,1)),'']#[LANGUAGE(30022),LANGUAGE(32136)]]
+        self.storedValues       = [[],[],[]]
         
 
     def copy(self):
@@ -462,8 +491,8 @@ class SetScreenVingette(BaseRule):
         if self.optionValues[0]: return '%s @ %s x %s\n%s'%(LANGUAGE(32227),self.optionValues[2],self.optionValues[3],self.getImage(self.optionValues[1]))
         else:                    return LANGUAGE(32228)
             
-            
-    def getPosition(self, optionindex):
+            # todo set viewmode as dict() response from json.
+    def getPosition(self, optionindex):#todo vin utility to adjust zoom,vshift,pratio and nls
         self.dialog.notificationDialog(LANGUAGE(32020))
 
 
@@ -485,10 +514,9 @@ class SetScreenVingette(BaseRule):
 
 
     def onAction(self, optionindex):
-        if   optionindex == 0: self.onActionToggleBool(optionindex)
-        elif optionindex == 1: self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), exclude=[12,13,14,15,16,17,22])
-        elif optionindex == 2: self.getPosition(optionindex)
-        elif optionindex == 3: self.onActionSelect(optionindex, self.optionLabels[optionindex])
+        if   optionindex == 1:       self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), exclude=[12,13,14,15,16,17,22])
+        elif optionindex in [0,5]:   self.onActionToggleBool(optionindex)
+        elif optionindex in [2,3,4]: self.onActionSelect(optionindex, self.optionLabels[optionindex])
         return self.optionValues[optionindex]
 
 
@@ -496,22 +524,18 @@ class SetScreenVingette(BaseRule):
         if actionid == RULES_ACTION_OVERLAY_OPEN:
             self.storedValues[0] = overlay.enableVignette
             self.storedValues[1] = overlay._vinImage
-            self.storedValues[2] = overlay._vinOffsetXY
-            self.storedValues[3] = overlay._vinZoom
+            self.storedValues[2] = overlay._vinViewMode
             
             overlay.enableVignette = self.optionValues[0]
             overlay._vinImage      = self.getImage(self.optionValues[1])
-            overlay._vinOffsetXY   = tuple(self.optionValues[2])
-            overlay._vinZoom       = self.optionValues[3]
-            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
+            overlay._vinViewMode   = {"nonlinearstretch":self.optionValues[5] ,"pixelratio":self.optionValues[4],"verticalshift":self.optionValues[3],"viewmode":"custom","zoom": self.optionValues[2]}
+            self.log('runAction, setting vignette image = %s\nmode = %s'%(overlay._vinImage,overlay._vinViewMode))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
             overlay.enableVignette = self.storedValues[0]
             overlay._vinImage      = self.storedValues[1]
-            overlay._vinOffsetXY   = self.storedValues[2]
-            overlay._vinZoom       = self.storedValues[3]
-            self.log("runAction, restoring overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
-        return parameter
+            overlay._vinViewMode   = self.storedValues[2]
+            self.log('runAction, restoring vignette image = %s\nmode = %s'%(overlay._vinImage,overlay._vinViewMode))
 
 
 class MST3k(BaseRule):

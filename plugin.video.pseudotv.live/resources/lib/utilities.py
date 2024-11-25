@@ -134,13 +134,13 @@ class Utilities:
                     del chmanager
     
         
-    def openChannelBug(self):
-        self.log('openChannelBug')
-        if not PROPERTIES.isRunning('OVERLAY_CHANNELBUG_RUNNING'):
-            with PROPERTIES.setRunning('OVERLAY_CHANNELBUG_RUNNING'), PROPERTIES.suspendActivity():
-                with BUILTIN.busy_dialog(): from channelbug import ChannelBug
-                channelbug = ChannelBug(CHANNELBUG_XML, ADDON_PATH, "default")
-                del channelbug
+    def openMoveUtil(self, idx):
+        self.log('openMoveUtil, idx = %s'%(idx))
+        if not PROPERTIES.isRunning('MOVE_UTILITY_RUNNING'):
+            with PROPERTIES.setRunning('MOVE_UTILITY_RUNNING'), PROPERTIES.suspendActivity():
+                with BUILTIN.busy_dialog(): from overlaytool import OverlayTool
+                overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
+                del overlaytool
 
 
     def _togglePVR(self):
@@ -233,7 +233,10 @@ class Utilities:
         #Globals
         elif param.startswith('Move_Channelbug'):
             ctl = (3,15)
-            self.openChannelBug()
+            self.openMoveUtil(1)
+        elif param.startswith('Move_OnNext'):
+            ctl = (3,15)
+            self.openMoveUtil(2)
         elif param == 'Sort_Method':
             ctl = (3,16)
             self.sortMethod()

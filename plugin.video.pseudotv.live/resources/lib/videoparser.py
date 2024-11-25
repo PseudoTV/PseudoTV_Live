@@ -33,7 +33,13 @@ try:
     from parsers import MediaInfo
     EXTERNAL_PARSER.append(MediaInfo.MediaInfo)
 except: pass
-
+    
+try:
+    import ffmpeg
+    from parsers import FFProbe
+    EXTERNAL_PARSER.append(FFProbe.FFProbe)
+except: pass
+    
 try:
     import hachoir
     from parsers import Hachoir
@@ -41,21 +47,15 @@ try:
 except: pass
 
 try:
-    import cv2
-    from parsers import OpenCV
-    EXTERNAL_PARSER.append(OpenCV.OpenCV)
-except: pass
-    
-try:
     import moviepy
     from parsers import MoviePY
     EXTERNAL_PARSER.append(MoviePY.MoviePY)
 except: pass
-    
+
 try:
-    import ffmpeg
-    from parsers import FFProbe
-    EXTERNAL_PARSER.append(FFProbe.FFProbe)
+    import cv2
+    from parsers import OpenCV
+    EXTERNAL_PARSER.append(OpenCV.OpenCV)
 except: pass
     
 class VideoParser:
@@ -75,9 +75,10 @@ class VideoParser:
         if duration == 0:
             if not filename: log("VideoParser: getVideoLength, no filename.")
             elif filename.lower().startswith(tuple(self.VFSPaths)):
-                duration = VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
-                if duration == 0 and filename.lower().startswith(tuple(self.YTPaths)):
+                if filename.lower().startswith(tuple(self.YTPaths)):
                     duration = YTParser.YTParser().determineLength(filename)
+                if duration == 0:
+                    duration = VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
             else:
                 ext = os.path.splitext(filename)[1].lower()
                 if not FileAccess.exists(filename):

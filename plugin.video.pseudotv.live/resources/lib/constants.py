@@ -41,7 +41,7 @@ PLAYER              = xbmc.Player
 #constants
 FIFTEEN             = 15    #unit
 DISCOVERY_TIMER     = 60    #secs
-SUSPEND_TIMER       = 5     #secs
+SUSPEND_TIMER       = 30    #secs
 DISCOVER_INTERVAL   = 30    #secs
 EPG_DURATION        = 10800 #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
@@ -219,7 +219,7 @@ MST3K_2             = os.path.join(MEDIA_LOC,'overlays','MST3K_2.gif')
 RESTART_XML    = '%s.restart.xml'%(ADDON_ID)
 BACKGROUND_XML = '%s.background.xml'%(ADDON_ID)
 MANAGER_XML    = '%s.manager.xml'%(ADDON_ID)
-CHANNELBUG_XML = '%s.channelbug.xml'%(ADDON_ID)
+OVERLAYTOOL_XML = '%s.overlaytool.xml'%(ADDON_ID)
 
 # https://github.com/xbmc/xbmc/blob/master/xbmc/addons/kodi-dev-kit/include/kodi/c-api/gui/input/action_ids.h
 

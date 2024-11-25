@@ -238,7 +238,7 @@ msgid "Include STRMs"
 msgstr ""
 
 msgctxt "#30055"
-msgid "Include 3D Media."
+msgid "Include 3D Media"
 msgstr ""
 
 msgctxt "#30056"
@@ -734,7 +734,7 @@ msgid "Vignette Rules"
 msgstr ""
 
 msgctxt "#30178"
-msgid "Vignette Offset"
+msgid "Vignette V-Shift"
 msgstr ""
 
 msgctxt "#30179"
@@ -761,6 +761,13 @@ msgctxt "#30184"
 msgid "Enabled"
 msgstr ""
 
+msgctxt "#30185"
+msgid "Vignette Pixel Ratio"
+msgstr ""
+
+msgctxt "#30186"
+msgid "Vignette Non-Linear Stretch"
+msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins
 
@@ -1152,7 +1159,7 @@ msgid "Channel Rules"
 msgstr ""
 
 msgctxt "#32096"
-msgid "Position Changed, Do you want to save?\n(%s,%s)"
+msgid "Position Changed, Do you want to save?"
 msgstr ""
 
 msgctxt "#32097"
@@ -1675,6 +1682,11 @@ msgctxt "#32228"
 msgid "Hide Screen Vignette"
 msgstr ""
 
+msgctxt "#32229"
+msgid "On Next Position"
+msgstr ""
+
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"
@@ -1770,11 +1782,11 @@ msgid "Display the channel logo at the bottom corner of your screen."
 msgstr ""
 
 msgctxt "#33044"
-msgid "Select Color to apply to monochromatic channel logos [#FFFFFFFF Default]"
+msgid "Select Color to apply [#FFFFFFFF Default]"
 msgstr ""
 
 msgctxt "#33045"
-msgid "Display On-Next information towards the end of programme.\nIf Playlist Playback & Up-Next service installed; support meta is provided."
+msgid "Display On Next information towards the end of programme.\nIf Playlist Playback & Up-Next service installed; support meta is provided."
 msgstr ""
 
 msgctxt "#33046"
@@ -1802,7 +1814,7 @@ msgid "Include .strm files *see wiki for details."
 msgstr ""
 
 msgctxt "#33055"
-msgid "Include 3D Media."
+msgid "Include 3D Media"
 msgstr ""
 
 msgctxt "#33056"
@@ -2042,7 +2054,7 @@ msgid "Select Vignette Image"
 msgstr ""
 
 msgctxt "#33179"
-msgid "Change Vignette Offset"
+msgid "Change Vignette V-Shift"
 msgstr ""
 
 msgctxt "#33180"
@@ -2055,6 +2067,14 @@ msgstr ""
 
 msgctxt "#33182"
 msgid "Enabled in discovered servers in the list below."
+msgstr ""
+
+msgctxt "#33185"
+msgid "Vignette Pixel Ratio"
+msgstr ""
+
+msgctxt "#33186"
+msgid "Vignette Non-Linear Stretch"
 msgstr ""
 
 msgctxt "#33202"
@@ -2075,6 +2095,10 @@ msgstr ""
 
 msgctxt "#33215"
 msgid "Interleave individual paths in sets of x *see wiki for details [0 Disabled, 1 Default]"
+msgstr ""
+
+msgctxt "#33229"
+msgid "Change the onscreen On Next position. [Auto Default]"
 msgstr ""
 
 msgctxt "#33308"
