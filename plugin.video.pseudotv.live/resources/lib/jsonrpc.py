@@ -341,6 +341,12 @@ class JSONRPC:
         return runtime
 
 
+    def getTotRuntime(self, items={}):
+        total = sum([self._getRuntime(item) for item in items])
+        self.log("getTotRuntime, items = %s, total = %s" % (len(items), total))
+        return total
+
+
     def __parseDuration(self, runtime, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("__parseDuration, runtime = %s, path = %s, save = %s" % (runtime, path, save))
         duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
@@ -567,8 +573,12 @@ class JSONRPC:
                                 self.log('getCallback: _matchJSON, id = %s, found file = %s'%(sysInfo.get('chid'),item.get('file')))
                                 return item.get('file')
                                 
-        if sysInfo.get('mode','').lower() == 'live' and sysInfo.get('chpath'): callback = sysInfo.get('chpath')
-        else: callback = _matchJSON()
+        if sysInfo.get('mode','').lower() == 'live' and sysInfo.get('chpath'):
+            callback = sysInfo.get('chpath')
+        elif sysInfo.get('isPlaylist'):
+            callback = sysInfo.get('citem',{}).get('url')
+        else:
+            callback = _matchJSON()
         self.log('getCallback: returning callback = %s'%(callback))
         return callback
         

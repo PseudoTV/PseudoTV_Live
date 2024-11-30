@@ -28,6 +28,7 @@ KEY_QUERY   = {"method":"","order":"","field":'',"operator":'',"value":[]}
 class Seasonal:
     def __init__(self):
         self.log('__init__')
+        self.cache = SETTINGS.cacheDB
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -46,6 +47,7 @@ class Seasonal:
         else:                    return int(floor(week))
 
         
+    @cacheit(expiration=datetime.timedelta(minutes=5), checksum=PROPERTIES.getInstanceID())
     def getHoliday(self, nearest=SETTINGS.getSettingBool('Nearest_Holiday')):
         self.log('getHoliday, nearest = %s'%(nearest))
         if nearest: return self.getNearestHoliday()

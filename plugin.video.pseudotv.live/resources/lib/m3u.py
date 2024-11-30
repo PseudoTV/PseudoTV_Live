@@ -313,13 +313,14 @@ class M3U:
         
         
     def getStationItem(self, sitem):
-        if sitem['catchup']:
+        if sitem.get('resume',False):
+                             sitem['url'] = RESUME_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']))
+        elif sitem['catchup']:
                              sitem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']),vid='{catchup-id}')
                              sitem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
         elif sitem['radio']: sitem['url'] = RADIO_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']),radio=str(sitem['radio']),vid='{catchup-id}')
         else:                sitem['url'] = TV_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']))
         return sitem
-        
     
     def getRecordItem(self, fitem, seek=0):
         if seek <= 0: group = LANGUAGE(30119)

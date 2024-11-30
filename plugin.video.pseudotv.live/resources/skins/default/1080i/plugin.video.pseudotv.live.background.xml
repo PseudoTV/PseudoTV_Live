@@ -38,19 +38,15 @@
                     <visible>Control.IsVisible(40001)</visible>
                     <aspectratio scalediffuse="false" align="center" aligny="center">scale</aspectratio>
                 </control>
-                <control type="grouplist">
+                <control type="image" id="40002">
                     <posx>704</posx>
                     <posy>284</posy>
-                    <itemgap>5</itemgap>
-                    <orientation>vertical</orientation>
-                    <control type="image" id="40002">
-                        <description>Background Logo</description>
-                        <height>512</height>
-                        <width>512</width>
-                        <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
-                        <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-                        <texture/>
-                    </control>
+                    <description>Background Logo</description>
+                    <height>512</height>
+                    <width>512</width>
+                    <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+                    <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
+                    <texture/>
                 </control>
                 <control type="textbox" id="40003">
                     <posx>128</posx>

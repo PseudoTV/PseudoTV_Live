@@ -40,6 +40,7 @@ class Resources:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    @cacheit(expiration=datetime.timedelta(minutes=5), checksum=PROPERTIES.getInstanceID())
     def getLogo(self, chname: str, type: str="Custom", logo=None) -> str:
         if not logo: logo = self.getLocalLogo(chname)              #local
         if not logo: logo = self.getLogoResources(chname, type)    #resource
@@ -169,3 +170,44 @@ class Resources:
                 return mono
             except Exception as e: self.log("isMono, failed! %s\nfile = %s"%(e,file), xbmc.LOGWARNING)
         return False
+        
+        
+        # from PIL import Image, ImageDraw, ImageFont
+
+# def generate_placeholder(text, background_image_path, output_path, font_path="arial.ttf", font_size=30, text_color=(255, 255, 255)):
+    # """
+    # Generates a placeholder image with text on a background image.
+
+    # Args:
+        # text: The text to display on the placeholder.
+        # background_image_path: Path to the background image.
+        # output_path: Path to save the generated placeholder image.
+        # font_path: Path to the font file (optional).
+        # font_size: Font size for the text (optional).
+        # text_color: Color of the text (optional).
+    # """
+
+    # # Open the background image
+    # background_image = Image.open(background_image_path)
+
+    # # Create a drawing object
+    # draw = ImageDraw.Draw(background_image)
+
+    # # Choose a font
+    # font = ImageFont.truetype(font_path, font_size)
+
+    # # Calculate text size
+    # text_width, text_height = draw.textsize(text, font)
+
+    # # Calculate text position for centering
+    # x = (background_image.width - text_width) // 2
+    # y = (background_image.height - text_height) // 2
+
+    # # Draw the text on the image
+    # draw.text((x, y), text, font=font, fill=text_color)
+
+    # # Save the image
+    # background_image.save(output_path)
+
+# # Example usage
+# generate_placeholder("Product Image", "background.jpg", "placeholder.jpg")

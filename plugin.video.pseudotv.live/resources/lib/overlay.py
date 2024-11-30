@@ -124,8 +124,8 @@ class Overlay():
             
 
     def __init__(self, jsonRPC, player=None):
+        self.cache      = SETTINGS.cache
         self.jsonRPC    = jsonRPC
-        self.cache      = jsonRPC.cache
         self.player     = player
         self.resources  = Resources(jsonRPC)
         self.runActions = self.player.runActions
@@ -135,12 +135,12 @@ class Overlay():
                 
         self.enableVignette     = False
         self.enableOnNext       = SETTINGS.getSettingBool('Enable_OnNext')
-        self.onNextColor        = '0x%s'%((SETTINGS.getSetting('ON_Next_Color') or 'FFFFFFFF'))
-        self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         self.enableChannelBug   = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
         self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.minDuration        = SETTINGS.getSettingInt('Seek_Tolerance')
+        self.onNextColor        = '0x%s'%((SETTINGS.getSetting('ON_Next_Color') or 'FFFFFFFF'))
+        self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         
         try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
         except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
@@ -156,6 +156,7 @@ class Overlay():
         self._vinImage    = SETTINGS.getSetting('Vignette_Image')
         self._vignette    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
         self._blackout    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
+        self._blackout.setAnimations([('VisibleChange', 'condition=True effect=fade start=100 end=0 time=240 delay=160 reversible=True')])
         
         #thread timers
         self._bugThread    = Timer(0.1, self.toggleBug, [False])
@@ -167,6 +168,19 @@ class Overlay():
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
+        
+    def show(self):
+        self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
+        self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
+        self.toggleVignette(), self.toggleOnNext(), self.toggleBug()
+        
+            
+    def close(self):
+        self.log('close')
+        self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
+        self.toggleVignette(False), self._cancelOnNext(), self._cancelBug()
+        for control, visible in list(self.controlManager.items()): self._removeControl(control)
+        
 
     def _hasControl(self, control):
         ctrl = self._getControl(control) != None
@@ -210,19 +224,7 @@ class Overlay():
                 self.window.removeControl(control)
                 self.log('_removeControl, %s'%(control))
         except Exception as e: self.log('_removeControl failed! control = %s %s'%(control, e), xbmc.LOGERROR)
-        
-        
-    def _setText(self, control, text: str):
-        try: 
-            if self._hasControl(control): control.setText(text)
-        except Exception as e: self.log('_setText failed! %s'%(e), xbmc.LOGERROR)
-        
-        
-    def _setImage(self, control, image: str, cache: bool=False):
-        try: 
-            if self._hasControl(control): control.setImage(image, useCache=cache)
-        except Exception as e: self.log('_setImage failed! %s'%(e), xbmc.LOGERROR)
-        
+
         
     def _setVisible(self, control, state: bool=False):
         try:
@@ -236,28 +238,16 @@ class Overlay():
         
     def _isVisible(self, control):
         if hasattr(control, 'isVisible'): return control.isVisible()
-        else: return (self._getControl(control) or False)
+        else:                             return (self._getControl(control) or False)
     
-        
-    def show(self):
-        self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
-        self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
-        self.toggleVignette(), self.toggleOnNext(), self.toggleBug()
-        
-            
-    def close(self):
-        self.log('close')
-        self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
-        self.toggleVignette(False), self._cancelOnNext(), self._cancelBug()
-        for control, visible in list(self.controlManager.items()): self._removeControl(control)
-        
 
     def toggleBlackout(self, state: bool=True):
         self.log('toggleBlackout, state = %s'%(state))
-        if not self._hasControl(self._blackout):
-            self._addControl(self._blackout)
-            self._blackout.setAnimations([('VisibleChange', 'condition=True effect=fade start=100 end=0 time=240 delay=160 reversible=True')])
-        self._setVisible(self._blackout,state)
+        if state:
+            if not self._hasControl(self._blackout): self._addControl(self._blackout)
+            self._setVisible(self._blackout,state)
+        elif not state and self._hasControl(self._blackout):
+            self._setVisible(self._blackout,state)
 
 
     def toggleBackground(self, state: bool=True):
@@ -277,14 +267,13 @@ class Overlay():
     def toggleVignette(self, state: bool=True):
         if state and self.enableVignette:
             if not self._hasControl(self._vignette):
+                timerit(self.jsonRPC.setViewMode)(0.1,[self._vinViewMode])
                 self._vignette = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, self._vinImage, aspectRatio=0)
                 self._addControl(self._vignette)
-                timerit(self.jsonRPC.setViewMode)(0.1,[self._vinViewMode])
                 self._vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
-                self._setImage(self._vignette,self._vinImage)
+                self._vignette.setImage(self._vinImage)
                 self._setVisible(self._vignette,True)
                 self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self._vinImage,self._vinViewMode))
-                
         elif not state and self._hasControl(self._vignette):
             timerit(self.jsonRPC.setViewMode)(0.1,[self._defViewMode])
             self._removeControl(self._vignette)
@@ -316,7 +305,7 @@ class Overlay():
             return {True:float(onVAL),False:float(offVAL)}[state]
 
         remaining = abs(floor(self.player.getRemainingTime()))
-        if remaining <= 0: return 
+        if remaining <= 0 or remaining <= self.minDuration: return 
 
         wait   = _getWait(state, remaining)
         nstate = not bool(state)
@@ -329,26 +318,22 @@ class Overlay():
                 return  self.log('toggleBug, remaining time greater than threshold') 
                 
             elif not self._hasControl(self._channelBug):
+                logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
                 try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
                 except: self.channelBugX, self.channelBugY = subZoom(abs(int(self.window_w // 8) - self.window_w) - 128, self._vinViewMode.get('zoom')), subZoom(abs(int(self.window_h // 16) - self.window_h) - 128, self._vinViewMode.get('zoom')) #auto w/ zoom offset
                 
-                self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, 'None', aspectRatio=2)
+                self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, logo, aspectRatio=2)
                 self._addControl(self._channelBug)
-                self.log('toggleBug, channelbug POSXY (%s,%s)'%(self.channelBugX, self.channelBugY))
-                
-                self._channelBug.setPosition(self.channelBugX, self.channelBugY)
                 self._channelBug.setVisibleCondition('[!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
                 self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
                                                 ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
-            
-            logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
-            self.log('toggleBug, channelbug logo = %s)'%(logo))
-            if   self.channelBugDiffuse:      self._channelBug.setColorDiffuse(self.channelBugColor)
-            elif self.resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
-            self._setImage(self._channelBug,logo)
+                
+                if   self.channelBugDiffuse:      self._channelBug.setColorDiffuse(self.channelBugColor)
+                elif self.resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
+                self.log('toggleBug, logo = %s, setColorDiffuse = %s, POSXY (%s,%s))'%(logo, self.channelBugColor, self.channelBugX, self.channelBugY))
             self._setVisible(self._channelBug,True)
         elif not state and self._hasControl(self._channelBug):
-            self._setImage(self._channelBug,' ')
+            if self._hasControl(self._channelBug): self._channelBug.setImage(' ')
             self._setVisible(self._channelBug,False)
             
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
@@ -374,16 +359,15 @@ class Overlay():
             totalTime  = int(self.player.getPlayerTime())
             showTime   = (abs(totalTime - (totalTime * .75)) - (SETTINGS.getSettingInt('OSD_Timer') * interval))
             intTime    = roundupDIV(showTime,interval)
-            showOnNext = (remaining <= showTime and totalTime > SELECT_DELAY and totalTime > self.minDuration)
+            showOnNext = (remaining <= showTime and totalTime > self.minDuration)
             
             if remaining < intTime: return getOnNextInterval(interval+1, remaining)
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))
             return showOnNext, intTime
 
-        interval  = 3 #three times before show ends if remaining time applicable
         remaining = abs(floor(self.player.getRemainingTime()))
         if remaining <= 0: return 
-        showOnNext, intTime = getOnNextInterval(interval,remaining)
+        showOnNext, intTime = getOnNextInterval(ON_NEXT_COUNT,remaining)
         wait   = {True:FIFTEEN,False:float(intTime)}[state]
         nstate = not bool(state)
         if state and showOnNext and self.enableOnNext:
@@ -402,17 +386,17 @@ class Overlay():
                 chname    = citem.get('name',BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
                 nowTitle  = fitem.get('label',BUILTIN.getInfoLabel('Title','VideoPlayer'))
                 nextTitle = nitem.get('showlabel',BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
+                onNow     = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else fitem.get('showlabel',nowTitle)
+                onNext    = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
                 
-                onNow  = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else fitem.get('showlabel',nowTitle)
-                onNext = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
-                self._setText(self._onNext,'%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
+                self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                 self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=%s delay=%s condition=True reversible=True'%(ceil(wait//4)*1000,(ceil(wait//4)-2)*1000))])
                 self._onNext.autoScroll(5500, 2500, int(FIFTEEN//3))
                 self._setVisible(self._onNext,True)
                 nstate = not bool(state)
                 timerit(playSFX)(0.1,[BING_WAV])
         elif not state and self._hasControl(self._onNext):
-            self._setText(self._onNext,'')
+            if self._hasControl(self._onNext): self._onNext.setText(' ')
             self._setVisible(self._onNext,False)
             
         self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))

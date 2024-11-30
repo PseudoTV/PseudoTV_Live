@@ -28,6 +28,7 @@ class Player(xbmc.Player):
     sysInfo      = {}
     isPseudoTV   = False
     lastSubState = False
+    pendingStop  = False
     isIdle       = False
     restart      = None
     minDuration  = None
@@ -72,11 +73,12 @@ class Player(xbmc.Player):
         
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
-        if self.isPseudoTV: self.onAVChange()
+        self.pendingStop = True
+        self.onAVChange()
         
 
     def onAVChange(self):
-        self.log('onAVChange')
+        self.log('onAVChange, isPseudoTV = %s'%(self.isPseudoTV))
         self.service.monitor.chkIdle()
         if self.isPseudoTV: self.__updateGlobals()
 
@@ -92,17 +94,20 @@ class Player(xbmc.Player):
     
     
     def onPlayBackError(self):
-        self.log('onPlayBackError')
+        self.log('onPlayBackError, isPseudoTV = %s'%(self.isPseudoTV))
+        self.pendingStop = False
         if self.isPseudoTV: self._onError()
         
         
     def onPlayBackEnded(self):
-        self.log('onPlayBackEnded')
+        self.log('onPlayBackEnded, isPseudoTV = %s'%(self.isPseudoTV))
+        self.pendingStop = False
         if self.isPseudoTV: self._onChange()
         
         
     def onPlayBackStopped(self):
-        self.log('onPlayBackStopped')
+        self.log('onPlayBackStopped, isPseudoTV = %s'%(self.isPseudoTV))
+        self.pendingStop = False
         if self.isPseudoTV: self._onStop()
         
         
@@ -127,10 +132,11 @@ class Player(xbmc.Player):
         sysInfo['chpath']   = BUILTIN.getInfoLabel('Filenameandpath','Player')
         if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
         if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
-        sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime' :int(self.getPlayerTime())})
-        if not sysInfo.get('callback'): sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
-        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
+        sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime':int(self.getPlayerTime())})
+        if not sysInfo.get('callback'):
+            sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
         self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
+        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
         return sysInfo
         
         
@@ -173,7 +179,8 @@ class Player(xbmc.Player):
     def setTrakt(self, state: bool=SETTINGS.getSettingBool('Disable_Trakt')):
         self.log('setTrakt, state = %s'%(state))
         # https://github.com/trakt/script.trakt/blob/d45f1363c49c3e1e83dabacb70729cc3dec6a815/resources/lib/kodiUtilities.py#L104
-        PROPERTIES.setEXTProperty('script.trakt.paused',str(state).lower())
+        if state: PROPERTIES.setEXTProperty('script.trakt.paused',str(state).lower())
+        else:     PROPERTIES.clearEXTProperty('script.trakt.paused')
 
 
     def setSubtitles(self, state: bool=True):
@@ -195,47 +202,51 @@ class Player(xbmc.Player):
         
     def _onPlay(self):
         oldInfo = self.sysInfo
-        self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
-        self.log('_onPlay, id = %s, rules = %s'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo.get('rules',{})))
+        sysInfo = self.getPlayerSysInfo() #get current sysInfo
         #items that only run once per channel change. ie. set adv. rules and variables. 
-        if self.sysInfo.get('chid') != oldInfo.get('chid',random.random()): #playing new channel
-            self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), inherited=self)
+        self.log('_onPlay, [%s], mode = %s, chid = %s'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo.get('mode'),sysInfo.get('chid')))
+        if sysInfo.get('chid') == oldInfo.get('chid',random.random()):
+            self.toggleInfo(self.infoOnChange)
+        else:
+            self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), sysInfo, inherited=self)
             self.setRuntime(self.saveDuration,self.sysInfo.get('fitem',{}),self.sysInfo.get('runtime'))
-            self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             self.setTrakt(self.disableTrakt)
             self.toggleRestart()
-        elif self.service.player.enableOverlay and self.infoOnChange: self.toggleInfo()
-         
-                
+
+
     def _onChange(self):
-        self.log('_onChange')
         oldInfo = self.sysInfo
         self.toggleInfo(False)
         self.toggleRestart(False)
+        self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
+        self.log('_onChange, [%s], isPlaylist = %s, callback = %s'%(oldInfo.get('citem',{}).get('id'),oldInfo.get('isPlaylist'),oldInfo.get('callback')))
         if oldInfo.get('isPlaylist'):
-            sysInfo = self.getPlayerSysInfo()
-            if not sysInfo.get('fitem') and self.isPlaying(): return self.service.tasks._que(self._onChange,1)
-            elif sysInfo.get('fitem',{}).get('label') == oldInfo.get('nitem',{}).get('label',str(random.random())):
-                self.sysInfo = sysInfo
-                self.log('_onChange, updated sysInfo')
-                self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
+            while not self.service.monitor.abortRequested() and self.isPlaying():
+                sysInfo = self.getPlayerSysInfo()
+                if   sysInfo.get('fitem'): break
+                elif self.monitor.waitForAbort(0.5): break
+                self.log('_onChange, [%s], waiting for getPlayerSysInfo refresh'%(oldInfo.get('citem',{}).get('id')))
+                
+            if sysInfo.get('fitem',{}).get('label') == oldInfo.get('nitem',{}).get('label',str(random.random())):
+                self.sysInfo = self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), sysInfo, inherited=self)
                 self.setRuntime(self.saveDuration,self.sysInfo.get('fitem',{}),sysInfo.get('runtime'))
-                self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
+                self.toggleInfo(self.infoOnChange)
                 return
-        self.log('_onChange, callback = %s'%(oldInfo['callback']))
-        threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(oldInfo['callback']))
+                
+        elif oldInfo.get('callback'):
+            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(oldInfo['callback']))
+        else: self._onStop()
     
         
     def _onStop(self):
-        self.log('_onStop')
         self.setTrakt(False)
         self.toggleInfo(False)
         self.toggleRestart(False)
         self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
         if self.sysInfo.get('isPlaylist'): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-        self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), inherited=self)
-        self.sysInfo = {}
+        self.log('_onStop, id = %s'%(self.sysInfo.get('citem',{}).get('id')))
+        self.sysInfo = self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), {}, inherited=self)
 
 
     def _onError(self):
@@ -245,11 +256,12 @@ class Player(xbmc.Player):
     
     def toggleInfo(self, state: bool=True):
         if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
-        elif state:
+        elif state and self.service.player.enableOverlay:
             self.log('toggleInfo, state = %s'%(state))
             BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
             timerit(self.toggleInfo)(float(SETTINGS.getSettingInt('OSD_Timer')),[False])
         elif not state and BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
+            self.log('toggleInfo, state = %s'%(state))
             BUILTIN.executebuiltin('Action(back)')  
 
                  
@@ -299,16 +311,18 @@ class Monitor(xbmc.Monitor):
 
     def chkIdle(self):
         self.isIdle, self.idleTime = self.getIdle()
-        if SETTINGS.getSettingBool('Debug_Enable'):
-            self.log('chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
-        if self.isIdle: self.toggleOverlay(True)
-        else:           self.toggleOverlay(False)
-        if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)):
-            self.triggerSleep()
+        if SETTINGS.getSettingBool('Debug_Enable'): self.log('chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
+        if self.service.player.isPseudoTV:  
+            if self.isIdle: self.toggleOverlay(True)
+            else:           self.toggleOverlay(False)
+            
+            if self.service.player.isPlaying(): self.service.player.sysInfo['resume'] = {"position":self.service.player.getTime(),"total":self.service.player.getPlayerTime(),"file":self.service.player.getPlayingFile()}
+            if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)):
+                self.triggerSleep()
         
 
     def toggleOverlay(self, state: bool=True):
-        if state and self.service.player.enableOverlay and self.service.player.isPseudoTV:
+        if state and self.service.player.enableOverlay:
             if self.overlay is None and self.service.player.isPlaying():
                 self.log("toggleOverlay, state = %s"%(state))
                 self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)

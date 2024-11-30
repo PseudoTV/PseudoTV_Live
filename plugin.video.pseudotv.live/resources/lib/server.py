@@ -130,12 +130,10 @@ class RequestHandler(BaseHTTPRequestHandler):
                         if self.path.lower() == '/%s'%(CHANNELFLE.lower()):
                             with PROPERTIES.interruptActivity():
                                 from channels import Channels
-                                myChannels = Channels()
-                                channels = list(myChannels._verify(incoming))
+                                channels = list(Channels()._verify(incoming))
                                 self.log('do_POST incoming verified channels = %s'%(len(channels)))
                                 # if myChannels.setChannels(self.rfile.read(int(self.headers['content-length']))):
                                 DIALOG.notificationDialog('Channels updated by %s'%(incoming.get('name',ADDON_NAME)))
-                                del myChannels
                             return self.send_response(200, "OK")
                         else: self.send_error(401, "Not found")
                     return self.send_error(401, "Not verified")
@@ -184,37 +182,34 @@ class RequestHandler(BaseHTTPRequestHandler):
                 elif FileAccess.exists(path):
                     if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
                         self.log('do_GET, sending = %s'%(path))
-                        fle = FileAccess.open(path, "r")
-                        if 'gzip' in self.headers.get('accept-encoding'):
-                            self.log('do_GET, gzip compressing')
-                            data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
-                            self._set_headers(content,data,True)
-                            self.wfile.write(data)
-                        else:
-                            self._set_headers(content)
-                            while not self.monitor.abortRequested():
-                                chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                                if not chunk or self.monitor.waitForAbort(.0001): break
-                                self.send_header('content-length', len(chunk))
-                                self.wfile.write(chunk)
+                        with xbmcvfs.File(path, "r") as fle:
+                            if 'gzip' in self.headers.get('accept-encoding'):
+                                self.log('do_GET, gzip compressing')
+                                data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
+                                self._set_headers(content,data,True)
+                                self.wfile.write(data)
+                            else:
+                                self._set_headers(content)
+                                while not self.monitor.abortRequested():
+                                    chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
+                                    if not chunk or self.monitor.waitForAbort(.0001): break
+                                    self.send_header('content-length', len(chunk))
+                                    self.wfile.write(chunk)
                         self.wfile.close()
-                        fle.close()
                     elif self.path.lower().startswith("/images/"):
-                        fle = FileAccess.open(path, "r")
-                        chunk = fle.readBytes()
-                        self._set_headers(content,chunk)
-                        self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
-                        self.wfile.write(chunk)
+                        with xbmcvfs.File(path, "r") as fle:
+                            chunk = fle.readBytes()
+                            self._set_headers(content,chunk)
+                            self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
+                            self.wfile.write(chunk)
                         self.wfile.close()
-                        fle.close()
                     else:
-                        fle = FileAccess.open(path, "r")
-                        chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
-                        self._set_headers(content,chunk)
-                        self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
-                        self.wfile.write(chunk)
+                        with xbmcvfs.File(path, "r") as fle:
+                            chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
+                            self._set_headers(content,chunk)
+                            self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
+                            self.wfile.write(chunk)
                         self.wfile.close()
-                        fle.close()
                 else: self.send_error(401, "Not found")
         
 class HTTP:

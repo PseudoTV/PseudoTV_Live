@@ -250,8 +250,8 @@ class Settings:
     
     
     def getCacheSetting(self, key, checksum=1, json_data=False, revive=True):
-        if revive: return self.setCacheSetting(key, self.cache.get(key, checksum, json_data), checksum, json_data=json_data)
-        else:      return self.cache.get(key, checksum, json_data)
+        if revive: return self.setCacheSetting(key, self.cacheDB.get(key, checksum, json_data), checksum, json_data=json_data)
+        else:      return self.cacheDB.get(key, checksum, json_data)
         
         
     #SET
@@ -311,7 +311,7 @@ class Settings:
             
             
     def setCacheSetting(self, key, value, checksum=1, life=datetime.timedelta(days=84), json_data=False):
-        return self.cache.set(key, value, checksum, life, json_data)
+        return self.cacheDB.set(key, value, checksum, life, json_data)
             
 
     def getEXTMeta(self, id):
@@ -655,6 +655,24 @@ class Properties:
 
     def forceUpdateTime(self, key):
         return self.setPropertyInt(key,0)
+        
+    
+    def getUpdateChannelID(self):
+        ids = self.getPropertyList('updateChannels')
+        id  = ids.pop(0)
+        self.setPropertyList('updateChannels',list(set(ids)))
+        self.log('getUpdateChannelID, id = %s, remaining = %s'%(id,len(ids)))
+        return id
+    
+    
+    def setUpdateChannels(self, id):
+        ids = self.getPropertyList('updateChannels')
+        ids.append(id)
+        return self.setPropertyList('updateChannels',list(set(ids)))
+
+    
+    def clearUpdateChannels(self):
+        self.clearProperty('updateChannels')
 
 
     def setEpochTimer(self, key, state=True):
@@ -1428,7 +1446,8 @@ class Dialog:
         if multi == True and type > 0:  retval = xbmcgui.Dialog().browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
         else:                           retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
         if monitor: self.toggleInfoMonitor(False)
-        return retval
+        if not retval is None and retval != default:
+            return retval
         
 
     def multiBrowse(self, paths: list=[], header=ADDON_NAME, exclude=[], monitor=True):

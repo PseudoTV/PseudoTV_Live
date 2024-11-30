@@ -40,7 +40,7 @@ from seasonal   import Seasonal
 # Resource_Adverts
   
 class RulesList:
-    def __init__(self):
+    def __init__(self, channels=None):
         self.log('__init__')
         self.ruleList  = [BaseRule(),
                           ShowChannelBug(),
@@ -62,8 +62,9 @@ class RulesList:
                           HandleMethodOrder(),
                           ForceEpisode(),
                           ForceRandom(),
-                          EvenShowsRule()]
-        self.ruleItems = self.loadRules()
+                          EvenShowsRule(),
+                          PauseRule()]
+        self.ruleItems = self.loadRules(channels)
                          
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -174,7 +175,7 @@ class BaseRule:
         return BaseRule()
 
 
-    def log(self, msg, level = xbmc.LOGDEBUG):
+    def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
@@ -346,6 +347,10 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
         self.storedValues       = [[],[],[],[],[]]
         
 
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
     def copy(self):
         return ShowChannelBug()
 
@@ -419,6 +424,10 @@ class ShowOnNext(BaseRule):
         self.storedValues       = [[],[],[]]
 
 
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
     def copy(self):
         return ShowOnNext()
 
@@ -482,6 +491,10 @@ class SetScreenVingette(BaseRule):
         self.selectBoxOptions   = ['','',list(frange(5,21,1)),list(range(-2,3,1)),list(frange(5,21,1)),'']#[LANGUAGE(30022),LANGUAGE(32136)]]
         self.storedValues       = [[],[],[]]
         
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return SetScreenVingette()
@@ -552,6 +565,10 @@ class MST3k(BaseRule):
         self.storedValues       = [[],[],[]]
         self.threadTimer        = Timer(5.0, self.runAction)
         
+        
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return MST3k()
@@ -619,6 +636,10 @@ class DisableOverlay(BaseRule): #PLAYER RULES [50-99]
         self.storedValues       = [[]]
 
 
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
     def copy(self):
         return DisableOverlay()
 
@@ -658,6 +679,10 @@ class ForceSubtitles(BaseRule):
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.storedValues       = [[]]
 
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return ForceSubtitles()
@@ -699,6 +724,10 @@ class DisableTrakt(BaseRule):
         self.storedValues       = [[]]
 
 
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
     def copy(self):
         return DisableTrakt()
 
@@ -738,6 +767,10 @@ class RollbackPlaycount(BaseRule):
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.storedValues       = [[]]
 
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return RollbackPlaycount()
@@ -780,6 +813,10 @@ class DisableRestart(BaseRule):
         self.storedValues       = [[]]
 
 
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
     def copy(self):
         return DisableRestart()
 
@@ -818,6 +855,10 @@ class DisableOnChange(BaseRule):
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.storedValues       = [[]]
 
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return DisableOverlay()
@@ -859,6 +900,10 @@ class DurationOptions(BaseRule): #CHANNEL RULES [500-599]
         self.selectBoxOptions   = [{LANGUAGE(30050):0,LANGUAGE(30051):1},[],list(range(0,605,5))]
         self.storedValues       = [[],[],[]]
 
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return DurationOptions()
@@ -908,6 +953,10 @@ class FilterOptions(BaseRule):
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.storedValues       = [[],[],[]]
 
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return FilterOptions()
@@ -959,6 +1008,10 @@ class PreRoll(BaseRule):
         self.storedValues       = [{},{}]
 
 
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
     def copy(self):
         return PreRoll()
 
@@ -1003,6 +1056,10 @@ class PostRoll(BaseRule):
         self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0,LANGUAGE(30026):1,LANGUAGE(30024):2,LANGUAGE(30025):3},list(range(0,101,1)),[]]
         self.storedValues       = [{},{}]
 
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return PostRoll()
@@ -1050,6 +1107,10 @@ class InterleaveValue(BaseRule):
         self.storedValues       = [[]]
 
 
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
     def copy(self):
         return InterleaveValue()
 
@@ -1087,8 +1148,12 @@ class ProvisionalRule(BaseRule): #PARSING RULES [800-999]
         self.optionValues       = [""]
         self.optionDescriptions = [""]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE]
-        self.storedValues       = [list()]
+        self.storedValues       = [[]]
         
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self): 
         return ProvisionalRule()
@@ -1139,8 +1204,8 @@ class ProvisionalRule(BaseRule): #PARSING RULES [800-999]
                 except Exception as e: self.log("runAction, failed! %s"%(e), xbmc.LOGERROR)
                 return []
         return parameter
-       
-       
+
+
 class HandleMethodOrder(BaseRule):
     def __init__(self):
         self.myId               = 950
@@ -1156,6 +1221,10 @@ class HandleMethodOrder(BaseRule):
         self.storedValues       = [[],[],[],[],[]]
         
         
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
     def copy(self):
         return HandleMethodOrder()
 
@@ -1205,9 +1274,14 @@ class ForceEpisode(BaseRule):
         self.optionLabels       = [LANGUAGE(30181),LANGUAGE(30183)]
         self.optionValues       = [False,SETTINGS.getSettingInt('Interleave_Value')]
         self.optionDescriptions = ["",LANGUAGE(33215)]
-        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST]
+        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
         self.storedValues       = [{},{},[],[],[],[]]
         self.selectBoxOptions   = ["",list(range(0,26,1))]
+
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return ForceEpisode()
@@ -1264,7 +1338,7 @@ class ForceEpisode(BaseRule):
                 builder.sort.update({"method":"year"})
             self.log("runAction, setting sort to %s"%(builder.sort))
             
-        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST:
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
             builder.sort = self.storedValues[0]
             self.log("runAction, restoring sort and forcing episode/year ordering (%s)"%(len(parameter)))
             fileList = list(sorted(parameter, key=lambda k: k.get('year',0)))
@@ -1282,9 +1356,13 @@ class ForceRandom(BaseRule):
         self.optionLabels       = [LANGUAGE(30182)]
         self.optionValues       = [False]
         self.optionDescriptions = [LANGUAGE(33231)]
-        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST]
+        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
         self.storedValues       = [{}]
 
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self):
         return ForceRandom()
@@ -1305,7 +1383,7 @@ class ForceRandom(BaseRule):
             builder.sort.update({"method":"random"})
             self.log("runAction, setting sort to %s"%(builder.sort))
             
-        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST:
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
             builder.sort = self.storedValues[0]
             self.log("runAction, restoring sort and forcing random shuffle of %s items"%(len(fileList)))
             return randomShuffle(fileList)
@@ -1322,10 +1400,14 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-~]
         self.optionLabels       = [LANGUAGE(30180),LANGUAGE(30015),LANGUAGE(30181)]
         self.optionValues       = [SETTINGS.getSettingInt('Enable_Even'),SETTINGS.getSettingInt('Page_Limit'),SETTINGS.getSettingBool('Enable_Even_Force')]
         self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33015),LANGUAGE(33230)]
-        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST,RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST]
+        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST]
         self.selectBoxOptions   = [list(range(0,6)),list(range(25,501,25)),""]
         self.storedValues       = [[],[],[],{},[]]
         
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
 
     def copy(self): 
         return EvenShowsRule()
@@ -1393,18 +1475,172 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-~]
                 builder.limit = self.optionValues[1]
             self.log('runAction, setting limit %s'%(builder.limit))
             
-        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST:
-            if parameter:
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
+            if len(parameter) > 0:
                 if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                 if self.optionValues[2]: fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0))) #force episode ordering
                 else:                    fileItems = parameter
                 self.log('runAction, group by episode %s'%(self.optionValues[2]))
                 return self._mergeShows(*(self._sortShows(fileItems)))
             
-        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST:
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
             builder.enableEvenDistro = bool(SETTINGS.getSettingInt('Enable_Even')) #_injectedRules don't retain stored values use globals
             builder.limit            = SETTINGS.getSettingInt('Page_Limit')        #_injectedRules don't retain stored values use globals
             self.log('runAction, enableEvenDistro = %s, restoring limit = %s'%(builder.enableEvenDistro,builder.limit))
         return parameter
         
         
+class PauseRule(BaseRule): #Finial RULES [3000-~]
+    def __init__(self):
+        self.myId               = 3000
+        self.ignore             = False
+        self.exclude            = False
+        self.name               = "Pause Channel"
+        self.description        = "Pause Channel when not viewing (Experimental)"
+        self.optionLabels       = ["Enable Pause"]
+        self.optionValues       = [True]
+        self.optionDescriptions = ["Enable Pause"]
+        self.actions            = [RULES_ACTION_PLAYBACK_RESUME, RULES_ACTION_PLAYER_START, RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP, RULES_ACTION_CHANNEL_START, RULES_ACTION_CHANNEL_STOP, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN, RULES_ACTION_CHANNEL_BUILD_TIME_PRE, RULES_ACTION_CHANNEL_TEMP_CITEM]
+        self.storedValues       = [[],[],[]]
+        
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
+    def copy(self): 
+        return PauseRule()
+        
+        
+    def getTitle(self): 
+        return self.name
+            
+            
+    def _getResume(self, id):
+        value = (SETTINGS.getCacheSetting('pausedResume.%s'%(id)) or {"position":0.0,"total":0.0,"file":""})
+        self.log('_getResume, id = %s, value = %s'%(id,value))
+        return value
+
+
+    def _setResume(self, id, resume: dict={"position":0.0,"total":0.0,"file":""}):
+        self.log('_setResume, id = %s, resume = %s'%(id, resume))
+        return SETTINGS.setCacheSetting('pausedResume.%s'%(id),resume)
+
+
+    def _getPosition(self, id):
+        value = (SETTINGS.getCacheSetting('pausedPosition.%s'%(id)) or 0)
+        self.log('_getPosition, id = %s, value = %s'%(id, value))
+        return value
+
+        
+    def _setPosition(self, id, position: int=0):
+        self.log('_setPosition, id = %s, position = %s'%(id,position))
+        return SETTINGS.setCacheSetting('pausedPosition.%s'%(id), position)
+        
+        
+    def _getFileList(self, id, position: int=0):
+        self.log('_getFileList, id = %s, position = %s'%(id,position))
+        try:
+            items = SETTINGS.getCacheSetting('pausedFileList.%s'%(id), json_data=True)[position:]
+            self.log('_getFileList, items = %s'%(len(items)))
+            return items
+        except:
+            return []
+        finally: 
+            self.log("_getFileList, resetting position to 0")
+            self._setPosition(id, 0)
+            
+            
+    def _setFileList(self, id, fileList: list=[]):
+        self.log('_setFileList, id = %s, fileList = %s'%(id,len(fileList)))
+        return SETTINGS.setCacheSetting('pausedFileList.%s'%(id), fileList, json_data=True)
+        
+
+    def _getPlaylist(self, id):
+        self.log('_getPlaylist, id = %s'%(id))
+        return self._getFileList(self._getPosition(id))
+
+
+    def _getTotDuration(self, fileList=[]):
+        from jsonrpc import JSONRPC
+        return JSONRPC().getTotRuntime(fileList)
+            
+            
+    def _getduration(self, fileList=[]):
+        from jsonrpc import JSONRPC
+        return JSONRPC()._getRuntime(fileList)
+        
+        
+    def _buildSchedule(self, citem, fileList, builder):     
+        self.log('_buildSchedule, id = %s, fileList = %s'%(citem.get('id'),len(fileList)))
+        return builder.buildCells(citem, duration=self._getTotDuration(fileList), entries=1, info={'title':'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
+                                                                                                   'episodetitle':'Updated: %s'%(datetime.datetime.fromtimestamp(time.time()).strftime(DTJSONFORMAT)),
+                                                                                                   'plot':'Size: %s items\nTotal Runtime: %s hrs.'%(len(fileList),round(self._getTotDuration(fileList)//60//60)),
+                                                                                                   'art':{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
+
+
+    def runAction(self, actionid, citem, parameter, inherited):
+        self.log('runAction, actionid = %s, id = %s'%(actionid,citem.get('id')))
+        if actionid == RULES_ACTION_CHANNEL_START:
+            self.storedValues[0] = inherited.padScheduling
+            inherited.padScheduling = False #disable guide padding with duplicates to fill quota.
+            self.log("runAction, setting padScheduling = %s"%(inherited.padScheduling))
+            
+        elif actionid == RULES_ACTION_CHANNEL_TEMP_CITEM: 
+            parameter['resume'] = True
+            
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
+            self.storedValues[1] = self._getFileList(citem.get('id'),self._getPosition(citem.get('id')))
+            if self._getTotDuration(self.storedValues[1]) >= (MAX_GUIDEDAYS * 3600):
+                return [self.storedValues[1]]
+            
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST:
+            if [self.storedValues[1]] != parameter:
+                self.storedValues[2] = True #changed, pending fileList expansion.
+            elif len(self.storedValues[1]) > 0:
+                return True
+
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
+            if self.storedValues[2] and len(parameter) > 0:
+                self.log("runAction, updating filelist (%s) extending by (%s)"%(len(self.storedValues[1]),len(parameter)))
+                self.storedValues[1].extend(parameter)
+                self.storedValues[1] = self._setFileList(citem.get('id'), self.storedValues[1])
+                
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN:
+            if parameter: return self.storedValues[1]
+            
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_PRE:
+            if len(parameter) > 0: return self._buildSchedule(citem, parameter, inherited)
+                                
+        elif actionid == RULES_ACTION_CHANNEL_STOP:
+            inherited.padScheduling = self.storedValues[0]
+            self.log("runAction, restoring padScheduling = %s"%(inherited.padScheduling))
+            
+        elif actionid == RULES_ACTION_PLAYBACK_RESUME:
+            items = self._getFileList(citem.get('id'),self._getPosition(citem.get('id')))
+            if len(items)> 0:
+                item = items.pop(0)
+                resume = self._getResume(citem.get('id'))
+                if item.get('file') == resume.get('file',str(random.random())):
+                    self.log("runAction, restoring last resume point = %s"%(resume))
+                    item['resume'] = resume
+                else:
+                    self.log("runAction, no resume point found file = %s, last resume point = %s"%(item.get('file'),resume))
+                items.insert(0,item)
+                return [(idx,item) for idx, item in enumerate(items)]
+            return []
+            
+        elif actionid == RULES_ACTION_PLAYER_START:
+            self.log("runAction, current position = %s"%(inherited.sysInfo.get('position')))
+                
+        elif actionid == RULES_ACTION_PLAYER_CHANGE:
+            self._setPosition(citem.get('id'), inherited.sysInfo.get('position'))
+            self.log("runAction, updating position = %s"%(inherited.sysInfo.get('position')))
+                
+        elif actionid == RULES_ACTION_PLAYER_STOP:
+            self._setPosition(inherited.sysInfo.get('id'), inherited.sysInfo.get('position'))
+            self._setResume(inherited.sysInfo.get('citem',{}).get('id'),inherited.sysInfo.get('resume'))
+            self.log("runAction, saving position = %s, resume = %s"%(inherited.sysInfo.get('position'),inherited.sysInfo.get('resume')))
+            PROPERTIES.setUpdateChannels(citem.get('id'))
+        return parameter
+       

@@ -769,6 +769,18 @@ msgctxt "#30186"
 msgid "Vignette Non-Linear Stretch"
 msgstr ""
 
+msgctxt "#30187"
+msgid "Trailer"
+msgstr ""
+
+msgctxt "#30188"
+msgid "Label"
+msgstr ""
+
+msgctxt "#30189"
+msgid "Last Position"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 

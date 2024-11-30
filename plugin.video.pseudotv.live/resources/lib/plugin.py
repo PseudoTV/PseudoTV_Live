@@ -31,14 +31,14 @@ class Plugin:
 
 
     def __init__(self, sysARG=sys.argv, sysInfo={}):
-        self.sysARG     = sysARG
-        self.sysInfo    = sysInfo
-        self.jsonRPC    = JSONRPC()
-        self.cache      = SETTINGS.cache
+        self.sysARG      = sysARG
+        self.sysInfo     = sysInfo
+        self.jsonRPC     = JSONRPC()
+        self.cache       = SETTINGS.cache
         
-        self.pageLimit  = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
-        self.seekTOL    = SETTINGS.getSettingInt('Seek_Tolerance')
-        self.seekTHD    = SETTINGS.getSettingInt('Seek_Threshold')
+        self.pageLimit   = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
+        self.seekTOL     = SETTINGS.getSettingInt('Seek_Tolerance')
+        self.seekTHD     = SETTINGS.getSettingInt('Seek_Threshold')
         
         self.sysInfo['radio'] = sysInfo.get('mode','').lower() == "radio"
         self.sysInfo['now']   = int(sysInfo.get('now')   or int(getUTCstamp()))
@@ -73,6 +73,7 @@ class Plugin:
         
 
     def quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=BUILTIN.isPlaylistRandom()):
+        self.log('quePlaylist, listitems = %s, shuffle = %s'%(len(listitems),shuffle))
         with BUILTIN.busy_dialog():
             channelPlaylist = xbmc.PlayList(pltype)
             channelPlaylist.clear()
@@ -84,24 +85,68 @@ class Plugin:
             return channelPlaylist
 
 
-    def getPVRItems(self, name: str, chid: str) -> list:
-        self.log('getPVRItems, id = %s'%(chid))
+    def getResumeItems(self, name, chid):
+        self.log('getResumeItems, id = %s'%(chid))
         def buildfItem(item: dict={}):
+            idx, item = item
             sysInfo = self.sysInfo.copy()
-            nowitem = decodePlot(item.get('plot',''))
+            sysInfo['isPlaylist'] = True
+            
+            if idx == 0 and round(sysInfo.get('progresspercentage',0)) > self.seekTHD:
+                self.IDXModifier = 1
+            
+            nowitem = nextitems[idx+self.IDXModifier][1] #now broadcast
             if 'citem' in nowitem: nowitem.pop('citem')
-            nowitem['pvritem'] = item
-            sysInfo.update({'fitem':nowitem})
+            sysInfo.update({'fitem':nowitem,'position':idx})
             
             try: #next broadcast
-                nextitem = decodePlot(nextitems[nextitems.index(item) + 1].get('plot',''))
+                nextitem = nextitems[idx+self.IDXModifier+1][1]
                 if 'citem' in nextitem: nextitem.pop('citem')
-                nextitem.get('customproperties',{})['pvritem'] = nextitems[nextitems.index(item) + 1]
                 sysInfo.update({'nitem':nextitem})
             except: pass
             
             liz = LISTITEMS.buildItemListItem(nowitem,'video')
-            if (item['progress'] > 0 and item['runtime'] > 0):
+            if idx == 0 and item.get('resume'):
+                seektime = int(item.get('resume',{}).get('position',0.0))
+                runtime  = int(item.get('resume',{}).get('total',0.0))
+                self.log('getResumeItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(runtime, seektime))
+                liz.setProperty('startoffset', str(seektime)) #secs
+                infoTag = ListItemInfoTag(liz, 'video')
+                infoTag.set_resume_point({'ResumeTime':seektime, 'TotalTime':runtime * 60})
+            liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
+            return liz
+        
+        with BUILTIN.busy_dialog():
+            from rules import RulesList
+            nextitems = RulesList().runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
+            if nextitems:
+                self.IDXModifier = 0
+                del nextitems[PAGE_LIMIT-1:]# list of upcoming items, truncate for speed
+                self.log('getResumeItems, building nextitems (%s)'%(len(nextitems)))
+                return poolit(buildfItem)(nextitems)
+            else: DIALOG.notificationDialog(LANGUAGE(32000))
+            return []
+        
+
+    def getPVRItems(self, name: str, chid: str) -> list:
+        self.log('getPVRItems, id = %s'%(chid))
+        def buildfItem(item: dict={}):
+            idx, item = item
+            sysInfo = self.sysInfo.copy()
+            nowitem = decodePlot(item.get('plot',''))
+            if 'citem' in nowitem: nowitem.pop('citem')
+            nowitem['pvritem'] = item
+            sysInfo.update({'fitem':nowitem,'position':idx})
+            
+            try: #next broadcast
+                nextitem = decodePlot(nextitems[idx+1][1].get('plot',''))
+                if 'citem' in nextitem: nextitem.pop('citem')
+                nextitem.get('customproperties',{})['pvritem'] = nextitems[idx + 1]
+                sysInfo.update({'nitem':nextitem})
+            except: pass
+            
+            liz = LISTITEMS.buildItemListItem(nowitem,'video')
+            if (item.get('progress',0) > 0 and item.get('runtime',0) > 0):
                 self.log('getPVRItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((item['runtime'] * 60),item['progress']))
                 liz.setProperty('startoffset', str(item['progress'])) #secs
                 infoTag = ListItemInfoTag(liz, 'video')
@@ -153,7 +198,7 @@ class Plugin:
                     del nextitems[PAGE_LIMIT-1:]# list of upcoming items, truncate for speed
                     nextitems.insert(0,nowitem)
                     self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
-                    return poolit(buildfItem)(nextitems)
+                    return poolit(buildfItem)([(idx, item) for idx, item in enumerate(nextitems)])
                 else: DIALOG.notificationDialog(LANGUAGE(32164))
             else: DIALOG.notificationDialog(LANGUAGE(32000))
             return []
@@ -293,10 +338,7 @@ class Plugin:
             
     def playRadio(self, name: str, chid: str, vid: str):
         self.log('playRadio, id = %s'%(chid))
-        def buildfItem(item: dict={}):
-            liz = LISTITEMS.buildItemListItem(item, 'music')
-            return liz
-
+        def buildfItem(item: dict={}): return LISTITEMS.buildItemListItem(item, 'music')
         with BUILTIN.busy_dialog():
             jsonRPC  = JSONRPC()
             fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')], SETTINGS.getSettingInt('Interleave_Value'))
@@ -311,8 +353,15 @@ class Plugin:
     def playPlaylist(self, name: str, chid: str):
         self.log('playPlaylist, id = %s'%(chid))
         listitems = self.getPVRItems(name, chid)
-        if listitems:
+        if len(listitems) > 0:
             PLAYER().play(self.quePlaylist(listitems),windowed=True)
+        self.resolveURL(False, xbmcgui.ListItem())
+
+
+    def playResume(self, name: str, chid: str):
+        self.log('playResume, id = %s'%(chid))
+        listitems = self.getResumeItems(name, chid)
+        if len(listitems) > 0: PLAYER().play(self.quePlaylist(listitems),windowed=True)
         self.resolveURL(False, xbmcgui.ListItem())
 
 

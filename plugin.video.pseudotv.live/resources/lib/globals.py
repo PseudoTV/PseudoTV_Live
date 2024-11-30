@@ -275,7 +275,7 @@ def getGMTstamp():
 
 def randomShuffle(items=[]):
     if len(items) > 0:
-        #reseed random for a "greater sudo random".
+        #reseed random for a "greater sudo random"
         random.seed(random.randint(0,999999999999))
         random.shuffle(items)
     return items

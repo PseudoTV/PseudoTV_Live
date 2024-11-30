@@ -115,10 +115,11 @@ class Tasks():
         self._chkEpochTimer('chkChannels'     , self.chkChannels     , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
         
-        self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh)
-        self._chkPropTimer('chkFillers'       , self.chkFillers)
-        self._chkPropTimer('chkAutoTune'      , self.chkAutoTune)
-        
+        self._chkPropTimer('chkPVRRefresh'        , self.chkPVRRefresh)
+        self._chkPropTimer('chkFillers'           , self.chkFillers)
+        self._chkPropTimer('chkAutoTune'          , self.chkAutoTune)
+        self._chkChannelUpdate()
+                  
         
     def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
         if nextrun is None: nextrun = PROPERTIES.getPropertyInt(key,default=0)# nextrun == 0 => force que
@@ -135,7 +136,17 @@ class Tasks():
             self.log('_chkPropTimer, key = %s'%(key))
             PROPERTIES.clearEXTProperty(key)
             self._que(func)
-                  
+            
+            
+    def _chkChannelUpdate(self):
+        id = PROPERTIES.getUpdateChannelID()
+        if id:
+            builder = Builder(self.service)
+            citem   = [citem for citem in sorted(builder.verify(), key=itemgetter('number')) if citem.get('id') == id]
+            del builder
+            self.log('_chkChannelUpdate, id = %s, citem = %s'%(id,citem))
+            return self._que(self.chkChannels,citem)
+            
                   
     @cacheit(expiration=datetime.timedelta(minutes=10))
     def getOnlineVersion(self):
@@ -206,20 +217,24 @@ class Tasks():
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
-    def chkChannels(self):
+    def chkChannels(self, channels=None):
         try:
             builder = Builder(self.service)
-            self.service.currentChannels = sorted(builder.verify(), key=itemgetter('number'))
-            self.log('chkChannels, channels = %s'%(len(self.service.currentChannels)))
-            if len(self.service.currentChannels) > 0:
-                complete, updated = builder.build()
-                if not complete and PROPERTIES.hasFirstrun(): self._que(self.chkChannels,3)
+            if channels is None:
+                channels = sorted(builder.verify(), key=itemgetter('number'))
+                SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
+                PROPERTIES.setChannels(len(channels) > 0)
+                PROPERTIES.clearUpdateChannels() #updating all channels clear any pending individual channel updates
+                self.service.currentChannels = channels #update service channels
+                
+            self.log('chkChannels, channels = %s'%(len(channels)))
+            if len(channels) > 0:
+                complete, updated = builder.build(channels)
+                if not complete and PROPERTIES.hasFirstrun(): self._que(self.chkChannels,3,channels)
                 elif updated: PROPERTIES.setEpochTimer('chkPVRRefresh')
-                if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,self.service.currentChannels)
+                if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
             del builder
             
-            SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.service.currentChannels)))
-            PROPERTIES.setChannels(len(self.service.currentChannels) > 0)
             if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)

@@ -28,8 +28,8 @@ from resources  import Resources
 class Fillers:
     def __init__(self, builder):
         self.builder    = builder
-        self.cache      = SETTINGS.cacheDB
         self.jsonRPC    = builder.jsonRPC
+        self.cache      = jsonRPC.cache
         self.runActions = builder.runActions
         self.resources  = Resources(self.jsonRPC)
         self.fillSources()
@@ -125,9 +125,8 @@ class Fillers:
         if   len(tmpLST) >= count: items = random.sample(tmpLST, count)
         elif len(tmpLST) > 0:      items = setDictLST(random.choices(tmpLST,k=count))
         if len(items) < count and chance: items.extend(self.getMulti(type,count=(count-len(items))))#parse root for anything
-        items = setDictLST(items)
         self.log('getMulti, type = %s, keys = %s, count = %s, chance = %s, returning = %s'%(type,keys,count,chance,len(items)))
-        return items
+        return setDictLST(items)
     
 
     def injectBCTs(self, citem, fileList):
@@ -137,7 +136,6 @@ class Fillers:
             else:
                 runtime = fileItem.get('duration',0)
                 if runtime == 0: continue
-                
                 chtype  = citem.get('type','')
                 chname  = citem.get('name','')
                 fitem   = fileItem.copy()
@@ -154,7 +152,7 @@ class Fillers:
                     preKeys = {'ratings':[fmpaa, fcodec],'bumpers':[chname, fgenre]}[ftype]
                     if self.builder.bctTypes[ftype].get('enabled',False) and dbtype.startswith(tuple(preIncludeTypes)) and chtype not in IGNORE_CHTYPE: preFileList.extend(self.getSingle(ftype, preKeys, chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
 
-                for item in preFileList:
+                for item in setDictLST(preFileList):
                     if (item.get('duration') or 0) == 0: continue
                     else:
                         runtime += item.get('duration')
@@ -178,6 +176,7 @@ class Fillers:
                     postFillCount = len(postFileList)
 
                 if len(postFileList) > 0:
+                    postFileList = setDictLST(postFileList)
                     self.log('injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
                     while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and postFillCount > 0:
                         if len(postFileList) == 0: break

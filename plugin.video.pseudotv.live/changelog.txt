@@ -1,4 +1,8 @@
 v.0.5.7
+-Added Experimental new adv. channel rule "Pause Channel". The rule pauses channel content when not viewing.
+ - Assistance debugging this feature is appreciated...
+ - Known issues, Resume playback from last watched time may not always work.
+ - Focusing on wither the content stays in position and the EPG guide presents correct meta.
 -Improved Overlay position utility to include On-Next position and in the near future vignette position.
  - Added "Global" option for On-Next position, Including Adv. channel rules.
  - Added "Global" option for On-Next color change, Including Adv. channel rules.

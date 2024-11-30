@@ -43,7 +43,7 @@ FIFTEEN             = 15    #unit
 DISCOVERY_TIMER     = 60    #secs
 SUSPEND_TIMER       = 30    #secs
 DISCOVER_INTERVAL   = 30    #secs
-EPG_DURATION        = 10800 #secs
+MIN_EPG_DURATION        = 10800 #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'
@@ -56,6 +56,7 @@ RADIO_ITEM_LIMIT    = 250
 CHANNEL_LIMIT       = 999
 AUTOTUNE_LIMIT      = 3
 FILLER_LIMIT        = 250
+ON_NEXT_COUNT       = 3
 
 FILLER_TYPE         = ['Rating',
                        'Bumper',
@@ -120,6 +121,7 @@ ALT_PLAYLISTS       = [".cue",
                        ".wpl"] 
 
 TV_URL              = 'plugin://{addon}/?mode=tv&name={name}&chid={chid}.pvr'
+RESUME_URL          = 'plugin://{addon}/?mode=resume&name={name}&chid={chid}.pvr'
 RADIO_URL           = 'plugin://{addon}/?mode=radio&name={name}&chid={chid}&radio={radio}&vid={vid}.pvr'
 LIVE_URL            = 'plugin://{addon}/?mode=live&name={name}&chid={chid}&vid={vid}&now={now}&start={start}&duration={duration}&stop={stop}.pvr'
 BROADCAST_URL       = 'plugin://{addon}/?mode=broadcast&name={name}&chid={chid}&vid={vid}.pvr'
@@ -234,24 +236,29 @@ ACTION_PREVIOUS_MENU = [92,10,110,521,ACTION_SELECT_ITEM]
 
 #rules
 ##builder
-RULES_ACTION_CHANNEL_CITEM                = 1 
-RULES_ACTION_CHANNEL_START                = 2 
-RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE  = 3
-RULES_ACTION_CHANNEL_BUILD_PATH           = 4
-RULES_ACTION_CHANNEL_BUILD_FILELIST       = 5
-RULES_ACTION_CHANNEL_BUILD_TIME_PRE       = 7
-RULES_ACTION_CHANNEL_BUILD_TIME_POST      = 8
-RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST = 9
-RULES_ACTION_CHANNEL_STOP                 = 10
+RULES_ACTION_CHANNEL_CITEM                 = 1 #Persistent citem changes
+RULES_ACTION_CHANNEL_START                 = 2 #Set channel global
+RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE   = 3 #Initial FileArray (build bypass)
+RULES_ACTION_CHANNEL_BUILD_PATH            = 4 #Alter parsing directory prior to build
+RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE    = 5 #Initial FileList prior to fillers, after interleaving
+RULES_ACTION_CHANNEL_BUILD_FILELIST_POST   = 6 #Final FileList after fillers
+RULES_ACTION_CHANNEL_BUILD_TIME_PRE        = 7 #FileList prior to scheduling
+RULES_ACTION_CHANNEL_BUILD_TIME_POST       = 8 #FileList after scheduling
+RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST  = 9 #FileArray prior to interleaving and fillers
+RULES_ACTION_CHANNEL_STOP                  = 10#restore channel global
+RULES_ACTION_CHANNEL_TEMP_CITEM            = 11 #Temporary citem changes, rule injection
+RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN = 12
 ##player
-RULES_ACTION_PLAYER_START  = 12
-RULES_ACTION_PLAYER_CHANGE = 13
-RULES_ACTION_PLAYER_STOP   = 14
+RULES_ACTION_PLAYER_START  = 20 #Playback started
+RULES_ACTION_PLAYER_CHANGE = 21 #Playback changed/ended
+RULES_ACTION_PLAYER_STOP   = 22 #Playback stopped
 ##overlay/background
-RULES_ACTION_OVERLAY_OPEN     = 21
-RULES_ACTION_OVERLAY_CLOSE    = 22
-RULES_ACTION_BACKGROUND_OPEN  = 23
-RULES_ACTION_BACKGROUND_CLOSE = 24
+RULES_ACTION_OVERLAY_OPEN     = 30 #Overlay opened
+RULES_ACTION_OVERLAY_CLOSE    = 31 #Overlay closed
+RULES_ACTION_BACKGROUND_OPEN  = 32 #Background opened
+RULES_ACTION_BACKGROUND_CLOSE = 33 #Background closed
+##playback
+RULES_ACTION_PLAYBACK_RESUME = 40 #Prior to playback trigger resume to received a FileList
 
 ISPOT_PATHS = ['plugin://plugin.video.ispot.tv']
 IMDB_PATHS  = ['plugin://plugin.video.imdb.trailers/?action=list1&key=showing',
