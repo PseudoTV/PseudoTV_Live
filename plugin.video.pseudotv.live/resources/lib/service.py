@@ -77,9 +77,11 @@ class Player(xbmc.Player):
         
 
     def onAVChange(self):
-        self.log('onAVChange, isPseudoTV = %s, isPlaylist = %s'%(self.isPseudoTV,self.sysInfo.get('isPlaylist',False)))
+        isPlaylist = self.sysInfo.get('isPlaylist',False)
+        self.log('onAVChange, isPseudoTV = %s, isPlaylist = %s'%(self.isPseudoTV,isPlaylist))
         self.service.monitor.chkIdle()
-        if self.isPseudoTV: self._onChange(isPlaylist=self.sysInfo.get('isPlaylist',False))
+        if self.isPseudoTV and isPlaylist:
+            self._onChange(isPlaylist)
 
         
     def onAVStarted(self):
@@ -99,9 +101,10 @@ class Player(xbmc.Player):
         
         
     def onPlayBackEnded(self):
-        self.log('onPlayBackEnded, isPseudoTV = %s, isPlaylist = %s'%(self.isPseudoTV,self.sysInfo.get('isPlaylist',False)))
+        isPlaylist = self.sysInfo.get('isPlaylist',False)
+        self.log('onPlayBackEnded, isPseudoTV = %s, isPlaylist = %s'%(self.isPseudoTV,isPlaylist))
         self.pendingStop = False
-        if self.isPseudoTV: self._onChange(isPlaylist=self.sysInfo.get('isPlaylist',False))
+        if self.isPseudoTV and not isPlaylist: self._onChange(isPlaylist)
         
         
     def onPlayBackStopped(self):
@@ -224,9 +227,6 @@ class Player(xbmc.Player):
 
     def _onChange(self, isPlaylist=False):
         oldInfo = self.sysInfo
-        self.toggleInfo(False)
-        self.toggleRestart(False)
-        self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
         self.log('_onChange, [%s], isPlaylist = %s, callback = %s'%(oldInfo.get('citem',{}).get('id'),oldInfo.get('isPlaylist'),oldInfo.get('callback')))
         if oldInfo.get('isPlaylist'):
             while not self.service.monitor.abortRequested() and self.isPlaying():
@@ -236,12 +236,20 @@ class Player(xbmc.Player):
                 self.log('_onChange, [%s], waiting for getPlayerSysInfo refresh'%(oldInfo.get('citem',{}).get('id')))
                 
             if oldInfo.get('fitem',{}).get('label') != sysInfo.get('fitem',{}).get('label',str(random.random())):
-                self.sysInfo = self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), sysInfo, inherited=self)
+                self.toggleInfo(False)
+                self.toggleRestart(False)
+                self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
                 self.setRuntime(self.saveDuration,self.sysInfo.get('fitem',{}),sysInfo.get('runtime'))
+                self.sysInfo = self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), sysInfo, inherited=self)
                 self.toggleInfo(self.infoOnChange)
                 return
+                
         elif isPlaylist: return
-        elif oldInfo.get('callback'): threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(oldInfo['callback']))
+        elif oldInfo.get('callback'): 
+            self.toggleInfo(False)
+            self.toggleRestart(False)
+            self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
+            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(oldInfo['callback']))
         else: self._onStop()
     
         
