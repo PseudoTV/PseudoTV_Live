@@ -1517,49 +1517,44 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             
             
     def _getResume(self, id):
-        value = (SETTINGS.getCacheSetting('pausedResume.%s'%(id)) or {"position":0.0,"total":0.0,"file":""})
-        self.log('_getResume, id = %s, value = %s'%(id,value))
-        return value
+        resume = (SETTINGS.getCacheSetting('resumeChannel.%s'%(id)) or {"idx":0,"position":0.0,"total":0.0,"file":""})
+        self.log('_getResume, id = %s, resume = %s'%(id,resume))
+        return resume
 
 
-    def _setResume(self, id, resume: dict={"position":0.0,"total":0.0,"file":""}):
+    def _setResume(self, id, resume: dict={"idx":0,"position":0.0,"total":0.0,"file":""}):
         self.log('_setResume, id = %s, resume = %s'%(id, resume))
-        return SETTINGS.setCacheSetting('pausedResume.%s'%(id),resume)
+        return SETTINGS.setCacheSetting('resumeChannel.%s'%(id),resume)
 
 
     def _getPosition(self, id):
-        value = (SETTINGS.getCacheSetting('pausedPosition.%s'%(id)) or 0)
-        self.log('_getPosition, id = %s, value = %s'%(id, value))
-        return value
+        return self._getResume(id)["idx"]
 
         
-    def _setPosition(self, id, position: int=0):
-        self.log('_setPosition, id = %s, position = %s'%(id,position))
-        return SETTINGS.setCacheSetting('pausedPosition.%s'%(id), position)
+    def _setPosition(self, id, idx: int=0):
+        resume = self._getResume(id)
+        resume["idx"] = idx
+        return self._setResume(id, resume)
         
-        
-    def _getFileList(self, id, position: int=0):
-        self.log('_getFileList, id = %s, position = %s'%(id,position))
+
+    def _getFileList(self, id):
+        idx = self._getPosition(id)
+        self.log('_getFileList, id = %s, idx = %s'%(id,idx))
         try:
-            items = SETTINGS.getCacheSetting('pausedFileList.%s'%(id), json_data=True)[position:]
-            self.log('_getFileList, items = %s'%(len(items)))
-            return items
+            fileList = SETTINGS.getCacheSetting('pausedFileList.%s'%(id), json_data=True)[idx:]
+            self._setPosition(id) #reset idx, keep resume
         except:
-            return []
+            fileList = []
+            self._setResume(id) #reset all
         finally: 
-            self.log("_getFileList, resetting position to 0")
-            self._setPosition(id, 0)
+            self.log('_getFileList, fileList = %s, resetting position to 0, resume = %s'%(len(fileList),self._getResume(id)))
+            return self._setFileList(id, fileList)
             
             
     def _setFileList(self, id, fileList: list=[]):
         self.log('_setFileList, id = %s, fileList = %s'%(id,len(fileList)))
         return SETTINGS.setCacheSetting('pausedFileList.%s'%(id), fileList, json_data=True)
         
-
-    def _getPlaylist(self, id):
-        self.log('_getPlaylist, id = %s'%(id))
-        return self._getFileList(self._getPosition(id))
-
 
     def _getTotDuration(self, fileList=[]):
         from jsonrpc import JSONRPC
@@ -1582,27 +1577,24 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
     def runAction(self, actionid, citem, parameter, inherited):
         self.log('runAction, actionid = %s, id = %s'%(actionid,citem.get('id')))
         if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedValues[0] = inherited.padScheduling
+            self.storedValues[0]    = inherited.padScheduling
             inherited.padScheduling = False #disable guide padding with duplicates to fill quota.
             self.log("runAction, setting padScheduling = %s"%(inherited.padScheduling))
             
         elif actionid == RULES_ACTION_CHANNEL_TEMP_CITEM: 
             parameter['resume'] = True
             
-        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
-            self.storedValues[1] = self._getFileList(citem.get('id'),self._getPosition(citem.get('id')))
-            if self._getTotDuration(self.storedValues[1]) >= (MAX_GUIDEDAYS * 3600):
-                return [self.storedValues[1]]
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
+            self.storedValues[1] = self._getFileList(citem.get('id'))
+            if self._getTotDuration(self.storedValues[1]) > MIN_EPG_DURATION: return [self.storedValues[1]]
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST:
-            if [self.storedValues[1]] != parameter:
-                self.storedValues[2] = True #changed, pending fileList expansion.
-            elif len(self.storedValues[1]) > 0:
-                return True
+            if [self.storedValues[1]] != parameter: self.storedValues[2] = True #changed, pending fileList expansion.
+            elif len(self.storedValues[1]) > 0: return True
 
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
             if self.storedValues[2] and len(parameter) > 0:
-                self.log("runAction, updating filelist (%s) extending by (%s)"%(len(self.storedValues[1]),len(parameter)))
+                self.log("runAction, updating fileList (%s) extending by (%s)"%(len(self.storedValues[1]),len(parameter)))
                 self.storedValues[1].extend(parameter)
                 self.storedValues[1] = self._setFileList(citem.get('id'), self.storedValues[1])
                 
@@ -1611,36 +1603,34 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_PRE:
             if len(parameter) > 0: return self._buildSchedule(citem, parameter, inherited)
-                                
+
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             inherited.padScheduling = self.storedValues[0]
             self.log("runAction, restoring padScheduling = %s"%(inherited.padScheduling))
             
         elif actionid == RULES_ACTION_PLAYBACK_RESUME:
-            items = self._getFileList(citem.get('id'),self._getPosition(citem.get('id')))
-            if len(items)> 0:
-                item = items.pop(0)
+            if len(self.storedValues[1]) == 0: self.storedValues[1] = self._getFileList(citem.get('id'))
+            if len(self.storedValues[1]) > 0:
+                item   = self.storedValues[1].pop(0)
                 resume = self._getResume(citem.get('id'))
                 if item.get('file') == resume.get('file',str(random.random())):
                     self.log("runAction, restoring last resume point = %s"%(resume))
                     item['resume'] = resume
-                else:
-                    self.log("runAction, no resume point found file = %s, last resume point = %s"%(item.get('file'),resume))
-                items.insert(0,item)
-                return [(idx,item) for idx, item in enumerate(items)]
+                self.storedValues[1].insert(0,item)
+                if self._getTotDuration(self.storedValues[1]) < MIN_EPG_DURATION:
+                    PROPERTIES.setUpdateChannels(citem.get('id'))
+                return [(idx,item) for idx, item in enumerate(self.storedValues[1])]
             return []
-            
+                                            
         elif actionid == RULES_ACTION_PLAYER_START:
-            self.log("runAction, current position = %s"%(inherited.sysInfo.get('position')))
-                
+            if len(self.storedValues[1]) == 0: self.storedValues[1] = self._getFileList(citem.get('id'))
+            
         elif actionid == RULES_ACTION_PLAYER_CHANGE:
-            self._setPosition(citem.get('id'), inherited.sysInfo.get('position'))
-            self.log("runAction, updating position = %s"%(inherited.sysInfo.get('position')))
+            self._setResume(citem.get('id'), parameter.get('resume'))
+            self.log("runAction, updating resume = %s"%(self._getResume(citem.get('id'))))
                 
         elif actionid == RULES_ACTION_PLAYER_STOP:
-            self._setPosition(inherited.sysInfo.get('id'), inherited.sysInfo.get('position'))
-            self._setResume(inherited.sysInfo.get('citem',{}).get('id'),inherited.sysInfo.get('resume'))
-            self.log("runAction, saving position = %s, resume = %s"%(inherited.sysInfo.get('position'),inherited.sysInfo.get('resume')))
-            PROPERTIES.setUpdateChannels(citem.get('id'))
+            self._setResume(inherited.sysInfo.get('citem',{}).get('id'), inherited.sysInfo.get('resume'))
+            self.log("runAction, saving resume = %s"%(self._getResume(inherited.sysInfo.get('citem',{}).get('id'))))
         return parameter
        

@@ -97,7 +97,7 @@ class Plugin:
             
             nowitem = nextitems[idx+self.IDXModifier][1] #now broadcast
             if 'citem' in nowitem: nowitem.pop('citem')
-            sysInfo.update({'fitem':nowitem,'position':idx})
+            sysInfo.update({'fitem':nowitem,'resume':{"idx":idx}})
             
             try: #next broadcast
                 nextitem = nextitems[idx+self.IDXModifier+1][1]

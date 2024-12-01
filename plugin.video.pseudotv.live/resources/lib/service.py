@@ -42,7 +42,7 @@ class Player(xbmc.Player):
         xbmc.Player.__init__(self)
         self.service = service
         self.jsonRPC = service.jsonRPC
-        self.__updateGlobals()
+        self.updateGlobals()
         
         """ 
         Player() Trigger Order
@@ -60,7 +60,7 @@ class Player(xbmc.Player):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def __updateGlobals(self):
+    def updateGlobals(self):
         self.lastSubState       = BUILTIN.isSubtitle()
         self.enableOverlay      = SETTINGS.getSettingBool('Overlay_Enable')
         self.infoOnChange       = SETTINGS.getSettingBool('Enable_OnInfo')
@@ -74,13 +74,12 @@ class Player(xbmc.Player):
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
         self.pendingStop = True
-        self.onAVChange()
         
 
     def onAVChange(self):
-        self.log('onAVChange, isPseudoTV = %s'%(self.isPseudoTV))
+        self.log('onAVChange, isPseudoTV = %s, isPlaylist = %s'%(self.isPseudoTV,self.sysInfo.get('isPlaylist',False)))
         self.service.monitor.chkIdle()
-        if self.isPseudoTV: self.__updateGlobals()
+        if self.isPseudoTV: self._onChange(isPlaylist=self.sysInfo.get('isPlaylist',False))
 
         
     def onAVStarted(self):
@@ -100,9 +99,9 @@ class Player(xbmc.Player):
         
         
     def onPlayBackEnded(self):
-        self.log('onPlayBackEnded, isPseudoTV = %s'%(self.isPseudoTV))
+        self.log('onPlayBackEnded, isPseudoTV = %s, isPlaylist = %s'%(self.isPseudoTV,self.sysInfo.get('isPlaylist',False)))
         self.pendingStop = False
-        if self.isPseudoTV: self._onChange()
+        if self.isPseudoTV: self._onChange(isPlaylist=self.sysInfo.get('isPlaylist',False))
         
         
     def onPlayBackStopped(self):
@@ -133,8 +132,7 @@ class Player(xbmc.Player):
         if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
         if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
         sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime':int(self.getPlayerTime())})
-        if not sysInfo.get('callback'):
-            sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
+        if not sysInfo.get('callback'): sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
         self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
         return sysInfo
@@ -143,6 +141,7 @@ class Player(xbmc.Player):
     def getPlayerItem(self):
         try: return self.getPlayingItem()
         except:
+            self.service.monitor.waitForAbort(0.5)
             if self.isPlaying(): return self.getPlayerItem()
             else:                return xbmcgui.ListItem()
 
@@ -200,6 +199,14 @@ class Player(xbmc.Player):
         if not fitem.get('file','').startswith(tuple(VFS_TYPES)): self.jsonRPC._setRuntime(fitem, int(runtime), state)
         
         
+    def updateResume(self):
+        if self.isPlaying():
+            file = self.getPlayingFile()
+            if self.sysInfo.get('fitem',{}).get('file') == file:
+                self.sysInfo['resume'].update({"position":self.getTime(),"total":self.getPlayerTime(),"file":file})
+                self.log('updateResume, resume = %s'%(self.sysInfo['resume']))
+        
+        
     def _onPlay(self):
         oldInfo = self.sysInfo
         sysInfo = self.getPlayerSysInfo() #get current sysInfo
@@ -215,7 +222,7 @@ class Player(xbmc.Player):
             self.toggleRestart()
 
 
-    def _onChange(self):
+    def _onChange(self, isPlaylist=False):
         oldInfo = self.sysInfo
         self.toggleInfo(False)
         self.toggleRestart(False)
@@ -228,14 +235,13 @@ class Player(xbmc.Player):
                 elif self.monitor.waitForAbort(0.5): break
                 self.log('_onChange, [%s], waiting for getPlayerSysInfo refresh'%(oldInfo.get('citem',{}).get('id')))
                 
-            if sysInfo.get('fitem',{}).get('label') == oldInfo.get('nitem',{}).get('label',str(random.random())):
+            if oldInfo.get('fitem',{}).get('label') != sysInfo.get('fitem',{}).get('label',str(random.random())):
                 self.sysInfo = self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), sysInfo, inherited=self)
                 self.setRuntime(self.saveDuration,self.sysInfo.get('fitem',{}),sysInfo.get('runtime'))
                 self.toggleInfo(self.infoOnChange)
                 return
-                
-        elif oldInfo.get('callback'):
-            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(oldInfo['callback']))
+        elif isPlaylist: return
+        elif oldInfo.get('callback'): threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(oldInfo['callback']))
         else: self._onStop()
     
         
@@ -316,10 +322,11 @@ class Monitor(xbmc.Monitor):
             if self.isIdle: self.toggleOverlay(True)
             else:           self.toggleOverlay(False)
             
-            if self.service.player.isPlaying(): self.service.player.sysInfo['resume'] = {"position":self.service.player.getTime(),"total":self.service.player.getPlayerTime(),"file":self.service.player.getPlayingFile()}
-            if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)):
-                self.triggerSleep()
-        
+            if self.service.player.isPlaying():
+                self.service.player.updateResume()
+                if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)):
+                    self.triggerSleep()
+            
 
     def toggleOverlay(self, state: bool=True):
         if state and self.service.player.enableOverlay:
@@ -380,7 +387,7 @@ class Monitor(xbmc.Monitor):
         self.log('_onSettingsChanged')
         self.service.currentChannels = self.service.tasks.chkChannelChange(self.service.currentChannels)  #check for channel change, rebuild if needed
         self.service.currentSettings = self.service.tasks.chkSettingsChange(self.service.currentSettings) #check for settings change, take action if needed
-
+        
 
 class Service():
     currentChannels = []

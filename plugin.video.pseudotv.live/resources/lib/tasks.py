@@ -339,6 +339,7 @@ class Tasks():
                 action = actions.get(setting)
                 self.log('chkSettingsChange, detected change in %s - from: %s to: %s\naction = %s'%(setting,value,nSettings.get(setting),action))
                 self._que(action.get('func'),1,*action.get('args',()),**action.get('kwargs',{}))
+        self.service.player.updateGlobals()
         return nSettings
 
 

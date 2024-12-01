@@ -29,7 +29,7 @@ class Fillers:
     def __init__(self, builder):
         self.builder    = builder
         self.jsonRPC    = builder.jsonRPC
-        self.cache      = jsonRPC.cache
+        self.cache      = builder.jsonRPC.cache
         self.runActions = builder.runActions
         self.resources  = Resources(self.jsonRPC)
         self.fillSources()
