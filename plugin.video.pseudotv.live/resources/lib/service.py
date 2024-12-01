@@ -203,7 +203,7 @@ class Player(xbmc.Player):
         if self.isPlaying():
             file = self.getPlayingFile()
             if self.sysInfo.get('fitem',{}).get('file') == file:
-                self.sysInfo['resume'].update({"position":self.getTime(),"total":self.getPlayerTime(),"file":file})
+                self.sysInfo.setdefault('resume',{}).update({"position":self.getTime(),"total":self.getPlayerTime(),"file":file})
                 self.log('updateResume, resume = %s'%(self.sysInfo['resume']))
         
         
