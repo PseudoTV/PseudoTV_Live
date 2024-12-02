@@ -150,7 +150,7 @@ class Tasks():
                   
     @cacheit(expiration=datetime.timedelta(minutes=10))
     def getOnlineVersion(self):
-        try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(getURL(ADDON_URL)))[0]
+        try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(requestURL(ADDON_URL)))[0]
         except: ONLINE_VERSON = ADDON_VERSION
         self.log('getOnlineVersion, ONLINE_VERSON = %s'%(ONLINE_VERSON))
         return ONLINE_VERSON

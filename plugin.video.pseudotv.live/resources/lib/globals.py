@@ -109,46 +109,48 @@ def setJSON(file, data):
         fle.close()
     return True
 
-def getURL(url, data={}, header=HEADER, json_data=False):
-    session = requests.Session()
-    adapter = HTTPAdapter(max_retries=Retry(total=3,backoff_factor=1,status_forcelist=[429, 500, 502, 503, 504]))
+def requestURL(url, params={}, data={}, header=HEADER, timeout=FIFTEEN, json_data=False, cache=None, checksum=ADDON_VERSION, life=datetime.timedelta(minutes=15)):
+    def __error(json_data):
+        return {} if json_data else ""
+    
+    def __getCache(key,json_data,cache,checksum):
+        cacheName = 'requestURL.%s'%(key)
+        return (cache.get(cacheName, checksum, json_data) or __error(json_data))
+        
+    def __setCache(key,data,json_data,cache,checksum,life):
+        cacheName = 'requestURL.%s'%(key)
+        return cache.set(cacheName, data, checksum, life, json_data)
+    
+    cacheKey = '.'.join([url,dumpJSON(params),dumpJSON(data),dumpJSON(header)])
+    session  = requests.Session()
+    retries  = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+    adapter  = HTTPAdapter(max_retries=retries)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
     try:
-        response = session.get(url, params=data, headers=HEADER.update(header))
+        headers = HEADER.copy()
+        headers.update(header)
+        if params: response = session.post(url, data=data, headers=headers, timeout=timeout)
+        else:      response = session.get(url, params=params, headers=headers, timeout=timeout)
         response.raise_for_status()  # Raise an exception for HTTP errors
-        log("Globals: getURL, url = %s status = %s"%(url,response.status_code))
-        if json_data: return response.json()
-        else:         return response.content
-    except requests.exceptions.ConnectionError as e: pass
-        # log("Globals: getURL, failed! Error connecting to the server: %s"%(e), xbmc.LOGERROR)
-    except requests.exceptions.HTTPError as e:
-        log("Globals: getURL, failed! HTTP error occurred: %s"%(e), xbmc.LOGERROR)
-    except requests.exceptions.RequestException as e:
-        log("Globals: getURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
-     
-def postURL(url, params={}, header=HEADER, json_data=False):
-    session = requests.Session()
-    retry_strategy = Retry(total=5,backoff_factor=1,status_forcelist=[429, 500, 502, 503, 504])
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
-    try:
-        response = session.post(url, data=params, headers=HEADER.update(header))
-        response.raise_for_status()  # Raise an exception for HTTP errors
-        log("Globals: postURL, url = %s status = %s"%(url,response.status_code))
-        if json_data: return response.json()
-        else:         return response.content
+        log("Globals: requestURL, url = %s, status = %s"%(url,response.status_code))
+        if json_data: results = response.json()
+        else:         results = response.content
+        if results and cache: return __setCache(cacheKey,results,json_data,cache,checksum,life)
+        else:                 return results
     except requests.exceptions.ConnectionError as e:
-        log("Globals: postURL, failed! Error connecting to the server: %s"%(e), xbmc.LOGERROR)
+        log("Globals: requestURL, failed! Error connecting to the server: %s"%('Returning cache' if cache else ''), xbmc.LOGERROR)
+        return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
     except requests.exceptions.HTTPError as e:
-        log("Globals: postURL, failed! HTTP error occurred: %s"%(e), xbmc.LOGERROR)
+        log("Globals: requestURL, failed! HTTP error occurred: %s\n%s"%('Returning cache' if cache else '',e), xbmc.LOGERROR)
+        return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
     except requests.exceptions.RequestException as e:
-        log("Globals: postURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
-
+        log("Globals: requestURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
+        return __error(json_data)
+     
 def setURL(url, file):
     try:
-        contents = getURL(url)
+        contents = requestURL(url)
         fle = FileAccess.open(file, 'w')
         fle.write(contents)
         fle.close()

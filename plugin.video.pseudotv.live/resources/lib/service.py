@@ -72,13 +72,13 @@ class Player(xbmc.Player):
         
         
     def onPlayBackStarted(self):
-        self.log('onPlayBackStarted')
         self.pendingStop = True
+        self.log('onPlayBackStarted, pendingStop = %s'%(self.pendingStop))
         
 
     def onAVChange(self):
         isPlaylist = self.sysInfo.get('isPlaylist',False)
-        self.log('onAVChange, isPseudoTV = %s, isPlaylist = %s'%(self.isPseudoTV,isPlaylist))
+        self.log('onAVChange, pendingStop = %s, isPseudoTV = %s, isPlaylist = %s'%(self.pendingStop,self.isPseudoTV,isPlaylist))
         self.service.monitor.chkIdle()
         if self.isPseudoTV and isPlaylist:
             self._onChange(isPlaylist)
@@ -86,7 +86,7 @@ class Player(xbmc.Player):
         
     def onAVStarted(self):
         self.isPseudoTV = self.isPseudoTVPlaying()
-        self.log('onAVStarted, isPseudoTV = %s'%(self.isPseudoTV))
+        self.log('onAVStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if self.isPseudoTV: self._onPlay()
         
         
@@ -95,21 +95,21 @@ class Player(xbmc.Player):
     
     
     def onPlayBackError(self):
-        self.log('onPlayBackError, isPseudoTV = %s'%(self.isPseudoTV))
         self.pendingStop = False
+        self.log('onPlayBackError, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if self.isPseudoTV: self._onError()
         
         
     def onPlayBackEnded(self):
-        isPlaylist = self.sysInfo.get('isPlaylist',False)
-        self.log('onPlayBackEnded, isPseudoTV = %s, isPlaylist = %s'%(self.isPseudoTV,isPlaylist))
         self.pendingStop = False
+        isPlaylist = self.sysInfo.get('isPlaylist',False)
+        self.log('onPlayBackEnded, pendingStop = %s, isPseudoTV = %s, isPlaylist = %s'%(self.pendingStop,self.isPseudoTV,isPlaylist))
         if self.isPseudoTV and not isPlaylist: self._onChange(isPlaylist)
         
         
     def onPlayBackStopped(self):
-        self.log('onPlayBackStopped, isPseudoTV = %s'%(self.isPseudoTV))
         self.pendingStop = False
+        self.log('onPlayBackStopped, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if self.isPseudoTV: self._onStop()
         
         
@@ -203,7 +203,7 @@ class Player(xbmc.Player):
         
         
     def updateResume(self):
-        if self.isPlaying():
+        if self.isPlaying() and self.sysInfo.get('isPlaylist',False):
             file = self.getPlayingFile()
             if self.sysInfo.get('fitem',{}).get('file') == file:
                 self.sysInfo.setdefault('resume',{}).update({"position":self.getTime(),"total":self.getPlayerTime(),"file":file})

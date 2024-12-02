@@ -1,4 +1,6 @@
 v.0.5.7
+-Fixed Deadlocking issue when checking multi-room status on startup.
+-Improved URL caching.
 -Added Experimental new adv. channel rule "Pause Channel". The rule pauses channel content when not viewing.
  - Assistance debugging this feature is appreciated...
  - Known issues, Resume playback from last watched time may not always work.

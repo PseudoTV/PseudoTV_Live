@@ -704,7 +704,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         with self.toggleSpinner(self.chanList):
             if self.server:
                 payload = {'uuid':SETTINGS.getMYUUID(),'name':SETTINGS.getFriendlyName(),'channels':self.validateChannels(self.newChannels)}
-                postURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), params=dumpJSON(payload), header=HEADER)
+                requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
                 #todo write tmp file if post fails, add to que to repost when url online.
             else: self.channels.setChannels(self.validateChannels(self.newChannels))
         self.closeManager()

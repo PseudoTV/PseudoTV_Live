@@ -87,18 +87,12 @@ class Multiroom:
         PROPERTIES.setEnabledServers(len(enabled) > 0)
         return enabled
             
-            
+
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN), json_data=True)
-    def getURL(self, remote):
-        return getURL(remote,header={'Accept':'application/json'},json_data=True)
-
-
     def getRemote(self, remote):
         self.log("getRemote, remote = %s"%(remote))
         cacheName = 'getRemote.%s'%(remote)
-        response  = self.getURL(remote)
-        if response: return self.cache.set(cacheName, response, checksum=self.uuid, expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
-        else:        return self.cache.get(cacheName, checksum=self.uuid, json_data=True) #retrieve cached response incase server is temporarily offline
+        return requestURL(remote, header={'Accept':'application/json'}, json_data=True, cache=self.cache, checksum=self.uuid, life=datetime.timedelta(days=MAX_GUIDEDAYS))
         
          
     def addServer(self, payload={}):

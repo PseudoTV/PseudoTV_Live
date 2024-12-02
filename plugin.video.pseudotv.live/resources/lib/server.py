@@ -52,7 +52,7 @@ class Discovery:
                     server = info.getServer()
                     self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(IP,info.getPort()),'bonjour':'http://%s:%s/%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
                     self.log("addService, found zeroconf %s @ %s using using bonjour %s"%(server,self.zServers[server]['host'],self.zServers[server]['bonjour']))
-                    self.multiroom.addServer(self.multiroom.getURL(self.zServers[server]['bonjour']))
+                    self.multiroom.addServer(requestURL(self.zServers[server]['bonjour'],json_data=True))
             
              
     def __init__(self, service=None, multiroom=None):
