@@ -97,7 +97,8 @@ class Library:
 
 
     def getEnabled(self, type):
-        return [item for item in self.getLibrary(type) if item.get('enabled',False)]
+        items = self.getLibrary(type)
+        return [item for item in items if item.get('enabled',False)]
 
 
     def updateLibrary(self, force: bool=False) -> bool:

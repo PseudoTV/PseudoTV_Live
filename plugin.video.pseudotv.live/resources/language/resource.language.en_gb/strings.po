@@ -781,6 +781,15 @@ msgctxt "#30189"
 msgid "Last Position"
 msgstr ""
 
+msgctxt "#30190"
+msgid "Failed to retrieve the paste url"
+msgstr ""
+
+msgctxt "#30191"
+msgid "Error posting snapshot."
+msgstr ""
+
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 

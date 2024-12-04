@@ -1517,14 +1517,13 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             
             
     def _getResume(self, id):
-        resume = (SETTINGS.getCacheSetting('resumeChannel.%s'%(id)) or {"idx":0,"position":0.0,"total":0.0,"file":""})
+        resume = (SETTINGS.getCacheSetting('resumeChannel.%s'%(id), json_data=True) or {"idx":0,"position":0.0,"total":0.0,"file":""})
         self.log('_getResume, id = %s, resume = %s'%(id,resume))
         return resume
 
 
     def _setResume(self, id, resume: dict={"idx":0,"position":0.0,"total":0.0,"file":""}):
-        self.log('_setResume, id = %s, resume = %s'%(id, resume))
-        return SETTINGS.setCacheSetting('resumeChannel.%s'%(id),resume)
+        self.log('_setResume, id = %s, resume = %s'%(id, SETTINGS.setCacheSetting('resumeChannel.%s'%(id),resume, json_data=True)))
 
 
     def _getPosition(self, id):
@@ -1568,11 +1567,10 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
         
     def _buildSchedule(self, citem, fileList, builder):     
         self.log('_buildSchedule, id = %s, fileList = %s'%(citem.get('id'),len(fileList)))
-        return builder.buildCells(citem, duration=self._getTotDuration(fileList), entries=1, info={'title':'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
-                                                                                                   'episodetitle':'Updated: %s'%(datetime.datetime.fromtimestamp(time.time()).strftime(DTJSONFORMAT)),
-                                                                                                   'plot':'Size: %s items\nTotal Runtime: %s hrs.'%(len(fileList),round(self._getTotDuration(fileList)//60//60)),
-                                                                                                   'art':{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
-
+        return builder.buildCells(citem, duration=self._getTotDuration(fileList), entries=1, info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
+                                                                                                   "episodetitle":'Updated: %s'%(datetime.datetime.fromtimestamp(time.time()).strftime(DTJSONFORMAT)),
+                                                                                                   "plot":'Size: %s videos\nTotal Runtime: %s hrs.'%(len(fileList),round(self._getTotDuration(fileList)//60//60)),
+                                                                                                   "art":{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
 
     def runAction(self, actionid, citem, parameter, inherited):
         self.log('runAction, actionid = %s, id = %s'%(actionid,citem.get('id')))
@@ -1602,7 +1600,9 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             if parameter: return self.storedValues[1]
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_PRE:
-            if len(parameter) > 0: return self._buildSchedule(citem, parameter, inherited)
+            if len(parameter) > 0: 
+                if inherited.xmltv.clrProgrammes(citem):
+                    return self._buildSchedule(citem, parameter, inherited)
 
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             inherited.padScheduling = self.storedValues[0]
@@ -1617,8 +1617,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
                     self.log("runAction, restoring last resume point = %s"%(resume))
                     item['resume'] = resume
                 self.storedValues[1].insert(0,item)
-                if self._getTotDuration(self.storedValues[1]) < MIN_EPG_DURATION:
-                    PROPERTIES.setUpdateChannels(citem.get('id'))
+                if self._getTotDuration(self.storedValues[1]) < MIN_EPG_DURATION: PROPERTIES.setUpdateChannels(citem.get('id'))
                 return [(idx,item) for idx, item in enumerate(self.storedValues[1])]
             return []
                                             

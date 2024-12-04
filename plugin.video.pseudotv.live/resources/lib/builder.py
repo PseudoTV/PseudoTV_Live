@@ -105,11 +105,12 @@ class Builder:
 
     def build(self, channels=None):
         with PROPERTIES.legacy():
-            if channels is None: channels = sorted(self.verify(Channels().getChannels()), key=itemgetter('number'))
+            if channels is None: channels = Channels().getChannels()
             if not channels:
                 self.log('build, no verified channels found!')
                 return False, False
                 
+            channels  = sorted(self.verify(channels), key=itemgetter('number'))
             now       = getUTCstamp()
             start     = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour
             stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
@@ -119,9 +120,8 @@ class Builder:
             updated = False
             for idx, citem in enumerate(channels):
                 citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
-                self.log('build, id = %s, rules = %s'%(citem.get('id'),citem.get('rules',{})))
-                if not citem.get('id'): continue
-                elif self.service._interrupt():
+                self.log('build, id = %s, rules = %s'%(citem['id'],citem.get('rules',{})))
+                if self.service._interrupt():
                     self.completeBuild = False
                     self.pErrors = [LANGUAGE(32160)]
                     self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
@@ -176,7 +176,7 @@ class Builder:
             if isinstance(cacheResponse,list): return sorted(self.addScheduling(citem, cacheResponse, start, self.padScheduling), key=itemgetter('start'))
             elif  self.service._interrupt():   return True
             else:                              return cacheResponse
-        except Exception as e: self.log("getFileList, [%s] failed! %s"%(citem.get('id'),e), xbmc.LOGERROR)
+        except Exception as e: self.log("getFileList, [%s] failed! %s"%(citem['id'],e), xbmc.LOGERROR)
         return False
 
 
@@ -229,7 +229,7 @@ class Builder:
         
         
     def buildRadio(self, citem: dict) -> list:
-        self.log("buildRadio, [%s]"%(citem.get('id')))
+        self.log("buildRadio, [%s]"%(citem['id']))
         #todo insert custom radio labels,plots based on genre type?
         # https://www.musicgenreslist.com/
         # https://www.musicgateway.com/blog/how-to/what-are-the-different-genres-of-music
@@ -242,7 +242,7 @@ class Builder:
                 if len(fileList) > 0: return True
             
         def _injectFillers(citem, fileList, enable=False):
-            self.log("buildChannel: _injectFillers, [%s], fileList = %s, enable = %s"%(citem.get('id'),len(fileList),enable))
+            self.log("buildChannel: _injectFillers, [%s], fileList = %s, enable = %s"%(citem['id'],len(fileList),enable))
             if enable: return Fillers(builder=self).injectBCTs(citem, fileList)
             else:      return fileList
           
@@ -250,7 +250,7 @@ class Builder:
             def __chkEvenDistro(citem):
                 if self.enableEvenDistro and not citem.get('rules',{}).get("1000"):
                     nrules = {"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":SETTINGS.getSettingBool('Enable_Even_Force')}}}
-                    self.log("buildChannel: _injectRules, __chkEvenDistro [%s], new rules = %s"%(citem.get('id'),nrules))
+                    self.log("buildChannel: _injectRules, __chkEvenDistro [%s], new rules = %s"%(citem['id'],nrules))
                     citem.setdefault('rules',{}).update(nrules)
                 return citem
             return __chkEvenDistro(citem)
@@ -259,7 +259,7 @@ class Builder:
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self)
         self.log("buildChannel, [%s] channel pre fileArray items = %s"%(citem['id'],len(fileArray)),xbmc.LOGINFO)
         
-        if not _validFileList(fileArray): #if valid array bypass build.
+        if not _validFileList(fileArray): #if valid array bypass build
             paths = citem.get('path',[])
             for idx, file in enumerate(paths):
                 if self.service._interrupt(): return []
@@ -495,7 +495,6 @@ class Builder:
         
     def addChannelProgrammes(self, citem: dict, fileList: list):
         self.log('addChannelProgrammes, [%s] fileList = %s'%(citem['id'],len(fileList)))
-        if citem.get('resume',False): self.xmltv.clrProgrammes(citem)
         for idx, item in enumerate(fileList): self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item))
         return True
         

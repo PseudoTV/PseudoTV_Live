@@ -150,27 +150,27 @@ class Player(xbmc.Player):
 
 
     def getPlayerFile(self):
-        try:    return (self.sysInfo.get('fitem',{}).get('file') or self.getPlayingFile())
-        except: return ''
+        try:    return self.getPlayingFile()
+        except: return self.sysInfo.get('fitem',{}).get('file')
 
 
     def getPlayerTime(self):
-        try:    return (self.sysInfo.get('fitem',{}).get('runtime') or self.getTotalTime())
-        except: return 0
+        try:    return self.getTotalTime()
+        except: return (self.sysInfo.get('fitem',{}).get('runtime') or -1)
             
             
     def getElapsedTime(self):
-        try:    return int((self.sysInfo.get('seek') or self.getTime() // 1000))
+        try:    return int(self.getTime() // 1000)
         except: return -1
 
 
     def getRemainingTime(self):
-        try:    return int(self.getPlayerTime() - self.getElapsedTime())
+        try:    return int(self.getTimeLabel(prop='TimeRemaining'))
         except: return -1
 
        
     def getPlayerProgress(self):
-        try:    return int((self.getElapsedTime() / self.getPlayerTime()) * 100)
+        try:    return int((self.getRemainingTime() / self.getPlayerTime()) * 100)
         except: return -1
 
 
@@ -201,15 +201,7 @@ class Player(xbmc.Player):
         self.log('setRuntime, state = %s, file = %s, runtime = %s'%(state,fitem.get('file'),runtime))
         if not fitem.get('file','').startswith(tuple(VFS_TYPES)): self.jsonRPC._setRuntime(fitem, int(runtime), state)
         
-        
-    def updateResume(self):
-        if self.isPlaying() and self.sysInfo.get('isPlaylist',False):
-            file = self.getPlayingFile()
-            if self.sysInfo.get('fitem',{}).get('file') == file:
-                self.sysInfo.setdefault('resume',{}).update({"position":self.getTime(),"total":self.getPlayerTime(),"file":file})
-                self.log('updateResume, resume = %s'%(self.sysInfo['resume']))
-        
-        
+
     def _onPlay(self):
         oldInfo = self.sysInfo
         sysInfo = self.getPlayerSysInfo() #get current sysInfo
@@ -299,6 +291,7 @@ class Player(xbmc.Player):
 class Monitor(xbmc.Monitor):
     idleTime   = 0
     isIdle     = False
+    isPlaying  = False
     overlay    = None
     
     def __init__(self, service=None):
@@ -324,21 +317,40 @@ class Monitor(xbmc.Monitor):
 
 
     def chkIdle(self):
+        def __chkBackground():
+            if not self.overlay is None:
+                remanTime = abs(floor(self.service.player.getRemainingTime()))
+                if self.overlay.background is None and remanTime <= 2:
+                    self.log('__chkBackground, toggleBackground remaining playback = %s'%(remanTime))
+                    self.overlay.toggleBackground()
+        
+        def __chkResumeTime():
+            if self.service.player.sysInfo.get('isPlaylist',False):
+                file = self.service.player.getPlayingFile()
+                if self.service.player.sysInfo.get('fitem',{}).get('file') == file:
+                    self.service.player.sysInfo.setdefault('resume',{}).update({"position":self.service.player.getTime(),"total":self.service.player.getPlayerTime(),"file":file})
+                    self.log('__chkResumeTime, resume = %s'%(self.service.player.sysInfo['resume']))
+
+        def __chkSleepTimer():
+            if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)):
+                self.log('__chkSleepTimer, sleepTime = %s'%(self.service.player.sleepTime))
+                self.triggerSleep()
+        
         self.isIdle, self.idleTime = self.getIdle()
         if SETTINGS.getSettingBool('Debug_Enable'): self.log('chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
-        if self.service.player.isPseudoTV:  
+        if self.service.player.isPseudoTV: 
+            self.isPlaying = self.service.player.isPlaying()
+            if self.isPlaying:
+                __chkBackground()
+                __chkResumeTime()
+                __chkSleepTimer()
             if self.isIdle: self.toggleOverlay(True)
             else:           self.toggleOverlay(False)
-            
-            if self.service.player.isPlaying():
-                self.service.player.updateResume()
-                if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)):
-                    self.triggerSleep()
             
 
     def toggleOverlay(self, state: bool=True):
         if state and self.service.player.enableOverlay:
-            if self.overlay is None and self.service.player.isPlaying():
+            if self.overlay is None and self.isPlaying:
                 self.log("toggleOverlay, state = %s"%(state))
                 self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
                 self.overlay.show()

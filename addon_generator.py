@@ -23,7 +23,7 @@
  
 """ addons.xml generator """
  
-import os, sys, fnmatch
+import os, sys, fnmatch, re, pprint, json
 import xml.etree.ElementTree
 from zipfile import ZipFile
 from shutil import copyfile, rmtree
@@ -42,6 +42,72 @@ if sys.version < '3':
 else:
     def u(x):
         return x
+        
+project_path = 'C:/GitHub/PseudoTV_Live/plugin.video.pseudotv.live/resources/lib/'
+lang_file    = 'C:/GitHub/PseudoTV_Live/plugin.video.pseudotv.live/resources/language/resource.language.en_gb/strings.po'
+
+lang_ids = {}
+lang_ref = {}
+code_ref = {}
+empty_ids = {}
+duplicate_ids = {}
+unused_ids = {}
+
+#find all ids and strings in po
+def scan_po(po_file):
+    with open(po_file,'r', encoding="utf8") as fle:
+        lines = fle.readlines()
+        for idx, line in enumerate(lines):
+            if line.startswith('msgctxt'): lang_ids[re.match('msgctxt \"#(.*?)\"',line).group(1)] = re.match('msgid \"(.*?)\"',lines[idx+1]).group(1)
+        return lang_ids
+
+#find all language ids in py
+def scan_py(directory):
+    for root, dirs, files in os.walk(directory):
+        for file_name in files:
+            if file_name.endswith('.py'):
+                with open(os.path.join(root,file_name),'r', encoding="utf8") as fle:
+                    lang_ref[os.path.join(root,file_name)] = re.findall("LANGUAGE\((.*?)\)", fle.read())
+    return lang_ref
+
+#return list of ids with no dups
+def clean_ids(ref):
+    tmpids = set()
+    for path, ids in list(lang_ref.items()):
+        for id in ids: tmpids.add(id)
+    return list(sorted(tmpids))
+
+#find all empty ids with no strings
+def find_empty(my_dict):
+    for id, string in list(my_dict.items()):
+        if not string: empty_ids[id] = string
+    return empty_ids
+
+#find all duplicate strings with ids
+def find_duplicate_values(my_dict):
+    seen_values = {}
+    for id, string in list(my_dict.items()):
+        if not string: continue
+        elif string not in seen_values: seen_values[string] = [id]
+        else:
+            seen_values[string].append(id)
+            if len(seen_values[string]) > 1: duplicate_ids[string] = seen_values[string]
+    return  duplicate_ids
+
+def find_unused(po,py):
+    ids = clean_ids(py)
+    for id, string in list(po.items()):
+        if id not in ids: unused_ids[id] = string
+    return unused_ids
+
+def Report():
+    with open(os.path.join(GITPATH,"language_report.txt"), "w") as fle:
+        scan_po(lang_file)
+        scan_py(project_path)
+        #clean_ids(lang_ref)
+        fle.write('Language IDS w\empty strings: %s\n\n\n'%(json.dumps(find_empty(lang_ids), indent=4)))
+        fle.write('Language IDS w\duplicate strings: %s\n\n\n'%(json.dumps(find_duplicate_values(lang_ids), indent=4)))
+        fle.write('Language IDS not found in py files, possibly only in xml: %s\n\n\n'%(json.dumps(find_unused(lang_ids,lang_ref), indent=4)))
 
 class Generator(object):
     """
@@ -210,3 +276,4 @@ class Generator(object):
 if ( __name__ == "__main__" ):
     # start
     Generator()
+    Report()

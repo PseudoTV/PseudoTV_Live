@@ -25,15 +25,25 @@ from resources import Resources
 class Background(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.player = kwargs.get('player', None)
+        self.player  = kwargs.get('player', None)
+        self.visible = self._chkGenre()
+
+
+    def _chkGenre(self):
+        genres = self.player.sysInfo.get('fitem',{}).get('genre',[]) + self.player.sysInfo.get('nitem',{}).get('genre',[])
+        for genre in genres:
+            if genre.lower() in ['pre-roll','post-roll']: return False
+        else: return True
 
 
     def onInit(self):
         try:
-            log("Background: onInit")
-            logo = (self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
-            self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
-            self.getControl(40003).setText(LANGUAGE(32104)%(self.player.sysInfo.get('citem',{}).get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
+            log("Background: onInit, visible = %s"%(self.visible))
+            self.getControl(40004).setVisible(self.visible)   
+            if self.visible:      
+                logo = (self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
+                self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
+                self.getControl(40003).setText(LANGUAGE(32104)%(self.player.sysInfo.get('citem',{}).get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except Exception as e:
             log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.close()
@@ -99,7 +109,7 @@ class Restart(xbmcgui.WindowXMLDialog):
   
   
 class Overlay():
-    background = None
+    background     = None
     controlManager = dict()
     
     class Player(PLAYER):
@@ -107,10 +117,10 @@ class Overlay():
             PLAYER.__init__(self)
             self.overlay = overlay
             
-            
+
         def onAVStarted(self):
             self.overlay.log('onAVStarted')
-            self.overlay.toggleBackground(False)
+            self.overlay.toggleBackground(state=False)
 
 
         def onPlayBackEnded(self):
@@ -120,7 +130,7 @@ class Overlay():
             
         def onPlayBackStopped(self):
             self.overlay.log('onPlayBackStopped')
-            self.overlay.toggleBackground(False)
+            self.overlay.toggleBackground(state=False)
             
 
     def __init__(self, jsonRPC, player=None):
@@ -129,8 +139,9 @@ class Overlay():
         self.player     = player
         self.resources  = Resources(jsonRPC)
         self.runActions = self.player.runActions
-        
-        self.window = xbmcgui.Window(12005) 
+
+        self.windowID = 12005
+        self.window   = xbmcgui.Window(self.windowID) 
         self.window_h, self.window_w = (self.window.getHeight(), self.window.getWidth())
                 
         self.enableVignette     = False
@@ -139,7 +150,7 @@ class Overlay():
         self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
         self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.minDuration        = SETTINGS.getSettingInt('Seek_Tolerance')
-        self.onNextColor        = '0x%s'%((SETTINGS.getSetting('ON_Next_Color') or 'FFFFFFFF'))
+        self.onNextColor        = '0x%s'%((SETTINGS.getSetting('ON_Next_Color')    or 'FFFFFFFF'))
         self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         
         try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
@@ -155,14 +166,12 @@ class Overlay():
         self._vinViewMode = self._defViewMode
         self._vinImage    = SETTINGS.getSetting('Vignette_Image')
         self._vignette    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
-        self._blackout    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
-        self._blackout.setAnimations([('VisibleChange', 'condition=True effect=fade start=100 end=0 time=240 delay=160 reversible=True')])
         
         #thread timers
         self._bugThread    = Timer(0.1, self.toggleBug, [False])
         self._onNextThread = Timer(0.1, self.toggleOnNext, [False])
         
-        self._myPlayer     = self.Player(overlay=self)
+        self._Player       = self.Player(overlay=self)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -173,12 +182,12 @@ class Overlay():
         self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
         self.toggleVignette(), self.toggleOnNext(), self.toggleBug()
-        
-            
+
+   
     def close(self):
         self.log('close')
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
-        self.toggleVignette(False), self._cancelOnNext(), self._cancelBug()
+        self.toggleVignette(False), self._cancelOnNext(), self._cancelBug() 
         for control, visible in list(self.controlManager.items()): self._removeControl(control)
         
 
@@ -239,29 +248,19 @@ class Overlay():
     def _isVisible(self, control):
         if hasattr(control, 'isVisible'): return control.isVisible()
         else:                             return (self._getControl(control) or False)
-    
-
-    def toggleBlackout(self, state: bool=True):
-        self.log('toggleBlackout, state = %s'%(state))
-        if state:
-            if not self._hasControl(self._blackout): self._addControl(self._blackout)
-            self._setVisible(self._blackout,state)
-        elif not state and self._hasControl(self._blackout):
-            self._setVisible(self._blackout,state)
 
 
     def toggleBackground(self, state: bool=True):
-        if state:
-            if self.background is None: 
-                self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self.player)
-                self.log('toggleBackground, state = %s'%(state))
-                self.background.doModal()
-                self.background = None
+        if state and self.background is None: 
+            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self.player)
+            self.log('toggleBackground, state = %s'%(state))
+            self.background.doModal()
+            self.background = None
         elif not state and not self.background is None:
             self.background = self.background.close()
             
-        if self.player.isPlaying() and not BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window'):
-            BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+        # if self.player.isPlaying() and not BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window'):
+            # BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
 
 
     def toggleVignette(self, state: bool=True):

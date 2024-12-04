@@ -9,7 +9,7 @@
             <posy>0</posy>
             <animation type="WindowOpen" reversible="false">
                 <effect type="zoom" start="80" end="100" center="960,540" delay="160" tween="back" time="240"/>
-                <effect type="fade" delay="160" end="100" time="240"/>
+                <effect type="fade" delay="160" start="0" end="100" time="240"/>
             </animation>
             <animation type="WindowClose" reversible="false">
                 <effect type="zoom" start="100" end="80" center="960,540" easing="in" tween="back" time="240"/>
@@ -19,7 +19,6 @@
                 <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" end="100" time="240"/>
             </animation>
-            <visible>Control.IsVisible(40001)</visible>
             <description>Background !Playing</description>
             <control type="group">
                 <description>Background Dynamic</description>
@@ -31,11 +30,10 @@
                     <texture>colors/white.png</texture>
                     <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
                 </control>
-                <control type="image">
+                <control type="image" id="40004">
                     <width>auto</width>
                     <height>auto</height>
                     <texture>backgrounds/background.gif</texture>
-                    <visible>Control.IsVisible(40001)</visible>
                     <aspectratio scalediffuse="false" align="center" aligny="center">scale</aspectratio>
                 </control>
                 <control type="image" id="40002">
@@ -46,6 +44,7 @@
                     <width>512</width>
                     <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
                     <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
+                    <visible>Control.IsVisible(40004)</visible>
                     <texture/>
                 </control>
                 <control type="textbox" id="40003">
@@ -61,7 +60,7 @@
                     <autoscroll delay="5000" time="1000">false</autoscroll>
                     <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                     <label/>
-                    <visible>Control.IsVisible(40001)</visible>
+                    <visible>Control.IsVisible(40004)</visible>
                 </control>
                 <control type="grouplist">
                     <posx>1440</posx>
@@ -69,7 +68,6 @@
                     <width>480</width>
                     <itemgap>1</itemgap>
                     <orientation>vertical</orientation>
-                    <visible>Control.IsVisible(40001)</visible>
                     <control type="label">
                         <description>Time</description>
                         <align>center</align>
@@ -78,12 +76,14 @@
                         <shadowcolor>text_shadow</shadowcolor>
                         <height>60</height>
                         <label>[B]$INFO[System.Time][/B]</label>
+                        <visible>Control.IsVisible(40004)</visible>
                         <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                     </control>
                     <control type="image">
                         <height>90</height>
                         <texture>splashtext.png</texture>
                         <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+                        <visible>Control.IsVisible(40004)</visible>
                         <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                     </control>
                 </control>

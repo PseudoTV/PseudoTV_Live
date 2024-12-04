@@ -102,10 +102,10 @@ class Utilities:
                     return False, response.json()['message']
                 else:
                     self.log('qrDebug failed! %s'%response.text)
-                    return False, LANGUAGE("Error posting snapshot.")
+                    return False, LANGUAGE(30191)
             except:
                 self.log('qrDebug, unable to retrieve the paste url')
-                return False, LANGUAGE("Failed to retrieve the paste url")
+                return False, LANGUAGE(30190)
               
         with BUILTIN.busy_dialog(): payload = SETTINGS.getPayload(inclDebug=True)
         if   not payload.get('debug',{}): return DIALOG.notificationDialog(LANGUAGE(32187))
