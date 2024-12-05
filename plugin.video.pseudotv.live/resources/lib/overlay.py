@@ -153,11 +153,11 @@ class Overlay():
         self.onNextColor        = '0x%s'%((SETTINGS.getSetting('ON_Next_Color')    or 'FFFFFFFF'))
         self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         
-        try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+        try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
         except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
         self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
         
-        try:    self.onNextX, self.onNextY = tuple(SETTINGS.getSetting("On_Next_Position_XY")) #user
+        try:    self.onNextX, self.onNextY = eval(SETTINGS.getSetting("On_Next_Position_XY")) #user
         except: self.onNextX, self.onNextY = abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h) #auto
         self._onNext = xbmcgui.ControlTextBox(self.onNextX, self.onNextY, abs(int(self.window_w // 2)), abs(int(self.window_h // 32)), 'font12', self.onNextColor)
         
@@ -318,7 +318,7 @@ class Overlay():
                 
             elif not self._hasControl(self._channelBug):
                 logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
-                try:    self.channelBugX, self.channelBugY = tuple(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+                try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
                 except: self.channelBugX, self.channelBugY = subZoom(abs(int(self.window_w // 8) - self.window_w) - 128, self._vinViewMode.get('zoom')), subZoom(abs(int(self.window_h // 16) - self.window_h) - 128, self._vinViewMode.get('zoom')) #auto w/ zoom offset
                 
                 self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, logo, aspectRatio=2)

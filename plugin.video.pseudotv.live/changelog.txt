@@ -1,4 +1,5 @@
 v.0.5.7
+-Fixed Channel bug and On-Next position not changing based on user settings.
 -Improved Background Interface.
 -Fixed Deadlocking issue when checking multi-room status on startup.
 -Improved URL caching.

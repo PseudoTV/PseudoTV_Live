@@ -106,7 +106,8 @@ class Utilities:
                 self.log('qrDebug, unable to retrieve the paste url')
                 return False, LANGUAGE(30190)
               
-        with BUILTIN.busy_dialog(): payload = SETTINGS.getPayload(inclDebug=True)
+        with BUILTIN.busy_dialog():
+            payload = SETTINGS.getPayload(inclDebug=True)
         if   not payload.get('debug',{}): return DIALOG.notificationDialog(LANGUAGE(32187))
         elif not DIALOG.yesnoDialog(message=LANGUAGE(32188)): return
         

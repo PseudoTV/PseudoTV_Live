@@ -394,7 +394,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
             
             overlay.enableChannelBug   = self.optionValues[0]
             overlay.channelBugInterval = self.optionValues[1]
-            overlay.channelBugX, overlay.channelBugY = tuple(self.optionValues[2])
+            overlay.channelBugX, overlay.channelBugY = eval(self.optionValues[2])
             overlay.channelBugColor    = '0x%s'%(self.optionValues[3])
             overlay.channelBugDiffuse  = self.optionValues[4]
             self.log("runAction, setting enableChannelBug = %s, channelBugInterval = %s, channelBugInterval = %s, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.enableChannelBug,overlay.channelBugInterval,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse))
@@ -465,7 +465,7 @@ class ShowOnNext(BaseRule):
             self.storedValues[2] = overlay.onNextColor
 
             overlay.enableOnNext             = self.optionValues[0]
-            overlay.onNextX, overlay.onNextY = tuple(self.optionValues[1])
+            overlay.onNextX, overlay.onNextY = eval(self.optionValues[1])
             overlay.onNextColor              = '0x%s'%(self.optionValues[2])
             self.log("runAction, setting enableOnNext = %s, onNextX = %s, onNextY = %s, onNextColor = %s"%(overlay.enableOnNext, overlay.onNextX, overlay.onNextY, overlay.onNextColor))
             

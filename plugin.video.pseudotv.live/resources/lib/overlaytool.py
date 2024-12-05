@@ -49,12 +49,12 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             
             self.channelBugDiffuse = '0x%s'%((kwargs.get("ChannelBug_Color") or SETTINGS.getSetting('ChannelBug_Color')))
             self.autoBugX, self.autoBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128)
-            try:    self.channelBugX, self.channelBugY = tuple(kwargs.get("Channel_Bug_Position_XY",SETTINGS.getSetting("Channel_Bug_Position_XY")))
+            try:    self.channelBugX, self.channelBugY = eval(kwargs.get("Channel_Bug_Position_XY",SETTINGS.getSetting("Channel_Bug_Position_XY")))
             except: self.channelBugX, self.channelBugY = self.autoBugX, self.autoBugY
 
             self.onNextColor = '0x%s'%((kwargs.get("ON_Next_Color") or SETTINGS.getSetting("ON_Next_Color")))
             self.autoNextX, self.autoNextY = abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h)
-            try:    self.onNextX, self.onNextY = tuple(kwargs.get("On_Next_Position_XY",SETTINGS.getSetting("On_Next_Position_XY")))
+            try:    self.onNextX, self.onNextY = eval(kwargs.get("On_Next_Position_XY",SETTINGS.getSetting("On_Next_Position_XY")))
             except: self.onNextX, self.onNextY = self.autoNextX, self.autoNextY
             
         try: 
