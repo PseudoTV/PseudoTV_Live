@@ -117,7 +117,7 @@ class Builder:
             self.pDialog = DIALOG.progressBGDialog()
             self.completeBuild = True
             
-            updated = False
+            updated = set()
             for idx, citem in enumerate(channels):
                 citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
                 self.log('build, id = %s, rules = %s'%(citem['id'],citem.get('rules',{})))
@@ -143,7 +143,7 @@ class Builder:
                     cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                     if cacheResponse:
                         if self.addChannelStation(citem) and (isinstance(cacheResponse,list) and len(cacheResponse) > 0):
-                            updated = self.addChannelProgrammes(citem, cacheResponse) #added xmltv lineup entries.
+                            updated.add(self.addChannelProgrammes(citem, cacheResponse)) #added xmltv lineup entries.
                     else: 
                         if self.completeBuild: self.pErrors.append(LANGUAGE(32026))
                         chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
@@ -153,8 +153,8 @@ class Builder:
                     self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                         
             self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completeBuild else LANGUAGE(32135)))
-            self.log('build, completeBuild = %s, updated = %s, saved = %s'%(self.completeBuild,updated,self.saveChannelLineups()))
-            return self.completeBuild, updated
+            self.log('build, completeBuild = %s, updated = %s, saved = %s'%(self.completeBuild,bool(updated),self.saveChannelLineups()))
+            return self.completeBuild, bool(updated)
 
         
     def getFileList(self, citem: dict, now: time, start: time) -> bool and list:

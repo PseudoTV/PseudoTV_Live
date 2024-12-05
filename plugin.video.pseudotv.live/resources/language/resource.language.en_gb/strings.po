@@ -150,15 +150,15 @@ msgid "Resources"
 msgstr ""
 
 msgctxt "#30033"
-msgid ""
+msgid "%s Support & Discussion Thread"
 msgstr ""
 
 msgctxt "#30034"
-msgid ""
+msgid "ZeroConf Already"
 msgstr ""
 
 msgctxt "#30035"
-msgid ""
+msgid "ZeroConf"
 msgstr ""
 
 msgctxt "#30036"
@@ -1072,7 +1072,7 @@ msgid "Browse"
 msgstr ""
 
 msgctxt "#32069"
-msgid "Auto"
+msgid "Ask"
 msgstr ""
 
 msgctxt "#32070"
@@ -2099,7 +2099,7 @@ msgid "Vignette Non-Linear Stretch"
 msgstr ""
 
 msgctxt "#33202"
-msgid "Minimum Debugging Level [LOGERROR - Default]"
+msgid "Minimum Debugging Level [LOGERROR - Default]\nIf submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error."
 msgstr ""
 
 msgctxt "#33230"

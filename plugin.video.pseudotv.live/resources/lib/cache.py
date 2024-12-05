@@ -42,32 +42,21 @@ def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VE
 class Cache:
     lock  = Lock()
     cache = SimpleCache()
-        
-        
-    def isCacheLocked(self):
-        return xbmcgui.Window(10000).getProperty('cacheLocker') == 'true'
 
 
-    def setCacheLocked(self, state=True):
-        xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),str(state).lower())
-        
-        
     @contextmanager
     def cacheLocker(self): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
         monitor = MONITOR()
-        while not monitor.abortRequested() and self.isCacheLocked():
+        while not monitor.abortRequested() and xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true':
             if monitor.waitForAbort(.0001): break
             else: self.log('cacheLocker, waiting...')
         del monitor
-        self.setCacheLocked(True)
+        xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
         try: yield self.log('cacheLocker, Locked!')
-        finally: self.setCacheLocked(False)
+        finally:
+            xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'false')
 
 
-    def cacheLocked(self):
-        return xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true'
-    
-    
     def __init__(self, mem_cache=False, is_json=False):
         self.cache.enable_mem_cache = mem_cache
         self.cache.data_is_json     = is_json  
@@ -85,7 +74,7 @@ class Cache:
         
     def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
         # with self.lock:
-        if value and not self.disable_cache and not self.cacheLocked():
+        if value and not self.disable_cache:
             with self.cacheLocker():
                 self.log('set, name = %s, value = %s'%(self.getname(name),'%s...'%(str(value)[:128])))
                 self.cache.set(self.getname(name),value,checksum,expiration,json_data)
@@ -94,7 +83,7 @@ class Cache:
     
     def get(self, name, checksum=ADDON_VERSION, json_data=False):
         # with self.lock:
-        if not self.disable_cache and not self.cacheLocked():
+        if not self.disable_cache:
             with self.cacheLocker():
                 try: 
                     value = self.cache.get(self.getname(name),checksum,json_data)

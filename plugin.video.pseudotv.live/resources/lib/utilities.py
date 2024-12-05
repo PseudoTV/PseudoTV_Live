@@ -35,7 +35,7 @@ class Utilities:
 
 
     def qrSupport(self):
-        DIALOG.qrDialog(URL_SUPPORT, 'PseudoTV Live Beta Blog, Support & Discussion Thread')
+        DIALOG.qrDialog(URL_SUPPORT, LANGUAGE(30033)%(ADDON_NAME))
         
         
     def qrRemote(self):
@@ -52,7 +52,7 @@ class Utilities:
         
     def showChangelog(self):
         try:  
-            def addColor(text):
+            def __addColor(text):
                 text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
                 text = text.replace('-New!'       ,'[COLOR=yellow][B]-New!:[/B][/COLOR]')
                 text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
@@ -70,29 +70,28 @@ class Utilities:
                 
             with BUILTIN.busy_dialog():
                 fle = FileAccess.open(CHANGELOG_FLE, "r")
-                txt = addColor(fle.read())
+                txt = __addColor(fle.read())
                 fle.close()
             DIALOG.textviewer(txt, heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
 
 
     def qrDebug(self):
-        def cleanPayload(payload):
-            payload['debug']    = loadJSON(cleanLog(dumpJSON(payload.get('debug',{}),idnt=4)))
-            payload['channels'] = loadJSON(cleanLog(dumpJSON(payload.get('channels',[]),idnt=4)))
-            payload['m3u']      = loadJSON(cleanLog(dumpJSON(payload.get('m3u',[]),idnt=4)))
-            [payload.pop(key) for key in ['host','remotes','bonjour','library','servers'] if key in payload]
-            return payload
-        
-        def cleanLog(content):           
+        def __cleanLog(content):           
             content = re.sub('//.+?:.+?@'                  ,'//USER:PASSWORD@'     , content)
             content = re.sub('<user>.+?</user>'            ,'<user>USER</user>'    , content)
             content = re.sub('<pass>.+?</pass>'            ,'<pass>PASSWORD</pass>', content)
             content = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", '0.0.0.0'             , content)
             return content
                 
-
-        def postLog(data):
+        def __cleanPayload(payload):
+            payload['debug']    = loadJSON(__cleanLog(dumpJSON(payload.get('debug',{}),idnt=4)))
+            payload['channels'] = loadJSON(__cleanLog(dumpJSON(payload.get('channels',[]),idnt=4)))
+            payload['m3u']      = loadJSON(__cleanLog(dumpJSON(payload.get('m3u',[]),idnt=4)))
+            [payload.pop(key) for key in ['host','remotes','bonjour','library','servers'] if key in payload]
+            return payload
+        
+        def __postLog(data):
             try:
                 session = requests.Session()
                 response = session.post('https://paste.kodi.tv/' + 'documents', data=data.encode('utf-8'), headers={'User-Agent':'%s: %s'%(ADDON_ID, ADDON_VERSION)})
@@ -112,7 +111,7 @@ class Utilities:
         elif not DIALOG.yesnoDialog(message=LANGUAGE(32188)): return
         
         with BUILTIN.busy_dialog():
-            succes, data = postLog(dumpJSON(cleanPayload(payload),idnt=4))
+            succes, data = __postLog(dumpJSON(__cleanPayload(payload),idnt=4))
             
         if succes: DIALOG.qrDialog(data,LANGUAGE(32189)%(data))
         else:      DIALOG.okDialog(LANGUAGE(32190)%(data))
@@ -120,8 +119,7 @@ class Utilities:
 
     def userGroups(self):
         self.log('userGroups')
-        retval = DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups'))
-        if retval: SETTINGS.setSetting('User_Groups',retval)
+        SETTINGS.setSetting('User_Groups',DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups')))
                 
 
     def openChannelManager(self, chnum: int=1):
@@ -130,15 +128,16 @@ class Utilities:
             with PROPERTIES.setRunning('OVERLAY_MANAGER'), PROPERTIES.interruptActivity():
                 with BUILTIN.busy_dialog():
                     from manager import Manager
-                    chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
-                    del chmanager
+                chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
+                del chmanager
     
         
     def openMoveUtil(self, idx):
         self.log('openMoveUtil, idx = %s'%(idx))
         if not PROPERTIES.isRunning('MOVE_UTILITY_RUNNING'):
             with PROPERTIES.setRunning('MOVE_UTILITY_RUNNING'), PROPERTIES.suspendActivity():
-                with BUILTIN.busy_dialog(): from overlaytool import OverlayTool
+                with BUILTIN.busy_dialog():
+                    from overlaytool import OverlayTool
                 overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
                 del overlaytool
 
@@ -187,10 +186,12 @@ class Utilities:
             with BUILTIN.busy_dialog():
                  for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
+        
         if full: 
             SETTINGS.setAutotuned(False)
             PROPERTIES.setEpochTimer('chkPVRRefresh')
-            PROPERTIES.setPendingRestart()
+        else:
+            PROPERTIES.forceUpdateTime('chkChannels')
 
 
     def sortMethod(self):
@@ -198,19 +199,19 @@ class Utilities:
         with BUILTIN.busy_dialog():
             from jsonrpc import JSONRPC
             values  = sorted([item.title() for item in JSONRPC().getEnums("List.Sort",type="method")])
-        select = DIALOG.selectDialog(values, LANGUAGE(32214), findItemsInLST(values, [SETTINGS.getSetting('Sort_Method').lower()])[0], False, SELECT_DELAY, False)
-        if not select is None: return SETTINGS.setSetting('Sort_Method',values[select])
+        try: return SETTINGS.setSetting('Sort_Method',values[DIALOG.selectDialog(values, LANGUAGE(32214), findItemsInLST(values, [SETTINGS.getSetting('Sort_Method').lower()])[0], False, SELECT_DELAY, False)])
+        except: pass
 
 
     def defaultChannels(self):
         self.log('defaultChannels')
         with BUILTIN.busy_dialog():
             values = [cleanLabel(value) for value in SETTINGS.getSettingList('Select_server')]
-            values.insert(0,'Auto')
-            values.insert(1,'Ask')
+            values.insert(0,LANGUAGE(30022))
+            values.insert(1,LANGUAGE(32069))
         select = DIALOG.selectDialog(values, LANGUAGE(30173), findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
         if not select is None: return SETTINGS.setSetting('Default_Channels',values[select])
-        else:                  return SETTINGS.setSetting('Default_Channels','Auto')
+        else:                  return SETTINGS.setSetting('Default_Channels',LANGUAGE(30022))
 
 
     def run(self):
@@ -252,7 +253,7 @@ class Utilities:
             return self.buildMenu()
         elif param == 'Show_Wiki_QR':
             ctl = (6,4)
-            return self.qrWiki()
+            self.qrWiki()
         elif param == 'Show_Support_QR':
             ctl = (6,5)
             self.qrSupport()

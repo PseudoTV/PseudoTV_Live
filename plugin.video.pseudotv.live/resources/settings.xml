@@ -1366,6 +1366,7 @@
                             <and>
                                 <condition on="property" name="InfoBool">System.AddonIsEnabled(script.kodi.loguploader)</condition>
                                 <condition on="property" name="InfoBool">System.HasAddon(script.kodi.loguploader)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.debug),true)</condition>
                             </and>
                         </dependency>
                     </dependencies>
@@ -1374,7 +1375,7 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <setting id="Debug_QR2" type="action" label="30166" help="33166" parent="Debug_Enable">
+                <setting id="Debug_Snapshot" type="action" label="30166" help="33166" parent="Debug_Enable">
                     <level>0</level>
                     <default/>
                     <constraints>
@@ -1384,12 +1385,6 @@
                         <dependency type="visible">
                             <and>
                                 <condition operator="is" setting="Debug_Enable">true</condition>
-                            </and>
-                        </dependency>
-                        <dependency type="enable">
-                            <and>
-                                <condition operator="is" setting="Remote_Status">[COLOR=green][B]Online[/B][/COLOR]</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.debug),true)</condition>
                             </and>
                         </dependency>
                     </dependencies>

@@ -1584,7 +1584,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
             self.storedValues[1] = self._getFileList(citem.get('id'))
-            if self._getTotDuration(self.storedValues[1]) > MIN_EPG_DURATION: return [self.storedValues[1]]
+            if self._getTotDuration(self.storedValues[1]) >= (MIN_GUIDEDAYS * 86400): return [self.storedValues[1]]
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST:
             if [self.storedValues[1]] != parameter: self.storedValues[2] = True #changed, pending fileList expansion.
@@ -1617,7 +1617,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
                     self.log("runAction, restoring last resume point = %s"%(resume))
                     item['resume'] = resume
                 self.storedValues[1].insert(0,item)
-                if self._getTotDuration(self.storedValues[1]) < MIN_EPG_DURATION: PROPERTIES.setUpdateChannels(citem.get('id'))
+                if self._getTotDuration(self.storedValues[1]) < (MIN_GUIDEDAYS * 86400) : PROPERTIES.setUpdateChannels(citem.get('id'))
                 return [(idx,item) for idx, item in enumerate(self.storedValues[1])]
             return []
                                             

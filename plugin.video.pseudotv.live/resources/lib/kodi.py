@@ -380,16 +380,18 @@ class Settings:
             from xmltvs      import XMLTVS
             from library     import Library
             from multiroom   import Multiroom
+            xmltv = XMLTVS()
             payload.pop('updated')
             payload.pop('md5')
             payload['library'] = Library().getLibrary()
             payload['m3u']     = M3U().getM3U()
-            payload['xmltv']   = {'stations':XMLTVS().getChannels(), 'recordings':XMLTVS().getRecordings()}
+            payload['xmltv']   = {'stations':xmltv.getChannels(), 'recordings':xmltv.getRecordings(), 'programmes':dict([(key,datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)) for key, value in list(dict(xmltv.loadStopTimes()).items())])}
             payload['servers'] = Multiroom().getDiscovery()
+            del xmltv
             return payload
 
         payload = __getMeta(self.getBonjour(inclChannels=True))
-        if inclDebug: payload['debug'] = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_NAME))).get('DEBUG',{})
+        if inclDebug: payload['debug'] = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_ID))).get('DEBUG',{})
         payload['updated']   = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         payload['md5']       = getMD5(dumpJSON(payload))
         return payload

@@ -84,9 +84,7 @@ class Backup:
         with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
             if FileAccess.move(CHANNELFLEPATH,CHANNELFLE_RESTORE):
                 if FileAccess.copy(file,CHANNELFLEPATH):
-                    library = Library()
-                    library.resetLibrary()
-                    del library
+                    Library().resetLibrary()
                     return PROPERTIES.setPendingRestart()
         
         

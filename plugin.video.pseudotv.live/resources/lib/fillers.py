@@ -112,10 +112,9 @@ class Fillers:
         for key in keys:
             tmpLST = self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[])
             if len(tmpLST) > 0: items.append(random.choice(tmpLST))
-        if len(items) ==  0 and chance: items.extend(self.getSingle(type))#parse root for anything
-        items = setDictLST(items)
+            elif chance:        items.extend(self.getSingle(type))
         self.log('getSingle, type = %s, keys = %s, chance = %s, returning = %s'%(type,keys,chance,len(items)))
-        return items
+        return setDictLST(items)
         
 
     def getMulti(self, type, keys=['resources'], count=1, chance=False):
@@ -136,13 +135,14 @@ class Fillers:
             else:
                 runtime = fileItem.get('duration',0)
                 if runtime == 0: continue
+                
                 chtype  = citem.get('type','')
                 chname  = citem.get('name','')
                 fitem   = fileItem.copy()
                 dbtype  = fileItem.get('type','')
-                fgenre  = (fileItem.get('genre') or citem.get('group') or '')
                 fmpaa   = (self.convertMPAA(fileItem.get('mpaa')) or 'NR')
                 fcodec  = (fileItem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')
+                fgenre  = (fileItem.get('genre') or citem.get('group') or '')
                 if isinstance(fgenre,list) and len(fgenre) > 0: fgenre = fgenre[0]
                 
                 #pre roll - bumpers/ratings
@@ -150,9 +150,10 @@ class Fillers:
                 for ftype in ['ratings','bumpers']:
                     preIncludeTypes = {'ratings':MOVIE_TYPES ,'bumpers':TV_TYPES}[ftype]
                     preKeys = {'ratings':[fmpaa, fcodec],'bumpers':[chname, fgenre]}[ftype]
-                    if self.builder.bctTypes[ftype].get('enabled',False) and dbtype.startswith(tuple(preIncludeTypes)) and chtype not in IGNORE_CHTYPE: preFileList.extend(self.getSingle(ftype, preKeys, chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
+                    if self.builder.bctTypes[ftype].get('enabled',False) and dbtype.startswith(tuple(preIncludeTypes)) and chtype not in IGNORE_CHTYPE:
+                        preFileList.extend(self.getSingle(ftype, preKeys, chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
 
-                for item in setDictLST(preFileList):
+                for item in preFileList:
                     if (item.get('duration') or 0) == 0: continue
                     else:
                         runtime += item.get('duration')
@@ -176,7 +177,6 @@ class Fillers:
                     postFillCount = len(postFileList)
 
                 if len(postFileList) > 0:
-                    postFileList = setDictLST(postFileList)
                     self.log('injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
                     while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and postFillCount > 0:
                         if len(postFileList) == 0: break

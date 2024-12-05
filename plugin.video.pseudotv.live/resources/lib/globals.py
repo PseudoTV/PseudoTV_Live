@@ -308,18 +308,19 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
            'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
 def togglePVR(state=True, reverse=False, wait=FIFTEEN):
-    if not PROPERTIES.isRunning('togglePVR') and SETTINGS.getSettingBool('Enable_PVR_RELOAD'):
-        with PROPERTIES.setRunning('togglePVR'):
-            log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
-            if not BUILTIN.getInfoBool('Playing','Player') or not BUILTIN.getInfoBool('HasMedia','Player'):
-                isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
-                if (state and isEnabled) or (not state and not isEnabled): return
+    if SETTINGS.getSettingBool('Enable_PVR_RELOAD'):
+        isPlaying = BUILTIN.getInfoBool('Playing','Player')
+        isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
+        if (state and isEnabled) or (not state and not isEnabled): return
+        elif not isPlaying and not PROPERTIES.isRunning('togglePVR'):
+            with PROPERTIES.setRunning('togglePVR'):
+                log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
                 xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
-                if reverse:
-                    with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
-                        timerit(togglePVR)(wait,[not bool(state)])
-                        DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
-            else: DIALOG.notificationWait(LANGUAGE(30023)%(PVR_CLIENT_NAME))
+            if reverse:
+                with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
+                    timerit(togglePVR)(wait,[not bool(state)])
+                    DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
+    else: DIALOG.notificationWait(LANGUAGE(30023)%(PVR_CLIENT_NAME))
         
 def isRadio(item):
     if item.get('radio',False) or item.get('type') == "Music Genres": return True

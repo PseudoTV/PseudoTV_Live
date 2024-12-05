@@ -32,9 +32,9 @@ def log(event, level=xbmc.LOGDEBUG):
         event = '%s-%s-%s'%(ADDON_ID, ADDON_VERSION, event)
         if level >= DEBUG_LEVEL:
             xbmc.log(event,level)
-            try:    entries = json.loads(xbmcgui.Window(10000).getProperty('%s.debug.log'%(ADDON_NAME))).get('DEBUG',{})
+            try:    entries = json.loads(xbmcgui.Window(10000).getProperty('%s.debug.log'%(ADDON_ID))).get('DEBUG',{})
             except: entries = {}
             entries.setdefault(DEBUG_NAMES[DEBUG_LEVEL],[]).append('%s - %s: %s'%(datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT),DEBUG_NAMES[level],event))
-            xbmcgui.Window(10000).setProperty('%s.debug.log'%(ADDON_NAME),json.dumps({'DEBUG':entries}, indent=4))
-            if not xbmcgui.Window(10000).getProperty('%s.has.debug'%(ADDON_NAME)) == 'true': xbmcgui.Window(10000).setProperty('%s.has.debug'%(ADDON_NAME),'true')
+            xbmcgui.Window(10000).setProperty('%s.debug.log'%(ADDON_ID),json.dumps({'DEBUG':entries}, indent=4))
+            if not xbmcgui.Window(10000).getProperty('%s.has.debug'%(ADDON_ID)) == 'true': xbmcgui.Window(10000).setProperty('%s.has.debug'%(ADDON_ID),'true')
         

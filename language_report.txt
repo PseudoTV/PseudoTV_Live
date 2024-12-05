@@ -1,7 +1,4 @@
 Language IDS w\empty strings: {
-    "30033": "",
-    "30034": "",
-    "30035": "",
     "30047": "",
     "30070": "",
     "30073": "",
@@ -27,10 +24,6 @@ Language IDS w\duplicate strings: {
     "Browse": [
         "30087",
         "32068"
-    ],
-    "Auto": [
-        "30022",
-        "32069"
     ],
     "Enter Channel Name": [
         "32079",
@@ -93,9 +86,6 @@ Language IDS not found in py files, possibly only in xml: {
     "30016": "Fillers",
     "30027": "Logo Resource",
     "30032": "Resources",
-    "30033": "",
-    "30034": "",
-    "30035": "",
     "30036": "Minimum Guide Days",
     "30037": "Maximum Guide Days",
     "30039": "Clear Recommended Blacklist",
@@ -299,7 +289,7 @@ Language IDS not found in py files, possibly only in xml: {
     "33178": "Select Vignette Image",
     "33182": "Enabled in discovered servers in the list below.",
     "33186": "Vignette Non-Linear Stretch",
-    "33202": "Minimum Debugging Level [LOGERROR - Default]",
+    "33202": "Minimum Debugging Level [LOGERROR - Default]\\nIf submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error.",
     "33214": "Default Sort Method for all channels, overridden per channel by SmartPlaylist, DynamicPlaylist and Adv. Channel rules.",
     "33308": "Install Log Uploader.",
     "33309": "Submit debugging log for review to http://paste.kodi.tv."

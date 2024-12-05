@@ -136,15 +136,15 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
 
     
     def set(self, cntrl, posx, posy, auto=False):
-        self.log('set, cntrl = %s, posx,posy = (%s,%s) Auto? %s'%(cntrl, posx, posy, auto))
+        self.log('set, cntrl = %s, posx,posy = (%s,%s) %s? %s'%(cntrl, posx, posy, LANGUAGE(30022), auto))
         if self.advRule: save = PROPERTIES.setProperty
         else:            save = SETTINGS.setSetting
         
         if cntrl == self._channelBug:
-            if auto: save("Channel_Bug_Position_XY","Auto")
+            if auto: save("Channel_Bug_Position_XY",LANGUAGE(30022))
             else:    save("Channel_Bug_Position_XY","(%s,%s)"%(posx, posy))
         elif cntrl == self._onNext:
-            if auto: save("On_Next_Position_XY","Auto")
+            if auto: save("On_Next_Position_XY",LANGUAGE(30022))
             else:    save("On_Next_Position_XY","(%s,%s)"%(posx, posy))
         
 
