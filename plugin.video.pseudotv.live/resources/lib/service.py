@@ -26,13 +26,11 @@ from jsonrpc    import JSONRPC
 
 class Player(xbmc.Player):
     sysInfo      = {}
-    isPseudoTV   = False
-    lastSubState = False
-    pendingStop  = False
     isIdle       = False
+    isPseudoTV   = False
+    pendingStop  = False
+    lastSubState = False
     restart      = None
-    minDuration  = None
-    accurateDuration = None
     rules        = RulesList()
     runActions   = rules.runActions
     
@@ -61,7 +59,6 @@ class Player(xbmc.Player):
 
 
     def updateGlobals(self):
-        self.lastSubState       = BUILTIN.isSubtitle()
         self.enableOverlay      = SETTINGS.getSettingBool('Overlay_Enable')
         self.infoOnChange       = SETTINGS.getSettingBool('Enable_OnInfo')
         self.disableTrakt       = SETTINGS.getSettingBool('Disable_Trakt')
@@ -72,7 +69,8 @@ class Player(xbmc.Player):
         
         
     def onPlayBackStarted(self):
-        self.pendingStop = True
+        self.pendingStop  = True
+        self.lastSubState = BUILTIN.isSubtitle()
         self.log('onPlayBackStarted, pendingStop = %s'%(self.pendingStop))
         
 
@@ -291,7 +289,6 @@ class Player(xbmc.Player):
 class Monitor(xbmc.Monitor):
     idleTime   = 0
     isIdle     = False
-    isPlaying  = False
     overlay    = None
     
     def __init__(self, service=None):
@@ -317,13 +314,6 @@ class Monitor(xbmc.Monitor):
 
 
     def chkIdle(self):
-        def __chkBackground():
-            if not self.overlay is None:
-                remanTime = abs(floor(self.service.player.getRemainingTime()))
-                if self.overlay.background is None and remanTime <= 2:
-                    self.log('__chkBackground, toggleBackground remaining playback = %s'%(remanTime))
-                    self.overlay.toggleBackground()
-        
         def __chkResumeTime():
             if self.service.player.sysInfo.get('isPlaylist',False):
                 file = self.service.player.getPlayingFile()
@@ -336,21 +326,27 @@ class Monitor(xbmc.Monitor):
                 self.log('__chkSleepTimer, sleepTime = %s'%(self.service.player.sleepTime))
                 self.triggerSleep()
         
+        def __chkBackground():
+            if not self.overlay is None:
+                remanTime = abs(floor(self.service.player.getRemainingTime()))
+                if self.overlay.background is None and remanTime <= 2:
+                    self.log('__chkBackground, toggleBackground remaining playback = %s'%(remanTime))
+                    self.overlay.toggleBackground()
+        
         self.isIdle, self.idleTime = self.getIdle()
         if SETTINGS.getSettingBool('Debug_Enable'): self.log('chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
         if self.service.player.isPseudoTV: 
-            self.isPlaying = self.service.player.isPlaying()
-            if self.isPlaying:
-                __chkBackground()
+            if self.service.player.isPlaying():
                 __chkResumeTime()
                 __chkSleepTimer()
+                __chkBackground()
             if self.isIdle: self.toggleOverlay(True)
             else:           self.toggleOverlay(False)
             
 
     def toggleOverlay(self, state: bool=True):
         if state and self.service.player.enableOverlay:
-            if self.overlay is None and self.isPlaying:
+            if self.overlay is None and self.service.player.isPlaying():
                 self.log("toggleOverlay, state = %s"%(state))
                 self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
                 self.overlay.show()
@@ -468,7 +464,6 @@ class Service():
 
 
     def __tasks(self):
-        if SETTINGS.getSettingBool('Debug_Enable'): self.log('__tasks')
         self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
            
                 

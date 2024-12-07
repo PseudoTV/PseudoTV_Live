@@ -105,7 +105,7 @@ class Library:
         def __clear():
             for label, func in list(self.libraryFUNCS.items()):
                 cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
-                DIALOG.notificationDialog('Clearing %s Cache'%(label),time=5)
+                DIALOG.notificationDialog(LANGUAGE(30070)%(label),time=5)
                 self.cache.clear(cacheName,wait=5)
                 
         def __update(type, item):

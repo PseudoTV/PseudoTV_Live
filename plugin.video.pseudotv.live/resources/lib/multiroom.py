@@ -96,7 +96,7 @@ class Multiroom:
         
          
     def addServer(self, payload={}):
-        self.log('addServer, payload = %s'%(payload))
+        self.log('addServer, name = %s'%(payload.get('name')))
         if payload and payload.get('name'):
             payload['online'] = True
             servers = self.getDiscovery()

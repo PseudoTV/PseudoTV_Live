@@ -85,7 +85,13 @@ class Utilities:
             return content
                 
         def __cleanPayload(payload):
-            payload['debug']    = loadJSON(__cleanLog(dumpJSON(payload.get('debug',{}),idnt=4)))
+            def __getDebug(payload): #only post errors
+                debug = payload.get('debug',{})
+                # for key in list(debug.keys()):
+                    # if key in ['LOGDEBUG','LOGINFO']: debug.pop(key)
+                return debug
+                    
+            payload['debug']    = loadJSON(__cleanLog(dumpJSON(__getDebug(payload),idnt=4)))
             payload['channels'] = loadJSON(__cleanLog(dumpJSON(payload.get('channels',[]),idnt=4)))
             payload['m3u']      = loadJSON(__cleanLog(dumpJSON(payload.get('m3u',[]),idnt=4)))
             [payload.pop(key) for key in ['host','remotes','bonjour','library','servers'] if key in payload]

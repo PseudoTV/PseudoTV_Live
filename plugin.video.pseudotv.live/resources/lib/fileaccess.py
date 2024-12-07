@@ -29,7 +29,6 @@ class FileAccess:
     @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):
         fle = 0
-        log("FileAccess: trying to open %s"%filename)
         try: return VFSFile(filename, mode)
         except UnicodeDecodeError: return FileAccess.open(filename, mode, encoding)
         return fle
@@ -204,7 +203,6 @@ class FileAccess:
 
 class VFSFile:
     def __init__(self, filename, mode):
-        log("VFSFile: trying to open %s"%filename)
         if mode == 'w':
             if not FileAccess.exists(filename): 
                 FileAccess.makedirs(os.path.split(filename)[0])

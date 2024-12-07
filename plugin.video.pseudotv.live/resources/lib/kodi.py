@@ -383,9 +383,9 @@ class Settings:
             xmltv = XMLTVS()
             payload.pop('updated')
             payload.pop('md5')
-            payload['library'] = Library().getLibrary()
             payload['m3u']     = M3U().getM3U()
-            payload['xmltv']   = {'stations':xmltv.getChannels(), 'recordings':xmltv.getRecordings(), 'programmes':dict([(key,datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)) for key, value in list(dict(xmltv.loadStopTimes()).items())])}
+            payload['xmltv']   = {'stations':xmltv.getChannels(), 'recordings':xmltv.getRecordings(), 'programmes':[{'id':key,'end-time':datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
+            payload['library'] = Library().getLibrary()
             payload['servers'] = Multiroom().getDiscovery()
             del xmltv
             return payload
@@ -834,7 +834,7 @@ class Properties:
     #GET
     def getEXTProperty(self, key):
         value = xbmcgui.Window(10000).getProperty(key)
-        self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%(str(value)[:128])))
+        if not '.TRASH' in key: self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%(str(value)[:128])))
         return value
         
         
@@ -871,7 +871,7 @@ class Properties:
 
     #SET
     def setEXTProperty(self, key, value):
-        self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((str(value)[:128]))))
+        if not '.TRASH' in key: self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((str(value)[:128]))))
         xbmcgui.Window(10000).setProperty(key,str(value))
         return value
         
@@ -1363,7 +1363,7 @@ class Dialog:
                 fle   = FileAccess.open(strm,'r')
                 paths = [line for line in fle.readlines() if not line.startswith('#') and '://' in line]
                 fle.close()
-                if len(paths) == 0: return self.notificationDialog(LANGUAGE(32018)%("Strms"))
+                if len(paths) == 0: return self.notificationDialog(LANGUAGE(32018)%(LANGUAGE(30047)))
             select = self.selectDialog(paths, LANGUAGE(32080), useDetails=False, multi=False)
             self.log("importSTRM, strm = %s paths = %s"%(strm,paths))
             if not select is None: return paths[select]

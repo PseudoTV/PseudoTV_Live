@@ -181,14 +181,20 @@ class Overlay():
     def show(self):
         self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
-        self.toggleVignette(), self.toggleOnNext(), self.toggleBug()
+        self.toggleVignette()
+        self.toggleOnNext()
+        self.toggleBug()
 
    
     def close(self):
         self.log('close')
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
-        self.toggleVignette(False), self._cancelOnNext(), self._cancelBug() 
-        for control, visible in list(self.controlManager.items()): self._removeControl(control)
+        self.toggleVignette(False)
+        self._cancelOnNext()
+        self._cancelBug() 
+        
+        for control, visible in list(self.controlManager.items()):
+            self._removeControl(control)
         
 
     def _hasControl(self, control):

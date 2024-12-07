@@ -1,6 +1,7 @@
 v.0.5.7
+-Fixed PseudoTV not respecting user subtitle preference.
 -Fixed Channel bug and On-Next position not changing based on user settings.
--Improved Background Interface.
+-Improved Background Interface and content transitioning.
 -Fixed Deadlocking issue when checking multi-room status on startup.
 -Improved URL caching.
 -Added Experimental new adv. channel rule "Pause Channel". The rule pauses channel content when not viewing.

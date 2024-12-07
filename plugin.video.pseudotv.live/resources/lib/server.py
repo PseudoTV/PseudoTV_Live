@@ -133,7 +133,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                                 channels = list(Channels()._verify(incoming))
                                 self.log('do_POST incoming verified channels = %s'%(len(channels)))
                                 # if myChannels.setChannels(self.rfile.read(int(self.headers['content-length']))):
-                                DIALOG.notificationDialog('Channels updated by %s'%(incoming.get('name',ADDON_NAME)))
+                                DIALOG.notificationDialog(LANGUAGE(30085)%(incoming.get('name',ADDON_NAME)))
                             return self.send_response(200, "OK")
                         else: self.send_error(401, "Not found")
                     return self.send_error(401, "Not verified")

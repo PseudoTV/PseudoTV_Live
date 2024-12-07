@@ -206,7 +206,7 @@ msgid "Remove Server"
 msgstr ""
 
 msgctxt "#30047"
-msgid ""
+msgid "Strms"
 msgstr ""
 
 msgctxt "#30048"
@@ -298,7 +298,7 @@ msgid "Third-Party"
 msgstr ""
 
 msgctxt "#30070"
-msgid ""
+msgid "Clearing %s Cache"
 msgstr ""
 
 msgctxt "#30071"
@@ -310,7 +310,7 @@ msgid "Debugging"
 msgstr ""
 
 msgctxt "#30073"
-msgid ""
+msgid "%s\nVersion: [B]%s[/B]"
 msgstr ""
 
 msgctxt "#30074"
@@ -358,7 +358,7 @@ msgid "Disable Cache while Debugging"
 msgstr ""
 
 msgctxt "#30085"
-msgid ""
+msgid "Channels updated by %s"
 msgstr ""
 
 msgctxt "#30086"
@@ -928,7 +928,7 @@ msgid "No Duration Found!"
 msgstr ""
                
 msgctxt "#32033"
-msgid ""
+msgid "Offline"
 msgstr ""
 
 msgctxt "#32034"
@@ -1252,7 +1252,7 @@ msgid "Recovering Channel"
 msgstr ""
 
 msgctxt "#32114"
-msgid ""
+msgid "Online"
 msgstr ""
 
 msgctxt "#32115"

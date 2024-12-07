@@ -560,7 +560,7 @@ class JSONRPC:
             
             
     def getCallback(self, sysInfo={}):
-        self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(sysInfo.get('chid'),sysInfo.get('radio',False),sysInfo.get('isPlaylist',False)))
+        self.log('getCallback, id = %s, mode = %s, radio = %s, isPlaylist = %s'%(sysInfo.get('chid'),sysInfo.get('mode'),sysInfo.get('radio',False),sysInfo.get('isPlaylist',False)))
         def _matchJSON():#requires 'pvr://' json whitelisting.
             results = self.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir={'True':'radio','False':'tv'}[str(sysInfo.get('radio',False))])}, cache=False).get('files',[])
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
@@ -572,13 +572,14 @@ class JSONRPC:
                             if item.get('label','').lower() == sysInfo.get('name','').lower() and decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
                                 self.log('getCallback: _matchJSON, id = %s, found file = %s'%(sysInfo.get('chid'),item.get('file')))
                                 return item.get('file')
-                                
+                  
         if sysInfo.get('mode','').lower() == 'live' and sysInfo.get('chpath'):
             callback = sysInfo.get('chpath')
         elif sysInfo.get('isPlaylist'):
             callback = sysInfo.get('citem',{}).get('url')
         else:
-            callback = _matchJSON()
+            callback = sysInfo.get('callback','')
+        if not callback: callback = _matchJSON()
         self.log('getCallback: returning callback = %s'%(callback))
         return callback
         

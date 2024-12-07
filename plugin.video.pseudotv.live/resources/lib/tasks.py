@@ -162,7 +162,7 @@ class Tasks():
         ONLINE_VERSION = self.getOnlineVersion()
         if ADDON_VERSION < ONLINE_VERSION: 
             update = True
-            DIALOG.notificationDialog('%s\nVersion: [B]%s[/B]'%(LANGUAGE(32168),ONLINE_VERSION))
+            DIALOG.notificationDialog(LANGUAGE(30073)%(LANGUAGE(32168),ONLINE_VERSION))
         elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion', checksum=ADDON_VERSION) or '0.0.0'):
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION, checksum=ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')

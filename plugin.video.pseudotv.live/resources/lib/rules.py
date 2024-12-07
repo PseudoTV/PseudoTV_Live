@@ -896,7 +896,7 @@ class DurationOptions(BaseRule): #CHANNEL RULES [500-599]
         self.optionLabels       = [LANGUAGE(30049),LANGUAGE(30052),"Minimum Duration"]
         self.optionValues       = [SETTINGS.getSettingInt('Duration_Type'),SETTINGS.getSettingBool('Store_Duration'),SETTINGS.getSettingInt('Seek_Tolerance')]
         self.optionDescriptions = [LANGUAGE(33015),LANGUAGE(33049),LANGUAGE(33052),"Minimum Duration"]
-        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP,RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
+        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30050):0,LANGUAGE(30051):1},[],list(range(0,605,5))]
         self.storedValues       = [[],[],[]]
 
