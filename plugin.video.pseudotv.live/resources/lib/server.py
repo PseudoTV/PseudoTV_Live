@@ -85,7 +85,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.monitor = monitor
         self.cache   = SETTINGS.cache
         try: BaseHTTPRequestHandler.__init__(self, request, client_address, server)
-        except (IOError, OSError) as e: pass
+        except: pass
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):

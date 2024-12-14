@@ -103,9 +103,14 @@ class Builder:
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
 
 
-    def build(self, channels=None):
+    def build(self, channels: list=[]):
+        def __hasProgrammes(cacheResponse):
+            if isinstance(cacheResponse,list):
+                if len(cacheResponse) > 0: return True
+            return False
+            
         with PROPERTIES.legacy():
-            if channels is None: channels = Channels().getChannels()
+            if not channels: channels = Channels().getChannels()
             if not channels:
                 self.log('build, no verified channels found!')
                 return False, False
@@ -142,7 +147,7 @@ class Builder:
                     
                     cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                     if cacheResponse:
-                        if self.addChannelStation(citem) and (isinstance(cacheResponse,list) and len(cacheResponse) > 0):
+                        if self.addChannelStation(citem) and __hasProgrammes(cacheResponse):
                             updated.add(self.addChannelProgrammes(citem, cacheResponse)) #added xmltv lineup entries.
                     else: 
                         if self.completeBuild: self.pErrors.append(LANGUAGE(32026))

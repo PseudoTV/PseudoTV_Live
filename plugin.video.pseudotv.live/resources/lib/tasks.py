@@ -217,10 +217,10 @@ class Tasks():
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
-    def chkChannels(self, channels=None):
+    def chkChannels(self, channels: list=[]):
         try:
             builder = Builder(self.service)
-            if channels is None:
+            if not channels:
                 channels = sorted(builder.verify(), key=itemgetter('number'))
                 SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
                 PROPERTIES.setChannels(len(channels) > 0)
