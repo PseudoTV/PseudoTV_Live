@@ -81,16 +81,16 @@ class XSP:
             xml.close()
             
             try: media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
-            except Exception as e: self.log("parseXSP, parsing media failed! %s"%(e), xbmc.LOGDEBUG)
+            except Exception as e: self.log("parseXSP, no media type", xbmc.LOGDEBUG)
             
             try: limit = (int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue) or limit)
-            except Exception as e: self.log("parseXSP, no xsp limit set", xbmc.LOGDEBUG)
+            except Exception as e: self.log("parseXSP, no limit set", xbmc.LOGDEBUG)
 
             try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()}) #todo pop rules to filter var.
-            except Exception as e: self.log("parseXSP, parsing method failed! %s"%(e), xbmc.LOGDEBUG)
+            except Exception as e: self.log("parseXSP, no sort method", xbmc.LOGDEBUG)
             
             try: sort.update({"order":dom.getElementsByTagName('order')[0].getAttribute('direction').lower()})#todo pop rules to filter var.
-            except Exception as e: self.log("parseXSP, parsing order failed! %s"%(e), xbmc.LOGDEBUG)
+            except Exception as e: self.log("parseXSP, no sort direction", xbmc.LOGDEBUG)
 
             try:
                 type = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value

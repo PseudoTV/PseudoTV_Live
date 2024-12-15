@@ -48,8 +48,8 @@ class Channels:
                 
                 
     def _save(self, file=CHANNELFLEPATH) -> bool:
-        self.channelDATA['uuid'] = SETTINGS.getMYUUID()
-        self.channelDATA['channels'] = sorted(self.channelDATA['channels'], key=itemgetter('number'))
+        self.channelDATA['uuid']     = SETTINGS.getMYUUID()
+        self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
         self.log('_save, channels = %s'%(len(self.channelDATA['channels'])))
         return setJSON(file,self.channelDATA)
 
@@ -81,6 +81,11 @@ class Channels:
         
     def getType(self, type: str):
         return list([citem for citem in self.getChannels() if citem.get('type') == type])
+
+
+    def sortChannels(self, channels: list) -> list:
+        try:    return sorted(channels, key=itemgetter('number'))
+        except: return channels
 
 
     def setChannels(self, channels: list=[]) -> bool:

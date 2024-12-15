@@ -26,7 +26,6 @@ from jsonrpc    import JSONRPC
 
 class Player(xbmc.Player):
     sysInfo      = {}
-    isIdle       = False
     isPseudoTV   = False
     pendingStop  = False
     lastSubState = False

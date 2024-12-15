@@ -128,7 +128,7 @@ class Library:
             return items
 
         if force: #clear library cache.
-            with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
+            with BUILTIN.busy_dialog():
                 __clear()
                 
         complete = True 

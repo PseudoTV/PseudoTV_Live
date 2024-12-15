@@ -207,7 +207,8 @@ class XMLTVS:
 
 
     def sortChannels(self, channels: list) -> list:
-        return sorted(channels, key=itemgetter('display-name'))
+        try:    return sorted(channels, key=itemgetter('display-name'))
+        except: return channels
         
 
     def sortProgrammes(self, programmes: list) -> list:

@@ -99,7 +99,7 @@ class Tasks():
         self.log('chkPVRBackend')
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
             if not SETTINGS.hasPVRInstance():
-                with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
+                with BUILTIN.busy_dialog():
                     SETTINGS.setPVRPath(USER_LOC, SETTINGS.getFriendlyName())
               
 
@@ -142,10 +142,10 @@ class Tasks():
         id = PROPERTIES.getUpdateChannelID()
         if id:
             builder = Builder(self.service)
-            citem   = [citem for citem in sorted(builder.verify(), key=itemgetter('number')) if citem.get('id') == id]
+            citem   = builder.sortChannels([citem for citem in builder.verify() if citem.get('id') == id])
             del builder
             self.log('_chkChannelUpdate, id = %s, citem = %s'%(id,citem))
-            return self._que(self.chkChannels,citem)
+            return self._que(self.chkChannels,1,citem)
             
                   
     @cacheit(expiration=datetime.timedelta(minutes=10))
@@ -221,7 +221,7 @@ class Tasks():
         try:
             builder = Builder(self.service)
             if not channels:
-                channels = sorted(builder.verify(), key=itemgetter('number'))
+                channels = builder.sortChannels(builder.verify())
                 SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
                 PROPERTIES.setChannels(len(channels) > 0)
                 PROPERTIES.clearUpdateChannels() #updating all channels clear any pending individual channel updates
@@ -258,7 +258,15 @@ class Tasks():
 
     def chkPVRRefresh(self):
         self.log('chkPVRRefresh')
-        self._que(togglePVR,1,*(False,True))
+        self._que(self.chkPVRToggle,1)
+
+
+    def chkPVRToggle(self):
+        isIdle    = self.service.monitor.isIdle
+        isPlaying = self.service.player.isPlaying()
+        self.log('chkPVRToggle, isIdle = %s, isPlaying = %s'%(isIdle,isPlaying))
+        if isIdle and not isPlaying: togglePVR(False,True)
+        else:                        self.chkPVRRefresh()
 
 
     def chkFillers(self, channels=None):
@@ -312,7 +320,7 @@ class Tasks():
     def getChannels(self):
         try:
             builder  = Builder(self.service)
-            channels = sorted(builder.verify(), key=itemgetter('number'))
+            channels = builder.sortChannels(builder.verify())
             del builder
             self.log('getChannels, channels = %s'%(len(channels)))
             return channels
@@ -325,7 +333,7 @@ class Tasks():
         nChannels = self.getChannels()
         if channels != nChannels:
             self.log('chkChannelChange, channels changed %s => %s: queueing chkChannels'%(len(channels),len(nChannels)))
-            self._que(self.chkChannels)
+            self._que(self.chkChannels,1,diffLSTDICT(channels,nChannels))
             return nChannels
         return channels
 
@@ -347,7 +355,7 @@ class Tasks():
         with PROPERTIES.interruptActivity():
             self.log('setUserPath, old = %s, new = %s'%(old,new))
             dia = DIALOG.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
-            with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
+            with BUILTIN.busy_dialog():
                 fileItems = self.jsonRPC.walkListDirectory(old, depth=-1, appendPath=True)
             
             cnt = 0

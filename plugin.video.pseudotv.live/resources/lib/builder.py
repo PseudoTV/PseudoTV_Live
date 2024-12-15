@@ -115,7 +115,7 @@ class Builder:
                 self.log('build, no verified channels found!')
                 return False, False
                 
-            channels  = sorted(self.verify(channels), key=itemgetter('number'))
+            channels  = self.sortChannels(self.verify(channels))
             now       = getUTCstamp()
             start     = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour
             stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
@@ -161,6 +161,10 @@ class Builder:
             self.log('build, completeBuild = %s, updated = %s, saved = %s'%(self.completeBuild,bool(updated),self.saveChannelLineups()))
             return self.completeBuild, bool(updated)
 
+
+    def sortChannels(self, channels: list) -> list:
+        return Channels().sortChannels(channels)
+        
         
     def getFileList(self, citem: dict, now: time, start: time) -> bool and list:
         self.log('getFileList, [%s] start = %s'%(citem['id'],start))

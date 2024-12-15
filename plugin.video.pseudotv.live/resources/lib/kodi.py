@@ -384,7 +384,9 @@ class Settings:
             payload.pop('updated')
             payload.pop('md5')
             payload['m3u']     = M3U().getM3U()
-            payload['xmltv']   = {'stations':xmltv.getChannels(), 'recordings':xmltv.getRecordings(), 'programmes':[{'id':key,'end-time':datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
+            payload['xmltv']   = {'stations'  :[{'id':station.get('id'),'display-name':station.get('display-name',[['','']])[0][0],'icon':station.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for station in xmltv.getChannels()],
+                                  'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in xmltv.getRecordings()], 
+                                  'programmes':[{'id':key,'end-time':datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
             payload['library'] = Library().getLibrary()
             payload['servers'] = Multiroom().getDiscovery()
             del xmltv
@@ -1075,10 +1077,13 @@ class Builtin:
 
 
     @contextmanager
-    def busy_dialog(self, isPlaying=False):
-        if not self.isBusyDialog() and not isPlaying:
+    def busy_dialog(self):
+        if not self.isBusyDialog() and not self.getInfoBool('Playing','Player'):
             self.executebuiltin('ActivateWindow(busydialognocancel)')
-            try: yield
+            try:
+                if self.getInfoBool('Playing','Player'):
+                    self.executebuiltin('Dialog.Close(busydialognocancel)')
+                yield
             finally:
                 self.executebuiltin('Dialog.Close(busydialognocancel)')
         else: yield

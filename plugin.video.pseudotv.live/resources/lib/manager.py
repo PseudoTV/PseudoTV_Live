@@ -61,7 +61,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.eChannels      = self.__loadChannels(SETTINGS.getSetting('Default_Channels'))
             if self.eChannels is None: self.closeManager()
             else:
-                self.channelList = sorted(self.createChannelList(self.buildArray(), self.eChannels), key=itemgetter('number'))
+                self.channelList = self.channels.sortChannels(self.createChannelList(self.buildArray(), self.eChannels))
                 self.newChannels = self.channelList.copy()
                 
                 if self.startChannel == -1:            self.startChannel = self.getFirstAvailChannel()
@@ -304,7 +304,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             value = citem.get(key,' ')
             if   key in ["number","type","logo","id","catchup"]: return # keys to ignore, internal use only.
             elif isinstance(value,(list,dict)): 
-                if   key == "group" : value = '|'.join(sorted(set(value)))
+                if   key == "group" : value = ('|'.join(sorted(set(value))) or LANGUAGE(30127))
                 elif key == "path"  : value = '|'.join(value)
                 elif key == "rules" : value = '|'.join([rule.name for key, rule in list(self.rule.loadRules([citem]).get(citem['id'],{}).items())])#todo load rule names
             elif not isinstance(value,str): value = str(value)
@@ -417,8 +417,8 @@ class Manager(xbmcgui.WindowXMLDialog):
     def getGroups(self, citem: dict={}, groups: list=[]):
         groups  = list([_f for _f in groups if _f])
         ngroups = sorted([_f for _f in set(SETTINGS.getSetting('User_Groups').split('|') + GROUP_TYPES + groups) if _f])
-        if len(ngroups) > 0: 
-            groups = [ngroups[idx] for idx in DIALOG.selectDialog(ngroups,header=LANGUAGE(32081),preselect=findItemsInLST(ngroups,groups),useDetails=False)]
+        if len(ngroups) > 0: groups = [ngroups[idx] for idx in DIALOG.selectDialog(ngroups,header=LANGUAGE(32081),preselect=findItemsInLST(ngroups,groups),useDetails=False)]
+        if not groups:       groups = [LANGUAGE(30127)]
         self.log('getGroups, groups = %s'%(groups))
         return groups, citem
     
@@ -653,7 +653,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if citem['number'] <= CHANNEL_LIMIT: citem['type'] = "Custom"
                 return self.setID(citem)
             
-        channelList = sorted([_f for _f in [_validate(channel) for channel in channelList] if _f], key=itemgetter('number'))
+        channelList = self.channels.sortChannels([_f for _f in [_validate(channel) for channel in channelList] if _f])
         self.log('validateChannels, channelList = %s'%(len(channelList)))
         return channelList
               

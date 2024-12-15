@@ -268,7 +268,8 @@ class M3U:
 
 
     def sortStations(self, stations, key='number'):
-        return sorted(stations, key=itemgetter(key))
+        try:    return sorted(stations, key=itemgetter(key))
+        except: return stations
         
         
     def getM3U(self):

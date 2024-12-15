@@ -1569,7 +1569,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
         self.log('_buildSchedule, id = %s, fileList = %s'%(citem.get('id'),len(fileList)))
         return builder.buildCells(citem, duration=self._getTotDuration(fileList), entries=1, info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
                                                                                                    "episodetitle":'Updated: %s'%(datetime.datetime.fromtimestamp(time.time()).strftime(DTJSONFORMAT)),
-                                                                                                   "plot":'Size: %s videos\nTotal Runtime: %s hrs.'%(len(fileList),round(self._getTotDuration(fileList)//60//60)),
+                                                                                                   "plot":'Size: %s videos \nTotal Runtime: %s hrs.'%(len(fileList),round(self._getTotDuration(fileList)//60//60)),
                                                                                                    "art":{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
 
     def runAction(self, actionid, citem, parameter, inherited):
