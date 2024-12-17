@@ -178,7 +178,7 @@ class Player(xbmc.Player):
     def setTrakt(self, state: bool=SETTINGS.getSettingBool('Disable_Trakt')):
         self.log('setTrakt, state = %s'%(state))
         # https://github.com/trakt/script.trakt/blob/d45f1363c49c3e1e83dabacb70729cc3dec6a815/resources/lib/kodiUtilities.py#L104
-        if state: PROPERTIES.setEXTProperty('script.trakt.paused',str(state).lower())
+        if state: PROPERTIES.setEXTPropertyBool('script.trakt.paused',state)
         else:     PROPERTIES.clearEXTProperty('script.trakt.paused')
 
 
@@ -400,6 +400,7 @@ class Monitor(xbmc.Monitor):
                 
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged')
+        self.service.player.updateGlobals()
         self.service.currentChannels = self.service.tasks.chkChannelChange(self.service.currentChannels)  #check for channel change, rebuild if needed
         self.service.currentSettings = self.service.tasks.chkSettingsChange(self.service.currentSettings) #check for settings change, take action if needed
         
@@ -414,7 +415,7 @@ class Service():
         PROPERTIES.getInstanceID()
         SETTINGS.getMYUUID()
         
-        self.pendingRestart    = False
+        self.pendingRestart    = PROPERTIES.setPendingRestart(False)
         self.jsonRPC           = JSONRPC()
         self.player            = Player(service=self)
         self.monitor           = Monitor(service=self)
@@ -440,7 +441,7 @@ class Service():
     def __restart(self, wait=1.0) -> bool:
         pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart() | self.monitor.waitForAbort(wait))
         if pendingRestart != self.pendingRestart:
-            self.pendingRestart = PROPERTIES.setPendingRestart(self.pendingRestart)
+            self.pendingRestart = PROPERTIES.setPendingRestart(pendingRestart)
             self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
         return self.pendingRestart
          

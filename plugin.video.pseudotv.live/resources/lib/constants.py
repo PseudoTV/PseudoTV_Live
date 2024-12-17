@@ -41,7 +41,7 @@ PLAYER              = xbmc.Player
 #constants
 FIFTEEN             = 15    #unit
 DISCOVERY_TIMER     = 60    #secs
-SUSPEND_TIMER       = 30    #secs
+SUSPEND_TIMER       = 15    #secs
 DISCOVER_INTERVAL   = 30    #secs
 MIN_EPG_DURATION    = 10800 #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
@@ -82,7 +82,19 @@ AUTOTUNE_TYPES      = ["Playlists",
                        "Recommended",
                        "Services"]
 
-GROUP_TYPES         = ['Addon', 'Directory', 'TV', 'Movies', 'Music', 'Other', 'PVR', 'Plugin', 'Radio', 'Smartplaylist', 'UPNP', 'IPTV'] + AUTOTUNE_TYPES
+GROUP_TYPES         = ['Addon', 
+                       'Custom',
+                       'Directory', 
+                       'TV', 
+                       'Movies', 
+                       'Music', 
+                       'Other', 
+                       'PVR', 
+                       'Plugin', 
+                       'Radio', 
+                       'Smartplaylist', 
+                       'UPNP', 
+                       'IPTV'] + AUTOTUNE_TYPES
 
 WEB_TYPES           = ["http",
                        "ftp",

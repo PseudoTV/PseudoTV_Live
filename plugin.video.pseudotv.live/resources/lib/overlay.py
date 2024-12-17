@@ -121,16 +121,19 @@ class Overlay():
         def onAVStarted(self):
             self.overlay.log('onAVStarted')
             self.overlay.toggleBackground(state=False)
+            self.overlay._cancelOnNext()
 
 
         def onPlayBackEnded(self):
             self.overlay.log('onPlayBackEnded')
             self.overlay.toggleBackground()
-            
+            self.overlay._cancelBug() 
+                
             
         def onPlayBackStopped(self):
             self.overlay.log('onPlayBackStopped')
             self.overlay.toggleBackground(state=False)
+            self.overlay._cancelBug() 
             
 
     def __init__(self, jsonRPC, player=None):

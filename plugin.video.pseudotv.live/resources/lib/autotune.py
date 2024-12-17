@@ -53,17 +53,20 @@ class Autotune:
         customChannels = self.getCustom()
         autoChannels   = self.getAutotuned()
         self.log('_runTune, custom channels = %s,  autotune channels = %s'%(len(customChannels),len(autoChannels)))
+        
         if len(autoChannels) > 0: #rebuild existing autotune. 
             rebuild = True
-            PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
+            PROPERTIES.setEXTPropertyBool('%s.has.Predefined'%(ADDON_ID),True)
             if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32128))
+            
         elif len(customChannels) == 0 and not PROPERTIES.hasAutotuned():
             autoEnabled = []
             [autoEnabled.extend(self.library.getEnabled(type)) for type in AUTOTUNE_TYPES]
             if len(autoEnabled) > 0:
                 self.log('_runTune, library enabled items = %s; recovering enabled items'%(len(autoEnabled)))
                 rebuild = True   #recover empty channels.json with enabled library.json items.
-            else: samples = True #create sample channels "autotune".
+            else:
+                samples = True #create sample channels "autotune".
             
             if samples:
                 opt = ''
@@ -76,15 +79,17 @@ class Autotune:
                 elif hasServers:
                     opt = LANGUAGE(30092)
                     msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32215))
+                    
                 retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
                 if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
                 elif retval == 2:
                     if   hasBackup:  return Backup().recoverChannels()
                     elif hasServers: return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Select_Server)')
-                else: return True
+                elif not PROPERTIES.hasFirstrun(): return openAddonSettings()       
         else:
             if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32058))
             return 
+            
         for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
             if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
             self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)

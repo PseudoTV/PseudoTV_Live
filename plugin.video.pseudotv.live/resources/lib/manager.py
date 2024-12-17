@@ -417,8 +417,13 @@ class Manager(xbmcgui.WindowXMLDialog):
     def getGroups(self, citem: dict={}, groups: list=[]):
         groups  = list([_f for _f in groups if _f])
         ngroups = sorted([_f for _f in set(SETTINGS.getSetting('User_Groups').split('|') + GROUP_TYPES + groups) if _f])
-        if len(ngroups) > 0: groups = [ngroups[idx] for idx in DIALOG.selectDialog(ngroups,header=LANGUAGE(32081),preselect=findItemsInLST(ngroups,groups),useDetails=False)]
-        if not groups:       groups = [LANGUAGE(30127)]
+        ngroups.insert(0, '-%s'%(LANGUAGE(30064)))
+        selects = DIALOG.selectDialog(ngroups,header=LANGUAGE(32081),preselect=findItemsInLST(ngroups,groups),useDetails=False)
+        if 0 in selects:
+            SETTINGS.setSetting('User_Groups',DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups')))
+            return self.getGroups(groups)
+        elif len(ngroups) > 0: groups = [ngroups[idx] for idx in selects]
+        if not groups:         groups = [LANGUAGE(30127)]
         self.log('getGroups, groups = %s'%(groups))
         return groups, citem
     

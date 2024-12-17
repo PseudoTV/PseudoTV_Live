@@ -127,7 +127,7 @@ class Resources:
     def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None:
         if auto: return ((SequenceMatcher(None, chname, name).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name.split(' ')[0]).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name).ratio() > .8) | (SequenceMatcher(None, chname, name.split(' ')[0]).ratio() > .8))
         else:
-            chnames  = list(set([chname, slugify(chname), validString(chname)]))
+            chnames  = list(set([chname, slugify(chname), validString(chname), chname.replace('and', '&'), chname.replace('&','and')]))
             renames  = list(set([name, slugify(name), validString(name)]))
             patterns = [getChannelSuffix, cleanChannelSuffix, stripRegion, splitYear]
             for chname in chnames:

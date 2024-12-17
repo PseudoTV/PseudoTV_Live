@@ -91,7 +91,7 @@ class Library:
         self.log('setLibrary')
         self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
         self.libraryDATA['library'][type] = items
-        PROPERTIES.setEXTProperty('%s.has.%s'%(ADDON_ID,slugify(type)),str(len(items)>0).lower())
+        PROPERTIES.setEXTPropertyBool('%s.has.%s'%(ADDON_ID,slugify(type)),len(items) > 0)
         SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabled(type)),len(items)))
         return self._save()
 
@@ -136,13 +136,9 @@ class Library:
         
         types = AUTOTUNE_TYPES
         for idx, type in enumerate(types):
-            if self.service._interrupt():
+            if self.service._interrupt() or self.service._suspend():
                 complete = False
                 break
-            # elif self.service._suspend():
-                # types.insert(idx,type)
-                # self.service.monitor.waitForAbort(SUSPEND_TIMER)
-                # continue
             else:
                 msg = LANGUAGE(30014)
                 func = self.libraryFUNCS[type]
@@ -419,7 +415,7 @@ class Library:
         whiteList = self.getWhiteList()
         whiteList.append(addonid)
         whiteList = sorted(set(whiteList))
-        if len(whiteList) > 0: PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),len(whiteList) > 0)
+        if len(whiteList) > 0: PROPERTIES.setEXTPropertyBool('%s.has.WhiteList'%(ADDON_ID),len(whiteList) > 0)
         return self.setWhiteList(whiteList)
         
 
@@ -461,6 +457,6 @@ class Library:
                     else:
                         self.addWhiteList(addonid)
                 
-        PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),str(len(self.getWhiteList()) > 0).lower())
-        PROPERTIES.setEXTProperty('%s.has.BlackList'%(ADDON_ID),str(len(self.getBlackList()) > 0).lower())
+        PROPERTIES.setEXTPropertyBool('%s.has.WhiteList'%(ADDON_ID),len(self.getWhiteList()) > 0)
+        PROPERTIES.setEXTPropertyBool('%s.has.BlackList'%(ADDON_ID),len(self.getBlackList()) > 0)
         SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))

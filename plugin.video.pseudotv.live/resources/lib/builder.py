@@ -354,8 +354,18 @@ class Builder:
                 file     = item.get('file','')
                 fileType = item.get('filetype','file')
                 if not item.get('type'): item['type'] = query.get('key','files')
-
-                if fileType == 'directory':
+                
+                if self.service._interrupt():
+                    self.jsonRPC.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #rollback pagination limits
+                    return [], []
+                    
+                elif self.service._suspend(): 
+                    items.insert(idx,item)
+                    self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
+                    self.service.monitor.waitForAbort(SUSPEND_TIMER)
+                    continue
+                    
+                elif fileType == 'directory':
                     dirList.append(item)
                     self.log("buildList, [%s] IDX = %s, appending directory: %s"%(citem['id'],idx,file),xbmc.LOGINFO)
                     

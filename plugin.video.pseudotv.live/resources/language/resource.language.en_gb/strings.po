@@ -274,7 +274,7 @@ msgid "Enable Automatic Guide Grouping"
 msgstr ""
 
 msgctxt "#30064"
-msgid "Enter Custom Channel Group"
+msgid "Added Group"
 msgstr ""
 
 msgctxt "#30065"
@@ -1755,7 +1755,7 @@ msgid "AutoTune Music Genres collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33012"
-msgid "Move critical files to a central location.\nPrevent storage thrashing by moving to HDD or Persistent (Restorable) RAMDISK"
+msgid "Move critical files to a central location.\nIf you're concerned with Write Amplification move to HDD or Persistent (Restorable) RAMDISK"
 msgstr ""
 
 msgctxt "#33013"
@@ -1951,7 +1951,7 @@ msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33121"
-msgid "Group Autotuned channel TV shows in blocks. [0 Disabled, 3 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
+msgid "Group Autotuned channel TV shows in blocks. [0 Disabled, 0 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
 msgstr ""
 
 msgctxt "#33125"

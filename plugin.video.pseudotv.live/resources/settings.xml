@@ -462,22 +462,6 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
-                <setting id="User_Groups" type="string" label="30064" help="33064" parent="Enable_Grouping">
-                    <level>2</level>
-                    <default/>
-                    <constraints>
-                        <allowempty>true</allowempty>
-                    </constraints>
-                    <dependencies>
-                        <dependency type="enable">
-                            <condition operator="is" setting="Enable_Grouping">true</condition>
-                        </dependency>
-                    </dependencies>
-                    <control type="button" format="action">
-                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, User_Groups)</data>
-                        <close>false</close>
-                    </control>
-                </setting>
             </group>
             <group id="3" label="30111">
                 <setting id="Run_While_Playing" type="boolean" label="32150" help="33150">
@@ -821,7 +805,7 @@
                 </setting>
                 <setting id="Enable_Even" type="integer" label="30121" help="33121">
                     <level>2</level>
-                    <default>3</default>
+                    <default>0</default>
                     <constraints>
                         <minimum>0</minimum>
                         <step>1</step>

@@ -236,12 +236,20 @@ def hasAddon(id, install=False, enable=False, force=False, notify=False):
     return False
 
 def openAddonSettings(ctl=(0,1),id=ADDON_ID):
+    BUILTIN.closeBusyDialog()
     BUILTIN.executebuiltin('Addon.OpenSettings(%s)'%id)
     xbmc.sleep(100)
     BUILTIN.executebuiltin('SetFocus(%i)'%(ctl[0]-200))
     xbmc.sleep(50)
     BUILTIN.executebuiltin('SetFocus(%i)'%(ctl[1]-180))
+    return True
 
+def startChannelBuild():
+    PROPERTIES.setAutotuned(False)
+    PROPERTIES.setEpochTimer('chkAutoTune')
+    BUILTIN.closeBusyDialog()
+    return BUILTIN.executebuiltin('ActivateWindow(home)')
+    
 def diffRuntime(dur, roundto=15):
     def ceil_dt(dt, delta):
         return dt + (datetime.datetime.min - dt) % delta

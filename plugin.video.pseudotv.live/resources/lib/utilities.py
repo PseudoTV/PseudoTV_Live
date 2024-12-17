@@ -124,11 +124,6 @@ class Utilities:
         else:      DIALOG.okDialog(LANGUAGE(32190)%(data))
                 
 
-    def userGroups(self):
-        self.log('userGroups')
-        SETTINGS.setSetting('User_Groups',DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups')))
-                
-
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.isRunning('OVERLAY_MANAGER'):
@@ -158,9 +153,9 @@ class Utilities:
                  {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)               , 'hide':False},#"Clean Start"
                  {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR                                     , 'hide':False},#"Force PVR reload"
                  {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart                                           , 'hide':False},#"Force PTVL reload"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkLibrary'%(ADDON_ID),'true')  , 'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('chkFillers',)                      ,'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('chkAutoTune',)                     ,'hide':False}] #Run Autotune
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTPropertyBool ,'args':('%s.chkLibrary'%(ADDON_ID),True), 'hide':False}, #Rescan library
+                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('chkFillers',)                      , 'hide':False}, #Rescan library
+                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':startChannelBuild                                                      , 'hide':False}] #Run Autotune
                 
         with BUILTIN.busy_dialog():
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide'))]
@@ -195,8 +190,7 @@ class Utilities:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
         
         if full: 
-            SETTINGS.setAutotuned(False)
-            PROPERTIES.setEpochTimer('chkPVRRefresh')
+            startChannelBuild()
         else:
             PROPERTIES.forceUpdateTime('chkChannels')
 
@@ -233,11 +227,6 @@ class Utilities:
             ctl = (0,2)
             self.defaultChannels()
             
-        #Options
-        elif param == 'User_Groups':
-            ctl = (2,10)
-            self.userGroups()
-            
         #Globals
         elif param.startswith('Move_Channelbug'):
             ctl = (3,15)
@@ -246,7 +235,7 @@ class Utilities:
             ctl = (3,15)
             self.openMoveUtil(2)
         elif param == 'Sort_Method':
-            ctl = (3,16)
+            ctl = (3,22)
             self.sortMethod()
             
         #Multi-Room
@@ -260,13 +249,13 @@ class Utilities:
             return self.buildMenu()
         elif param == 'Show_Wiki_QR':
             ctl = (6,4)
-            self.qrWiki()
+            return self.qrWiki()
         elif param == 'Show_Support_QR':
             ctl = (6,5)
-            self.qrSupport()
+            return self.qrSupport()
         elif param == 'Show_Remote_UI':
             ctl = (6,6)
-            self.qrRemote()
+            return self.qrRemote()
         elif param == 'Show_Changelog':
             ctl = (6,8)
             return self.showChangelog()
@@ -274,7 +263,7 @@ class Utilities:
         #Misc. Debug
         elif param == 'Debug_QR':
             ctl = (6,1)
-            self.qrDebug()
+            return self.qrDebug()
         return openAddonSettings(ctl)
 
 if __name__ == '__main__': Utilities(sys.argv).run()

@@ -132,7 +132,7 @@ class Tasks():
 
     def _chkPropTimer(self, key, func):
         key = '%s.%s'%(ADDON_ID,key)
-        if PROPERTIES.getEXTProperty(key) == 'true':
+        if PROPERTIES.getEXTPropertyBool(key):
             self.log('_chkPropTimer, key = %s'%(key))
             PROPERTIES.clearEXTProperty(key)
             self._que(func)
@@ -347,7 +347,6 @@ class Tasks():
                 action = actions.get(setting)
                 self.log('chkSettingsChange, detected change in %s - from: %s to: %s\naction = %s'%(setting,value,nSettings.get(setting),action))
                 self._que(action.get('func'),1,*action.get('args',()),**action.get('kwargs',{}))
-        self.service.player.updateGlobals()
         return nSettings
 
 

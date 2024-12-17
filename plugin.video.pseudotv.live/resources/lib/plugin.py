@@ -116,7 +116,7 @@ class Plugin:
             liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
             return liz
         
-        with BUILTIN.busy_dialog():
+        with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
             from rules import RulesList
             nextitems = RulesList().runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
             if nextitems:
@@ -155,7 +155,7 @@ class Plugin:
             return liz
             
         found = False
-        with BUILTIN.busy_dialog():
+        with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
             pvritem = self._matchChannel(name,chid,radio=False)
             if pvritem:
                 pastItems = pvritem.get('broadcastpast',[])
@@ -253,7 +253,7 @@ class Plugin:
             if self.sysInfo.get('fitem'):
                 liz = LISTITEMS.buildItemListItem(self.sysInfo['fitem'])
                 if (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')): #-> live
-                    if (self.sysInfo.get('seek',0) > self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < 100 ):
+                    if (self.sysInfo.get('seek',0) >= self.seekTOL) and (self.sysInfo.get('progresspercentage') >= 0 and self.sysInfo.get('progresspercentage') < self.seekTHD ):
                         self.log('playTV, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
                         liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
                         infoTag = ListItemInfoTag(liz,'video')
@@ -268,8 +268,8 @@ class Plugin:
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             if self.sysInfo.get('fitem'):#-> live playback from UI incl. listitem
                 liz = LISTITEMS.buildItemListItem(self.sysInfo['fitem'])
-                if (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')) or (self.sysInfo.get('seek',0) < self.seekTOL and self.sysInfo.get('progresspercentage',0) < self.seekTHD): #-> live
-                    if (self.sysInfo.get('seek',0) > self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < 100 ):
+                if (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')) or (self.sysInfo.get('seek',0) >= self.seekTOL and self.sysInfo.get('progresspercentage',0) < self.seekTHD): #-> live
+                    if (self.sysInfo.get('seek',0) >= self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < self.seekTHD):
                         self.log('playLive, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
                         liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
                         infoTag = ListItemInfoTag(liz,'video')
@@ -291,7 +291,7 @@ class Plugin:
             else:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
                 liz = xbmcgui.ListItem(name,path=vid)
                 liz.setProperty("IsPlayable","true")
-                if (self.sysInfo.get('seek',0) > self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < 100 ):
+                if (self.sysInfo.get('seek',0) >= self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < self.seekTHD):
                     self.log('playLive, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
                     liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
                     infoTag = ListItemInfoTag(liz,'video')
@@ -324,7 +324,7 @@ class Plugin:
             else: #-> recordings, non UI callbacks.
                 liz = xbmcgui.ListItem(title,path=vid)
                 liz.setProperty("IsPlayable","true")
-                if (self.sysInfo.get('seek',0) > self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < 100 ):
+                if (self.sysInfo.get('seek',0) >= self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < self.seekTHD):
                     self.log('playVOD, vid = %s, seek = %s'%(vid, self.sysInfo['seek']))
                     liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
                     infoTag = ListItemInfoTag(liz,'video')

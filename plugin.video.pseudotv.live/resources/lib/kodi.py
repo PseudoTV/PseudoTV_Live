@@ -184,13 +184,7 @@ class Settings:
         self.log('openGuide, opening %s'%(item.get('file',baseURL)))
         self.builtin.executebuiltin("Dialog.Close(all)") 
         self.builtin.executebuiltin("ReplaceWindow(TVGuide,%s)"%(item.get('file',baseURL)))
-                
-        
-    def openSettings(self):
-        self.log('openSettings')
-        REAL_SETTINGS.openSettings()
-    
-    
+                    
     #GET
     def _getSetting(self, func, key):
         try: 
@@ -646,15 +640,15 @@ class Properties:
         
         
     def setFirstrun(self, state=True):
-        return self.setEXTProperty('%s.has.Firstrun'%(ADDON_ID),state) == "true"
+        return self.setEXTPropertyBool('%s.has.Firstrun'%(ADDON_ID),state)
                
 
     def isRunning(self, key):
-        return self.getEXTProperty('%s.Running.%s'%(ADDON_ID,key)) == 'true'
+        return self.getEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key))
 
 
     def getLegacy(self):
-        return self.getEXTProperty('PseudoTVRunning') == 'True'
+        return self.getEXTPropertyBool('PseudoTVRunning')
 
 
     def forceUpdateTime(self, key):
@@ -680,78 +674,70 @@ class Properties:
 
 
     def setEpochTimer(self, key, state=True):
-        return self.setEXTProperty('%s.%s'%(ADDON_ID,key),str(state).lower())
+        return self.setEXTPropertyBool('%s.%s'%(ADDON_ID,key),state)
 
 
     def setAutotuned(self, state=True):
-        return self.setEXTProperty('%s.has.Autotuned'%(ADDON_ID),str(state).lower())
+        return self.setEXTPropertyBool('%s.has.Autotuned'%(ADDON_ID),state)
 
 
     def setChannels(self, state=True):
-        return self.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(state).lower())
+        return self.setEXTPropertyBool('%s.has.Channels'%(ADDON_ID),state)
 
 
     def setBackup(self, state=True):
-        return self.setEXTProperty('%s.has.Backup'%(ADDON_ID),str(state).lower())
+        return self.setEXTPropertyBool('%s.has.Backup'%(ADDON_ID),state)
 
 
     def setServers(self, state=True):
-        return self.setEXTProperty('%s.has.Servers'%(ADDON_ID),str(state).lower())
+        return self.setEXTPropertyBool('%s.has.Servers'%(ADDON_ID),state)
         
         
     def setEnabledServers(self, state=True):
-        return self.setEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),str(state).lower())
+        return self.setEXTPropertyBool('%s.has.Enabled_Servers'%(ADDON_ID),state)
         
         
     def setPendingRestart(self, state=True):
-        if state: Dialog().notificationDialog('%s\n%s'%(LANGUAGE(32157),LANGUAGE(32124)))
-        return self.setPropertyBool('pendingRestart',state)
+        if state: Dialog().notificationDialog(LANGUAGE(32124))
+        return self.setEXTPropertyBool('%s.pendingRestart'%(ADDON_ID),state)
         
 
     def setPendingInterrupt(self, state=True):
-        return self.setPropertyBool('pendingInterrupt',state)
+        return self.setEXTPropertyBool('pendingInterrupt',state)
 
         
     def setInterruptActivity(self, state=True):
-        return self.setPropertyBool('interruptActivity',state)
+        return self.setEXTPropertyBool('interruptActivity',state)
         
         
     def setPendingSuspend(self, state=True):
-        return self.setPropertyBool('pendingSuspend',state)
+        return self.setEXTPropertyBool('pendingSuspend',state)
         
 
     def setSuspendActivity(self, state=True):
-        return self.setPropertyBool('suspendActivity',state)
-        
-        
-    def isPseudoTVRunning(self):
-        return self.getEXTProperty('PseudoTVRunning') == 'true'
+        return self.setEXTPropertyBool('suspendActivity',state)
 
 
     @contextmanager
     def legacy(self):
-        monitor = MONITOR()
-        while not monitor.abortRequested() and self.isPseudoTVRunning():
-            if monitor.waitForAbort(.0001): break
-        del monitor
-        self.setEXTProperty('PseudoTVRunning','true')
-        try: yield
-        finally: self.setEXTProperty('PseudoTVRunning','false')
+        if not self.isPseudoTVRunning():
+            self.setEXTPropertyBool('PseudoTVRunning',True)
+            try: yield
+            finally: self.setEXTPropertyBool('PseudoTVRunning',False)
+        else: yield
 
 
     @contextmanager
     def setRunning(self, key):
-        monitor = MONITOR()
-        while not monitor.abortRequested() and self.isRunning(key):
-            if monitor.waitForAbort(.0001): break
-        del monitor
-        self.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'true')
-        try: yield
-        finally: self.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'false')
+        if not self.isRunning(key):
+            self.setEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key),True)
+            try: yield
+            finally: self.setEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key),False)
+        else: yield
 
 
     @contextmanager
-    def interruptActivity(self): #suspend/quit running background task.
+    def interruptActivity(self): #suspend/quit running background task
         if not self.isInterruptActivity():
             self.setInterruptActivity(True)
             try: yield
@@ -767,45 +753,49 @@ class Properties:
             finally: self.setSuspendActivity(False)
         else: yield
 
-        
+
     def hasAutotuned(self):
-        return self.getEXTProperty('%s.has.Autotuned'%(ADDON_ID)) == "true"
+        return self.getEXTPropertyBool('%s.has.Autotuned'%(ADDON_ID))
         
         
     def hasChannels(self):
-        return self.getEXTProperty('%s.has.Channels'%(ADDON_ID)) == "true"
+        return self.getEXTPropertyBool('%s.has.Channels'%(ADDON_ID))
 
 
     def hasBackup(self):
-        return self.getEXTProperty('%s.has.Backup'%(ADDON_ID)) == "true"
+        return self.getEXTPropertyBool('%s.has.Backup'%(ADDON_ID))
         
 
     def hasServers(self):
-        return self.getEXTProperty('%s.has.Servers'%(ADDON_ID)) == "true"
+        return self.getEXTPropertyBool('%s.has.Servers'%(ADDON_ID))
         
         
     def hasEnabledServers(self):
-        return self.getEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID)) == "true"
+        return self.getEXTPropertyBool('%s.has.Enabled_Servers'%(ADDON_ID))
         
         
     def isPendingRestart(self):
-        return self.getPropertyBool('pendingRestart')
+        return self.getEXTPropertyBool('%s.pendingRestart'%(ADDON_ID))
 
         
     def isPendingInterrupt(self):
-        return self.getPropertyBool('pendingInterrupt')
+        return self.getEXTPropertyBool('pendingInterrupt')
 
 
     def isInterruptActivity(self):
-        return self.getPropertyBool('interruptActivity')
+        return self.getEXTPropertyBool('interruptActivity')
 
 
     def isPendingSuspend(self):
-        return self.getPropertyBool('pendingSuspend')
+        return self.getEXTPropertyBool('pendingSuspend')
 
 
     def isSuspendActivity(self):
-        return self.getPropertyBool('suspendActivity')
+        return self.getEXTPropertyBool('suspendActivity')
+
+        
+    def isPseudoTVRunning(self):
+        return self.getEXTPropertyBool('PseudoTVRunning')
 
 
     def getKey(self, key, instanceID=True):
@@ -838,6 +828,10 @@ class Properties:
         value = xbmcgui.Window(10000).getProperty(key)
         if not '.TRASH' in key: self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%(str(value)[:128])))
         return value
+        
+        
+    def getEXTPropertyBool(self, key):
+        return (self.getEXTProperty(key) or '').lower() == "true"
         
         
     def getProperty(self, key):
@@ -876,6 +870,10 @@ class Properties:
         if not '.TRASH' in key: self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((str(value)[:128]))))
         xbmcgui.Window(10000).setProperty(key,str(value))
         return value
+        
+        
+    def setEXTPropertyBool(self, key, value):
+        return self.setEXTProperty(key,str(value).lower()) == 'true'
         
         
     def setProperty(self, key, value):
