@@ -87,14 +87,18 @@ class XSP:
             except Exception as e: self.log("parseXSP, no limit set", xbmc.LOGDEBUG)
 
             try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()}) #todo pop rules to filter var.
-            except Exception as e: self.log("parseXSP, no sort method", xbmc.LOGDEBUG)
+            except Exception as e:
+                if "method" in sort: sort.pop("method")
+                self.log("parseXSP, no sort method", xbmc.LOGDEBUG)
             
             try: sort.update({"order":dom.getElementsByTagName('order')[0].getAttribute('direction').lower()})#todo pop rules to filter var.
-            except Exception as e: self.log("parseXSP, no sort direction", xbmc.LOGDEBUG)
+            except Exception as e: 
+                if "order" in sort: sort.pop("order")
+                self.log("parseXSP, no sort direction", xbmc.LOGDEBUG)
 
             try:
                 type = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
-                if type.lower() == "mixed":#todo use operators to build filter list for mixed content
+                if type.lower() in ["mixed"]:#todo use operators to build filter list for mixed content
                     for rule in dom.getElementsByTagName('rule'):
                         if rule.getAttribute('field').lower() == 'path' and rule.getAttribute('operator').lower() in ['is','contains']:
                             paths.append(rule.getElementsByTagName("value")[0].childNodes[0].data)

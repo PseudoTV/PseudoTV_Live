@@ -215,8 +215,8 @@ class JSONRPC:
 
     def getEpisodes(self, cache=True):
         param = {"method":"VideoLibrary.GetEpisodes","params":{"properties":self.getEnums("Video.Fields.Episode", type='items')}}
-        if cache: return self.cacheJSON(param).get('result', {}).get('tvshows', [])
-        else:     return self.sendJSON(param).get('result', {}).get('tvshows', [])
+        if cache: return self.cacheJSON(param).get('result', {}).get('episodes', [])
+        else:     return self.sendJSON(param).get('result', {}).get('episodes', [])
 
 
     def getTVshows(self, cache=True):

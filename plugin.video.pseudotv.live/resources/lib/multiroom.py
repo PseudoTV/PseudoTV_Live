@@ -175,7 +175,7 @@ class Multiroom:
         self.log('enableZeroConf')
         if SETTINGS.getSetting('ZeroConf_Status') == '[COLOR=red][B]Offline[/B][/COLOR]':
             if BUILTIN.getInfoLabel('Platform.Windows','System'): 
-                BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Show_ZeroConf_QR)')
+                BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Show_ZeroConf_QR)'%(ADDON_ID))
             if DIALOG.yesnoDialog(message=LANGUAGE(30129)):
                 if self.jsonRPC.setSettingValue("services.zeroconf","true"):
                     DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30035)))

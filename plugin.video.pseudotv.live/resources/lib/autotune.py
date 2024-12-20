@@ -84,7 +84,7 @@ class Autotune:
                 if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
                 elif retval == 2:
                     if   hasBackup:  return Backup().recoverChannels()
-                    elif hasServers: return BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Select_Server)')
+                    elif hasServers: return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID))
                 elif not PROPERTIES.hasFirstrun(): return openAddonSettings()       
         else:
             if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32058))

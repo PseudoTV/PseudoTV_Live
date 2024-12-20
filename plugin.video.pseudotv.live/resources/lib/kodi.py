@@ -999,7 +999,7 @@ class ListItems:
             elif not isinstance(value,types):# convert to schema type
                 for type in types:
                     try:   ninfo[key] = type(value)
-                    except Exception as e: self.log("buildItemListItem, cleanInfo error! %s\nkey = %s, value = %s, type = %s\n%s"%(e,key,value,type,ninfo), xbmc.LOGWARNING)
+                    except Exception as e: self.log("cleanInfo failed! %s\nkey = %s, value = %s, type = %s\n%s"%(e,key,value,type,ninfo), xbmc.LOGWARNING)
                      
             if isinstance(ninfo[key],list):
                 for n in ninfo[key]:
@@ -1009,10 +1009,10 @@ class ListItems:
 
 
     def cleanProp(self, pvalue):
-        if isinstance(pvalue,dict):      return dumpJSON(pvalue)
-        elif isinstance(pvalue,list):    return '|'.join(map(str, pvalue))
-        elif not isinstance(pvalue,str): return str(pvalue)
-        else:                            return pvalue
+        if       isinstance(pvalue,dict): return dumpJSON(pvalue)
+        elif     isinstance(pvalue,list): return '|'.join(map(str, pvalue))
+        elif not isinstance(pvalue,str):  return str(pvalue)
+        else:                             return pvalue
             
     
 class Builtin:
