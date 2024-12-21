@@ -447,7 +447,7 @@ class Service():
          
 
     def _interrupt(self) -> bool: #break
-        pendingInterrupt = (self.pendingRestart | PROPERTIES.isInterruptActivity())
+        pendingInterrupt = (self.monitor.isSettingsOpened() | self.pendingRestart | PROPERTIES.isInterruptActivity())
         if pendingInterrupt != self.monitor.pendingInterrupt:
             self.monitor.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
             self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
@@ -456,7 +456,7 @@ class Service():
 
     def _suspend(self) -> bool: #continue
         if self.monitor.pendingInterrupt: pendingSuspend = False
-        else: pendingSuspend = (self.monitor.isSettingsOpened() | self.__playing() | PROPERTIES.isSuspendActivity())
+        else: pendingSuspend = (self.__playing() | PROPERTIES.isSuspendActivity())
         if pendingSuspend != self.monitor.pendingSuspend:
             self.monitor.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))

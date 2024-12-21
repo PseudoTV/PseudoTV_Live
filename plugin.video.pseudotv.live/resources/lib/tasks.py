@@ -145,7 +145,7 @@ class Tasks():
             citem   = builder.sortChannels([citem for citem in builder.verify() if citem.get('id') == id])
             del builder
             self.log('_chkChannelUpdate, id = %s, citem = %s'%(id,citem))
-            return self._que(self.chkChannels,1,citem)
+            return self._que(self.chkChannels,3,citem)
             
                   
     @cacheit(expiration=datetime.timedelta(minutes=10))
@@ -258,15 +258,17 @@ class Tasks():
 
     def chkPVRRefresh(self):
         self.log('chkPVRRefresh')
-        self._que(self.chkPVRToggle,1)
+        timerit(self._que)(self.chkPVRToggle)(FIFTEEN,[1])
 
 
     def chkPVRToggle(self):
-        isIdle    = self.service.monitor.isIdle
-        isPlaying = self.service.player.isPlaying()
+        isIdle      = self.service.monitor.isIdle
+        isPlaying   = self.service.player.isPlaying()
+        isScanning  = BUILTIN.getInfoBool('IsScanningVideo','Library')
+        isRecording = BUILTIN.getInfoBool('IsRecording','Pvr')
         self.log('chkPVRToggle, isIdle = %s, isPlaying = %s'%(isIdle,isPlaying))
-        if isIdle and not isPlaying: togglePVR(False,True)
-        else:                        self.chkPVRRefresh()
+        if isIdle and not (isPlaying | isScanning | isRecording): togglePVR(False,True)
+        else: self.chkPVRRefresh()
 
 
     def chkFillers(self, channels=None):
@@ -333,7 +335,7 @@ class Tasks():
         nChannels = self.getChannels()
         if channels != nChannels:
             self.log('chkChannelChange, channels changed %s => %s: queueing chkChannels'%(len(channels),len(nChannels)))
-            self._que(self.chkChannels,1,diffLSTDICT(channels,nChannels))
+            self._que(self.chkChannels,3,diffLSTDICT(channels,nChannels))
             return nChannels
         return channels
 
@@ -350,33 +352,13 @@ class Tasks():
         return nSettings
 
 
-    def setUserPath(self, old, new, overwrite=False):
+    def setUserPath(self, old, new):
         with PROPERTIES.interruptActivity():
             self.log('setUserPath, old = %s, new = %s'%(old,new))
             dia = DIALOG.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
-            with BUILTIN.busy_dialog():
-                fileItems = self.jsonRPC.walkListDirectory(old, depth=-1, appendPath=True)
-            
-            cnt = 0
-            for dir, files in list(fileItems.items()):
-                ndir = dir.replace(old,new)
-                dia  = DIALOG.progressDialog(int(((cnt)*100)//len(list(fileItems.keys()))), dia, message='%s\n%s'%(LANGUAGE(32051),ndir))
-                if ndir and not FileAccess.exists(os.path.join(ndir,'')):
-                    if not FileAccess.makedirs(os.path.join(ndir,'')): continue
-                    
-                pnt = 0
-                for idx, file in enumerate(files):
-                    pnt = int(((idx)*100)//len(files))
-                    nfile = file.replace(old,new)
-                    if FileAccess.exists(nfile) and not overwrite:
-                        retval = DIALOG.yesnoDialog((LANGUAGE(30120)%nfile),customlabel='Overwrite All')
-                        if retval in [1,2]: FileAccess.delete(nfile)
-                        else: continue
-                        if retval == 2: overwrite = True
-                    if FileAccess.copy(file,nfile): dia = DIALOG.progressDialog(pnt, dia, message='%s\n%s\n%s'%(LANGUAGE(32051),ndir,nfile))
-                    else:                           dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(nfile))
-            DIALOG.progressDialog(100, dia)
+            FileAccess.copyFolder(old, new, dia)
             SETTINGS.setPVRPath(new,prompt=True,force=True)
             PROPERTIES.setPendingRestart()
+            DIALOG.progressDialog(100, dia)
             
         

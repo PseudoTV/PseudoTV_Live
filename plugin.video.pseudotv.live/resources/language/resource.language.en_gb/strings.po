@@ -1004,7 +1004,7 @@ msgid "Copying"
 msgstr ""
 
 msgctxt "#32052"
-msgid "Copying %s Failed!"
+msgid "Copying Failed!"
 msgstr ""
 
 msgctxt "#32053"

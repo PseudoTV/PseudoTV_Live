@@ -139,10 +139,10 @@ def requestURL(url, params={}, data={}, header=HEADER, timeout=FIFTEEN, json_dat
         if results and cache: return __setCache(cacheKey,results,json_data,cache,checksum,life)
         else:                 return results
     except requests.exceptions.ConnectionError as e:
-        log("Globals: requestURL, failed! Error connecting to the server: %s"%('Returning cache' if cache else ''), xbmc.LOGERROR)
+        log("Globals: requestURL, failed! Error connecting to the server: %s"%('Returning cache' if cache else ''))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
     except requests.exceptions.HTTPError as e:
-        log("Globals: requestURL, failed! HTTP error occurred: %s\n%s"%('Returning cache' if cache else '',e), xbmc.LOGERROR)
+        log("Globals: requestURL, failed! HTTP error occurred: %s\n%s"%('Returning cache' if cache else ''))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
     except requests.exceptions.RequestException as e:
         log("Globals: requestURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)

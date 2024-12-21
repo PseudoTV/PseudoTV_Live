@@ -114,7 +114,7 @@ class JSONRPC:
         walk.setdefault(path,[]).extend(nfiles)
         
         for sub in subs:
-            if depth == 0:break
+            if depth == 0: break
             depth -= 1
             walk.update(self.walkListDirectory(os.path.join(path,sub), exts, depth, chkDuration, appendPath, checksum, expiration))
         return walk

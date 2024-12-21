@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.5.6s" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.5.6u" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
         <import addon="pvr.iptvsimple" version="21.8.0"/>
@@ -26,7 +26,6 @@
         <provides>video</provides>
     </extension>
     <extension point="xbmc.service" library="resources/lib/service.py"/>
-    <extension point="xbmc.python.module" library="resources/lib/"/>
     <extension point="kodi.context.item">
         <menu id="kodi.core.main">
             <menu>

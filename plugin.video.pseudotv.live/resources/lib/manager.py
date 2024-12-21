@@ -89,7 +89,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             enabled  = SETTINGS.getSettingList('Select_server')
             friendly = SETTINGS.getFriendlyName()
             
-        if name == LANGUAGE(30022):
+        if name == LANGUAGE(30022):#Auto
             if   len(channels) > 0: return channels
             elif len(enabled) > 0:
                 for name in enabled:
@@ -395,7 +395,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 except: lastOPT = None
                 if key == 'add': 
                     with self.toggleSpinner(self.itemList):
-                        retval = DIALOG.browseSources(heading=LANGUAGE(32080),exclude=[21],monitor=True)
+                        retval = DIALOG.browseSources(heading=LANGUAGE(32080), exclude=[21], monitor=True)
                         if not retval is None:
                             npath, citem = self.validatePath(retval,citem)
                             if npath: pathLST.append(npath)
@@ -408,7 +408,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     if retval in [1,2]: pathLST.pop(pathLST.index(path))
                     if retval == 2:
                         with self.toggleSpinner(self.itemList):
-                            npath, citem = self.validatePath(DIALOG.browseSources(heading=LANGUAGE(32080),default=path,monitor=True,exclude=[21]), citem)
+                            npath, citem = self.validatePath(DIALOG.browseSources(heading=LANGUAGE(32080), default=path, monitor=True, exclude=[21]), citem)
                             pathLST.append(npath)
         self.log('getPaths, paths = %s'%(paths))
         return paths, citem
@@ -421,7 +421,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         selects = DIALOG.selectDialog(ngroups,header=LANGUAGE(32081),preselect=findItemsInLST(ngroups,groups),useDetails=False)
         if 0 in selects:
             SETTINGS.setSetting('User_Groups',DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups')))
-            return self.getGroups(groups)
+            return self.getGroups(citem, groups)
         elif len(ngroups) > 0: groups = [ngroups[idx] for idx in selects]
         if not groups:         groups = [LANGUAGE(30127)]
         self.log('getGroups, groups = %s'%(groups))
@@ -766,7 +766,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
         def browse(chname):
             with self.toggleSpinner(self.itemList):
-                retval = DIALOG.browseSources(type=1,heading='%s (%s)'%(LANGUAGE(32066).split('[CR]')[0],chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),exclude=[12,13,14,15,16,17,21,22])
+                retval = DIALOG.browseSources(type=1,heading='%s (%s)'%(LANGUAGE(32066).split('[CR]')[0],chname), default=channelData.get('icon',''), shares='files', mask=xbmc.getSupportedMedia('picture'), exclude=[12,13,14,15,16,17,21,22])
             if FileAccess.copy(cleanLogo(retval), os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
                 if FileAccess.exists(os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
                     return os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')

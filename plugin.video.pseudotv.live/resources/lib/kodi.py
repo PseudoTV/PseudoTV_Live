@@ -444,6 +444,8 @@ class Settings:
                      'epgPath'                    :os.path.join(path,XMLTVFLE),
                      'genresPathType'             :'0',
                      'genresPath'                 :os.path.join(path,GENREFLE),
+                     'logoPathType'               :'0',
+                     'logoPath'                   :os.path.join(path,'logos'),
                      'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
                      'kodi_addon_instance_enabled':'true'}
         settings.update(nsettings)
@@ -1403,7 +1405,7 @@ class Dialog:
 
 
     def browseSources(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, options=[], exclude=[]):
-        self.log('browseSources, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s, options= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,len(options),exclude))
+        self.log('browseSources, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s, mask= %s, options= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,len(options),exclude))
         def __buildMenuItem(option):
             return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=getAbbr(option['label'])))
 
@@ -1423,17 +1425,18 @@ class Dialog:
                     {"idx":21, "label":LANGUAGE(32201)                    , "label2":""                                      , "default":""                                   , "shares":"pictures", "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
                     {"idx":22, "label":LANGUAGE(32202)                    , "label2":"Resource Plugin"                       , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi}]
 
-        if len(exclude) > 0: options.extend([opt for opt in opts if not opt.get('idx',-1) in exclude])
+        options.extend([opt for opt in opts if not opt.get('idx',-1) in exclude])
+        options = setDictLST(options) #todo trakdown bug where options are being recalled back to function.
         if default: options.insert(0,{"idx":0, "label":LANGUAGE(32203), "label2":default, "default":default, "shares":shares, "mask":mask, "type":type, "multi":multi})
         lizLST = poolit(__buildMenuItem)(sorted(options, key=itemgetter('idx')))
         select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
         if select is None: return
+        
         default = options[select]['default']
         shares  = options[select]['shares']
         mask    = options[select]['mask']
         type    = options[select]['type']
         multi   = options[select]['multi']
-
         if type == 0:
             if "resource."   in default or options[select]["idx"] == 22: return self._resourcePath(default)
         elif type == 1:
@@ -1478,7 +1481,7 @@ class Dialog:
                 except: lastOPT = -1
                 if key == 'add': 
                     with self.builtin.busy_dialog():
-                        npath = self.browseSources(heading=LANGUAGE(32080),exclude=exclude,monitor=monitor)
+                        npath = self.browseSources(heading=LANGUAGE(32080), exclude=exclude, monitor=monitor)
                         if npath: pathLST.append(npath)
                 elif key == 'save': 
                     paths = pathLST
@@ -1488,7 +1491,7 @@ class Dialog:
                     if retval in [1,2]: pathLST.pop(pathLST.index(path))
                     if retval == 2:
                         with self.builtin.busy_dialog():
-                            npath = self.browseSources(heading=LANGUAGE(32080),default=path,monitor=monitor,exclude=exclude)
+                            npath = self.browseSources(heading=LANGUAGE(32080), default=path, monitor=monitor, exclude=exclude)
                             pathLST.append(npath)
         self.log('multiBrowse, OUT paths = %s'%(paths))
         return paths

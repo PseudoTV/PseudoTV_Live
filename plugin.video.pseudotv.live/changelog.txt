@@ -1,4 +1,6 @@
 v.0.5.7
+-Fixed Channel Manager path duplication.
+-Improved file migration when changing centralized file location.
 -Changed Even show distributions global default value to 0.
 -Moved Custom user groups out of settings and into group select list in channel manager.
 -Fixed PseudoTV not respecting user subtitle preference.

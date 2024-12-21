@@ -132,10 +132,10 @@ class Utilities:
                     from manager import Manager
                 chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
                 del chmanager
-    
+     
         
-    def openMoveUtil(self, idx):
-        self.log('openMoveUtil, idx = %s'%(idx))
+    def openPositionUtil(self, idx):
+        self.log('openPositionUtil, idx = %s'%(idx))
         if not PROPERTIES.isRunning('MOVE_UTILITY_RUNNING'):
             with PROPERTIES.setRunning('MOVE_UTILITY_RUNNING'), PROPERTIES.suspendActivity():
                 with BUILTIN.busy_dialog():
@@ -208,7 +208,7 @@ class Utilities:
         self.log('defaultChannels')
         with BUILTIN.busy_dialog():
             values = [cleanLabel(value) for value in SETTINGS.getSettingList('Select_server')]
-            values.insert(0,LANGUAGE(30022))
+            values.insert(0,LANGUAGE(30022)) #Auto
             values.insert(1,LANGUAGE(32069))
         select = DIALOG.selectDialog(values, LANGUAGE(30173), findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
         if not select is None: return SETTINGS.setSetting('Default_Channels',values[select])
@@ -230,10 +230,10 @@ class Utilities:
         #Globals
         elif param.startswith('Move_Channelbug'):
             ctl = (3,15)
-            self.openMoveUtil(1)
+            self.openPositionUtil(1)
         elif param.startswith('Move_OnNext'):
             ctl = (3,15)
-            self.openMoveUtil(2)
+            self.openPositionUtil(2)
         elif param == 'Sort_Method':
             ctl = (3,22)
             self.sortMethod()

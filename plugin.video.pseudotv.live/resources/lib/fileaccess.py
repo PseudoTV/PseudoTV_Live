@@ -35,6 +35,13 @@ class FileAccess:
 
 
     @staticmethod
+    def _getFolderPath(path):
+        head, tail  = os.path.split(path)
+        last_folder = os.path.basename(head)
+        return os.path.join(last_folder, tail)
+        
+        
+    @staticmethod
     def listdir(path):
         return xbmcvfs.listdir(path)
 
@@ -46,16 +53,33 @@ class FileAccess:
 
 
     @staticmethod
-    def copyFolder(path, newpath, verbose=None):
-        log('FileAccess: copying folder %s to %s'%(path,newpath))
-        return shutil.copytree(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath), copy_function=verbose)
-
+    def copyFolder(src, dir, dia=None):
+        log('FileAccess: copyFolder %s to %s'%(src,dir))
+        if not FileAccess.exists(dir): FileAccess.makedirs(dir)
+        if dia:
+            from kodi import Dialog
+            DIALOG = Dialog()
+        
+        subs, files = FileAccess.listdir(src)
+        pct = 0
+        if dia: dia = DIALOG.progressDialog(pct, control=dia, message='%s\n%s'%(LANGUAGE(32051),src))
+        for fidx, file in enumerate(files):
+            if dia: dia = DIALOG.progressDialog(pct, control=dia, message='%s: (%s%)\n%s'%(LANGUAGE(32051),(int(fidx*100)//len(files)),FileAccess._getFolderPath(file)))
+            FileAccess.copy(os.path.join(src, file), os.path.join(dir, file))
+        
+        for sidx, sub in enumerate(subs):
+            pct = int(sidx)//len(subs)
+            FileAccess.copyFolder(os.path.join(src, sub), os.path.join(dir, sub), dia)
+        
 
     @staticmethod
-    def moveFolder(path, newpath):
-        log('FileAccess: moving folder %s to %s'%(path,newpath))
-        return shutil.move(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
-
+    def moveFolder(src, dir):
+        log('FileAccess: moving folder %s to %s'%(src,dir))
+        if not FileAccess.exists(dir): FileAccess.makedirs(dir)
+        for subs, files in FileAccess.listdir(src):
+            for file in files: FileAccess.movie(os.path.join(src, file), dir)
+            for sub in subs:   FileAccess.moveFolder(os.path.join(src, sub), dir)
+    
 
     @staticmethod
     def copy(orgfilename, newfilename):

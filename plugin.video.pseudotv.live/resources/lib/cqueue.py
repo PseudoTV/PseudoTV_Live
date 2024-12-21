@@ -62,9 +62,9 @@ class CustomQueue:
             self.popThread.start()
 
 
-    def __run(self, func, args=None, kwargs=None):
+    def __run(self, func, *args, **kwargs):
         self.log("__run, func = %s"%(func.__name__))
-        try: return self.pool.executor(func, None, *args, *kwargs)
+        try: return self.pool.executor(func, None, *args, **kwargs)
         except Exception as e: self.log("__run, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
                 
@@ -131,7 +131,7 @@ class CustomQueue:
                         self.log("__pop, heappop failed! %s\nmin_heap = %s"%(e,self.min_heap), xbmc.LOGERROR)
                         continue
                     self.qsize -= 1
-                    self.__run(*package)
+                    self.__run(package[0],*package[1],**package[2])
                     
             elif self.fifo or self.lifo:
                 curr_node = self.head if self.fifo else self.tail
