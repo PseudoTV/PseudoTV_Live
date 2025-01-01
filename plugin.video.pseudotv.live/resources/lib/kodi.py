@@ -27,15 +27,6 @@ from collections import Counter, OrderedDict
 from contextlib  import contextmanager, closing
 from infotagger.listitem import ListItemInfoTag
 
-def getIP(wait=5):
-    monitor = MONITOR()
-    while not monitor.abortRequested() and wait > 0:
-        ip = xbmc.getIPAddress()
-        if ip: return ip
-        elif monitor.waitForAbort(1.0): break
-        else: wait -= 1
-    del monitor
-        
 def convertString2Num(value):
     from ast import literal_eval
     try: return literal_eval(value)
@@ -145,14 +136,21 @@ def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
     
 class Settings:
     def __init__(self):
-        self.cacheDB  = Cache()
-        self.cache    = Cache(mem_cache=True)
+        self.cacheDB = Cache()
+        self.cache   = Cache(mem_cache=True)
 
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
+    @cacheit(expiration=datetime.timedelta(seconds=FIFTEEN))
+    def getIP(self, default='127.0.0.1'):
+        IP = (xbmc.getIPAddress() or gethostbyname(gethostname()) or default)
+        log('getIP, IP = %s'%(IP))
+        return IP
+    
+    
     def getRealSettings(self):
         try:    return xbmcaddon.Addon(id=ADDON_ID)#xbmcaddon.Addon('id').getSettings()
         except: return REAL_SETTINGS
@@ -436,7 +434,7 @@ class Settings:
                 'catchupWatchEpgBeginBufferMins':'0'}
 
 
-    def setPVRPath(self, path, instance=ADDON_NAME, prompt=False, force=False):
+    def setPVRPath(self, path, instance=ADDON_NAME, prompt=False, force=False): #local instance
         settings  = self.IPTV_SIMPLE_SETTINGS()
         nsettings = {'m3uPathType'                :'0',
                      'm3uPath'                    :os.path.join(path,M3UFLE),
@@ -455,7 +453,7 @@ class Settings:
         return self.chkPluginSettings(PVR_CLIENT_ID,settings,instance,prompt)
         
         
-    def setPVRRemote(self, host, instance=ADDON_NAME, prompt=False):
+    def setPVRRemote(self, host, instance=ADDON_NAME, prompt=False): #multi-room instances
         settings  = self.IPTV_SIMPLE_SETTINGS()
         nsettings = {'m3uPathType'                :'1',
                      'm3uUrl'                     :'http://%s/%s'%(host,M3UFLE),
@@ -531,26 +529,24 @@ class Settings:
 
     @cacheit(expiration=datetime.timedelta(minutes=5),json_data=True)
     def getPVRInstanceSettings(self, instance):
+        instanceConf = dict()
         instancePath = self.hasPVRInstance(instance)
         if instancePath:
             fle = FileAccess.open(instancePath,'r')
-            lines = fle.readlines()
-            fle.close()
-            settings = dict()
-            for line in lines:
+            for line in fle.readlines():
                 if not 'id=' in line: continue
-                #todo refactor using proper minidom
                 match = re.compile('<setting id=\"(.*)\" default=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
-                try: settings.update({match.group(1):(match.group(2),match.group(3))})
+                try: instanceConf.update({match.group(1):(match.group(2),match.group(3))})
                 except:
                     match = re.compile('<setting id=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
-                    try: settings.update({match.group(1):('',match.group(2))})
+                    try: instanceConf.update({match.group(1):('',match.group(2))})
                     except:
                         match = re.compile('<setting id=\"(.*)\" default=\"(.*?)\" />', re.IGNORECASE).search(line)
-                        try: settings.update({match.group(1):(match.group(2),None)})
+                        try: instanceConf.update({match.group(1):(match.group(2),None)})
                         except: pass
-            self.log('getPVRInstanceSettings, returning instance = %s\n%s'%(instance,settings))
-            return settings
+            fle.close()
+        self.log('getPVRInstanceSettings, returning instance = %s\n%s'%(instance,instanceConf))
+        return instanceConf
         
         
     def chkPluginSettings(self, id, nsettings, instance=ADDON_NAME, prompt=False):
@@ -560,12 +556,12 @@ class Settings:
         monitor = MONITOR()
         if addon is None: dialog.notificationDialog(LANGUAGE(32034)%(id))
         else:
-            changes = {}
-            name = addon.getAddonInfo('name')
-            osettings = (self.getPVRInstanceSettings(instance) or {})
+            changes   = {}
+            name      = addon.getAddonInfo('name')
+            osettings = self.getPVRInstanceSettings(instance)
             for setting, newvalue in list(nsettings.items()):
                 if monitor.waitForAbort(.0001): return False
-                default, oldvalue = osettings.get(setting,(None,None))
+                default, oldvalue = osettings.get(setting,({},{}))
                 if str(newvalue).lower() != str(oldvalue).lower(): 
                     changes[setting] = (oldvalue, newvalue)
                 
@@ -597,7 +593,7 @@ class Settings:
         for setting in settings:
             yield (setting,self.getSetting(setting))
                
-        
+
 class Properties:
     
     def __init__(self, winID=10000):
@@ -629,7 +625,7 @@ class Properties:
 
     def getRemoteHost(self):
         remote = self.getProperty('%s.Remote_Host'%(ADDON_ID))
-        if not remote: remote = self.setRemoteHost('%s:%s'%(getIP(),Settings().getSettingInt('TCP_PORT')))
+        if not remote: remote = self.setRemoteHost('%s:%s'%(Settings().getIP(),Settings().getSettingInt('TCP_PORT')))
         return remote
 
 
@@ -1018,6 +1014,8 @@ class ListItems:
             
     
 class Builtin:
+    busy = None
+    
     def __init__(self):
         ...
 
@@ -1078,29 +1076,25 @@ class Builtin:
 
     @contextmanager
     def busy_dialog(self):
-        if not self.isBusyDialog() and not self.getInfoBool('Playing','Player'):
-            self.executebuiltin('ActivateWindow(busydialognocancel)')
-            try:
-                if self.getInfoBool('Playing','Player'):
-                    self.executebuiltin('Dialog.Close(busydialognocancel)')
+        if not xbmcgui.Window(10000).getProperty('%s.%s'%(ADDON_ID,'OVERLAY_BUSY')) == "true":
+            try: 
+                if self.busy is None:
+                    from overlay import Busy 
+                    self.busy = Busy(BUSY_XML, ADDON_PATH, "default")
+                    self.busy.show()
                 yield
             finally:
-                self.executebuiltin('Dialog.Close(busydialognocancel)')
+                if hasattr(self.busy, 'close'):
+                    self.busy = self.busy.close()
         else: yield
-       
 
-    def getInfoLabel(self, key, param='ListItem', timeout=FIFTEEN):
-        monitor = MONITOR()
-        value   = xbmc.getInfoLabel('%s.%s'%(param,key))
-        while not monitor.abortRequested() and (value is None or value == 'Busy'):
-            if monitor.waitForAbort(.0001) or timeout < 0: break
-            timeout -= .0001
-            value = xbmc.getInfoLabel('%s.%s'%(param,key))
-        self.log('getInfoLabel, key = %s.%s, value = %s, wait = %s'%(param,key,value,(FIFTEEN-timeout)))
-        del monitor
+
+    def getInfoLabel(self, key, param='ListItem', default=''):
+        value = (xbmc.getInfoLabel('%s.%s'%(param,key)) or default)
+        self.log('getInfoLabel, key = %s.%s, value = %s'%(param,key,value))
         return value
         
-        
+
     def getInfoBool(self, key, param='Library', default=False):
         value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or default)
         self.log('getInfoBool, key = %s.%s, value = %s'%(param,key,value))

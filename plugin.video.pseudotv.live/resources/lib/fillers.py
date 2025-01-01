@@ -153,7 +153,7 @@ class Fillers:
                     if self.builder.bctTypes[ftype].get('enabled',False) and dbtype.startswith(tuple(preIncludeTypes)) and chtype not in IGNORE_CHTYPE:
                         preFileList.extend(self.getSingle(ftype, preKeys, chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
 
-                for item in preFileList:
+                for item in setDictLSTLST(preFileList):
                     if (item.get('duration') or 0) == 0: continue
                     else:
                         runtime += item.get('duration')

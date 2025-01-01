@@ -283,7 +283,7 @@ class Player(xbmc.Player):
         elif not state and hasattr(self.restart,'onClose'):
             self.log('toggleRestart, state = %s'%(state))
             self.restart = self.restart.onClose()
-        
+
 
 class Monitor(xbmc.Monitor):
     idleTime   = 0
@@ -303,16 +303,15 @@ class Monitor(xbmc.Monitor):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getIdle(self):
-        try: idleTime = (int(xbmc.getGlobalIdleTime()) or 0)
-        except: #Kodi raises error after sleep.
-            self.log('getIdle, Kodi waking up from sleep...')
-            idleTime = 0
-        idleState = (idleTime > SETTINGS.getSettingInt('OSD_Timer'))
-        return idleState, idleTime
-
-
     def chkIdle(self):
+        def __getIdle():
+            try: idleTime = (int(xbmc.getGlobalIdleTime()) or 0)
+            except: #Kodi raises error after sleep.
+                self.log('__getIdle, Kodi waking up from sleep...')
+                idleTime = 0
+            idleState = (idleTime > SETTINGS.getSettingInt('OSD_Timer'))
+            return idleState, idleTime
+
         def __chkResumeTime():
             if self.service.player.sysInfo.get('isPlaylist',False):
                 file = self.service.player.getPlayingFile()
@@ -327,12 +326,10 @@ class Monitor(xbmc.Monitor):
         
         def __chkBackground():
             if not self.overlay is None:
-                remanTime = abs(floor(self.service.player.getRemainingTime()))
-                if self.overlay.background is None and remanTime <= 2:
-                    self.log('__chkBackground, toggleBackground remaining playback = %s'%(remanTime))
+                if self.overlay.background is None and abs(floor(self.service.player.getRemainingTime())) <= 2:
                     self.overlay.toggleBackground()
         
-        self.isIdle, self.idleTime = self.getIdle()
+        self.isIdle, self.idleTime = __getIdle()
         if SETTINGS.getSettingBool('Debug_Enable'): self.log('chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
         if self.service.player.isPseudoTV: 
             if self.service.player.isPlaying():
@@ -464,7 +461,8 @@ class Service():
 
 
     def __tasks(self):
-        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
+        if not self._suspend():
+            self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
            
                 
     def __initialize(self):

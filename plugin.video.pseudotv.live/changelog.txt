@@ -1,4 +1,7 @@
 v.0.5.7
+-Improved stability by removing Kodi's segfault prone busy dialog, in-favor of a custom busy dialog.
+-Improved "ONNext" options now include Artwork or Text based prompts.
+-Improved Background Overlay.
 -Fixed Channel Manager path duplication.
 -Improved file migration when changing centralized file location.
 -Changed Even show distributions global default value to 0.

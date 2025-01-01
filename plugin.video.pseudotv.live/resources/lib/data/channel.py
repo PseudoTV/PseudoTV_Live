@@ -15,8 +15,6 @@
 
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
-# https://github.com/xbmc/xbmc/blob/master/xbmc/input/actions/ActionIDs.h
-# https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
 from globals   import *

@@ -160,7 +160,6 @@ Language IDS not found in py files, possibly only in xml: {
     "30168": "Visit Project Wiki",
     "30169": "OSD Display Time",
     "30172": "Channel List",
-    "30179": "Interleave set value",
     "30189": "Last Position",
     "32004": "TV Networks",
     "32005": "TV Shows",

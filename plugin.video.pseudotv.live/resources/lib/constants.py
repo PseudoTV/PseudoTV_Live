@@ -224,15 +224,18 @@ URL_README                = 'https://github.com/PseudoTV/PseudoTV_Live/blob/mast
 #images
 LOGO                = os.path.join(MEDIA_LOC,'wlogo.png')
 COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
+COLOR_FANART        = os.path.join(MEDIA_LOC,'fanart.jpg')
 HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
 DUMMY_ICON          = 'https://dummyimage.com/512x512/%s/%s.png&text={text}'%(COLOR_BACKGROUND,COLOR_TEXT)
 MST3K_1             = os.path.join(MEDIA_LOC,'overlays','MST3K_1.gif')
 MST3K_2             = os.path.join(MEDIA_LOC,'overlays','MST3K_2.gif')
 
 #skins
-RESTART_XML    = '%s.restart.xml'%(ADDON_ID)
-BACKGROUND_XML = '%s.background.xml'%(ADDON_ID)
-MANAGER_XML    = '%s.manager.xml'%(ADDON_ID)
+BUSY_XML        = '%s.busy.xml'%(ADDON_ID)
+ONNEXT_XML      = '%s.onnext.xml'%(ADDON_ID)
+RESTART_XML     = '%s.restart.xml'%(ADDON_ID)
+BACKGROUND_XML  = '%s.background.xml'%(ADDON_ID)
+MANAGER_XML     = '%s.manager.xml'%(ADDON_ID)
 OVERLAYTOOL_XML = '%s.overlaytool.xml'%(ADDON_ID)
 
 # https://github.com/xbmc/xbmc/blob/master/xbmc/addons/kodi-dev-kit/include/kodi/c-api/gui/input/action_ids.h

@@ -569,19 +569,26 @@
                         <multiselect>true</multiselect>
                     </control>
                 </setting>
-                <setting id="Enable_OnNext" type="boolean" label="30045" help="33045" parent="Overlay_Enable">
-                    <level>1</level>
-                    <default>true</default>
+                <setting id="OnNext_Enable" type="integer" label="30045" help="33045" parent="Overlay_Enable">
+                    <level>2</level>
+                    <default>1</default>
+                    <constraints>
+                        <options>
+                            <option label="30021">0</option>
+                            <option label="30193">1</option>
+                            <option label="30194">2</option>
+                            <option label="30197">3</option>
+                            <option label="30195">4</option>
+                        </options>
+                    </constraints>
                     <dependencies>
-                        <dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Overlay_Enable">true</condition>
-                            </and>
+                        <dependency type="enable">
+                            <condition operator="is" setting="Overlay_Enable">true</condition>
                         </dependency>
                     </dependencies>
-                    <control type="toggle"/>
+                    <control type="spinner" format="string"/>
                 </setting>
-                <setting id="ON_Next_Color" type="string" label="30044" help="33044" parent="Enable_OnNext">
+                <setting id="OnNext_Color" type="string" label="30044" help="33044" parent="OnNext_Enable">
                     <level>2</level>
                     <default>FFFFFFFF</default>
                     <control type="colorbutton"/>
@@ -589,7 +596,7 @@
                         <dependency type="visible">
                             <and>
                                 <condition operator="is" setting="Overlay_Enable">true</condition>
-                                <condition operator="is" setting="Enable_OnNext">true</condition>
+                                <condition operator="is" setting="OnNext_Enable">1</condition>
                             </and>
                         </dependency>
                         <dependency type="enable">
@@ -597,7 +604,7 @@
                         </dependency>
                     </dependencies>
                 </setting>
-                <setting id="On_Next_Position_XY" type="string" label="32229" help="33229" parent="Enable_OnNext">
+                <setting id="OnNext_Position_XY" type="string" label="32229" help="33229" parent="OnNext_Enable">
                     <level>3</level>
                     <default>Auto</default>
                     <constraints>
@@ -607,7 +614,7 @@
                         <dependency type="visible">
                             <and>
                                 <condition operator="is" setting="Overlay_Enable">true</condition>
-                                <condition operator="is" setting="Enable_OnNext">true</condition>
+                                <condition operator="is" setting="OnNext_Enable">1</condition>
                             </and>
                         </dependency>
                     </dependencies>

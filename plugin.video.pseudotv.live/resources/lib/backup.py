@@ -66,7 +66,7 @@ class Backup:
             if not DIALOG.yesnoDialog('%s\n%s?'%(LANGUAGE(32108),SETTINGS.getSetting('Backup_Channels'))): 
                 return False
                 
-        with BUILTIN.busy_dialog():
+        with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
             if FileAccess.copy(CHANNELFLEPATH,file):
                 if file == CHANNELFLE_BACKUP: #main backup file, set meta.
                     PROPERTIES.setBackup(True)

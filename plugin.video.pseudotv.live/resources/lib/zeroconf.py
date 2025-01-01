@@ -924,8 +924,7 @@ class ServiceBrowser(threading.Thread):
             except:
                 if not expired:
                     self.services[record.alias.lower()] = record
-                    callback = lambda x: self.listener.addService(x,
-                        self.type, record.alias)
+                    callback = lambda x: self.listener.addService(x, self.type, record.alias)
                     self.list.append(callback)
 
             expires = record.getExpirationTime(75)

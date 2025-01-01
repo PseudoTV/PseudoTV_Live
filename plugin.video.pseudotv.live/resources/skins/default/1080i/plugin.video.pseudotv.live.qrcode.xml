@@ -5,11 +5,11 @@
     <onunload>SetProperty(plugin.video.pseudotv.live.QR_BACKGROUND,false,10000)</onunload>
     <controls>
         <animation type="WindowOpen" reversible="false">
-            <effect type="zoom" start="80" end="100" center="960,540" delay="160" tween="back" time="240"/>
+            <effect type="zoom" start="80" end="100" center="960,480" delay="160" tween="back" time="240"/>
             <effect type="fade" delay="160" end="100" time="240"/>
         </animation>
         <animation type="WindowClose" reversible="false">
-            <effect type="zoom" start="100" end="80" center="960,540" easing="in" tween="back" time="240"/>
+            <effect type="zoom" start="100" end="80" center="960,480" easing="in" tween="back" time="240"/>
             <effect type="fade" start="100" end="0" time="240"/>
         </animation>
         <control type="group">
@@ -44,7 +44,7 @@
                     <top>0</top>
                     <right>0</right>
                     <height>70</height>
-                    <texture colordiffuse="FF12A0C7" border="2">colors/white70.png</texture>
+                    <texture colordiffuse="FF01416b" border="2">colors/white70.png</texture>
                 </control>
                 <control type="label" id="40000">
                     <left>30</left>
@@ -139,7 +139,7 @@
                     <textoffsetx>20</textoffsetx>
                     <onclick/>
                     <align>center</align>
-                    <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
+                    <texturefocus border="40" colordiffuse="FF01416b">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
                 </control>
             </control>

@@ -163,16 +163,6 @@ def diffLSTDICT(old, new):
     sDIFF = sOLD.symmetric_difference(sNEW)
     return setDictLST([loadJSON(e) for e in sDIFF])
 
-def getIP(wait=5):
-    monitor = MONITOR()
-    while not monitor.abortRequested() and wait > 0:
-        ip = xbmc.getIPAddress()
-        if ip: return ip
-        elif monitor.waitForAbort(1.0): break
-        else: wait -= 1
-    del monitor
-    return gethostbyname(gethostname())
-
 def getChannelID(name, path, number):
     if isinstance(path, list): path = '|'.join(path)
     tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),SETTINGS.getMYUUID())

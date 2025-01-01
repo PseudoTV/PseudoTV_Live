@@ -32,12 +32,12 @@ class Predefined:
     def getParams(self) -> dict:
         params = {}
         params["order"] = {"direction"        :"ascending",
-                           "method"           :"random",
+                           "method"           :SETTINGS.getSetting('Sort_Method').lower(),
                            "ignorearticle"    :True,
                            "useartistsortname":True}
         return params.copy()
 
-        
+
     def createRECOMMENDED(self, type: str) -> list:
         return []
         
@@ -117,7 +117,6 @@ class Predefined:
         
         
     def createSeasonal(self) -> list:
-        #todo fix seasons. 
         return ["{Seasonal}"]
         
         

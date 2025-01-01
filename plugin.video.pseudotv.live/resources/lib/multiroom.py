@@ -97,7 +97,7 @@ class Multiroom:
          
     def addServer(self, payload={}):
         self.log('addServer, name = %s'%(payload.get('name')))
-        if payload and payload.get('name'):
+        if payload and payload.get('name') and payload.get('host'):
             payload['online'] = True
             servers = self.getDiscovery()
             server  = servers.get(payload.get('name'),{})
@@ -177,9 +177,10 @@ class Multiroom:
             if BUILTIN.getInfoLabel('Platform.Windows','System'): 
                 BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Show_ZeroConf_QR)'%(ADDON_ID))
             if DIALOG.yesnoDialog(message=LANGUAGE(30129)):
-                if self.jsonRPC.setSettingValue("services.zeroconf","true"):
-                    DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30035)))
-                    PROPERTIES.forceUpdateTime('chkKodiSettings')
+                with PROPERTIES.interruptActivity():
+                    if self.jsonRPC.setSettingValue("services.zeroconf","true",que=False):
+                        DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30035)))
+                        PROPERTIES.forceUpdateTime('chkKodiSettings')
         else: DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30034)))
                     
             

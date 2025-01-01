@@ -149,6 +149,24 @@ class XMLTVS:
                 self.log("loadStopTimes, channel = %s failed!\nMalformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s"%(channel.get('id'),e,fallback), xbmc.LOGWARNING)
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
 
+
+    def hasProgrammes(self, channels: list=[], programmes: list=[], fallback=None):
+        if not channels:   channels   = self.getChannels()
+        if not programmes: programmes = self.getProgrammes()
+        if not fallback:   fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getUTCstamp(),offset=60)).strftime(DTFORMAT)
+        
+        for channel in channels:
+            try: 
+                valid = False
+                firstStart = min([program['start'] for program in programmes if program['channel'] == channel['id']], default=fallback)
+                lastStop   = max([program['stop']  for program in programmes if program['channel'] == channel['id']], default=fallback)
+                self.log('hasProgrammes, channel = %s, valid = %s'%(channel['id'],valid))
+                if lastStop > fallback: valid = True
+                yield channel['id'],valid
+            except Exception as e:
+                self.log("hasProgrammes, channel = %s failed!\nMalformed XMLTV channel/programmes %s! valid = False %s"%(channel.get('id'),e), xbmc.LOGWARNING)
+                yield channel['id'],False
+                
              
     def resetData(self):
         self.log('resetData')

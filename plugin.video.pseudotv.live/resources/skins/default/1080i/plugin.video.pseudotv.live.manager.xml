@@ -53,7 +53,7 @@
                     <top>0</top>
                     <right>0</right>
                     <height>70</height>
-                    <texture colordiffuse="FF12A0C7" border="2">colors/white70.png</texture>
+                    <texture colordiffuse="FF01416b" border="2">colors/white70.png</texture>
                 </control>
                 <control type="label" id="">
                     <left>40</left>
@@ -175,7 +175,7 @@
                     <width>100</width>
                     <height>100</height>
                     <aspectratio aligny="center">keep</aspectratio>
-                    <texture colordiffuse="FF000000">dialogs/extendedprogress/loading-back.png</texture>
+                    <texture colordiffuse="dimgray">dialogs/extendedprogress/loading-back.png</texture>
                 </control>
                 <control type="image">
                     <width>100</width>
@@ -232,7 +232,7 @@
                             <left>0</left>
                             <width>1060</width>
                             <height>63</height>
-                            <colordiffuse>FF12A0C7</colordiffuse>
+                            <colordiffuse>FF01416b</colordiffuse>
                             <texture border="63">colors/white.png</texture>
                         </control>
                         <control type="label">
@@ -312,7 +312,7 @@
                         <left>0</left>
                         <width>1060</width>
                         <height>63</height>
-                        <colordiffuse>FF12A0C7</colordiffuse>
+                        <colordiffuse>FF01416b</colordiffuse>
                         <texture border="63">colors/white.png</texture>
                     </control>
                     <control type="label">
@@ -392,7 +392,7 @@
                         <left>0</left>
                         <width>1060</width>
                         <height>63</height>
-                        <colordiffuse>FF12A0C7</colordiffuse>
+                        <colordiffuse>FF01416b</colordiffuse>
                         <texture border="63">colors/white.png</texture>
                     </control>
                     <control type="label">
@@ -434,7 +434,7 @@
                 <font>font12</font>
                 <align>justify</align>
                 <label condition="Control.IsVisible(5)">$INFO[Container(5).ListItem.Property(description)]</label>
-                <textcolor>FF12A0C7</textcolor>
+                <textcolor>FF01416b</textcolor>
                 <visible>Control.IsVisible(5)</visible>
                 <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
             </control>
@@ -447,7 +447,7 @@
                 <font>font12</font>
                 <align>justify</align>
                 <label condition="Control.IsVisible(6)">$INFO[Container(6).ListItem.Property(description)]</label>
-                <textcolor>FF12A0C7</textcolor>
+                <textcolor>FF01416b</textcolor>
                 <visible>Control.IsVisible(6)</visible>
                 <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
             </control>
@@ -460,7 +460,7 @@
                 <font>font12</font>
                 <align>justify</align>
                 <label condition="Control.IsVisible(7)">$INFO[Container(7).ListItem.Property(description)]</label>
-                <textcolor>FF12A0C7</textcolor>
+                <textcolor>FF01416b</textcolor>
                 <visible>Control.IsVisible(7)</visible>
                 <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
             </control>
@@ -498,7 +498,7 @@
                     <textoffsetx>20</textoffsetx>
                     <onclick/>
                     <align>center</align>
-                    <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
+                    <texturefocus border="40" colordiffuse="FF01416b">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
                     <visible>!String.IsEmpty(Control.GetLabel(9001))</visible>
                 </control>
@@ -510,7 +510,7 @@
                     <textoffsetx>20</textoffsetx>
                     <onclick/>
                     <align>center</align>
-                    <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
+                    <texturefocus border="40" colordiffuse="FF01416b">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
                     <visible>!String.IsEmpty(Control.GetLabel(9002))</visible>
                 </control>
@@ -522,7 +522,7 @@
                     <textoffsetx>20</textoffsetx>
                     <onclick/>
                     <align>center</align>
-                    <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
+                    <texturefocus border="40" colordiffuse="FF01416b">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
                     <visible>!String.IsEmpty(Control.GetLabel(9003))</visible>
                 </control>
@@ -535,7 +535,7 @@
                     <textoffsetx>20</textoffsetx>
                     <onclick/>
                     <align>center</align>
-                    <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
+                    <texturefocus border="40" colordiffuse="FF01416b">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
                     <visible>!String.IsEmpty(Control.GetLabel(9004))</visible>
                 </control>

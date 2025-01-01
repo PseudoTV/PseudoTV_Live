@@ -34,7 +34,7 @@
                 <colordiffuse>FFFFFFFF</colordiffuse>
                 <shadowcolor>FF696969</shadowcolor>
                 <texturefocus colordiffuse="FF01416b">buttons/restart_button.png</texturefocus>
-                <texturenofocus colordiffuse="FF696969">buttons/restart_button.png</texturenofocus>
+                <texturenofocus colordiffuse="dimgray">buttons/restart_button.png</texturenofocus>
                 <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
                 <label/>
                 <align>center</align>

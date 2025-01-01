@@ -40,7 +40,7 @@ class Builder:
         
         #global rules
         self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
-        self.enableEvenDistro = bool(SETTINGS.getSettingInt('Enable_Even'))
+        self.enableEven       = bool(SETTINGS.getSettingInt('Enable_Even'))
         self.interleaveValue  = SETTINGS.getSettingInt('Interleave_Value')
         self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
         self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
@@ -90,20 +90,20 @@ class Builder:
 
     def verify(self, channels=None):
         if channels is None: channels = Channels().getChannels()
-        
         for idx, citem in enumerate(channels):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
                 self.log('verify, [%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem))
                 continue
-            else:
-                citem['name'] = validString(citem['name']) #todo temp. correct existing file names; drop by v.0.6
-                citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
-                    
-                self.log('verify, [%s] VERIFIED - channel %s: %s'%(citem['id'],citem['number'],citem['name']))
-                yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
+            citem['name'] = validString(citem['name']) #todo temp. correct existing file names; drop by v.0.6
+            citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
+            self.log('verify, [%s] VERIFIED - channel %s: %s'%(citem['id'],citem['number'],citem['name']))
+            yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
 
 
     def build(self, channels: list=[]):
+        def __hasGuideData(citem):
+            return dict(self.xmltv.hasProgrammes([citem])).get(citem['id'],False)
+            
         def __hasProgrammes(cacheResponse):
             if isinstance(cacheResponse,list):
                 if len(cacheResponse) > 0: return True
@@ -114,8 +114,7 @@ class Builder:
             if not channels:
                 self.log('build, no verified channels found!')
                 return False, False
-                
-            channels  = self.sortChannels(self.verify(channels))
+
             now       = getUTCstamp()
             start     = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour
             stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
@@ -123,7 +122,7 @@ class Builder:
             self.completeBuild = True
             
             updated = set()
-            for idx, citem in enumerate(channels):
+            for idx, citem in enumerate(self.sortChannels(self.verify(channels))):
                 citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
                 self.log('build, id = %s, rules = %s'%(citem['id'],citem.get('rules',{})))
                 if self.service._interrupt():
@@ -154,7 +153,7 @@ class Builder:
                         chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
                         self.log('build, [%s] In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
                         self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
-                        self.delChannelStation(citem)
+                        if not __hasGuideData(citem): self.delChannelStation(citem) #only remove m3u references when no valid programmes found.
                     self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                         
             self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completeBuild else LANGUAGE(32135)))
@@ -257,7 +256,7 @@ class Builder:
           
         def _injectRules(citem):
             def __chkEvenDistro(citem):
-                if self.enableEvenDistro and not citem.get('rules',{}).get("1000"):
+                if self.enableEven and not citem.get('rules',{}).get("1000"):
                     nrules = {"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":SETTINGS.getSettingBool('Enable_Even_Force')}}}
                     self.log("buildChannel: _injectRules, __chkEvenDistro [%s], new rules = %s"%(citem['id'],nrules))
                     citem.setdefault('rules',{}).update(nrules)
@@ -329,6 +328,7 @@ class Builder:
         self.log("buildList, [%s] media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
         dirList, fileList, seasoneplist, trailersdict = [], [], [], {}
         items, nlimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
+        
         if self.service._interrupt():
             self.jsonRPC.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #rollback pagination limits
             return [], []
@@ -451,7 +451,7 @@ class Builder:
                         self.pErrors.append(LANGUAGE(32032))
                         self.log("buildList, [%s] IDX = %s skipping content no duration meta found! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
 
-            if sort.get("method","") == 'episode':
+            if sort.get("method","").startswith('episode'):
                 self.log("buildList, [%s] sorting by episode"%(citem['id']))
                 seasoneplist.sort(key=lambda seep: seep[1])
                 seasoneplist.sort(key=lambda seep: seep[0])

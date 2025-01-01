@@ -136,9 +136,13 @@ class Library:
         
         types = AUTOTUNE_TYPES
         for idx, type in enumerate(types):
-            if self.service._interrupt() or self.service._suspend():
+            if self.service._interrupt():
                 complete = False
                 break
+            elif self.service._suspend():
+                types.insert(idx, type)
+                self.service.monitor.waitForAbort(SUSPEND_TIMER)
+                continue
             else:
                 msg = LANGUAGE(30014)
                 func = self.libraryFUNCS[type]

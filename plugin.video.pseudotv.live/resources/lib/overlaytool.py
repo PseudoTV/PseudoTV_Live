@@ -52,9 +52,9 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             try:    self.channelBugX, self.channelBugY = eval(kwargs.get("Channel_Bug_Position_XY",SETTINGS.getSetting("Channel_Bug_Position_XY")))
             except: self.channelBugX, self.channelBugY = self.autoBugX, self.autoBugY
 
-            self.onNextColor = '0x%s'%((kwargs.get("ON_Next_Color") or SETTINGS.getSetting("ON_Next_Color")))
+            self.onNextColor = '0x%s'%((kwargs.get("OnNext_Color") or SETTINGS.getSetting("OnNext_Color")))
             self.autoNextX, self.autoNextY = abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h)
-            try:    self.onNextX, self.onNextY = eval(kwargs.get("On_Next_Position_XY",SETTINGS.getSetting("On_Next_Position_XY")))
+            try:    self.onNextX, self.onNextY = eval(kwargs.get("OnNext_Position_XY",SETTINGS.getSetting("OnNext_Position_XY")))
             except: self.onNextX, self.onNextY = self.autoNextX, self.autoNextY
             
         try: 
@@ -80,7 +80,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         self.posx, self.posy = self._channelBug.getX(),self._channelBug.getY()
         
         self._onNext = xbmcgui.ControlTextBox(self.onNextX, self.onNextY, abs(int(self.window_w // 2)), abs(int(self.window_h // 32)), 'font12', self.onNextColor) #IDX 2
-        self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(ADDON_NAME),LANGUAGE(32116)%(ADDON_NAME)))
+        self._onNext.setText('%s %s\n%s %s'%(LANGUAGE(32104),ADDON_NAME,LANGUAGE(32116),ADDON_NAME))
         self._addCntrl(self._onNext)
 
         self.focusCycleLST.insert(0,self.focusCycleLST.pop(self.focusIDX))
@@ -144,8 +144,8 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             if auto: save("Channel_Bug_Position_XY",LANGUAGE(30022))
             else:    save("Channel_Bug_Position_XY","(%s,%s)"%(posx, posy))
         elif cntrl == self._onNext:
-            if auto: save("On_Next_Position_XY",LANGUAGE(30022))
-            else:    save("On_Next_Position_XY","(%s,%s)"%(posx, posy))
+            if auto: save("OnNext_Position_XY",LANGUAGE(30022))
+            else:    save("OnNext_Position_XY","(%s,%s)"%(posx, posy))
         
 
     def _setFocus(self, cntrl):

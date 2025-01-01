@@ -83,8 +83,8 @@ class XSP:
             try: media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
             except Exception as e: self.log("parseXSP, no media type", xbmc.LOGDEBUG)
             
-            try: limit = (int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue) or limit)
-            except Exception as e: self.log("parseXSP, no limit set", xbmc.LOGDEBUG)
+            # try: limit = (int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue) or limit)
+            # except Exception as e: self.log("parseXSP, no limit set", xbmc.LOGDEBUG)
 
             try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()}) #todo pop rules to filter var.
             except Exception as e:
@@ -98,17 +98,17 @@ class XSP:
 
             try:
                 type = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
-                if type.lower() in ["mixed"]:#todo use operators to build filter list for mixed content
+                if type.lower() in ["mixed"]:
                     for rule in dom.getElementsByTagName('rule'):
-                        if rule.getAttribute('field').lower() == 'path' and rule.getAttribute('operator').lower() in ['is','contains']:
+                        if rule.getAttribute('field').lower() == 'path' and rule.getAttribute('operator').lower() in ['is']:
                             paths.append(rule.getElementsByTagName("value")[0].childNodes[0].data)
-                        elif rule.getAttribute('field').lower() in ['playlist','virtualfolder'] and rule.getAttribute('operator').lower() in ['is','contains']:
+                        elif rule.getAttribute('field').lower() in ['playlist','virtualfolder'] and rule.getAttribute('operator').lower() in ['is']:
                             paths.extend(self.findXSP(rule.getElementsByTagName("value")[0].childNodes[0].data))
             except Exception as e:
                 self.log("parseXSP, parsing paths failed! %s"%(e), xbmc.LOGDEBUG)
                 type  = ''
                 
-            self.log("parseXSP, type = %s, paths = %s, media = %s, sort = %s, filter = %s, limit = %s"%(type, paths, media, sort, filter, limit))
+            self.log("parseXSP, type = %s, media = %s, sort = %s, filter = %s, limit = %s\npaths = %s"%(type, media, sort, filter, limit, paths))
         except Exception as e: self.log("parseXSP, failed! %s"%(e), xbmc.LOGERROR)
         return paths, media, sort, filter, limit
             
@@ -116,29 +116,31 @@ class XSP:
     def parseDXSP(self, opath: str, sort: dict={}, filter: dict={}, incExtras: bool=SETTINGS.getSettingBool('Enable_Extras')):
         try:
             path, params = opath.split('?xsp=')
+            
+            if   path.startswith('videodb://tvshows/'): type = 'episodes'
+            elif path.startswith('videodb://movies/'):  type = 'movies'
+            elif path.startswith('musicdb://songs/'):   type = 'music'
+            else:                                       type = 'files'
+            
+            if type == 'episodes' and '-1/-1/-1/' not in path: flatten = '-1/-1/-1/'
+            else:                                              flatten = ''
+
             media = 'music' if path.lower().startswith('musicdb://') else 'video'
             param = loadJSON(unquoteString(params))
+            sort.update(param.get("order",{}))
+            filter.update(param.get("rules",{}))
             
-            if   path.startswith('videodb://tvshows/'): param["type"], nsort = ('episodes',{"method":"episode"})  #tvshows
-            elif path.startswith('videodb://movies/'):  param["type"], nsort = ('movies'  ,{"method": "random"})  #movies
-            elif path.startswith('musicdb://songs/'):   param["type"], nsort = ('music'   ,{"method": "random"})  #music
-            else:                                       param["type"], nsort = ('files'   ,{"method": "random"})  #other
-            nsort.update(param.get('order',{}))
-            nsort.update(sort)
-            
-            if not incExtras and param["type"].startswith(tuple(TV_TYPES)): #filter out extras/specials
-                param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"}, 
-                                                                          {"field":"episode","operator":"greaterthan","value":"0"}])
-
-            param.setdefault("rules",{}).update(filter)   
-            if param["type"] == 'episodes' and '-1/-1/-1/' not in path: flatten = '-1/-1/-1/'
-            else: flatten = ''
-            
-            path = '%s%s?xsp=%s'%(path,flatten,quoteString(dumpJSON(param)))
-            self.log("parseDXSP, dynamic library path detected! augmenting path\n%s\n=>\n%s"%(opath,path))
-            return path, media, {}, {}
+            if not incExtras and type.startswith(tuple(TV_TYPES)): #filter out extras/specials
+                filter.setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"}, 
+                                                    {"field":"episode","operator":"greaterthan","value":"0"}])
+                                                    
+            param["type"]  = type
+            param["order"] = sort
+            param["rules"] = filter
+            opath = '%s%s?xsp=%s'%(path,flatten,quoteString(dumpJSON(param)))
+            self.log("parseDXSP, type = %s, media = %s, sort = %s, filter = %s\npath = %s"%(type, media, sort, {}, opath))
         except Exception as e: self.log("parseDXSP, failed! %s"%(e), xbmc.LOGERROR)
-        return opath, media, nsort, filter
+        return opath, media, sort, {}
         
 if __name__ == '__main__':
     main()

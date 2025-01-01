@@ -36,9 +36,10 @@ class Plugin:
         self.jsonRPC     = JSONRPC()
         self.cache       = SETTINGS.cache
         
-        self.pageLimit   = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
-        self.seekTOL     = SETTINGS.getSettingInt('Seek_Tolerance')
-        self.seekTHD     = SETTINGS.getSettingInt('Seek_Threshold')
+        self.pageLimit    = SETTINGS.getSettingInt('Page_Limit')
+        self.seekTOL      = SETTINGS.getSettingInt('Seek_Tolerance')
+        self.seekTHD      = SETTINGS.getSettingInt('Seek_Threshold')
+        self.debugEnabled = SETTINGS.getSettingBool('Debug_Enable')
         
         self.sysInfo['radio'] = sysInfo.get('mode','').lower() == "radio"
         self.sysInfo['now']   = int(sysInfo.get('now')   or int(getUTCstamp()))
@@ -121,7 +122,7 @@ class Plugin:
             nextitems = RulesList().runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
             if nextitems:
                 self.IDXModifier = 0
-                del nextitems[PAGE_LIMIT-1:]# list of upcoming items, truncate for speed
+                del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
                 self.log('getResumeItems, building nextitems (%s)'%(len(nextitems)))
                 return poolit(buildfItem)(nextitems)
             else: DIALOG.notificationDialog(LANGUAGE(32000))
@@ -190,12 +191,12 @@ class Plugin:
                         self.log('getPVRItems, progress past threshold advance to nextitem')
                         nowitem = nextitems.pop(0)
                     
-                    if round(nowitem['progress']) <= self.seekTOL:
+                    if round(nowitem['progress']) < self.seekTOL:
                         self.log('getPVRItems, progress start at the beginning')
                         nowitem['progress']           = 0
                         nowitem['progresspercentage'] = 0
 
-                    del nextitems[PAGE_LIMIT-1:]# list of upcoming items, truncate for speed
+                    del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
                     nextitems.insert(0,nowitem)
                     self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
                     return poolit(buildfItem)([(idx, item) for idx, item in enumerate(nextitems)])
@@ -268,8 +269,8 @@ class Plugin:
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             if self.sysInfo.get('fitem'):#-> live playback from UI incl. listitem
                 liz = LISTITEMS.buildItemListItem(self.sysInfo['fitem'])
-                if (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')) or (self.sysInfo.get('seek',0) >= self.seekTOL and self.sysInfo.get('progresspercentage',0) < self.seekTHD): #-> live
-                    if (self.sysInfo.get('seek',0) >= self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < self.seekTHD):
+                if self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0'): #-> live
+                    if self.sysInfo.get('seek',0) > 0 and self.sysInfo.get('progresspercentage',0) < 100:
                         self.log('playLive, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
                         liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
                         infoTag = ListItemInfoTag(liz,'video')
@@ -373,7 +374,7 @@ class Plugin:
             elif   self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): return hasAddon(self.sysInfo.get('vid',''))
             elif   FileAccess.exists(self.sysInfo.get('vid','')): return True
             self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))
-            if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32167))
+            if self.debugEnabled: DIALOG.notificationDialog(LANGUAGE(32167))
             return False
             
         def _chkLoop():
@@ -384,19 +385,19 @@ class Plugin:
                     
                     if self.sysInfo['now'] >= self.sysInfo['stop']:
                         self.log('playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo['now'],self.sysInfo['stop']))
-                        if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']))
+                        if self.debugEnabled: DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']))
                         return False
                     elif self.sysInfo['duration'] > self.sysInfo['runtime'] and self.sysInfo['runtime'] > 0:
                         self.log('playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
-                        if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['duration'],self.sysInfo['runtime']))
+                        if self.debugEnabled: DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['duration'],self.sysInfo['runtime']))
                         return False
                     elif self.sysInfo['seek'] >= oldInfo.get('runtime',self.sysInfo['duration']):
                         self.log('playCheck _chkLoop, failed! Seeking to a position (%s) past media runtime (%s).'%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
-                        if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
+                        if self.debugEnabled: DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
                         return False
                     elif self.sysInfo['seek'] == oldInfo.get('seek',self.sysInfo['seek']):
                         self.log('playCheck _chkLoop, failed! Seeking to same position.')
-                        if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog("Playback Failed: Seeking to same position")
+                        if self.debugEnabled: DIALOG.notificationDialog("Playback Failed: Seeking to same position")
                         return False
             return True
 

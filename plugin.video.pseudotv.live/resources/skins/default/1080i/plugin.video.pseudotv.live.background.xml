@@ -4,64 +4,55 @@
     <onload>SetProperty(plugin.video.pseudotv.live.Running.OVERLAY_BACKGROUND,true,10000)</onload>
     <onunload>SetProperty(plugin.video.pseudotv.live.Running.OVERLAY_BACKGROUND,false,10000)</onunload>
     <controls>
-        <control type="group" id="40000">
+        <control type="group">
+            <description>Background !Playing</description>
             <posx>0</posx>
             <posy>0</posy>
             <animation type="WindowOpen" reversible="false">
-                <effect type="zoom" start="80" end="100" center="960,540" delay="160" tween="back" time="240"/>
+                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" start="0" end="100" time="240"/>
             </animation>
             <animation type="WindowClose" reversible="false">
-                <effect type="zoom" start="100" end="80" center="960,540" easing="in" tween="back" time="240"/>
+                <effect type="zoom" start="100" end="80" center="50%,50%" easing="in" tween="back" time="240"/>
                 <effect type="fade" start="100" end="0" time="240"/>
             </animation>
             <animation type="Visible" reversible="false">
                 <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" end="100" time="240"/>
             </animation>
-            <description>Background !Playing</description>
-            <control type="group">
+            <control type="image">
+                <description>Hide Background</description>
+                <posx>0</posx>
+                <posy>0</posy>
+                <width>auto</width>
+                <height>auto</height>
+                <texture border="5">colors/white.png</texture>
+                <bordersize>5</bordersize>
+                <colordiffuse>black</colordiffuse>
+                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+                <bordertexture border="5" infill="false" colordiffuse="FF01416b">colors/white.png</bordertexture>
+            </control>
+            <control type="image" id="40001">
                 <description>Background Dynamic</description>
-                <control type="image" id="40001">
-                    <description>Hide Background</description>
-                    <width>auto</width>
-                    <height>auto</height>
-                    <colordiffuse>black</colordiffuse>
-                    <texture>colors/white.png</texture>
-                    <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
-                </control>
-                <control type="image" id="40004">
-                    <width>auto</width>
-                    <height>auto</height>
-                    <texture>backgrounds/background.gif</texture>
-                    <aspectratio scalediffuse="false" align="center" aligny="center">scale</aspectratio>
-                </control>
-                <control type="image" id="40002">
-                    <posx>704</posx>
-                    <posy>284</posy>
-                    <description>Background Logo</description>
-                    <height>512</height>
-                    <width>512</width>
-                    <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
-                    <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-                    <visible>Control.IsVisible(40004)</visible>
-                    <texture/>
-                </control>
-                <control type="textbox" id="40003">
-                    <posx>128</posx>
-                    <posy>952</posy>
-                    <height>36</height>
-                    <width>1418</width>
-                    <font>font27</font>
-                    <scroll>true</scroll>
-                    <textcolor>white</textcolor>
-                    <shadowcolor>text_shadow</shadowcolor>
-                    <scrolltime>600</scrolltime>
-                    <autoscroll delay="5000" time="1000">false</autoscroll>
-                    <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
-                    <label/>
-                    <visible>Control.IsVisible(40004)</visible>
-                </control>
+                <top>40</top>
+                <left>360</left>
+                <width>1200</width>
+                <height>1000</height>
+                <texture>backgrounds/background.gif</texture>
+                <aspectratio scalediffuse="false" align="center" aligny="center">keep</aspectratio>
+                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+            </control>
+            <control type="image" id="40002">
+                <description>Background Logo</description>
+                <top>412</top>
+                <left>832</left>
+                <width>256</width>
+                <height>256</height>
+                <texture border="5" fallback="logo.png">logo.png</texture>
+                <visible>Control.IsVisible(40001)</visible>
+                <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+            </control>
+            <control type="group">
                 <control type="grouplist">
                     <posx>1440</posx>
                     <posy>850</posy>
@@ -73,19 +64,45 @@
                         <align>center</align>
                         <aligny>center</aligny>
                         <font>font_clock</font>
-                        <shadowcolor>text_shadow</shadowcolor>
+                        <textcolor>dimgray</textcolor>
                         <height>60</height>
                         <label>[B]$INFO[System.Time][/B]</label>
-                        <visible>Control.IsVisible(40004)</visible>
-                        <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+                        <visible>Control.IsVisible(40001)</visible>
                     </control>
                     <control type="image">
                         <height>90</height>
-                        <texture>splashtext.png</texture>
+                        <visible>Control.IsVisible(40001)</visible>
+                        <texture colordiffuse="dimgray">splashtext.png</texture>
                         <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
-                        <visible>Control.IsVisible(40004)</visible>
-                        <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                     </control>
+                </control>
+            </control>
+            <control type="grouplist">
+                <posx>130</posx>
+                <posy>735</posy>
+                <itemgap>10</itemgap>
+                <orientation>vertical</orientation>
+                <control type="image" id="40004">
+                    <description>OnNext Image</description>
+                    <height>135</height>
+                    <width>240</width>
+                    <texture border="5" fallback="fanart.jpg"></texture>
+                    <bordersize>5</bordersize>
+                    <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+                    <bordertexture border="5" infill="false" colordiffuse="FF01416b">colors/white.png</bordertexture>
+                    <visible>Control.IsVisible(40001)</visible>
+                </control>
+                <control type="textbox" id="40003">
+                    <height>70</height>
+                    <width>960/</width>
+                    <font>font27</font>
+                    <scroll>true</scroll>
+                    <textcolor>white</textcolor>
+                    <shadowcolor>dimgray</shadowcolor>
+                    <scrolltime>600</scrolltime>
+                    <autoscroll delay="5000" time="1000">false</autoscroll>
+                    <label/>
+                    <visible>Control.IsVisible(40001)</visible>
                 </control>
             </control>
         </control>

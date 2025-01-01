@@ -38,7 +38,7 @@ class JSONRPC:
             else: self.log('sendLocker, waiting...')
         PROPERTIES.setPropertyBool('sendLocker',True)
         try: yield self.log('sendLocker, Locked!')
-        finally:
+        finally: #throttle calls, low power devices suffer segfault during rpc flood.
             monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
             PROPERTIES.setPropertyBool('sendLocker',False)
         del monitor
@@ -125,8 +125,7 @@ class JSONRPC:
         results   = self.cache.get(cacheName, checksum)
         if not results:
             try:    
-                results = FileAccess.listdir(path)
-                self.cache.set(cacheName, results, checksum, expiration)
+                results = self.cache.set(cacheName, FileAccess.listdir(path), checksum, expiration)
                 self.log('getListDirectory path = %s, checksum = %s'%(path, checksum))
             except Exception as e:
                 self.log("getListDirectory, failed! %s\npath = %s"%(e,path), xbmc.LOGERROR)
@@ -171,9 +170,10 @@ class JSONRPC:
         else:     return (self.sendJSON(param).get('result',{}).get('value')  or default)
 
 
-    def setSettingValue(self, key, value):
+    def setSettingValue(self, key, value, que=True):
         param = {"method":"Settings.SetSettingValue","params":{"setting":key,"value":value}}
-        self.queueJSON(param)
+        if que: self.queueJSON(param)
+        else:   self.sendJSON(param)
 
 
     def getSources(self, media='video', cache=True):
@@ -306,24 +306,24 @@ class JSONRPC:
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
     
-    def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')):
+    def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected during playback, accurate meta...
         self.cache.set('getRuntime.%s'%(getMD5(item.get('file'))), runtime, checksum=getMD5(item.get('file')), expiration=datetime.timedelta(days=28), json_data=False)
         if save and item: self.queDuration(item, runtime=runtime)
         return runtime
     
         
-    def _getRuntime(self, item={}):
+    def _getRuntime(self, item={}): #get runtime collected during playback, else less accurate provider meta
         runtime = self.cache.get('getRuntime.%s'%(getMD5(item.get('file'))), checksum=getMD5(item.get('file')), json_data=False)
         return (runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         
 
-    def _setDuration(self, path, item={}, duration=0, save=SETTINGS.getSettingBool('Store_Duration')):
+    def _setDuration(self, path, item={}, duration=0, save=SETTINGS.getSettingBool('Store_Duration')):#set VideoParser cache
         self.cache.set('getDuration.%s'%(getMD5(path)), duration, checksum=getMD5(path), expiration=datetime.timedelta(days=28), json_data=False)
         if save and item: self.queDuration(item, duration)
         return duration
 
     
-    def _getDuration(self, path):
+    def _getDuration(self, path): #get VideoParser cache
         return (self.cache.get('getDuration.%s'%(getMD5(path)), checksum=getMD5(path), json_data=False) or 0)
 
 
@@ -344,6 +344,12 @@ class JSONRPC:
     def getTotRuntime(self, items={}):
         total = sum([self._getRuntime(item) for item in items])
         self.log("getTotRuntime, items = %s, total = %s" % (len(items), total))
+        return total
+
+
+    def getTotDuration(self, items={}):
+        total = sum([self.getDuration(item.get('file'),item) for item in items])
+        self.log("getTotDuration, items = %s, total = %s" % (len(items), total))
         return total
 
 
@@ -483,22 +489,13 @@ class JSONRPC:
 
 
     def autoPagination(self, id, path, limits={}):
-        cacheName = 'autoPagination.%s.%s'%(id,getMD5(path))
-        if not limits:
-            msg = 'get'
-            limits = (self.cache.get(cacheName, checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
-        else:
-            msg = 'set'
-            self.cache.set(cacheName, limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
-        self.log("%s autoPagination; id = %s, limits = %s, path = %s"%(msg,id,limits,path))
-        return limits
+        if not limits: return (self.cache.get('autoPagination.%s.%s'%(id,getMD5(path)), checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
+        else:          return  self.cache.set('autoPagination.%s.%s'%(id,getMD5(path)), limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
             
              
-    def randomPagination(self, page=SETTINGS.getSettingInt('Page_Limit'), limits={}):
-        total = limits.get('total',0)
-        if total > page: start = random.randrange(0, (total-page), page)
-        else:            start = 0
-        return {"end": start, "start": start, "total":total}
+    def randomPagination(self, page=SETTINGS.getSettingInt('Page_Limit'), limits={}, start=0):
+        if limits.get('total',0) > page: start = random.randrange(0, (limits.get('total',0)-page), page)
+        return {"end": start, "start": start, "total":limits.get('total',0)}
         
 
     @cacheit(checksum=PROPERTIES.getInstanceID())
@@ -520,7 +517,7 @@ class JSONRPC:
         username = '{0}:{1}@'.format(username, password) if username and password else ''
         protocol = 'https' if secure else 'http'
         if local: ip = 'localhost'
-        else:     ip = getIP()
+        else:     ip = SETTINGS.getIP()
         webURL =  '{0}://{1}{2}:{3}'.format(protocol,username,ip, port)
         self.log("buildWebBase; returning %s"%(webURL))
         return webURL
@@ -554,7 +551,7 @@ class JSONRPC:
                     if not friendly or friendly.lower() == 'kodi':
                         return self.inputFriendlyName()
                     else:
-                        self.setSettingValue("services.devicename",friendly)
+                        self.setSettingValue("services.devicename",friendly,que=False)
                         self.log('inputFriendlyName, setting device name = %s'%(friendly))
             return friendly
             

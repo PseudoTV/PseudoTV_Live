@@ -53,7 +53,7 @@ class FileAccess:
 
 
     @staticmethod
-    def copyFolder(src, dir, dia=None):
+    def copyFolder(src, dir, dia=None, delete=False):
         log('FileAccess: copyFolder %s to %s'%(src,dir))
         if not FileAccess.exists(dir): FileAccess.makedirs(dir)
         if dia:
@@ -65,21 +65,13 @@ class FileAccess:
         if dia: dia = DIALOG.progressDialog(pct, control=dia, message='%s\n%s'%(LANGUAGE(32051),src))
         for fidx, file in enumerate(files):
             if dia: dia = DIALOG.progressDialog(pct, control=dia, message='%s: (%s%)\n%s'%(LANGUAGE(32051),(int(fidx*100)//len(files)),FileAccess._getFolderPath(file)))
-            FileAccess.copy(os.path.join(src, file), os.path.join(dir, file))
+            if delete: FileAccess.move(os.path.join(src, file), os.path.join(dir, file))
+            else:      FileAccess.copy(os.path.join(src, file), os.path.join(dir, file))
         
         for sidx, sub in enumerate(subs):
             pct = int(sidx)//len(subs)
-            FileAccess.copyFolder(os.path.join(src, sub), os.path.join(dir, sub), dia)
+            FileAccess.copyFolder(os.path.join(src, sub), os.path.join(dir, sub), dia, delete)
         
-
-    @staticmethod
-    def moveFolder(src, dir):
-        log('FileAccess: moving folder %s to %s'%(src,dir))
-        if not FileAccess.exists(dir): FileAccess.makedirs(dir)
-        for subs, files in FileAccess.listdir(src):
-            for file in files: FileAccess.movie(os.path.join(src, file), dir)
-            for sub in subs:   FileAccess.moveFolder(os.path.join(src, sub), dir)
-    
 
     @staticmethod
     def copy(orgfilename, newfilename):
@@ -92,8 +84,8 @@ class FileAccess:
     @staticmethod
     def move(orgfilename, newfilename):
         log('FileAccess: moving %s to %s'%(orgfilename,newfilename))
-        if xbmcvfs.copy(orgfilename, newfilename):
-            return xbmcvfs.delete(orgfilename)
+        if FileAccess.copy(orgfilename, newfilename):
+            return FileAccess.delete(orgfilename)
         return False
         
 

@@ -198,7 +198,7 @@ msgid "Select Diffuse Color"
 msgstr ""
 
 msgctxt "#30045"
-msgid "Show On Next"
+msgid "Show OnNext"
 msgstr ""
 
 msgctxt "#30046"
@@ -789,6 +789,30 @@ msgctxt "#30191"
 msgid "Error posting snapshot."
 msgstr ""
 
+msgctxt "#30192"
+msgid "Interleave Paths"
+msgstr ""
+
+msgctxt "#30193"
+msgid "Text"
+msgstr ""
+
+msgctxt "#30194"
+msgid "Artwork"
+msgstr ""
+
+msgctxt "#30195"
+msgid "UpNext"
+msgstr ""
+
+msgctxt "#30196"
+msgid "Select OnNext Mode"
+msgstr ""
+
+msgctxt "#30197"
+msgid "OSD"
+msgstr ""
+
 
 # Skin - strings 31000 thru 31999 reserved for skins
 
@@ -1212,7 +1236,7 @@ msgid "Edit Path"
 msgstr ""
 
 msgctxt "#32104"
-msgid "[B]You're Watching:[/B] %s"
+msgid "[B]You're Watching:[/B]"
 msgstr ""
 
 msgctxt "#32105"
@@ -1260,7 +1284,7 @@ msgid "Running as a client."
 msgstr ""
 
 msgctxt "#32116"
-msgid "[B]Next:[/B] %s"
+msgid "[B]Next:[/B]"
 msgstr ""
 
 msgctxt "#32117"
@@ -1428,7 +1452,7 @@ msgid "Changes Detected!"
 msgstr ""
 
 msgctxt "#32158"
-msgid "[COLOR=yellow][B]Discovering...[/B][/COLOR]"
+msgid "[COLOR=yellow][B]Listening...[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32159"
@@ -1707,6 +1731,23 @@ msgctxt "#32229"
 msgid "On Next Position"
 msgstr ""
 
+msgctxt "#32230"
+msgid "Pause Channel"
+msgstr ""
+
+msgctxt "#32231"
+msgid "Enable Pause"
+msgstr ""
+
+msgctxt "#32232"
+msgid "Limits & Sort Methods"
+msgstr ""
+
+msgctxt "#32233"
+msgid "Minimum Duration"
+msgstr ""
+
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
@@ -1807,7 +1848,7 @@ msgid "Select Color to apply [#FFFFFFFF Default]"
 msgstr ""
 
 msgctxt "#33045"
-msgid "Display On Next information towards the end of programme.\nIf Playlist Playback & Up-Next service installed; support meta is provided."
+msgid "Display OnNext information towards the end of program.\nUp-Next requires service install. [0 Disabled, 1 Default]"
 msgstr ""
 
 msgctxt "#33046"
@@ -1951,7 +1992,7 @@ msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33121"
-msgid "Group Autotuned channel TV shows in blocks. [0 Disabled, 0 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
+msgid "Group channel TV shows in blocks. [0 Disabled, 0 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
 msgstr ""
 
 msgctxt "#33125"
@@ -2102,14 +2143,6 @@ msgctxt "#33202"
 msgid "Minimum Debugging Level [LOGERROR - Default]\nIf submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error."
 msgstr ""
 
-msgctxt "#33230"
-msgid "Force TV in Episode order, Movies in Year order\nBased on available content provided by your channel configuration."
-msgstr ""
-
-msgctxt "#33231"
-msgid "Random sort & shuffle channel content."
-msgstr ""
-
 msgctxt "#33214"
 msgid "Default Sort Method for all channels, overridden per channel by SmartPlaylist, DynamicPlaylist and Adv. Channel rules."
 msgstr ""
@@ -2118,8 +2151,24 @@ msgctxt "#33215"
 msgid "Interleave individual paths in sets of x *see wiki for details [0 Disabled, 1 Default]"
 msgstr ""
 
+msgctxt "#33228"
+msgid "Pause Channel when not viewing (Experimental)"
+msgstr ""
+
 msgctxt "#33229"
 msgid "Change the onscreen On Next position. [Auto Default]"
+msgstr ""
+
+msgctxt "#33230"
+msgid "Force TV in Episode order, Movies in Year order\nBased on available content provided by your channel configuration and supersedes SmartPlaylist rules"
+msgstr ""
+
+msgctxt "#33231"
+msgid "Random sort & shuffle channel content\nSupersedes SmartPlaylist rules"
+msgstr ""
+
+msgctxt "#33232"
+msgid "Change content limits and sorting methods."
 msgstr ""
 
 msgctxt "#33308"

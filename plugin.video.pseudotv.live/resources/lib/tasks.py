@@ -115,9 +115,9 @@ class Tasks():
         self._chkEpochTimer('chkChannels'     , self.chkChannels     , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
         
-        self._chkPropTimer('chkPVRRefresh'        , self.chkPVRRefresh)
-        self._chkPropTimer('chkFillers'           , self.chkFillers)
-        self._chkPropTimer('chkAutoTune'          , self.chkAutoTune)
+        self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh)
+        self._chkPropTimer('chkFillers'       , self.chkFillers)
+        self._chkPropTimer('chkAutoTune'      , self.chkAutoTune)
         self._chkChannelUpdate()
                   
         
@@ -245,7 +245,7 @@ class Tasks():
             with PROPERTIES.setRunning('chkJSONQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
                 params = queuePool.get('params',[])
-                for i in list(range(int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))):
+                for i in list(range(SETTINGS.getSettingInt('Page_Limit'))):
                     if   self.service._interrupt(): break
                     elif len(params) > 0:
                         param = params.pop(0)
@@ -258,7 +258,7 @@ class Tasks():
 
     def chkPVRRefresh(self):
         self.log('chkPVRRefresh')
-        timerit(self._que)(self.chkPVRToggle)(FIFTEEN,[1])
+        timerit(self._que)(FIFTEEN,[self.chkPVRToggle,1])
 
 
     def chkPVRToggle(self):
@@ -268,7 +268,7 @@ class Tasks():
         isRecording = BUILTIN.getInfoBool('IsRecording','Pvr')
         self.log('chkPVRToggle, isIdle = %s, isPlaying = %s'%(isIdle,isPlaying))
         if isIdle and not (isPlaying | isScanning | isRecording): togglePVR(False,True)
-        else: self.chkPVRRefresh()
+        else: PROPERTIES.setEpochTimer('chkPVRRefresh')
 
 
     def chkFillers(self, channels=None):
