@@ -205,18 +205,19 @@ class Builder:
 
     def addScheduling(self, citem: dict, fileList: list, start: time, padScheduling=True) -> list:
         self.log("addScheduling, [%s] IN fileList = %s, start = %s, padScheduling = %s"%(citem['id'],len(fileList),start,padScheduling))
-        totDur  = 0
-        tmpList = []
-        nowtime = getUTCstamp()
-
-        for idx, item in enumerate(self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)):
+        totDur   = 0
+        tmpList  = []
+        nowtime  = getUTCstamp()
+        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)
+        
+        for idx, item in enumerate(fileList):
             item["idx"]   = idx
             item['start'] = start
             item['stop']  = start + item['duration']
             start = item['stop']
             tmpList.append(item)
 
-        if padScheduling:
+        if padScheduling and len(tmpList) > 0:
             iters = cycle(fileList)
             while not self.service.monitor.abortRequested() and tmpList[-1].get('stop') <= (nowtime + MIN_EPG_DURATION):
                 if tmpList[-1].get('stop') >= (nowtime + MIN_EPG_DURATION): 

@@ -22,7 +22,7 @@
             <control type="grouplist">
                 <posx>130</posx>
                 <posy>735</posy>
-                <itemgap>10</itemgap>
+                <itemgap>15</itemgap>
                 <orientation>vertical</orientation>
                 <Visible>Window.IsActive(fullscreenvideo) + [!Window.IsActive(videoosd)]</Visible>
                 <control type="image" id="40004">

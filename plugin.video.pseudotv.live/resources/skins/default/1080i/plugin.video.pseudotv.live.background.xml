@@ -80,7 +80,7 @@
             <control type="grouplist">
                 <posx>130</posx>
                 <posy>735</posy>
-                <itemgap>10</itemgap>
+                <itemgap>15</itemgap>
                 <orientation>vertical</orientation>
                 <control type="image" id="40004">
                     <description>OnNext Image</description>
