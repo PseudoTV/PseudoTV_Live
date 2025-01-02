@@ -44,7 +44,7 @@ class Background(xbmcgui.WindowXMLDialog):
             onNow  = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else self.fitem.get('showlabel',nowTitle)
             onNext = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
             
-            self.getControl(40004).setImage(COLOR_FANART if land == FANART else land)
+            self.getControl(40004).setImage(COLOR_FANART if land == FANART else land, useCache=True)
             self.getControl(40003).setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
             self.getControl(40001).setVisible(self.visible)
@@ -86,7 +86,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             onNow  = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else self.fitem.get('showlabel',nowTitle)
             onNext = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
             
-            self.getControl(40004).setImage(COLOR_FANART if land == FANART else land)
+            self.getControl(40004).setImage(COLOR_FANART if land == FANART else land, useCache=True)
             self.getControl(40003).setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
             self.getControl(40001).setVisible(self.visible)
         except Exception as e:
@@ -267,19 +267,21 @@ class Overlay():
         return self.controlManager.get(control)
 
 
-    def _setControl(self, control, state):
+    def _setControl(self, control, state=False):
         self.controlManager[control] = state
-        return state
+        return control
         
         
     def _delControl(self, control):
-        self.controlManager.pop(control)
+        if control in self.controlManager: self.controlManager.pop(control)
+        return control
         
         
     def _setVisible(self, control, state: bool=False):
         try:
-            control.setVisible(self._setControl(control,state))
-            self.log('setVisible, %s = %s'%(control,state))
+            if self._hasControl(control):
+                self._setControl(control,state).setVisible(state)
+                self.log('setVisible, %s = %s'%(control,state))
         except Exception('setVisible, failed! control does not exist'): pass
         return state
         
@@ -294,8 +296,7 @@ class Overlay():
         """
         try:
             if not self._hasControl(control):
-                self.window.addControl(control)
-                self._setVisible(control, False)
+                self.window.addControl(self._setControl(control))
                 self.log('_addControl, %s'%(control))
         except Exception as e: self.log('_addControl failed! %s'%(e), xbmc.LOGERROR)
         
@@ -305,9 +306,8 @@ class Overlay():
         """
         try:
             if self._hasControl(control):
-                self._delControl(control)
+                self.window.removeControl(self._delControl(control))
                 self.log('_removeControl, %s'%(control))
-                self.window.removeControl(control)
         except Exception as e: self.log('_removeControl failed! control = %s %s'%(control, e), xbmc.LOGERROR)
 
 
@@ -432,20 +432,21 @@ class Overlay():
             
             
     def toggleOnNext(self, state: bool=True, cancel: bool=False):
-        def __getOnNextInterval(interval, remaining):
+        def __getOnNextInterval(interval, remaining, displayTime):
             #split totalTime time into quarters, last quarter triggers nextup split by equal intervals of 3. ie. display 3 times in the last quarter of show
             totalTime  = (int(self.player.getPlayerTime()) * (self.maxProgress / 100)) #total time minus max threshold
-            showTime   = ((totalTime * .85) - (self.OSDTimer * interval))
-            intTime    = roundupDIV(showTime,interval)
-            if remaining < intTime: return __getOnNextInterval(interval+1, remaining)
+            elapsed    = self.player.getElapsedTime()
+            showTime   = ((totalTime * .85) - displayTime)
+            sleepTime    = roundupDIV(showTime,interval)
+            if remaining < sleepTime: return __getOnNextInterval(interval+1, remaining, displayTime)
             conditions = self.chkOnNextConditions()
-            showOnNext = (remaining <= showTime and totalTime > self.minDuration and conditions)
-            self.log('toggleOnNext, __getOnNextInterval: totalTime = %s, interval = %s, remaining = %s, intTime = %s, conditions = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,conditions,showOnNext))
-            return showOnNext, intTime
+            showOnNext = (elapsed >= showTime and remaining >= sleepTime and totalTime > self.minDuration and conditions)
+            self.log('toggleOnNext, __getOnNextInterval: interval = %s, totalTime = %s, showTime = %s, remaining = %s, elapsed = %s, displayTime = %s, sleepTime = %s, conditions = %s, showOnNext = %s'%(interval,totalTime,showTime,remaining,elapsed,displayTime,sleepTime,conditions,showOnNext))
+            return showOnNext, sleepTime, displayTime
 
         if self.enableOnNext:
-            showOnNext, intTime = __getOnNextInterval(ON_NEXT_COUNT,abs(floor(self.player.getRemainingTime())))
-            wait   = {True:int(self.OSDTimer * ON_NEXT_COUNT),False:float(intTime)}[state]
+            showOnNext, sleepTime, displayTime = __getOnNextInterval(ON_NEXT_COUNT,abs(floor(self.player.getRemainingTime())),int(self.OSDTimer * ON_NEXT_COUNT))
+            wait   = {True:displayTime,False:float(sleepTime)}[state]
             nstate = not bool(state)
             citem  = self.player.sysInfo.get('citem',{}) #channel
             fitem  = self.player.sysInfo.get('fitem',{}) #onnow
@@ -462,9 +463,9 @@ class Overlay():
                     nowTitle  = fitem.get('label'    ,BUILTIN.getInfoLabel('Title','VideoPlayer'))
                     nextTitle = nitem.get('showlabel',BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
                     onNow  = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else fitem.get('showlabel',nowTitle)
-                    onNext = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
+                    onNext = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
                     
-                    self._onNext.setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow),LANGUAGE(32116),onNext)
+                    self._onNext.setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
                     self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=%s delay=%s condition=True reversible=True'%(ceil(wait//4)*1000,(ceil(wait//4)-2)*1000))])
                     self._onNext.autoScroll(5500, 2500, int(FIFTEEN//3))
                     self._setVisible(self._onNext,True)

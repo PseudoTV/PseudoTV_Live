@@ -158,7 +158,7 @@ class Player(xbmc.Player):
             
             
     def getElapsedTime(self):
-        try:    return int(self.getTime() // 1000)
+        try:    return (self.getPlayerTime() - self.getRemainingTime())
         except: return -1
 
 

@@ -31,14 +31,14 @@
                     <width>240</width>
                     <texture border="5" fallback="fanart.jpg"></texture>
                     <bordersize>5</bordersize>
-                    <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+                    <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
                     <bordertexture border="5" infill="false" colordiffuse="FF01416b">colors/white.png</bordertexture>
                     <visible>Control.IsVisible(40001)</visible>
                 </control>
                 <control type="textbox" id="40003">
                     <height>70</height>
                     <width>960/</width>
-                    <posy>145</posy>
+                    <posy>140</posy>
                     <font>font27</font>
                     <scroll>true</scroll>
                     <textcolor>white</textcolor>
