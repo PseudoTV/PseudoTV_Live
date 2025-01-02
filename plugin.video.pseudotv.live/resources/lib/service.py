@@ -84,7 +84,8 @@ class Player(xbmc.Player):
     def onAVStarted(self):
         self.isPseudoTV = self.isPseudoTVPlaying()
         self.log('onAVStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
-        if self.isPseudoTV: self._onPlay()
+        if    self.isPseudoTV: self._onPlay()
+        else: self.service.monitor.toggleOverlay(False)
         
         
     def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, issue limited to pvr?
@@ -207,6 +208,7 @@ class Player(xbmc.Player):
         if sysInfo.get('chid') == oldInfo.get('chid',random.random()):
             self.toggleInfo(self.infoOnChange)
         else:
+            self.service.monitor.toggleOverlay(False)
             self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), sysInfo, inherited=self)
             self.setRuntime(self.saveDuration,self.sysInfo.get('fitem',{}),self.sysInfo.get('runtime'))
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
@@ -297,6 +299,7 @@ class Monitor(xbmc.Monitor):
         self.jsonRPC          = service.jsonRPC
         self.pendingSuspend   = False
         self.pendingInterrupt = False
+        self.OSDTimer         = SETTINGS.getSettingInt('OSD_Timer')
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -309,7 +312,7 @@ class Monitor(xbmc.Monitor):
             except: #Kodi raises error after sleep.
                 self.log('__getIdle, Kodi waking up from sleep...')
                 idleTime = 0
-            idleState = (idleTime > SETTINGS.getSettingInt('OSD_Timer'))
+            idleState = (idleTime > self.OSDTimer)
             return idleState, idleTime
 
         def __chkResumeTime():

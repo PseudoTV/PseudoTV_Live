@@ -188,11 +188,8 @@ class Utilities:
             with BUILTIN.busy_dialog():
                  for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
-        
-        if full: 
-            startChannelBuild()
-        else:
-            PROPERTIES.forceUpdateTime('chkChannels')
+        if full: startChannelBuild()
+        else:    PROPERTIES.forceUpdateTime('chkChannels')
 
 
     def sortMethod(self):

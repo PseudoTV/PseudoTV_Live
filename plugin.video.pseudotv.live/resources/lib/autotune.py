@@ -71,8 +71,9 @@ class Autotune:
             if samples:
                 opt = ''
                 msg = (LANGUAGE(32042)%ADDON_NAME)
-                hasBackup  = PROPERTIES.hasBackup()
-                hasServers = PROPERTIES.hasServers()
+                hasBackup   = PROPERTIES.hasBackup()
+                hasServers  = PROPERTIES.hasServers()
+                hasChannels = PROPERTIES.hasChannels()
                 if hasBackup:
                     opt = LANGUAGE(32112)
                     msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
@@ -83,9 +84,9 @@ class Autotune:
                 retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
                 if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
                 elif retval == 2:
-                    if   hasBackup:  return Backup().recoverChannels()
-                    elif hasServers: return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID))
-                elif not PROPERTIES.hasFirstrun(): return openAddonSettings()       
+                    if   hasBackup:   return Backup().recoverChannels()
+                    elif hasServers:  return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID))
+                elif not hasChannels: return openAddonSettings()       
         else:
             if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32058))
             return 
@@ -177,8 +178,8 @@ class Autotune:
                 citem['logo']     = eitem.get('logo',citem.get('logo',LOGO))
                 citem['favorite'] = eitem.get('favorite',False)
             self.channels.addChannel(citem)
-        if self.channels.setChannels():
-            PROPERTIES.forceUpdateTime('chkChannels')
+            PROPERTIES.setUpdateChannels(citem['id'])
+        return self.channels.setChannels()
        
        
     def clearLibrary(self):

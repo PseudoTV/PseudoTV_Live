@@ -65,16 +65,14 @@ def slugify(s, lowercase=False):
   return s
         
 def validString(s):
-    return "".join(x for x in s if (x.isalnum() or x not in '\/:*?"<>|'))
+    return "".join(x for x in s if (x.isalnum() or x not in '\\/:*?"<>|'))
         
 def stripNumber(s):
     return re.sub(r'\d+','',s)
     
 def stripRegion(s):
-    try:
-        match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(s)
-        if match.group(1): return match.group(1)
-    except: return s
+    match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(s)
+    if match: return match.group(1)
     
 def chanceBool(percent=25):
     return random.randrange(100) <= percent
@@ -139,10 +137,10 @@ def requestURL(url, params={}, data={}, header=HEADER, timeout=FIFTEEN, json_dat
         if results and cache: return __setCache(cacheKey,results,json_data,cache,checksum,life)
         else:                 return results
     except requests.exceptions.ConnectionError as e:
-        log("Globals: requestURL, failed! Error connecting to the server: %s"%('Returning cache' if cache else ''))
+        log("Globals: requestURL, failed! Error connecting to the server: %s"%('Returning cache' if cache else 'No Response'))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
     except requests.exceptions.HTTPError as e:
-        log("Globals: requestURL, failed! HTTP error occurred: %s\n%s"%('Returning cache' if cache else ''))
+        log("Globals: requestURL, failed! HTTP error occurred: %s\n%s"%('Returning cache' if cache else 'No Response'))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
     except requests.exceptions.RequestException as e:
         log("Globals: requestURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
@@ -175,7 +173,7 @@ def getRecordID(name, path, number):
 
 def splitYear(label):
     try:
-        match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
+        match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(label)
         if match and match.group(2):
             label, year = match.groups()
             if year.isdigit():
@@ -334,8 +332,8 @@ def playSFX(filename, cached=False):
     xbmc.playSFX(filename, useCached=cached)
 
 def cleanLabel(text):
-    text = re.sub('\[COLOR=(.+?)\]', '', text)
-    text = re.sub('\[/COLOR\]', '', text)
+    text = re.sub(r'\[COLOR=(.+?)\]', '', text)
+    text = re.sub(r'\[/COLOR\]', '', text)
     text = text.replace("[B]",'').replace("[/B]",'')
     text = text.replace("[I]",'').replace("[/I]",'')
     return text.replace(":",'')

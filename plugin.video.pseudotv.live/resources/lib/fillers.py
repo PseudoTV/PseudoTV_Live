@@ -111,8 +111,8 @@ class Fillers:
         items  = []
         for key in keys:
             tmpLST = self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[])
-            if len(tmpLST) > 0: items.append(random.choice(tmpLST))
-            elif chance:        items.extend(self.getSingle(type))
+            if   len(tmpLST) > 0:            items.append(random.choice(tmpLST))
+            elif len(items) == 0 and chance: items.extend(self.getSingle(type))
         self.log('getSingle, type = %s, keys = %s, chance = %s, returning = %s'%(type,keys,chance,len(items)))
         return setDictLST(items)
         
@@ -153,7 +153,7 @@ class Fillers:
                     if self.builder.bctTypes[ftype].get('enabled',False) and dbtype.startswith(tuple(preIncludeTypes)) and chtype not in IGNORE_CHTYPE:
                         preFileList.extend(self.getSingle(ftype, preKeys, chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
 
-                for item in setDictLSTLST(preFileList):
+                for item in setDictLST(preFileList):
                     if (item.get('duration') or 0) == 0: continue
                     else:
                         runtime += item.get('duration')

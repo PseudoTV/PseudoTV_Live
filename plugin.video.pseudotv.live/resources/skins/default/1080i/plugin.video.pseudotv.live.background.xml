@@ -77,9 +77,10 @@
                     </control>
                 </control>
             </control>
-            <control type="grouplist">
+            <control type="group">
                 <posx>130</posx>
                 <posy>735</posy>
+                <width>960/</width>
                 <itemgap>15</itemgap>
                 <orientation>vertical</orientation>
                 <control type="image" id="40004">
@@ -95,6 +96,7 @@
                 <control type="textbox" id="40003">
                     <height>70</height>
                     <width>960/</width>
+                    <posy>145</posy>
                     <font>font27</font>
                     <scroll>true</scroll>
                     <textcolor>white</textcolor>

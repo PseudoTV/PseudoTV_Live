@@ -131,9 +131,11 @@ class Resources:
             renames  = list(set([name, slugify(name), validString(name)]))
             patterns = [getChannelSuffix, cleanChannelSuffix, stripRegion, splitYear]
             for chname in chnames:
-                if chname.lower() == name.lower(): return True
+                if not chname or not name: continue
+                elif chname.lower() == name.lower(): return True
                 for rename in renames:
-                    if chname.lower() == rename.lower(): return True
+                    if not rename: continue
+                    elif chname.lower() == rename.lower(): return True
                     for pattern in patterns:
                         try:
                             rrename = pattern(rename,type)
@@ -142,9 +144,10 @@ class Resources:
                             rrename = pattern(rename)
                             rchname = pattern(chname)
                         finally:
-                            if isinstance(rrename,(list,tuple)) and len(rrename) > 1: rrename = rrename[0]
                             if isinstance(rchname,(list,tuple)) and len(rchname) > 1: rchname = rchname[0]
-                            if chname.lower() == rrename.lower() or rename.lower() == rchname.lower() or rchname.lower() == rrename.lower(): return True
+                            if isinstance(rrename,(list,tuple)) and len(rrename) > 1: rrename = rrename[0]
+                            if not rchname or not rrename: continue
+                            elif chname.lower() == rrename.lower() or rename.lower() == rchname.lower() or rchname.lower() == rrename.lower(): return True
         
 
     def buildWebImage(self, image: str) -> str:

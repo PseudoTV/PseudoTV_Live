@@ -23,8 +23,8 @@ class YTParser:
         try:
             if hasAddon('script.module.youtube.dl'):
                 from youtube_dl import YoutubeDL
-                if   'videoid'  in filename: vID = (re.compile('videoid\=(.*)' , re.IGNORECASE).search(filename)).group(1)
-                elif 'video_id' in filename: vID = (re.compile('video_id\=(.*)', re.IGNORECASE).search(filename)).group(1)
+                if   'videoid'  in filename: vID = (re.compile(r'videoid\=(.*)' , re.IGNORECASE).search(filename)).group(1)
+                elif 'video_id' in filename: vID = (re.compile(r'video_id\=(.*)', re.IGNORECASE).search(filename)).group(1)
                 else: raise Exception('No video_id found.')
                 log("YTParser: determineLength, file = %s, id = %s"%(filename,vID))
                 ydl = YoutubeDL({'no_color': True, 'format': 'best', 'outtmpl': '%(id)s.%(ext)s', 'no-mtime': True, 'add-header': HEADER})

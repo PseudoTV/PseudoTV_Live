@@ -54,7 +54,7 @@ class XSP:
             xml = FileAccess.open(fle, "r")
             string = xml.read()
             xml.close()
-            match = re.compile('<%s>(.*?)\</%s>'%(key,key), re.IGNORECASE).search(string)
+            match = re.compile(r'<%s>(.*?)\</%s>'%(key,key), re.IGNORECASE).search(string)
             if match: name = unescapeString(match.group(1))
             self.log("getName, fle = %s, name = %s"%(fle,name))
         except: self.log("getName, return unable to parse %s"%(fle), xbmc.LOGERROR)

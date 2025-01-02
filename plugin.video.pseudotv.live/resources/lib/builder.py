@@ -56,7 +56,7 @@ class Builder:
         self.filters          = {} #{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
         self.sort             = {"ignorearticle":True,"method":"%s"%(SETTINGS.getSetting('Sort_Method').lower()),"order":"ascending","useartistsortname":True}
         self.limits           = {"end":-1,"start":0,"total":0}
-        self.completeBuild    = False
+        self.completedBuild   = False
         
         self.bctTypes         = {"ratings" :{"min":-1, "max":SETTINGS.getSettingInt('Enable_Preroll'), "auto":SETTINGS.getSettingInt('Enable_Preroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')), "chance":SETTINGS.getSettingInt('Random_Pre_Chance'),
                                  "sources" :{"ids":SETTINGS.getSetting('Resource_Ratings').split('|'),"paths":[os.path.join(FILLER_LOC,'Ratings' ,'')]},"items":{}},
@@ -119,14 +119,14 @@ class Builder:
             start     = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour
             stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
             self.pDialog = DIALOG.progressBGDialog()
-            self.completeBuild = True
+            self.completedBuild = True
             
             updated = set()
             for idx, citem in enumerate(self.sortChannels(self.verify(channels))):
                 citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
                 self.log('build, id = %s, rules = %s'%(citem['id'],citem.get('rules',{})))
                 if self.service._interrupt():
-                    self.completeBuild = False
+                    self.completedBuild = False
                     self.pErrors = [LANGUAGE(32160)]
                     self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                     break
@@ -149,16 +149,16 @@ class Builder:
                         if self.addChannelStation(citem) and __hasProgrammes(cacheResponse):
                             updated.add(self.addChannelProgrammes(citem, cacheResponse)) #added xmltv lineup entries.
                     else: 
-                        if self.completeBuild: self.pErrors.append(LANGUAGE(32026))
+                        if self.completedBuild: self.pErrors.append(LANGUAGE(32026))
                         chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
                         self.log('build, [%s] In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
                         self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
                         if not __hasGuideData(citem): self.delChannelStation(citem) #only remove m3u references when no valid programmes found.
                     self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                         
-            self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completeBuild else LANGUAGE(32135)))
-            self.log('build, completeBuild = %s, updated = %s, saved = %s'%(self.completeBuild,bool(updated),self.saveChannelLineups()))
-            return self.completeBuild, bool(updated)
+            self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completedBuild else LANGUAGE(32135)))
+            self.log('build, completed = %s, updated = %s, saved = %s'%(self.completedBuild,bool(updated),self.saveChannelLineups()))
+            return self.completedBuild, bool(updated)
 
 
     def sortChannels(self, channels: list) -> list:

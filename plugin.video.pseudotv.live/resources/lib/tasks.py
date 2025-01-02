@@ -51,7 +51,7 @@ class Tasks():
 
     def _initialize(self):
         tasks = [self.chkInstanceID,
-                 self.chkFiles,
+                 self.chkDirs,
                  self.chkWelcome,
                  self.chkDebugging,
                  self.chkBackup,
@@ -107,18 +107,18 @@ class Tasks():
         self.log('_chkQueTimer')
         self._chkEpochTimer('chkVersion'      , self.chkVersion      , 900)
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
-        self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 900)
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 900)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkChannels'     , self.chkChannels     , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
+        self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         
-        self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh)
-        self._chkPropTimer('chkFillers'       , self.chkFillers)
-        self._chkPropTimer('chkAutoTune'      , self.chkAutoTune)
-        self._chkChannelUpdate()
+        self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
+        self._chkPropTimer('chkFillers'       , self.chkFillers      , 2)
+        self._chkPropTimer('chkAutoTune'      , self.chkAutoTune     , 2)
+        self._chkPropTimer('chkChannels'      , self.chkChannels     , 3, **{'proper':False})
                   
         
     def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
@@ -127,27 +127,17 @@ class Tasks():
         if epoch >= nextrun:
             self.log('_chkEpochTimer, key = %s'%(key))
             PROPERTIES.setPropertyInt(key,(epoch+runevery))
-            return self._que(func)
+            return self._que(func, -1, *args, **kwargs)
         
 
-    def _chkPropTimer(self, key, func):
+    def _chkPropTimer(self, key, func, priority=-1, *args, **kwargs):
         key = '%s.%s'%(ADDON_ID,key)
         if PROPERTIES.getEXTPropertyBool(key):
             self.log('_chkPropTimer, key = %s'%(key))
             PROPERTIES.clearEXTProperty(key)
-            self._que(func)
+            self._que(func, priority , *args, **kwargs)
             
-            
-    def _chkChannelUpdate(self):
-        id = PROPERTIES.getUpdateChannelID()
-        if id:
-            builder = Builder(self.service)
-            citem   = builder.sortChannels([citem for citem in builder.verify() if citem.get('id') == id])
-            del builder
-            self.log('_chkChannelUpdate, id = %s, citem = %s'%(id,citem))
-            return self._que(self.chkChannels,3,citem)
-            
-                  
+
     @cacheit(expiration=datetime.timedelta(minutes=10))
     def getOnlineVersion(self):
         try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(requestURL(ADDON_URL)))[0]
@@ -178,12 +168,16 @@ class Tasks():
         SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zeroconf],{True:'Online',False:'Offline'}[zeroconf]))
          
 
+    def chkDirs(self):
+        self.log('chkDirs')
+        [FileAccess.makedirs(folder) for folder in [LOGO_LOC,FILLER_LOC,TEMP_LOC] if not FileAccess.exists(os.path.join(folder,''))]
+
+
     def chkFiles(self):
         self.log('chkFiles')
-        if PROPERTIES.hasFirstrun():
-            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,2)
-            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels,3)
-        [FileAccess.makedirs(folder) for folder in [LOGO_LOC,FILLER_LOC,TEMP_LOC] if not FileAccess.exists(os.path.join(folder,''))]
+        self.chkDirs()
+        if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,2)
+        if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels,3)
 
 
     def chkHTTP(self):
@@ -217,29 +211,35 @@ class Tasks():
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
-    def chkChannels(self, channels: list=[]):
+    def chkChannels(self, channels: list=[], proper=True):
+        def __match(id, channels):
+            for citem in channels:
+                if citem['id'] == id:
+                    return id
         try:
             builder = Builder(self.service)
             if not channels:
-                channels = builder.sortChannels(builder.verify())
-                SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
-                PROPERTIES.setChannels(len(channels) > 0)
-                PROPERTIES.clearUpdateChannels() #updating all channels clear any pending individual channel updates
-                self.service.currentChannels = channels #update service channels
+                ids = PROPERTIES.getUpdateChannels()
+                if ids and not proper:
+                    channels = list(builder.sortChannels(poolit(__match)(ids, **{'channels':list(builder.verify())})))
+                else:
+                    channels = list(builder.sortChannels(builder.verify()))
+                    SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
+                    PROPERTIES.setChannels(len(channels) > 0)
+                    self.service.currentChannels = channels #update service channels
                 
-            self.log('chkChannels, channels = %s'%(len(channels)))
             if len(channels) > 0:
                 complete, updated = builder.build(channels)
-                if not complete and PROPERTIES.hasFirstrun(): self._que(self.chkChannels,3,channels)
-                elif updated: PROPERTIES.setEpochTimer('chkPVRRefresh')
-                if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
+                self.log('chkChannels, channels = %s, proper = %s, complete = %s, updated = %s'%(len(channels),proper,complete,updated))
+                if complete:
+                    if updated:    PROPERTIES.setEpochTimer('chkPVRRefresh')
+                    if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
+                else: self._que(self.chkChannels,3,channels)
             del builder
-            
-            if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
 
-            
+
     def chkJSONQUE(self):
         if not PROPERTIES.isRunning('chkJSONQUE'):
             with PROPERTIES.setRunning('chkJSONQUE'):
@@ -322,7 +322,7 @@ class Tasks():
     def getChannels(self):
         try:
             builder  = Builder(self.service)
-            channels = builder.sortChannels(builder.verify())
+            channels = list(builder.sortChannels(builder.verify()))
             del builder
             self.log('getChannels, channels = %s'%(len(channels)))
             return channels

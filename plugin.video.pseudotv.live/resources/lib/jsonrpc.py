@@ -158,13 +158,13 @@ class JSONRPC:
         return self.sendJSON(param).get('result') == 'OK'
 
 
-    def getSetting(self, category, section, cache=True):
+    def getSetting(self, category, section, cache=False):
         param = {"method":"Settings.GetSettings","params":{"filter":{"category":category,"section":section}}}
         if cache: return self.cacheJSON(param).get('result',{}).get('settings',[])
         else:     return self.sendJSON(param).get('result', {}).get('settings',[])
 
 
-    def getSettingValue(self, key, default='', cache=True):
+    def getSettingValue(self, key, default='', cache=False):
         param = {"method":"Settings.GetSettingValue","params":{"setting":key}}
         if cache: return (self.cacheJSON(param).get('result',{}).get('value') or default)
         else:     return (self.sendJSON(param).get('result',{}).get('value')  or default)
@@ -246,7 +246,6 @@ class JSONRPC:
     def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         param["properties"] = self.getEnums("List.Fields.Files", type='items')
         param = {"method":"Files.GetDirectory","params":param}
-        #todo carry over "error" to requestlist for user message.
         if cache: return self.cacheJSON(param, expiration, checksum).get('result', {})
         else:     return self.sendJSON(param).get('result', {})
         
@@ -268,8 +267,8 @@ class JSONRPC:
 
 
     def getViewMode(self):
-        default = {"nonlinearstretch":False,"pixelratio":1,"verticalshift":0,"viewmode":"custom","zoom": 1.0}
-        response = self.cacheJSON({"method":"Player.GetViewMode","params":{}}).get('result',default)
+        default  = {"nonlinearstretch":False,"pixelratio":1,"verticalshift":0,"viewmode":"custom","zoom": 1.0}
+        response = self.sendJSON({"method":"Player.GetViewMode","params":{}}).get('result',default)
         self.log('getViewMode, response = %s'%(response))
         return response
         
@@ -540,7 +539,6 @@ class JSONRPC:
         return files
 
 
-    @cacheit(expiration=datetime.timedelta(seconds=FIFTEEN),json_data=False)
     def inputFriendlyName(self):
         with PROPERTIES.interruptActivity():
             friendly = self.getSettingValue("services.devicename")

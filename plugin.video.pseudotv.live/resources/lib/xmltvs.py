@@ -87,7 +87,7 @@ class XMLTVS:
         #hacky; try to log malformed xml's by printing error position..
         if not 'no element found: line 1, column 0' in str(e):
             try:
-                match = re.compile('line\ (.*?),\ column\ (.*)', re.IGNORECASE).search(str(e))
+                match = re.compile(r'line\ (.*?),\ column\ (.*)', re.IGNORECASE).search(str(e))
                 if match: 
                     fle  = FileAccess.open(file,'r')
                     file = fle.readlines()

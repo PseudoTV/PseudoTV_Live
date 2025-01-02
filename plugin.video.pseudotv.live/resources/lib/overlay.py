@@ -26,11 +26,11 @@ class Background(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.overlay = kwargs.get('overlay', None)
-        self.player  = self.overlay.player
-        self.citem   = self.player.sysInfo.get('citem',{})
-        self.fitem   = self.player.sysInfo.get('fitem',{})
-        self.nitem   = self.player.sysInfo.get('nitem',{})
         self.visible = self.overlay.chkOnNextConditions()
+        self.sysInfo = self.overlay.player.sysInfo.copy()
+        self.citem   = self.sysInfo.get('citem',{})
+        self.fitem   = self.sysInfo.get('fitem',{})
+        self.nitem   = self.sysInfo.get('nitem',{})
 
 
     def onInit(self):
@@ -42,7 +42,7 @@ class Background(xbmcgui.WindowXMLDialog):
             nowTitle  = self.fitem.get('label'    , BUILTIN.getInfoLabel('Title','VideoPlayer'))
             nextTitle = self.nitem.get('showlabel', BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
             onNow  = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else self.fitem.get('showlabel',nowTitle)
-            onNext = '%s @ %s'%(nextTitle ,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
+            onNext = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
             
             self.getControl(40004).setImage(COLOR_FANART if land == FANART else land)
             self.getControl(40003).setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
@@ -69,11 +69,11 @@ class OnNext(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.overlay = kwargs.get('overlay', None)
-        self.player  = self.overlay.player
-        self.citem   = self.player.sysInfo.get('citem',{})
-        self.fitem   = self.player.sysInfo.get('fitem',{})
-        self.nitem   = self.player.sysInfo.get('nitem',{})
         self.visible = self.overlay.chkOnNextConditions()
+        self.sysInfo = self.overlay.player.sysInfo.copy()
+        self.citem   = self.sysInfo.get('citem',{})
+        self.fitem   = self.sysInfo.get('fitem',{})
+        self.nitem   = self.sysInfo.get('nitem',{})
 
 
     def onInit(self):
@@ -435,7 +435,7 @@ class Overlay():
         def __getOnNextInterval(interval, remaining):
             #split totalTime time into quarters, last quarter triggers nextup split by equal intervals of 3. ie. display 3 times in the last quarter of show
             totalTime  = (int(self.player.getPlayerTime()) * (self.maxProgress / 100)) #total time minus max threshold
-            showTime   = ((totalTime * .75) - (self.OSDTimer * interval))
+            showTime   = ((totalTime * .85) - (self.OSDTimer * interval))
             intTime    = roundupDIV(showTime,interval)
             if remaining < intTime: return __getOnNextInterval(interval+1, remaining)
             conditions = self.chkOnNextConditions()

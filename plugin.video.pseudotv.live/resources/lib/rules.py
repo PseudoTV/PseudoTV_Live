@@ -516,8 +516,8 @@ class SetScreenVingette(BaseRule):
 
     def getImage(self, image=''):
         self.log('getImage, In image = %s'%(image))
-        day    = re.compile('\_Day(.*?)', re.IGNORECASE).search(image)
-        night  = re.compile('\_Night(.*?)', re.IGNORECASE).search(image)
+        day    = re.compile(r'\_Day(.*?)', re.IGNORECASE).search(image)
+        night  = re.compile(r'\_Night(.*?)', re.IGNORECASE).search(image)
         mytime = time.localtime()
         if mytime.tm_hour < 6 or mytime.tm_hour > 18:
             if day:

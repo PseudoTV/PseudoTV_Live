@@ -19,12 +19,12 @@
                 <effect type="zoom" start="80" end="100" center="130,735" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" end="100" time="240"/>
             </animation>
-            <control type="grouplist">
+            <control type="group">
                 <posx>130</posx>
                 <posy>735</posy>
+                <width>960/</width>
                 <itemgap>15</itemgap>
                 <orientation>vertical</orientation>
-                <Visible>Window.IsActive(fullscreenvideo) + [!Window.IsActive(videoosd)]</Visible>
                 <control type="image" id="40004">
                     <description>OnNext Image</description>
                     <height>135</height>
@@ -38,6 +38,7 @@
                 <control type="textbox" id="40003">
                     <height>70</height>
                     <width>960/</width>
+                    <posy>145</posy>
                     <font>font27</font>
                     <scroll>true</scroll>
                     <textcolor>white</textcolor>

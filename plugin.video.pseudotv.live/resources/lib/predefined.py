@@ -22,7 +22,7 @@ from globals    import *
 
 class Predefined:
     def __init__(self):
-        ...
+        self.defaultMethod = SETTINGS.getSetting('Sort_Method').lower()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -32,7 +32,7 @@ class Predefined:
     def getParams(self) -> dict:
         params = {}
         params["order"] = {"direction"        :"ascending",
-                           "method"           :SETTINGS.getSetting('Sort_Method').lower(),
+                           "method"           :self.defaultMethod,
                            "ignorearticle"    :True,
                            "useartistsortname":True}
         return params.copy()
@@ -70,7 +70,7 @@ class Predefined:
         param["type"] = "episodes"
         param["order"]["method"] = method
         try:
-            match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(show)
+            match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(show)
             year, title = int(match.group(2)), match.group(1)
             param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":"is","value":[year]},{"field":"tvshow","operator":"is","value":[quoteString(title)]}])
         except:

@@ -510,10 +510,10 @@ class Settings:
                     self.log('chkPVRInstance, path = %s, failed to open file = %s\n%s'%(PVR_CLIENT_LOC,file,e))
                     continue
                         
-                match = re.compile('<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(txt)
+                match = re.compile(r'<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(txt)
                 try: name = match.group(1)
                 except:
-                    match = re.compile('<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(txt)
+                    match = re.compile(r'<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(txt)
                     try:    name = match.group(1)
                     except: name = None
                     
@@ -535,13 +535,13 @@ class Settings:
             fle = FileAccess.open(instancePath,'r')
             for line in fle.readlines():
                 if not 'id=' in line: continue
-                match = re.compile('<setting id=\"(.*)\" default=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
+                match = re.compile(r'<setting id=\"(.*)\" default=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
                 try: instanceConf.update({match.group(1):(match.group(2),match.group(3))})
                 except:
-                    match = re.compile('<setting id=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
+                    match = re.compile(r'<setting id=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
                     try: instanceConf.update({match.group(1):('',match.group(2))})
                     except:
-                        match = re.compile('<setting id=\"(.*)\" default=\"(.*?)\" />', re.IGNORECASE).search(line)
+                        match = re.compile(r'<setting id=\"(.*)\" default=\"(.*?)\" />', re.IGNORECASE).search(line)
                         try: instanceConf.update({match.group(1):(match.group(2),None)})
                         except: pass
             fle.close()
@@ -633,14 +633,6 @@ class Properties:
         return self.setProperty('%s.Remote_Host'%(ADDON_ID),value)
         
 
-    def hasFirstrun(self):
-        return self.getEXTProperty('%s.has.Firstrun'%(ADDON_ID))
-        
-        
-    def setFirstrun(self, state=True):
-        return self.setEXTPropertyBool('%s.has.Firstrun'%(ADDON_ID),state)
-               
-
     def isRunning(self, key):
         return self.getEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key))
 
@@ -653,22 +645,17 @@ class Properties:
         return self.setPropertyInt(key,0)
         
     
-    def getUpdateChannelID(self):
+    def getUpdateChannels(self):
         ids = self.getPropertyList('updateChannels')
-        id  = ids.pop(0)
-        self.setPropertyList('updateChannels',list(set(ids)))
-        self.log('getUpdateChannelID, id = %s, remaining = %s'%(id,len(ids)))
-        return id
+        self.clearProperty('updateChannels')
+        return ids
     
     
     def setUpdateChannels(self, id):
         ids = self.getPropertyList('updateChannels')
         ids.append(id)
-        return self.setPropertyList('updateChannels',list(set(ids)))
-
-    
-    def clearUpdateChannels(self):
-        self.clearProperty('updateChannels')
+        self.setPropertyList('updateChannels',list(set(ids)))
+        return self.setEpochTimer('chkChannels')
 
 
     def setEpochTimer(self, key, state=True):
