@@ -221,7 +221,7 @@ class Tasks():
             if not channels:
                 ids = PROPERTIES.getUpdateChannels()
                 if ids and not proper:
-                    channels = list(builder.sortChannels(poolit(__match)(ids, **{'channels':list(builder.verify())})))
+                    channels = list(builder.sortChannels([__match(id,builder.verify()) for id in ids]))
                 else:
                     channels = list(builder.sortChannels(builder.verify()))
                     SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))

@@ -23,11 +23,12 @@ from xmltvs     import XMLTVS
 
 class Record:
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
-        log('Record: __init__, sysARG = %s, fitem = %s\npath = %s'%(sysARG,fitem,listitem.getPath()))
-        self.sysARG          = sysARG
-        self.fitem           = fitem
-        self.listitem        = listitem
-        self.fitem['label']  = (fitem.get('label') or listitem.getLabel())
+        with BUILTIN.busy_dialog():
+            log('Record: __init__, sysARG = %s, fitem = %s\npath = %s'%(sysARG,fitem,listitem.getPath()))
+            self.sysARG          = sysARG
+            self.fitem           = fitem
+            self.listitem        = listitem
+            self.fitem['label']  = (fitem.get('label') or listitem.getLabel())
         
         
     def add(self):

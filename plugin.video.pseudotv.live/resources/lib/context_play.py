@@ -21,19 +21,20 @@ from globals import *
 from plugin  import Plugin
      
 def run(sysARG, fitem: dict={}, nitem: dict={}):
-    mode                 = sysARG[1]
-    params               = {}
-    params['fitem']      = fitem
-    params['nitem']      = nitem
-    params['vid']        = decodeString(params.get("vid",''))
-    params["chid"]       = (params.get("chid")  or fitem.get('citem',{}).get('id'))
-    params['title']      = (params.get('title') or BUILTIN.getInfoLabel('label'))
-    params['name']       = (unquoteString(params.get("name",'')) or BUILTIN.getInfoLabel('ChannelName'))
-    params['isPlaylist'] = (mode == 'playlist')
-    log("Context_Play: run, params = %s"%(params))
-    
-    if   mode == 'play':     threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
-    elif mode == 'playlist': threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
+    with BUILTIN.busy_dialog():
+        mode                 = sysARG[1]
+        params               = {}
+        params['fitem']      = fitem
+        params['nitem']      = nitem
+        params['vid']        = decodeString(params.get("vid",''))
+        params["chid"]       = (params.get("chid")  or fitem.get('citem',{}).get('id'))
+        params['title']      = (params.get('title') or BUILTIN.getInfoLabel('label'))
+        params['name']       = (unquoteString(params.get("name",'')) or BUILTIN.getInfoLabel('ChannelName'))
+        params['isPlaylist'] = (mode == 'playlist')
+        log("Context_Play: run, params = %s"%(params))
         
+        if   mode == 'play':     threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
+        elif mode == 'playlist': threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
+            
 if __name__ == '__main__': run(sys.argv, fitem=decodePlot(BUILTIN.getInfoLabel('Plot')), nitem=decodePlot(BUILTIN.getInfoLabel('NextPlot')))
 

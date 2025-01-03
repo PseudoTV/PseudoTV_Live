@@ -136,8 +136,8 @@ class Utilities:
         
     def openPositionUtil(self, idx):
         self.log('openPositionUtil, idx = %s'%(idx))
-        if not PROPERTIES.isRunning('MOVE_UTILITY_RUNNING'):
-            with PROPERTIES.setRunning('MOVE_UTILITY_RUNNING'), PROPERTIES.suspendActivity():
+        if not PROPERTIES.isRunning('OVERLAY_UTILITY'):
+            with PROPERTIES.setRunning('OVERLAY_UTILITY'), PROPERTIES.suspendActivity():
                 with BUILTIN.busy_dialog():
                     from overlaytool import OverlayTool
                 overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
@@ -213,55 +213,56 @@ class Utilities:
 
 
     def run(self):
-        ctl = (0,1)
-        try:    param = self.sysARG[1]
-        except: param = None
-        #Channels
-        if param.startswith('Channel_Manager'):
+        with BUILTIN.busy_dialog():
             ctl = (0,1)
-            self.openChannelManager()
-        elif param.startswith('Default_Channels'):
-            ctl = (0,2)
-            self.defaultChannels()
-            
-        #Globals
-        elif param.startswith('Move_Channelbug'):
-            ctl = (3,15)
-            self.openPositionUtil(1)
-        elif param.startswith('Move_OnNext'):
-            ctl = (3,15)
-            self.openPositionUtil(2)
-        elif param == 'Sort_Method':
-            ctl = (3,22)
-            self.sortMethod()
-            
-        #Multi-Room
-        elif param == 'Show_ZeroConf_QR':
-            ctl = (5,5)
-            self.qrBonjourDL()
+            try:    param = self.sysARG[1]
+            except: param = None
+            #Channels
+            if param.startswith('Channel_Manager'):
+                ctl = (0,1)
+                self.openChannelManager()
+            elif param.startswith('Default_Channels'):
+                ctl = (0,2)
+                self.defaultChannels()
+                
+            #Globals
+            elif param.startswith('Move_Channelbug'):
+                ctl = (3,15)
+                self.openPositionUtil(1)
+            elif param.startswith('Move_OnNext'):
+                ctl = (3,15)
+                self.openPositionUtil(2)
+            elif param == 'Sort_Method':
+                ctl = (3,22)
+                self.sortMethod()
+                
+            #Multi-Room
+            elif param == 'Show_ZeroConf_QR':
+                ctl = (5,5)
+                self.qrBonjourDL()
 
-        #Misc.Docs
-        elif param == 'Utilities':
-            ctl = (6,1)
-            return self.buildMenu()
-        elif param == 'Show_Wiki_QR':
-            ctl = (6,4)
-            return self.qrWiki()
-        elif param == 'Show_Support_QR':
-            ctl = (6,5)
-            return self.qrSupport()
-        elif param == 'Show_Remote_UI':
-            ctl = (6,6)
-            return self.qrRemote()
-        elif param == 'Show_Changelog':
-            ctl = (6,8)
-            return self.showChangelog()
-            
-        #Misc. Debug
-        elif param == 'Debug_QR':
-            ctl = (6,1)
-            return self.qrDebug()
-        return openAddonSettings(ctl)
+            #Misc.Docs
+            elif param == 'Utilities':
+                ctl = (6,1)
+                return self.buildMenu()
+            elif param == 'Show_Wiki_QR':
+                ctl = (6,4)
+                return self.qrWiki()
+            elif param == 'Show_Support_QR':
+                ctl = (6,5)
+                return self.qrSupport()
+            elif param == 'Show_Remote_UI':
+                ctl = (6,6)
+                return self.qrRemote()
+            elif param == 'Show_Changelog':
+                ctl = (6,8)
+                return self.showChangelog()
+                
+            #Misc. Debug
+            elif param == 'Debug_QR':
+                ctl = (6,1)
+                return self.qrDebug()
+            return openAddonSettings(ctl)
 
 if __name__ == '__main__': Utilities(sys.argv).run()
    

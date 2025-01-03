@@ -204,7 +204,7 @@ class Player(xbmc.Player):
         oldInfo = self.sysInfo
         sysInfo = self.getPlayerSysInfo() #get current sysInfo
         #items that only run once per channel change. ie. set adv. rules and variables. 
-        self.log('_onPlay, [%s], mode = %s, chid = %s'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo.get('mode'),sysInfo.get('chid')))
+        self.log('_onPlay, [%s], mode = %s, chid = %s'%(sysInfo.get('citem',{}).get('id'),sysInfo.get('mode'),sysInfo.get('chid')))
         if sysInfo.get('chid') == oldInfo.get('chid',random.random()):
             self.toggleInfo(self.infoOnChange)
         else:
@@ -215,9 +215,9 @@ class Player(xbmc.Player):
             self.setTrakt(self.disableTrakt)
             self.toggleRestart()
             
-            if self.sysInfo.get('isPlaylist',False):
-                if self.sysInfo.get('radio',False): timerit(BUILTIN.executebuiltin)(0.1,['ReplaceWindow(visualisation)'])
-                else:                               timerit(BUILTIN.executebuiltin)(0.1,['ReplaceWindow(fullscreenvideo)'])
+        if self.sysInfo.get('isPlaylist',False):
+            if self.sysInfo.get('radio',False): timerit(BUILTIN.executebuiltin)(0.1,['ReplaceWindow(visualisation)'])
+            else:                               timerit(BUILTIN.executebuiltin)(0.1,['ReplaceWindow(fullscreenvideo)'])
             
 
     def _onChange(self, isPlaylist=False):

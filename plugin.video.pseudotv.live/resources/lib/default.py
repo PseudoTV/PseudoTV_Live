@@ -22,28 +22,29 @@ from globals   import *
 from plugin    import Plugin
 
 def run(sysARG, fitem: dict={}, nitem: dict={}):
-    params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-    mode   = (params.get("mode")  or 'guide')
-    params['fitem']      = fitem
-    params['nitem']      = nitem
-    params['vid']        = decodeString(params.get("vid",''))
-    params["chid"]       = (params.get("chid")  or fitem.get('citem',{}).get('id'))
-    params['title']      = (params.get('title') or BUILTIN.getInfoLabel('label'))
-    params['name']       = (unquoteString(params.get("name",'')) or BUILTIN.getInfoLabel('ChannelName'))
-    params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
-    log("Default: run, params = %s"%(params))
-    if PROPERTIES.isRunning('togglePVR'):   DIALOG.notificationDialog(LANGUAGE(32000))
-    elif params.get('start') == '{utc}':    DIALOG.okDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
-    elif mode == 'live':
-        if   params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
-        elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
-        else:                               threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
-    elif mode in ['vod','dvr']:             threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
-    elif mode == 'resume':                  threadit(Plugin(sysARG, sysInfo=params).playPaused)(params["name"],params["chid"])
-    elif mode == 'broadcast':               threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
-    elif mode == 'radio':                   threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
-    elif mode == 'guide'                and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openGuide()
-    elif mode == 'settings'             and hasAddon(PVR_CLIENT_ID,install=True,enable=True): openAddonSettings()
-    else: DIALOG.notificationDialog(LANGUAGE(32000))
-    
+    with BUILTIN.busy_dialog():
+        params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
+        mode   = (params.get("mode")  or 'guide')
+        params['fitem']      = fitem
+        params['nitem']      = nitem
+        params['vid']        = decodeString(params.get("vid",''))
+        params["chid"]       = (params.get("chid")  or fitem.get('citem',{}).get('id'))
+        params['title']      = (params.get('title') or BUILTIN.getInfoLabel('label'))
+        params['name']       = (unquoteString(params.get("name",'')) or BUILTIN.getInfoLabel('ChannelName'))
+        params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
+        log("Default: run, params = %s"%(params))
+        if PROPERTIES.isRunning('togglePVR'):   DIALOG.notificationDialog(LANGUAGE(32000))
+        elif params.get('start') == '{utc}':    DIALOG.okDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
+        elif mode == 'live':
+            if   params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
+            elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
+            else:                               threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
+        elif mode in ['vod','dvr']:             threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
+        elif mode == 'resume':                  threadit(Plugin(sysARG, sysInfo=params).playPaused)(params["name"],params["chid"])
+        elif mode == 'broadcast':               threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
+        elif mode == 'radio':                   threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
+        elif mode == 'guide'                and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openGuide()
+        elif mode == 'settings'             and hasAddon(PVR_CLIENT_ID,install=True,enable=True): openAddonSettings()
+        else: DIALOG.notificationDialog(LANGUAGE(32000))
+        
 if __name__ == '__main__': run(sys.argv,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')),nitem=decodePlot(BUILTIN.getInfoLabel('NextPlot')))

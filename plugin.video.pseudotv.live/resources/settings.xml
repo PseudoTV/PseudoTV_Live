@@ -571,7 +571,7 @@
                 </setting>
                 <setting id="OnNext_Enable" type="integer" label="30045" help="33045" parent="Overlay_Enable">
                     <level>2</level>
-                    <default>1</default>
+                    <default>2</default>
                     <constraints>
                         <options>
                             <option label="30021">0</option>
@@ -614,7 +614,8 @@
                         <dependency type="visible">
                             <and>
                                 <condition operator="is" setting="Overlay_Enable">true</condition>
-                                <condition operator="is" setting="OnNext_Enable">1</condition>
+                                <condition operator="gt" setting="OnNext_Enable">0</condition>
+                                <condition operator="lt" setting="OnNext_Enable">3</condition>
                             </and>
                         </dependency>
                     </dependencies>
@@ -637,9 +638,9 @@
                 </setting>
                 <setting id="Restart_Percentage" type="integer" label="30153" help="33153" parent="Overlay_Enable">
                     <level>2</level>
-                    <default>85</default>
+                    <default>0</default>
                     <constraints>
-                        <minimum>25</minimum>
+                        <minimum>0</minimum>
                         <step>5</step>
                         <maximum>95</maximum>
                     </constraints>

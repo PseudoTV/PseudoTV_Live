@@ -1,5 +1,7 @@
 v.0.5.8
 -Various tweaks to playback & on next logic.
+-Various tweaks to improve stability.
+-Fixed Restart Percentage setting to allow 0% ie. Disable Restart Prompt.
 
 v.0.5.7
 -Improved Stability by removing Kodi's segfault prone busy dialog, in-favor of a custom busy dialog.

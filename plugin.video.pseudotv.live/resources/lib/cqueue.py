@@ -92,7 +92,7 @@ class CustomQueue:
                     self.itemCount[priority] += 1
                     self.log("_push, func = %s, priority = %s"%(package[0].__name__,priority))
                     heapq.heappush(self.min_heap, (item[0], self.itemCount[priority], item[1]))
-                except Exception as e: self.log("_push, func = %s failed! %s"%(func.__name__,e), xbmc.LOGFATAL)
+                except Exception as e: self.log("_push, func = %s failed! %s"%(package[0].__name__,e), xbmc.LOGFATAL)
             else: self.log("_push, func = %s exists; ignoring package"%(package[0].__name__))
         elif self.head:
             self.tail.next = node

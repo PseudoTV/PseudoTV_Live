@@ -89,11 +89,12 @@ class Backup:
         
         
     def run(self):  
-        ctl = (0,1) #settings return focus
-        try:    param = self.sysARG[1]
-        except: param = None
-        if   param == 'Backup_Channels':  self.backupChannels()
-        elif param == 'Recover_Channels': self.recoverChannels()
-        return openAddonSettings(ctl)
+        with BUILTIN.busy_dialog():
+            ctl = (0,1) #settings return focus
+            try:    param = self.sysARG[1]
+            except: param = None
+            if   param == 'Backup_Channels':  self.backupChannels()
+            elif param == 'Recover_Channels': self.recoverChannels()
+            return openAddonSettings(ctl)
         
 if __name__ == '__main__': Backup(sys.argv).run()

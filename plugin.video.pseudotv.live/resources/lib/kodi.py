@@ -1063,7 +1063,7 @@ class Builtin:
 
     @contextmanager
     def busy_dialog(self):
-        if not xbmcgui.Window(10000).getProperty('%s.%s'%(ADDON_ID,'OVERLAY_BUSY')) == "true":
+        if not Properties().isRunning('OVERLAY_BUSY'):
             try: 
                 if self.busy is None:
                     from overlay import Busy 
@@ -1385,8 +1385,8 @@ class Dialog:
         else:                              return [lizLST[select].getPath() for select in selects]
 
 
-    def browseSources(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, options=[], exclude=[]):
-        self.log('browseSources, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s, mask= %s, options= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,len(options),exclude))
+    def browseSources(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, include=[], exclude=[]):
+        self.log('browseSources, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s, mask= %s, include= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,len(include),exclude))
         def __buildMenuItem(option):
             return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=getAbbr(option['label'])))
 
@@ -1406,8 +1406,9 @@ class Dialog:
                     {"idx":21, "label":LANGUAGE(32201)                    , "label2":""                                      , "default":""                                   , "shares":"pictures", "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
                     {"idx":22, "label":LANGUAGE(32202)                    , "label2":"Resource Plugin"                       , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi}]
 
+        options = include.copy()
         options.extend([opt for opt in opts if not opt.get('idx',-1) in exclude])
-        options = setDictLST(options) #todo trakdown bug where options are being recalled back to function.
+        options = setDictLST(options)
         if default: options.insert(0,{"idx":0, "label":LANGUAGE(32203), "label2":default, "default":default, "shares":shares, "mask":mask, "type":type, "multi":multi})
         lizLST = poolit(__buildMenuItem)(sorted(options, key=itemgetter('idx')))
         select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)

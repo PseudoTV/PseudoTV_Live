@@ -36,8 +36,8 @@ class Browse:
             if '?xsp=' in path:
                 path, params = path.split('?xsp=')
                 path = '%s?xsp=%s'%(path,quoteString(unquoteString(params)))
-        #todo create custom container window with channel listitems.
-        log('Browse: target = %s, path = %s'%(media,path))
+            #todo create custom container window with channel listitems.
+            log('Browse: target = %s, path = %s'%(media,path))
         BUILTIN.executebuiltin('ReplaceWindow(%s,%s,return)'%(media,path))
 
 class Match:
@@ -53,14 +53,14 @@ class Match:
             dbid   = (fitem.get('tvshowid') or fitem.get('movieid'))
             log('Match: __init__, sysARG = %s, title = %s, dbtype = %s, dbid = %s'%(sysARG,'%s - %s'%(title,name),dbtype,dbid))
 
-        if hasAddon(self.SIMILAR_SCRIPT,install=True) and dbid:
-            self.SEARCH_SCRIPT = self.SIMILAR_SCRIPT
-        elif hasAddon(self.GLOBAL_SCRIPT,install=True):
-            self.SEARCH_SCRIPT = self.GLOBAL_SCRIPT
-        else: 
-            DIALOG.notificationDialog(LANGUAGE(32000))
-        log('Match: SEARCH_SCRIPT = %s'%(self.SEARCH_SCRIPT))
-        hasAddon(self.SEARCH_SCRIPT,enable=True)
+            if hasAddon(self.SIMILAR_SCRIPT,install=True) and dbid:
+                self.SEARCH_SCRIPT = self.SIMILAR_SCRIPT
+            elif hasAddon(self.GLOBAL_SCRIPT,install=True):
+                self.SEARCH_SCRIPT = self.GLOBAL_SCRIPT
+            else: 
+                DIALOG.notificationDialog(LANGUAGE(32000))
+            log('Match: SEARCH_SCRIPT = %s'%(self.SEARCH_SCRIPT))
+            hasAddon(self.SEARCH_SCRIPT,enable=True)
 
         if self.SEARCH_SCRIPT == self.SIMILAR_SCRIPT:
             # plugin://script.embuary.helper/?info=getsimilar&dbid=$INFO[ListItem.DBID]&type=tvshow&tag=HDR
@@ -77,10 +77,11 @@ class Match:
  
 
 if __name__ == '__main__': 
-    param = sys.argv[1]
-    log('Info: __main__, param = %s'%(param))
-    if   param == 'info':   Info(sys.argv  ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
-    elif param == 'browse': Browse(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
-    elif param == 'match':  Match(sys.argv ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
+    with BUILTIN.busy_dialog():
+        param = sys.argv[1]
+        log('Info: __main__, param = %s'%(param))
+        if   param == 'info':   Info(sys.argv  ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
+        elif param == 'browse': Browse(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
+        elif param == 'match':  Match(sys.argv ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
         
    

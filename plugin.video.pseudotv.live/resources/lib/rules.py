@@ -1671,7 +1671,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
                     item['resume'] = resume
                 self.storedValues[1].insert(0,item)
                 if self._getTotDuration(self.storedValues[1]) < (MIN_GUIDEDAYS * 86400) : PROPERTIES.setUpdateChannels(citem.get('id'))
-                return [(idx,item) for idx, item in enumerate(self.storedValues[1])]
+                return self.storedValues[1]
             return []
                                             
         elif actionid == RULES_ACTION_PLAYER_START:

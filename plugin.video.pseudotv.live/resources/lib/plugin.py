@@ -91,21 +91,20 @@ class Plugin:
             
     def _quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=BUILTIN.isPlaylistRandom()):
         self.log('_quePlaylist, listitems = %s, shuffle = %s'%(len(listitems),shuffle))
-        with BUILTIN.busy_dialog():
-            channelPlaylist = xbmc.PlayList(pltype)
-            channelPlaylist.clear()
-            xbmc.sleep(100) #give channelPlaylist.clear() enough time to clear queue.
-            [channelPlaylist.add(liz.getPath(),liz,idx) for idx,liz in enumerate(listitems) if liz.getPath()]
-            self.log('_quePlaylist, Playlist size = %s, shuffle = %s'%(channelPlaylist.size(),shuffle))
-            if shuffle: channelPlaylist.shuffle()
-            else:       channelPlaylist.unshuffle()
-            return channelPlaylist
+        channelPlaylist = xbmc.PlayList(pltype)
+        channelPlaylist.clear()
+        xbmc.sleep(100) #give channelPlaylist.clear() enough time to clear queue.
+        [channelPlaylist.add(liz.getPath(),liz,idx) for idx,liz in enumerate(listitems) if liz.getPath()]
+        self.log('_quePlaylist, Playlist size = %s, shuffle = %s'%(channelPlaylist.size(),shuffle))
+        if shuffle: channelPlaylist.shuffle()
+        else:       channelPlaylist.unshuffle()
+        return channelPlaylist
 
 
     def _matchChannel(self, chname: str, id: str, radio: bool=False):
         self.log('_matchChannel, id = %s, chname = %s, radio = %s'%(id,chname,radio))
         def __match():
-            channels = jsonRPC.getPVRChannels(radio)
+            channels = self.jsonRPC.getPVRChannels(radio)
             for channel in channels:
                 if channel.get('label').lower() == chname.lower():
                     for key in ['broadcastnow', 'broadcastnext']:
@@ -123,8 +122,7 @@ class Plugin:
                     channelItem['broadcastnow'] = broadcast
                 elif broadcast.get('progresspercentage',0) == 0 and broadcast.get('progresspercentage',100) < 100:
                     channelItem.setdefault('broadcastnext',[]).append(broadcast)
-            
-            poolit(_parseBroadcast)(jsonRPC.getPVRBroadcasts(pvritem.get('channelid',{})))
+            [_parseBroadcast(broadcast) for broadcast in self.jsonRPC.getPVRBroadcasts(pvritem.get('channelid',{}))]
             pvritem['broadcastnext'] = channelItem.get('broadcastnext',pvritem['broadcastnext'])
             self.log('_matchChannel: __extend, broadcastnext = %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
@@ -132,23 +130,17 @@ class Plugin:
         cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s'%(chname,id,radio)))
         cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
         if not cacheResponse:
-            jsonRPC = JSONRPC()
             pvritem = __match()
-            if not pvritem:
-                del jsonRPC
-                return self._resolveURL(False, xbmcgui.ListItem())
-            else:
+            if pvritem:
                 self.sysInfo.update({'citem':decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',self.sysInfo.get('citem'))})
                 self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)# or (('%s%s'%(self.sysARG[0],self.sysARG[2])).split('%s&'%(slugify(ADDON_NAME))))[0])
                 cacheResponse = self.cache.set(cacheName, __extend(pvritem), checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=FIFTEEN), json_data=True)
-                del jsonRPC
         return cacheResponse
 
 
     def getPausedItems(self, name, chid):
         self.log('getPausedItems, id = %s'%(chid))
-        def buildfItem(item: dict={}):
-            idx, item = item
+        def __buildfItem(idx, item):
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             
@@ -176,22 +168,26 @@ class Plugin:
             liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
             return liz
         
-        with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+        with PROPERTIES.suspendActivity():
             from rules import RulesList
             nextitems = RulesList().runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
             if nextitems:
                 self.IDXModifier = 0
                 del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
                 self.log('getPausedItems, building nextitems (%s)'%(len(nextitems)))
-                return poolit(buildfItem)(nextitems)
+                return [__buildfItem(idx, nextitem) for idx, nextitem in enumerate(nextitems)]
             else: DIALOG.notificationDialog(LANGUAGE(32000))
             return []
         
+        
+    def getRadioItems(self, name, chid, vid, limit=RADIO_ITEM_LIMIT):
+        with PROPERTIES.suspendActivity():
+            return interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in vid.split('|')], SETTINGS.getSettingInt('Interleave_Value'))
+
 
     def getPVRItems(self, name: str, chid: str) -> list:
         self.log('getPVRItems, id = %s'%(chid))
-        def buildfItem(item: dict={}):
-            idx, item = item
+        def __buildfItem(idx, item):
             sysInfo = self.sysInfo.copy()
             nowitem = decodePlot(item.get('plot',''))
             if 'citem' in nowitem: nowitem.pop('citem')
@@ -214,8 +210,8 @@ class Plugin:
             liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
             return liz
             
-        found = False
-        with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+        with PROPERTIES.suspendActivity():
+            found   = False
             pvritem = self._matchChannel(name,chid,radio=False)
             if pvritem:
                 pastItems = pvritem.get('broadcastpast',[])
@@ -258,7 +254,7 @@ class Plugin:
                     del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
                     nextitems.insert(0,nowitem)
                     self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
-                    return poolit(buildfItem)([(idx, item) for idx, item in enumerate(nextitems)])
+                    return [__buildfItem(idx, item) for idx, item in enumerate(nextitems)]
                 else: DIALOG.notificationDialog(LANGUAGE(32164))
             else: DIALOG.notificationDialog(LANGUAGE(32000))
             return []
@@ -290,11 +286,6 @@ class Plugin:
                     DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
                     timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(url)])
                     self._resolveURL(False, xbmcgui.ListItem())
-                # else: 
-                    # DIALOG.notificationDialog(LANGUAGE(32000))
-                    # timerit(BUILTIN.executebuiltin)(0.1,['Action(stop)'])
-                    # self._resolveURL(False, xbmcgui.ListItem())
-                #else: self._resolveURL(False, xbmcgui.ListItem())
             else:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
                 liz = self._setResume(xbmcgui.ListItem(name,path=vid))
                 liz.setProperty("IsPlayable","true")
@@ -330,12 +321,9 @@ class Plugin:
 
     def playRadio(self, name: str, chid: str, vid: str):
         self.log('playRadio, id = %s'%(chid))
-        def buildfItem(item: dict={}): return LISTITEMS.buildItemListItem(item, 'music')
-        with BUILTIN.busy_dialog():
-            jsonRPC  = JSONRPC()
-            fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')], SETTINGS.getSettingInt('Interleave_Value'))
-            del jsonRPC
-        if len(fileList) > 0: PLAYER().play(self._quePlaylist(poolit(buildfItem)(randomShuffle(fileList)),pltype=xbmc.PLAYLIST_MUSIC,shuffle=True),windowed=True)
+        def __buildfItem(idx, item: dict={}): return LISTITEMS.buildItemListItem(item, 'music')
+        listitems = [__buildfItem(idx, item) for idx, item in enumerate(randomShuffle(self.getRadioItems(name, chid, vid)))]
+        if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True),windowed=True)
         self._resolveURL(False, xbmcgui.ListItem())
 
 
