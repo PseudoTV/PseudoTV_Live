@@ -39,7 +39,7 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
         else:                               threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
     elif mode in ['vod','dvr']:             threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
-    elif mode == 'resume':                  threadit(Plugin(sysARG, sysInfo=params).playResume)(params["name"],params["chid"])
+    elif mode == 'resume':                  threadit(Plugin(sysARG, sysInfo=params).playPaused)(params["name"],params["chid"])
     elif mode == 'broadcast':               threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
     elif mode == 'radio':                   threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
     elif mode == 'guide'                and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openGuide()

@@ -214,7 +214,11 @@ class Player(xbmc.Player):
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             self.setTrakt(self.disableTrakt)
             self.toggleRestart()
-
+            
+            if self.sysInfo.get('isPlaylist',False):
+                if self.sysInfo.get('radio',False): timerit(BUILTIN.executebuiltin)(0.1,['ReplaceWindow(visualisation)'])
+                else:                               timerit(BUILTIN.executebuiltin)(0.1,['ReplaceWindow(fullscreenvideo)'])
+            
 
     def _onChange(self, isPlaylist=False):
         oldInfo = self.sysInfo

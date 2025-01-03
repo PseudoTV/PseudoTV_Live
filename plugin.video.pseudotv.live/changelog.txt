@@ -1,6 +1,9 @@
+v.0.5.8
+-Various tweaks to playback & on next logic.
+
 v.0.5.7
--Improved stability by removing Kodi's segfault prone busy dialog, in-favor of a custom busy dialog.
--Improved "ONNext" options now include Artwork or Text based prompts.
+-Improved Stability by removing Kodi's segfault prone busy dialog, in-favor of a custom busy dialog.
+-Improved "ON Next" options now include Artwork or Text based prompts.
 -Improved Background Overlay.
 -Fixed Channel Manager path duplication.
 -Improved file migration when changing centralized file location.
