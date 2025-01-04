@@ -41,13 +41,14 @@ class Background(xbmcgui.WindowXMLDialog):
             chname    = self.citem.get('name'     , BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
             nowTitle  = self.fitem.get('label'    , BUILTIN.getInfoLabel('Title','VideoPlayer'))
             nextTitle = self.nitem.get('showlabel', BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
-            onNow  = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else self.fitem.get('showlabel',nowTitle)
-            onNext = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
+            onNow     = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else self.fitem.get('showlabel',nowTitle)
+            onNext    = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
             
             self.getControl(40004).setImage(COLOR_FANART if land == FANART else land, useCache=True)
             self.getControl(40003).setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
-            self.getControl(40001).setVisible(self.visible)
+            self.getControl(40001).setPosition(self.overlay.onNextX, self.overlay.onNextY)
+            self.getControl(40000).setVisible(self.visible)
         except Exception as e:
             log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.close()
@@ -169,30 +170,29 @@ class Overlay():
         self.enableChannelBug   = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
         self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
-        self.onNextColor        = '0x%s'%((SETTINGS.getSetting('OnNext_Color')    or 'FFFFFFFF'))
         self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
+        self.onNextColor        = '0x%s'%((SETTINGS.getSetting('OnNext_Color')     or 'FFFFFFFF'))
         
+        #vignette
+        self.defaultView = self.jsonRPC.getViewMode()
+        self.vinView     = self.defaultView
+        self.vignette    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
+        
+        #channelBug
         try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
         except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
-        self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
+        self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
         
+        #onNext
         try:    self.onNextX, self.onNextY = eval(SETTINGS.getSetting("OnNext_Position_XY")) #user
         except: self.onNextX, self.onNextY = (130,735)#abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h) #auto
-        self._onNext_Border  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, ' ', aspectRatio=0)
-        self._onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 230, 125, ' ', aspectRatio=0)
-        self._onNext_Text    = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
+        self.onNext_Border  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, ' ', aspectRatio=0)
+        self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 230, 125, ' ', aspectRatio=0)
+        self.onNext_Text    = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
 
-        #init controls
-        self._defViewMode = self.jsonRPC.getViewMode()
-        self._vinViewMode = self._defViewMode
-        self._vinImage    = SETTINGS.getSetting('Vignette_Image')
-        self._vignette    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
-        
-        #thread timers
         self._bugThread    = Timer(0.1, self.toggleBug, [False])
         self._onNextThread = Timer(0.1, self.toggleOnNext, [False])
-        
-        self._Player       = self.Player(overlay=self)
+        self._player       = self.Player(overlay=self)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -203,7 +203,7 @@ class Overlay():
         self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
         self.toggleBug(), self.toggleOnNext(), self.toggleVignette()
-        self._Player.onAVStarted()
+        self._player.onAVStarted()
 
    
     def close(self):
@@ -211,7 +211,7 @@ class Overlay():
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
         self.toggleBug(False), self.toggleOnNext(False), self.toggleVignette(False)
         self._cancelBug(), self._cancelOnNext()
-        self._Player.onPlayBackStopped()
+        self._player.onPlayBackStopped()
         
         for control, visible in list(self.controlManager.items()):
             self._removeControl(control)
@@ -307,29 +307,26 @@ class Overlay():
         elif not state and not self.background is None:
             self.background = self.background.close()
             
-        # if self.player.isPlaying() and not BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window'):
-            # BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
-
 
     def toggleVignette(self, state: bool=True):
         if state and self.enableVignette:
-            if not self._hasControl(self._vignette):
-                timerit(self.jsonRPC.setViewMode)(0.1,[self._vinViewMode])
-                self._vignette = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
-                self._addControl(self._vignette)
-                self._vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
-                self._vignette.setImage(self._vinImage)
-                self._setVisible(self._vignette,True)
-                self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self._vinImage,self._vinViewMode))
-        elif not state and self._hasControl(self._vignette):
-            self._removeControl(self._vignette)
-            timerit(self.jsonRPC.setViewMode)(0.1,[self._defViewMode])
-            self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self._vinImage,self._defViewMode))
+            if not self._hasControl(self.vignette):
+                timerit(self.jsonRPC.setViewMode)(0.1,[self.vinView])
+                self.vignette = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
+                self._addControl(self.vignette)
+                self.vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
+                self.vignette.setImage(self.vinImage)
+                self._setVisible(self.vignette,True)
+                self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self.vinImage,self.vinView))
+        elif not state and self._hasControl(self.vignette):
+            self._removeControl(self.vignette)
+            timerit(self.jsonRPC.setViewMode)(0.1,[self.defaultView])
+            self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self.vinImage,self.defaultView))
             
                 
     def _cancelBug(self):
         self.log('_cancelBug')
-        if self._hasControl(self._channelBug): self._removeControl(self._channelBug)
+        if self._hasControl(self.channelBug): self._removeControl(self.channelBug)
         if self._bugThread.is_alive():
             if hasattr(self._bugThread, 'cancel'): self._bugThread.cancel()
             try: self._bugThread.join()
@@ -357,27 +354,26 @@ class Overlay():
         nstate = not bool(state)
         
         if state and self.enableChannelBug:
-            if not self._hasControl(self._channelBug):
+            if not self._hasControl(self.channelBug):
                 logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
                 try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-                except: self.channelBugX, self.channelBugY = subZoom(abs(int(self.window_w // 8) - self.window_w) - 128, self._vinViewMode.get('zoom')), subZoom(abs(int(self.window_h // 16) - self.window_h) - 128, self._vinViewMode.get('zoom')) #auto w/ zoom offset
+                except: self.channelBugX, self.channelBugY = subZoom(abs(int(self.window_w // 8) - self.window_w) - 128, self.vinView.get('zoom')), subZoom(abs(int(self.window_h // 16) - self.window_h) - 128, self.vinView.get('zoom')) #auto w/ zoom offset
                 
-                self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
-                self._addControl(self._channelBug)
-                self._channelBug.setVisibleCondition('[!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
-                self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
-                                                ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
+                self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
+                self._addControl(self.channelBug)
+                self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
+                                               ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
                 
-                if   self.channelBugDiffuse:      self._channelBug.setColorDiffuse(self.channelBugColor)
-                elif self.resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
+                if   self.channelBugDiffuse:      self.channelBug.setColorDiffuse(self.channelBugColor)
+                elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
                 self.log('toggleBug, logo = %s, setColorDiffuse = %s, POSXY (%s,%s))'%(logo, self.channelBugColor, self.channelBugX, self.channelBugY))
-                self._channelBug.setImage(logo)
-                self._setVisible(self._channelBug,True)
+                self.channelBug.setImage(logo)
+                self._setVisible(self.channelBug,True)
             
-        elif not state and self._hasControl(self._channelBug):
+        elif not state and self._hasControl(self.channelBug):
             self._cancelBug()
-            self._channelBug.setImage(' ')
-            self._setVisible(self._channelBug,False)
+            self.channelBug.setImage(' ')
+            self._setVisible(self.channelBug,False)
             
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
         self._bugThread = Timer(wait, self.toggleBug, [nstate])
@@ -388,7 +384,7 @@ class Overlay():
     
     def _cancelOnNext(self):
         self.log('_cancelOnNext')
-        if self._hasControl(self._onNext_Text): self._removeControl(self._onNext_Text)
+        if self._hasControl(self.onNext_Text): self._removeControl(self.onNext_Text)
         if self._onNextThread.is_alive():
             if hasattr(self._onNextThread, 'cancel'): self._onNextThread.cancel()
             try: self._onNextThread.join()
@@ -397,11 +393,10 @@ class Overlay():
             
     def toggleOnNext(self, state: bool=True, cancel: bool=False):
         def __getOnNextInterval(interval, remaining, displayTime):
-            #split totalTime time into quarters, last quarter triggers nextup split by equal intervals of 3. ie. display 3 times in the last quarter of show
             totalTime  = (int(self.player.getPlayerTime()) * (self.maxProgress / 100)) #total time minus max threshold
             elapsed    = self.player.getElapsedTime()
             showTime   = ((totalTime * .85) - displayTime)
-            sleepTime    = roundupDIV(showTime,interval)
+            sleepTime  = roundupDIV(showTime,interval)
             if remaining < sleepTime: return __getOnNextInterval(interval+1, remaining, displayTime)
             conditions = self.chkOnNextConditions()
             showOnNext = (elapsed >= showTime and remaining >= sleepTime and totalTime > self.minDuration and conditions)
@@ -425,46 +420,46 @@ class Overlay():
                     onNow  = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else fitem.get('showlabel',nowTitle)
                     onNext = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
                     
-                    if not self._hasControl(self._onNext_Text):
-                        self._onNext_Text = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
-                        self._addControl(self._onNext_Text)
+                    if not self._hasControl(self.onNext_Text):
+                        self.onNext_Text = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
+                        self._addControl(self.onNext_Text)
 
-                    self._onNext_Text.setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
-                    self._onNext_Text.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                     ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
-                                                     ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                     ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
-                                                     ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                     ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
+                    self.onNext_Text.setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
+                    self.onNext_Text.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                    ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
+                                                    ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                    ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
+                                                    ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                    ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
                     if self.onNextMode == 2:
                         landscape = getThumb(nitem)    
                         
-                        if not self._hasControl(self._onNext_Border):
-                            self._onNext_Border = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, os.path.join(MEDIA_LOC,'colors','white.png'), 0, '0xC0%s'%(COLOR_BACKGROUND))#todo adv. rule to change color.
-                            self._addControl(self._onNext_Border)
+                        if not self._hasControl(self.onNext_Border):
+                            self.onNext_Border = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, os.path.join(MEDIA_LOC,'colors','white.png'), 0, '0xC0%s'%(COLOR_BACKGROUND))#todo adv. rule to change color.
+                            self._addControl(self.onNext_Border)
 
-                        self._onNext_Border.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                        self.onNext_Border.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
                                                            ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
                                                            ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
                                                            ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
                                                            ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
                                                            ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
              
-                        if not self._hasControl(self._onNext_Artwork):
-                            self._onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 230, 125, ' ', aspectRatio=0)
-                            self._addControl(self._onNext_Artwork)
+                        if not self._hasControl(self.onNext_Artwork):
+                            self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 230, 125, ' ', aspectRatio=0)
+                            self._addControl(self.onNext_Artwork)
                             
-                        self._onNext_Artwork.setImage(COLOR_FANART if landscape == FANART else landscape, useCache=True)
-                        self._onNext_Artwork.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                        self.onNext_Artwork.setImage(COLOR_FANART if landscape == FANART else landscape, useCache=True)
+                        self.onNext_Artwork.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
                                                            ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
                                                            ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
                                                            ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
                                                            ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
                                                            ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
          
-                        self._setVisible(self._onNext_Border,True)
-                        self._setVisible(self._onNext_Artwork,True)
-                    self._setVisible(self._onNext_Text,True)
+                        self._setVisible(self.onNext_Border,True)
+                        self._setVisible(self.onNext_Artwork,True)
+                    self._setVisible(self.onNext_Text,True)
 
                 elif self.onNextMode == 3: self.player.toggleInfo()
                 elif self.onNextMode == 4: self._updateUpNext(fitem,nitem)
@@ -473,16 +468,16 @@ class Overlay():
             elif not state:
                 self._cancelOnNext()
                 if self.onNextMode in [1,2]:
-                    if self._hasControl(self._onNext_Text):
-                        self._onNext_Text.reset()
-                        self._setVisible(self._onNext_Text,False)
+                    if self._hasControl(self.onNext_Text):
+                        self.onNext_Text.reset()
+                        self._setVisible(self.onNext_Text,False)
                         
-                    if self._hasControl(self._onNext_Border):
-                        self._setVisible(self._onNext_Border,False)
+                    if self._hasControl(self.onNext_Border):
+                        self._setVisible(self.onNext_Border,False)
                         
-                    if self._hasControl(self._onNext_Artwork):
-                        self._onNext_Artwork.setImage(' ')
-                        self._setVisible(self._onNext_Artwork,False)
+                    if self._hasControl(self.onNext_Artwork):
+                        self.onNext_Artwork.setImage(' ')
+                        self._setVisible(self.onNext_Artwork,False)
                     
             self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
             self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])

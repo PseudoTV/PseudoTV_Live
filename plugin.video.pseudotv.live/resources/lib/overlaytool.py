@@ -43,9 +43,9 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             self.advRule  = (kwargs.get("ADV_RULES") or False)
             self.focusIDX = (kwargs.get("Focus_IDX") or 1)
             
-            self._defViewMode = self.jsonRPC.getViewMode()
-            self._vinViewMode = (kwargs.get("Vignette_VideoMode") or self._defViewMode)
-            self._vinImage    = (kwargs.get("Vignette_Image")     or os.path.join(MEDIA_LOC,'overlays','ratio.png'))
+            self.defaultView = self.jsonRPC.getViewMode()
+            self.vinView     = (kwargs.get("Vignette_VideoMode") or self.defaultView)
+            self.vinImage    = (kwargs.get("Vignette_Image")     or os.path.join(MEDIA_LOC,'overlays','ratio.png'))
             
             self.channelBugDiffuse = '0x%s'%((kwargs.get("ChannelBug_Color") or SETTINGS.getSetting('ChannelBug_Color')))
             self.autoBugX, self.autoBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128)
@@ -72,21 +72,21 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         if not BUILTIN.getInfoBool('IsFullscreen','System'):
             DIALOG.okDialog(LANGUAGE(32097)%(BUILTIN.getInfoLabel('ScreenResolution','System')))
             
-        self._vignetteControl = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, self._vinImage, aspectRatio=0) #IDX 0
-        self._addCntrl(self._vignetteControl)  
+        self.vignetteControl = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, self.vinImage, aspectRatio=0) #IDX 0
+        self._addCntrl(self.vignetteControl)  
         
-        self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, COLOR_LOGO, 2, self.channelBugDiffuse) #IDX 1
-        self._addCntrl(self._channelBug)
-        self.posx, self.posy = self._channelBug.getX(),self._channelBug.getY()
+        self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, COLOR_LOGO, 2, self.channelBugDiffuse) #IDX 1
+        self._addCntrl(self.channelBug)
+        self.posx, self.posy = self.channelBug.getX(),self.channelBug.getY()
         
-        self._onNext_Border  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, os.path.join(MEDIA_LOC,'colors','white.png'), 0, '0xC0%s'%(COLOR_BACKGROUND)) #IDX 2
-        self._onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), self.onNextY + 5, 230, 125, COLOR_FANART, aspectRatio=0)    
-        self._onNext_Text    = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
-        self._onNext_Text.setText('%s %s\n%s %s'%(LANGUAGE(32104),ADDON_NAME,LANGUAGE(32116),ADDON_NAME))
+        self.onNext_Border  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, os.path.join(MEDIA_LOC,'colors','white.png'), 0, '0xC0%s'%(COLOR_BACKGROUND)) #IDX 2
+        self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), self.onNextY + 5, 230, 125, COLOR_FANART, aspectRatio=0)    
+        self.onNext_Text    = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
+        self.onNext_Text.setText('%s %s\n%s %s'%(LANGUAGE(32104),ADDON_NAME,LANGUAGE(32116),ADDON_NAME))
         
-        self._addCntrl(self._onNext_Border)
-        self._addCntrl(self._onNext_Artwork, incl=False)
-        self._addCntrl(self._onNext_Text, incl=False)
+        self._addCntrl(self.onNext_Border)
+        self._addCntrl(self.onNext_Artwork, incl=False)
+        self._addCntrl(self.onNext_Text, incl=False)
 
         self.focusCycleLST.insert(0,self.focusCycleLST.pop(self.focusIDX))
         self.focusCycle = cycle(self.focusCycleLST).__next__
@@ -109,11 +109,11 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             self.focusControl = cntrl
             self._setFocus(self.focusControl)
             for cntrl in self.focusCNTRLST:
-                if cntrl == self._onNext_Border:
+                if cntrl == self.onNext_Border:
                     self.posx, self.posy = cntrl.getX(),cntrl.getY()
                     cntrl.setAnimations([('Conditional', 'effect=fade start=25 end=100 time=240 delay=160 condition=True reversible=False')])
-                    self._onNext_Artwork.setAnimations([('Conditional', 'effect=fade start=25 end=100 time=240 delay=160 condition=True reversible=False')])
-                    self._onNext_Text.setAnimations([('Conditional', 'effect=fade start=25 end=100 time=240 delay=160 condition=True reversible=False')])
+                    self.onNext_Artwork.setAnimations([('Conditional', 'effect=fade start=25 end=100 time=240 delay=160 condition=True reversible=False')])
+                    self.onNext_Text.setAnimations([('Conditional', 'effect=fade start=25 end=100 time=240 delay=160 condition=True reversible=False')])
                 elif self.focusControl != cntrl:
                     cntrl.setAnimations([('Conditional', 'effect=fade start=100 end=25 time=240 delay=160 condition=True reversible=False')])
                 else:
@@ -125,19 +125,19 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         posx, posy = self.focusCNTRLST[cntrl]
         if (self.posx != posx or self.posy != posy):
             cntrl.setPosition(self.posx, self.posy)
-            if cntrl == self._onNext_Border:
-                self._onNext_Artwork.setPosition((self.posx + 5), (self.posy + 5))
-                self._onNext_Text.setPosition(self.posx, (self.posy + 140))
+            if cntrl == self.onNext_Border:
+                self.onNext_Artwork.setPosition((self.posx + 5), (self.posy + 5))
+                self.onNext_Text.setPosition(self.posx, (self.posy + 140))
             
                       
     def save(self):
         changes = {}
         for cntrl in self.focusCNTRLST:
             posx, posy = cntrl.getX(), cntrl.getY()
-            if  cntrl == self._channelBug:
+            if  cntrl == self.channelBug:
                 if (posx != self.channelBugX or posy != self.channelBugY):
                     changes[cntrl] = posx, posy, (posx == self.autoBugX & posy == self.autoBugY)
-            elif cntrl == self._onNext_Border:
+            elif cntrl == self.onNext_Border:
                 if (posx != self.onNextX or posy != self.onNextY):
                     changes[cntrl] = posx, posy, (posx == self.autoNextX & posy == self.autoNextY)
           
@@ -153,7 +153,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         if self.advRule: save = PROPERTIES.setProperty
         else:            save = SETTINGS.setSetting
         
-        if cntrl == self._channelBug:
+        if cntrl == self.channelBug:
             if auto: save("Channel_Bug_Position_XY",LANGUAGE(30022))
             else:    save("Channel_Bug_Position_XY","(%s,%s)"%(posx, posy))
         elif cntrl == self._onNext:

@@ -1,4 +1,6 @@
 v.0.5.8
+-UI Improvements.
+-Added New "On Next" controls to overlay position utility.
 -Various tweaks to playback & on next logic.
 -Various tweaks to improve stability.
 -Fixed Restart Percentage setting to allow 0% ie. Disable Restart Prompt.

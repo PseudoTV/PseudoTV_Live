@@ -541,19 +541,19 @@ class SetScreenVingette(BaseRule):
     def runAction(self, actionid, citem, parameter, overlay):
         if actionid == RULES_ACTION_OVERLAY_OPEN:
             self.storedValues[0] = overlay.enableVignette
-            self.storedValues[1] = overlay._vinImage
-            self.storedValues[2] = overlay._vinViewMode
+            self.storedValues[1] = overlay.vinImage
+            self.storedValues[2] = overlay.vinView
             
             overlay.enableVignette = self.optionValues[0]
-            overlay._vinImage      = self.getImage(self.optionValues[1])
-            overlay._vinViewMode   = {"nonlinearstretch":self.optionValues[5] ,"pixelratio":self.optionValues[4],"verticalshift":self.optionValues[3],"viewmode":"custom","zoom": self.optionValues[2]}
-            self.log('runAction, setting vignette image = %s\nmode = %s'%(overlay._vinImage,overlay._vinViewMode))
+            overlay.vinImage      = self.getImage(self.optionValues[1])
+            overlay.vinView   = {"nonlinearstretch":self.optionValues[5] ,"pixelratio":self.optionValues[4],"verticalshift":self.optionValues[3],"viewmode":"custom","zoom": self.optionValues[2]}
+            self.log('runAction, setting vignette image = %s\nmode = %s'%(overlay.vinImage,overlay.vinView))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
             overlay.enableVignette = self.storedValues[0]
-            overlay._vinImage      = self.storedValues[1]
-            overlay._vinViewMode   = self.storedValues[2]
-            self.log('runAction, restoring vignette image = %s\nmode = %s'%(overlay._vinImage,overlay._vinViewMode))
+            overlay.vinImage      = self.storedValues[1]
+            overlay.vinView   = self.storedValues[2]
+            self.log('runAction, restoring vignette image = %s\nmode = %s'%(overlay.vinImage,overlay.vinView))
 
 
 class MST3k(BaseRule):
@@ -600,25 +600,25 @@ class MST3k(BaseRule):
 
     def runAction(self, actionid, citem, parameter, overlay):
         if actionid == RULES_ACTION_OVERLAY_OPEN:
-            self.storedValues[0] = overlay._vinImage
+            self.storedValues[0] = overlay.vinImage
             self.storedValues[1] = overlay._vinOffsetXY
             self.storedValues[2] = overlay._vinZoom
             
-            overlay._vinImage    = self.setImage(actionid+.1, citem, overlay, MST3K_1)
+            overlay.vinImage    = self.setImage(actionid+.1, citem, overlay, MST3K_1)
             overlay._vinOffsetXY = (0,0)
             overlay._vinZoom     = 1.0
-            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
+            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay.vinImage, overlay._vinOffsetXY, overlay._vinZoom))
             
         elif actionid == RULES_ACTION_OVERLAY_OPEN+.1:
-            overlay._vinImage = self.setImage(actionid, citem, overlay, MST3K_2)
-            overlay._setImage(overlay._vignette,overlay._vinImage)
-            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
+            overlay.vinImage = self.setImage(actionid, citem, overlay, MST3K_2)
+            overlay._setImage(overlay.vignette,overlay.vinImage)
+            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay.vinImage, overlay._vinOffsetXY, overlay._vinZoom))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
-            overlay._vinImage    = self.storedValues[0]
+            overlay.vinImage    = self.storedValues[0]
             overlay._vinOffsetXY = self.storedValues[1]
             overlay._vinZoom     = self.storedValues[2]
-            self.log("runAction, restoring overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay._vinImage, overlay._vinOffsetXY, overlay._vinZoom))
+            self.log("runAction, restoring overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay.vinImage, overlay._vinOffsetXY, overlay._vinZoom))
             
             if self.threadTimer.is_alive():
                 if hasattr(thread, 'cancel'): self.threadTimer.cancel()
