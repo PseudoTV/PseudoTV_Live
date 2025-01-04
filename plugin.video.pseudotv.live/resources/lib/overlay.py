@@ -335,14 +335,15 @@ class Overlay():
             
     def toggleBug(self, state: bool=True):
         def _getWait(state, remaining):
-            if self.channelBugInterval == -1: 
+            if self.channelBugInterval == -1: #Indefinitely 
                 onVAL  = remaining
-                offVAL = 0.1
-            elif self.channelBugInterval == 0:
+                offVAL = FIFTEEN
+            elif self.channelBugInterval == 0: #random
                 onVAL  = random.randint(0,remaining)
-                offVAL = random.randint(0,remaining)
-            else:
-                onVAL  = self.channelBugInterval * 60
+                offVAL = random.randint(0,(abs(remaining - onVAL) // 2))
+            else: #set time
+                setVal = self.channelBugInterval * 60
+                onVAL  = setVal if setVal <= remaining else remaining
                 offVAL = round(onVAL // 2)
             self.log('toggleBug, _getWait onVAL, offVAL (%s,%s)'%(onVAL, offVAL))
             return {True:float(onVAL),False:float(offVAL)}[state]
@@ -354,24 +355,23 @@ class Overlay():
         nstate = not bool(state)
         
         if state and self.enableChannelBug:
+            logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
+            
             if not self._hasControl(self.channelBug):
-                logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
-                try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-                except: self.channelBugX, self.channelBugY = subZoom(abs(int(self.window_w // 8) - self.window_w) - 128, self.vinView.get('zoom')), subZoom(abs(int(self.window_h // 16) - self.window_h) - 128, self.vinView.get('zoom')) #auto w/ zoom offset
-                
                 self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
                 self._addControl(self.channelBug)
-                self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
-                                               ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
                 
-                if   self.channelBugDiffuse:      self.channelBug.setColorDiffuse(self.channelBugColor)
-                elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
-                self.log('toggleBug, logo = %s, setColorDiffuse = %s, POSXY (%s,%s))'%(logo, self.channelBugColor, self.channelBugX, self.channelBugY))
-                self.channelBug.setImage(logo)
-                self._setVisible(self.channelBug,True)
+            self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
+                                           ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
+            
+            if   self.channelBugDiffuse:      self.channelBug.setColorDiffuse(self.channelBugColor)
+            elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
+            self.channelBug.setImage(logo)
+            self._setVisible(self.channelBug,True)
+            self.log('toggleBug, logo = %s, setColorDiffuse = %s, POSXY (%s,%s))'%(logo, self.channelBugColor, self.channelBugX, self.channelBugY))
             
         elif not state and self._hasControl(self.channelBug):
-            self._cancelBug()
+            self._cancelBug() #cancel any leftover threads (overkill)
             self.channelBug.setImage(' ')
             self._setVisible(self.channelBug,False)
             
@@ -395,7 +395,7 @@ class Overlay():
         def __getOnNextInterval(interval, remaining, displayTime):
             totalTime  = (int(self.player.getPlayerTime()) * (self.maxProgress / 100)) #total time minus max threshold
             elapsed    = self.player.getElapsedTime()
-            showTime   = ((totalTime * .85) - displayTime)
+            showTime   = (totalTime - displayTime)
             sleepTime  = roundupDIV(showTime,interval)
             if remaining < sleepTime: return __getOnNextInterval(interval+1, remaining, displayTime)
             conditions = self.chkOnNextConditions()
@@ -466,7 +466,7 @@ class Overlay():
                 timerit(playSFX)(0.1,[BING_WAV])
                     
             elif not state:
-                self._cancelOnNext()
+                self._cancelOnNext() #cancel any leftover threads (overkill)
                 if self.onNextMode in [1,2]:
                     if self._hasControl(self.onNext_Text):
                         self.onNext_Text.reset()

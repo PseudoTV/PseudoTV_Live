@@ -39,7 +39,6 @@
                     <visible>!Player.Playing</visible>
                     <aspectratio aligny="center">keep</aspectratio>
                     <texture>dialogs/extendedprogress/logo.png</texture>
-                    <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                 </control>
                 <control type="image">
                     <width>160</width>

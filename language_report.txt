@@ -1,6 +1,7 @@
 Language IDS w\empty strings: {
     "32024": "",
     "32197": "",
+    "33085": "",
     "33130": ""
 }
 
@@ -247,7 +248,7 @@ Language IDS not found in py files, possibly only in xml: {
     "33074": "Automatically configure IPTV-Simple for use with PseudoTV Live [Minimal risk of overriding existing user configurations].",
     "33078": "Stop Playback when Idle for x Hours.\\nCancelable with prompt and countdown.",
     "33084": "Not recommend!! Only disable if you understand the impact of theses changes.",
-    "33085": "Display channel logo for non-PseudoTV Channels.",
+    "33085": "",
     "33089": "QRCode - Visit PseudoTV Live Wiki",
     "33092": "Multi-room help",
     "33097": "Only recommend you change port if a conflict exists.",

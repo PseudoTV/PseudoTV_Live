@@ -99,8 +99,7 @@ class Tasks():
         self.log('chkPVRBackend')
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
             if not SETTINGS.hasPVRInstance():
-                with BUILTIN.busy_dialog():
-                    SETTINGS.setPVRPath(USER_LOC, SETTINGS.getFriendlyName())
+                SETTINGS.setPVRPath(USER_LOC, SETTINGS.getFriendlyName())
               
 
     def _chkQueTimer(self):

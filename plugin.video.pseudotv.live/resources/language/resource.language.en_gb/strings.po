@@ -1928,7 +1928,7 @@ msgid "Not recommend!! Only disable if you understand the impact of theses chang
 msgstr ""
 
 msgctxt "#33085"
-msgid "Display channel logo for non-PseudoTV Channels."
+msgid ""
 msgstr ""
 
 msgctxt "#33086"
@@ -2048,7 +2048,7 @@ msgid "Parse Library & Build Channels while playing."
 msgstr ""
 
 msgctxt "#33153"
-msgid "[B]Restart[/B] prompt when media progress above % [0% Disabled]."
+msgid "[B]Restart[/B] prompt when media progress above % [0% Disabled, 95% Default]."
 msgstr ""
 
 msgctxt "#33155"
