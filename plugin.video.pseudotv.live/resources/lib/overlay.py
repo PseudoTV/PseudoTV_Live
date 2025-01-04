@@ -371,9 +371,9 @@ class Overlay():
             self.log('toggleBug, logo = %s, setColorDiffuse = %s, POSXY (%s,%s))'%(logo, self.channelBugColor, self.channelBugX, self.channelBugY))
             
         elif not state and self._hasControl(self.channelBug):
-            self._cancelBug() #cancel any leftover threads (overkill)
             self.channelBug.setImage(' ')
             self._setVisible(self.channelBug,False)
+            self._cancelBug() #cancel any leftover threads (overkill)
             
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
         self._bugThread = Timer(wait, self.toggleBug, [nstate])
@@ -466,7 +466,6 @@ class Overlay():
                 timerit(playSFX)(0.1,[BING_WAV])
                     
             elif not state:
-                self._cancelOnNext() #cancel any leftover threads (overkill)
                 if self.onNextMode in [1,2]:
                     if self._hasControl(self.onNext_Text):
                         self.onNext_Text.reset()
@@ -478,7 +477,8 @@ class Overlay():
                     if self._hasControl(self.onNext_Artwork):
                         self.onNext_Artwork.setImage(' ')
                         self._setVisible(self.onNext_Artwork,False)
-                    
+                self._cancelOnNext() #cancel any leftover threads (overkill)
+                
             self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
             self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
             self._onNextThread.name = "onNextThread"
