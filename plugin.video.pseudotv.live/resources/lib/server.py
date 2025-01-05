@@ -57,6 +57,7 @@ class Discovery:
     def __init__(self, service=None, multiroom=None):
         self.service   = service
         self.multiroom = multiroom
+        self.cache     = SETTINGS.cache
         self._start()
                    
 
@@ -64,16 +65,21 @@ class Discovery:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    @cacheit(checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(minutes=FIFTEEN))
+    def _getStatus(self):
+        return self.jsonRPC.getSettingValue("services.zeroconf",default=False)
+
+
     def _start(self):
         if not PROPERTIES.isRunning('Discovery'):
             with PROPERTIES.setRunning('Discovery'):
                 zconf = Zeroconf()
+                zcons = self._getStatus()
                 self.log("_start, Multicast DNS Service Discovery (%s)"%(ZEROCONF_SERVICE))
-                lastState = SETTINGS.getSetting('ZeroConf_Status')
                 SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32158))
                 ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
                 self.service.monitor.waitForAbort(DISCOVER_INTERVAL)
-                SETTINGS.setSetting('ZeroConf_Status',lastState)
+                SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:'Online',False:'Offline'}[zcons]))
                 zconf.close()
                         
             

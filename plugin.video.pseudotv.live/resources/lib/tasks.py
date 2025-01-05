@@ -104,7 +104,7 @@ class Tasks():
 
     def _chkQueTimer(self):
         self.log('_chkQueTimer')
-        self._chkEpochTimer('chkVersion'      , self.chkVersion      , 900)
+        self._chkEpochTimer('chkVersion'      , self.chkVersion      , 21600)
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
         self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 900)
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
@@ -160,11 +160,9 @@ class Tasks():
 
     def chkKodiSettings(self):
         self.log('chkKodiSettings')
-        SETTINGS.setSettingInt('Min_Days' ,self.jsonRPC.getSettingValue('epg.pastdaystodisplay',default=1))
-        SETTINGS.setSettingInt('Max_Days' ,self.jsonRPC.getSettingValue('epg.futuredaystodisplay',default=3))
+        SETTINGS.setSettingInt('Min_Days' ,self.jsonRPC.getSettingValue('epg.pastdaystodisplay'     ,default=1))
+        SETTINGS.setSettingInt('Max_Days' ,self.jsonRPC.getSettingValue('epg.futuredaystodisplay'   ,default=3))
         SETTINGS.setSettingInt('OSD_Timer',self.jsonRPC.getSettingValue('pvrmenu.displaychannelinfo',default=5))
-        zeroconf = self.jsonRPC.getSettingValue("services.zeroconf",default=False)
-        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zeroconf],{True:'Online',False:'Offline'}[zeroconf]))
          
 
     def chkDirs(self):
@@ -300,8 +298,7 @@ class Tasks():
         self.log('chkAutoTune')
         try:
             autotune = Autotune(service=self.service)
-            complete = autotune._runTune()
-            if complete: PROPERTIES.setAutotuned()
+            if autotune._runTune(): PROPERTIES.setAutotuned()
             del autotune
         except Exception as e: self.log('chkAutoTune failed! %s'%(e), xbmc.LOGERROR)
     

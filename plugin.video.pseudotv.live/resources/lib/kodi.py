@@ -144,7 +144,7 @@ class Settings:
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
-    @cacheit(expiration=datetime.timedelta(seconds=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
     def getIP(self, default='127.0.0.1'):
         IP = (xbmc.getIPAddress() or gethostbyname(gethostname()) or default)
         log('getIP, IP = %s'%(IP))

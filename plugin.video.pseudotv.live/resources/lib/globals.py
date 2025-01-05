@@ -454,3 +454,10 @@ def percentDiff(org, new):
 def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
+
+def isCenterlized():
+    default = 'special://profile/addon_data/plugin.video.pseudotv.live/cache'
+    if REAL_SETTINGS.getSetting('User_Folder') == default:
+        return False
+    return True
+                

@@ -582,7 +582,7 @@
                         </options>
                     </constraints>
                     <dependencies>
-                        <dependency type="enable">
+                        <dependency type="visible">
                             <condition operator="is" setting="Overlay_Enable">true</condition>
                         </dependency>
                     </dependencies>
@@ -596,7 +596,8 @@
                         <dependency type="visible">
                             <and>
                                 <condition operator="is" setting="Overlay_Enable">true</condition>
-                                <condition operator="is" setting="OnNext_Enable">1</condition>
+                                <condition operator="gt" setting="OnNext_Enable">0</condition>
+                                <condition operator="lt" setting="OnNext_Enable">3</condition>
                             </and>
                         </dependency>
                         <dependency type="enable">

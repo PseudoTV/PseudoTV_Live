@@ -54,42 +54,40 @@ class Autotune:
         autoChannels   = self.getAutotuned()
         self.log('_runTune, custom channels = %s,  autotune channels = %s'%(len(customChannels),len(autoChannels)))
         
-        if len(autoChannels) > 0: #rebuild existing autotune. 
+        if len(autoChannels) > 0: #rebuild existing autotune
             rebuild = True
             PROPERTIES.setEXTPropertyBool('%s.has.Predefined'%(ADDON_ID),True)
-            if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32128))
-            
         elif len(customChannels) == 0 and not PROPERTIES.hasAutotuned():
             autoEnabled = []
             [autoEnabled.extend(self.library.getEnabled(type)) for type in AUTOTUNE_TYPES]
             if len(autoEnabled) > 0:
                 self.log('_runTune, library enabled items = %s; recovering enabled items'%(len(autoEnabled)))
                 rebuild = True   #recover empty channels.json with enabled library.json items.
-            else:
-                samples = True #create sample channels "autotune".
+            elif isCenterlized(): return True
+            else: samples = True #create sample channels "autotune".
             
             if samples:
-                opt = ''
-                msg = (LANGUAGE(32042)%ADDON_NAME)
                 hasBackup   = PROPERTIES.hasBackup()
                 hasServers  = PROPERTIES.hasServers()
                 hasChannels = PROPERTIES.hasChannels()
+                
                 if hasBackup:
                     opt = LANGUAGE(32112)
                     msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
                 elif hasServers:
                     opt = LANGUAGE(30092)
                     msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32215))
-                    
+                else:
+                    opt = ''
+                    msg = (LANGUAGE(32042)%ADDON_NAME)
+                
                 retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
                 if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
                 elif retval == 2:
                     if   hasBackup:   return Backup().recoverChannels()
                     elif hasServers:  return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID))
-                elif not hasChannels: return openAddonSettings()       
-        else:
-            if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32058))
-            return 
+                elif not hasChannels: return openAddonSettings()     
+        else: return True
             
         for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
             if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
