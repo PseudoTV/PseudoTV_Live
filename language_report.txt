@@ -1,6 +1,4 @@
 Language IDS w\empty strings: {
-    "32024": "",
-    "32197": "",
     "33085": "",
     "33130": ""
 }
@@ -171,7 +169,6 @@ Language IDS not found in py files, possibly only in xml: {
     "32011": "Music Genres",
     "32012": "Recommended",
     "32013": "Services",
-    "32024": "",
     "32033": "Offline",
     "32048": "Select Servers",
     "32049": "Restarting...",
@@ -210,7 +207,6 @@ Language IDS not found in py files, possibly only in xml: {
     "32170": "- Delete Path",
     "32177": "Finish Configuring channel first",
     "32182": "ZeroConf Status:",
-    "32197": "",
     "32208": "Parsing Trailer",
     "32210": "Parsing Details",
     "32218": "Not Needed...",

@@ -133,7 +133,7 @@ class Tasks():
         key = '%s.%s'%(ADDON_ID,key)
         if PROPERTIES.getEXTPropertyBool(key):
             self.log('_chkPropTimer, key = %s'%(key))
-            PROPERTIES.clearEXTProperty(key)
+            PROPERTIES.clrEXTProperty(key)
             self._que(func, priority , *args, **kwargs)
             
 
@@ -216,7 +216,7 @@ class Tasks():
         try:
             builder = Builder(self.service)
             if not channels:
-                ids = PROPERTIES.getUpdateChannels()
+                ids = SETTINGS.getUpdateChannels()
                 if ids and not proper:
                     channels = list(builder.sortChannels([__match(id,builder.verify()) for id in ids]))
                 else:
@@ -296,10 +296,7 @@ class Tasks():
 
     def chkAutoTune(self):
         self.log('chkAutoTune')
-        try:
-            autotune = Autotune(service=self.service)
-            if autotune._runTune(): PROPERTIES.setAutotuned()
-            del autotune
+        try: SETTINGS.setAutotuned(Autotune(service=self.service)._runTune())
         except Exception as e: self.log('chkAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
     

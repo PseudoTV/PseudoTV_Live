@@ -709,11 +709,12 @@ class Manager(xbmcgui.WindowXMLDialog):
         elif not DIALOG.yesnoDialog(LANGUAGE(32076)): return
         with self.toggleSpinner(self.chanList):
             if self.server:
-                payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'channels':self.validateChannels(self.newChannels)}
-                requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
+                return DIALOG.notificationDialog(LANGUAGE(32197))
+                # payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'channels':self.validateChannels(self.newChannels)}
+                # requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
                 #todo write tmp file if post fails, add to que to repost when url online.
             else:
-                [(PROPERTIES.setUpdateChannels(citem.get('id')),PROPERTIES.setClearChannels(citem.get('id'))) for citem in self.validateChannels(diffLSTDICT(self.channelList,self.newChannels))]
+                [(SETTINGS.setUpdateChannels(citem.get('id')),SETTINGS.setResetChannels(citem.get('id'))) for citem in self.validateChannels(diffLSTDICT(self.channelList,self.newChannels))]
                 self.channels.setChannels(self.validateChannels(self.newChannels))
         self.closeManager()
             

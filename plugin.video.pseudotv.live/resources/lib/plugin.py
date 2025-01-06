@@ -168,21 +168,19 @@ class Plugin:
             liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
             return liz
         
-        with PROPERTIES.suspendActivity():
-            from rules import RulesList
-            nextitems = RulesList().runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
-            if nextitems:
-                self.IDXModifier = 0
-                del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
-                self.log('getPausedItems, building nextitems (%s)'%(len(nextitems)))
-                return [__buildfItem(idx, nextitem) for idx, nextitem in enumerate(nextitems)]
-            else: DIALOG.notificationDialog(LANGUAGE(32000))
-            return []
-        
+        from rules import RulesList
+        nextitems = RulesList().runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
+        if nextitems:
+            self.IDXModifier = 0
+            del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
+            self.log('getPausedItems, building nextitems (%s)'%(len(nextitems)))
+            return [__buildfItem(idx, nextitem) for idx, nextitem in enumerate(nextitems)]
+        else: DIALOG.notificationDialog(LANGUAGE(32000))
+        return []
+    
         
     def getRadioItems(self, name, chid, vid, limit=RADIO_ITEM_LIMIT):
-        with PROPERTIES.suspendActivity():
-            return interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in vid.split('|')], SETTINGS.getSettingInt('Interleave_Value'))
+        return interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in vid.split('|')], SETTINGS.getSettingInt('Interleave_Value'))
 
 
     def getPVRItems(self, name: str, chid: str) -> list:
@@ -210,54 +208,53 @@ class Plugin:
             liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
             return liz
             
-        with PROPERTIES.suspendActivity():
-            found   = False
-            pvritem = self._matchChannel(name,chid,radio=False)
-            if pvritem:
-                pastItems = pvritem.get('broadcastpast',[])
-                nowitem   = pvritem.get('broadcastnow',{})
-                nextitems = pvritem.get('broadcastnext',[]) # upcoming items
-                nextitems.insert(0,nowitem)
-                nextitems = pastItems + nextitems
+        found   = False
+        pvritem = self._matchChannel(name,chid,radio=False)
+        if pvritem:
+            pastItems = pvritem.get('broadcastpast',[])
+            nowitem   = pvritem.get('broadcastnow',{})
+            nextitems = pvritem.get('broadcastnext',[]) # upcoming items
+            nextitems.insert(0,nowitem)
+            nextitems = pastItems + nextitems
+            
+            if (self.sysInfo.get('fitem') or self.sysInfo.get('vid')):
+                for pos, nextitem in enumerate(nextitems):
+                    fitem = decodePlot(nextitem.get('plot',{}))
+                    file  = self.sysInfo.get('fitem',{}).get('file') if self.sysInfo.get('fitem') else self.sysInfo.get('vid')
+                    if file == fitem.get('file') and self.sysInfo.get('citem',{}).get('id') == fitem.get('citem',{}).get('id',str(random.random())):
+                        found = True
+                        self.log('getPVRItems, id = %s found matching fitem'%(chid))
+                        del nextitems[0:pos] # start array at correct position
+                        break
+                        
+            elif self.sysInfo.get('now'):
+                for pos, nextitem in enumerate(nextitems):
+                    fitem = decodePlot(nextitem.get('plot',{}))
+                    ntime = datetime.datetime.fromtimestamp(float(self.sysInfo.get('now')))
+                    if ntime >= strpTime(nextitem.get('starttime')) and ntime < strpTime(nextitem.get('endtime')) and chid == fitem.get('citem',{}).get('id',str(random.random())):
+                        found = True
+                        self.log('getPVRItems, id = %s found matching starttime'%(chid))
+                        del nextitems[0:pos] # start array at correct position
+                        break
                 
-                if (self.sysInfo.get('fitem') or self.sysInfo.get('vid')):
-                    for pos, nextitem in enumerate(nextitems):
-                        fitem = decodePlot(nextitem.get('plot',{}))
-                        file  = self.sysInfo.get('fitem',{}).get('file') if self.sysInfo.get('fitem') else self.sysInfo.get('vid')
-                        if file == fitem.get('file') and self.sysInfo.get('citem',{}).get('id') == fitem.get('citem',{}).get('id',str(random.random())):
-                            found = True
-                            self.log('getPVRItems, id = %s found matching fitem'%(chid))
-                            del nextitems[0:pos] # start array at correct position
-                            break
-                            
-                elif self.sysInfo.get('now'):
-                    for pos, nextitem in enumerate(nextitems):
-                        fitem = decodePlot(nextitem.get('plot',{}))
-                        ntime = datetime.datetime.fromtimestamp(float(self.sysInfo.get('now')))
-                        if ntime >= strpTime(nextitem.get('starttime')) and ntime < strpTime(nextitem.get('endtime')) and chid == fitem.get('citem',{}).get('id',str(random.random())):
-                            found = True
-                            self.log('getPVRItems, id = %s found matching starttime'%(chid))
-                            del nextitems[0:pos] # start array at correct position
-                            break
-                    
-                if found:
+            if found:
+                nowitem = nextitems.pop(0)
+                if round(nowitem['progresspercentage']) > self.seekTHD:
+                    self.log('getPVRItems, progress past threshold advance to nextitem')
                     nowitem = nextitems.pop(0)
-                    if round(nowitem['progresspercentage']) > self.seekTHD:
-                        self.log('getPVRItems, progress past threshold advance to nextitem')
-                        nowitem = nextitems.pop(0)
-                    
-                    if round(nowitem['progress']) < self.seekTOL:
-                        self.log('getPVRItems, progress start at the beginning')
-                        nowitem['progress']           = 0
-                        nowitem['progresspercentage'] = 0
+                
+                if round(nowitem['progress']) < self.seekTOL:
+                    self.log('getPVRItems, progress start at the beginning')
+                    nowitem['progress']           = 0
+                    nowitem['progresspercentage'] = 0
 
-                    del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
-                    nextitems.insert(0,nowitem)
-                    self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
-                    return [__buildfItem(idx, item) for idx, item in enumerate(nextitems)]
-                else: DIALOG.notificationDialog(LANGUAGE(32164))
-            else: DIALOG.notificationDialog(LANGUAGE(32000))
-            return []
+                del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
+                nextitems.insert(0,nowitem)
+                self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
+                return [__buildfItem(idx, item) for idx, item in enumerate(nextitems)]
+            else: DIALOG.notificationDialog(LANGUAGE(32164))
+        else: DIALOG.notificationDialog(LANGUAGE(32000))
+        return []
     
 
     def playTV(self, name: str, chid: str):
@@ -322,23 +319,26 @@ class Plugin:
     def playRadio(self, name: str, chid: str, vid: str):
         self.log('playRadio, id = %s'%(chid))
         def __buildfItem(idx, item: dict={}): return LISTITEMS.buildItemListItem(item, 'music')
-        listitems = [__buildfItem(idx, item) for idx, item in enumerate(randomShuffle(self.getRadioItems(name, chid, vid)))]
-        if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True),windowed=True)
-        self._resolveURL(False, xbmcgui.ListItem())
+        with self.preparingPlayback(), PROPERTIES.suspendActivity():
+            listitems = [__buildfItem(idx, item) for idx, item in enumerate(randomShuffle(self.getRadioItems(name, chid, vid)))]
+            if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True),windowed=True)
+            self._resolveURL(False, xbmcgui.ListItem())
 
 
     def playPlaylist(self, name: str, chid: str):
         self.log('playPlaylist, id = %s'%(chid))
-        listitems = self.getPVRItems(name, chid)
-        if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems),windowed=True)
-        self._resolveURL(False, xbmcgui.ListItem())
+        with self.preparingPlayback(), PROPERTIES.suspendActivity():
+            listitems = self.getPVRItems(name, chid)
+            if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems),windowed=True)
+            self._resolveURL(False, xbmcgui.ListItem())
 
 
     def playPaused(self, name: str, chid: str):
         self.log('playPaused, id = %s'%(chid))
-        listitems = self.getPausedItems(name, chid)
-        if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems),windowed=True)
-        self._resolveURL(False, xbmcgui.ListItem())
+        with self.preparingPlayback(), PROPERTIES.suspendActivity():
+            listitems = self.getPausedItems(name, chid)
+            if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems),windowed=True)
+            self._resolveURL(False, xbmcgui.ListItem())
 
 
     def playCheck(self, oldInfo: dict={}) -> bool:

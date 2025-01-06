@@ -465,7 +465,7 @@ class Builder:
                 fileList = randomShuffle(fileList)
                 
             self.kodiTrailers(trailersdict)
-            self.log("buildList, id: %s returning (%s) files, (%s) dirs."%(citem['id'],len(fileList),len(dirList)))
+            self.log("buildList, [%s] returning (%s) files, (%s) dirs."%(citem['id'],len(fileList),len(dirList)))
             return fileList, dirList
 
  

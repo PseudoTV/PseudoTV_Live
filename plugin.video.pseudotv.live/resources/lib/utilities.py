@@ -149,13 +149,13 @@ class Utilities:
             
 
     def buildMenu(self, select=None):
-        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)              , 'hide':False},#"Rebuild M3U/XMLTV"
-                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)               , 'hide':False},#"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR                                     , 'hide':False},#"Force PVR reload"
-                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart                                           , 'hide':False},#"Force PTVL reload"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTPropertyBool ,'args':('%s.chkLibrary'%(ADDON_ID),True), 'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer  ,'args':('chkFillers',)                      , 'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':startChannelBuild                                                      , 'hide':False}] #Run Autotune
+        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32120),False) , 'hide':False},#"Rebuild M3U/XMLTV"
+                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32119),True) , 'hide':False},#"Clean Start"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR , 'hide':False},#"Force PVR reload"
+                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart , 'hide':False},#"Force PTVL reload"
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.forceUpdateTime ,'args':('chkLibrary',) , 'hide':False}, #Rescan library
+                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer ,'args':('chkFillers',) , 'hide':False}, #Rescan library
+                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':self._runAutotune , 'hide':False}] #Run Autotune
                 
         with BUILTIN.busy_dialog():
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide'))]
@@ -172,7 +172,19 @@ class Utilities:
                     self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
                     return DIALOG.notificationDialog(LANGUAGE(32000))
         else: openAddonSettings((6,1))
-                
+         
+         
+    def _runAutotune(self):
+        SETTINGS.setAutotuned(False)
+        PROPERTIES.setEpochTimer('chkAutoTune')
+         
+         
+    def _runUpdate(self, full=False):
+        if full:
+            SETTINGS.setAutotuned(False)
+            PROPERTIES.forceUpdateTime('chkLibrary')
+        PROPERTIES.forceUpdateTime('chkChannels')
+               
 
     def deleteFiles(self, msg, full: bool=False):
         self.log('deleteFiles, full = %s'%(full))
@@ -188,8 +200,7 @@ class Utilities:
             with BUILTIN.busy_dialog():
                  for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
-        if full: startChannelBuild()
-        else:    PROPERTIES.forceUpdateTime('chkChannels')
+        self._runUpdate(full)
 
 
     def sortMethod(self):

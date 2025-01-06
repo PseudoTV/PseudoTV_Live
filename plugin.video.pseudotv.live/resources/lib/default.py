@@ -33,10 +33,11 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         params['name']       = (unquoteString(params.get("name",'')) or BUILTIN.getInfoLabel('ChannelName'))
         params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
         log("Default: run, params = %s"%(params))
-        if PROPERTIES.isRunning('togglePVR'):   DIALOG.notificationDialog(LANGUAGE(32000))
-        elif params.get('start') == '{utc}':    DIALOG.okDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
+        
+        if   PROPERTIES.isRunning('togglePVR'): DIALOG.notificationDialog(LANGUAGE(32000))
         elif mode == 'live':
-            if   params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
+            if   params.get('start') == '{utc}':DIALOG.okDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
+            elif params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
             elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
             else:                               threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
         elif mode in ['vod','dvr']:             threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
@@ -46,5 +47,6 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         elif mode == 'guide'                and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openGuide()
         elif mode == 'settings'             and hasAddon(PVR_CLIENT_ID,install=True,enable=True): openAddonSettings()
         else: DIALOG.notificationDialog(LANGUAGE(32000))
+        MONITOR().waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
         
 if __name__ == '__main__': run(sys.argv,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')),nitem=decodePlot(BUILTIN.getInfoLabel('NextPlot')))

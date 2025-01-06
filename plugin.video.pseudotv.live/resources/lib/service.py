@@ -180,7 +180,7 @@ class Player(xbmc.Player):
         self.log('setTrakt, state = %s'%(state))
         # https://github.com/trakt/script.trakt/blob/d45f1363c49c3e1e83dabacb70729cc3dec6a815/resources/lib/kodiUtilities.py#L104
         if state: PROPERTIES.setEXTPropertyBool('script.trakt.paused',state)
-        else:     PROPERTIES.clearEXTProperty('script.trakt.paused')
+        else:     PROPERTIES.clrEXTProperty('script.trakt.paused')
 
 
     def setSubtitles(self, state: bool=True):

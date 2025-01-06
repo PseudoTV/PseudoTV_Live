@@ -46,7 +46,7 @@ class Create:
                     channelData['id'] = getChannelID(channelData['name'], channelData['path'], channelData['number'])
                     manager.channels.addChannel(channelData)
                     manager.channels.setChannels()
-                    PROPERTIES.setUpdateChannels(channelData['id'])
+                    SETTINGS.setUpdateChannels(channelData['id'])
                     manager.closeManager()
                     del manager
                 manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=channelData['number'])

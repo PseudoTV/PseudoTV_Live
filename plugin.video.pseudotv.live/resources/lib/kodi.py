@@ -246,6 +246,49 @@ class Settings:
         else:      return self.cacheDB.get(key, checksum, json_data)
         
         
+    def getEXTMeta(self, id):
+        addon = xbmcaddon.Addon(id)
+        properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
+        for property in properties: yield (property, addon.getAddonInfo(property))
+
+
+    def getEXTSetting(self, id, key):
+        return xbmcaddon.Addon(id).getSetting(key)
+        
+        
+    def getFriendlyName(self):
+        from jsonrpc import JSONRPC
+        return JSONRPC().inputFriendlyName()
+
+
+    def getMYUUID(self):
+        friendly = self.getFriendlyName()
+        uuid = self.getCacheSetting('MY_UUID', checksum=friendly)
+        if not uuid: uuid = self.setCacheSetting('MY_UUID', genUUID(seed=self.getFriendlyName()), checksum=friendly)
+        return uuid
+
+        
+    def getResetChannels(self):
+        ids = (self.getCacheSetting('clearChannels') or [])
+        self.clrCacheSetting('clearChannels')
+        return ids
+
+
+    def getUpdateChannels(self):
+        ids = (self.getCacheSetting('updateChannels') or [])
+        self.clrCacheSetting('updateChannels')
+        return ids
+    
+    
+    def hasAutotuned(self):
+        return self.getCacheSetting('has.Autotuned') == True
+        
+        
+    #CLR
+    def clrCacheSetting(self, key, checksum=1, life=datetime.timedelta(days=84), json_data=False):
+        self.setCacheSetting(key, None, checksum, life, json_data)
+    
+    
     #SET
     def _setSetting(self, func, key, value):
         try:
@@ -306,30 +349,24 @@ class Settings:
         return self.cacheDB.set(key, value, checksum, life, json_data)
             
 
-    def getEXTMeta(self, id):
-        addon = xbmcaddon.Addon(id)
-        properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
-        for property in properties: yield (property, addon.getAddonInfo(property))
-
-
-    def getEXTSetting(self, id, key):
-        return xbmcaddon.Addon(id).getSetting(key)
-        
-        
     def setEXTSetting(self, id, key, value):
         return xbmcaddon.Addon(id).setSetting(key,value)
 
 
-    def getFriendlyName(self):
-        from jsonrpc     import JSONRPC
-        return JSONRPC().inputFriendlyName()
+    def setUpdateChannels(self, id):
+        ids = self.getUpdateChannels()
+        ids.append(id)
+        return self.setCacheSetting('updateChannels',list(set(ids)))
+    
+    
+    def setResetChannels(self, id):
+        ids = self.getResetChannels()
+        ids.append(id)
+        return self.setCacheSetting('clearChannels',list(set(ids)))
 
 
-    def getMYUUID(self):
-        friendly = self.getFriendlyName()
-        uuid = self.getCacheSetting('MY_UUID', checksum=friendly)
-        if not uuid: uuid = self.setCacheSetting('MY_UUID', genUUID(seed=self.getFriendlyName()), checksum=friendly)
-        return uuid
+    def setAutotuned(self, state=True):
+        return self.setCacheSetting('has.Autotuned',state)
 
 
     @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
@@ -609,7 +646,7 @@ class Properties:
     def clrInstanceID(self):
         instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
         if instanceID: self.clearTrash(instanceID)
-        self.clearEXTProperty('%s.InstanceID'%(ADDON_ID))
+        self.clrEXTProperty('%s.InstanceID'%(ADDON_ID))
 
 
     def setInstanceID(self):
@@ -643,40 +680,10 @@ class Properties:
 
     def forceUpdateTime(self, key):
         return self.setPropertyInt(key,0)
-        
-    
-    def getUpdateChannels(self):
-        ids = self.getPropertyList('updateChannels')
-        self.clearProperty('updateChannels')
-        return ids
-    
-    
-    def setUpdateChannels(self, id):
-        ids = self.getPropertyList('updateChannels')
-        ids.append(id)
-        self.setPropertyList('updateChannels',list(set(ids)))
-        return self.setEpochTimer('chkChannels')
-    
-    
-    def getClearChannels(self):
-        ids = self.getPropertyList('clearChannels')
-        self.clearProperty('clearChannels')
-        return ids
-    
-    
-    def setClearChannels(self, id):
-        ids = self.getPropertyList('clearChannels')
-        ids.append(id)
-        self.setPropertyList('clearChannels',list(set(ids)))
-        return self.setEpochTimer('chkChannels')
 
 
     def setEpochTimer(self, key, state=True):
         return self.setEXTPropertyBool('%s.%s'%(ADDON_ID,key),state)
-
-
-    def setAutotuned(self, state=True):
-        return self.setEXTPropertyBool('%s.has.Autotuned'%(ADDON_ID),state)
 
 
     def setChannels(self, state=True):
@@ -752,10 +759,6 @@ class Properties:
         else: yield
 
 
-    def hasAutotuned(self):
-        return self.getEXTPropertyBool('%s.has.Autotuned'%(ADDON_ID))
-        
-        
     def hasChannels(self):
         return self.getEXTPropertyBool('%s.has.Channels'%(ADDON_ID))
 
@@ -805,19 +808,19 @@ class Properties:
 
         
     #CLEAR
-    def clearEXTProperty(self, key):
-        self.log('clearEXTProperty, id = %s, key = %s'%(10000,key))
+    def clrEXTProperty(self, key):
+        self.log('clrEXTProperty, id = %s, key = %s'%(10000,key))
         return xbmcgui.Window(10000).clearProperty(key)
         
         
-    def clearProperties(self):
-        self.log('clearProperties')
+    def clrProperties(self):
+        self.log('clrProperties')
         return self.window.clearProperties()
         
         
-    def clearProperty(self, key):
+    def clrProperty(self, key):
         key = self.getKey(key)
-        self.log('clearProperty, id = %s, key = %s'%(self.winID,key))
+        self.log('clrProperty, id = %s, key = %s'%(self.winID,key))
         return self.window.clearProperty(key)
 
 
@@ -912,7 +915,7 @@ class Properties:
     def clearTrash(self, instanceID=None): #clear abandoned properties after instanceID change
         self.log('clearTrash, instanceID = %s'%(instanceID))
         tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
-        for prop in tmpDCT.get(instanceID,[]): self.clearEXTProperty(prop)
+        for prop in tmpDCT.get(instanceID,[]): self.clrEXTProperty(prop)
 
 
     def __exit__(self):
@@ -1126,7 +1129,7 @@ class Dialog:
     def toggleInfoMonitor(self, state, wait=0.1):
         self.log('toggleInfoMonitor, state = %s'%(state))
         if self.properties.setPropertyBool('chkInfoMonitor',state): 
-            self.properties.clearProperty('monitor.montiorList')
+            self.properties.clrProperty('monitor.montiorList')
             timerit(self.doInfoMonitor)(0.1)
 
 

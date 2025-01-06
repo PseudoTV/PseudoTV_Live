@@ -370,7 +370,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
             overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=1, Channel_Bug_Position_XY=self.optionValues[optionindex], ChannelBug_Color=self.optionValues[3])
             del overlaytool
             value = PROPERTIES.getProperty("Channel_Bug_Position_XY")
-            PROPERTIES.clearProperty("Channel_Bug_Position_XY")
+            PROPERTIES.clrProperty("Channel_Bug_Position_XY")
             if value: self.optionValues[optionindex] = value
             else:     self.optionValues[optionindex] = orgvalue
         elif self.optionValues[optionindex] != self.selectBoxOptions[optionindex][0]:
@@ -446,7 +446,7 @@ class ShowOnNext(BaseRule):
             overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=0, OnNext_Position_XY=self.optionValues[optionindex], OnNext_Color=self.optionValues[2])
             del overlaytool
             value = PROPERTIES.getProperty("OnNext_Position_XY")
-            PROPERTIES.clearProperty("OnNext_Position_XY")
+            PROPERTIES.clrProperty("OnNext_Position_XY")
             if value: self.optionValues[optionindex] = value
             else:     self.optionValues[optionindex] = orgvalue
         elif self.optionValues[optionindex] != self.selectBoxOptions[optionindex][0]:
@@ -1670,7 +1670,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
                     self.log("runAction, restoring last resume point = %s"%(resume))
                     item['resume'] = resume
                 self.storedValues[1].insert(0,item)
-                if self._getTotDuration(self.storedValues[1]) < (MIN_GUIDEDAYS * 86400) : PROPERTIES.setUpdateChannels(citem.get('id'))
+                if self._getTotDuration(self.storedValues[1]) < (MIN_GUIDEDAYS * 86400) : SETTINGS.setUpdateChannels(citem.get('id'))
                 return self.storedValues[1]
             return []
                                             

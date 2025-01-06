@@ -21,7 +21,6 @@
 from globals    import *
 from library    import Library
 from channels   import Channels
-from backup     import Backup
 
 class Autotune:
     def __init__(self, sysARG=sys.argv, service=None):
@@ -50,21 +49,24 @@ class Autotune:
 
 
     def _runTune(self, samples: bool=False, rebuild: bool=False, dia=None):
+        autoEnabled    = []
         customChannels = self.getCustom()
         autoChannels   = self.getAutotuned()
-        self.log('_runTune, custom channels = %s,  autotune channels = %s'%(len(customChannels),len(autoChannels)))
+        hasAutotuned   = SETTINGS.hasAutotuned()
+        self.log('_runTune, custom channels = %s,  autotune channels = %s,  has autotuned = %s'%(len(customChannels),len(autoChannels),hasAutotuned))
         
-        if len(autoChannels) > 0: #rebuild existing autotune
+        if len(autoChannels) > 0: #rebuild existing autotune, no samples needed
             rebuild = True
             PROPERTIES.setEXTPropertyBool('%s.has.Predefined'%(ADDON_ID),True)
-        elif len(customChannels) == 0 and not PROPERTIES.hasAutotuned():
-            autoEnabled = []
+        elif len(customChannels) == 0 and not hasAutotuned: #begin check if samples needed
             [autoEnabled.extend(self.library.getEnabled(type)) for type in AUTOTUNE_TYPES]
             if len(autoEnabled) > 0:
                 self.log('_runTune, library enabled items = %s; recovering enabled items'%(len(autoEnabled)))
-                rebuild = True   #recover empty channels.json with enabled library.json items.
-            elif isCenterlized(): return True
-            else: samples = True #create sample channels "autotune".
+                rebuild = True #recover empty channels.json with enabled library.json items.
+            elif hasAutotuned: # autotune already ran once, manual only going forward
+                return DIALOG.notificationDialog(LANGUAGE(32024))
+            else:
+                samples = True #create sample channels "autotune".
             
             if samples:
                 hasBackup   = PROPERTIES.hasBackup()
@@ -82,11 +84,12 @@ class Autotune:
                     msg = (LANGUAGE(32042)%ADDON_NAME)
                 
                 retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
-                if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-                elif retval == 2:
-                    if   hasBackup:   return Backup().recoverChannels()
+                if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038)))) #Yes
+                elif retval == 2: #Custom
+                    if   hasBackup:   return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/backup.py, Recover_Channels)'%(ADDON_ID))
                     elif hasServers:  return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID))
-                elif not hasChannels: return openAddonSettings()     
+                elif not hasChannels: return openAddonSettings() #No w/exception
+                else: return True #No
         else: return True
             
         for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
@@ -137,10 +140,9 @@ class Autotune:
         if not list: return
         def buildAvailableRange(existing):
             # create number array for given type, excluding existing channel numbers.
-            if existing:
-                existingNUMBERS = [eitem.get('number') for eitem in existing if eitem.get('number',0) > 0] # existing channel numbers
-            else:
-                existingNUMBERS = []
+            if existing: existingNUMBERS = [eitem.get('number') for eitem in existing if eitem.get('number',0) > 0] # existing channel numbers
+            else:        existingNUMBERS = []
+            
             start = ((CHANNEL_LIMIT+1)*(AUTOTUNE_TYPES.index(ATtype)+1))
             stop  = (start + CHANNEL_LIMIT)
             self.log('buildAUTOTUNE, ATtype = %s, range = %s-%s, existingNUMBERS = %s'%(ATtype,start,stop,existingNUMBERS))
@@ -173,7 +175,7 @@ class Autotune:
                 citem['logo']     = eitem.get('logo',citem.get('logo',LOGO))
                 citem['favorite'] = eitem.get('favorite',False)
             self.channels.addChannel(citem)
-            PROPERTIES.setUpdateChannels(citem['id'])
+            SETTINGS.setUpdateChannels(citem['id'])
         return self.channels.setChannels()
        
        

@@ -97,7 +97,16 @@ class XMLTVS:
                 else: raise Exception('no parser match %s'%(str(e)))
             except Exception as en: self.log('%s, failed! %s\n%s'%(name,e,en), xbmc.LOGERROR)
     
-    
+                
+    def resetData(self):
+        self.log('resetData')
+        return {'date'                : datetime.datetime.fromtimestamp(float(time.time())).strftime(DTFORMAT),
+                'generator-info-name' : self.cleanString('%s Guidedata'%(ADDON_NAME)),
+                'generator-info-url'  : self.cleanString(ADDON_ID),
+                'source-info-name'    : self.cleanString(ADDON_NAME),
+                'source-info-url'     : self.cleanString(ADDON_ID)}
+
+
     def loadData(self, file: str=XMLTVFLEPATH) -> dict:
         self.log('loadData, file = %s'%file)
         try: 
@@ -151,31 +160,21 @@ class XMLTVS:
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
 
 
-    def hasProgrammes(self, channels: list=[], programmes: list=[], fallback=None):
+    def hasProgrammes(self, channels: list=[], programmes: list=[], now=None):
         if not channels:   channels   = self.getChannels()
         if not programmes: programmes = self.getProgrammes()
-        if not fallback:   fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getUTCstamp(),offset=60)).strftime(DTFORMAT)
+        if not now: now   = datetime.datetime.fromtimestamp(roundTimeDown(getUTCstamp(),offset=60)).strftime(DTFORMAT)
         
         for channel in channels:
             try: 
                 valid = False
-                firstStart = min([program['start'] for program in programmes if program['channel'] == channel['id']], default=fallback)
-                lastStop   = max([program['stop']  for program in programmes if program['channel'] == channel['id']], default=fallback)
+                lastStop  = max([program['stop']  for program in programmes if program['channel'] == channel['id']], default=now)
+                if lastStop > now: valid = True
                 self.log('hasProgrammes, channel = %s, valid = %s'%(channel['id'],valid))
-                if lastStop > fallback: valid = True
                 yield channel['id'],valid
             except Exception as e:
                 self.log("hasProgrammes, channel = %s failed!\nMalformed XMLTV channel/programmes %s! valid = False %s"%(channel.get('id'),e), xbmc.LOGWARNING)
                 yield channel['id'],False
-                
-             
-    def resetData(self):
-        self.log('resetData')
-        return {'date'                : datetime.datetime.fromtimestamp(float(time.time())).strftime(DTFORMAT),
-                'generator-info-name' : self.cleanString('%s Guidedata'%(ADDON_NAME)),
-                'generator-info-url'  : self.cleanString(ADDON_ID),
-                'source-info-name'    : self.cleanString(ADDON_NAME),
-                'source-info-url'     : self.cleanString(ADDON_ID)}
 
 
     def cleanString(self, text: str) -> str:
@@ -206,7 +205,7 @@ class XMLTVS:
     def cleanProgrammes(self, programmes: list) -> list:
         now = (datetime.datetime.fromtimestamp(float(getUTCstamp())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells
         holiday = Seasonal().getHoliday()
-        clrIDS  = PROPERTIES.getClearChannels()
+        clrIDS  = SETTINGS.getResetChannels()
         
         def __filterProgrammes(program):
             citem = decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
@@ -283,8 +282,10 @@ class XMLTVS:
         item['categories']    = (fItem.get('genre')        or ['Undefined'])[:5]#trim list to five
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
+        
         item['thumb']         = cleanImage(getThumb(fItem,EPG_ARTWORK)) #unify thumbnail by user preference 
         fItem.get('art',{})['thumb'] = getThumb(fItem,{0:1,1:0}[EPG_ARTWORK])  #unify thumbnail artwork, opposite of EPG_Artwork
+        
         item['date']          = fItem.get('premiered','')
         item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=quoteString(item['title']),chid=quoteString(citem['id']),vid=quoteString(encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=quoteString(citem['name']))
         fItem['catchup-id']   = item['catchup-id']
@@ -558,4 +559,3 @@ class XMLTVS:
                         xmlData.close()
                 except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
-

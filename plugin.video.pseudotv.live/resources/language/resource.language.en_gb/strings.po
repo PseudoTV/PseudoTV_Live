@@ -916,7 +916,7 @@ msgid "Channel"
 msgstr ""
 
 msgctxt "#32024"
-msgid ""
+msgid "Autotuning available via Misc. Utilities"
 msgstr ""
 
 msgctxt "#32025"
@@ -1608,7 +1608,7 @@ msgid "Video"
 msgstr ""
 
 msgctxt "#32197"
-msgid "" 
+msgid "Currently Supported!" 
 msgstr ""
 
 msgctxt "#32198"
