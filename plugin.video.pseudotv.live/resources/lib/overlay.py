@@ -47,7 +47,6 @@ class Background(xbmcgui.WindowXMLDialog):
             self.getControl(40002).setImage(COLOR_LOGO if self.logo.endswith('wlogo.png') else self.logo)
             self.getControl(40001).setPosition(self.overlay.onNextX, self.overlay.onNextY)
             self.getControl(40001).setVisible(self.overlay.chkOnNextConditions())
-            self.getControl(40000).setVisible(self.visible)
         except Exception as e:
             log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.close()
@@ -395,7 +394,7 @@ class Overlay():
             elapsed    = self.player.getElapsedTime()
             showTime   = (totalTime - displayTime)
             sleepTime  = roundupDIV(showTime,interval)
-            if remaining < sleepTime: return __getOnNextInterval(interval+1, remaining, displayTime)
+            if interval < (ON_NEXT_COUNT*2) and remaining < sleepTime: return __getOnNextInterval(interval+1, remaining, displayTime)
             conditions = self.chkOnNextConditions()
             showOnNext = (elapsed >= showTime and remaining >= sleepTime and totalTime > self.minDuration and conditions)
             self.log('toggleOnNext, __getOnNextInterval: interval = %s, totalTime = %s, showTime = %s, remaining = %s, elapsed = %s, displayTime = %s, sleepTime = %s, conditions = %s, showOnNext = %s'%(interval,totalTime,showTime,remaining,elapsed,displayTime,sleepTime,conditions,showOnNext))
