@@ -50,6 +50,11 @@ class Multiroom:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    @cacheit(checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(minutes=FIFTEEN))
+    def _getStatus(self):
+        return self.jsonRPC.getSettingValue("services.zeroconf",default=False)
+
+
     def _chkDiscovery(self):
         self.log('_chkDiscovery')
         Discovery(service=self.service, multiroom=self)

@@ -712,7 +712,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                 payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'channels':self.validateChannels(self.newChannels)}
                 requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
                 #todo write tmp file if post fails, add to que to repost when url online.
-            else: self.channels.setChannels(self.validateChannels(self.newChannels))
+            else:
+                [(PROPERTIES.setUpdateChannels(citem.get('id')),PROPERTIES.setClearChannels(citem.get('id'))) for citem in self.validateChannels(diffLSTDICT(self.channelList,self.newChannels))]
+                self.channels.setChannels(self.validateChannels(self.newChannels))
         self.closeManager()
             
         

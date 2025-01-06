@@ -656,6 +656,19 @@ class Properties:
         ids.append(id)
         self.setPropertyList('updateChannels',list(set(ids)))
         return self.setEpochTimer('chkChannels')
+    
+    
+    def getClearChannels(self):
+        ids = self.getPropertyList('clearChannels')
+        self.clearProperty('clearChannels')
+        return ids
+    
+    
+    def setClearChannels(self, id):
+        ids = self.getPropertyList('clearChannels')
+        ids.append(id)
+        self.setPropertyList('clearChannels',list(set(ids)))
+        return self.setEpochTimer('chkChannels')
 
 
     def setEpochTimer(self, key, state=True):

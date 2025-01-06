@@ -62,6 +62,7 @@ class XMLTVS:
             
             for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
                 writer.addChannel(channel)
+                
             for program in self.XMLTVDATA['programmes']:
                 writer.addProgramme(program)
             
@@ -203,24 +204,19 @@ class XMLTVS:
 
 
     def cleanProgrammes(self, programmes: list) -> list:
-        now = (datetime.datetime.fromtimestamp(float(getUTCstamp())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells.
-        def filterProgrames(program):
-            if (strpTime(program.get('stop',now).rstrip(),DTFORMAT) > now): return program
-            
-        tmpProgrammes = [filterProgrames(program) for program in programmes] # remove expired content, ignore "recordings" ie. media=True
-        self.log('cleanProgrammes, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
-        return self.cleanHolidays(tmpProgrammes)
-
-
-    def cleanHolidays(self, programmes: list=[]) -> list:
+        now = (datetime.datetime.fromtimestamp(float(getUTCstamp())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells
         holiday = Seasonal().getHoliday()
-        def filterHoliday(program):
+        clrIDS  = PROPERTIES.getClearChannels()
+        
+        def __filterProgrammes(program):
             citem = decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
-            if citem.get('holiday') and citem.get('holiday',{}).get('name',str(random.random())) != holiday.get('name',str(random.random())): return None
+            if   citem.get('id') in clrIDS: return None
+            elif citem.get('holiday') and citem.get('holiday',{}).get('name',str(random.random())) != holiday.get('name',str(random.random())): return None
+            elif (strpTime(program.get('stop',now).rstrip(),DTFORMAT) < now): return None  # remove expired content, ignore "recordings" ie. media=True
             return program
-            
-        tmpProgrammes = [filterHoliday(program) for program in programmes if program] # remove expired seasons.
-        self.log('cleanHolidays, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
+
+        tmpProgrammes = [prog for prog in [__filterProgrammes(program) for program in programmes] if prog is not None]
+        self.log('cleanProgrammes, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
         return tmpProgrammes
 
 
@@ -414,7 +410,7 @@ class XMLTVS:
 
 
     def clrProgrammes(self, citem: dict) -> bool:# remove all programmes from XMLTVDATA
-        programmes = self.XMLTVDATA['programmes'].copy()
+        if programmes is None: programmes = self.XMLTVDATA['programmes'].copy()
         self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != citem.get('id')])
         self.log('clrProgrammes, removing channel %s programmes: before = %s, after = %s'%(citem.get('id'),len(programmes),len(self.XMLTVDATA['programmes'])))
         return True
@@ -562,3 +558,4 @@ class XMLTVS:
                         xmlData.close()
                 except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
+

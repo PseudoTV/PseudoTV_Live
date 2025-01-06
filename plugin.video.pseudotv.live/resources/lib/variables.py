@@ -24,6 +24,7 @@ from constants import *
 PAGE_LIMIT          = int((REAL_SETTINGS.getSetting('Page_Limit')  or "25"))
 MIN_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Min_Days')    or "1"))
 MAX_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Max_Days')    or "3"))
+OSD_TIMER           = int((REAL_SETTINGS.getSetting('OSD_Timer')   or "5"))
 EPG_ARTWORK         = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
 
 #file paths

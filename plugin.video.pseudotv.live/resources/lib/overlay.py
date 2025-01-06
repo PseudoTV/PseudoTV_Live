@@ -25,29 +25,28 @@ from resources import Resources
 class Background(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.overlay = kwargs.get('overlay', None)
-        self.visible = self.overlay.chkOnNextConditions()
-        self.sysInfo = self.overlay.player.sysInfo.copy()
-        self.citem   = self.sysInfo.get('citem',{})
-        self.fitem   = self.sysInfo.get('fitem',{})
-        self.nitem   = self.sysInfo.get('nitem',{})
-
-
+        self.overlay   = kwargs.get('overlay', None)
+        self.sysInfo   = self.overlay.player.sysInfo.copy()
+        self.citem     = self.sysInfo.get('citem',{})
+        self.fitem     = self.sysInfo.get('fitem',{})
+        self.nitem     = self.sysInfo.get('nitem',{})
+        
+        self.land      = getThumb(self.nitem)
+        self.logo      = self.citem.get('logo'     , BUILTIN.getInfoLabel('Art(icon)','Player'))
+        self.chname    = self.citem.get('name'     , BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
+        self.nowTitle  = self.fitem.get('label'    , BUILTIN.getInfoLabel('Title','VideoPlayer'))
+        self.nextTitle = self.nitem.get('showlabel', BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
+        self.onNow     = '%s on %s'%(self.nowTitle,self.chname) if self.chname not in validString(self.nowTitle) else self.fitem.get('showlabel',self.nowTitle)
+        self.onNext    = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),self.nextTitle)
+        
     def onInit(self):
         try:
-            log("Background: onInit, visible = %s"%(self.visible))
-            land      = getThumb(self.nitem)
-            logo      = self.citem.get('logo'     , BUILTIN.getInfoLabel('Art(icon)','Player'))
-            chname    = self.citem.get('name'     , BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
-            nowTitle  = self.fitem.get('label'    , BUILTIN.getInfoLabel('Title','VideoPlayer'))
-            nextTitle = self.nitem.get('showlabel', BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
-            onNow     = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else self.fitem.get('showlabel',nowTitle)
-            onNext    = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
-            
-            self.getControl(40004).setImage(COLOR_FANART if land == FANART else land, useCache=True)
-            self.getControl(40003).setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
-            self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
+            log("Background: onInit")
+            self.getControl(40004).setImage(COLOR_FANART if self.land == FANART else self.land, useCache=True)
+            self.getControl(40003).setText('%s %s[CR]%s %s'%(LANGUAGE(32104),self.onNow,LANGUAGE(32116),self.onNext))
+            self.getControl(40002).setImage(COLOR_LOGO if self.logo.endswith('wlogo.png') else self.logo)
             self.getControl(40001).setPosition(self.overlay.onNextX, self.overlay.onNextY)
+            self.getControl(40001).setVisible(self.overlay.chkOnNextConditions())
             self.getControl(40000).setVisible(self.visible)
         except Exception as e:
             log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
@@ -85,7 +84,7 @@ class Restart(xbmcgui.WindowXMLDialog):
             self.onClose()
 
 
-    def _progressLoop(self, control, wait=(SETTINGS.getSettingInt('OSD_Timer')*2)):
+    def _progressLoop(self, control, wait=(OSD_TIMER*2)):
         prog = 0
         tot  = wait
         xpos = control.getX()
@@ -166,7 +165,6 @@ class Overlay():
         self.onNextMode         = SETTINGS.getSettingInt('OnNext_Enable')
         self.minDuration        = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxProgress        = SETTINGS.getSettingInt('Seek_Threshold')
-        self.OSDTimer           = SETTINGS.getSettingInt('OSD_Timer')
         self.enableChannelBug   = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
         self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
@@ -404,7 +402,7 @@ class Overlay():
             return showOnNext, sleepTime, displayTime
 
         if self.enableOnNext:
-            showOnNext, sleepTime, displayTime = __getOnNextInterval(ON_NEXT_COUNT,abs(floor(self.player.getRemainingTime())),int(self.OSDTimer * ON_NEXT_COUNT))
+            showOnNext, sleepTime, displayTime = __getOnNextInterval(ON_NEXT_COUNT,abs(floor(self.player.getRemainingTime())),int(OSD_TIMER * ON_NEXT_COUNT))
             wait    = {True:displayTime,False:float(sleepTime)}[state]
             nstate  = not bool(state)
             sysInfo = self.player.sysInfo.copy()
@@ -491,7 +489,7 @@ class Overlay():
         try:
             # https://github.com/im85288/service.upnext/wiki/Example-source-code
             data = dict()
-            data.update({"notification_offset":int(floor(self.player.getRemainingTime())) + self.OSDTimer})
+            data.update({"notification_offset":int(floor(self.player.getRemainingTime())) + OSD_TIMER})
             current_episode = {"current_episode":{"episodeid" :(nowItem.get("id")            or ""),
                                                   "tvshowid"  :(nowItem.get("tvshowid")      or ""),
                                                   "title"     :(nowItem.get("title")         or ""),

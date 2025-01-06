@@ -268,7 +268,7 @@ class Player(xbmc.Player):
         elif state and self.service.player.enableOverlay:
             self.log('toggleInfo, state = %s'%(state))
             BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
-            timerit(self.toggleInfo)(float(SETTINGS.getSettingInt('OSD_Timer')),[False])
+            timerit(self.toggleInfo)(float(OSD_TIMER),[False])
         elif not state and BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
             self.log('toggleInfo, state = %s'%(state))
             BUILTIN.executebuiltin('Action(back)')  
@@ -303,7 +303,6 @@ class Monitor(xbmc.Monitor):
         self.jsonRPC          = service.jsonRPC
         self.pendingSuspend   = False
         self.pendingInterrupt = False
-        self.OSDTimer         = SETTINGS.getSettingInt('OSD_Timer')
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -316,7 +315,7 @@ class Monitor(xbmc.Monitor):
             except: #Kodi raises error after sleep.
                 self.log('__getIdle, Kodi waking up from sleep...')
                 idleTime = 0
-            idleState = (idleTime > self.OSDTimer)
+            idleState = (idleTime > OSD_TIMER)
             return idleState, idleTime
 
         def __chkResumeTime():

@@ -78,7 +78,7 @@ class Plugin:
         
         
     def _setResume(self, liz):
-        if self.sysInfo.get('seek',0) > 0 and self.sysInfo.get('progresspercentage',100) < 100:
+        if self.sysInfo.get('seek',0) > self.seekTOL and self.sysInfo.get('progresspercentage',100) < 100:
             self.log('_setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), liz.getPath()))
             liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
             infoTag = ListItemInfoTag(liz,'video')
