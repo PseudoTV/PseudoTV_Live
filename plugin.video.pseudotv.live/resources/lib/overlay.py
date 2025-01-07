@@ -394,7 +394,8 @@ class Overlay():
             elapsed    = self.player.getElapsedTime()
             showTime   = (totalTime - displayTime)
             sleepTime  = roundupDIV(showTime,interval)
-            if interval < (ON_NEXT_COUNT*2) and remaining < sleepTime: return __getOnNextInterval(interval+1, remaining, displayTime)
+            if   remaining < self.minDuration: return False, 0, 0
+            elif remaining < sleepTime:        return __getOnNextInterval(interval+1, remaining, displayTime)
             conditions = self.chkOnNextConditions()
             showOnNext = (elapsed >= showTime and remaining >= sleepTime and totalTime > self.minDuration and conditions)
             self.log('toggleOnNext, __getOnNextInterval: interval = %s, totalTime = %s, showTime = %s, remaining = %s, elapsed = %s, displayTime = %s, sleepTime = %s, conditions = %s, showOnNext = %s'%(interval,totalTime,showTime,remaining,elapsed,displayTime,sleepTime,conditions,showOnNext))

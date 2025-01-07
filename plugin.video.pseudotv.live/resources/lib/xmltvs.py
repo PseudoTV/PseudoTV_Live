@@ -411,7 +411,7 @@ class XMLTVS:
 
 
     def clrProgrammes(self, citem: dict) -> bool:# remove all programmes from XMLTVDATA
-        if programmes is None: programmes = self.XMLTVDATA['programmes'].copy()
+        programmes = self.XMLTVDATA['programmes'].copy()
         self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != citem.get('id')])
         self.log('clrProgrammes, removing channel %s programmes: before = %s, after = %s'%(citem.get('id'),len(programmes),len(self.XMLTVDATA['programmes'])))
         return True
