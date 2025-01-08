@@ -916,7 +916,7 @@ msgid "Channel"
 msgstr ""
 
 msgctxt "#32024"
-msgid "Autotuning available via Misc. Utilities"
+msgid "Autotuning samples available via Misc. Utilities"
 msgstr ""
 
 msgctxt "#32025"

@@ -58,8 +58,9 @@ class Tasks():
                  self.chkServers,
                  self.chkPVRBackend]
 
+        self.service.monitor.waitForAbort(FIFTEEN)
         for func in tasks:
-            if    self.service.monitor.waitForAbort(.0001): break
+            if    self.service.monitor.waitForAbort(0.5): break
             else: self._que(func)
         self.log('_initialize, finished...')
         

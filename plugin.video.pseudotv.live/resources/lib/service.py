@@ -221,8 +221,8 @@ class Player(xbmc.Player):
             self.toggleRestart()
             
         if self.sysInfo.get('isPlaylist',False):
-            if self.sysInfo.get('radio',False): timerit(BUILTIN.executebuiltin)(0.1,['ReplaceWindow(visualisation)'])
-            else:                               timerit(BUILTIN.executebuiltin)(0.1,['ReplaceWindow(fullscreenvideo)'])
+            if self.sysInfo.get('radio',False): timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(visualisation)'])
+            else:                               timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(fullscreenvideo)'])
             
 
     def _onChange(self, isPlaylist=False):
@@ -375,7 +375,7 @@ class Monitor(xbmc.Monitor):
         sec = 0
         cnx = False
         inc = int(100/FIFTEEN)
-        timerit(playSFX)(0.1,[NOTE_WAV])
+        timerit(playSFX)(0.5,[NOTE_WAV])
         dia = DIALOG.progressDialog(message=LANGUAGE(30078))
         while not self.abortRequested() and (sec < FIFTEEN):
             sec += 1

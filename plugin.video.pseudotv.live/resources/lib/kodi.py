@@ -1095,7 +1095,10 @@ class Builtin:
 
 
     def getInfoLabel(self, key, param='ListItem', default=''):
-        value = (xbmc.getInfoLabel('%s.%s'%(param,key)) or default)
+        value = "Busy"
+        while not MONITOR().abortRequested() and value == "Busy":
+            value = xbmc.getInfoLabel('%s.%s'%(param,key))
+        value = (value or default)
         self.log('getInfoLabel, key = %s.%s, value = %s'%(param,key,value))
         return value
         
@@ -1132,7 +1135,7 @@ class Dialog:
         self.log('toggleInfoMonitor, state = %s'%(state))
         if self.properties.setPropertyBool('chkInfoMonitor',state): 
             self.properties.clrProperty('monitor.montiorList')
-            timerit(self.doInfoMonitor)(0.1)
+            timerit(self.doInfoMonitor)(0.5)
 
 
     def doInfoMonitor(self):

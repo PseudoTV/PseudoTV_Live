@@ -35,9 +35,9 @@ class JSONRPC:
         monitor = MONITOR()
         while not monitor.abortRequested() and PROPERTIES.getPropertyBool('sendLocker'):
             if monitor.waitForAbort(.0001): break
-            else: self.log('sendLocker, waiting...')
+            else: self.log('sendLocker, waiting for release...')
         PROPERTIES.setPropertyBool('sendLocker',True)
-        try: yield self.log('sendLocker, Locked!')
+        try: yield
         finally: #throttle calls, low power devices suffer segfault during rpc flood.
             monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
             PROPERTIES.setPropertyBool('sendLocker',False)

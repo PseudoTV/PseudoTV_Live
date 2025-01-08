@@ -281,7 +281,7 @@ class Plugin:
                     self.log('playLive, id = %s, VOD = %s'%(chid, url))
                     self.sysInfo['vid'] = self.sysInfo['fitem'].get('file',url)
                     DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
-                    timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(url)])
+                    timerit(BUILTIN.executebuiltin)(0.5,['PlayMedia(%s)'%(url)])
                     self._resolveURL(False, xbmcgui.ListItem())
             else:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
                 liz = self._setResume(xbmcgui.ListItem(name,path=vid))
@@ -384,7 +384,7 @@ class Plugin:
         
     def playError(self):
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
-        timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(back,Action(back),.5,true,false)'])
+        timerit(BUILTIN.executebuiltin)(0.5,['AlarmClock(back,Action(back),.5,true,false)'])
         self.log('playError, id = %s, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo.get('playcount'),self.sysInfo))
         if self.sysInfo.get('playcount') == 1:
             self._resolveURL(False, xbmcgui.ListItem()) #release pending playback.

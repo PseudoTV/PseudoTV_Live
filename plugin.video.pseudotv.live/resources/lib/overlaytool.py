@@ -58,7 +58,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             except: self.onNextX, self.onNextY = self.autoNextX, self.autoNextY
             
         try: 
-            # if isplaying() timerit(self.jsonRPC.setViewMode)(0.1,[self._defZoom, self._defVShift, self._defPratio, self._defNLS]) #todo add video mode changes
+            # if isplaying() timerit(self.jsonRPC.setViewMode)(0.5,[self._defZoom, self._defVShift, self._defPratio, self._defNLS]) #todo add video mode changes
             if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
             self.doModal()
         except Exception as e: self.log("__init__, failed! %s"%(e), xbmc.LOGERROR)

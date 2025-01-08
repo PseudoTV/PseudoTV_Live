@@ -295,9 +295,9 @@ class Builder:
 
     def buildFileList(self, citem: dict, path: str, media: str='video', limit: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}) -> list: #build channel via vfs path.
         self.log("buildFileList, [%s] media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
-        if path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info
-            paths, media, sort, filter, limit = self.xsp.parseXSP(path, media, sort, {}, limit)
-            if len(paths) > 0: return interleave([self.buildFileList(citem, file, media, limit, sort, limits) for file in paths], self.interleaveValue)
+        if path.endswith('.xsp'): #smartplaylist - parse xsp for path, sort info
+            paths, media, sort, limit = self.xsp.parseXSP(path, media, sort, limit)
+            if len(paths) > 0: return interleave([self.buildFileList(citem, xsp, media, limit, sort, limits) for xsp in paths], self.interleaveValue)
             
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
             path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules.

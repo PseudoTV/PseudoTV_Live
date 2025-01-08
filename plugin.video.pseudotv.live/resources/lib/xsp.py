@@ -73,7 +73,7 @@ class XSP:
         return ""
         
 
-    def parseXSP(self, path: str, media: str='video', sort: dict={}, filter: dict={}, limit: int=SETTINGS.getSettingInt('Page_Limit')):
+    def parseXSP(self, path: str, media: str='video', sort: dict={}, limit: int=SETTINGS.getSettingInt('Page_Limit')):
         try: 
             paths = []
             xml   = FileAccess.open(path, "r")
@@ -81,36 +81,35 @@ class XSP:
             xml.close()
             
             try: media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
-            except Exception as e: self.log("parseXSP, no media type", xbmc.LOGDEBUG)
+            except Exception as e: self.log("parseXSP, no media type, fallback to %s"%(media), xbmc.LOGDEBUG)
             
-            # try: limit = (int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue) or limit)
-            # except Exception as e: self.log("parseXSP, no limit set", xbmc.LOGDEBUG)
+            try: limit = int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue)
+            except Exception as e: self.log("parseXSP, no limit set, fallback to %s"%(limit), xbmc.LOGDEBUG)
 
-            try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()}) #todo pop rules to filter var.
+            try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()})
             except Exception as e:
                 if "method" in sort: sort.pop("method")
-                self.log("parseXSP, no sort method", xbmc.LOGDEBUG)
+                self.log("parseXSP, no sort method, fallback to %s"%(sort.get('method')), xbmc.LOGDEBUG)
             
-            try: sort.update({"order":dom.getElementsByTagName('order')[0].getAttribute('direction').lower()})#todo pop rules to filter var.
+            try: sort.update({"order":dom.getElementsByTagName('order')[0].getAttribute('direction').lower()})
             except Exception as e: 
                 if "order" in sort: sort.pop("order")
-                self.log("parseXSP, no sort direction", xbmc.LOGDEBUG)
+                self.log("parseXSP, no sort direction, fallback to %s"%(sort.get('order')), xbmc.LOGDEBUG)
 
             try:
                 type = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
                 if type.lower() in ["mixed"]:
                     for rule in dom.getElementsByTagName('rule'):
-                        if rule.getAttribute('field').lower() == 'path' and rule.getAttribute('operator').lower() in ['is']:
-                            paths.append(rule.getElementsByTagName("value")[0].childNodes[0].data)
-                        elif rule.getAttribute('field').lower() in ['playlist','virtualfolder'] and rule.getAttribute('operator').lower() in ['is']:
-                            paths.extend(self.findXSP(rule.getElementsByTagName("value")[0].childNodes[0].data))
+                        if rule.getAttribute('operator').lower() == 'is':
+                            if   rule.getAttribute('field').lower() == 'path':                       paths.append(rule.getElementsByTagName("value")[0].childNodes[0].data)
+                            elif rule.getAttribute('field').lower() in ['playlist','virtualfolder']: paths.extend(self.findXSP(rule.getElementsByTagName("value")[0].childNodes[0].data))
             except Exception as e:
                 self.log("parseXSP, parsing paths failed! %s"%(e), xbmc.LOGDEBUG)
-                type  = ''
+                type  = 'Unknown'
                 
-            self.log("parseXSP, type = %s, media = %s, sort = %s, filter = %s, limit = %s\npaths = %s"%(type, media, sort, filter, limit, paths))
+            self.log("parseXSP, type = %s, media = %s, sort = %s, limit = %s\npaths = %s"%(type, media, sort, limit, paths))
         except Exception as e: self.log("parseXSP, failed! %s"%(e), xbmc.LOGERROR)
-        return paths, media, sort, filter, limit
+        return paths, media, sort, limit
             
 
     def parseDXSP(self, opath: str, sort: dict={}, filter: dict={}, incExtras: bool=SETTINGS.getSettingBool('Enable_Extras')):

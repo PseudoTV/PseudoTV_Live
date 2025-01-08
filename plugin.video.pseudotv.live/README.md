@@ -1,4 +1,5 @@
-![](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Artwork/master/PseudoTV%20Live/Flat/PTVL%20-%20Metro%20-%20Fanart%20(1).png)
+![PseudoTV Live](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/plugin.video.pseudotv.live/resources/images/fanart.jpg)
+[![PseudoTV Live](https://opengraph.githubassets.com/b515e27858c045536f54116a571f79bda90cde077f4a9e87af8908cb0801b6a2/PseudoTV/PseudoTV_Live)](https://opengraph.githubassets.com/b515e27858c045536f54116a571f79bda90cde077f4a9e87af8908cb0801b6a2/PseudoTV/PseudoTV_Live)
 
 # PseudoTV Live for Kodi™
 
@@ -15,8 +16,6 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 [Discussion: Kodi](https://forum.kodi.tv/showthread.php?tid=346803)
 
 [Discussion: Github](https://github.com/PseudoTV/PseudoTV_Live/discussions)
-
-[![PseudoTV Live](https://opengraph.githubassets.com/b515e27858c045536f54116a571f79bda90cde077f4a9e87af8908cb0801b6a2/PseudoTV/PseudoTV_Live)](https://opengraph.githubassets.com/b515e27858c045536f54116a571f79bda90cde077f4a9e87af8908cb0801b6a2/PseudoTV/PseudoTV_Live)
 
 [![License](https://img.shields.io/github/license/PseudoTV/PseudoTV_Live?style=flat-square)](https://github.com/PseudoTV/PseudoTV_Live/blob/master/LICENSE)
 [![Codacy Badge](https://img.shields.io/codacy/grade/efcc007bd689449f8cf89569ac6a311b.svg?style=flat-square)](https://www.codacy.com/app/PseudoTV/PseudoTV_Live/dashboard)
@@ -36,4 +35,4 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 ### License
 
 * [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
-* Copyright 2009-2021
+* Copyright 2009-2025
