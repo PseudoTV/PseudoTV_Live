@@ -354,5 +354,3 @@ class Tasks():
             SETTINGS.setPVRPath(new,prompt=True,force=True)
             PROPERTIES.setPendingRestart()
             DIALOG.progressDialog(100, dia)
-            
-        

@@ -1067,11 +1067,13 @@ class Builtin:
                 
                 
     def isBusyDialog(self):
-        return (self.getInfoBool('IsActive(busydialognocancel)','Window') | self.getInfoBool('IsActive(busydialog)','Window'))
+        return (Properties().isRunning('OVERLAY_BUSY') | self.getInfoBool('IsActive(busydialognocancel)','Window') | self.getInfoBool('IsActive(busydialog)','Window'))
 
 
     def closeBusyDialog(self):
-        if self.getInfoBool('IsActive(busydialognocancel)','Window'):
+        if hasattr(self.busy, 'close'):
+            self.busy = self.busy.close()
+        elif self.getInfoBool('IsActive(busydialognocancel)','Window'):
             self.executebuiltin('Dialog.Close(busydialognocancel)')
         elif self.getInfoBool('IsActive(busydialog)','Window'):
             self.executebuiltin('Dialog.Close(busydialog)')
@@ -1079,7 +1081,7 @@ class Builtin:
 
     @contextmanager
     def busy_dialog(self):
-        if not Properties().isRunning('OVERLAY_BUSY'):
+        if not self.isBusyDialog():
             try: 
                 if self.busy is None:
                     from overlay import Busy 

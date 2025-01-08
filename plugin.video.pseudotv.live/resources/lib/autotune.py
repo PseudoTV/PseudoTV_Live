@@ -100,7 +100,7 @@ class Autotune:
 
     def selectAUTOTUNE(self, ATtype: str, autoSelect: bool=False, rebuildChannels: bool=False):
         self.log('selectAUTOTUNE, ATtype = %s, autoSelect = %s, rebuildChannels = %s'%(ATtype,autoSelect,rebuildChannels))
-        def __build(item): return LISTITEMS.buildMenuListItem(item['name'],item['type'],item['logo'])
+        def __buildMenuItem(item): return LISTITEMS.buildMenuListItem(item['name'],item['type'],item['logo'])
         
         def _match(enabledItems):
             for item in enabledItems:
@@ -121,7 +121,7 @@ class Autotune:
             if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32018)%(ATtype))
             return
         
-        lizlst = poolit(__build)(items)
+        lizlst = poolit(__buildMenuItem)(items)
         if rebuildChannels:#rebuild channels.json entries
             selects = list(_match(self.library.getEnabled(ATtype)))
         elif autoSelect:#build sample channels

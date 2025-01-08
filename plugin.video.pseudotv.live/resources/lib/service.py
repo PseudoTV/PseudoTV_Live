@@ -167,6 +167,11 @@ class Player(xbmc.Player):
         except: return -1
 
        
+    def getPlayedTime(self):
+        try:    return self.getTimeLabel(prop='Time')
+        except: return -1
+       
+       
     def getPlayerProgress(self):
         try:    return int((self.getRemainingTime() / self.getPlayerTime()) * 100)
         except: return -1
@@ -488,7 +493,6 @@ class Service():
 
 
     def _stop(self):
-        self.monitor.waitForAbort(FIFTEEN) #give remaining active threads time to close.
         for thread in thread_enumerate():
             if thread.name != "MainThread" and thread.is_alive():
                 if hasattr(thread, 'cancel'): thread.cancel()

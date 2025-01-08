@@ -389,21 +389,24 @@ class Overlay():
             
             
     def toggleOnNext(self, state: bool=True, cancel: bool=False):
-        def __getOnNextInterval(interval, remaining, displayTime):
-            totalTime  = (int(self.player.getPlayerTime()) * (self.maxProgress / 100)) #total time minus max threshold
-            elapsed    = self.player.getElapsedTime()
-            showTime   = (totalTime - displayTime)
-            sleepTime  = roundupDIV(showTime,interval)
-            if   remaining < self.minDuration: return False, 0, 0
-            elif remaining < sleepTime:        return __getOnNextInterval(interval+1, remaining, displayTime)
+        def __getOnNextInterval(interval, displayTime):
             conditions = self.chkOnNextConditions()
-            showOnNext = (elapsed >= showTime and remaining >= sleepTime and totalTime > self.minDuration and conditions)
-            self.log('toggleOnNext, __getOnNextInterval: interval = %s, totalTime = %s, showTime = %s, remaining = %s, elapsed = %s, displayTime = %s, sleepTime = %s, conditions = %s, showOnNext = %s'%(interval,totalTime,showTime,remaining,elapsed,displayTime,sleepTime,conditions,showOnNext))
-            return showOnNext, sleepTime, displayTime
-
+            totalTime  = int(self.player.getPlayerTime() * (self.maxProgress / 100))
+            remaining  = int(totalTime - self.player.getPlayedTime())
+            threshold  = roundupDIV(totalTime,4)
+            intTime    = roundupDIV(threshold,interval)
+            
+            self.log('toggleOnNext, conditions = %s, totalTime = %s, remaining = %s, threshold = %s, intTime = %s'%(conditions, totalTime, remaining, threshold, intTime))
+            if not conditions or remaining <= self.minDuration: return False, remaining, 0
+            elif remaining > threshold:                         return False, abs(remaining - threshold), 0
+            elif remaining < intTime:                           return __getOnNextInterval(interval+1, displayTime)
+            else:                                               return True, abs(intTime - displayTime), displayTime
+            
         if self.enableOnNext:
-            showOnNext, sleepTime, displayTime = __getOnNextInterval(ON_NEXT_COUNT,abs(floor(self.player.getRemainingTime())),int(OSD_TIMER * ON_NEXT_COUNT))
-            wait    = {True:displayTime,False:float(sleepTime)}[state]
+            showOnNext, sleepTime, displayTime = __getOnNextInterval(ON_NEXT_COUNT,int(OSD_TIMER * ON_NEXT_COUNT))
+            self.log('toggleOnNext, showOnNext = %s, sleepTime = %s, displayTime = %s'%(showOnNext, sleepTime, displayTime))
+            
+            wait    = {True:displayTime,False:sleepTime}[state]
             nstate  = not bool(state)
             sysInfo = self.player.sysInfo.copy()
             citem   = sysInfo.get('citem',{}) #channel
