@@ -270,8 +270,8 @@ class Player(xbmc.Player):
     def _onError(self):
         self.log('_onError, playing file = %s'%(self.getPlayerFile()))
         # timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(last,Action(PlayPvr),.5,true,false)'])
-        DIALOG.notificationDialog(LANGUAGE(32000))
-        self.stop()
+        # DIALOG.notificationDialog(LANGUAGE(32000))
+        # self.stop()
         
     
     def toggleInfo(self, state: bool=True):
