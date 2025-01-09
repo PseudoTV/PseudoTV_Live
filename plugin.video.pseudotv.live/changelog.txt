@@ -1,4 +1,6 @@
 v.0.5.8
+-Fixed Rollback playcount.
+-Fixed Overlay tool, issue saving "On Next" Position.
 -Smartplaylist limits now override global pagination size, "No Limit" defaults back to pagination size. 
 -Added channel guidedata reset to the channel manager. Channel changes will now trigger complete rebuild of guidedata to reflect new changes. 
 -UI Improvements.

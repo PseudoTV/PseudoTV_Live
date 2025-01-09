@@ -184,7 +184,7 @@ class Plugin:
 
 
     def getPVRItems(self, name: str, chid: str) -> list:
-        self.log('getPVRItems, id = %s'%(chid))
+        self.log('getPVRItems, id = %s, chname = %s'%(chid,name))
         def __buildfItem(idx, item):
             sysInfo = self.sysInfo.copy()
             nowitem = decodePlot(item.get('plot',''))

@@ -29,7 +29,7 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         params['vid']        = decodeString(params.get("vid",''))
         params["chid"]       = (params.get("chid")  or fitem.get('citem',{}).get('id'))
         params['title']      = (params.get('title') or BUILTIN.getInfoLabel('label'))
-        params['name']       = (unquoteString(params.get("name",'')) or BUILTIN.getInfoLabel('ChannelName'))
+        params['name']       = (unquoteString(params.get("name",'')) or fitem.get('citem',{}).get('name') or BUILTIN.getInfoLabel('ChannelName'))
         params['isPlaylist'] = (mode == 'playlist')
         log("Context_Play: run, params = %s"%(params))
         

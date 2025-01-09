@@ -177,12 +177,12 @@ class Overlay():
         
         #channelBug
         try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-        except: self.channelBugX, self.channelBugY = (abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128) #auto
+        except: self.channelBugX, self.channelBugY = abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto
         self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
         
         #onNext
         try:    self.onNextX, self.onNextY = eval(SETTINGS.getSetting("OnNext_Position_XY")) #user
-        except: self.onNextX, self.onNextY = (130,735)#abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h) #auto
+        except: self.onNextX, self.onNextY = abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h) #auto
         self.onNext_Border  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, ' ', aspectRatio=0)
         self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 230, 125, ' ', aspectRatio=0)
         self.onNext_Text    = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
@@ -332,7 +332,7 @@ class Overlay():
             
     def toggleBug(self, state: bool=True):
         def __getWait(state, remaining):
-            if state and (remaining <= self.minDuration or not self.chkBugConditions()): return False, remaining
+            if (remaining <= self.minDuration or not self.chkBugConditions()): return False, remaining
             elif self.channelBugInterval == -1: #Indefinitely 
                 onVAL  = remaining
                 offVAL = FIFTEEN

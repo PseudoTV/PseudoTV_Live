@@ -28,6 +28,7 @@ class Player(xbmc.Player):
     sysInfo      = {}
     isPseudoTV   = False
     pendingStop  = False
+    pendingPlay  = False
     lastSubState = False
     restart      = None
     rules        = RulesList()
@@ -68,6 +69,7 @@ class Player(xbmc.Player):
         
         
     def onPlayBackStarted(self):
+        self.pendingPlay  = True
         self.pendingStop  = True
         self.lastSubState = BUILTIN.isSubtitle()
         self.log('onPlayBackStarted, pendingStop = %s'%(self.pendingStop))
@@ -82,24 +84,25 @@ class Player(xbmc.Player):
 
         
     def onAVStarted(self):
-        self.isPseudoTV = self.isPseudoTVPlaying()
+        self.pendingPlay = False
+        self.isPseudoTV  = self.isPseudoTVPlaying()
         self.log('onAVStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if    self.isPseudoTV: self._onPlay()
         else: self.service.monitor.toggleOverlay(False)
         
-        
+                
     def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, issue limited to pvr?
         self.log('onPlayBackSeek, seek_time = %s, seek_offset = %s'%(seek_time,seek_offset))
     
     
     def onPlayBackError(self):
-        self.pendingStop = False
         self.log('onPlayBackError, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if self.isPseudoTV: self._onError()
         
         
     def onPlayBackEnded(self):
         self.pendingStop = False
+        self.pendingPlay = False
         isPlaylist = self.sysInfo.get('isPlaylist',False)
         self.log('onPlayBackEnded, pendingStop = %s, isPseudoTV = %s, isPlaylist = %s'%(self.pendingStop,self.isPseudoTV,isPlaylist))
         if self.isPseudoTV and not isPlaylist: self._onChange(isPlaylist)
@@ -107,6 +110,7 @@ class Player(xbmc.Player):
         
     def onPlayBackStopped(self):
         self.pendingStop = False
+        self.pendingPlay = False
         self.log('onPlayBackStopped, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if self.isPseudoTV: self._onStop()
         
@@ -265,7 +269,9 @@ class Player(xbmc.Player):
 
     def _onError(self):
         self.log('_onError, playing file = %s'%(self.getPlayerFile()))
-        self.onPlayBackStopped()
+        # timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(last,Action(PlayPvr),.5,true,false)'])
+        DIALOG.notificationDialog(LANGUAGE(32000))
+        self.stop()
         
     
     def toggleInfo(self, state: bool=True):
@@ -323,6 +329,11 @@ class Monitor(xbmc.Monitor):
             idleState = (idleTime > OSD_TIMER)
             return idleState, idleTime
 
+        def __chkPlayback():
+            if self.idleTime > (OSD_TIMER*3) and self.service.player.pendingPlay and not BUILTIN.isBusyDialog():
+                self.log('__chkPlayback, pendingPlay Error\nsysInfo = %s'%(self.service.player.sysInfo))
+                self.service.player.onPlayBackError()
+
         def __chkResumeTime():
             if self.service.player.sysInfo.get('isPlaylist',False):
                 file = self.service.player.getPlayingFile()
@@ -344,6 +355,7 @@ class Monitor(xbmc.Monitor):
         if SETTINGS.getSettingBool('Debug_Enable'): self.log('chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
         if self.service.player.isPseudoTV: 
             if self.service.player.isPlaying():
+                __chkPlayback()
                 __chkResumeTime()
                 __chkSleepTimer()
                 __chkBackground()

@@ -24,7 +24,8 @@ class Info:
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         with BUILTIN.busy_dialog():
             log('Info: __init__, sysARG = %s'%(sysARG))
-        DIALOG.infoDialog(LISTITEMS.buildItemListItem(fitem))
+            listitem = LISTITEMS.buildItemListItem(fitem,fitem.get('media','video'),oscreen=True)
+        DIALOG.infoDialog(listitem)
             
 class Browse:
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
@@ -77,11 +78,10 @@ class Match:
  
 
 if __name__ == '__main__': 
-    with BUILTIN.busy_dialog():
-        param = sys.argv[1]
-        log('Info: __main__, param = %s'%(param))
-        if   param == 'info':   Info(sys.argv  ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
-        elif param == 'browse': Browse(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
-        elif param == 'match':  Match(sys.argv ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
+    param = sys.argv[1]
+    log('Info: __main__, param = %s'%(param))
+    if   param == 'info':   Info(sys.argv  ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
+    elif param == 'browse': Browse(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
+    elif param == 'match':  Match(sys.argv ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
         
    

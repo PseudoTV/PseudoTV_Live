@@ -405,8 +405,7 @@ class JSONRPC:
             if not item.get('file','').startswith(tuple(VFS_TYPES)):
                 params = param.get(item.get('type'))
                 if params:
-                    id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
-                    self.log('quePlaycount, id = %s, media = %s, playcount = %s, resume = %s'%(id,item['type'],item.get('playcount',0),item.get('resume',{})))
+                    self.log('quePlaycount, params = %s'%(params.get('params',{})))
                     self.queueJSON(params)
         except Exception as e: self.log("quePlaycount, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
 

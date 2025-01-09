@@ -177,7 +177,6 @@ class Utilities:
     def _runAutotune(self):
         SETTINGS.setAutotuned(False)
         PROPERTIES.setEpochTimer('chkAutoTune')
-        PROPERTIES.forceUpdateTime('chkChannels')
          
          
     def _runUpdate(self, full=False):
