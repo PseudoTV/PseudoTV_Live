@@ -254,12 +254,12 @@ class M3U:
         elif recordings:#remove recordings that no longer exists on disk
             if chkPath: recordings = [recording for recording in recordings if hasFile(decodeString(dict(urllib.parse.parse_qsl(recording.get('url',''))).get('vid').replace('.pvr','')))]
             else:       recordings = [recording for recording in recordings if recording.get('media',False)]
-            self.log('_verify, recordings = %s'%(len(recordings)))
+            self.log('_verify, recordings = %s, chkPath = %s'%(len(recordings),chkPath))
             return recordings
         return []
         
 
-    def cleanSelf(self, items, key='id', slug='@%s'%(slugify(ADDON_NAME))): # remove imports (Non PseudoTV Live)
+    def cleanSelf(self, items, key='id', slug='@%s'%(slugify(ADDON_NAME))): # remove m3u imports (Non PseudoTV Live)
         if not slug: return items
         stations   = self.sortStations(self._verify(stations=[station for station in items if station.get(key,'').endswith(slug) and not station.get('media',False)]))
         recordings = self.sortStations(self._verify(recordings=[recording for recording in items if recording.get(key,'').endswith(slug) and recording.get('media',False)]), key='name')

@@ -168,7 +168,7 @@ def getChannelID(name, path, number):
     
 def getRecordID(name, path, number):
     if isinstance(path, list): path = '|'.join(path)
-    tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)))
+    tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),SETTINGS.getMYUUID())
     return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:16]).decode(DEFAULT_ENCODING),slugify(ADDON_NAME))
 
 def splitYear(label):
@@ -206,10 +206,11 @@ def getLabel(item, addYear=False):
     return label
    
 def hasFile(file):
-    if file.startswith(tuple(VFS_TYPES)):
-        if file.startswith('plugin://'): return hasAddon(file)
-        else: return True
-    else: return FileAccess.exists(file)
+    if not file.startswith(tuple(VFS_TYPES + WEB_TYPES)): state = FileAccess.exists(file)
+    elif   file.startswith('plugin://'):                  state = hasAddon(file)
+    else:                                                 state = True
+    log("Globals: hasFile, file = %s (%s)"%(file,state))
+    return state    
 
 def hasAddon(id, install=False, enable=False, force=False, notify=False):
     if '://' in id: id = getIDbyPath(id)

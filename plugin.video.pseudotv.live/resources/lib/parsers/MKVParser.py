@@ -19,8 +19,8 @@
 from globals import *
 
 class MKVParser:
-    def determineLength(self, filename):
-        log("MKVParser: determineLength " + filename)
+    def determineLength(self, filename: str) -> int and float:
+        log("MKVParser: determineLength %s"%filename)
         try: self.File = FileAccess.open(filename, "rb", None)
         except:
             log("MKVParser: Unable to open the file")
@@ -35,7 +35,7 @@ class MKVParser:
         else:
             dur = int(round(self.parseHeader(size)))
 
-        log("MKVParser: Duration is " + str(dur))
+        log("MKVParser: Duration is %s"%(dur))
         return dur
         
 

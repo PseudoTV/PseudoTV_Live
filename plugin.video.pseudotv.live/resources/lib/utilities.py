@@ -145,7 +145,7 @@ class Utilities:
 
 
     def _togglePVR(self):
-        if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): PROPERTIES.setEpochTimer('chkPVRRefresh')
+        if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): PROPERTIES.setPropTime('chkPVRRefresh')
             
 
     def buildMenu(self, select=None):
@@ -153,8 +153,8 @@ class Utilities:
                  {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32119),True) , 'hide':False},#"Clean Start"
                  {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR , 'hide':False},#"Force PVR reload"
                  {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart , 'hide':False},#"Force PTVL reload"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.forceUpdateTime ,'args':('chkLibrary',) , 'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer ,'args':('chkFillers',) , 'hide':False}, #Rescan library
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTime ,'args':('chkLibrary',) , 'hide':False}, #Rescan library
+                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setPropTime ,'args':('chkFillers',) , 'hide':False}, #Rescan library
                  {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':self._runAutotune , 'hide':False}] #Run Autotune
                 
         with BUILTIN.busy_dialog():
@@ -176,14 +176,15 @@ class Utilities:
          
     def _runAutotune(self):
         SETTINGS.setAutotuned(False)
-        PROPERTIES.setEpochTimer('chkAutoTune')
+        PROPERTIES.setPropTime('chkAutoTune')
+        PROPERTIES.setEpochTime('chkChannels')
          
          
     def _runUpdate(self, full=False):
-        PROPERTIES.forceUpdateTime('chkChannels')
+        PROPERTIES.setEpochTime('chkChannels')
         if full:
             SETTINGS.setAutotuned(False)
-            PROPERTIES.forceUpdateTime('chkLibrary')
+            PROPERTIES.setEpochTime('chkLibrary')
             PROPERTIES.setPendingRestart()
                
 

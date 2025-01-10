@@ -41,7 +41,7 @@ class MP4Parser:
 
 
     def determineLength(self, filename: str) -> int and float:
-        log("MP4Parser: determineLength " + filename)
+        log("MP4Parser: determineLength %s"%filename)
         try: self.File = FileAccess.open(filename, "rb", None)
         except:
             log("MP4Parser: Unable to open the file")

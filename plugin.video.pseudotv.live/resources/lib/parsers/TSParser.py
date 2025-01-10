@@ -34,7 +34,7 @@ class TSParser:
         
 
     def determineLength(self, filename: str) -> int and float:
-        log("TSParser: determineLength " + filename)
+        log("TSParser: determineLength %s"%filename)
         self.pid = -1
 
         try: self.File = FileAccess.open(filename, "rb", None)
@@ -49,9 +49,9 @@ class TSParser:
             return 0
 
         start = self.getStartTime()
-        log('TSParser: Start - ' + str(start))
+        log('TSParser: Start %s'%(start))
         end = self.getEndTime()
-        log('TSParser: End - ' + str(end))
+        log('TSParser: End - %s'%(end))
 
         if end > start:
             dur = int((end - start) / 90000)
@@ -59,7 +59,7 @@ class TSParser:
             dur = 0
 
         self.File.close()
-        log("TSParser: Duration is " + str(dur))
+        log("TSParser: Duration is %s"%(dur))
         return dur
         
 
@@ -90,7 +90,7 @@ class TSParser:
                 return
 
         if (start > 0) and (end > start):
-            log('TSParser: Packet Length: ' + str(int(end - start)))
+            log('TSParser: Packet Length: %s'%(end - start))
             return (end - start)
 
         return
@@ -132,7 +132,7 @@ class TSParser:
 
                 if ret > 0:
                     self.pid = packet.pid
-                    log('TSParser: PID: ' + str(self.pid))
+                    log('TSParser: PID: %s'%(self.pid))
                     return ret
 
         return 0

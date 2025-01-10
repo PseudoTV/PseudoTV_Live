@@ -49,11 +49,13 @@ class Record:
                 if retval or int(retval) > 0:
                     with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                         m3u   = M3U()
-                        ritem = m3u.getRecordItem(self.fitem,{'1':0,'2':seek}[str(int(retval))])
-                        if (m3u.addRecording(ritem), XMLTVS().addRecording(ritem,self.fitem)):
-                            DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
-                            PROPERTIES.setEpochTimer('chkPVRRefresh')
+                        ritem = m3u.getRecordItem(self.fitem, seek)
+                        added = (m3u.addRecording(ritem), XMLTVS().addRecording(ritem,self.fitem))
                         del m3u
+                    if added:
+                        log('Record: add, ritem = %s'%(ritem))
+                        DIALOG.notificationDialog('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
+                        PROPERTIES.setPropTime('chkPVRRefresh')
         else: DIALOG.notificationDialog(LANGUAGE(32000))
         
  
@@ -63,10 +65,11 @@ class Record:
                 if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(self.fitem['label'])):
                     with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                         ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})
+                        removed = (M3U().delRecording(ritem), XMLTVS().delRecording(ritem))
+                    if removed:
                         log('Record: remove, ritem = %s'%(ritem))
-                        if (M3U().delRecording(ritem), XMLTVS().delRecording(ritem)):
-                            DIALOG.notificationWait('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
-                            PROPERTIES.setEpochTimer('chkPVRRefresh')
+                        DIALOG.notificationDialog('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
+                        PROPERTIES.setPropTime('chkPVRRefresh')
         else: DIALOG.notificationDialog(LANGUAGE(32000))
                 
             

@@ -38,7 +38,7 @@ class MediaInfo:
                     with xbmcvfs.File(filename) as fle:
                         mi = MediaInfo.parse(FileAccess.translatePath(fle.read()))
                         log("MediaInfo: reading %s"%(filename))
-            if not mi is None: dur = (mi.tracks[0].duration // 1000 or 0)
+            if not mi is None: dur = int(mi.tracks[0].duration // 1000)
             log('MediaInfo: Duration is %s'%(dur))
             return dur
         except Exception as e:

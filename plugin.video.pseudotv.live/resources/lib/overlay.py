@@ -39,6 +39,7 @@ class Background(xbmcgui.WindowXMLDialog):
         self.onNow     = '%s on %s'%(self.nowTitle,self.chname) if self.chname not in validString(self.nowTitle) else self.fitem.get('showlabel',self.nowTitle)
         self.onNext    = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),self.nextTitle)
         
+        
     def onInit(self):
         try:
             log("Background: onInit")
@@ -173,6 +174,7 @@ class Overlay():
         #vignette
         self.defaultView = self.jsonRPC.getViewMode()
         self.vinView     = self.defaultView
+        self.vinImage    = ''
         self.vignette    = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
         
         #channelBug
@@ -211,65 +213,39 @@ class Overlay():
         self._player.onPlayBackStopped()
         
         for control, visible in list(self.controlManager.items()):
-            self._removeControl(control)
+            self._delControl(control)
 
 
     def _hasControl(self, control):
-        ctrl = self._getControl(control) != None
-        self.log('_hasControl, %s = %s'%(control,ctrl))
-        return ctrl
+        return control in self.controlManager
         
 
-    def _getControl(self, control):
-        """ If control is None  == Doesn't Exists, 
-            If control is True  == Visible, 
-            If control is False == Hidden 
-        """
-        return self.controlManager.get(control)
+    def _isVisible(self, control):
+        return self.controlManager.get(control,False)
 
 
-    def _setControl(self, control, state=False):
-        self.controlManager[control] = state
-        return control
-        
-        
-    def _delControl(self, control):
-        if control in self.controlManager: self.controlManager.pop(control)
-        return control
-        
-        
     def _setVisible(self, control, state: bool=False):
         try:
-            if self._hasControl(control):
-                self._setControl(control,state).setVisible(state)
-                self.log('setVisible, %s = %s'%(control,state))
-        except Exception('setVisible, failed! control does not exist'): pass
+            self.log('_setVisible, %s = %s'%(control,state))
+            if self._hasControl(control): control.setVisible(state)
+        except Exception('_setVisible, failed! control does not exist'): pass
         return state
-        
-        
-    def _isVisible(self, control):
-        if hasattr(control, 'isVisible'): return control.isVisible()
-        else:                             return (self._getControl(control) or False)
 
 
     def _addControl(self, control):
-        """ Create Control & Add to manager.
-        """
         try:
+            self.log('_addControl, %s'%(control))
             if not self._hasControl(control):
-                self.window.addControl(self._setControl(control))
-                self.log('_addControl, %s'%(control))
+                self.window.addControl(control)
+                self.controlManager[control] = self._setVisible(control,False)
         except Exception as e: self.log('_addControl failed! %s'%(e), xbmc.LOGERROR)
         
         
-    def _removeControl(self, control):
-        """ Remove Control & Delete from manager.
-        """
+    def _delControl(self, control):
         try:
-            if self._hasControl(control):
-                self.window.removeControl(self._delControl(control))
-                self.log('_removeControl, %s'%(control))
-        except Exception as e: self.log('_removeControl failed! control = %s %s'%(control, e), xbmc.LOGERROR)
+            self.log('_delControl, %s'%(control))
+            if self._hasControl(control): self.window.removeControl(self.controlManager.pop(control))
+        except Exception as e: self.log('_delControl failed! control = %s %s'%(control, e), xbmc.LOGERROR)
 
 
     def chkOnNextConditions(self):
@@ -311,19 +287,21 @@ class Overlay():
                 timerit(self.jsonRPC.setViewMode)(0.5,[self.vinView])
                 self.vignette = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
                 self._addControl(self.vignette)
-                self.vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
-                self.vignette.setImage(self.vinImage)
-                self._setVisible(self.vignette,True)
-                self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self.vinImage,self.vinView))
+            
+            self.vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
+            self.vignette.setImage(self.vinImage)
+            self._setVisible(self.vignette,True)
+            self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self.vinImage,self.vinView))
+            
         elif not state and self._hasControl(self.vignette):
-            self._removeControl(self.vignette)
+            self._delControl(self.vignette)
             timerit(self.jsonRPC.setViewMode)(0.5,[self.defaultView])
             self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self.vinImage,self.defaultView))
             
                 
     def _cancelBug(self):
         self.log('_cancelBug')
-        if self._hasControl(self.channelBug): self._removeControl(self.channelBug)
+        if self._hasControl(self.channelBug): self._delControl(self.channelBug)
         if self._bugThread.is_alive():
             if hasattr(self._bugThread, 'cancel'): self._bugThread.cancel()
             try: self._bugThread.join()
@@ -366,9 +344,7 @@ class Overlay():
             self.log('toggleBug, logo = %s, setColorDiffuse = %s, POSXY (%s,%s))'%(logo, self.channelBugColor, self.channelBugX, self.channelBugY))
             
         elif not state and self._hasControl(self.channelBug):
-            self.channelBug.setImage(' ')
-            self._setVisible(self.channelBug,False)
-            self._cancelBug() #cancel any leftover threads (overkill)
+            self._delControl(self.channelBug)
             
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
         self._bugThread = Timer(wait, self.toggleBug, [nstate])
@@ -379,7 +355,9 @@ class Overlay():
     
     def _cancelOnNext(self):
         self.log('_cancelOnNext')
-        if self._hasControl(self.onNext_Text): self._removeControl(self.onNext_Text)
+        if self._hasControl(self.onNext_Text):    self._delControl(self.onNext_Text)
+        if self._hasControl(self.onNext_Border):  self._delControl(self.onNext_Border)
+        if self._hasControl(self.onNext_Artwork): self._delControl(self.onNext_Artwork)
         if self._onNextThread.is_alive():
             if hasattr(self._onNextThread, 'cancel'): self._onNextThread.cancel()
             try: self._onNextThread.join()
@@ -465,17 +443,9 @@ class Overlay():
                 
         elif not state:
             if self.onNextMode in [1,2]:
-                if self._hasControl(self.onNext_Text):
-                    self.onNext_Text.reset()
-                    self._setVisible(self.onNext_Text,False)
-                    
-                if self._hasControl(self.onNext_Border):
-                    self._setVisible(self.onNext_Border,False)
-                    
-                if self._hasControl(self.onNext_Artwork):
-                    self.onNext_Artwork.setImage(' ')
-                    self._setVisible(self.onNext_Artwork,False)
-            self._cancelOnNext() #cancel any leftover threads (overkill)
+                if self._hasControl(self.onNext_Text):    self._delControl(self.onNext_Text)
+                if self._hasControl(self.onNext_Border):  self._delControl(self.onNext_Border)
+                if self._hasControl(self.onNext_Artwork): self._delControl(self.onNext_Artwork)
             
         self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
         self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])

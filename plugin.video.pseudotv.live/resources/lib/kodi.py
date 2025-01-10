@@ -356,6 +356,7 @@ class Settings:
     def setUpdateChannels(self, id):
         ids = self.getUpdateChannels()
         ids.append(id)
+        Properties().setPropTime('chkChannels')
         return self.setCacheSetting('updateChannels',list(set(ids)))
     
     
@@ -678,11 +679,11 @@ class Properties:
         return self.getEXTPropertyBool('PseudoTVRunning')
 
 
-    def forceUpdateTime(self, key):
-        return self.setPropertyInt(key,0)
+    def setEpochTime(self, key, time=0):
+        return self.setPropertyInt(key,time)
 
 
-    def setEpochTimer(self, key, state=True):
+    def setPropTime(self, key, state=True):
         return self.setEXTPropertyBool('%s.%s'%(ADDON_ID,key),state)
 
 
@@ -1232,8 +1233,9 @@ class Dialog:
 
             def onClose(self):
                 if self.acThread.is_alive():
-                    self.acThread.cancel()
-                    self.acThread.join()
+                    if hasattr(self.acThread, 'cancel'): self.acThread.cancel()
+                    try: self.acThread.join()
+                    except: pass
                 self.close()
 
         if not self.properties.isRunning('qrDialog'):

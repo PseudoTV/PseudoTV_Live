@@ -116,7 +116,7 @@ class Builder:
                 return False, False
 
             now       = getUTCstamp()
-            start     = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour
+            start     = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
             stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
             self.pDialog = DIALOG.progressBGDialog()
             self.completedBuild = True
@@ -140,6 +140,7 @@ class Builder:
                     self.pName  = citem['name']
                     self.pCount = int(idx*100//len(channels))
                     self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
+                    
                     if   (stopTimes.get(citem['id']) or start) > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
                     elif  stopTimes.get(citem['id']):                                                       self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
                     else:                                                                                   self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
@@ -168,7 +169,7 @@ class Builder:
     def getFileList(self, citem: dict, now: time, start: time) -> bool and list:
         self.log('getFileList, [%s] start = %s'%(citem['id'],start))
         try:
-            if start > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): #max guidedata days to seconds.
+            if start > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): #max guidedata days to seconds, minus fill buffer (12hrs) in seconds.
                 if self.pDialog: self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message=self.pName, header='%s, %s'%(ADDON_NAME,self.pMSG))
                 self.log('getFileList, [%s] programmes over MAX_DAYS! start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building

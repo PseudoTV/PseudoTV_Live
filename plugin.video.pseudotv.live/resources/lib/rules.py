@@ -621,7 +621,7 @@ class MST3k(BaseRule):
             self.log("runAction, restoring overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay.vinImage, overlay._vinOffsetXY, overlay._vinZoom))
             
             if self.threadTimer.is_alive():
-                if hasattr(thread, 'cancel'): self.threadTimer.cancel()
+                if hasattr(self.threadTimer, 'cancel'): self.threadTimer.cancel()
                 try: self.threadTimer.join()
                 except: pass
         return parameter

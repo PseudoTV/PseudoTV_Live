@@ -59,9 +59,7 @@ class Tasks():
                  self.chkPVRBackend]
 
         self.service.monitor.waitForAbort(FIFTEEN)
-        for func in tasks:
-            if    self.service.monitor.waitForAbort(0.5): break
-            else: self._que(func)
+        for func in tasks: self._que(func)
         self.log('_initialize, finished...')
         
         
@@ -231,7 +229,7 @@ class Tasks():
                 complete, updated = builder.build(channels)
                 self.log('chkChannels, channels = %s, proper = %s, complete = %s, updated = %s'%(len(channels),proper,complete,updated))
                 if complete:
-                    if updated: PROPERTIES.setEpochTimer('chkPVRRefresh')
+                    if updated: PROPERTIES.setPropTime('chkPVRRefresh')
                     if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
                 else: self._que(self.chkChannels,3,channels)
             del builder
@@ -267,7 +265,7 @@ class Tasks():
         isRecording = BUILTIN.getInfoBool('IsRecording','Pvr')
         self.log('chkPVRToggle, isIdle = %s, isPlaying = %s'%(isIdle,isPlaying))
         if isIdle and not (isPlaying | isScanning | isRecording): togglePVR(False,True)
-        else: PROPERTIES.setEpochTimer('chkPVRRefresh')
+        else: PROPERTIES.setPropTime('chkPVRRefresh')
 
 
     def chkFillers(self, channels=None):

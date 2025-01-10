@@ -855,7 +855,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def closeManager(self):
         self.log('closeManager')
-        if self.madeChanges: PROPERTIES.forceUpdateTime('chkChannels')
+        if self.madeChanges: PROPERTIES.setEpochTime('chkChannels')
         self.close()
 
 

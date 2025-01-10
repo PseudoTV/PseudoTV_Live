@@ -51,7 +51,7 @@ class FLVParser:
     
     
     def determineLength(self, filename: str) -> int and float:
-        log("FLVParser: determineLength " + filename)
+        log("FLVParser: determineLength %s"%filename)
 
         try: self.File = FileAccess.open(filename, "rb", None)
         except:
@@ -72,7 +72,7 @@ class FLVParser:
 
         dur = int(self.getDurFromTag(tagheader))
         self.File.close()
-        log("FLVParser: Duration is " + str(dur))
+        log("FLVParser: Duration is %s"%(dur))
         return dur
 
 
@@ -126,7 +126,7 @@ class FLVParser:
                     return None
 
                 self.File.seek(-8, 1)
-                log("FLVParser: detected tag type " + str(tag.tagtype))
+                log("FLVParser: detected tag type %s"%(tag.tagtype))
                 curloc = self.File.tell()
 
                 if tag.tagtype == 9:

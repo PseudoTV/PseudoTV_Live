@@ -28,7 +28,7 @@ class Player(xbmc.Player):
     sysInfo      = {}
     isPseudoTV   = False
     pendingStop  = False
-    pendingPlay  = False
+    pendingPlay  = -1
     lastSubState = False
     restart      = None
     rules        = RulesList()
@@ -69,9 +69,9 @@ class Player(xbmc.Player):
         
         
     def onPlayBackStarted(self):
-        self.pendingPlay  = True
         self.pendingStop  = True
         self.lastSubState = BUILTIN.isSubtitle()
+        self.pendingPlay  = self.service.monitor.idleTime
         self.log('onPlayBackStarted, pendingStop = %s'%(self.pendingStop))
         
 
@@ -79,12 +79,12 @@ class Player(xbmc.Player):
         isPlaylist = self.sysInfo.get('isPlaylist',False)
         self.log('onAVChange, pendingStop = %s, isPseudoTV = %s, isPlaylist = %s'%(self.pendingStop,self.isPseudoTV,isPlaylist))
         self.service.monitor.chkIdle()
-        if self.isPseudoTV and isPlaylist:
-            self._onChange(isPlaylist)
+        if self.isPseudoTV and isPlaylist: self._onChange(isPlaylist)
+        else: self.service.monitor.toggleOverlay(False)
 
         
     def onAVStarted(self):
-        self.pendingPlay = False
+        self.pendingPlay = 0
         self.isPseudoTV  = self.isPseudoTVPlaying()
         self.log('onAVStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if    self.isPseudoTV: self._onPlay()
@@ -102,7 +102,7 @@ class Player(xbmc.Player):
         
     def onPlayBackEnded(self):
         self.pendingStop = False
-        self.pendingPlay = False
+        self.pendingPlay = 0
         isPlaylist = self.sysInfo.get('isPlaylist',False)
         self.log('onPlayBackEnded, pendingStop = %s, isPseudoTV = %s, isPlaylist = %s'%(self.pendingStop,self.isPseudoTV,isPlaylist))
         if self.isPseudoTV and not isPlaylist: self._onChange(isPlaylist)
@@ -110,7 +110,7 @@ class Player(xbmc.Player):
         
     def onPlayBackStopped(self):
         self.pendingStop = False
-        self.pendingPlay = False
+        self.pendingPlay = 0
         self.log('onPlayBackStopped, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if self.isPseudoTV: self._onStop()
         
@@ -267,12 +267,13 @@ class Player(xbmc.Player):
         self.sysInfo = self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), {}, inherited=self)
 
 
-    def _onError(self):
+    def _onError(self): #todo evaluate potential for error handling.
         self.log('_onError, playing file = %s'%(self.getPlayerFile()))
-        # timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(last,Action(PlayPvr),.5,true,false)'])
-        # DIALOG.notificationDialog(LANGUAGE(32000))
-        # self.stop()
-        
+        if REAL_SETTINGS.getSetting('Debug_Enable').lower() == 'true':
+            DIALOG.notificationDialog(LANGUAGE(32000))
+            timerit(BUILTIN.executebuiltin)(0.5,['Action(PlayPvr)'])
+            self.stop()
+            
     
     def toggleInfo(self, state: bool=True):
         if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
@@ -330,7 +331,7 @@ class Monitor(xbmc.Monitor):
             return idleState, idleTime
 
         def __chkPlayback():
-            if self.idleTime > 30 and self.service.player.pendingPlay and not BUILTIN.isBusyDialog():
+            if bool(self.service.player.pendingPlay) and abs(self.idleTime - self.service.player.pendingPlay) > 30 and not BUILTIN.isBusyDialog():
                 self.log('__chkPlayback, pendingPlay Error\nsysInfo = %s'%(self.service.player.sysInfo))
                 self.service.player.onPlayBackError()
 
@@ -369,7 +370,7 @@ class Monitor(xbmc.Monitor):
                 self.log("toggleOverlay, state = %s"%(state))
                 self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
                 self.overlay.show()
-        elif not state and not self.overlay is None:
+        elif not state and hasattr(self.overlay, 'close'):
             self.log("toggleOverlay, state = %s"%(state))
             self.overlay = self.overlay.close()
             
@@ -475,8 +476,10 @@ class Service():
     
 
     def _suspend(self) -> bool: #continue
-        if self.monitor.pendingInterrupt: pendingSuspend = False
-        else: pendingSuspend = (self.__playing() | PROPERTIES.isSuspendActivity())
+        if self.monitor.pendingInterrupt:
+            pendingSuspend = False
+        else:
+            pendingSuspend = (self.__playing() | PROPERTIES.isSuspendActivity())
         if pendingSuspend != self.monitor.pendingSuspend:
             self.monitor.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))

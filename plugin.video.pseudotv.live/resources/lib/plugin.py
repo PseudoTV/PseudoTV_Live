@@ -36,9 +36,6 @@ class Plugin:
         self.jsonRPC     = JSONRPC()
         self.cache       = SETTINGS.cache
         
-        self.pageLimit    = SETTINGS.getSettingInt('Page_Limit')
-        self.seekTOL      = SETTINGS.getSettingInt('Seek_Tolerance')
-        self.seekTHD      = SETTINGS.getSettingInt('Seek_Threshold')
         self.debugEnabled = SETTINGS.getSettingBool('Debug_Enable')
         
         self.sysInfo['radio'] = sysInfo.get('mode','').lower() == "radio"
@@ -78,7 +75,7 @@ class Plugin:
         
         
     def _setResume(self, liz):
-        if self.sysInfo.get('seek',0) > self.seekTOL and self.sysInfo.get('progresspercentage',100) < 100:
+        if self.sysInfo.get('seek',0) > SETTINGS.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
             self.log('_setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), liz.getPath()))
             liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
             infoTag = ListItemInfoTag(liz,'video')
@@ -140,11 +137,11 @@ class Plugin:
 
     def getPausedItems(self, name, chid):
         self.log('getPausedItems, id = %s'%(chid))
-        def __buildfItem(idx, item):
+        def __buildfItem(idx, item, seekTHD):
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             
-            if idx == 0 and round(sysInfo.get('progresspercentage',0)) > self.seekTHD:
+            if idx == 0 and round(sysInfo.get('progresspercentage',0)) > seekTHD:
                 self.IDXModifier = 1
             
             nowitem = nextitems[idx+self.IDXModifier][1] #now broadcast
@@ -171,10 +168,11 @@ class Plugin:
         from rules import RulesList
         nextitems = RulesList().runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
         if nextitems:
+            seekTHD = SETTINGS.getSettingInt('Seek_Threshold')
             self.IDXModifier = 0
-            del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
+            del nextitems[SETTINGS.getSettingInt('Page_Limit')-1:]# list of upcoming items, truncate for speed
             self.log('getPausedItems, building nextitems (%s)'%(len(nextitems)))
-            return [__buildfItem(idx, nextitem) for idx, nextitem in enumerate(nextitems)]
+            return [__buildfItem(idx, nextitem, seekTHD) for idx, nextitem in enumerate(nextitems)]
         else: DIALOG.notificationDialog(LANGUAGE(32000))
         return []
     
@@ -239,16 +237,16 @@ class Plugin:
                 
             if found:
                 nowitem = nextitems.pop(0)
-                if round(nowitem['progresspercentage']) > self.seekTHD:
+                if round(nowitem['progresspercentage']) > SETTINGS.getSettingInt('Seek_Threshold'):
                     self.log('getPVRItems, progress past threshold advance to nextitem')
                     nowitem = nextitems.pop(0)
                 
-                if round(nowitem['progress']) < self.seekTOL:
+                if round(nowitem['progress']) < SETTINGS.getSettingInt('Seek_Tolerance'):
                     self.log('getPVRItems, progress start at the beginning')
                     nowitem['progress']           = 0
                     nowitem['progresspercentage'] = 0
 
-                del nextitems[self.pageLimit-1:]# list of upcoming items, truncate for speed
+                del nextitems[SETTINGS.getSettingInt('Page_Limit')-1:]# list of upcoming items, truncate for speed
                 nextitems.insert(0,nowitem)
                 self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
                 return [__buildfItem(idx, item) for idx, item in enumerate(nextitems)]
@@ -393,7 +391,7 @@ class Plugin:
         elif self.sysInfo.get('playcount') == 2:
             self._resolveURL(False, xbmcgui.ListItem()) #release pending playback.
             DIALOG.okDialog(LANGUAGE(32134)%(ADDON_NAME))
-            return PROPERTIES.setEpochTimer('chkPVRRefresh')
+            return PROPERTIES.setPropTime('chkPVRRefresh')
         else:
             self._resolveURL(False, xbmcgui.ListItem()) #release pending playback
             return DIALOG.notificationDialog(LANGUAGE(32000))

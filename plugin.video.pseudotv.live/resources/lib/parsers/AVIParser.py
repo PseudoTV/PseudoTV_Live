@@ -110,7 +110,7 @@ class AVIParser:
 
 
     def determineLength(self, filename: str) -> int and float:
-        log("AVIParser: determineLength " + filename)
+        log("AVIParser: determineLength %s"%filename)
 
         try: self.File = FileAccess.open(filename, "rb", None)
         except:
@@ -119,7 +119,7 @@ class AVIParser:
 
         dur = int(self.readHeader())
         self.File.close()
-        log('AVIParser: Duration is ' + str(dur))
+        log('AVIParser: Duration is %s'%(dur))
         return dur
 
 

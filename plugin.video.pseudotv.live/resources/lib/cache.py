@@ -49,7 +49,6 @@ class Cache:
         monitor = MONITOR()
         while not monitor.abortRequested() and xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true':
             if monitor.waitForAbort(.0001): break
-            else: self.log('cacheLocker, waiting for release...')
         del monitor
         xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
         try: yield
