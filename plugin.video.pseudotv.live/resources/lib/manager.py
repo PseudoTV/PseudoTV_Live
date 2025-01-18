@@ -661,8 +661,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             return fileList, round(abs(end_time-start_time),2)
             
         if not PROPERTIES.isRunning('previewChannel'):
-            listitems = []
             with PROPERTIES.setRunning('previewChannel'), self.toggleSpinner():
+                listitems = []
                 fileList, run_time = __fileList(citem)
                 if not isinstance(fileList,list) and not fileList: DIALOG.notificationDialog('%s or\n%s'%(LANGUAGE(32030),LANGUAGE(32000)))
                 else:

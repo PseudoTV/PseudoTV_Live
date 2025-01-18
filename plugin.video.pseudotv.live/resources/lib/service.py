@@ -350,7 +350,8 @@ class Monitor(xbmc.Monitor):
         
         def __chkBackground():
             if not self.overlay is None:
-                if self.overlay.background is None and abs(floor(self.service.player.getRemainingTime())) <= 2:
+                isFullscreen = BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window')
+                if isFullscreen and self.overlay.background is None and abs(floor(self.service.player.getRemainingTime())) <= 2:
                     self.overlay.toggleBackground()
         
         self.isIdle, self.idleTime = __getIdle()
@@ -366,13 +367,17 @@ class Monitor(xbmc.Monitor):
             
 
     def toggleOverlay(self, state: bool=True):
-        if state and self.service.player.enableOverlay:
-            if self.overlay is None and self.service.player.isPlaying():
-                self.log("toggleOverlay, state = %s"%(state))
-                self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
-                self.overlay.show()
+        self.log("toggleOverlay, state = %s"%(state))
+        def __chkConditions():
+            isPlaying    = self.service.player.isPlaying()
+            isEnabled    = self.service.player.enableOverlay
+            isFullscreen = not BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window')
+            return (isPlaying | isEnabled | isFullscreen)
+            
+        if state and __chkConditions() :
+            if self.overlay is None: self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
+            self.overlay.show()
         elif not state and hasattr(self.overlay, 'close'):
-            self.log("toggleOverlay, state = %s"%(state))
             self.overlay = self.overlay.close()
             
 

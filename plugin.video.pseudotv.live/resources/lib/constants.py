@@ -262,6 +262,7 @@ RESTART_XML     = '%s.restart.xml'%(ADDON_ID)
 BACKGROUND_XML  = '%s.background.xml'%(ADDON_ID)
 MANAGER_XML     = '%s.manager.xml'%(ADDON_ID)
 OVERLAYTOOL_XML = '%s.overlaytool.xml'%(ADDON_ID)
+DIALOG_SELECT   = '%s.dialogselect.xml'%(ADDON_ID)
 
 # https://github.com/xbmc/xbmc/blob/master/xbmc/addons/kodi-dev-kit/include/kodi/c-api/gui/input/action_ids.h
 

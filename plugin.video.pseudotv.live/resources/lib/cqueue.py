@@ -56,11 +56,15 @@ class CustomQueue:
 
 
     def __start(self):
-        if not self.popThread.is_alive():
-            self.log("__starting popThread")
-            self.popThread = Thread(target=self.__pop)
-            self.popThread.daemon = True
-            self.popThread.start()
+        if self.popThread.is_alive():
+            if hasattr(self.popThread, 'cancel'): self.popThread.cancel()
+            try: self.popThread.join()
+            except: pass
+
+        self.log("__starting popThread")
+        self.popThread = Thread(target=self.__pop)
+        self.popThread.daemon = True
+        self.popThread.start()
 
 
     def __run(self, func, *args, **kwargs):
@@ -114,6 +118,7 @@ class CustomQueue:
     
     def __pop(self):
         self.isRunning = True
+        self.log("__pop, starting")
         self.execute = SETTINGS.getSettingBool('Enable_Executor')
         while not self.service.monitor.abortRequested():
             if self.service.monitor.waitForAbort(1.0): 
@@ -159,6 +164,7 @@ class CustomQueue:
                     else:
                         popTimer = Timer(curr_node.wait, *package)
                         if popTimer.is_alive(): 
+                            if hasattr(popTimer, 'cancel'): popTimer.cancel()
                             try: popTimer.join()
                             except: pass
                         else:
@@ -167,6 +173,8 @@ class CustomQueue:
             else:
                 self.log("__pop, queue undefined!")
                 break
+                
+        self.log("__pop, finished shutting down!")
         self.isRunning = False
                 
                 

@@ -90,7 +90,7 @@ class Restart(xbmcgui.WindowXMLDialog):
         xpos = control.getX()
         control.setVisibleCondition('Player.Playing')
         while not self.monitor.abortRequested():
-            if (self.monitor.waitForAbort(0.1) or wait < 0 or self.closing or not self.player.isPlaying()): break
+            if (self.monitor.waitForAbort(0.5) or wait < 0 or self.closing or not self.player.isPlaying()): break
             else:
                 prog = int((abs(wait-tot)*100)//tot)
                 if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
@@ -245,6 +245,7 @@ class Overlay():
             if not self._hasControl(control):
                 self.window.addControl(control)
                 self.controlManager[control] = self._setVisible(control,False)
+                MONITOR().waitForAbort(0.5)
         except Exception as e: self.log('_addControl failed! %s'%(e), xbmc.LOGERROR)
         
         
@@ -281,29 +282,29 @@ class Overlay():
 
 
     def toggleBackground(self, state: bool=True):
-        if state and self.background is None:
-            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", overlay=self)
-            self.log('toggleBackground, state = %s'%(state))
+        self.log('toggleBackground, state = %s'%(state))
+        if state:
+            if self.background is None: self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", overlay=self)
             self.background.doModal()
             del self.background
             self.background = None
-        elif not state and not self.background is None:
+        elif hasattr(self.background,'close'):
             self.background = self.background.close()
             
 
     def toggleVignette(self, state: bool=True):
         if state and self.enableVignette:
             if not self._hasControl(self.vignette):
-                timerit(self.jsonRPC.setViewMode)(0.5,[self.vinView])
                 self.vignette = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
                 self._addControl(self.vignette)
             
+            timerit(self.jsonRPC.setViewMode)(0.5,[self.vinView])
             self.vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
             self.vignette.setImage(self.vinImage)
             self._setVisible(self.vignette,True)
             self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self.vinImage,self.vinView))
             
-        elif not state and self._hasControl(self.vignette):
+        elif self._hasControl(self.vignette):
             self._delControl(self.vignette)
             timerit(self.jsonRPC.setViewMode)(0.5,[self.defaultView])
             self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self.vinImage,self.defaultView))

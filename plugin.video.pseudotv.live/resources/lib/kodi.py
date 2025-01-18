@@ -1218,8 +1218,8 @@ class Dialog:
         else:
             if autoclose > 0: timerit(self._closeOkDialog)(autoclose)
             return xbmcgui.Dialog().ok(heading, msg)
-
-
+            
+            
     def qrDialog(self, url, msg, heading='%s - %s'%(ADDON_NAME,LANGUAGE(30158)), autoclose=AUTOCLOSE_DELAY):
         class QRCode(xbmcgui.WindowXMLDialog):
             def __init__(self, *args, **kwargs):
@@ -1227,7 +1227,6 @@ class Dialog:
                 self.image     = kwargs["image"]
                 self.text      = kwargs["text"]
                 self.acThread  = Timer(kwargs["atclose"], self.onClose)
-
 
             def onInit(self):
                 self.getControl(40000).setLabel(self.header)
@@ -1239,11 +1238,9 @@ class Dialog:
                 self.acThread.daemon=True
                 self.acThread.start()
 
-
             def onClick(self, controlId):
                 if controlId == 40003:
                     self.onClose()
-
 
             def onClose(self):
                 if self.acThread.is_alive():
@@ -1361,9 +1358,29 @@ class Dialog:
         return True
              
              
-    def selectDialog(self, items, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=SELECT_DELAY, multi=True, custom=True):
+    def customSelect(self, items, header, preselect, useDetails, autoclose, multi): #todo
+        class DialogSelect(xbmcgui.WindowXMLDialog):
+            def __init__(self, *args, **kwargs):
+                xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
+
+            def onInit(self):
+                log("DialogSelect: onInit")
+               
+            def onAction(self, act):
+                actionId = act.getId()
+                log('DialogSelect: onAction: actionId = %s'%(actionId))
+                if actionId in ACTION_PREVIOUS_MENU: self.close()
+                else: pass
+
+        dialogSelect = DialogSelect(DIALOG_SELECT, ADDON_PATH, "default")
+        dialogSelect.doModal()
+        del dialogSelect
+        
+
+    def selectDialog(self, items, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=SELECT_DELAY, multi=True, custom=False):
         self.log('selectDialog, items = %s, header = %s, preselect = %s, useDetails = %s, autoclose = %s, multi = %s, custom = %s'%(len(items),header,preselect,useDetails,autoclose,multi,custom))
-        if multi == True:
+        if custom: return self.customSelect(items, header, preselect, useDetails, autoclose, multi)
+        elif multi == True:
             if not preselect: preselect = [-1]
             select = xbmcgui.Dialog().multiselect(header, items, (autoclose*1000), preselect, useDetails)
             if select == [-1]: return
