@@ -17,30 +17,31 @@
                 <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" end="100" time="240"/>
             </animation>
-            <top>90</top>
+            <centertop>50%</centertop>
             <centerleft>50%</centerleft>
-            <width>1820</width>
-            <control type="image">
-                <left>-2000</left>
-                <top>-2000</top>
-                <width>6000</width>
-                <height>6000</height>
-                <animation effect="fade" start="0" end="100" time="300">WindowOpen</animation>
-                <animation effect="fade" start="100" end="0" time="200">WindowClose</animation>
-                <texture colordiffuse="C2FFFFFF">colors/black.png</texture>
-            </control>
+            <height>810</height>
+            <width>1440</width>
+            <!-- <control type="image"> -->
+                <!-- <left>-2000</left> -->
+                <!-- <top>-2000</top> -->
+                <!-- <width>6000</width> -->
+                <!-- <height>6000</height> -->
+                <!-- <animation effect="fade" start="0" end="100" time="300">WindowOpen</animation> -->
+                <!-- <animation effect="fade" start="100" end="0" time="200">WindowClose</animation> -->
+                <!-- <texture colordiffuse="C2FFFFFF">colors/black.png</texture> -->
+            <!-- </control> -->
             <control type="button">
-                <left>-2000</left>
-                <top>-2000</top>
-                <width>6000</width>
-                <height>6000</height>
+                <top>80</top>
+                <left>480</left>
+                <height>810</height>
+                <width>1440</width>
                 <texturefocus/>
                 <texturenofocus/>
                 <onclick>Action(close)</onclick>
             </control>
             <control type="group">
-                <width>1820</width>
-                <height>900</height>
+                <height>810</height>
+                <width>1440</width>
                 <control type="image">
                     <left>0</left>
                     <top>0</top>
@@ -55,8 +56,8 @@
                     <height>70</height>
                     <texture colordiffuse="FF01416b" border="2">colors/white70.png</texture>
                 </control>
-                <control type="label" id="">
-                    <left>40</left>
+                <control type="label">
+                    <left>30</left>
                     <top>0</top>
                     <right>100</right>
                     <height>70</height>
@@ -103,112 +104,60 @@
                     <visible>Skin.HasSetting(touchmode)</visible>
                 </control>
             </control>
-            <control type="group" id="3">
-                <description>Channel Logo Button</description>
-                <left>29</left>
-                <top>80</top>
-                <control type="button" id="10">
-                    <description>Logo Background</description>
-                    <onright condition="Control.IsVisible(5)">Control.SetFocus(5)</onright>
-                    <onright condition="Control.IsVisible(6)">Control.SetFocus(6)</onright>
-                    <onleft>Control.SetFocus(9001)</onleft>
-                    <height>390</height>
-                    <width>390</width>
-                    <textoffsetx>20</textoffsetx>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <font>font25_title</font>
-                    <visible>!Control.IsVisible(5) + !Control.IsVisible(7)</visible>
-                    <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
-                </control>
-                <control type="image" id="11">
-                    <description>Logo Image</description>
-                    <left>37</left>
-                    <top>33</top>
-                    <height>320</height>
-                    <width>320</width>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <aspectratio>keep</aspectratio>
-                    <visible>Control.IsVisible(5)|Control.IsVisible(7)</visible>
-                    <texture fallback="logo.png">$INFO[Container(5).ListItem.Art(icon)]</texture>
-                </control>
-                <control type="image" id="12">
-                    <description>Logo Image</description>
-                    <left>37</left>
-                    <top>33</top>
-                    <height>320</height>
-                    <width>320</width>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <aspectratio>keep</aspectratio>
-                    <visible>Control.IsVisible(6)</visible>
-                    <texture fallback="logo.png">$INFO[Container(6).ListItem.Art(icon)]</texture>
-                    <colordiffuse>$INFO[Container(6).ListItem.Property(colorDiffuse)]</colordiffuse>
-                </control>
-                <control type="label" id="">
-                    <left>29</left>
-                    <top>375</top>
-                    <height>70</height>
-                    <width>320</width>
-                    <font>font25_title</font>
-                    <label>[B]$INFO[Container(5).ListItem.Property(chname)][/B]</label>
-                    <aligny>center</aligny>
-                    <align>center</align>
-                    <shadowcolor>black</shadowcolor>
-                </control>
-            </control>
-            <control type="image">
-                <left>410</left>
-                <top>80</top>
-                <width>1100</width>
-                <height>740</height>
-                <texture border="40">buttons/dialogbutton-nofo.png</texture>
-            </control>
-            <control type="group" id="4">
-                <description>spinner</description>
-                <left>910</left>
-                <top>390</top>
-                <width>100</width>
-                <height>100</height>
+            <control type="group">
+                <left>30</left>
+                <top>100</top>
                 <control type="image">
-                    <width>100</width>
-                    <height>100</height>
-                    <aspectratio aligny="center">keep</aspectratio>
-                    <texture colordiffuse="dimgray">dialogs/extendedprogress/loading-back.png</texture>
+                    <left>-20</left>
+                    <top>-20</top>
+                    <width>1090</width>
+                    <height>680</height>
+                    <texture border="40">buttons/dialogbutton-nofo.png</texture>
                 </control>
-                <control type="image">
-                    <width>100</width>
-                    <height>100</height>
-                    <aspectratio aligny="center">keep</aspectratio>
-                    <texture>dialogs/extendedprogress/loading.png</texture>
-                    <animation effect="rotate" center="auto" start="360" end="0" time="1500" loop="true" condition="true">Conditional</animation>
+                <control type="scrollbar" id="50">
+                    <left>1050</left>
+                    <width>15</width>
+                    <height>640</height>
+                    <orientation>vertical</orientation>
+                    <onleft condition="Control.IsVisible(5)">5</onleft>
+                    <onright condition="Control.IsVisible(9001)">9001</onright>
+                    <onright condition="Control.IsVisible(9002) + !Control.IsVisible(9001)">9002</onright>
+                    <onright condition="Control.IsVisible(9003) + !Control.IsVisible(9001) + !Control.IsVisible(9002)">9003</onright>
+                    <onright condition="Control.IsVisible(9004) + !Control.IsVisible(9001) + !Control.IsVisible(9002) + !Control.IsVisible(9003)">9004</onright>
+                    <visible>Control.IsVisible(5)</visible>
+                    <pulseonselect>true</pulseonselect>
+                    <animation type="Visible" reversible="false">
+                        <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
+                        <effect type="fade" delay="160" end="100" time="240"/>
+                    </animation>
                 </control>
             </control>
-            <control type="group" id="55">
+            <control type="group">
+                <left>30</left>
+                <top>100</top>
+                <width>1050</width>
                 <control type="list" id="5">
                     <description>Channel List</description>
-                    <left>429</left>
-                    <top>100</top>
-                    <width>1060</width>
-                    <height>700</height>
+                    <width>1050</width>
+                    <height>640</height>
                     <pagecontrol>50</pagecontrol>
-                    <onleft>Control.SetFocus(10)</onleft>
-                    <onright>Control.SetFocus(50)</onright>
-                    <itemlayout width="1060" height="63">
+                    <onleft condition="Control.IsVisible(9001)">9001</onleft>
+                    <onleft condition="Control.IsVisible(9002) + !Control.IsVisible(9001)">9002</onleft>
+                    <onleft condition="Control.IsVisible(9003) + !Control.IsVisible(9001) + !Control.IsVisible(9002)">9003</onleft>
+                    <onleft condition="Control.IsVisible(9004) + !Control.IsVisible(9001) + !Control.IsVisible(9002) + !Control.IsVisible(9003)">9004</onleft>
+                    <onright>50</onright>
+                    <itemlayout width="1050" height="70">
                         <control type="image">
-                            <left>80</left>
-                            <top>0</top>
-                            <width>1060</width>
-                            <height>63</height>
-                            <texture border="1">overlays/separator.png</texture>
-                            <bordersize>63</bordersize>
-                        </control>
-                        <control type="label">
                             <left>0</left>
                             <top>0</top>
-                            <width>1060</width>
-                            <height>63</height>
+                            <width>1050</width>
+                            <height>70</height>
+                            <colordiffuse>dimgray</colordiffuse>
+                            <texture>overlays/separator.png</texture>
+                        </control>
+                        <control type="label">
+                            <width>1050</width>
+                            <height>70</height>
                             <aligny>center</aligny>
                             <align>left</align>
                             <font>font12</font>
@@ -218,8 +167,8 @@
                         <control type="label">
                             <left>0</left>
                             <top>0</top>
-                            <width>1060</width>
-                            <height>63</height>
+                            <width>1050</width>
+                            <height>70</height>
                             <aligny>center</aligny>
                             <align>right</align>
                             <font>font12</font>
@@ -227,19 +176,19 @@
                             <info>ListItem.Label2</info>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="1060" height="63">
+                    <focusedlayout width="1050" height="70">
                         <control type="image">
                             <left>0</left>
-                            <width>1060</width>
-                            <height>63</height>
+                            <width>1050</width>
+                            <height>70</height>
                             <colordiffuse>FF01416b</colordiffuse>
-                            <texture border="63">colors/white.png</texture>
+                            <texture border="70">colors/white.png</texture>
                         </control>
                         <control type="label">
                             <left>0</left>
                             <top>0</top>
-                            <width>1060</width>
-                            <height>63</height>
+                            <width>1050</width>
+                            <height>70</height>
                             <aligny>center</aligny>
                             <align>left</align>
                             <font>font12</font>
@@ -251,8 +200,8 @@
                         <control type="label">
                             <left>0</left>
                             <top>0</top>
-                            <width>1060</width>
-                            <height>63</height>
+                            <width>1050</width>
+                            <height>70</height>
                             <aligny>center</aligny>
                             <align>right</align>
                             <font>fontt12</font>
@@ -263,233 +212,212 @@
                         </control>
                     </focusedlayout>
                 </control>
+                <control type="textbox">
+                    <description>description area</description>
+                    <bottom>-15</bottom>
+                    <width>1050</width>
+                    <height>70</height>
+                    <font>font12</font>
+                    <align>justify</align>
+                    <label condition="Control.IsVisible(5)">$INFO[Container(5).ListItem.Property(description)]</label>
+                    <textcolor>dimgray</textcolor>
+                    <visible>Control.IsVisible(5)</visible>
+                    <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+                </control>
+                <control type="list" id="6">
+                    <description>Channel Items</description>
+                    <width>1050</width>
+                    <height>640</height>
+                    <onleft>10</onleft>
+                    <onright condition="Control.IsVisible(9001)">9001</onright>
+                    <onright condition="Control.IsVisible(9002) + !Control.IsVisible(9001)">9002</onright>
+                    <onright condition="Control.IsVisible(9003) + !Control.IsVisible(9001) + !Control.IsVisible(9002)">9003</onright>
+                    <onright condition="Control.IsVisible(9004) + !Control.IsVisible(9001) + !Control.IsVisible(9002) + !Control.IsVisible(9003)">9004</onright>
+                    <orientation>vertical</orientation>
+                    <itemlayout width="1050" height="70">
+                        <control type="image">
+                            <left>0</left>
+                            <top>0</top>
+                            <width>1050</width>
+                            <height>70</height>
+                            <colordiffuse>dimgray</colordiffuse>
+                            <texture>overlays/separator.png</texture>
+                        </control>
+                        <control type="label">
+                            <width>1050</width>
+                            <height>70</height>
+                            <aligny>center</aligny>
+                            <align>left</align>
+                            <font>font12</font>
+                            <textoffsetx>40</textoffsetx>
+                            <info>ListItem.Label</info>
+                        </control>
+                        <control type="label">
+                            <left>0</left>
+                            <top>0</top>
+                            <width>1050</width>
+                            <height>70</height>
+                            <aligny>center</aligny>
+                            <align>right</align>
+                            <font>font12</font>
+                            <textoffsetx>40</textoffsetx>
+                            <info>ListItem.Label2</info>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="1050" height="70">
+                        <control type="image">
+                            <left>0</left>
+                            <width>1050</width>
+                            <height>70</height>
+                            <colordiffuse>FF01416b</colordiffuse>
+                            <texture border="70">colors/white.png</texture>
+                        </control>
+                        <control type="label">
+                            <left>0</left>
+                            <top>0</top>
+                            <width>1050</width>
+                            <height>70</height>
+                            <aligny>center</aligny>
+                            <align>left</align>
+                            <font>font12</font>
+                            <textoffsetx>40</textoffsetx>
+                            <info>ListItem.Label</info>
+                            <scroll>true</scroll>
+                            <scrollspeed>50</scrollspeed>
+                        </control>
+                        <control type="label">
+                            <left>0</left>
+                            <top>0</top>
+                            <width>1050</width>
+                            <height>70</height>
+                            <aligny>center</aligny>
+                            <align>right</align>
+                            <font>fontt12</font>
+                            <textoffsetx>40</textoffsetx>
+                            <info>ListItem.Label2</info>
+                            <scroll>true</scroll>
+                            <scrollspeed>50</scrollspeed>
+                        </control>
+                    </focusedlayout>
+                </control>
+                <control type="textbox">
+                    <description>description area</description>
+                    <bottom>-15</bottom>
+                    <width>1050</width>
+                    <height>70</height>
+                    <font>font12</font>
+                    <align>justify</align>
+                    <label condition="Control.IsVisible(6)">$INFO[Container(6).ListItem.Property(description)]</label>
+                    <textcolor>dimgray</textcolor>
+                    <visible>Control.IsVisible(6)</visible>
+                    <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+                </control>
+                <control type="list" id="7">
+                    <description>Unused List TODO, Preview window? Adv. Rules?</description>
+                </control>
+                <control type="textbox">
+                    <description>description area</description>
+                    <bottom>-15</bottom>
+                    <width>1050</width>
+                    <height>70</height>
+                    <font>font12</font>
+                    <align>justify</align>
+                    <label condition="Control.IsVisible(7)">$INFO[Container(7).ListItem.Property(description)]</label>
+                    <textcolor>dimgray</textcolor>
+                    <visible>Control.IsVisible(7)</visible>
+                    <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+                </control>
             </control>
-            <control type="list" id="6">
-                <description>Channel Items</description>
-                <left>429</left>
+            <control type="group" id="4">
+                <description>spinner</description>
+                <left>30</left>
+                <top>320</top>
+                <width>1050</width>
+                <height>160</height>
+                <control type="image">
+                    <centertop>50%</centertop>
+                    <centerleft>50%</centerleft>
+                    <width>160</width>
+                    <height>160</height>
+                    <aspectratio aligny="center">keep</aspectratio>
+                    <texture colordiffuse="dimgray">dialogs/extendedprogress/loading-back.png</texture>
+                </control>
+                <control type="image">
+                    <centertop>50%</centertop>
+                    <centerleft>50%</centerleft>
+                    <width>160</width>
+                    <height>160</height>
+                    <aspectratio aligny="center">keep</aspectratio>
+                    <texture>dialogs/extendedprogress/wlogo.png</texture>
+                </control>
+                <control type="image">
+                    <centertop>50%</centertop>
+                    <centerleft>50%</centerleft>
+                    <width>160</width>
+                    <height>160</height>
+                    <aspectratio aligny="center">keep</aspectratio>
+                    <texture colordiffuse="FFFFFFFF">dialogs/extendedprogress/loading.png</texture>
+                    <animation effect="rotate" center="auto" start="360" end="0" time="1500" loop="true" condition="true">Conditional</animation>
+                </control>
+            </control>
+            <control type="group">
+                <right>30</right>
                 <top>100</top>
-                <width>1060</width>
-                <height>700</height>
-                <onleft>Control.SetFocus(10)</onleft>
-                <onright>Control.SetFocus(9001)</onright>
-                <orientation>vertical</orientation>
-                <itemlayout width="1060" height="63">
-                    <control type="image">
-                        <left>80</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <texture border="1">overlays/separator.png</texture>
-                        <bordersize>63</bordersize>
-                    </control>
-                    <control type="label">
-                        <left>0</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <aligny>center</aligny>
-                        <align>left</align>
-                        <font>font12</font>
-                        <textcolor>grey</textcolor>
-                        <textoffsetx>40</textoffsetx>
-                        <info>ListItem.Label</info>
-                    </control>
-                    <control type="label">
-                        <left>0</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <aligny>center</aligny>
-                        <align>right</align>
-                        <font>fontt12</font>
-                        <textcolor>grey</textcolor>
-                        <textoffsetx>40</textoffsetx>
-                        <info>ListItem.Label2</info>
-                    </control>
-                </itemlayout>
-                <focusedlayout width="1060" height="63">
-                    <control type="image">
-                        <left>0</left>
-                        <width>1060</width>
-                        <height>63</height>
-                        <colordiffuse>FF01416b</colordiffuse>
-                        <texture border="63">colors/white.png</texture>
-                    </control>
-                    <control type="label">
-                        <left>0</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <aligny>center</aligny>
-                        <align>left</align>
-                        <font>font12</font>
-                        <textcolor>white</textcolor>
-                        <textoffsetx>40</textoffsetx>
-                        <info>ListItem.Label</info>
-                        <scroll>true</scroll>
-                        <scrollspeed>50</scrollspeed>
-                    </control>
-                    <control type="label">
-                        <left>0</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <aligny>center</aligny>
-                        <align>right</align>
-                        <font>fontt12</font>
-                        <textcolor>white</textcolor>
-                        <textoffsetx>40</textoffsetx>
-                        <info>ListItem.Label2</info>
-                        <scroll>true</scroll>
-                        <scrollspeed>50</scrollspeed>
-                    </control>
-                </focusedlayout>
-            </control>
-            <control type="list" id="7">
-                <description>Rule Items</description>
-                <left>429</left>
-                <top>100</top>
-                <width>1060</width>
-                <height>700</height>
-                <onleft>Control.SetFocus(10)</onleft>
-                <onright>Control.SetFocus(9001)</onright>
-                <itemlayout width="1060" height="63">
-                    <control type="image">
-                        <left>80</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <texture border="63"/>
-                        <bordersize>63</bordersize>
-                    </control>
-                    <control type="label">
-                        <left>0</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <aligny>center</aligny>
-                        <align>left</align>
-                        <font>font12</font>
-                        <textcolor>FFFFFFFF</textcolor>
-                        <textoffsetx>40</textoffsetx>
-                        <info>ListItem.Label</info>
-                    </control>
-                    <control type="label">
-                        <left>0</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <aligny>center</aligny>
-                        <align>right</align>
-                        <font>font12</font>
-                        <textcolor>FFFFFFFF</textcolor>
-                        <textoffsetx>40</textoffsetx>
-                        <info>ListItem.Label2</info>
-                    </control>
-                </itemlayout>
-                <focusedlayout width="1060" height="63">
-                    <control type="image">
-                        <left>0</left>
-                        <width>1060</width>
-                        <height>63</height>
-                        <colordiffuse>FF01416b</colordiffuse>
-                        <texture border="63">colors/white.png</texture>
-                    </control>
-                    <control type="label">
-                        <left>0</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <aligny>center</aligny>
-                        <align>left</align>
-                        <font>font12</font>
-                        <textcolor>FFFFFFFF</textcolor>
-                        <textoffsetx>40</textoffsetx>
-                        <info>ListItem.Label</info>
-                        <scroll>true</scroll>
-                        <scrollspeed>50</scrollspeed>
-                    </control>
-                    <control type="label">
-                        <left>0</left>
-                        <top>0</top>
-                        <width>1060</width>
-                        <height>63</height>
-                        <aligny>center</aligny>
-                        <align>right</align>
-                        <font>fontt12</font>
-                        <textcolor>FFFFFFFF</textcolor>
-                        <textoffsetx>40</textoffsetx>
-                        <info>ListItem.Label2</info>
-                        <scroll>true</scroll>
-                        <scrollspeed>50</scrollspeed>
-                    </control>
-                </focusedlayout>
-            </control>
-            <control type="textbox">
-                <description>description area</description>
-                <left>429</left>
-                <top>820</top>
-                <width>1060</width>
-                <height>70</height>
-                <font>font12</font>
-                <align>justify</align>
-                <label condition="Control.IsVisible(5)">$INFO[Container(5).ListItem.Property(description)]</label>
-                <textcolor>FF01416b</textcolor>
-                <visible>Control.IsVisible(5)</visible>
-                <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
-            </control>
-            <control type="textbox">
-                <description>description area</description>
-                <left>429</left>
-                <top>820</top>
-                <width>1060</width>
-                <height>70</height>
-                <font>font12</font>
-                <align>justify</align>
-                <label condition="Control.IsVisible(6)">$INFO[Container(6).ListItem.Property(description)]</label>
-                <textcolor>FF01416b</textcolor>
-                <visible>Control.IsVisible(6)</visible>
-                <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
-            </control>
-            <control type="textbox">
-                <description>description area</description>
-                <left>429</left>
-                <top>820</top>
-                <width>1060</width>
-                <height>70</height>
-                <font>font12</font>
-                <align>justify</align>
-                <label condition="Control.IsVisible(7)">$INFO[Container(7).ListItem.Property(description)]</label>
-                <textcolor>FF01416b</textcolor>
-                <visible>Control.IsVisible(7)</visible>
-                <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
-            </control>
-            <control type="scrollbar" id="50">
-                <left>1489</left>
-                <top>100</top>
-                <width>12</width>
-                <height>700</height>
-                <orientation>vertical</orientation>
-                <onright>9001</onright>
-                <onleft condition="Control.IsVisible(5)">Control.SetFocus(5)</onleft>
-                <onleft condition="Control.IsVisible(6)">Control.SetFocus(6)</onleft>
-                <onleft condition="Control.IsVisible(7)">Control.SetFocus(7)</onleft>
-                <onright>9001</onright>
-                <visible>Control.IsVisible(5)</visible>
-                <animation effect="fade" start="0" end="100" delay="300" time="320">WindowOpen</animation>
-                <animation effect="fade" start="100" end="0" time="150">WindowClose</animation>
+                <width>300</width>
+                <height>300</height>
+                <description>Channel Logo Button</description>
+                <control type="button" id="10">
+                    <right>0</right>
+                    <top>-20</top>
+                    <description>Logo Background</description>
+                    <onleft condition="Control.IsVisible(6)">6</onleft>
+                    <onright condition="Control.IsVisible(6)">6</onright>
+                    <onup condition="Control.IsVisible(9004)">9004</onup>
+                    <onup condition="Control.IsVisible(9003) + !Control.IsVisible(9004)">9003</onup>
+                    <onup condition="Control.IsVisible(9002) + !Control.IsVisible(9004) + !Control.IsVisible(9003)">9002</onup>
+                    <onup condition="Control.IsVisible(9001) + !Control.IsVisible(9004) + !Control.IsVisible(9003) + !Control.IsVisible(9002)">9001</onup>
+                    <ondown condition="Control.IsVisible(9001)">9001</ondown>
+                    <ondown condition="Control.IsVisible(9002) + !Control.IsVisible(9001)">9002</ondown>
+                    <ondown condition="Control.IsVisible(9003) + !Control.IsVisible(9001) + !Control.IsVisible(9002)">9003</ondown>
+                    <ondown condition="Control.IsVisible(9004) + !Control.IsVisible(9001) + !Control.IsVisible(9002) + !Control.IsVisible(9003)">9004</ondown>
+                    <width>300</width>
+                    <height>340</height>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <visible>!Control.IsVisible(5)</visible>
+                    <texturefocus border="40" colordiffuse="FF01416b">buttons/dialogbutton-fo.png</texturefocus>
+                    <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
+                </control>
+                <control type="image">
+                    <description>Logo Image</description>
+                    <left>45</left>
+                    <top>45</top>
+                    <height>210</height>
+                    <width>210</width>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <aspectratio>keep</aspectratio>
+                    <visible>Control.IsVisible(5)|Control.IsVisible(6)</visible>
+                    <texture fallback="logo.png">$INFO[Container(5).ListItem.Art(icon)]</texture>
+                </control>
             </control>
             <control type="grouplist" id="9000">
                 <description>buttons right</description>
-                <left>1510</left>
-                <top>92</top>
                 <orientation>vertical</orientation>
+                <bottom>0</bottom>
+                <right>30</right>
                 <width>300</width>
-                <height>440</height>
-                <itemgap>-10</itemgap>
-                <onright>10</onright>
-                <onleft condition="Control.IsVisible(5)">Control.SetFocus(5)</onleft>
-                <onleft condition="Control.IsVisible(6)">Control.SetFocus(6)</onleft>
+                <height>400</height>
+                <onup>10</onup>
+                <onleft condition="Control.IsVisible(5)">5</onleft>
+                <onleft condition="Control.IsVisible(6)">6</onleft>
+                <onleft condition="Control.IsVisible(7)">7</onleft>
+                <onright condition="Control.IsVisible(5)">5</onright>
+                <onright condition="Control.IsVisible(6)">6</onright>
+                <onright condition="Control.IsVisible(7)">7</onright>
+                <itemgap>-15</itemgap>
+                <scrolltime tween="sine" easing="out">200</scrolltime>
+                <defaultcontrol>9001</defaultcontrol>
                 <control type="button" id="9001">
                     <width>300</width>
                     <height>100</height>
@@ -527,7 +455,6 @@
                     <visible>!String.IsEmpty(Control.GetLabel(9003))</visible>
                 </control>
                 <control type="button" id="9004">
-                    <!-- todo open node/xsp editor using listitem path to detect .xsp or .xml ListItem.FileExtension	 -->
                     <width>300</width>
                     <height>100</height>
                     <label/>
@@ -542,15 +469,15 @@
             </control>
             <control type="label">
                 <description>version label</description>
-                <left>1710</left>
-                <top>820</top>
-                <width>1060</width>
+                <bottom>-15</bottom>
+                <right>15</right>
+                <width>140</width>
                 <height>70</height>
                 <font>font12</font>
                 <align>justify</align>
-                <label>[B]$INFO[System.AddonVersion(plugin.video.pseudotv.live),v.,][/B]</label>
-                <textcolor>FF696969</textcolor>
+                <textcolor>dimgray</textcolor>
                 <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+                <label>[B]$INFO[System.AddonVersion(plugin.video.pseudotv.live),v.,][/B]</label>
             </control>
         </control>
     </controls>

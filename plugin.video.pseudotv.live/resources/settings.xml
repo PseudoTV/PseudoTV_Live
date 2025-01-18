@@ -736,17 +736,6 @@
                 </setting>
             </group>
             <group id="3" label="32021">
-                <setting id="Sort_Method" type="string" label="32214" help="33214">
-                    <level>3</level>
-                    <default>Random</default>
-                    <constraints>
-                        <allowempty>false</allowempty>
-                    </constraints>
-                    <control type="button" format="action">
-                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Sort_Method)</data>
-                        <close>true</close>
-                    </control>
-                </setting>
                 <setting id="Page_Limit" type="integer" label="30015" help="33015">
                     <level>3</level>
                     <default>25</default>
@@ -1387,6 +1376,18 @@
                     </control>
                 </setting>
                 <setting id="Disable_Cache" type="boolean" label="30084" help="33084" parent="Debug_Enable">
+                    <level>3</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                    <dependencies>
+                        <dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="Debug_Enable">true</condition>
+                            </and>
+                        </dependency>
+                    </dependencies>
+                </setting>
+                <setting id="Enable_Executor" type="boolean" label="30198" help="33084" parent="Debug_Enable">
                     <level>3</level>
                     <default>false</default>
                     <control type="toggle"/>

@@ -40,7 +40,7 @@ from seasonal   import Seasonal
 # Resource_Adverts
   
 class RulesList:
-    def __init__(self, channels=None):
+    def __init__(self):
         self.log('__init__')
         self.ruleList  = [BaseRule(),
                           ShowChannelBug(),
@@ -64,7 +64,6 @@ class RulesList:
                           ForceRandom(),
                           EvenShowsRule(),
                           PauseRule()]
-        self.ruleItems = self.loadRules(channels)
                          
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -131,7 +130,7 @@ class RulesList:
     def runActions(self, action, citem={}, parameter=None, inherited=None):
         if inherited is None: inherited = self
         self.log("runActions, %s action = %s, id = %s"%(inherited.__class__.__name__,action,citem.get('id')))
-        rules = self.ruleItems.get(citem.get('id',''))
+        rules = self.loadRules([citem]).get(citem.get('id',''))
         if not rules: rules = (self.loadRules([citem]).get(citem.get('id','')) or {})
         for myId, rule in list(sorted(rules.items())):
             if action in rule.actions:
@@ -632,9 +631,9 @@ class DisableOverlay(BaseRule): #PLAYER RULES [50-99]
         self.myId               = 50
         self.ignore             = False
         self.exclude            = False
-        self.name               = LANGUAGE(30170)
+        self.name               = LANGUAGE(30042)
         self.description        = LANGUAGE(33042)
-        self.optionLabels       = [LANGUAGE(30170)]
+        self.optionLabels       = [LANGUAGE(30042)]
         self.optionValues       = [SETTINGS.getSettingBool('Overlay_Enable')]
         self.optionDescriptions = [LANGUAGE(33042)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
@@ -650,8 +649,8 @@ class DisableOverlay(BaseRule): #PLAYER RULES [50-99]
 
 
     def getTitle(self):
-        if self.optionValues[0]: return LANGUAGE(30170)
-        else:                    return LANGUAGE(30170)
+        if self.optionValues[0]: return "Overlay Enabled"
+        else:                    return "Overlay Disabled"
 
 
     def onAction(self, optionindex):
@@ -1222,7 +1221,7 @@ class ProvisionalRule(BaseRule): #PARSING RULES [800-999]
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
             if self.optionValues[0]:
                 try:
-                    if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    if builder.pDialog: builder.pDialog = self.dialog.updateProgress(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                     if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
                     else:                                  queries = self._getProvisional(citem)
                     self.log("%s: runAction, id: %s, provisional value = %s\nqueries = %s"%(self.__class__.__name__,citem.get('id'),self.optionValues[0],queries))
@@ -1253,7 +1252,7 @@ class HandleMethodOrder(BaseRule):
         self.name               = LANGUAGE(32232)
         self.description        = LANGUAGE(33232)
         self.optionLabels       = ['Page Limit','Method','Order','Ignore Articles','Ignore Artist Sort Name']
-        self.optionValues       = [REAL_SETTINGS.getSettingInt('Page_Limit'),SETTINGS.getSetting('Sort_Method').lower(),'ascending',True,True]
+        self.optionValues       = [REAL_SETTINGS.getSettingInt('Page_Limit'),'random','ascending',True,True]
         self.optionDescriptions = ["","","","",""]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(25,525,25)), self.getSort(), self.getOrder()]
@@ -1317,7 +1316,7 @@ class ForceEpisode(BaseRule):
         self.optionValues       = [SETTINGS.getSettingBool('Enable_Even_Force'),SETTINGS.getSettingInt('Interleave_Value')]
         self.optionDescriptions = [LANGUAGE(33230),LANGUAGE(33215)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
-        self.storedValues       = [{},{},[],[],[],[]]
+        self.storedValues       = [{},{},{},[],[],[]]
         self.selectBoxOptions   = ["",list(range(0,26,1))]
 
 
@@ -1523,7 +1522,7 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-2999]
                 
             elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
                 if len(parameter) > 0:
-                    if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    if builder.pDialog: builder.pDialog = self.dialog.updateProgress(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                     if self.optionValues[2]: fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0))) #force episode ordering
                     else:                    fileItems = parameter
                     self.log('runAction, group by episode %s'%(self.optionValues[2]))

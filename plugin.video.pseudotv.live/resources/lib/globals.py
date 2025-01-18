@@ -319,7 +319,7 @@ def isRadio(item):
         if path.lower().startswith(('musicdb://','special://profile/playlists/music/','special://musicplaylists/')): return True
     return False
     
-def isMixed(item):
+def isMixed_XSP(item):
     for path in item.get('path',[item.get('file','')]):
         if path.lower().startswith('special://profile/playlists/mixed/'): return True
     return False

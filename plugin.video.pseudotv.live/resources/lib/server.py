@@ -191,7 +191,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                                 self._set_headers(content)
                                 while not self.monitor.abortRequested():
                                     chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                                    if not chunk or self.monitor.waitForAbort(.0001): break
+                                    if not chunk or self.monitor.waitForAbort(0.1): break
                                     self.send_header('content-length', len(chunk))
                                     self.wfile.write(chunk)
                         self.wfile.close()
@@ -246,7 +246,7 @@ class HTTP:
 
     def _start(self):
         try:
-            if self.service.monitor.waitForAbort(.0001): self._stop()
+            if self.service.monitor.waitForAbort(0.1): self._stop()
             elif not self.isRunning:
                 self.isRunning = True
                 IP  = SETTINGS.getIP()

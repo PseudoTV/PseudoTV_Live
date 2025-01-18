@@ -122,7 +122,7 @@ msgid "Three Inserts"
 msgstr ""
 
 msgctxt "#30026"
-msgid "One Inserts"
+msgid "One Insert"
 msgstr ""
 
 msgctxt "#30027"
@@ -274,7 +274,7 @@ msgid "Enable Automatic Guide Grouping"
 msgstr ""
 
 msgctxt "#30064"
-msgid "Added Group"
+msgid "Add Custom Group"
 msgstr ""
 
 msgctxt "#30065"
@@ -354,7 +354,7 @@ msgid "24 Hours"
 msgstr ""
 
 msgctxt "#30084"
-msgid "Disable Cache while Debugging"
+msgid "Disable Cache"
 msgstr ""
 
 msgctxt "#30085"
@@ -813,6 +813,10 @@ msgctxt "#30197"
 msgid "OSD"
 msgstr ""
 
+msgctxt "#30198"
+msgid "Enable Threaded Queue Executor"
+msgstr ""
+
 
 # Skin - strings 31000 thru 31999 reserved for skins
 
@@ -904,7 +908,7 @@ msgid "Unavailable"
 msgstr ""
 
 msgctxt "#32021"
-msgid "Parsing"
+msgid "AutoTuning..."
 msgstr ""
 
 msgctxt "#32022"
@@ -1028,7 +1032,7 @@ msgid "Copying"
 msgstr ""
 
 msgctxt "#32052"
-msgid "Copying Failed!"
+msgid "Failed!"
 msgstr ""
 
 msgctxt "#32053"
@@ -1076,7 +1080,7 @@ msgid "OK"
 msgstr ""
 
 msgctxt "#32064"
-msgid "Autotuned Channels are currently non-configurable."
+msgid "Autotuned Channels are currently\nnon-configurable."
 msgstr ""
 
 msgctxt "#32065"
@@ -1104,7 +1108,7 @@ msgid "No Logo Found!"
 msgstr "" 
 
 msgctxt "#32071"
-msgid "Please finish configurations before creating channel rules."
+msgid "Add Content Paths before adding channel rules."
 msgstr ""
 
 msgctxt "#32072"
@@ -1140,7 +1144,7 @@ msgid "Enter Channel Name"
 msgstr ""
 
 msgctxt "#32080"
-msgid "Select Content Path"
+msgid "Select Media Path"
 msgstr ""
 
 msgctxt "#32081"
@@ -1192,11 +1196,11 @@ msgid "Channel Name"
 msgstr ""
 
 msgctxt "#32093"
-msgid "Content Path"
+msgid "Content Paths"
 msgstr ""
 
 msgctxt "#32094"
-msgid "Content Group"
+msgid "Content Groups"
 msgstr ""
 
 msgctxt "#32095"
@@ -1384,7 +1388,7 @@ msgid "This may take a moment..."
 msgstr ""
 
 msgctxt "#32141"
-msgid "Shutting Down..."
+msgid "Shutting down background service..."
 msgstr ""
 
 msgctxt "#32142"
@@ -1496,7 +1500,7 @@ msgid "Update Available!"
 msgstr ""
 
 msgctxt "#32169"
-msgid "Edit Channel (%s)"
+msgid "Edit Channel %s (%s)"
 msgstr ""
 
 msgctxt "#32170"
@@ -1676,7 +1680,7 @@ msgid "Enable Multi-Room Instances?"
 msgstr ""
 
 msgctxt "#32216"
-msgid "Welcome to %s, If you're new please visit our project wiki for help & guides. Thank you for your support, enjoy!"
+msgid "[B]Welcome to %s![/B][CR][CR]If you're new please visit our wiki for helpful tips & guides.[CR][CR]Thank you for your support, enjoy![CR][B][I]              %s[/I][/B]"
 msgstr ""
 
 msgctxt "#32217"
@@ -1747,6 +1751,33 @@ msgctxt "#32233"
 msgid "Minimum Duration"
 msgstr ""
 
+msgctxt "#32234"
+msgid "Changes Detected, Do you want to save?"
+msgstr ""
+
+msgctxt "#32235"
+msgid "Preview"
+msgstr ""
+
+msgctxt "#32236"
+msgid "Building Preview"
+msgstr ""
+
+msgctxt "#32237"
+msgid "Waiting for Background Service to idle..."
+msgstr ""
+
+msgctxt "#32238"
+msgid "Autotuned Channels must be\n disabled in settings."
+msgstr ""
+
+msgctxt "#32239"
+msgid "Clear"
+msgstr ""
+
+msgctxt "#32240"
+msgid "Confirm"
+msgstr ""
 
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
@@ -1924,7 +1955,7 @@ msgid "Stop Playback when Idle for x Hours.\nCancelable with prompt and countdow
 msgstr ""
 
 msgctxt "#33084"
-msgid "Not recommend!! Only disable if you understand the impact of theses changes."
+msgid "Not recommend!! Only use if you understand the impact of theses changes."
 msgstr ""
 
 msgctxt "#33085"

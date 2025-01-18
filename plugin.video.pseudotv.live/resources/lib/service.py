@@ -54,6 +54,7 @@ class Player(xbmc.Player):
         Player: onPlayBackStopped
         """
               
+              
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -84,7 +85,7 @@ class Player(xbmc.Player):
 
         
     def onAVStarted(self):
-        self.pendingPlay = 0
+        self.pendingPlay = -1
         self.isPseudoTV  = self.isPseudoTVPlaying()
         self.log('onAVStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if    self.isPseudoTV: self._onPlay()
@@ -102,7 +103,7 @@ class Player(xbmc.Player):
         
     def onPlayBackEnded(self):
         self.pendingStop = False
-        self.pendingPlay = 0
+        self.pendingPlay = -1
         isPlaylist = self.sysInfo.get('isPlaylist',False)
         self.log('onPlayBackEnded, pendingStop = %s, isPseudoTV = %s, isPlaylist = %s'%(self.pendingStop,self.isPseudoTV,isPlaylist))
         if self.isPseudoTV and not isPlaylist: self._onChange(isPlaylist)
@@ -110,7 +111,7 @@ class Player(xbmc.Player):
         
     def onPlayBackStopped(self):
         self.pendingStop = False
-        self.pendingPlay = 0
+        self.pendingPlay = -1
         self.log('onPlayBackStopped, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if self.isPseudoTV: self._onStop()
         
@@ -146,7 +147,7 @@ class Player(xbmc.Player):
     def getPlayerItem(self):
         try: return self.getPlayingItem()
         except:
-            self.service.monitor.waitForAbort(0.5)
+            self.service.monitor.waitForAbort(0.1)
             if self.isPlaying(): return self.getPlayerItem()
             else:                return xbmcgui.ListItem()
 
@@ -167,13 +168,11 @@ class Player(xbmc.Player):
 
 
     def getRemainingTime(self):
-        try:    return int(self.getTimeLabel(prop='TimeRemaining'))
-        except: return -1
+        return int(self.getTimeLabel(prop='TimeRemaining'))
 
        
     def getPlayedTime(self):
-        try:    return self.getTimeLabel(prop='Time')
-        except: return -1
+        return self.getTimeLabel(prop='Time')
        
        
     def getPlayerProgress(self):
@@ -182,7 +181,8 @@ class Player(xbmc.Player):
 
 
     def getTimeLabel(self, prop: str='TimeRemaining') -> int and float: #prop='EpgEventElapsedTime'
-        return timeString2Seconds(BUILTIN.getInfoLabel('%s(hh:mm:ss)'%(prop),'Player'))
+        if self.isPlaying(): return timeString2Seconds(BUILTIN.getInfoLabel('%s(hh:mm:ss)'%(prop),'Player'))
+        else:                return -1
 
 
     def setTrakt(self, state: bool=SETTINGS.getSettingBool('Disable_Trakt')):
@@ -224,7 +224,7 @@ class Player(xbmc.Player):
             self.setTrakt(self.disableTrakt)
             self.toggleRestart()
             
-        if self.sysInfo.get('isPlaylist',False):
+        if self.sysInfo.get('isPlaylist',False) and self.service.monitor.isIdle:
             if self.sysInfo.get('radio',False): timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(visualisation)'])
             else:                               timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(fullscreenvideo)'])
             
@@ -236,7 +236,7 @@ class Player(xbmc.Player):
             while not self.service.monitor.abortRequested() and self.isPlaying():
                 sysInfo = self.getPlayerSysInfo()
                 if   sysInfo.get('fitem'): break
-                elif self.monitor.waitForAbort(0.5): break
+                elif self.monitor.waitForAbort(0.1): break
                 self.log('_onChange, [%s], waiting for getPlayerSysInfo refresh'%(oldInfo.get('citem',{}).get('id')))
                 
             if oldInfo.get('fitem',{}).get('label') != sysInfo.get('fitem',{}).get('label',str(random.random())):
@@ -297,6 +297,7 @@ class Player(xbmc.Player):
                 self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
                 self.log('toggleRestart, state = %s'%(state))
                 self.restart.doModal()
+                del self.restart
                 self.restart = None
         elif not state and hasattr(self.restart,'onClose'):
             self.log('toggleRestart, state = %s'%(state))
@@ -331,7 +332,7 @@ class Monitor(xbmc.Monitor):
             return idleState, idleTime
 
         def __chkPlayback():
-            if bool(self.service.player.pendingPlay) and abs(self.idleTime - self.service.player.pendingPlay) > 30 and not BUILTIN.isBusyDialog():
+            if not BUILTIN.isBusyDialog() and self.service.player.pendingPlay >= 0 and abs(self.idleTime - self.service.player.pendingPlay) > 30:
                 self.log('__chkPlayback, pendingPlay Error\nsysInfo = %s'%(self.service.player.sysInfo))
                 self.service.player.onPlayBackError()
 
@@ -436,6 +437,7 @@ class Service():
         PROPERTIES.getInstanceID()
         SETTINGS.getMYUUID()
         
+        self.pendingShutdown   = PROPERTIES.setPendingShutdown(False)
         self.pendingRestart    = PROPERTIES.setPendingRestart(False)
         self.jsonRPC           = JSONRPC()
         self.player            = Player(service=self)
@@ -459,8 +461,16 @@ class Service():
         return False
     
     
-    def __restart(self, wait=1.0) -> bool:
-        pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart() | self.monitor.waitForAbort(wait))
+    def __shutdown(self, wait=1.0) -> bool:
+        pendingShutdown = (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
+        if pendingShutdown != self.pendingShutdown:
+            self.pendingShutdown = PROPERTIES.setPendingShutdown(pendingShutdown)
+            self.log('__shutdown, pendingShutdown = %s, wait = %s'%(self.pendingShutdown,wait))
+        return self.pendingShutdown
+    
+    
+    def __restart(self) -> bool:
+        pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart())
         if pendingRestart != self.pendingRestart:
             self.pendingRestart = PROPERTIES.setPendingRestart(pendingRestart)
             self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
@@ -468,7 +478,7 @@ class Service():
          
 
     def _interrupt(self) -> bool: #break
-        pendingInterrupt = (self.monitor.isSettingsOpened() | self.pendingRestart | PROPERTIES.isInterruptActivity())
+        pendingInterrupt = (self.pendingShutdown | self.pendingRestart | PROPERTIES.isInterruptActivity() | self.monitor.isSettingsOpened())
         if pendingInterrupt != self.monitor.pendingInterrupt:
             self.monitor.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
             self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
@@ -487,8 +497,7 @@ class Service():
 
 
     def __tasks(self):
-        if not self._suspend():
-            self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
+        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
            
                 
     def __initialize(self):
@@ -502,7 +511,8 @@ class Service():
         self.__initialize()
         while not self.monitor.abortRequested():
             self.monitor.chkIdle()
-            if    self.__restart(): break
+            if    self.__shutdown(): break
+            elif  self.__restart(): break
             else: self.__tasks()
         self._stop()
 
@@ -514,7 +524,12 @@ class Service():
                 try: thread.join(1.0)
                 except: pass
                 self.log('_stop, closing %s...'%(thread.name))
-        self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
-        if self.pendingRestart: Service()._start()
+                
+        if self.pendingRestart: 
+            self.log('_stop, finished: restarting!')
+            Service()._start()
+        else: 
+            self.log('_stop, finished: exiting!')
+            sys.exit()
 
 if __name__ == '__main__': Service()._start()

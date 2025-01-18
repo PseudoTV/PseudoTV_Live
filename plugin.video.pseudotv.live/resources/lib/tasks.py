@@ -49,7 +49,7 @@ class Tasks():
         self.quePriority._push((func, args, kwargs), priority)
         
 
-    def _initialize(self):
+    def _initialize(self, sleep=FIFTEEN):
         tasks = [self.chkInstanceID,
                  self.chkDirs,
                  self.chkWelcome,
@@ -57,8 +57,8 @@ class Tasks():
                  self.chkBackup,
                  self.chkServers,
                  self.chkPVRBackend]
-
-        self.service.monitor.waitForAbort(FIFTEEN)
+                 
+        DIALOG.notificationWait(LANGUAGE(32054),wait=sleep)
         for func in tasks: self._que(func)
         self.log('_initialize, finished...')
         
@@ -116,7 +116,6 @@ class Tasks():
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
         self._chkPropTimer('chkFillers'       , self.chkFillers      , 2)
         self._chkPropTimer('chkAutoTune'      , self.chkAutoTune     , 2)
-        self._chkPropTimer('chkChannels'      , self.chkChannels     , 3, **{'proper':False})
                   
         
     def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
@@ -207,32 +206,26 @@ class Tasks():
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
-    def chkChannels(self, channels: list=[], proper=True):
-        def __match(id, channels):
-            for citem in channels:
-                if citem['id'] == id:
-                    return id
+    def chkChannels(self, channels: list=[]):
         try:
-            builder = Builder(self.service)
             if not channels:
                 ids = SETTINGS.getUpdateChannels()
-                if ids and not proper:
-                    channels = list(builder.sortChannels([__match(id,builder.verify()) for id in ids]))
+                if ids:
+                    channels = self.getChannels()
+                    channels = [citem for id in ids for citem in channels if citem.get('id') == id]
                 else:
-                    channels = list(builder.sortChannels(builder.verify()))
+                    channels = self.getChannels()
                     SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
                     PROPERTIES.setChannels(len(channels) > 0)
                     self.service.currentChannels = channels #update service channels
-            else: channels = list(builder.sortChannels(builder.verify(channels)))
-                
+                    
             if len(channels) > 0:
-                complete, updated = builder.build(channels)
-                self.log('chkChannels, channels = %s, proper = %s, complete = %s, updated = %s'%(len(channels),proper,complete,updated))
+                complete, updated = Builder(self.service).build(channels)
+                self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
                 if complete:
-                    if updated: PROPERTIES.setPropTime('chkPVRRefresh')
+                    if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
                     if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
                 else: self._que(self.chkChannels,3,channels)
-            del builder
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
 
@@ -265,7 +258,7 @@ class Tasks():
         isRecording = BUILTIN.getInfoBool('IsRecording','Pvr')
         self.log('chkPVRToggle, isIdle = %s, isPlaying = %s'%(isIdle,isPlaying))
         if isIdle and not (isPlaying | isScanning | isRecording): togglePVR(False,True)
-        else: PROPERTIES.setPropTime('chkPVRRefresh')
+        else: PROPERTIES.setPropTimer('chkPVRRefresh')
 
 
     def chkFillers(self, channels=None):
@@ -276,10 +269,11 @@ class Tasks():
             if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),'')): 
                 pDialog = DIALOG.progressBGDialog(int(idx*50//len(ftype)), pDialog, message='%s: %s'%(ftype,int(idx*100//len(ftype)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
                 FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),''))
-            
+        
+        genres = self.getGenreNames()
         for idx, citem in enumerate(channels):
             for ftype in FILLER_TYPES[1:]:
-                for genre in self.getGenreNames():
+                for genre in genres:
                     if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),'')):
                         pDialog = DIALOG.progressBGDialog(int(idx*50//len(channels)), pDialog, message='%s: %s'%(genre,int(idx*100//len(channels)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
                         FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower()))
@@ -303,8 +297,10 @@ class Tasks():
     def getGenreNames(self):
         self.log('getGenres')
         try:
-            library = Library(self.service)
-            genres  = set([tvgenre.get('name') for tvgenre in library.getTVGenres() if tvgenre.get('name')] + [movgenre.get('name') for movgenre in library.getMovieGenres() if movgenre.get('name')])
+            library     = Library(self.service)
+            tvgenres    = library.getTVGenres()
+            moviegenres = library.getMovieGenres()
+            genres  = set([tvgenre.get('name') for tvgenre in tvgenres if tvgenre.get('name')] + [movgenre.get('name') for movgenre in moviegenres if movgenre.get('name')])
             del library
             return list(genres)
         except Exception as e: 
@@ -314,9 +310,7 @@ class Tasks():
 
     def getChannels(self):
         try:
-            builder  = Builder(self.service)
-            channels = list(builder.sortChannels(builder.verify()))
-            del builder
+            channels = Builder(self.service).getChannels()
             self.log('getChannels, channels = %s'%(len(channels)))
             return channels
         except Exception as e: 

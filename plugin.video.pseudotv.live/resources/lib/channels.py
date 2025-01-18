@@ -67,11 +67,13 @@ class Channels:
         
         
     def getCustom(self) -> list:
-        return list([citem for citem in self.getChannels() if citem.get('number') <= CHANNEL_LIMIT])
+        channels = self.getChannels()
+        return list([citem for citem in channels if citem.get('number') <= CHANNEL_LIMIT])
         
         
     def getAutotuned(self) -> list: 
-        return list([citem for citem in self.getChannels() if citem.get('number') > CHANNEL_LIMIT])
+        channels = self.getChannels()
+        return list([citem for citem in channels if citem.get('number') > CHANNEL_LIMIT])
         
 
     def getChannelbyID(self, id: str) -> list:
@@ -80,7 +82,8 @@ class Channels:
         
         
     def getType(self, type: str):
-        return list([citem for citem in self.getChannels() if citem.get('type') == type])
+        channels = self.getChannels()
+        return list([citem for citem in channels if citem.get('type') == type])
 
 
     def sortChannels(self, channels: list) -> list:

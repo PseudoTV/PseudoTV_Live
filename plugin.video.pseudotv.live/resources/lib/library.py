@@ -103,7 +103,8 @@ class Library:
 
     def updateLibrary(self, force: bool=False) -> bool:
         def __clear():
-            for label, func in list(self.libraryFUNCS.items()):
+            items = list(self.libraryFUNCS.items())
+            for label, func in items:
                 cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
                 DIALOG.notificationDialog(LANGUAGE(30070)%(label),time=5)
                 self.cache.clear(cacheName,wait=5)
@@ -154,7 +155,7 @@ class Library:
                 self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
                 if not items: items = _fill(type, func)
                 self.setLibrary(type, [__update(type,item) for item in items])
-
+        
         self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
         self.log('updateLibrary, force = %s, complete = %s'%(force,  complete))
         return  complete
@@ -194,7 +195,9 @@ class Library:
          
     def getMixedGenres(self):
         MixedGenreList = []
-        for tv in [tv for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.get('name','').lower() == movie.get('name','').lower()]:
+        tvGenres    = self.getTVGenres()
+        movieGenres = self.getMovieGenres()
+        for tv in [tv for tv in tvGenres for movie in movieGenres if tv.get('name','').lower() == movie.get('name','').lower()]:
             rules = {"800":{"values":{"0":tv.get('name')}}}
             MixedGenreList.append({'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createGenreMixedPlaylist(tv.get('name')),'logo':tv.get('logo'),'rules':rules})
         self.log('getMixedGenres, genres = %s' % (len(MixedGenreList)))
@@ -211,14 +214,13 @@ class Library:
             rules = {"800":{"values":{"0":LANGUAGE(32002)}}}
             MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':rules}) #"Seasonal"
 
-        # if __hasRecordings(): #broken paths no longer play, Kodi jsonrpc doesn't return valid file and uses unknown vfs assignment
-            # MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
+        if __hasRecordings(): #broken paths no longer play, Kodi jsonrpc doesn't return valid file and uses unknown vfs assignment
+            MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
         
         self.log('getMixed, mixed = %s' % (len(MixedList)))
         return sorted(MixedList,key=itemgetter('name'))
     
     
-    @cacheit(expiration=datetime.timedelta(minutes=5),json_data=True)
     def getPlaylists(self):
         PlayList = []
         types    = ['video','mixed','music']
@@ -230,7 +232,7 @@ class Library:
                 
                 if not result.get('label'): continue
                 logo = result.get('thumbnail')
-                if not logo: logo = self.resources.getLogo(result.get('label'),"Custom")
+                if not logo: logo = (self.resources.getLocalLogo(result.get('label')) or LOGO)
                 PlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':logo})
         self.log('getPlaylists, PlayList = %s' % (len(PlayList)))
         PlayList = sorted(PlayList,key=itemgetter('name'))

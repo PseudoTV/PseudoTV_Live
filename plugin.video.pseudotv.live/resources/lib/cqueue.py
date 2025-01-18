@@ -48,6 +48,7 @@ class CustomQueue:
         self.itemCount = defaultdict(int)
         self.popThread = Thread(target=self.__pop)
         self.pool      = ThreadPool()
+        self.execute   = SETTINGS.getSettingBool('Enable_Executor')
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -63,8 +64,10 @@ class CustomQueue:
 
 
     def __run(self, func, *args, **kwargs):
-        self.log("__run, func = %s"%(func.__name__))
-        try: return self.pool.executor(func, None, *args, **kwargs)
+        self.log("__run, func = %s, execute = %s"%(func.__name__,self.execute))
+        try:
+            if self.execute: return self.pool.executor(func, None, *args, **kwargs)
+            else:            return func(*args, **kwargs)
         except Exception as e: self.log("__run, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
                 
@@ -104,18 +107,24 @@ class CustomQueue:
             self.log("_push, func = %s"%(package[0].__name__))
             self.tail = node
             
-        if not self.isRunning:
+        if not self.isRunning: 
+            self.log("_push, starting __pop")
             self.__start()
     
     
     def __pop(self):
         self.isRunning = True
+        self.execute = SETTINGS.getSettingBool('Enable_Executor')
         while not self.service.monitor.abortRequested():
-            if self.service.monitor.waitForAbort(.0001): 
+            if self.service.monitor.waitForAbort(1.0): 
                 self.log("__pop, waitForAbort")
                 break
-            elif self.service._interrupt() or self.service._suspend():
-                self.log("__pop, _interrupt/_suspend")
+            elif self.service._interrupt(): 
+                self.isRunning = False
+                self.log("__pop, _interrupt")
+                break
+            elif self.service._suspend():
+                self.log("__pop, _suspend")
                 self.service.monitor.waitForAbort(SUSPEND_TIMER)
                 continue
             elif not self.head and not self.priority:

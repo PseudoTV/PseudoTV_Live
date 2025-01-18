@@ -27,23 +27,29 @@
                 <width>160</width>
                 <height>160</height>
                 <control type="image">
+                    <centertop>50%</centertop>
+                    <centerleft>50%</centerleft>
                     <width>160</width>
                     <height>160</height>
-                    <visible>!Player.Playing</visible>
+                    <visible>!Window.IsTopMost(fullscreenvideo)</visible>
                     <aspectratio aligny="center">keep</aspectratio>
                     <texture colordiffuse="dimgray">dialogs/extendedprogress/loading-back.png</texture>
                 </control>
                 <control type="image">
+                    <centertop>50%</centertop>
+                    <centerleft>50%</centerleft>
                     <width>160</width>
                     <height>160</height>
-                    <visible>!Player.Playing</visible>
+                    <visible>!Window.IsTopMost(fullscreenvideo)</visible>
                     <aspectratio aligny="center">keep</aspectratio>
                     <texture>dialogs/extendedprogress/logo.png</texture>
                 </control>
                 <control type="image">
+                    <centertop>50%</centertop>
+                    <centerleft>50%</centerleft>
                     <width>160</width>
                     <height>160</height>
-                    <visible>!Player.Playing</visible>
+                    <visible>!Window.IsTopMost(fullscreenvideo)</visible>
                     <aspectratio aligny="center">keep</aspectratio>
                     <texture colordiffuse="FF01416b">dialogs/extendedprogress/loading.png</texture>
                     <animation effect="rotate" center="auto" start="360" end="0" time="1500" loop="true" condition="true">Conditional</animation>

@@ -30,7 +30,7 @@
                 <bordersize>5</bordersize>
                 <colordiffuse>black</colordiffuse>
                 <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
-                <bordertexture border="5" infill="false" colordiffuse="FF01416b">colors/white.png</bordertexture>
+                <bordertexture border="5" infill="false" colordiffuse="black">colors/white.png</bordertexture><!-- #FF01416b -->
             </control>
             <control type="image" id="40000">
                 <description>Background Dynamic</description>

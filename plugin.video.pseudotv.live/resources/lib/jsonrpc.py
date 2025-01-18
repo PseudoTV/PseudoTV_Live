@@ -34,7 +34,7 @@ class JSONRPC:
     def sendLocker(self): #kodi jsonrpc not thread safe avoid request collision during threading.
         monitor = MONITOR()
         while not monitor.abortRequested() and PROPERTIES.getPropertyBool('sendLocker'):
-            if monitor.waitForAbort(.0001): break
+            if monitor.waitForAbort(0.1): break
         PROPERTIES.setPropertyBool('sendLocker',True)
         try: yield
         finally: #throttle calls, low power devices suffer segfault during rpc flood.
@@ -43,13 +43,14 @@ class JSONRPC:
         del monitor
 
 
-    def sendJSON(self, param, timeout=30):
+    def sendJSON(self, param, timeout=60):
         with self.sendLocker():
             command = param
             command["jsonrpc"] = "2.0"
             command["id"] = ADDON_ID
             self.log('sendJSON, command = %s'%(dumpJSON(command)))
-            response = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))#(killit( or {'error':{'message':'JSONRPC timed out!'}})
+            response = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))
+            #response = loadJSON((killit(xbmc.executeJSONRPC)(timeout,dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
             if response.get('error'):
                 self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
                 response.setdefault('result',{})['error'] = response.pop('error')
@@ -79,7 +80,8 @@ class JSONRPC:
     def walkFileDirectory(self, path, media='files', depth=5, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         walk = dict()
         self.log('walkFileDirectory, walking %s, depth = %s'%(path,depth))
-        for idx, item in enumerate(self.getDirectory({"directory":path,"media":media},True,checksum,expiration).get('files',[])):
+        items = self.getDirectory({"directory":path,"media":media},True,checksum,expiration).get('files',[])
+        for idx, item in enumerate(items):
             if item.get('filetype') == 'file':
                 if chkDuration:
                     item['duration'] = self.getDuration(item.get('file'),item, accurate=bool(SETTINGS.getSettingInt('Duration_Type')))
@@ -446,7 +448,7 @@ class JSONRPC:
         self.log("requestList, id: %s, getDirectory = %s, media = %s, limit = %s, sort = %s, query = %s, limits = %s\npath = %s"%(citem['id'],getDirectory,media,page,sort,query,limits,path))
         
         if limits.get('end',-1) == -1: #global default, replace with autoPagination.
-            limits = self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)])) #get
+            limits = self.autoPagination(citem['id'], path, query) #get
             self.log('requestList, id = %s autoPagination limits = %s'%(citem['id'],limits))
             if limits.get('total',0) > page and sort.get("method","") == "random":
                 limits = self.randomPagination(page,limits)
@@ -471,7 +473,7 @@ class JSONRPC:
             # restart page to 0, exceeding boundaries.
             self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-        self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #set 
+        self.autoPagination(citem['id'], path, query, limits) #set 
         
         errors = results.get('error',{})
         items  = results.get(key, [])
@@ -485,9 +487,13 @@ class JSONRPC:
             return items, limits, errors
 
 
-    def autoPagination(self, id, path, limits={}):
-        if not limits: return (self.cache.get('autoPagination.%s.%s'%(id,getMD5(path)), checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
-        else:          return  self.cache.set('autoPagination.%s.%s'%(id,getMD5(path)), limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
+    def resetPagination(self, id, path, query={}):
+        return self.autoPagination(id, path, query, limits={"end": 0, "start": 0, "total":0})
+            
+            
+    def autoPagination(self, id, path, query={}, limits={}):
+        if not limits: return (self.cache.get('autoPagination.%s.%s.%s'%(id,getMD5(path),getMD5(dumpJSON(query))), checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
+        else:          return  self.cache.set('autoPagination.%s.%s.%s'%(id,getMD5(path),getMD5(dumpJSON(query))), limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
             
              
     def randomPagination(self, page=SETTINGS.getSettingInt('Page_Limit'), limits={}, start=0):
@@ -502,7 +508,8 @@ class JSONRPC:
         password = ''
         secure   = False
         enabled  = True
-        for setting in self.getSetting('control','services'):
+        settings = self.getSetting('control','services')
+        for setting in settings:
             if setting.get('id','').lower() == 'services.webserver' and not setting.get('value'):
                 enabled = False
                 DIALOG.notificationDialog(LANGUAGE(32131))

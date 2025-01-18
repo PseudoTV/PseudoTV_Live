@@ -17,8 +17,9 @@
                 <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" end="100" time="240"/>
             </animation>
-            <top>270</top>
-            <left>480</left>
+            <centertop>50%</centertop>
+            <centerleft>50%</centerleft>
+            <height>540</height>
             <width>960</width>
             <control type="button">
                 <top>80</top>
@@ -96,16 +97,18 @@
             </control>
             <control type="group" id="3">
                 <control type="image">
-                    <left>200</left>
-                    <top>255</top>
+                    <centertop>50%</centertop>
+                    <top>212</top>
+                    <left>135</left>
                     <width>100</width>
                     <height>100</height>
                     <aspectratio aligny="center">keep</aspectratio>
                     <texture colordiffuse="FF000000">dialogs/extendedprogress/loading-back.png</texture>
                 </control>
                 <control type="image">
-                    <left>200</left>
-                    <top>255</top>
+                    <centertop>50%</centertop>
+                    <top>212</top>
+                    <left>135</left>
                     <width>100</width>
                     <height>100</height>
                     <aspectratio aligny="center">keep</aspectratio>
@@ -113,25 +116,27 @@
                     <animation effect="rotate" center="auto" start="360" end="0" time="1500" loop="true" condition="true">Conditional</animation>
                 </control>
                 <control type="image" id="40001">
+                    <centertop>50%</centertop>
+                    <top>100</top>
                     <left>30</left>
-                    <top>85</top>
-                    <width>440</width>
-                    <height>440</height>
+                    <width>auto</width>
+                    <height>410</height>
                     <aspectratio aligny="center" align="center">keep</aspectratio>
                 </control>
                 <control type="textbox" id="40002">
-                    <left>510</left>
-                    <top>80</top>
+                    <centertop>50%</centertop>
+                    <left>545</left>
+                    <top>100</top>
                     <width>400</width>
-                    <height>375</height>
+                    <height>280</height>
                     <font>font12</font>
                     <align>justify</align>
                     <aligny>top</aligny>
                     <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
                 </control>
                 <control type="button" id="40003">
-                    <left>660</left>
-                    <top>440</top>
+                    <right>30</right>
+                    <bottom>30</bottom>
                     <width>300</width>
                     <height>100</height>
                     <label/>

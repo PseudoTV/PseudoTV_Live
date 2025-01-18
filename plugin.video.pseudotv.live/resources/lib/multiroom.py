@@ -122,7 +122,7 @@ class Multiroom:
                 if       payload.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(payload.get('host'),payload.get('name'))
                 elif not payload.get('enabled',False) and instancePath:     changed = FileAccess.delete(instancePath)
                 else:                                                       changed = False
-                if changed: PROPERTIES.setPropTime('chkPVRRefresh')
+                if changed: PROPERTIES.setPropTimer('chkPVRRefresh')
                 self.log('addServer, payload changed, chkPVRRefresh = %s'%(changed))
             return True
 
@@ -166,7 +166,7 @@ class Multiroom:
                             DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
                             servers[liz.getLabel()]['enabled'] = True
                         if not instancePath: 
-                            if SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel()): PROPERTIES.setPropTime('chkPVRRefresh')
+                            if SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel()): PROPERTIES.setPropTimer('chkPVRRefresh')
                     else:
                         if servers[liz.getLabel()].get('enabled',False):
                             DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
@@ -185,7 +185,7 @@ class Multiroom:
                 with PROPERTIES.interruptActivity():
                     if self.jsonRPC.setSettingValue("services.zeroconf","true",que=False):
                         DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30035)))
-                        PROPERTIES.setEpochTime('chkKodiSettings')
+                        PROPERTIES.setEpochTimer('chkKodiSettings')
         else: DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30034)))
                     
             

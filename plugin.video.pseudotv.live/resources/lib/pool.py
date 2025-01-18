@@ -41,7 +41,7 @@ def timeit(method):
     
 def killit(method):
     @wraps(method)
-    def wrapper(wait=15, *args, **kwargs):
+    def wrapper(wait=60, *args, **kwargs):
         class waiter(Thread):
             def __init__(self):
                 Thread.__init__(self)
@@ -85,7 +85,7 @@ def threadit(method):
         thread_name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
         for thread in thread_enumerate():
             if thread.name == thread_name and thread.is_alive():
-                thread.cancel()
+                if hasattr(thread, 'cancel'): thread.cancel()
                 log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
                 
         thread = Thread(None, method, None, args, kwargs)
@@ -103,7 +103,7 @@ def timerit(method):
         thread_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
         for timer in thread_enumerate():
             if timer.name == thread_name and timer.is_alive():
-                timer.cancel()
+                if hasattr(timer, 'cancel'): timer.cancel()
                 try: timer.join()
                 except: pass
                 log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
@@ -212,8 +212,7 @@ class Cores:
             if res > 0: return res
         except OSError: pass
         return 1
-        
-        
+
 class ThreadPool:
     CPUCount    = Cores().CPUcount()
     ThreadCount = CPUCount*8

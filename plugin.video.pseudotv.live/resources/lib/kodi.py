@@ -355,14 +355,16 @@ class Settings:
 
     def setUpdateChannels(self, id):
         ids = self.getUpdateChannels()
-        ids.append(id)
-        Properties().setPropTime('chkChannels')
+        if isinstance(id, list): ids.extend(id)
+        else:                    ids.append(id)
+        Properties().setEpochTimer('chkChannels')
         return self.setCacheSetting('updateChannels',list(set(ids)))
     
     
     def setResetChannels(self, id):
         ids = self.getResetChannels()
-        ids.append(id)
+        if isinstance(id, list): ids.extend(id)
+        else:                    ids.append(id)
         return self.setCacheSetting('clearChannels',list(set(ids)))
 
 
@@ -413,9 +415,11 @@ class Settings:
             xmltv = XMLTVS()
             payload.pop('updated')
             payload.pop('md5')
-            payload['m3u']     = M3U().getM3U()
-            payload['xmltv']   = {'stations'  :[{'id':station.get('id'),'display-name':station.get('display-name',[['','']])[0][0],'icon':station.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for station in xmltv.getChannels()],
-                                  'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in xmltv.getRecordings()], 
+            payload['m3u'] = M3U().getM3U()
+            stations = xmltv.getChannels()
+            recordings = xmltv.getRecordings()
+            payload['xmltv']   = {'stations'  :[{'id':station.get('id'),'display-name':station.get('display-name',[['','']])[0][0],'icon':station.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for station in stations],
+                                  'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in recordings], 
                                   'programmes':[{'id':key,'end-time':datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
             payload['library'] = Library().getLibrary()
             payload['servers'] = Multiroom().getDiscovery()
@@ -538,7 +542,7 @@ class Settings:
         found   = False
         monitor = MONITOR()
         for file in [filename for filename in FileAccess.listdir(PVR_CLIENT_LOC)[1] if filename.endswith('.xml')]:
-            if monitor.waitForAbort(.0001): break
+            if monitor.waitForAbort(0.1): break
             elif file.startswith('instance-settings-'):
                 try:
                     xml = FileAccess.open(os.path.join(PVR_CLIENT_LOC,file), "r")
@@ -571,7 +575,8 @@ class Settings:
         instancePath = self.hasPVRInstance(instance)
         if instancePath:
             fle = FileAccess.open(instancePath,'r')
-            for line in fle.readlines():
+            lines = fle.readlines()
+            for line in lines:
                 if not 'id=' in line: continue
                 match = re.compile(r'<setting id=\"(.*)\" default=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
                 try: instanceConf.update({match.group(1):(match.group(2),match.group(3))})
@@ -598,7 +603,7 @@ class Settings:
             name      = addon.getAddonInfo('name')
             osettings = self.getPVRInstanceSettings(instance)
             for setting, newvalue in list(nsettings.items()):
-                if monitor.waitForAbort(.0001): return False
+                if monitor.waitForAbort(0.1): return False
                 default, oldvalue = osettings.get(setting,({},{}))
                 if str(newvalue).lower() != str(oldvalue).lower(): 
                     changes[setting] = (oldvalue, newvalue)
@@ -614,7 +619,7 @@ class Settings:
                     return False
                 
             for s, v in list(changes.items()):
-                if monitor.waitForAbort(.0001): return False
+                if monitor.waitForAbort(0.1): return False
                 addon.setSetting(s, v[1])
                 self.log('chkPluginSettings, setting = %s, current value = %s => %s'%(s,oldvalue,v[1]))
             self.setPVRInstance(instance)
@@ -679,11 +684,11 @@ class Properties:
         return self.getEXTPropertyBool('PseudoTVRunning')
 
 
-    def setEpochTime(self, key, time=0):
+    def setEpochTimer(self, key, time=0):
         return self.setPropertyInt(key,time)
 
 
-    def setPropTime(self, key, state=True):
+    def setPropTimer(self, key, state=True):
         return self.setEXTPropertyBool('%s.%s'%(ADDON_ID,key),state)
 
 
@@ -701,6 +706,11 @@ class Properties:
         
     def setEnabledServers(self, state=True):
         return self.setEXTPropertyBool('%s.has.Enabled_Servers'%(ADDON_ID),state)
+        
+        
+    def setPendingShutdown(self, state=True):
+        if state: Dialog().notificationDialog(LANGUAGE(32141))
+        return self.setEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID),state)
         
         
     def setPendingRestart(self, state=True):
@@ -775,6 +785,10 @@ class Properties:
     def hasEnabledServers(self):
         return self.getEXTPropertyBool('%s.has.Enabled_Servers'%(ADDON_ID))
         
+                
+    def isPendingShutdown(self):
+        return self.getEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID))
+
         
     def isPendingRestart(self):
         return self.getEXTPropertyBool('%s.pendingRestart'%(ADDON_ID))
@@ -1081,8 +1095,8 @@ class Builtin:
 
 
     @contextmanager
-    def busy_dialog(self):
-        if not self.isBusyDialog():
+    def busy_dialog(self, cancel=False):
+        if not self.isBusyDialog() and not cancel:
             try: 
                 if self.busy is None:
                     from overlay import Busy 
@@ -1142,7 +1156,7 @@ class Dialog:
     def doInfoMonitor(self):
         monitor = MONITOR()
         while not monitor.abortRequested():
-            if not self.fillInfoMonitor() or monitor.waitForAbort(0.5): break
+            if not self.fillInfoMonitor() or monitor.waitForAbort(0.1): break
         del monitor
             
 
@@ -1287,63 +1301,68 @@ class Dialog:
         else:
             pDialog = self.progressBGDialog(message=message,header=header)
             for idx in range(int(wait)):
-                pDialog = self.progressBGDialog((((idx+1) * 100)//int(wait)),control=pDialog,header=header)
+                pDialog = self.progressBGDialog((((idx+1) * 100)//int(wait)),pDialog,header=header)
                 if pDialog is None or MONITOR().waitForAbort(1.0): break
             if hasattr(pDialog, 'close'): pDialog.close()
         return True
 
 
-    def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None):
-        # if silent is None and self.settings.getSettingBool('Silent_OnPlayback'): 
-            # silent = (self.properties.getPropertyBool('OVERLAY') | self.builtin.getInfoBool('Playing','Player'))
+    def updateProgress(self, percent=0, control=None, message='', header=ADDON_NAME):
+        self.log('updateProgress: percent = %s, control = %s, message = %s, header = %s'%(percent, control, message, header))
+        if   isinstance(control,xbmcgui.DialogProgressBG): return self.progressBGDialog(percent, control, message, header)
+        elif isinstance(control,xbmcgui.DialogProgress):
+            title = header.replace('%s, '%(ADDON_NAME),'')
+            match = re.compile(r'(.*?): (.*?)\%', re.IGNORECASE).search(message)
+            try:
+                message = match.group(1)
+                percent = int(match.group(2))
+            except: pass
+            if title: message = '%s: %s'%(title,message)
+            return self.progressDialog(percent, control, message)
+
+
+    def progressDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
+        self.log('progressDialog: percent = %s, control = %s, message = %s, header = %s'%(percent, control, message, header))
+        if control is None and int(percent) == 0:
+            control = xbmcgui.DialogProgress()
+            control.create(header, message)  
+        elif control:
+            if int(percent) == 100 or control.iscanceled(): 
+                return control.close()
+            elif hasattr(control, 'update'): control.update(int(percent), message)
+        return control
         
-        # if silent:
-            # if hasattr(control, 'close'): control.close()
-            # self.log('progressBGDialog, silent = %s; closing dialog'%(silent))
-            # return 
-            
+        
+    def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
+        self.log('progressBGDialog: percent = %s, control = %s, message = %s, header = %s'%(percent, control, message, header))
         if control is None and int(percent) == 0:
             control = xbmcgui.DialogProgressBG()
             control.create(header, message)
         elif control:
             if int(percent) == 100 or control.isFinished(): 
-                if hasattr(control, 'close'):
-                    control.close()
-                    return None
-            elif hasattr(control, 'update'):  control.update(int(percent), header, message)
+                return control.close()
+            elif hasattr(control,'update'): control.update(int(percent), header, message)
         return control
         
 
-    def progressDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
-        if control is None and int(percent) == 0:
-            control = xbmcgui.DialogProgress()
-            control.create(header, message)
-        elif control:
-            if int(percent) == 100 or control.iscanceled(): 
-                if hasattr(control, 'close'):
-                    control.close()
-                    return None
-            elif hasattr(control, 'update'):  control.update(int(percent), message)
-        return control
-        
-   
     def infoDialog(self, listitem):
         xbmcgui.Dialog().info(listitem)
         
 
-    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO):
+    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO, show=True):
         self.log('notificationDialog: %s'%(message))
         ## - Builtin Icons:
         ## - xbmcgui.NOTIFICATION_INFO
         ## - xbmcgui.NOTIFICATION_WARNING
         ## - xbmcgui.NOTIFICATION_ERROR
-        try:    xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
-        except: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
+        if show:
+            try:    xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
+            except: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
         return True
              
              
-    def selectDialog(self, items, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=SELECT_DELAY, multi=True):
-        self.log('selectDialog, items = %s, header = %s, preselect = %s, useDetails = %s, autoclose = %s, multi = %s'%(len(items),header,preselect,useDetails,autoclose,multi))
+    def selectDialog(self, items, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=SELECT_DELAY, multi=True, custom=True):
+        self.log('selectDialog, items = %s, header = %s, preselect = %s, useDetails = %s, autoclose = %s, multi = %s, custom = %s'%(len(items),header,preselect,useDetails,autoclose,multi,custom))
         if multi == True:
             if not preselect: preselect = [-1]
             select = xbmcgui.Dialog().multiselect(header, items, (autoclose*1000), preselect, useDetails)

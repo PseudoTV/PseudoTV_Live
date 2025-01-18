@@ -27,10 +27,30 @@ from fillers    import Fillers
 from resources  import Resources
 from seasonal   import Seasonal 
 
+class Service:
+    class player:
+        from rules import RulesList
+        runActions = RulesList().runActions
+    from jsonrpc import JSONRPC
+    player  = player()
+    monitor = xbmc.Monitor()
+    jsonRPC = JSONRPC()
+    def _interrupt(self) -> bool:
+        return PROPERTIES.isPendingInterrupt()
+    def _suspend(self) -> bool:
+        return PROPERTIES.isPendingSuspend()
+        
+        
 class Builder:
-    loopback   = {}
+    loopback = {}
     
     def __init__(self, service=None):
+        if service is None: service = Service()
+        self.service      = service        
+        self.jsonRPC      = service.jsonRPC
+        self.cache        = service.jsonRPC.cache
+        self.runActions   = service.player.runActions
+
         #global dialog
         self.pDialog    = None
         self.pCount     = 0
@@ -53,8 +73,8 @@ class Builder:
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
         self.padScheduling    = True #todo adv. rule and global opt. 
         
-        self.filters          = {} #{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
-        self.sort             = {"ignorearticle":True,"method":"%s"%(SETTINGS.getSetting('Sort_Method').lower()),"order":"ascending","useartistsortname":True}
+        self.filters          = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
+        self.sort             = {}#{"ignorearticle":True,"method":"random","order":"ascending","useartistsortname":True}
         self.limits           = {"end":-1,"start":0,"total":0}
         self.completedBuild   = False
         
@@ -72,11 +92,6 @@ class Builder:
                                  "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{},
                                  "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI'),
                                  "incIMDB":SETTINGS.getSettingBool('Include_Trailers_IMDB')}}
-        
-        self.service          = service
-        self.jsonRPC          = service.jsonRPC
-        self.cache            = service.jsonRPC.cache
-        self.runActions       = service.player.runActions
 
         self.xsp              = XSP()
         self.xmltv            = XMLTVS()
@@ -86,6 +101,10 @@ class Builder:
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    def getChannels(self):
+        return self.sortChannels(self.verify())
 
 
     def verify(self, channels=None):
@@ -100,7 +119,7 @@ class Builder:
             yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
 
 
-    def build(self, channels: list=[]):
+    def build(self, channels: list=[], preview=False):
         def __hasGuideData(citem):
             return dict(self.xmltv.hasProgrammes([citem])).get(citem['id'],False)
             
@@ -108,59 +127,62 @@ class Builder:
             if isinstance(cacheResponse,list):
                 if len(cacheResponse) > 0: return True
             return False
-            
-        with PROPERTIES.legacy():
-            if not channels: channels = Channels().getChannels()
-            if not channels:
-                self.log('build, no verified channels found!')
-                return False, False
-
-            now       = getUTCstamp()
-            start     = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
-            stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
-            self.pDialog = DIALOG.progressBGDialog()
-            self.completedBuild = True
-            
-            updated = set()
-            for idx, citem in enumerate(self.sortChannels(self.verify(channels))):
-                citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
-                self.log('build, id = %s, rules = %s'%(citem['id'],citem.get('rules',{})))
-                if self.service._interrupt():
-                    self.completedBuild = False
-                    self.pErrors = [LANGUAGE(32160)]
-                    self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
-                    break
-                elif self.service._suspend():
-                    channels.insert(idx,citem)
-                    self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
-                    self.service.monitor.waitForAbort(SUSPEND_TIMER)
-                    continue
-                else:
-                    self.pMSG   = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
-                    self.pName  = citem['name']
-                    self.pCount = int(idx*100//len(channels))
-                    self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
+        
+        if not PROPERTIES.isRunning('builder.build'):
+            with PROPERTIES.legacy(), PROPERTIES.setRunning('builder.build'):
+                if not channels: channels = self.getChannels()
+                if len(channels) > 0:
+                    now       = getUTCstamp()
+                    start     = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
+                    stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
+                    if preview: self.pDialog = DIALOG.progressDialog()
+                    else:       self.pDialog = DIALOG.progressBGDialog()
+                    self.completedBuild = True
                     
-                    if   (stopTimes.get(citem['id']) or start) > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
-                    elif  stopTimes.get(citem['id']):                                                       self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
-                    else:                                                                                   self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
-                    
-                    cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
-                    if cacheResponse:
-                        if self.addChannelStation(citem) and __hasProgrammes(cacheResponse):
-                            updated.add(self.addChannelProgrammes(citem, cacheResponse)) #added xmltv lineup entries.
-                    else: 
-                        if self.completedBuild: self.pErrors.append(LANGUAGE(32026))
-                        chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
-                        self.log('build, [%s] In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
-                        self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
-                        if not __hasGuideData(citem): self.delChannelStation(citem) #only remove m3u references when no valid programmes found.
-                    self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
-                        
-            self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completedBuild else LANGUAGE(32135)))
-            self.log('build, completed = %s, updated = %s, saved = %s'%(self.completedBuild,bool(updated),self.saveChannelLineups()))
-            return self.completedBuild, bool(updated)
-
+                    updated  = set()
+                    channels = self.sortChannels(self.verify(channels))
+                    for idx, citem in enumerate(channels):
+                        citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
+                        self.log('build, id = %s, rules = %s, preview = %s'%(citem['id'],citem.get('rules',{}),preview))
+                        if self.service._interrupt():
+                            self.completedBuild = False
+                            self.pErrors = [LANGUAGE(32160)]
+                            self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
+                            break
+                        elif self.service._suspend():
+                            channels.insert(idx,citem)
+                            self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
+                            self.service.monitor.waitForAbort(SUSPEND_TIMER)
+                            continue
+                        else:
+                            self.pMSG   = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
+                            self.pName  = citem['name']
+                            self.pCount = int(idx*100//len(channels))
+                            self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
+                            
+                            if   (stopTimes.get(citem['id']) or start) > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
+                            elif  stopTimes.get(citem['id']):                                                       self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
+                            else:                                                                                   self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(32023)) #Building
+                            
+                            cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
+                            if preview:
+                                return cacheResponse
+                            elif cacheResponse:
+                                if self.addChannelStation(citem) and __hasProgrammes(cacheResponse): updated.add(self.addChannelProgrammes(citem, cacheResponse)) #added xmltv lineup entries.
+                            else: 
+                                if self.completedBuild: self.pErrors.append(LANGUAGE(32026))
+                                chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
+                                self.log('build, [%s] In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
+                                self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
+                                if not __hasGuideData(citem): self.delChannelStation(citem) #only remove m3u references when no valid programmes found.
+                            self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
+                                
+                    self.pDialog = DIALOG.updateProgress(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completedBuild else LANGUAGE(32135)))
+                    self.log('build, completed = %s, updated = %s, saved = %s'%(self.completedBuild,bool(updated),self.saveChannelLineups()))
+                    return self.completedBuild, bool(updated)
+                else: self.log('build, no verified channels found!')
+        return False, False
+        
 
     def sortChannels(self, channels: list) -> list:
         return Channels().sortChannels(channels)
@@ -170,7 +192,7 @@ class Builder:
         self.log('getFileList, [%s] start = %s'%(citem['id'],start))
         try:
             if start > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): #max guidedata days to seconds, minus fill buffer (12hrs) in seconds.
-                if self.pDialog: self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message=self.pName, header='%s, %s'%(ADDON_NAME,self.pMSG))
+                if self.pDialog: self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message=self.pName, header='%s, %s'%(ADDON_NAME,self.pMSG))
                 self.log('getFileList, [%s] programmes over MAX_DAYS! start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
             
@@ -178,7 +200,7 @@ class Builder:
             radio = True if citem.get('radio',False) else False
             media = 'music' if radio else 'video'
             self.log('getFileList, [%s] multipath = %s, radio = %s, media = %s, path = %s'%(citem['id'],multi,radio,media,citem.get('path')),xbmc.LOGINFO)
-
+            
             if radio: cacheResponse = self.buildRadio(citem)
             else:     cacheResponse = self.buildChannel(citem)
             
@@ -233,7 +255,7 @@ class Builder:
                     start = item['stop']
                     totDur += item['duration']
                     tmpList.append(item)
-                    if self.pDialog: self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: Extending guidedata %s/%s'%(self.pName,totDur,MIN_EPG_DURATION),header='%s, %s'%(ADDON_NAME,self.pMSG))
+                    if self.pDialog: self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: Extending guidedata %s/%s'%(self.pName,totDur,MIN_EPG_DURATION),header='%s, %s'%(ADDON_NAME,self.pMSG))
                     self.log("addScheduling; [%s] ++ fileList = %s, totDur = %s/%s, stop = %s"%(citem['id'],len(tmpList),totDur,MIN_EPG_DURATION,tmpList[-1].get('stop')))
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
@@ -331,11 +353,7 @@ class Builder:
         dirList, fileList, seasoneplist, trailersdict = [], [], [], {}
         items, nlimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
         
-        if self.service._interrupt():
-            self.jsonRPC.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #rollback pagination limits
-            return [], []
-            
-        elif errors.get('message'):
+        if errors.get('message'):
             self.pErrors.append(errors['message'])
             return fileList, dirList
             
@@ -358,12 +376,12 @@ class Builder:
                 if not item.get('type'): item['type'] = query.get('key','files')
                 
                 if self.service._interrupt():
-                    self.jsonRPC.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #rollback pagination limits
+                    self.jsonRPC.autoPagination(citem['id'], path, query, limits) #rollback pagination limits
                     return [], []
                     
                 elif self.service._suspend(): 
                     items.insert(idx,item)
-                    self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
+                    self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
                     self.service.monitor.waitForAbort(SUSPEND_TIMER)
                     continue
                     
@@ -396,7 +414,7 @@ class Builder:
                         item['media']        = media
                         item['originalpath'] = path #use for path sorting/playback verification 
                         if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554
-                        if self.pDialog: self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
+                        if self.pDialog: self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
 
                         title   = (item.get("title")     or item.get("label") or dirItem.get('label') or '')
                         tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')
@@ -412,13 +430,13 @@ class Builder:
                             label = tvtitle
                             item["tvshowtitle"]  = tvtitle
                             item["episodetitle"] = title
-                            item["episodelabel"] = '%s (%sx%s)'%(title,season,str(episode).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
-                            item["showlabel"]    = '%s %s'%(item["tvshowtitle"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
+                            item["episodelabel"] = '%s%s'%(title,' (%sx%s)'%(season,str(episode).zfill(2))) #Episode Title (SSxEE) Mimic Kodi's PVR label format
+                            item["showlabel"]    = '%s%s'%(item["tvshowtitle"],' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
                         else: # This is a Movie
                             label = title
                             item["episodetitle"] = item.get("tagline","")
                             item["episodelabel"] = item.get("tagline","")
-                            item["showlabel"]    = '%s %s'%(item["title"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
+                            item["showlabel"]    = '%s%s'%(item["title"], ' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
                     
                         if not label: 
                             self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))

@@ -48,7 +48,7 @@ class Cache:
     def cacheLocker(self): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
         monitor = MONITOR()
         while not monitor.abortRequested() and xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true':
-            if monitor.waitForAbort(.0001): break
+            if monitor.waitForAbort(0.1): break
         del monitor
         xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
         try: yield
@@ -56,23 +56,22 @@ class Cache:
             xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'false')
 
 
-    def __init__(self, mem_cache=False, is_json=False):
+    def __init__(self, mem_cache=False, is_json=False, disable_cache=False):
         self.cache.enable_mem_cache = mem_cache
         self.cache.data_is_json     = is_json  
-        self.disable_cache          = (REAL_SETTINGS.getSettingBool('Debug_Enable') & REAL_SETTINGS.getSettingBool('Disable_Cache'))
+        self.disable_cache          = (disable_cache | REAL_SETTINGS.getSettingBool('Disable_Cache'))
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
-
+        
     def getname(self, name):
         if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
         return name.lower()
         
         
     def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
-        # with self.lock:
         if value and not self.disable_cache:
             with self.cacheLocker():
                 self.log('set, name = %s, value = %s'%(self.getname(name),'%s...'%(str(value)[:128])))
@@ -81,7 +80,6 @@ class Cache:
         
     
     def get(self, name, checksum=ADDON_VERSION, json_data=False):
-        # with self.lock:
         if not self.disable_cache:
             with self.cacheLocker():
                 try: 

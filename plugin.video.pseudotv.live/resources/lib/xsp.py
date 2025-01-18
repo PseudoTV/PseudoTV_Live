@@ -115,29 +115,25 @@ class XSP:
     def parseDXSP(self, opath: str, sort: dict={}, filter: dict={}, incExtras: bool=SETTINGS.getSettingBool('Enable_Extras')):
         try:
             path, params = opath.split('?xsp=')
-            
-            if   path.startswith('videodb://tvshows/'): type = 'episodes'
-            elif path.startswith('videodb://movies/'):  type = 'movies'
-            elif path.startswith('musicdb://songs/'):   type = 'music'
-            else:                                       type = 'files'
-            
-            if type == 'episodes' and '-1/-1/-1/' not in path: flatten = '-1/-1/-1/'
-            else:                                              flatten = ''
-
             media = 'music' if path.lower().startswith('musicdb://') else 'video'
             param = loadJSON(unquoteString(params))
-            sort.update(param.get("order",{}))
-            filter.update(param.get("rules",{}))
             
-            if not incExtras and type.startswith(tuple(TV_TYPES)): #filter out extras/specials
+            if   path.startswith('videodb://tvshows/'): param["type"] = 'episodes'
+            elif path.startswith('videodb://movies/'):  param["type"] = 'movies'
+            elif path.startswith('musicdb://songs/'):   param["type"] = 'music'
+            else:                                       param["type"] = 'files'
+            
+            if param["type"] == 'episodes' and '-1/-1/-1/' not in path: flatten = '-1/-1/-1/'
+            else:                                                       flatten = ''
+
+            if not incExtras and param["type"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                 filter.setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"}, 
                                                     {"field":"episode","operator":"greaterthan","value":"0"}])
-                                                    
-            param["type"]  = type
-            param["order"] = sort
-            param["rules"] = filter
+            if sort: param["order"].update(sort)
+            #if filter: param["rules"].update(filter)
+            
             opath = '%s%s?xsp=%s'%(path,flatten,quoteString(dumpJSON(param)))
-            self.log("parseDXSP, type = %s, media = %s, sort = %s, filter = %s\npath = %s"%(type, media, sort, {}, opath))
+            self.log("parseDXSP, type = %s, media = %s, sort = %s, filter = %s\npath = %s"%(param["type"], media, sort, {}, opath))
         except Exception as e: self.log("parseDXSP, failed! %s"%(e), xbmc.LOGERROR)
         return opath, media, sort, {}
         

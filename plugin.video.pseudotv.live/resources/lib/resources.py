@@ -85,7 +85,7 @@ class Resources:
         cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
-                if MONITOR().waitForAbort(.0001): 
+                if MONITOR().waitForAbort(0.1): 
                     self.log('getLogoResources, waitForAbort')
                     break
                 elif not hasAddon(id):
@@ -175,42 +175,36 @@ class Resources:
         return False
         
         
-        # from PIL import Image, ImageDraw, ImageFont
+    def generate_placeholder(self, text, background_image_path, output_path, font_path="arial.ttf", font_size=30, text_color=(255, 255, 255)):
+        """
+        Generates a placeholder image with text on a background image.
 
-# def generate_placeholder(text, background_image_path, output_path, font_path="arial.ttf", font_size=30, text_color=(255, 255, 255)):
-    # """
-    # Generates a placeholder image with text on a background image.
+        Args:
+            text: The text to display on the placeholder.
+            background_image_path: Path to the background image.
+            output_path: Path to save the generated placeholder image.
+            font_path: Path to the font file (optional).
+            font_size: Font size for the text (optional).
+            text_color: Color of the text (optional).
+        """
 
-    # Args:
-        # text: The text to display on the placeholder.
-        # background_image_path: Path to the background image.
-        # output_path: Path to save the generated placeholder image.
-        # font_path: Path to the font file (optional).
-        # font_size: Font size for the text (optional).
-        # text_color: Color of the text (optional).
-    # """
+        if hasAddon('script.module.pil'):
+            from PIL import Image, ImageDraw, ImageFont
+            # Open the background image
+            background_image = Image.open(background_image_path)
+            # Create a drawing object
+            draw = ImageDraw.Draw(background_image)
+            # Choose a font
+            font = ImageFont.truetype(font_path, font_size)
+            # Calculate text size
+            text_width, text_height = draw.textsize(text, font)
+            # Calculate text position for centering 
+            x = (background_image.width - text_width) // 2
+            y = (background_image.height - text_height) // 2
+            # Draw the text on the image
+            draw.text((x, y), text, font=font, fill=text_color)
+            # Save the image
+            background_image.save(output_path)
 
-    # # Open the background image
-    # background_image = Image.open(background_image_path)
-
-    # # Create a drawing object
-    # draw = ImageDraw.Draw(background_image)
-
-    # # Choose a font
-    # font = ImageFont.truetype(font_path, font_size)
-
-    # # Calculate text size
-    # text_width, text_height = draw.textsize(text, font)
-
-    # # Calculate text position for centering
-    # x = (background_image.width - text_width) // 2
-    # y = (background_image.height - text_height) // 2
-
-    # # Draw the text on the image
-    # draw.text((x, y), text, font=font, fill=text_color)
-
-    # # Save the image
-    # background_image.save(output_path)
-
-# # Example usage
-# generate_placeholder("Product Image", "background.jpg", "placeholder.jpg")
+        # Example usage
+        # generate_placeholder("Product Image", "background.jpg", "placeholder.jpg")

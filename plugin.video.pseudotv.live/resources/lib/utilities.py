@@ -31,7 +31,7 @@ class Utilities:
 
    
     def qrWiki(self):
-        DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME))
+        DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
 
 
     def qrSupport(self):
@@ -87,8 +87,7 @@ class Utilities:
         def __cleanPayload(payload):
             def __getDebug(payload): #only post errors
                 debug = payload.get('debug',{})
-                # for key in list(debug.keys()):
-                    # if key in ['LOGDEBUG','LOGINFO']: debug.pop(key)
+                # [debug.pop(key) for key in list(debug.keys()) if key in ['LOGDEBUG','LOGINFO']]
                 return debug
                     
             payload['debug']    = loadJSON(__cleanLog(dumpJSON(__getDebug(payload),idnt=4)))
@@ -127,9 +126,8 @@ class Utilities:
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.isRunning('OVERLAY_MANAGER'):
-            with PROPERTIES.setRunning('OVERLAY_MANAGER'), PROPERTIES.interruptActivity():
-                with BUILTIN.busy_dialog():
-                    from manager import Manager
+            with PROPERTIES.setRunning('OVERLAY_MANAGER'), BUILTIN.busy_dialog():
+                from manager import Manager
                 chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
                 del chmanager
      
@@ -145,20 +143,22 @@ class Utilities:
 
 
     def _togglePVR(self):
-        if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): PROPERTIES.setPropTime('chkPVRRefresh')
+        if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): PROPERTIES.setPropTimer('chkPVRRefresh')
             
 
     def buildMenu(self, select=None):
-        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32120),False) , 'hide':False},#"Rebuild M3U/XMLTV"
-                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32119),True) , 'hide':False},#"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR , 'hide':False},#"Force PVR reload"
-                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart , 'hide':False},#"Force PTVL reload"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTime ,'args':('chkLibrary',) , 'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setPropTime ,'args':('chkFillers',) , 'hide':False}, #Rescan library
-                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':self._runAutotune , 'hide':False}] #Run Autotune
+        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32120),False), 'hide':True}, #"Rebuild M3U/XMLTV"
+                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32119),True) , 'hide':True}, #"Clean Start"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR              , 'hide':False},#"Force PVR reload"
+                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart                    , 'hide':False},#"Force PTVL reload"
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer ,'args':('chkLibrary',), 'hide':False},#Rescan library
+                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setPropTimer ,'args':('chkFillers',) , 'hide':False},#Rebuild Fillers
+                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':self._runAutotune                               , 'hide':False}]#Run Autotune
                 
         with BUILTIN.busy_dialog():
-            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide'))]
+            debugEnabled = SETTINGS.getSettingBool('Debug_Enable')
+            if not debugEnabled: items = [item for item in items if not item.get('hide',False)]
+            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label'))]
             if select is None: select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
             
         if not select is None:
@@ -176,15 +176,15 @@ class Utilities:
          
     def _runAutotune(self):
         SETTINGS.setAutotuned(False)
-        PROPERTIES.setPropTime('chkAutoTune')
-        PROPERTIES.setEpochTime('chkChannels')
+        PROPERTIES.setPropTimer('chkAutoTune')
+        PROPERTIES.setEpochTimer('chkChannels')
          
          
     def _runUpdate(self, full=False):
-        PROPERTIES.setEpochTime('chkChannels')
+        PROPERTIES.setEpochTimer('chkChannels')
         if full:
             SETTINGS.setAutotuned(False)
-            PROPERTIES.setEpochTime('chkLibrary')
+            PROPERTIES.setEpochTimer('chkLibrary')
             PROPERTIES.setPendingRestart()
                
 
@@ -199,25 +199,18 @@ class Utilities:
         keys = list(files.keys())
         if not full: keys = keys[:2]
         if DIALOG.yesnoDialog('%s ?'%(msg)): 
-            with BUILTIN.busy_dialog():
-                 for key in keys:
+            with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
+                for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
+                    else:                             DIALOG.notificationDialog('%s %s'%((LANGUAGE(32127)%(key.replace(':',''))),LANGUAGE(32052)))
         self._runUpdate(full)
-
-
-    def sortMethod(self):
-        self.log('sortMethod')
-        with BUILTIN.busy_dialog():
-            from jsonrpc import JSONRPC
-            values  = sorted([item.title() for item in JSONRPC().getEnums("List.Sort",type="method")])
-        try: return SETTINGS.setSetting('Sort_Method',values[DIALOG.selectDialog(values, LANGUAGE(32214), findItemsInLST(values, [SETTINGS.getSetting('Sort_Method').lower()])[0], False, SELECT_DELAY, False)])
-        except: pass
 
 
     def defaultChannels(self):
         self.log('defaultChannels')
         with BUILTIN.busy_dialog():
-            values = [cleanLabel(value) for value in SETTINGS.getSettingList('Select_server')]
+            values = SETTINGS.getSettingList('Select_server')
+            values = [cleanLabel(value) for value in values]
             values.insert(0,LANGUAGE(30022)) #Auto
             values.insert(1,LANGUAGE(32069))
         select = DIALOG.selectDialog(values, LANGUAGE(30173), findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
@@ -245,9 +238,6 @@ class Utilities:
             elif param.startswith('Move_OnNext'):
                 ctl = (3,15)
                 self.openPositionUtil(2)
-            elif param == 'Sort_Method':
-                ctl = (3,22)
-                self.sortMethod()
                 
             #Multi-Room
             elif param == 'Show_ZeroConf_QR':

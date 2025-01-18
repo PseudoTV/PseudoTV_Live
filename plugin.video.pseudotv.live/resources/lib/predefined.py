@@ -22,8 +22,7 @@ from globals    import *
 
 class Predefined:
     def __init__(self):
-        self.defaultMethod = SETTINGS.getSetting('Sort_Method').lower()
-        
+        ...
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -32,7 +31,7 @@ class Predefined:
     def getParams(self) -> dict:
         params = {}
         params["order"] = {"direction"        :"ascending",
-                           "method"           :self.defaultMethod,
+                           "method"           :"random",
                            "ignorearticle"    :True,
                            "useartistsortname":True}
         return params.copy()

@@ -48,8 +48,9 @@ class Fillers:
        
 
     def fillSources(self):
-        for ftype, values in list(self.builder.bctTypes.items()):
-            if not values.get('enabled',False) or self.builder.service._interrupt(): continue
+        items = list(self.builder.bctTypes.items())
+        for ftype, values in items:
+            if not values.get('enabled',False): continue
             if self.builder.bctTypes.get(ftype,{}).get("incIspot",False):
                 self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).append(self.getAdvertPath())
                 
@@ -158,7 +159,7 @@ class Fillers:
                     else:
                         runtime += item.get('duration')
                         self.log('injectBCTs, adding pre-roll %s - %s'%(item.get('duration'),item.get('file')))
-                        if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Filling Pre-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
+                        if self.builder.pDialog: self.builder.pDialog = DIALOG.updateProgress(self.builder.pCount, self.builder.pDialog, message='Filling Pre-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
                         item.update({'title':'Pre-Roll','episodetitle':item.get('label'),'genre':['Pre-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
                         nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
 
@@ -187,7 +188,7 @@ class Fillers:
                             elif postFillRuntime >= item.get('duration'):
                                 postFillRuntime -= item.get('duration')
                                 self.log('injectBCTs, adding post-roll %s - %s'%(item.get('duration'),item.get('file')))
-                                if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Filling Post-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
+                                if self.builder.pDialog: self.builder.pDialog = DIALOG.updateProgress(self.builder.pCount, self.builder.pDialog, message='Filling Post-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
                                 item.update({'title':'Post-Roll','episodetitle':item.get('label'),'genre':['Post-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
                                 nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
                             elif postFillRuntime < item.get('duration'):

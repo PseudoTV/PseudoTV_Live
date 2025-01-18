@@ -84,7 +84,7 @@ class Autotune:
                     msg = (LANGUAGE(32042)%ADDON_NAME)
                 
                 retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
-                if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038)))) #Yes
+                if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32021))) #Yes
                 elif retval == 2: #Custom
                     if   hasBackup:   return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/backup.py, Recover_Channels)'%(ADDON_ID))
                     elif hasServers:  return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID))
@@ -93,14 +93,15 @@ class Autotune:
         else: return True
             
         for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
-            if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+            if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
             self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
         return True
         
 
     def selectAUTOTUNE(self, ATtype: str, autoSelect: bool=False, rebuildChannels: bool=False):
         self.log('selectAUTOTUNE, ATtype = %s, autoSelect = %s, rebuildChannels = %s'%(ATtype,autoSelect,rebuildChannels))
-        def __buildMenuItem(item): return LISTITEMS.buildMenuListItem(item['name'],item['type'],item['logo'])
+        def __buildMenuItem(item):
+            return LISTITEMS.buildMenuListItem(item['name'],item['type'],item['logo'])
         
         def _match(enabledItems):
             for item in enabledItems:
@@ -121,7 +122,9 @@ class Autotune:
             if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32018)%(ATtype))
             return
         
-        lizlst = poolit(__buildMenuItem)(items)
+        with BUILTIN.busy_dialog(rebuildChannels):
+            lizlst = poolit(__buildMenuItem)(items)
+            
         if rebuildChannels:#rebuild channels.json entries
             selects = list(_match(self.library.getEnabled(ATtype)))
         elif autoSelect:#build sample channels

@@ -31,39 +31,40 @@ class Plugin:
 
 
     def __init__(self, sysARG=sys.argv, sysInfo={}):
-        self.sysARG      = sysARG
-        self.sysInfo     = sysInfo
-        self.jsonRPC     = JSONRPC()
-        self.cache       = SETTINGS.cache
-        
-        self.debugEnabled = SETTINGS.getSettingBool('Debug_Enable')
-        
-        self.sysInfo['radio'] = sysInfo.get('mode','').lower() == "radio"
-        self.sysInfo['now']   = int(sysInfo.get('now')   or int(getUTCstamp()))
-        self.sysInfo['start'] = int(sysInfo.get('start') or '-1')
-        self.sysInfo['stop']  = int(sysInfo.get('stop')  or '-1')
-        self.sysInfo['citem'] = (sysInfo.get('citem')    or combineDicts({'id':sysInfo.get("chid")},sysInfo.get('fitem',{}).get('citem',{})))
-        
-        if sysInfo.get('fitem'):
-            if sysInfo.get("nitem"): self.sysInfo.update({'citem':combineDicts(self.sysInfo["nitem"].pop('citem'),self.sysInfo["fitem"].pop('citem'))})
-            else:                    self.sysInfo.update({'citem':combineDicts(self.sysInfo["citem"],self.sysInfo["fitem"].pop('citem'))})
+        with BUILTIN.busy_dialog():
+            self.sysARG      = sysARG
+            self.sysInfo     = sysInfo
+            self.jsonRPC     = JSONRPC()
+            self.cache       = SETTINGS.cache
             
-            if self.sysInfo.get('start') == -1:
-                self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
-                self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
+            self.debugEnabled = SETTINGS.getSettingBool('Debug_Enable')
+            
+            self.sysInfo['radio'] = sysInfo.get('mode','').lower() == "radio"
+            self.sysInfo['now']   = int(sysInfo.get('now')   or int(getUTCstamp()))
+            self.sysInfo['start'] = int(sysInfo.get('start') or '-1')
+            self.sysInfo['stop']  = int(sysInfo.get('stop')  or '-1')
+            self.sysInfo['citem'] = (sysInfo.get('citem')    or combineDicts({'id':sysInfo.get("chid")},sysInfo.get('fitem',{}).get('citem',{})))
+            
+            if sysInfo.get('fitem'):
+                if sysInfo.get("nitem"): self.sysInfo.update({'citem':combineDicts(self.sysInfo["nitem"].pop('citem'),self.sysInfo["fitem"].pop('citem'))})
+                else:                    self.sysInfo.update({'citem':combineDicts(self.sysInfo["citem"],self.sysInfo["fitem"].pop('citem'))})
+                
+                if self.sysInfo.get('start') == -1:
+                    self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
+                    self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
 
-            self.sysInfo['duration']  = float(sysInfo.get('duration')  or self.jsonRPC._getRuntime(self.sysInfo['fitem']) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')))
-        else:
-            self.sysInfo['duration']  = float((sysInfo.get('duration') or '-1'))
-            
-        try:
-            self.sysInfo['seek']               = int(sysInfo.get('seek') or (abs(self.sysInfo['start'] - self.sysInfo['now']) if self.sysInfo['start'] > 0 else -1))
-            self.sysInfo["progresspercentage"] = -1 if self.sysInfo['seek'] == -1 else (self.sysInfo["seek"]/self.sysInfo["duration"]) * 100
-        except:
-            self.sysInfo['seek']               = int(sysInfo.get('seek','-1'))
-            self.sysInfo["progresspercentage"] = -1
-            
-        self.log('__init__, sysARG = %s\nsysInfo = %s'%(sysARG,self.sysInfo))
+                self.sysInfo['duration']  = float(sysInfo.get('duration')  or self.jsonRPC._getRuntime(self.sysInfo['fitem']) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')))
+            else:
+                self.sysInfo['duration']  = float((sysInfo.get('duration') or '-1'))
+                
+            try:
+                self.sysInfo['seek']               = int(sysInfo.get('seek') or (abs(self.sysInfo['start'] - self.sysInfo['now']) if self.sysInfo['start'] > 0 else -1))
+                self.sysInfo["progresspercentage"] = -1 if self.sysInfo['seek'] == -1 else (self.sysInfo["seek"]/self.sysInfo["duration"]) * 100
+            except:
+                self.sysInfo['seek']               = int(sysInfo.get('seek','-1'))
+                self.sysInfo["progresspercentage"] = -1
+                
+            self.log('__init__, sysARG = %s\nsysInfo = %s'%(sysARG,self.sysInfo))
 
                 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -119,7 +120,9 @@ class Plugin:
                     channelItem['broadcastnow'] = broadcast
                 elif broadcast.get('progresspercentage',0) == 0 and broadcast.get('progresspercentage',100) < 100:
                     channelItem.setdefault('broadcastnext',[]).append(broadcast)
-            [_parseBroadcast(broadcast) for broadcast in self.jsonRPC.getPVRBroadcasts(pvritem.get('channelid',{}))]
+                    
+            broadcasts = self.jsonRPC.getPVRBroadcasts(pvritem.get('channelid',{}))
+            [_parseBroadcast(broadcast) for broadcast in broadcasts]
             pvritem['broadcastnext'] = channelItem.get('broadcastnext',pvritem['broadcastnext'])
             self.log('_matchChannel: __extend, broadcastnext = %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
@@ -170,7 +173,7 @@ class Plugin:
         if nextitems:
             seekTHD = SETTINGS.getSettingInt('Seek_Threshold')
             self.IDXModifier = 0
-            del nextitems[SETTINGS.getSettingInt('Page_Limit')-1:]# list of upcoming items, truncate for speed
+            del nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
             self.log('getPausedItems, building nextitems (%s)'%(len(nextitems)))
             return [__buildfItem(idx, nextitem, seekTHD) for idx, nextitem in enumerate(nextitems)]
         else: DIALOG.notificationDialog(LANGUAGE(32000))
@@ -246,7 +249,7 @@ class Plugin:
                     nowitem['progress']           = 0
                     nowitem['progresspercentage'] = 0
 
-                del nextitems[SETTINGS.getSettingInt('Page_Limit')-1:]# list of upcoming items, truncate for speed
+                del nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
                 nextitems.insert(0,nowitem)
                 self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
                 return [__buildfItem(idx, item) for idx, item in enumerate(nextitems)]
@@ -318,7 +321,8 @@ class Plugin:
         self.log('playRadio, id = %s'%(chid))
         def __buildfItem(idx, item: dict={}): return LISTITEMS.buildItemListItem(item, 'music')
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
-            listitems = [__buildfItem(idx, item) for idx, item in enumerate(randomShuffle(self.getRadioItems(name, chid, vid)))]
+            items = randomShuffle(self.getRadioItems(name, chid, vid))
+            listitems = [__buildfItem(idx, item) for idx, item in enumerate(items)]
             if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True),windowed=True)
             self._resolveURL(False, xbmcgui.ListItem())
 
@@ -340,15 +344,13 @@ class Plugin:
 
 
     def playCheck(self, oldInfo: dict={}) -> bool:
-        self.log('playCheck, sysInfo=%s\noldInfo = %s'%(self.sysInfo,oldInfo))
         def _chkPath():
-            if not self.sysInfo.get('vid'): return True 
-            elif   self.sysInfo.get('vid','').startswith(tuple(WEB_TYPES)): return True
-            elif   self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): return hasAddon(self.sysInfo.get('vid',''))
-            elif   FileAccess.exists(self.sysInfo.get('vid','')): return True
-            self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))
-            if self.debugEnabled: DIALOG.notificationDialog(LANGUAGE(32167))
-            return False
+            status = True
+            if       self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): status = hasAddon(self.sysInfo['vid'])
+            elif not self.sysInfo.get('vid','').startswith(tuple(WEB_TYPES)): status = FileAccess.exists(self.sysInfo['vid'])
+            self.log('playCheck _chkPath, valid = %s\npath %s'%(status,self.sysInfo.get('vid')))
+            if not status: DIALOG.notificationDialog(LANGUAGE(32167),show=self.debugEnabled)
+            return status
             
         def _chkLoop():
             if self.sysInfo.get('chid') == oldInfo.get('chid',random.random()):
@@ -358,41 +360,39 @@ class Plugin:
                     
                     if self.sysInfo['now'] >= self.sysInfo['stop']:
                         self.log('playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo['now'],self.sysInfo['stop']))
-                        if self.debugEnabled: DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']))
+                        DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']),show=self.debugEnabled)
                         return False
                     elif self.sysInfo['duration'] > self.sysInfo['runtime'] and self.sysInfo['runtime'] > 0:
                         self.log('playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
-                        if self.debugEnabled: DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['duration'],self.sysInfo['runtime']))
+                        DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['runtime'],self.sysInfo['duration']),show=self.debugEnabled)
                         return False
                     elif self.sysInfo['seek'] >= oldInfo.get('runtime',self.sysInfo['duration']):
                         self.log('playCheck _chkLoop, failed! Seeking to a position (%s) past media runtime (%s).'%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
-                        if self.debugEnabled: DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
+                        DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])),show=self.debugEnabled)
                         return False
                     elif self.sysInfo['seek'] == oldInfo.get('seek',self.sysInfo['seek']):
                         self.log('playCheck _chkLoop, failed! Seeking to same position.')
-                        if self.debugEnabled: DIALOG.notificationDialog("Playback Failed: Seeking to same position")
+                        DIALOG.notificationDialog("Playback Failed: Seeking to same position",show=self.debugEnabled)
                         return False
             return True
-
-        _chkPath()
-        _chkLoop()
-        #todo take action on fail. for now log events and strategize actions. 
-        return True
+            
+        status = bool([_chkPath(),_chkLoop()])
+        self.log('playCheck [%s], status = %s\nsysInfo=%s\noldInfo = %s'%(self.sysInfo.get('citem',{}).get('id'),status, self.sysInfo,oldInfo))
+        return status
         
         
     def playError(self):
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
-        timerit(BUILTIN.executebuiltin)(0.5,['AlarmClock(back,Action(back),.5,true,false)'])
         self.log('playError, id = %s, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo.get('playcount'),self.sysInfo))
         if self.sysInfo.get('playcount') == 1:
-            self._resolveURL(False, xbmcgui.ListItem()) #release pending playback.
             DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',1.0)))
-            return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])) #retry channel
+            timerit(BUILTIN.executebuiltin)(0.5,['PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])]) #retry channel
         elif self.sysInfo.get('playcount') == 2:
-            self._resolveURL(False, xbmcgui.ListItem()) #release pending playback.
-            DIALOG.okDialog(LANGUAGE(32134)%(ADDON_NAME))
-            return PROPERTIES.setPropTime('chkPVRRefresh')
+            DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',1.0)))
+            timerit(BUILTIN.executebuiltin)(0.5,['AlarmClock(last,Number(0),.5,true,false)'])
         else:
-            self._resolveURL(False, xbmcgui.ListItem()) #release pending playback
-            return DIALOG.notificationDialog(LANGUAGE(32000))
+            DIALOG.notificationDialog(LANGUAGE(32000))
+            PROPERTIES.setPropTimer('chkPVRRefresh')
+            timerit(DIALOG.okDialog)(0.5,[LANGUAGE(32134)%(ADDON_NAME)])
+        self._resolveURL(False, xbmcgui.ListItem()) #release pending playback
             

@@ -90,7 +90,7 @@ class Restart(xbmcgui.WindowXMLDialog):
         xpos = control.getX()
         control.setVisibleCondition('Player.Playing')
         while not self.monitor.abortRequested():
-            if (self.monitor.waitForAbort(0.5) or wait < 0 or self.closing or not self.player.isPlaying()): break
+            if (self.monitor.waitForAbort(0.1) or wait < 0 or self.closing or not self.player.isPlaying()): break
             else:
                 prog = int((abs(wait-tot)*100)//tot)
                 if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
@@ -136,17 +136,23 @@ class Overlay():
 
         def onAVStarted(self):
             self.overlay.log('onAVStarted')
-            self.overlay.toggleBackground(state=False)
+            self.overlay.toggleBug()
+            self.overlay.toggleOnNext()
+            self.overlay.toggleBackground(False)
             
 
         def onPlayBackEnded(self):
             self.overlay.log('onPlayBackEnded')
+            self.overlay.toggleBug(False)
+            self.overlay.toggleOnNext(False)
             self.overlay.toggleBackground()
                 
             
         def onPlayBackStopped(self):
             self.overlay.log('onPlayBackStopped')
-            self.overlay.toggleBackground(state=False)
+            self.overlay.toggleBug(False, cancel=False)
+            self.overlay.toggleOnNext(False, cancel=False)
+            self.overlay.toggleBackground(False)
             
 
     def __init__(self, jsonRPC, player=None):
@@ -201,18 +207,19 @@ class Overlay():
     def show(self):
         self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
-        self.toggleBug(), self.toggleOnNext(), self.toggleVignette()
-        self._player.onAVStarted()
+        self._player.onAVStarted(), self.toggleVignette()
 
    
     def close(self):
         self.log('close')
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
-        self.toggleBug(False), self.toggleOnNext(False), self.toggleVignette(False)
-        self._cancelBug(), self._cancelOnNext()
-        self._player.onPlayBackStopped()
+        self._player.onPlayBackStopped(), self.toggleVignette(False)
+        self._clrRemaining()
+                
         
+    def _clrRemaining(self):
         for control, visible in list(self.controlManager.items()):
+            self.log('_clrRemaining, removing orphaned control %s'%(control))
             self._delControl(control)
 
 
@@ -244,7 +251,9 @@ class Overlay():
     def _delControl(self, control):
         try:
             self.log('_delControl, %s'%(control))
-            if self._hasControl(control): self.window.removeControl(self.controlManager.pop(control))
+            if self._hasControl(control):
+                self.window.removeControl(control)
+                self.controlManager.pop(control)
         except Exception as e: self.log('_delControl failed! control = %s %s'%(control, e), xbmc.LOGERROR)
 
 
@@ -265,7 +274,7 @@ class Overlay():
                 if genre.lower() in ['pre-roll','post-roll']: return True
             return False
             
-        if not self.enableChannelBug or self.player.sysInfo.get('fitem',{}).get('duration', 0) < self.minDuration: return False
+        if not self.enableChannelBug or self.player.sysInfo.get('fitem',{}).get('duration', 0) < self.minDuration or not self.player.isPlaying(): return False
         elif self.player.getPlayerProgress() >= self.maxProgress: return False
         elif __isFiller(): return False
         return True
@@ -276,6 +285,7 @@ class Overlay():
             self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", overlay=self)
             self.log('toggleBackground, state = %s'%(state))
             self.background.doModal()
+            del self.background
             self.background = None
         elif not state and not self.background is None:
             self.background = self.background.close()
@@ -299,16 +309,7 @@ class Overlay():
             self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self.vinImage,self.defaultView))
             
                 
-    def _cancelBug(self):
-        self.log('_cancelBug')
-        if self._hasControl(self.channelBug): self._delControl(self.channelBug)
-        if self._bugThread.is_alive():
-            if hasattr(self._bugThread, 'cancel'): self._bugThread.cancel()
-            try: self._bugThread.join()
-            except: pass
-            
-            
-    def toggleBug(self, state: bool=True):
+    def toggleBug(self, state: bool=True, cancel=False):
         def __getWait(state, remaining):
             if (remaining <= self.minDuration or not self.chkBugConditions()): return False, remaining
             elif self.channelBugInterval == -1: #Indefinitely 
@@ -343,9 +344,15 @@ class Overlay():
             self._setVisible(self.channelBug,True)
             self.log('toggleBug, logo = %s, setColorDiffuse = %s, POSXY (%s,%s))'%(logo, self.channelBugColor, self.channelBugX, self.channelBugY))
             
-        elif not state and self._hasControl(self.channelBug):
+        elif self._hasControl(self.channelBug):
             self._delControl(self.channelBug)
             
+        if self._bugThread.is_alive():
+            if hasattr(self._bugThread, 'cancel'): self._bugThread.cancel()
+            try: self._bugThread.join()
+            except: pass
+            
+        if cancel or wait < 1: return self.log('toggleBug, cancelling timer...')
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
         self._bugThread = Timer(wait, self.toggleBug, [nstate])
         self._bugThread.name = "_bugThread"
@@ -353,17 +360,6 @@ class Overlay():
         self._bugThread.start()
 
     
-    def _cancelOnNext(self):
-        self.log('_cancelOnNext')
-        if self._hasControl(self.onNext_Text):    self._delControl(self.onNext_Text)
-        if self._hasControl(self.onNext_Border):  self._delControl(self.onNext_Border)
-        if self._hasControl(self.onNext_Artwork): self._delControl(self.onNext_Artwork)
-        if self._onNextThread.is_alive():
-            if hasattr(self._onNextThread, 'cancel'): self._onNextThread.cancel()
-            try: self._onNextThread.join()
-            except: pass
-            
-            
     def toggleOnNext(self, state: bool=True, cancel: bool=False):
         def __getOnNextInterval(interval, displayTime):
             conditions = self.chkOnNextConditions()
@@ -441,12 +437,17 @@ class Overlay():
             elif self.onNextMode == 4: self._updateUpNext(fitem,nitem)
             timerit(playSFX)(0.5,[BING_WAV])
                 
-        elif not state:
-            if self.onNextMode in [1,2]:
-                if self._hasControl(self.onNext_Text):    self._delControl(self.onNext_Text)
-                if self._hasControl(self.onNext_Border):  self._delControl(self.onNext_Border)
-                if self._hasControl(self.onNext_Artwork): self._delControl(self.onNext_Artwork)
+        elif self._hasControl(self.onNext_Text):
+            self._delControl(self.onNext_Text)
+            if self._hasControl(self.onNext_Border):  self._delControl(self.onNext_Border)
+            if self._hasControl(self.onNext_Artwork): self._delControl(self.onNext_Artwork)
+                        
+        if self._onNextThread.is_alive():
+            if hasattr(self._onNextThread, 'cancel'): self._onNextThread.cancel()
+            try: self._onNextThread.join()
+            except: pass
             
+        if cancel or wait < 1: return self.log('toggleOnNext, cancelling timer...')
         self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
         self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
         self._onNextThread.name = "onNextThread"

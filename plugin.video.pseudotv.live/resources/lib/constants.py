@@ -31,6 +31,7 @@ ICON                = REAL_SETTINGS.getAddonInfo('icon')
 FANART              = REAL_SETTINGS.getAddonInfo('fanart')
 SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
 ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
+ADDON_AUTHOR        = REAL_SETTINGS.getAddonInfo('author')
 ADDON_URL           = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/plugin.video.pseudotv.live/addon.xml'
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
 
@@ -88,7 +89,7 @@ GROUP_TYPES         = ['Addon',
                        'TV', 
                        'Movies', 
                        'Music', 
-                       'Other', 
+                       'Miscellaneous', 
                        'PVR', 
                        'Plugin', 
                        'Radio', 
@@ -96,13 +97,18 @@ GROUP_TYPES         = ['Addon',
                        'UPNP', 
                        'IPTV'] + AUTOTUNE_TYPES
 
+DB_TYPES            = ["videodb://",
+                       "musicdb://",
+                       "library://",
+                       "special://"]
+
 WEB_TYPES           = ["http",
-                       "ftp",
-                       "pvr"]
+                       "ftp://",
+                       "pvr://"
+                       "upnp://",]
 
 VFS_TYPES           = ["plugin://",
                        "pvr://",
-                       "upnp://",
                        "resource://",
                        "special://home/addons/resource"]
                        
@@ -131,6 +137,19 @@ ALT_PLAYLISTS       = [".cue",
                        ".strm",
                        ".pls",
                        ".wpl"] 
+
+IGNORE_CHTYPE       = ['TV Shows',
+                       'Mixed',
+                       'Recommended',
+                       'Services',
+                       'Music Genres']
+                 
+MOVIE_CHTYPE        = ["Movie Genres",
+                       "Movie Studios"]
+                 
+TV_CHTYPE           = ["TV Networks",
+                       "TV Genres",
+                       "Mixed Genre"]
 
 TV_URL              = 'plugin://{addon}/?mode=tv&name={name}&chid={chid}.pvr'
 RESUME_URL          = 'plugin://{addon}/?mode=resume&name={name}&chid={chid}.pvr'
@@ -202,8 +221,14 @@ GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'remotes',GENREFLE)
 PROVIDERFLE_DEFAULT = os.path.join(ADDON_PATH,'remotes',PROVIDERFLE)
 
 #colors
+PRIMARY_BACKGROUND        = 'FF11375C'
+SECONDARY_BACKGROUND      = '334F4F9E'
+DIALOG_TINT               = 'FF181B1E'
+BUTTON_FOCUS              = 'FF2866A4'
+SELECTED                  = 'FF5BE5EE'
+
 COLOR_BACKGROUND          = '01416b'
-COLOR_TEXT                = 'ffffff'
+COLOR_TEXT                = 'FFFFFF'
 COLOR_UNAVAILABLE_CHANNEL = 'dimgray'
 COLOR_AVAILABLE_CHANNEL   = 'white'
 COLOR_LOCKED_CHANNEL      = 'orange'
@@ -357,13 +382,3 @@ VIDEO_LISTITEM_TYPES =   {'genre'                   : (tuple,list),
                           'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
                           # 'size'                    : (int,),  #long (1024) - size in bytes
                           'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
-
-IGNORE_CHTYPE = ['TV Shows','Mixed','Recommended','Services',"Music Genres"]
-MOVIE_CHTYPE  = ["Movie Genres","Movie Studios"]
-TV_CHTYPE     = ["TV Networks","TV Genres","Mixed Genre"]
-
-PRIMARY_BACKGROUND   = 'FF11375C'
-SECONDARY_BACKGROUND = '334F4F9E'
-DIALOG_TINT          = 'FF181B1E'
-BUTTON_FOCUS         = 'FF2866A4'
-SELECTED             = 'FF5BE5EE'

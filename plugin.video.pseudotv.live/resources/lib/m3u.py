@@ -248,7 +248,8 @@ class M3U:
         
     def _verify(self, stations=[], recordings=[], chkPath=SETTINGS.getSettingBool('Clean_Recordings')):
         if stations: #remove abandoned m3u entries; Stations that are not found in the channel list
-            stations = [station for station in stations for channel in Channels().getChannels() if channel.get('id') == station.get('id',str(random.random()))] 
+            channels = Channels().getChannels()
+            stations = [station for station in stations for channel in channels if channel.get('id') == station.get('id',str(random.random()))] 
             self.log('_verify, stations = %s'%(len(stations)))
             return stations
         elif recordings:#remove recordings that no longer exists on disk

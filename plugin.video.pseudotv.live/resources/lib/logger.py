@@ -35,6 +35,7 @@ def log(event, level=xbmc.LOGDEBUG):
             try:    entries = json.loads(xbmcgui.Window(10000).getProperty('%s.debug.log'%(ADDON_ID))).get('DEBUG',{})
             except: entries = {}
             entries.setdefault(DEBUG_NAMES[DEBUG_LEVEL],[]).append('%s - %s: %s'%(datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT),DEBUG_NAMES[level],event))
-            xbmcgui.Window(10000).setProperty('%s.debug.log'%(ADDON_ID),json.dumps({'DEBUG':entries}, indent=4))
+            try: xbmcgui.Window(10000).setProperty('%s.debug.log'%(ADDON_ID),json.dumps({'DEBUG':entries}, indent=4))
+            except: pass
             if not xbmcgui.Window(10000).getProperty('%s.has.debug'%(ADDON_ID)) == 'true': xbmcgui.Window(10000).setProperty('%s.has.debug'%(ADDON_ID),'true')
         
