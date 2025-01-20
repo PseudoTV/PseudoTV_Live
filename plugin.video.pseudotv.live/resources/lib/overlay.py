@@ -448,7 +448,7 @@ class Overlay():
             try: self._onNextThread.join()
             except: pass
             
-        if cancel or wait < 1: return self.log('toggleOnNext, cancelling timer...')
+        if cancel: return self.log('toggleOnNext, cancelling timer...')
         self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
         self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
         self._onNextThread.name = "onNextThread"

@@ -125,12 +125,11 @@ class Manager(xbmcgui.WindowXMLDialog):
             if len(channels) > 0: return channels
             else:                 return self.loadChannels('Ask')
         elif name == 'Ask':
-            def __buildItem(server, servers):
+            def __buildItem(servers, server):
                 if server.get('online',False):
                     return LISTITEMS.buildMenuListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)]),server.get('host'),len(server.get('channels',[]))),icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
-
             servers = self.getServers()
-            lizlst = poolit(__buildItem)(*(list(servers.values()),list(servers.values())))
+            lizlst = poolit(__buildItem)(*(servers.values(),servers.values()))
             lizlst.insert(0,LISTITEMS.buildMenuListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(channels)),icon=DUMMY_ICON.format(text=str(1))))
             select = DIALOG.selectDialog(lizlst, LANGUAGE(30173), None, True, SELECT_DELAY, False)
             if not select is None: return self.loadChannels(lizlst[select].getLabel())
