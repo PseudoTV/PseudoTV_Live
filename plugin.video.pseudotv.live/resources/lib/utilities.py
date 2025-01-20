@@ -151,7 +151,7 @@ class Utilities:
                  {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32119),True) , 'hide':True}, #"Clean Start"
                  {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR              , 'hide':False},#"Force PVR reload"
                  {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart                    , 'hide':False},#"Force PTVL reload"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEpochTimer ,'args':('chkLibrary',), 'hide':False},#Rescan library
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':self.rescanLibrary, 'hide':False},#Rescan library
                  {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setPropTimer ,'args':('chkFillers',) , 'hide':False},#Rebuild Fillers
                  {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':self._runAutotune                               , 'hide':False}]#Run Autotune
                 
@@ -216,6 +216,12 @@ class Utilities:
         select = DIALOG.selectDialog(values, LANGUAGE(30173), findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
         if not select is None: return SETTINGS.setSetting('Default_Channels',values[select])
         else:                  return SETTINGS.setSetting('Default_Channels',LANGUAGE(30022))
+
+
+    def rescanLibrary(self):
+        PROPERTIES.setPropertyBool('ForceLibrary',True)
+        PROPERTIES.setEpochTimer('chkLibrary')
+        DIALOG.notificationDialog('%s %s'%(LANGUAGE(30199),LANGUAGE(30200)))
 
 
     def run(self):

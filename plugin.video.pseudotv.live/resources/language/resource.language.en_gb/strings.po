@@ -817,6 +817,14 @@ msgctxt "#30198"
 msgid "Enable Threaded Queue Executor"
 msgstr ""
 
+msgctxt "#30199"
+msgid "Request"
+msgstr ""
+
+msgctxt "#30200"
+msgid "Received"
+msgstr ""
+
 
 # Skin - strings 31000 thru 31999 reserved for skins
 
@@ -908,7 +916,7 @@ msgid "Unavailable"
 msgstr ""
 
 msgctxt "#32021"
-msgid "AutoTuning..."
+msgid "AutoTuning"
 msgstr ""
 
 msgctxt "#32022"
@@ -1779,6 +1787,13 @@ msgctxt "#32240"
 msgid "Confirm"
 msgstr ""
 
+msgctxt "#32241"
+msgid "PVR Searches"
+msgstr ""
+
+msgctxt "#32242"
+msgid "PVR Search"
+msgstr ""
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 

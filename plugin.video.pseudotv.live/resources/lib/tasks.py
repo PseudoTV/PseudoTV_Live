@@ -108,7 +108,7 @@ class Tasks():
         self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 900)
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 900)
-        self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , (MAX_GUIDEDAYS*3600))
+        self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 900)
         self._chkEpochTimer('chkChannels'     , self.chkChannels     , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
         self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
@@ -194,14 +194,16 @@ class Tasks():
         except Exception as e: self.log('chkRecommended failed! %s'%(e), xbmc.LOGERROR)
 
         
-    def chkLibrary(self, force=False):
+    def chkLibrary(self, force=PROPERTIES.getPropertyBool('ForceLibrary')):
         self.log('chkLibrary, force = %s'%(force))
         try: 
             library = Library(service=self.service)
             library.importPrompt()
             complete = library.updateLibrary(force)
             del library
-            if complete: self.chkAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            if complete: 
+                if force: PROPERTIES.setPropertyBool('ForceLibrary',False)
+                self.chkAutoTune() #run autotune for the first time this Kodi/PTVL instance.
             else: self._que(self.chkLibrary,2,force)
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 

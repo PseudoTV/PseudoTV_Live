@@ -40,11 +40,7 @@ class Predefined:
     def createRECOMMENDED(self, type: str) -> list:
         return []
         
-    
-    def createPVRRecordings(self) -> list:
-        return ['pvr://recordings/tv/active/?xsp=%s'%(dumpJSON(self.getParams()))]
-        
-        
+
     def createMixedRecent(self) -> list:
         param = self.getParams()
         param["order"]["method"] = "episode"

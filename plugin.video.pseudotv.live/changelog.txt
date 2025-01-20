@@ -1,3 +1,8 @@
+v.0.5.9
+-Added New parsing procedures when reading pvr:// directories. 
+ - This should fix playback issues with PVR recordings and the newly added saved searches.
+-Added Support for saved PVR Searches (Currently only supports PseudoTV Channels); Available under "Mixed" Autotuning.
+
 v.0.5.8
 -Improved Channel Manager UI and refactored code.
 -Fixed Issue with some Adv. Channel rules not applying correctly. 

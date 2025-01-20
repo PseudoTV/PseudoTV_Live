@@ -211,6 +211,7 @@ Language IDS not found in py files, possibly only in xml: {
     "32221": "Add",
     "32222": "Save",
     "32237": "Waiting for Background Service to idle...",
+    "32242": "PVR Search",
     "33001": "Only enable for short DEBUGGING sessions. The Kodi log will be spammed; You may experience poor system performance while enabled.",
     "33002": "AutoTune Video/Mixed/Music SmartPlaylists.",
     "33003": "AutoTune from Recommended (Supported) plugins installed on Kodi.\\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins.",

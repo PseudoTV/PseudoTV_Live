@@ -502,7 +502,7 @@ class Service():
 
 
     def __tasks(self):
-        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
+        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,10)
            
                 
     def __initialize(self):
@@ -523,6 +523,8 @@ class Service():
 
 
     def _stop(self):
+        self.monitor.pendingSuspend   = False
+        self.monitor.pendingInterrupt = True
         for thread in thread_enumerate():
             if thread.name != "MainThread" and thread.is_alive():
                 if hasattr(thread, 'cancel'): thread.cancel()

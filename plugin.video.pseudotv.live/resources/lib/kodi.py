@@ -171,7 +171,7 @@ class Settings:
                 if item.get('label','').lower().startswith(instance.lower()): return item
 
         with self.builtin.busy_dialog():
-            from jsonrpc     import JSONRPC
+            from jsonrpc import JSONRPC
             jsonRPC = JSONRPC()
             baseURL = 'pvr://channels/tv/'
             for name in ['%s [All channels]'%(instance), instance, 'All channels']:
@@ -206,7 +206,7 @@ class Settings:
 
 
     def getSettingInt(self, key):
-        return int(convertString2Num(self.getSetting(key)))
+        return convertString2Num(self.getSetting(key))
               
               
     def getSettingIntList(self, key):
@@ -1039,7 +1039,17 @@ class Builtin:
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+                  
+    def hasSearches(self):
+        from jsonrpc import JSONRPC
+        return len(JSONRPC().getPVRSearches()) > 0
+            
          
+    def hasRecordings(self):
+        from jsonrpc import JSONRPC
+        return len(JSONRPC().getPVRRecordings()) > 0
+               
      
     def hasPVR(self):
         return self.getInfoBool('HasTVChannels','Pvr')
@@ -1647,7 +1657,7 @@ class Dialog:
                     else: params['order'].update({enumLST[enumSEL].getLabel().lower(): not enumLST[enumSEL].getLabel2() == 'True'})
             return params
 
-        from jsonrpc     import JSONRPC
+        from jsonrpc import JSONRPC
         jsonRPC = JSONRPC()
         try:
             path, params = path.split('?xsp=')

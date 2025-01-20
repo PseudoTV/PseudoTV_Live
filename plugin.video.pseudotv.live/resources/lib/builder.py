@@ -388,13 +388,18 @@ class Builder:
                 elif fileType == 'directory':
                     dirList.append(item)
                     self.log("buildList, [%s] IDX = %s, appending directory: %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                    
-                elif fileType == 'file':
+
+                elif fileType == 'file':                        
+                    if file.startswith('pvr://'): #parse encoded fileitem otherwise no relevant meta provided via org. query.
+                        self.log("buildList, [%s] IDX = %s, PVR item => FileItem! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
+                        item = decodePlot(item.get('plot',''))
+                        file = item.get('file','')
+                        
                     if not file:
                         self.pErrors.append(LANGUAGE(32031))
                         self.log("buildList, [%s] IDX = %s, skipping missing playable file! path = %s"%(citem['id'],idx,path),xbmc.LOGINFO)
                         continue
-                        
+
                     elif (file.lower().endswith('strm') and not self.incStrms): 
                         self.pErrors.append('%s STRM'%(LANGUAGE(32027)))
                         self.log("buildList, [%s] IDX = %s, skipping strm file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)

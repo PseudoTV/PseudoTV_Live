@@ -43,14 +43,14 @@ class JSONRPC:
         del monitor
 
 
-    def sendJSON(self, param, timeout=60):
+    def sendJSON(self, param, timeout=-1):
         with self.sendLocker():
             command = param
             command["jsonrpc"] = "2.0"
             command["id"] = ADDON_ID
-            self.log('sendJSON, command = %s'%(dumpJSON(command)))
-            response = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))
-            #response = loadJSON((killit(xbmc.executeJSONRPC)(timeout,dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
+            self.log('sendJSON, timeout = %s, command = %s'%(timeout,dumpJSON(command)))
+            if timeout > 0: response = loadJSON((killit(xbmc.executeJSONRPC)(timeout,dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
+            else:           response = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))
             if response.get('error'):
                 self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
                 response.setdefault('result',{})['error'] = response.pop('error')
@@ -68,7 +68,7 @@ class JSONRPC:
         SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
 
         
-    def cacheJSON(self, param, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, timeout=15):
+    def cacheJSON(self, param, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, timeout=-1):
         cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
@@ -264,14 +264,12 @@ class JSONRPC:
 
 
     def getFileDetails(self, file, media='video', properties=["duration","runtime"]):
-        return self.sendJSON({"method":"Files.GetFileDetails","params":{"file":file,"media":media,"properties":properties}})
+        return self.cacheJSON({"method":"Files.GetFileDetails","params":{"file":file,"media":media,"properties":properties}})
 
 
     def getViewMode(self):
-        default  = {"nonlinearstretch":False,"pixelratio":1,"verticalshift":0,"viewmode":"custom","zoom": 1.0}
-        response = self.sendJSON({"method":"Player.GetViewMode","params":{}}).get('result',default)
-        self.log('getViewMode, response = %s'%(response))
-        return response
+        default = {"nonlinearstretch":False,"pixelratio":1,"verticalshift":0,"viewmode":"custom","zoom": 1.0}
+        return self.sendJSON({"method":"Player.GetViewMode","params":{}}).get('result',default)
         
 
     def setViewMode(self, params={}):
@@ -305,6 +303,24 @@ class JSONRPC:
         param = {"method":"PVR.GetBroadcastDetails","params":{"broadcastid":id,"properties":self.getEnums("PVR.Fields.Broadcast", type='items')}}
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
+
+    def getPVRRecordings(self, media='video', cache=True):
+        param = {"method":"Files.GetDirectory","params":{"directory":"pvr://recordings/tv/active/","media":media,"properties":self.getEnums("List.Fields.Files", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('files', [])
+        else:     return self.sendJSON(param).get('result', {}).get('files', [])
+
+    
+    def getPVRSearches(self, media='video', cache=True):
+        param = {"method":"Files.GetDirectory","params":{"directory":"pvr://search/tv/savedsearches/","media":media,"properties":self.getEnums("List.Fields.Files", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('files', [])
+        else:     return self.sendJSON(param).get('result', {}).get('files', [])
+        
+        
+    def getPVRSearchItems(self, id, media='video', cache=True):
+        param = {"method":"Files.GetDirectory","params":{"directory":f"pvr://search/tv/savedsearches/{id}/","media":media,"properties":self.getEnums("List.Fields.Files", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('files', [])
+        else:     return self.sendJSON(param).get('result', {}).get('files', [])
+    
     
     def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected during playback, accurate meta...
         self.cache.set('getRuntime.%s'%(getMD5(item.get('file'))), runtime, checksum=getMD5(item.get('file')), expiration=datetime.timedelta(days=28), json_data=False)

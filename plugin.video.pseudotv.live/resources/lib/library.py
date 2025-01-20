@@ -52,17 +52,17 @@ class Library:
         self.libraryTEMP  = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
 
-        self.libraryFUNCS = {"Playlists"    :self.getPlaylists,
-                             "TV Networks"  :self.getNetworks,
-                             "TV Shows"     :self.getTVShows,
-                             "TV Genres"    :self.getTVGenres,
-                             "Movie Genres" :self.getMovieGenres,
-                             "Movie Studios":self.getMovieStudios,
-                             "Mixed Genres" :self.getMixedGenres,
-                             "Mixed"        :self.getMixed,
-                             "Recommended"  :self.getRecommend,
-                             "Services"     :self.getServices,
-                             "Music Genres" :self.getMusicGenres}
+        self.libraryFUNCS = {"Playlists"    :{'func':self.getPlaylists   ,'life':datetime.timedelta(minutes=FIFTEEN)},
+                             "TV Networks"  :{'func':self.getNetworks    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                             "TV Shows"     :{'func':self.getTVShows     ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                             "TV Genres"    :{'func':self.getTVGenres    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                             "Movie Genres" :{'func':self.getMovieGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                             "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                             "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                             "Mixed"        :{'func':self.getMixed       ,'life':datetime.timedelta(minutes=FIFTEEN)},
+                             "Recommended"  :{'func':self.getRecommend   ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
+                             "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
+                             "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)}}
              
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -88,7 +88,7 @@ class Library:
         
         
     def setLibrary(self, type, items=[]):
-        self.log('setLibrary')
+        self.log('setLibrary, type = %s, items = %s'%(type,len(items)))
         self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
         self.libraryDATA['library'][type] = items
         PROPERTIES.setEXTPropertyBool('%s.has.%s'%(ADDON_ID,slugify(type)),len(items) > 0)
@@ -104,8 +104,8 @@ class Library:
     def updateLibrary(self, force: bool=False) -> bool:
         def __clear():
             items = list(self.libraryFUNCS.items())
-            for label, func in items:
-                cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
+            for label, params in items:
+                cacheName = "%s.%s"%(self.__class__.__name__,params['func'].__name__)
                 DIALOG.notificationDialog(LANGUAGE(30070)%(label),time=5)
                 self.cache.clear(cacheName,wait=5)
                 
@@ -119,11 +119,9 @@ class Library:
             return entry
             
         def _fill(type, func):
-            try:
-                items = func()
-                if items: self.cache.set(cacheName, items, expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
+            try: items = func()
             except Exception as e:
-                self.log("fillItems, %s failed! %s"%(type,e), xbmc.LOGERROR)
+                self.log("_fill, %s failed! %s"%(type,e), xbmc.LOGERROR)
                 items = []
             self.log('_fill, returning %s (%s)'%(type,len(items)))
             return items
@@ -145,8 +143,8 @@ class Library:
                 self.service.monitor.waitForAbort(SUSPEND_TIMER)
                 continue
             else:
-                msg = LANGUAGE(30014)
-                func = self.libraryFUNCS[type]
+                msg  = LANGUAGE(30014)
+                func = self.libraryFUNCS[type]['func']
                 cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
                 items = self.cache.get(cacheName)
                 if not items: msg = LANGUAGE(32022)
@@ -154,6 +152,7 @@ class Library:
                 self.parserCount  = int(idx*100//len(AUTOTUNE_TYPES))
                 self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
                 if not items: items = _fill(type, func)
+                if items: self.cache.set(cacheName, items, expiration=self.libraryFUNCS[type]['life'])
                 self.setLibrary(type, [__update(type,item) for item in items])
         
         self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
@@ -202,25 +201,37 @@ class Library:
             MixedGenreList.append({'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createGenreMixedPlaylist(tv.get('name')),'logo':tv.get('logo'),'rules':rules})
         self.log('getMixedGenres, genres = %s' % (len(MixedGenreList)))
         return sorted(MixedGenreList,key=itemgetter('name'))
-
+    
 
     def getMixed(self):
-        def __hasRecordings():
-            return self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/',appendPath=True)
-               
         MixedList = []
-        if BUILTIN.hasTV() or BUILTIN.hasMovie():
-            MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo(LANGUAGE(32001),"Mixed")}) #"Recently Added"
-            rules = {"800":{"values":{"0":LANGUAGE(32002)}}}
-            MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':rules}) #"Seasonal"
-
-        if __hasRecordings(): #broken paths no longer play, Kodi jsonrpc doesn't return valid file and uses unknown vfs assignment
-            MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
-        
+        MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo(LANGUAGE(32001),"Mixed")}) #"Recently Added"
+        MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':{"800":{"values":{"0":LANGUAGE(32002)}}}}) #"Seasonal"
+        MixedList.extend(self.getPVRRecordings())#"PVR Recordings"
+        MixedList.extend(self.getPVRSearches())  #"PVR Searches"
         self.log('getMixed, mixed = %s' % (len(MixedList)))
         return sorted(MixedList,key=itemgetter('name'))
-    
-    
+
+
+    def getPVRRecordings(self):
+        recordList = []
+        json_response = self.jsonRPC.getPVRRecordings()
+        paths = [item.get('file') for idx, item in enumerate(json_response) if item.get('label','').endswith('(%s)'%(ADDON_NAME))]
+        if len(paths) > 0: recordList.append({'name':LANGUAGE(32003),'type':"Mixed",'path':[paths],'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")})
+        self.log('getPVRRecordings, recordings = %s' % (len(recordList)))
+        return sorted(recordList,key=itemgetter('name'))
+
+
+    def getPVRSearches(self):
+        searchList = []
+        json_response = self.jsonRPC.getPVRSearches()
+        for idx, item in enumerate(json_response):
+            if not item.get('file'): continue
+            searchList.append({'name':"%s (%s)"%(item.get('label',LANGUAGE(32241)),LANGUAGE(32241)),'type':"Mixed",'path':[item.get('file')],'logo':self.resources.getLogo(item.get('label',LANGUAGE(32241)),"Mixed")})
+        self.log('getPVRSearches, searches = %s' % (len(searchList)))
+        return sorted(searchList,key=itemgetter('name'))
+                
+
     def getPlaylists(self):
         PlayList = []
         types    = ['video','mixed','music']
@@ -240,7 +251,6 @@ class Library:
         return PlayList
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def getTVInfo(self, sortbycount=True):
         self.log('getTVInfo')
         if BUILTIN.hasTV():
@@ -287,7 +297,6 @@ class Library:
         return {'studios':NetworkList,'genres':ShowGenreList,'shows':TVShows}
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def getMovieInfo(self, sortbycount=True):
         self.log('getMovieInfo')
         if BUILTIN.hasMovie():        
@@ -319,7 +328,6 @@ class Library:
         return {'studios':StudioList,'genres':MovieGenreList}
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def getMusicInfo(self, sortbycount=True):
         self.log('getMusicInfo')
         if BUILTIN.hasMusic():
