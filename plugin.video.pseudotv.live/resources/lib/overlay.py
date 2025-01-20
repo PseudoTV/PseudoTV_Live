@@ -150,8 +150,8 @@ class Overlay():
             
         def onPlayBackStopped(self):
             self.overlay.log('onPlayBackStopped')
-            self.overlay.toggleBug(False, cancel=False)
-            self.overlay.toggleOnNext(False, cancel=False)
+            self.overlay.toggleBug(False, cancel=True)
+            self.overlay.toggleOnNext(False, cancel=True)
             self.overlay.toggleBackground(False)
             
 
@@ -353,7 +353,7 @@ class Overlay():
             try: self._bugThread.join()
             except: pass
             
-        if cancel or wait < 1: return self.log('toggleBug, cancelling timer...')
+        if cancel: return self.log('toggleBug, cancelling timer...')
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
         self._bugThread = Timer(wait, self.toggleBug, [nstate])
         self._bugThread.name = "_bugThread"

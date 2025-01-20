@@ -37,6 +37,8 @@ ACTION_SHOW_INFO     = [11,24,401]
 ACTION_PREVIOUS_MENU = [92, 10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61448]
      
 class Manager(xbmcgui.WindowXMLDialog):
+    focusIndex  = -1
+    newChannels = []
     
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)    
@@ -74,7 +76,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.newChannel     = self.channels.getTemplate()
             self.eChannels      = self.loadChannels(SETTINGS.getSetting('Default_Channels'))
             
-            if self.eChannels is None: self.closeManager()
+            if self.eChannels is None:
+                self.closeManager()
             else:
                 self.channelList = self.channels.sortChannels(self.createChannelList(self.buildArray(), self.eChannels))
                 self.newChannels = self.channelList.copy()
@@ -130,7 +133,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     return LISTITEMS.buildMenuListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)]),server.get('host'),len(server.get('channels',[]))),icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
             servers = self.getServers()
             lizlst = poolit(__buildItem)(*(list(servers.values()),list(servers.values())))
-            lizlst.insert(0,LISTITEMS.buildMenuListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(channels)),icon=DUMMY_ICON.format(text=str(1))))
+            lizlst.insert(0,LISTITEMS.buildMenuListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(channels)),icon=ICON))
             select = DIALOG.selectDialog(lizlst, LANGUAGE(30173), None, True, SELECT_DELAY, False)
             if not select is None: return self.loadChannels(lizlst[select].getLabel())
             else: return
