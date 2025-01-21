@@ -96,7 +96,7 @@ class Builder:
         self.xsp              = XSP()
         self.xmltv            = XMLTVS()
         self.m3u              = M3U()
-        self.resources        = Resources(self.jsonRPC)
+        self.resources        = Resources(service)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -128,19 +128,24 @@ class Builder:
                 if len(cacheResponse) > 0: return True
             return False
         
+        def __clrChannel(citem):
+            self.log('build, __clrChannel [%s]'%(citem['id']))
+            return self.delChannelStation(citem)
+        
         if not PROPERTIES.isRunning('builder.build'):
             with PROPERTIES.legacy(), PROPERTIES.setRunning('builder.build'):
                 if not channels: channels = self.getChannels()
                 if len(channels) > 0:
-                    now       = getUTCstamp()
-                    start     = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
-                    stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
+                    self.completedBuild = True
+                    updated  = set()
+                    now      = getUTCstamp()
+                    start    = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
+                    clrIDS   = SETTINGS.getResetChannels()
+                    channels = self.sortChannels(self.verify(channels))
+                    
                     if preview: self.pDialog = DIALOG.progressDialog()
                     else:       self.pDialog = DIALOG.progressBGDialog()
-                    self.completedBuild = True
                     
-                    updated  = set()
-                    channels = self.sortChannels(self.verify(channels))
                     for idx, citem in enumerate(channels):
                         citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
                         self.log('build, id = %s, rules = %s, preview = %s'%(citem['id'],citem.get('rules',{}),preview))
@@ -160,6 +165,8 @@ class Builder:
                             self.pCount = int(idx*100//len(channels))
                             self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
                             
+                            if not preview and citem['id'] in clrIDS: __clrChannel({'id':clrIDS.pop(clrIDS.index(citem['id']))})
+                            stopTimes = dict(self.xmltv.loadStopTimes([citem], fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
                             if   (stopTimes.get(citem['id']) or start) > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
                             elif  stopTimes.get(citem['id']):                                                       self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
                             else:                                                                                   self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(32023)) #Building
@@ -174,9 +181,10 @@ class Builder:
                                 chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
                                 self.log('build, [%s] In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
                                 self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
-                                if not __hasGuideData(citem): self.delChannelStation(citem) #only remove m3u references when no valid programmes found.
+                                if not __hasGuideData(citem): self.delChannelStation(citem) #remove m3u/xmltv references when no valid programmes found.
                             self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
-                                
+                         
+                    SETTINGS.setResetChannels(clrIDS)       
                     self.pDialog = DIALOG.updateProgress(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completedBuild else LANGUAGE(32135)))
                     self.log('build, completed = %s, updated = %s, saved = %s'%(self.completedBuild,bool(updated),self.saveChannelLineups()))
                     return self.completedBuild, bool(updated)
@@ -390,10 +398,10 @@ class Builder:
                     self.log("buildList, [%s] IDX = %s, appending directory: %s"%(citem['id'],idx,file),xbmc.LOGINFO)
 
                 elif fileType == 'file':                        
-                    if file.startswith('pvr://'): #parse encoded fileitem otherwise no relevant meta provided via org. query.
+                    if file.startswith('pvr://'): #parse encoded fileitem otherwise no relevant meta provided via org. query. playable pvr:// paths are limited in Kodi.
                         self.log("buildList, [%s] IDX = %s, PVR item => FileItem! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
                         item = decodePlot(item.get('plot',''))
-                        file = item.get('file','')
+                        file = item.get('file')
                         
                     if not file:
                         self.pErrors.append(LANGUAGE(32031))

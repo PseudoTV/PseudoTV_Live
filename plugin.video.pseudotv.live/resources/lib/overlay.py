@@ -159,7 +159,7 @@ class Overlay():
         self.cache      = SETTINGS.cache
         self.jsonRPC    = jsonRPC
         self.player     = player
-        self.resources  = Resources(jsonRPC)
+        self.resources  = Resources(player.service)
         self.runActions = self.player.runActions
 
         self.windowID = 12005
@@ -205,13 +205,16 @@ class Overlay():
 
         
     def show(self):
+        if PROPERTIES.getPropertyBool('Overlay.Show'): return
         self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
+        PROPERTIES.setPropertyBool('Overlay.Show',True)
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
         self._player.onAVStarted(), self.toggleVignette()
 
    
     def close(self):
         self.log('close')
+        PROPERTIES.setPropertyBool('Overlay.Show',False)
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
         self._player.onPlayBackStopped(), self.toggleVignette(False)
         self._clrRemaining()
@@ -317,19 +320,19 @@ class Overlay():
                 onVAL  = remaining
                 offVAL = FIFTEEN
             elif self.channelBugInterval == 0: #random
-                onVAL  = random.randint(0,remaining)
-                offVAL = random.randint(0,(abs(remaining - onVAL) // 2))
+                onVAL  = random.randint(0,remaining//2)
+                offVAL = random.randint(0,(onVAL// 2))
             else: #set time
                 setVal = self.channelBugInterval * 60
                 onVAL  = setVal if setVal <= remaining else remaining
-                offVAL = round(onVAL // 2)
+                offVAL = round(onVAL//2)
             self.log('toggleBug, _getWait onVAL, offVAL (%s,%s)'%(onVAL, offVAL))
             return state, {True:float(onVAL),False:float(offVAL)}[state]
 
-        showbug, wait = __getWait(state, int(floor(self.player.getRemainingTime())))
-        nstate = not bool(showbug)
+        state, wait = __getWait(state, int(floor(self.player.getRemainingTime())))
+        nstate = not bool(state)
         
-        if state and showbug:
+        if state:
             logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
             
             if not self._hasControl(self.channelBug):
@@ -353,7 +356,7 @@ class Overlay():
             try: self._bugThread.join()
             except: pass
             
-        if cancel: return self.log('toggleBug, cancelling timer...')
+        if cancel or wait < 1: return self.log('toggleBug, cancelling timer...')
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
         self._bugThread = Timer(wait, self.toggleBug, [nstate])
         self._bugThread.name = "_bugThread"
@@ -371,15 +374,15 @@ class Overlay():
             
             self.log('toggleOnNext, conditions = %s, totalTime = %s, remaining = %s, threshold = %s, intTime = %s'%(conditions, totalTime, remaining, threshold, intTime))
             if not conditions or remaining <= self.minDuration: return False, remaining, 0
-            elif remaining > threshold:                         return False, abs(remaining - threshold), 0
+            elif remaining > threshold:                         return False, (remaining - threshold), 0
             elif remaining < intTime:                           return __getOnNextInterval(interval+1, displayTime)
-            else:                                               return True, abs(intTime - displayTime), displayTime
+            else:                                               return True, (intTime - displayTime), displayTime
             
         showOnNext, sleepTime, displayTime = __getOnNextInterval(ON_NEXT_COUNT,int(OSD_TIMER * ON_NEXT_COUNT))
         self.log('toggleOnNext, showOnNext = %s, sleepTime = %s, displayTime = %s'%(showOnNext, sleepTime, displayTime))
         
         wait    = {True:displayTime,False:sleepTime}[showOnNext]
-        nstate  = not bool(showOnNext)
+        nstate  = not bool(state)
         sysInfo = self.player.sysInfo.copy()
         citem   = sysInfo.get('citem',{}) #channel
         fitem   = sysInfo.get('fitem',{}) #onnow
@@ -448,7 +451,7 @@ class Overlay():
             try: self._onNextThread.join()
             except: pass
             
-        if cancel: return self.log('toggleOnNext, cancelling timer...')
+        if cancel or wait < 1: return self.log('toggleOnNext, cancelling timer...')
         self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
         self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
         self._onNextThread.name = "onNextThread"

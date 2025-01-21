@@ -372,7 +372,8 @@ class Monitor(xbmc.Monitor):
             isPlaying    = self.service.player.isPlaying()
             isEnabled    = self.service.player.enableOverlay
             isFullscreen = not BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window')
-            return (isPlaying | isEnabled | isFullscreen)
+            isOverlay    = not PROPERTIES.getPropertyBool('Overlay.Show')
+            return (isPlaying | isEnabled | isFullscreen | isOverlay)
             
         if state and __chkConditions() :
             if self.overlay is None: self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)

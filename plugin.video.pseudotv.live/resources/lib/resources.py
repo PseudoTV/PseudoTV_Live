@@ -21,18 +21,29 @@
 from globals    import *
 from functools  import reduce
 from difflib    import SequenceMatcher
-
-
+        
 LOCAL_RESOURCES = [LOGO_LOC, IMAGE_LOC]
 MUSIC_RESOURCE  = ["resource.images.musicgenreicons.text"]
 GENRE_RESOURCE  = ["resource.images.moviegenreicons.transparent"]
 STUDIO_RESOURCE = ["resource.images.studios.white"]
 
+class Service:
+    from jsonrpc import JSONRPC
+    monitor = xbmc.Monitor()
+    jsonRPC = JSONRPC()
+    def _interrupt(self) -> bool:
+        return PROPERTIES.isPendingInterrupt()
+    def _suspend(self) -> bool:
+        return PROPERTIES.isPendingSuspend()
+        
+        
 class Resources:
-    def __init__(self, jsonRPC):
-        self.jsonRPC    = jsonRPC
-        self.cache      = jsonRPC.cache
-        self.baseURL    = jsonRPC.buildWebBase()
+    def __init__(self, service=None):
+        if service is None: service = Service()
+        self.service    = service
+        self.jsonRPC    = service.jsonRPC
+        self.cache      = service.jsonRPC.cache
+        self.baseURL    = service.jsonRPC.buildWebBase()
         self.remoteHost = PROPERTIES.getRemoteHost()
         
         
@@ -40,7 +51,6 @@ class Resources:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=5), checksum=PROPERTIES.getInstanceID())
     def getLogo(self, chname: str, type: str="Custom", logo=None) -> str:
         if not logo: logo = self.getLocalLogo(chname)              #local
         if not logo: logo = self.getLogoResources(chname, type)    #resource
@@ -85,7 +95,7 @@ class Resources:
         cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
-                if MONITOR().waitForAbort(0.1): 
+                if self.service._interrupt(): 
                     self.log('getLogoResources, waitForAbort')
                     break
                 elif not hasAddon(id):
@@ -123,7 +133,7 @@ class Resources:
                             return self.cache.set(cacheName, art, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
         
-        
+    #todo refactor this mess, proper pattern matching...
     def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None:
         if auto: return ((SequenceMatcher(None, chname, name).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name.split(' ')[0]).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name).ratio() > .8) | (SequenceMatcher(None, chname, name.split(' ')[0]).ratio() > .8))
         else:
@@ -175,7 +185,7 @@ class Resources:
         return False
         
         
-    def generate_placeholder(self, text, background_image_path, output_path, font_path="arial.ttf", font_size=30, text_color=(255, 255, 255)):
+    def generate_placeholder(self, text, background_image_path=FileAccess.translatePath(os.path.join(MEDIA_LOC,'blank.png')), output_path=TEMP_LOC, font_path=FileAccess.translatePath(os.path.join('special://skin','fonts','NotoSans-Regular.ttf')), font_size=30, text_color=(255, 255, 255)):
         """
         Generates a placeholder image with text on a background image.
 
@@ -204,7 +214,10 @@ class Resources:
             # Draw the text on the image
             draw.text((x, y), text, font=font, fill=text_color)
             # Save the image
-            background_image.save(output_path)
+            file_name = os.path.join(output_path,'%s.png'%(text))
+            fle = FileAccess.open(file_name,'wb')
+            background_image.save(fle,'png')
+            fle.close()
 
         # Example usage
         # generate_placeholder("Product Image", "background.jpg", "placeholder.jpg")

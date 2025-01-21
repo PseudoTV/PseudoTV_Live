@@ -205,7 +205,6 @@ class XMLTVS:
     def cleanProgrammes(self, programmes: list) -> list:
         now = (datetime.datetime.fromtimestamp(float(getUTCstamp())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells
         holiday = Seasonal().getHoliday()
-        clrIDS  = SETTINGS.getResetChannels()
         
         def __filterProgrammes(program):
             citem = decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})

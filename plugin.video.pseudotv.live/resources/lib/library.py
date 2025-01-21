@@ -47,7 +47,7 @@ class Library:
         self.cache        = service.jsonRPC.cache
         self.predefined   = Predefined()
         self.channels     = Channels()
-        self.resources    = Resources(self.jsonRPC)
+        self.resources    = Resources(service)
         self.libraryDATA  = getJSON(LIBRARYFLE_DEFAULT)
         self.libraryTEMP  = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())

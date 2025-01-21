@@ -69,26 +69,25 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.channels       = Channels()
             self.rule           = RulesList()
             self.jsonRPC        = JSONRPC()
-            self.resource       = Resources(self.jsonRPC)
+            self.resource       = Resources()
 
             self.host           = PROPERTIES.getRemoteHost()
             self.friendly       = SETTINGS.getFriendlyName()
             self.newChannel     = self.channels.getTemplate()
             self.eChannels      = self.loadChannels(SETTINGS.getSetting('Default_Channels'))
             
-            if self.eChannels is None:
-                self.closeManager()
-            else:
-                self.channelList = self.channels.sortChannels(self.createChannelList(self.buildArray(), self.eChannels))
-                self.newChannels = self.channelList.copy()
-
-                if self.startChannel == -1:            self.startChannel = __get1stChannel(self.channelList)
-                if self.startChannel <= CHANNEL_LIMIT: self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
-                else:                                  self.focusIndex   = __findChannel(self.startChannel,channels=self.channelList)
-                if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
-                self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
-
             try:
+                if self.eChannels is None: raise Exception("No Channels Found!")
+                else:
+                    self.channelList = self.channels.sortChannels(self.createChannelList(self.buildArray(), self.eChannels))
+                    self.newChannels = self.channelList.copy()
+
+                    if self.startChannel == -1:            self.startChannel = __get1stChannel(self.channelList)
+                    if self.startChannel <= CHANNEL_LIMIT: self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
+                    else:                                  self.focusIndex   = __findChannel(self.startChannel,channels=self.channelList)
+                    if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
+                    self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
+
                 if kwargs.get('start',True): self.doModal()
             except Exception as e: 
                 self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
@@ -130,10 +129,10 @@ class Manager(xbmcgui.WindowXMLDialog):
         elif name == 'Ask':
             def __buildItem(servers, server):
                 if server.get('online',False):
-                    return LISTITEMS.buildMenuListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)]),server.get('host'),len(server.get('channels',[]))),icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
+                    return self.buildListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)]),server.get('host'),len(server.get('channels',[]))),icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
             servers = self.getServers()
             lizlst = poolit(__buildItem)(*(list(servers.values()),list(servers.values())))
-            lizlst.insert(0,LISTITEMS.buildMenuListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(channels)),icon=ICON))
+            lizlst.insert(0,self.buildListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(channels)),icon=ICON))
             select = DIALOG.selectDialog(lizlst, LANGUAGE(30173), None, True, SELECT_DELAY, False)
             if not select is None: return self.loadChannels(lizlst[select].getLabel())
             else: return
@@ -258,8 +257,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                     self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Property(chnum))]')
                 else:
                     self.setLabels(self.right_button1,LANGUAGE(32062))#Close
-                    self.setLabels(self.right_button2,'')
+                    self.setLabels(self.right_button2,LANGUAGE(32060))#Cancel
                     self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Property(chnum))]')
+                    self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Path)]')
                     
                 self.setLabels(self.right_button3,LANGUAGE(32235))#Preview
                 self.setLabels(self.right_button4,LANGUAGE(32239))#Clear
@@ -637,7 +637,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def previewChannel(self, citem, retCntrl=None):
         def __buildItem(fileList, fitem):
-            return LISTITEMS.buildMenuListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=getThumb(fitem,opt=EPG_ARTWORK))
+            return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=getThumb(fitem,opt=EPG_ARTWORK))
             
         def __fileList(citem):
             from builder import Builder
@@ -838,7 +838,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if citem.get('name') and citem.get('path'):
                     if citem['number'] <= CHANNEL_LIMIT: citem['type'] = "Custom"
                     return self.setID(citem)
-            channelList = self.channels.sortChannels([_f for _f in [_validate(channel) for channel in channelList] if _f])
+            channelList = setDictLST(self.channels.sortChannels([_f for _f in [_validate(channel) for channel in channelList] if _f]))
             self.log('__validateChannels, channelList = %s'%(len(channelList)))
             return channelList
               
@@ -854,11 +854,10 @@ class Manager(xbmcgui.WindowXMLDialog):
                 # payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'channels':self.newChannels}
                 # requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
                 #todo write tmp file if post fails, add to que to repost when url online.
-            else:
-                self.resetPagination(changes)
-                SETTINGS.setResetChannels(ids)
-                SETTINGS.setUpdateChannels(ids)
-                self.channels.setChannels(channels)
+            elif self.channels.setChannels(channels): #save changes
+                self.resetPagination(changes) #clear pagination cache
+                SETTINGS.setResetChannels(ids) #clear guidedata
+                SETTINGS.setUpdateChannels(ids) #update channel meta.
         self.closeManager()
             
         
@@ -958,7 +957,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             if   focusLabel == LANGUAGE(32059): self.saveChannels() #Save 
             elif focusLabel == LANGUAGE(32061): self.clearChannel(focusCitem)#Delete
             elif focusLabel == LANGUAGE(32239): self.clearChannel(focusCitem,open=True)#Clear
-            elif focusLabel == LANGUAGE(32136): self.moveChannel(focusCitem,focusItems.get('position'))#Move 
+            elif focusLabel == LANGUAGE(32136): self.moveChannel(focusCitem,focusPOS)#Move 
             elif focusLabel == LANGUAGE(32062): #Close
                 if   self.isVisible(self.itemList): self.togglechanList(focus=focusPOS)
                 elif self.isVisible(self.chanList): self.closeManager()

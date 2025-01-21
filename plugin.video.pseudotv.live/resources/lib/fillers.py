@@ -31,7 +31,7 @@ class Fillers:
         self.jsonRPC    = builder.jsonRPC
         self.cache      = builder.jsonRPC.cache
         self.runActions = builder.runActions
-        self.resources  = Resources(self.jsonRPC)
+        self.resources  = Resources(builder.service)
         self.fillSources()
         
 
