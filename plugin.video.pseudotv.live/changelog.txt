@@ -1,567 +1,313 @@
 v.0.5.9
--Added New parsing procedures when reading pvr:// directories. 
- - This should fix playback issues with PVR recordings and the newly added saved searches.
--Added Support for saved PVR Searches (Currently only supports PseudoTV Channels); Available under "Mixed" Autotuning.
+- Introduced new parsing procedures for reading `pvr://` directories.
+  - This enhancement aims to resolve playback issues with PVR recordings and newly added saved searches.
+- Added support for saved PVR searches (currently supports PseudoTV Channels only); available under "Mixed" Autotuning.
 
 v.0.5.8
--Improved Channel Manager UI and refactored code.
--Fixed Issue with some Adv. Channel rules not applying correctly. 
--Removed Global "Sort Method"! Sort Method are now only applied per channel via. Adv. Channel rules.
--Changed How sort methods are applied to Dynamic Smart Playlists. Adv. Channel rules supersede Dynamic rules.
--Added Channel Manager "Preview" button to channel settings [Experimental].
- - Preview channel's in-order as they would appear in the EPG.
- - Paths and rules apply as they would during channel building.
- - Useful for testing paths and rules, build time information included. 
--Notice Some Utility Items are now hidden only available when "Enabling Debugging" is enabled.
--Notice Channel Manager; some path options are excluded based on "radio" ie. Music Channel.
--Fixed Rollback playcount.
--Fixed Overlay tool, issue saving "On Next" Position.
--Notice Smartplaylist limits now override global pagination size, "No Limit" defaults back to pagination size. 
--Added Channel guidedata reset to the channel manager. Channel changes will now trigger complete rebuild of guidedata to reflect new changes. 
--Added New "On Next" controls to overlay position utility.
--Notice Various tweaks to playback, error handling & channel bug and on-next logic.
--Various tweaks to improve stability and reduce memory burden from background service.
--Fixed "Restart Percentage" setting to allow 0% ie. Disable Restart Prompt.
+- Enhanced Channel Manager UI and refactored code.
+- Resolved issues with some advanced channel rules not applying correctly.
+- Deprecated global "Sort Method"; sort methods are now applied per channel via advanced channel rules.
+- Modified the application of sort methods to dynamic smart playlists; advanced channel rules now supersede dynamic rules.
+- Added "Preview" button in channel settings for Channel Manager [Experimental].
+  - Preview channels in order as they would appear in the EPG.
+  - Paths and rules apply as they would during channel building.
+  - Useful for testing paths and rules, with build time information included.
+- Some utility items are now hidden and only available when "Enable Debugging" is turned on.
+- Excluded some path options based on "radio" (i.e., Music Channel) in the Channel Manager.
+- Fixed rollback playcount issue.
+- Fixed overlay tool issue saving "On Next" position.
+- Smartplaylist limits now override global pagination size; "No Limit" defaults back to pagination size.
+- Added channel guidedata reset to the Channel Manager. Channel changes will now trigger a complete rebuild of guidedata to reflect new changes.
+- Added new "On Next" controls to the overlay position utility.
+- Various tweaks to playback, error handling, channel bug, and on-next logic.
+- Improved stability and reduced memory burden from background service.
+- Fixed "Restart Percentage" setting to allow 0% (i.e., disable restart prompt).
 
 v.0.5.7
--Improved Stability by removing Kodi's segfault prone busy dialog, in-favor of a custom busy dialog.
--Improved "ON Next" options now include Artwork or Text based prompts.
--Improved Background Overlay.
--Fixed Channel Manager path duplication.
--Improved file migration when changing centralized file location.
--Changed Even show distributions global default value to 0.
--Moved Custom user groups out of settings and into group select list in channel manager.
--Fixed PseudoTV not respecting user subtitle preference.
--Fixed Channel bug and On-Next position not changing based on user settings.
--Improved Background Interface and content transitioning.
--Fixed Deadlocking issue when checking multi-room status on startup.
--Improved URL caching.
--Added Experimental new adv. channel rule "Pause Channel". The rule pauses channel content when not viewing.
- - Assistance debugging this feature is appreciated...
- - Known issues, Resume playback from last watched time may not always work.
- - Focusing on wither the content stays in position and the EPG guide presents correct meta.
--Improved Overlay position utility to include On-Next position and in the near future vignette position.
- - Added "Global" option for On-Next position, Including Adv. channel rules.
- - Added "Global" option for On-Next color change, Including Adv. channel rules.
+- Enhanced stability by replacing Kodi's segfault-prone busy dialog with a custom busy dialog.
+- Improved "ON Next" options to include artwork or text-based prompts.
+- Enhanced background overlay.
+- Fixed channel manager path duplication issue.
+- Improved file migration when changing centralized file locations.
+- Changed default value for even show distributions to 0.
+- Moved custom user groups out of settings into the group select list in the Channel Manager.
+- Fixed PseudoTV not respecting user subtitle preference.
+- Fixed channel bug and On-Next position not changing based on user settings.
+- Improved background interface and content transitioning.
+- Fixed deadlock issue when checking multi-room status on startup.
+- Enhanced URL caching.
+- Added experimental new advanced channel rule "Pause Channel." The rule pauses channel content when not viewing.
+  - Assistance debugging this feature is appreciated.
+  - Known issues: Resume playback from the last watched time may not always work.
+  - Focus on whether the content stays in position and the EPG guide presents correct metadata.
+- Improved overlay position utility to include On-Next position and future vignette position.
+  - Added "Global" option for On-Next position, including advanced channel rules.
+  - Added "Global" option for On-Next color change, including advanced channel rules.
 
 v.0.5.6
--Improved Vignette (W.I.P) available in Adv. Channel Rules.
--Added Global Interleaving value and Advanced Interleaving Channel rule. 
--Improved Even Distribution, now includes "Force Episode Ordering".
--Improved Channel Bug position tool, now includes overlay vignette if applicable.
--Improved Channel Manager's Path browser, now includes resource paths.
--Refactored Pre-Roll/Post-Roll Fillers.
--Added Pre-Roll/Post-Roll options to Adv. Channel rules.
--Improved Advanced Channel rules.
--Fixed Overlay issues introduced in previous versions.
--Improved MediaInfo support for external mediainfo.xml file parsing.
--Fixed Issue with disappearing channels from m3u.
--Tweaked Background overlay.
--Added Multi-Room channels to the channel manager w/ default server option in settings.
- - W.I.P there will be bugs (remote save disabled until finished.); For proper system setup info can be found on the wiki under "Recommend Prerequisites".
- - All Kodi instances are required to broadcast Zeroconf for two way communication between PseudoTV Live instances.
- - Default Channel List:
-   - Auto: Local if available then, first online server from enabled server list else, ask.
-   - Ask: Select from any Zeroconf online instance found.
--Added New global rule "Show OSD on change"; Display OSD Info when new channel content starts. Advanced Channel Rules available.
--Fixed User reported issues with browsing channel logos, parsing stacked MP4 files and moving channels within the channel manager.
--Added Zeroconf Multi-Room configuration; replacing the previous pairing method.
- - To use multi-room "Zeroconf" must be enabled under Kodi "Services/General" settings. 
-   (Windows users must install Apple's Bonjour service https://support.apple.com/en-us/106380)
- - Announcement & Discovery are fully automated, New instances are enabled by default.
- - No pairing procedures required; ignore past methods.
- - Receive notifications when new instances are detected.
- - Previous pairings are unchanged, no user action required.
--Notice All multi-room ports TCP/UDP are required to be identical on each instance of PseudoTV. 
- - It's recommended you leave ports unchanged. Ports settings are hidden and can be unlocked by enabling "Debugging" in settings.
--Added New welcome QRdialog to work in progress wiki (Currently unavailable).
--Added Multi-Room option to auto-tuning.
- - When no channel backups are found and multi-room instances are available. 
--Added Global sort method to settings.
- - Set the default method for all channels with exceptions below.
- - Per channel sort method is overridden by Smartplaylists, Dynamicplaylists and Advanced channel rules containing an existing sort method.
--Moved "Remove Server" to "Select Server" list.
--Tweaked Multiprocessing and cache.
--Improved filling guidedata for channels with limited or short duration media.
--Various improvements, tweaks and fixes.
--Improved Multi-Room connections and notifications.
--Added new channel path options to browse dialog utility.
- - "Import STRM" Import paths ie. directories within a STRM file. Not meant for STRMS containing individual media (directories only!).
- - "Basic Playlist" Create a channel from a single ".cue",".m3u",".m3u8",".strm",".pls",".wpl" file (content only!) (W.I.P).
- 
+- Improved vignette (W.I.P) available in advanced channel rules.
+- Added global interleaving value and advanced interleaving channel rule.
+- Enhanced even distribution, now includes "Force Episode Ordering".
+- Improved channel bug position tool, now includes overlay vignette if applicable.
+- Improved Channel Manager's Path browser, now includes resource paths.
+- Refactored pre-roll/post-roll fillers.
+- Added pre-roll/post-roll options to advanced channel rules.
+- Enhanced advanced channel rules.
+- Fixed overlay issues introduced in previous versions.
+- Improved MediaInfo support for external `mediainfo.xml` file parsing.
+- Fixed issue with disappearing channels from `m3u`.
+- Tweaked background overlay.
+- Added multi-room channels to the Channel Manager with default server option in settings.
+  - Work-in-progress: there will be bugs (remote save disabled until finished). For proper system setup, info can be found on the wiki under "Recommended Prerequisites."
+  - All Kodi instances are required to broadcast Zeroconf for two-way communication between PseudoTV Live instances.
+  - Default channel list:
+    - Auto: Local if available, then first online server from the enabled server list, else ask.
+    - Ask: Select from any Zeroconf online instance found.
+- Added new global rule "Show OSD on change"; display OSD info when new channel content starts. Advanced channel rules available.
+- Fixed user-reported issues with browsing channel logos, parsing stacked MP4 files, and moving channels within the Channel Manager.
+- Added Zeroconf multi-room configuration, replacing the previous pairing method.
+  - To use multi-room, "Zeroconf" must be enabled under Kodi "Services/General" settings.
+    (Windows users must install Apple's Bonjour service: https://support.apple.com/en-us/106380)
+  - Announcement & discovery are fully automated; new instances are enabled by default.
+  - No pairing procedures required; ignore past methods.
+  - Receive notifications when new instances are detected.
+  - Previous pairings are unchanged; no user action required.
+- All multi-room ports TCP/UDP are required to be identical on each instance of PseudoTV.
+  - It's recommended to leave ports unchanged. Ports settings are hidden and can be unlocked by enabling "Debugging" in settings.
+- Added new welcome QR dialog to work in progress wiki (Currently unavailable).
+- Added multi-room option to autotuning.
+  - When no channel backups are found and multi-room instances are available.
+- Added global sort method to settings.
+  - Set the default method for all channels with exceptions below.
+  - Per channel sort method is overridden by smart playlists, dynamic playlists, and advanced channel rules containing an existing sort method.
+- Moved "Remove Server" to "Select Server" list.
+- Tweaked multiprocessing and cache.
+- Improved filling guidedata for channels with limited or short-duration media.
+- Various improvements, tweaks, and fixes.
+- Improved multi-room connections and notifications.
+- Added new channel path options to browse dialog utility.
+  - "Import STRM" Import paths, i.e., directories within a STRM file. Not meant for STRMs containing individual media (directories only!).
+  - "Basic Playlist" Create a channel from a single `.cue`, `.m3u`, `.m3u8`, `.strm`, `.pls`, `.wpl` file (content only!) (W.I.P).
+
 v.0.5.5
--Added robust debugging with easy log submission and user U.I. (W.I.P).
- - Minimum Debug level setting - Filter less important entries to reduce file size.
- - QR-Code PseudoTV Live Forums.
- - QR-Code Snapshot UI (Unfiltered)
- - QR-Code "Submit Snapshot" Upload to paste.kodi.tv (filtered, sensitive information stripped before upload).
--Improved settings; reordered and cleaned in preparation for Kodi repository submission.
- - Debugging now disabled by default.
- - Automatic IPTV-Simple PVR Refresh / Configuration disabled by default.
--Added QR-Code dialog.
--Updated September/October Seasonal channels.
--Optimized cache initialization
--Improved STRM duration detection and playback.
--Removed "Tweak" settings; Moved to "Globals".
--Fixed "Play from here" playback.
--Added Local to URL image converter; hosted via Kodi webserver and PseudoTV Server.
--Added "Smart" TV-guide loading as default when launching PseudoTV Live via Kodi UI.
- - If multiple-instances guide will open to "PseudoTV Live [All channels]"
-   else the guide will open to your local instance name "PseudoTV Live".
-   Fallback to "[All channels]" if not match is found. 
--Improved "Restart" Button; Restart Button disabled by default.
--Improved PVR Backend refresh.
+- Added robust debugging with easy log submission and user UI (W.I.P).
+  - Minimum debug level setting: Filter less important entries to reduce file size.
+  - QR-Code PseudoTV Live Forums.
+  - QR-Code Snapshot UI (Unfiltered)
+  - QR-Code "Submit Snapshot" Upload to `paste.kodi.tv` (filtered, sensitive information stripped before upload).
+- Improved settings; reordered and cleaned in preparation for Kodi repository submission.
+  - Debugging now disabled by default.
+  - Automatic IPTV-Simple PVR refresh/configuration disabled by default.
+- Added QR-Code dialog.
+- Updated September/October seasonal channels.
+- Optimized cache initialization.
+- Improved STRM duration detection and playback.
+- Removed "Tweak" settings; moved to "Globals".
+- Fixed "Play from here" playback.
+- Added local to URL image converter; hosted via Kodi webserver and PseudoTV Server.
+- Added "Smart" TV-guide loading as default when launching PseudoTV Live via Kodi UI.
+  - If multiple instances, the guide will open to "PseudoTV Live [All channels]"
+  - Otherwise, the guide will open to your local instance name "PseudoTV Live".
+  - Fallback to "[All channels]" if no match is found.
+- Improved "Restart" button; restart button disabled by default.
+- Improved PVR backend refresh.
 
 v.0.5.4
--Added Provider meta to recordings.
--Refactored Playback:
-    -Improved Playlist/Broadcast/VOD callbacks and handling.
-    -New! EPG (Guide) behavior: Play media as VOD from any position regardless of playback type.
-    -"Play Programme" context will launch continued playback if enabled in Kodi's LiveTV Settings.
-    -New! On VOD finish channel will resume in realtime.
--Added "Build Filler Subfolders" setting to "Fillers".
--Added "Bonjour on startup" setting to "Multi-Room".
--Added "Allow PVR Refresh" to "Misc." settings.
--Added optional saving accurate duration meta directly from Kodi's videoplayer during playback.
--Added gzip compression support to xmltv server.
--Improved Playlist playback mode.
- - Media can start by any EPG cell, ie. it's not bound to linear time.
--Improved PVR Provider meta.
--Moved all context menu under "PseudoTV Live".
--Added Channel Manager to channel list context menu.
--Fixed Autotune prompt not showing.
--Fixed Disable Trakt, Playcount Rollback not triggering.
--Added "Restart" replay prompt.
- - When media is in-progress, a button will appear to restart the program from the beginning.
-   Media will be launched as a singular VOD event. 
- - Global and Adv. Channel rule to disable/set restart parameters.
--Added "Resume Later" recordings option.
- - When using "Add to Recordings" on currently playing content an option to "Incl. Resume" will be offered.
-   Resume later will start the future playback at the resume position for easy viewing later... 
--Added temporary debug logging to fix failed channel building during fillers.
-- Further logs will be needed to help resolve the issue, please submit logs. THX
--Tweaked background queue ordering.
--Improved startup pairing.
--Fixed background service not idling.
--Added "Seek Tolerance" as a runtime offset to keep durations via meta-providers under actual runtimes.
--Tweaked startup order, moved HTTP server to higher priority. 
--Fixed http hosted genres.
--Improved Multi-Room Adv. Rule support via paired clients.
- - Advanced Rules for playback, overlays, etc are now shared between instances.
+- Added provider metadata to recordings.
+- Refactored playback:
+  - Improved playlist/broadcast/VOD callbacks and handling.
+  - New EPG (Guide) behavior: Play media as VOD from any position regardless of playback type.
+  - "Play Programme" context will launch continued playback if enabled in Kodi's LiveTV settings.
+  - New: On VOD finish, the channel will resume in real-time.
+- Added "Build Filler Subfolders" setting to "Fillers".
+- Added "Bonjour on startup" setting to "Multi-Room".
+- Added "Allow PVR Refresh" to "Misc." settings.
+- Added optional saving of accurate duration metadata directly from Kodi's video player during playback.
+- Added gzip compression support to `xmltv` server.
+- Improved playlist playback mode.
+  - Media can start by any EPG cell, i.e., it's not bound to linear time.
+- Improved PVR provider metadata.
+- Moved all context menus under "PseudoTV Live".
+- Added channel manager to channel list context menu.
+- Fixed autotune prompt not showing.
+- Fixed disable Trakt, playcount rollback not triggering.
+- Added "Restart" replay prompt.
+  - When media is in progress, a button will appear to restart the program from the beginning.
+    Media will be launched as a singular VOD event.
+  - Global and advanced channel rule to disable/set restart parameters.
+- Added "Resume Later" recordings option.
+  - When using "Add to Recordings" on currently playing content, an option to "Incl. Resume" will be offered.
+    Resume later will start future playback at the resume position for easy viewing later.
+- Added temporary debug logging to fix failed channel building during fillers.
+  - Further logs will be needed to help resolve the issue; please submit logs. Thank you.
+- Tweaked background queue ordering.
+- Improved startup pairing.
+- Fixed background service not idling.
+- Added "Seek Tolerance" as a runtime offset to keep durations via meta-providers under actual runtimes.
+- Tweaked startup order; moved HTTP server to higher priority.
+- Fixed http hosted genres.
+- Improved multi-room advanced rule support via paired clients.
+  - Advanced rules for playback, overlays, etc., are now shared between instances.
 
 v.0.5.3
--Fixed channel manager "Add Path".
--Tweaked PVR backend reload.
--Improved user folder file transfer.
--Improved directory walking for plugins and resources.
--Added refactored "hack" method for writing PVR Instance settings. 
--Added rename default device name w/prompt:
- - New multi-room requires a unique device name.
--Removed all client/server references and settings.
--Added "Run Autotune" option to utility menu.
--Added new Multi-room pairing:
- - New method pairs instances together, no limit to paired devices.
-   Each instance has it's own channels to manage, The pairing process only shares m3u/xmltv/genre over http.
-   In-order for multi-room to work, Kodi needs to be configured with a centralized database and all media must use shared paths.
-   Start the pairing process by clicking "Bonjour Announcement" under multi-room settings.
-   You'll have 15mins to start Kodi on another device, which for the first 60secs at startup will look for pairing.
-   Once paired, you can enable the new server in multi-room settings "Select Servers".
-   PseudoTV Live will configure IPTV Simple PVR backend to use the selected servers files.
-   Feature is a W.I.P please provide feedback and debug logs when necessary. Thanks!
+- Fixed channel manager "Add Path".
+- Tweaked PVR backend reload.
+- Improved user folder file transfer.
+- Improved directory walking for plugins and resources.
+- Added refactored "hack" method for writing PVR instance settings.
+- Added rename default device name with prompt:
+  - New multi-room requires a unique device name.
+- Removed all client/server references and settings.
+- Added "Run Autotune" option to utility menu.
+- Added new multi-room pairing:
+  - New method pairs instances together, no limit to paired devices.
+    Each instance has its own channels to manage; the pairing process only shares `m3u/xmltv/genre` over http.
+    For multi-room to work, Kodi needs to be configured with a centralized database, and all media must use shared paths.
+    Start the pairing process by clicking "Bonjour Announcement" under multi-room settings.
+    You'll have 15 minutes to start Kodi on another device, which for the first 60 seconds at startup will look for pairing.
+    Once paired, you can enable the new server in multi-room settings "Select Servers".
+    PseudoTV Live will configure IPTV Simple PVR backend to use the selected server's files.
+    Feature is a work-in-progress; please provide feedback and debug logs when necessary. Thank you!
 
 v.0.5.2
--Added removal of invalid characters from channel names.
--Moved Logo's folder to user folder. ie. \cache\logos
--Added local fillers folder. ie. \cache\fillers
--Added automatically create filler folders based on your current channels and genres to the utilities menu.
--Changed default settings for accurate duration to "Prefer Kodi Metadata" & include fillers to "False".
--Added Force Episode Sort Channel Rule. 
--Improved queue priorities. 
--Added PVR backend refresh at the end of channel building:
- - Forces Kodi to recognize recent channel/epg changes.
- - May cause some channel EPGs to display a blank cell, until the PVR backend refreshes.
- - I'm working on a long-term solution, for now your feedback is appreciated.
--Fixed a few user reported issues that were introduced in recent iterations:
- - Channels not building due to limit Smartplaylist parsing error.
- - Channels ignoring auto pagination; leading to repeated content.
--Completed Holiday channels.
--Fixed Playlist Playback not progressing.
--Fixed Recordings Persistence issues.
--Added Automatic Recordings Cleanup to settings.
--Improved Channel Manager logo utility.
--Improved Channel Manager path utility.
--Improved Channel Content parsing.
--Added Advanced Channel Rules UI to Channel Manager.
--Added Dynamic Smartplaylist builder to path selections:
- - Allows users to build on-the-fly dynamic smartplaylists without the need for a smartplaylist or node.
--Added First round of Advanced Channel Rules, more to come...
--Added Update Available notification.
+- Added removal of invalid characters from channel names.
+- Moved logo folder to user folder (e.g., `\cache\logos`).
+- Added local fillers folder (e.g., `\cache\fillers`).
+- Added automatic creation of filler folders based on your current channels and genres to the utilities menu.
+- Changed default settings for accurate duration to "Prefer Kodi Metadata" & include fillers to "False".
+- Added force episode sort channel rule.
+- Improved queue priorities.
+- Added PVR backend refresh at the end of channel building:
+  - Forces Kodi to recognize recent channel/EPG changes.
+  - May cause some channel EPGs to display a blank cell until the PVR backend refreshes.
+  - Working on a long-term solution; feedback is appreciated.
+- Fixed a few user-reported issues introduced in recent iterations:
+  - Channels not building due to limit smart playlist parsing error.
+  - Channels ignoring auto pagination, leading to repeated content.
+- Completed holiday channels.
+- Fixed playlist playback not progressing.
+- Fixed recordings persistence issues.
+- Added automatic recordings cleanup to settings.
+- Improved channel manager logo utility.
+- Improved channel manager path utility.
+- Improved channel content parsing.
+- Added advanced channel rules UI to the Channel Manager.
+- Added dynamic smart playlist builder to path selections:
+  - Allows users to build on-the-fly dynamic smart playlists without the need for a smart playlist or node.
+- Added the first round of advanced channel rules, more to come.
+- Added update available notification.
 
 v.0.5.1
--Improved background services.
+- Enhanced background services.
 
 v.0.5.0
--Added Seasonal channel cleanup.
--Added Youtube duration detection *Requires Youtube_DL.
--Added Third-Party duration parsing via external python libraries (Hachoir,MediaInfo,FFProbe,MoviePY,OpenCV).
--Improved MP4 duration parsing.
--Added iSpot Adverts support.
--Finalized global fillers.
--Fixed "On Next" global setting; limited notifications to content above 15mins and ignore fillers.
--Finalized playcount rollback.
--Simplified filler settings. Advanced Channel Rules will feature more controls on release.
--Refactored internal references and compressed data strings using zlib. This will reduce memory burden and Kodi EPG database size.
--Tweaked onChange logic to improve callback performance. 
+- Added seasonal channel cleanup.
+- Added YouTube duration detection (requires YouTube_DL).
+- Added third-party duration parsing via external Python libraries (Hachoir, MediaInfo, FFProbe, MoviePY, OpenCV).
+- Improved MP4 duration parsing.
+- Added iSpot Adverts support.
+- Finalized global fillers.
+- Fixed "On Next" global setting; limited notifications to content above 15 minutes and ignore fillers.
+- Finalized playcount rollback.
+- Simplified filler settings. Advanced channel rules will feature more controls on release.
+- Refactored internal references and compressed data strings using zlib, reducing memory burden and Kodi EPG database size.
+- Tweaked onChange logic to improve callback performance.
 
 v.0.4.9
--Improved MP4 duration meta detection.
--Fixed Seasons returning incorrect holiday for the first week of April.
--Fixed Seasonal logos disappearing.
--Improved Playback error detection.
--Improved Trailer parsing from Kodi & IMDB Trailers plugin.
--Improved "Auto" calculations for fillers. 
- "Auto" attempts to fill the time between media to the nearest 15 minute mark.
--Fixed Client detection issues introduced in the last build.
+- Improved MP4 duration metadata detection.
+- Fixed seasons returning incorrect holiday for the first week of April.
+- Fixed seasonal logos disappearing.
+- Enhanced playback error detection.
+- Improved trailer parsing from Kodi & IMDB Trailers plugin.
+- Improved "Auto" calculations for fillers.
+  - "Auto" attempts to fill the time between media to the nearest 15-minute mark.
+- Fixed client detection issues introduced in the last build.
 
 v.0.4.8
--Notice The following steps are required!.
- - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".
- - Open Kodi settings, under PVR & Live TV; Click "clear data" and select "All".
- 
--Refactored Announcements & Discoveries for server/client multi-room (W.I.P).
--Refactored HTTP server.
--Added Disable Trakt scrobbling during playback to global options.
--Added Rollback watched playcount & resume points to global options.
--Fixed TV bumpers and resources (W.I.P); See readme for details.
--Added TV adverts and resources (W.I.P); See readme for details.
--Added Trailers and resources (W.I.P); See readme for details.
+- The following steps are required:
+  - Open PseudoTV Live settings, under Miscellaneous; click "Utility Menu" and select "Delete M3U/XMLTV".
+  - Open Kodi settings, under PVR & Live TV; click "clear data" and select "All".
+- Refactored announcements & discoveries for server/client multi-room (W.I.P).
+- Refactored HTTP server.
+- Added disable Trakt scrobbling during playback to global options.
+- Added rollback watched playcount & resume points to global options.
+- Fixed TV bumpers and resources (W.I.P); see readme for details.
+- Added TV adverts and resources (W.I.P); see readme for details.
+- Added trailers and resources (W.I.P); see readme for details.
 
 v.0.4.7
--Notice The following steps are required!.
- - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".
- - Open Kodi settings, under PVR & Live TV; Click "clear data" and select "All".
- 
--Fixed Misc. playback issues.
--Fixed Movie rating filler and resources.
- - Enable fillers under global settings, then verify MPAA resource installed under fillers.
- - Ratings only added to prior to a Movie and currently only support the U.S. Rating system (MPAA). 
- - If any overseas users would like support contact me @Lunatixz on the Kodi forums.
- - MPAA resources are available via the Lunatixz or PseudoTV repository. 
- 
--Updated April Seasonal channels.
--Fixed channel bug not displaying correct logo.
+- The following steps are required:
+  - Open PseudoTV Live settings, under Miscellaneous; click "Utility Menu" and select "Delete M3U/XMLTV".
+  - Open Kodi settings, under PVR & Live TV; click "clear data" and select "All".
+- Fixed miscellaneous playback issues.
+- Fixed movie rating filler and resources.
+  - Enable fillers under global settings, then verify MPAA resource installed under fillers.
+  - Ratings are only added before a movie and currently only support the U.S. rating system (MPAA).
+  - If any overseas users would like support, contact me at [Lunatixz on the Kodi forums].
+  - MPAA resources are available via the Lunatixz or PseudoTV repository.
+- Updated April seasonal channels.
+- Fixed channel bug not displaying the correct logo.
 
 v.0.4.6
--Refactored Seasonal & Provisional Autotuning.
--Added "Even Show Distribution" Rule; Enabled by default under global settings.
- - TV Networks, TV Genres, Mixed Genres & Seasonal include even show distribution.
--Notice Autotuned TV Genre, Mixed Genres are random and no longer in episode order.
--Bonjour Announcement/Discovery temporarily disabled.
+- Refactored seasonal & provisional autotuning.
+- Added "Even Show Distribution" rule; enabled by default under global settings.
+  - TV Networks, TV Genres, Mixed Genres & Seasonal include even show distribution.
+- Autotuned TV genre, mixed genres are now random and no longer in episode order.
+- Temporarily disabled Bonjour announcement/discovery.
 
 v.0.4.5
--Notice The following steps are required!.
- - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".
- - Open Kodi settings, under PVR & Live TV; Click "clear data" and select "All".
--Improved Channel loading times.
--Improved Background tasks and services.
--Improved Playback using new IPTV Simple methods *Thanks @phunkyfish.
--Refactored all playback handlers, including radio.
--Fixed a bug which caused duplicate XMLTV entries to share the same start time. This lead to empty EPG cells.
--Fixed a rare instance where existing channels are not detect/imported when rebuilding the library database from scratch.
--Added "Rebuild Library" to the utility menu. Forces a library rebuild which will detected recent Kodi library additions. Default behavior the library self updates every few days to hours. 
--Added "Welcome" prompt to help new users understand and operate PseudoTV Live. Suggestions for improvements are welcome.
--Removed "UpNext" support.
+- The following steps are required:
+  - Open PseudoTV Live settings, under Miscellaneous; click "Utility Menu" and select "Delete M3U/XMLTV".
+  - Open Kodi settings, under PVR & Live TV; click "clear data" and select "All".
+- Improved channel loading times.
+- Enhanced background tasks and services.
+- Improved playback using new IPTV Simple methods (thanks to `@phunkyfish`).
+- Refactored all playback handlers, including radio.
+- Fixed bug causing duplicate XMLTV entries to share the same start time, leading to empty EPG cells.
+- Fixed a rare instance where existing channels were not detected/imported when rebuilding the library database from scratch.
+- Added "Rebuild Library" to the utility menu. Forces a library rebuild to detect recent Kodi library additions. Default behavior is for the library to self-update every few days to hours.
+- Added "Welcome" prompt to help new users understand and operate PseudoTV Live. Suggestions for improvements are welcome.
+- Removed "UpNext" support.
 
 v.0.4.4
--Added "Network Folder" clients ability to edit Autotuned channels on server (W.I.P).
--Moved "channels.json,library.json" files to "Centralized Folder" for network/client accessibility.
--Improved overlay functions to reduce memory overhead.
--Added "Show M3U/XMLTV" option to the utility Menu (Debugging tool).
+- Added "Network Folder" clients' ability to edit autotuned channels on server (W.I.P).
+- Moved `channels.json` and `library.json` files to "Centralized Folder" for network/client accessibility.
+- Improved overlay functions to reduce memory overhead.
+- Added "Show M3U/XMLTV" option to the utility menu (debugging tool).
 
 v.0.4.3
--Added "Hack" method for automatically configuring IPTV-Simple (Manual configuration no longer necessary).
--Improved Usability/Notifications
--Fixed Channel Manager - channels removed/missing after editing.
--Added Support for upcoming IPTV-Simple update that allows audio passthrough for PVR content.
--Added "Add to Recordings" context option; stores given media as a PVR recording; "Watch Later" feature (Experimental - Feedback appreciated).
- Known issue with recordings - meta information inconsistently displays, I'm working with @phunkyfish to resolve this bug.
--Added "Force High-Power" option under miscellaneous settings. Disables performance throttling on low power devices.
--Improved file locking for upcoming webUI. 
--Temporarily disabled multi-room discovery/announcements. 
--Improved flow controls for background management (Experimental - Feedback appreciated).
--Fixed "Move"/"Delete" channel manager buttons.
+- Added "Hack" method for automatically configuring IPTV-Simple (manual configuration no longer necessary).
+- Improved usability/notifications.
+- Fixed Channel Manager - channels removed/missing after editing.
+- Added support for upcoming IPTV-Simple update allowing audio passthrough for PVR content.
+- Added "Add to Recordings" context option; stores given media as a PVR recording; "Watch Later" feature (experimental - feedback appreciated).
+  - Known issue with recordings: meta information inconsistently displays. Working with `@phunkyfish` to resolve this bug.
+- Added "Force High-Power" option under miscellaneous settings. Disables performance throttling on low-power devices.
+- Improved file locking for upcoming web UI.
+- Temporarily disabled multi-room discovery/announcements.
+- Improved flow controls for background management (experimental - feedback appreciated).
+- Fixed "Move"/"Delete" channel manager buttons.
 
 v.0.4.2
--Improved "Find More" context option. Now supports Embuary Helpers find similar.
--Miscellaneous tweaks and bug fixes.
--Fixed Forced Autotuning overriding custom channels.
--Improved seasonal channels and channel recovery.
--Fixed Seasonal Channel.
--Improved In-App Channel Manager logo tool.
- -Browse: Directory Navigation
- -Select: Choose from matching results.
- -Match: Automatically choose first match.
- 
--Improved In-App Channel Manager.
--Added "Add to PseudoTV Live" context menu option for effortless channel configuration (Experimental).
--Add "Move" channel manager option for easy channel renumbering.
--Fixed Radio playback failing due to URL encoding.
--Tweaked UpNext not creating new instance.
--Fixed playback error introduced in the previous release.
--Fixed playlist/play from here playback issues.
+- Improved "Find More" context option. Now supports Embuary Helpers find similar.
+- Miscellaneous tweaks and bug fixes.
+- Fixed forced autotuning overriding custom channels.
+- Improved seasonal channels and channel recovery.
+- Fixed seasonal channel.
+- Enhanced in-app Channel Manager logo tool.
+  - Browse: Directory navigation.
+  - Select: Choose from matching results.
+  - Match: Automatically choose the first match.
+- Improved in-app Channel Manager.
+- Added "Add to PseudoTV Live" context menu option for effortless channel configuration (experimental).
+- Added "Move" channel manager option for easy channel renumbering.
+- Fixed radio playback failing due to URL encoding.
+- Tweaked UpNext not creating a new instance.
+- Fixed playback error introduced in the previous release.
+- Fixed playlist/play from here playback issues.
 
 v.0.4.1
--Improved Playback error detection.
--Autotuned channels added to "Favorite" group.
--Miscellaneous Tweaks.
--Fixed "library" content not respecting "specials" & "extras" exclusion. 
--Improved "Random" limits.
--Fixed channel logos for clients.
--Changed default "Debugging" from enabled to disabled. Recommended users enable temporarily only for debugging.
--Improved loading dialog.
--Removed duplicate code.
--Improved Kodi Omega support.
--Fixed playback method "playlist" time-shift transitioning.
--Fixed playback fault. #Fix may not support local translations. 
--Added "autoclose" to okdialog and textviewer.
--Fixed "Browse" channel logo replacement.
--Added New PVR callback request technique to avoid high jsonprc latency on low power devices. 
--Notice some users can improve channel changing performance by adding "PVR://" as a Kodi video sources; See readme for details.
--Improved channel building filters not respecting "specials" & "extras" exclusion. 
--Improved channel changing "surfing" times after refactoring for Kodi Omega API changes.
--Fixed channel manager becoming unresponsive during path validation.
--Fixed channels updating twice after startup.
-
-v.0.4.0
--Major code refactoring to improve memory usage/stability.
--Added "Browse" context menu item. Browses channel media for VOD selection.
--Added "Find" content menu item. Search Kodi for related media.
--Removed Third-Party M3U/XMLTV imports; no longer needed IPTV-Simple supports multi-instances. 
--Added "SmartPlaylist" to Autotuning list & Improved "Recommended" imports.
--Added Unofficial Kodi support for "Mixed" content SmartPlaylists; See readme for details.
--Added Visual Channel Bug Position utility in global settings.
--Added Multi-Path channel configurations to the channel manager; See readme for details.
--Added Support for upcoming WebUI Channel Manager.
--Added UpNext Service support for playlist playback (Experimental).
--Added Smart monochromatic logo detection; Logo diffusion color will only apply to "white" logos (Experimental; currently only supports local images).
-
-v.0.3.8
--Improved error handling.
--Tweaked Multi-threading.
--Improved Server discovery, Clients can select from multiple servers if available via settings..
--Added User configurable channel bug diffuse color. Only available to "Prefer white" channel logos & Kodi v.20+
--Tweaked M3U/XMLTV Artwork to enforce VFS paths for client support.
--Added A JSONRPC timeout for unresponsive calls and hanging plugins.
--Added More Seasons...
--Added Setting "Nearest Season". When enabled and no season found, the nearest season within the month will be substituted.
--Fixed "Play from here" not applying offset start position.
-
-v.0.3.7
--Improved "Seasonal" channel , moved from third-party plugin to local code. Added additional holidays and weekly scheduling. 
--Added "New" overlay technique.
--Removed Previously added overlay controls ie. (left/right/up/down/ok).
-
-v.0.3.6
--Fixed "Future Days to display" PVR & LiveTV settings syncing.
--Fixed Duration parsing logic.
--Added Resource Pack enforcement to client instances.
--Improved Channel Bug and "OnNext" notification timing.
--Improved Global fillers framework. Feature Pending!
--Improved Navigation while overlay is active.
- -"Enter/OK/Select" Info.
- -"Up/Down" Browse Channels.
- -"Left" Channel List.
- -"Right" Channel Guide.
--Added limits on xmltv meta (Writers, Actors, Directors and Genres limited to 5 entries each).
--Improved Channel manager path selection, content validation and seek compatibility.
--Added Framework to introduce "Advanced Channel Rules".
--Added Fallback .nfo duration parsing. If "Parse for Accurate Duration Meta" is enabled and both the Kodi Library and file are missing duration meta. A matching filename nfo will be parsed for meta.
--Notice If you are enjoying this project, please consider making a donation; See readme for details.
-
-v.0.3.5
--Notice Moved Cache folder incl. logo folder to "Centralized File Location". Default path changed to "special://profile/addon_data/plugin.video.pseudotv.live/cache".
--Improved Third-Party playlist importing. New XMLTV Import type "Use XMLTV from M3U (if Available)." XMLTV meta will be pulled from M3Us w/"x-tvg-url".
--Fixed Third-Party XMLTV importing and malformed meta detection.
-
-v.0.3.4
--Refactored Background service.
--Notice File Locations Changed! channels.json and library.json now stored locally. M3U/XMLTV by default stored locally or users can select a path via "Centralized File Location".
--Added Moving existing files during "Centralized File Location" change.
--Added HTTP file Server. M3U/XMLTV are shared via local network for clients. Check "Multi-Room" for information and see readme for details.
--Added Automatic PseudoTV server detection via local UDP discovery. Set "Enable Client" to remote path for plugin and play configuration, see readme for details.
--Added Favorite channel flagging and EPG Category "Favorites".
-
-v.0.3.3
--Fixed sleep idle timer.
--Tweaked background service.
--Improved Smartplaylist parsing.
--Improved importing third-party xmltv meta.
--Improved channel recovery.
--Added Nexus support.
--Improved file handling for offline paths.
--Fixed Android Multi-threading.
-
-v.0.3.2
--Added channel building error notification.
--Fixed channel manager name selection.
--Fixed channel bug not appearing.
--Tweaked playback protocols.
--Changed default video/program icon execution behavior: Video opens TV Guide (PseudoTV Live Group), Program opens settings.
--Updated background overlay layout/artwork.
--Fixed channel Backup/Recovery? requires real-world testing...
--Refactored channel logo parsing, see readme for details.
--Tweaked performance, optimized caching.
--Fixed Radio channels and corrected artwork.
--Added channel logo selection to the channel manager. User can either:[CR]Browse - Browse filesystem for logo.[CR]Select - Select from a curated list of logos. Matched by name and available logos.[CR]Match - Auto select best match if available.
--Added channel bug visibility settings to "Tweaks" setting tab.
--Tweaked "random" shuffle and "random" pagination during channel building.
--Improved dialog notifications.
--Improved Plugin/UPNP channel building and meta parsing.
-
-v.0.3.1
--Added overlay actions. When overlay is active: Left/Right opens channel guide and programmes guide.
--Fixed custom smartplaylist paths, existing channels will require replaced/updated path in the channel manager.
--Fixed playlist playback mode busy spinner.
--Improved concurrent/parallel operations (reduced memory demands).
--Added consolidated utilities, one menu accessible in settings. PseudoTV Live default execution changed to open settings and moved from video to program menu.
--Max guide day setting disabled and moved to Kodi "PVR & LiveTV" and now reflects aforementioned setting.
--Added additional xmltv meta: Actors, Director, Audio, Language and Subtitles.
--Various improvements, tweaks and fixes.
--"Smarter" updating methods, less redundant background parsing and updates.
-
-v.0.3.0
--Added import support for new IPTV Simple m3u parameters. ie. "x-tvg-url", all "provider" and "catchup" parameters; including "#EXTGRP" (#EXTGRP converted to "group-title").
--Added m3u/xmltv support for "xmltv_ns", "provider" parameters.
--Miscellaneous Tweaks & Improvements.
--Fixed Radio Stations.
--Fixed Recommended Services Imports.
--Fixed Playback bug regarding channels containing a comma in it's name (requires IPTV Simple v7.6.5).
--Added m3u/xmltv imports that lack guidedata default to a single cell playable EPG entry.
--Added m3u import support for #EXTM3U parameters, all compliant parameters converted to #EXTINF.
-
-v.0.2.9
--Fixed "UpNext" display.
--Fixed ability to disable "Static" effect overlay.
-
-v.0.2.8
--Added "Show Readme" and "Show Changelog" to "Miscellaneous" settings tab.
--Improved channel loading and surfing performance. Short-term caching (10secs) added to increase channel surfing responsiveness.
--Settings.xml updated to new Matrix format; layout modified.
--Added Channel Backup and Recovery to settings (Experimental).
--Added Idle stop playback timer.
--Improved Channel & Library recovery.
--Added "Recover" option to auto-tune prompt (if backup available).
--Fixed random removal of channels?
--Improved Pre-defined TV Shows. List now features only the top 250 by episode count.
-
-v.0.2.7
--Warning It's strongly recommend users using Flash/SSD device change the "centralize file location" to HDD.
--Notice Requires Kodi IPTV Simple v.7.5.0 and greater.
--Added Install resources button to filler settings.
--Fixed XMLTV Unicode characters.
--Fixed content filling for channels with limited content.
--Improved M3U channel imports.
--Refactored Settings, Caching, Dialogs and ThreadPool/Parallel methods.
--Added CPU affinity (pinning) control under "Tweaks" settings tab. Delegate Disable|Single|Half|Full CPU cores during ThreadPool/Parallel calls.
--Optimized Memory and I/O usage, limited redundant calls.
--Miscellaneous improvements, visual tweaks and performance boosts.
-
-v.0.2.6
--Warning Requires Kodi Matrix Nightly (1/12/21) or greater.
--Fixed custom m3u/xmltv importing.
--Tweaked settings menu.
--Improved library parsing.
--Improved logo parsing.
--Improved importing "Recommended Services".
--Improved custom EPG genre.xml creation.
--Added 3D media Global filter.
-
-v.0.2.5
--Notice If you experience issues/errors a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".
--Improved Library/Predefined/Logo meta parsing.
--Added support for 'jpg','gif' channel logos in addition to 'png'. With improvements to logo detection. 
--Added "year" label to TV shows.
--Added Silence notifications during playback.
--Added "tvg-chno" conflict detection to m3u imports.
-
-v.0.2.4
--Warning If you are upgrading versions a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".
--Fixed Channel building bug which effected program start times overlapping with new content.
--Setting options can disable themselves when unavailable. ex. Predefined channels will appear "greyed out" when either no media is found or PseudoTV is temporarily busy. ie. You can't configure channels while PseudoTV is building channels... vice versa.
--Refactored Predefined channel aggregation.
--Improved Channel Logo parsing.
--Improved Predefined channels parsing and menu load times.
--Fixed Radio programmes.
--Improved programmes parsing.
--Improved Overlay performance.
--Fixed Overlay crashes.
--Reworked Duration meta parsing, Check settings!
--Artwork changes, preference options in settings.
--Improved Scheduling.
--Removed "Channel Change" Overlay, no longer needed due to performance enhancements. 
--Added "OnNext" pop-up to overlay. Global option to enable on all channels under tweaks. Pending release use Advanced Channel rule to disable on individual channels.
-
-v.0.2.3
--Warning If you are upgrading versions a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".
--Improved M3U/XMLTV imports (now supports urls and m3u playlists containing #KODIPROP).
--Fixed bug where adding "Predefined" channels was ignored.
--Added "Recommended Services" Pre-defined channel configurations, currently supports PlutoTV, Channels DVR Plugin.
--Improved custom IPTV simple genre.xml list.
--Changed IPTV Simple dependency version to v.7.0.0
--Tweaked performance with core-code refactoring.
-
-v.0.2.2
--Improved Internal meta handling; Default director & writer meta restored.
--Improved playback handling.
--Fixed playback issue (during the end of Non-PseudoTV playback, PseudoTV would launch last channel played).
--Tweaked client detection and Multi-Room sharing.
--Fixed saving accurate duration data to Kodis Library.
--Added IPTV Simple VOD support ("Play OnDemand" context item removed, use "Play Programme").
--Added initial support for Advanced Channel Rules.
-
-v.0.2.1
--Added Changelog dialog after update.
--Added "Pre-defined" Seasonal Holiday Channel to "Mixed Other". When enabled the channel will automatically appear only during the holiday months and if matching media is found. Supported Seasons (Star Trek Day (September), Halloween (October), Christmas (December), Star Wars Day (May)).
--Fixed Misc. Channel Manager issues.
--Added Node/Smartplaylist "caching" for client instances. Nodes and Smartplaylists copy from server to client needed for channel building.
--Added Seek Compatibility Test to Channel Manager (triggered by Plugin/UPNP sources). 
--Tweaked "Special/Extras" Detection to ignore false positives from Plugin/UPNP sources.
-
-v.0.2.0
--Added "Channel Manager" to settings. Configure "User-Defined" here!
--Added Misc. Tweaks & Improvements.
--Improved Logo folders, moved to "cache/logos"
--Added Seek Threshold adjustment to settings.
--Added "Start Clean" option to utilities menu. Removes all files (m3u,xmltv,genres,settings,channels).
--Added "More Info" context menu item.
--Added Misc. Community Feedback Tweaks & Improvements.
-
-v.0.1.4
--Removed Static intermission, replaced with Modern alterative. 
--Improved Thumbnail & streamdetail parsing. 
--Added "Auto Tuning" on initial run or when no channels are selected.
--Added "Force Client Mode" under options. Manually flag PseudoTV instance as client; bypassing automatic detection added to v.0.1.3.
-
-v.0.1.3
--Improved Logo detection.
--Improved overall Channel loading time.
--Fixed "New" programme flagging.
--Fixed "OnDemand" playback issues.
--Moved channels.json to user-selected folder location to allow for multi-room configurations.
--Added Automatic Client Mode: automatically disables client side m3u/xmltv updating. In Multi-Room environments users can edit channel lineups from any instance of PseudoTV; However, only one instance of PseudoTV is allowed to write to m3u/xmltv inorder to keep lineup/cache congruency.
--Added "Pre-defined" Channel sync for client instances. Settings on local client will reflect server configurations.
-
-v.0.1.2
--Moved Predefined channels to channels.json config. (Persistent channel numbers).
--Added BCT (Bumpers, Commercials, Trailers) injection, currently supports Ratings bumper packs.
--Improved background service.
--Improved channel management.
-
-v.0.1.1
--Added "Play from here" to context menu options, starts a channel playlist from the position selected. Moved Files over to new file structure in preparation for second wave beta features.
--Added Pre-defined music genres for PVR Radio
--Fixed Misc. Channel building issues, optimized background service. 
--Improved media interleaving. 
-
-v.0.1.0
--Initial release
+- Enhanced playback error detection.
+- Autotuned channels added to "Favorite" group.
+- Miscellaneous tweaks.
+- Fixed "library" content not respecting "specials" & "extras

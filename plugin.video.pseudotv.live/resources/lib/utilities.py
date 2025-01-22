@@ -53,19 +53,25 @@ class Utilities:
     def showChangelog(self):
         try:  
             def __addColor(text):
-                text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
-                text = text.replace('-New!'       ,'[COLOR=yellow][B]-New!:[/B][/COLOR]')
-                text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
-                text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
-                text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
-                text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
-                text = text.replace('-Updated'    ,'[COLOR=yellow][B]-Updated:[/B][/COLOR]')
-                text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
-                text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
-                text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
-                text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
-                text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
-                text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
+                text = text.replace('- Added'      ,'[COLOR=green][B]- Added:[/B][/COLOR]')
+                text = text.replace('- Introduced' ,'[COLOR=green][B]- Introduced:[/B][/COLOR]')
+                text = text.replace('- New!'       ,'[COLOR=yellow][B]- New!:[/B][/COLOR]')
+                text = text.replace('- Optimized'  ,'[COLOR=yellow][B]- Optimized:[/B][/COLOR]')
+                text = text.replace('- Improved'   ,'[COLOR=yellow][B]- Improved:[/B][/COLOR]')
+                text = text.replace('- Modified'   ,'[COLOR=yellow][B]- Modified:[/B][/COLOR]')
+                text = text.replace('- Enhanced'   ,'[COLOR=yellow][B]- Enhanced:[/B][/COLOR]')
+                text = text.replace('- Refactored' ,'[COLOR=yellow][B]- Refactored:[/B][/COLOR]')
+                text = text.replace('- Tweaked'    ,'[COLOR=yellow][B]- Tweaked:[/B][/COLOR]')
+                text = text.replace('- Updated'    ,'[COLOR=yellow][B]- Updated:[/B][/COLOR]')
+                text = text.replace('- Changed'    ,'[COLOR=yellow][B]- Changed:[/B][/COLOR]')
+                text = text.replace('- Notice'     ,'[COLOR=orange][B]- Notice:[/B][/COLOR]')
+                text = text.replace('- Fixed'      ,'[COLOR=orange][B]- Fixed:[/B][/COLOR]')
+                text = text.replace('- Resolved'   ,'[COLOR=orange][B]- Resolved:[/B][/COLOR]')
+                text = text.replace('- Removed'    ,'[COLOR=red][B]- Removed:[/B][/COLOR]')
+                text = text.replace('- Excluded'   ,'[COLOR=red][B]- Excluded:[/B][/COLOR]')
+                text = text.replace('- Deprecated' ,'[COLOR=red][B]- Deprecated:[/B][/COLOR]')
+                text = text.replace('- Important'  ,'[COLOR=red][B]- Important:[/B][/COLOR]')
+                text = text.replace('- Warning'    ,'[COLOR=red][B]- Warning:[/B][/COLOR]')
                 return text  
                 
             with BUILTIN.busy_dialog():

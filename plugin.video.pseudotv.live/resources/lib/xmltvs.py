@@ -208,8 +208,7 @@ class XMLTVS:
         
         def __filterProgrammes(program):
             citem = decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
-            if   citem.get('id') in clrIDS: return None
-            elif citem.get('holiday') and citem.get('holiday',{}).get('name',str(random.random())) != holiday.get('name',str(random.random())): return None
+            if citem.get('holiday') and citem.get('holiday',{}).get('name',str(random.random())) != holiday.get('name',str(random.random())): return None
             elif (strpTime(program.get('stop',now).rstrip(),DTFORMAT) < now): return None  # remove expired content, ignore "recordings" ie. media=True
             return program
 

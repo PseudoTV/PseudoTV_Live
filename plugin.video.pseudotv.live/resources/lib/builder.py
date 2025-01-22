@@ -165,11 +165,13 @@ class Builder:
                             self.pCount = int(idx*100//len(channels))
                             self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
                             
-                            if not preview and citem['id'] in clrIDS: __clrChannel({'id':clrIDS.pop(clrIDS.index(citem['id']))})
-                            stopTimes = dict(self.xmltv.loadStopTimes([citem], fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
-                            if   (stopTimes.get(citem['id']) or start) > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
-                            elif  stopTimes.get(citem['id']):                                                       self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
-                            else:                                                                                   self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(32023)) #Building
+                            if not preview and citem['id'] in clrIDS: __clrChannel({'id':clrIDS.pop(clrIDS.index(citem['id']))}) #clear channel m3u/xmltv
+                            stopTimes = dict(self.xmltv.loadStopTimes([citem], fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT))) #check last stop times
+                            
+                            if    preview:                                                                           self.pMSG = LANGUAGE(32236) #Building Preview
+                            elif  (stopTimes.get(citem['id']) or start) > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
+                            elif  stopTimes.get(citem['id']):                                                        self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
+                            else:                                                                                    self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(32023)) #Building
                             
                             cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                             if preview:
