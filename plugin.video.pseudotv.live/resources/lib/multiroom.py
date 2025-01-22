@@ -23,6 +23,7 @@ from server     import Discovery
 
 class Service:
     from jsonrpc import JSONRPC
+    player  = xbmc.Player()
     monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
     def _interrupt(self) -> bool:
@@ -30,17 +31,15 @@ class Service:
     def _suspend(self) -> bool:
         return PROPERTIES.isPendingSuspend()
         
-        
+            
 class Multiroom:
     def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = %s'%(sysARG))
-        self.sysARG = sysARG
-        if service is None:
-            service = Service()
-        
+        if service is None: service = Service()
         self.service    = service
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.jsonRPC.cache
+        self.sysARG     = sysARG
         self.uuid       = SETTINGS.getMYUUID()
         self.friendly   = SETTINGS.getFriendlyName()
         self.remoteHost = PROPERTIES.getRemoteHost()

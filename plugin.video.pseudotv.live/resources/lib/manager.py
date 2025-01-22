@@ -59,6 +59,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.server         = {}
             self.lockAutotune   = True
             self.madeChanges    = False
+            self.madeItemchange = False
             self.lastActionTime = time.time()
             self.cntrlStates    = {}
             self.showingList    = True
@@ -250,7 +251,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.itemList.selectItem(focus)
                 self.setFocus(self.itemList)
                 
-                if self.madeChanges:
+                if self.madeItemchange:
                     self.setLabels(self.right_button1,LANGUAGE(32240))#Confirm
                     self.setLabels(self.right_button2,LANGUAGE(32060))#Cancel
                     self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Label) + !String.IsEmpty(Container(6).ListItem(Container(6).Position).Path)]')
@@ -368,7 +369,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         retval, citem = action['func'](*action.get('args',()),**action.get('kwargs',{}))
         retval, citem = self.validateInputs(key,retval,citem)
         if not retval is None:
-            self.madeChanges = True
+            self.madeItemchange = True
             if key in list(self.newChannel.keys()): citem[key] = retval
             self.log('itemInput, Out value = %s, key = %s\ncitem = %s'%(retval,key,citem))
         return citem
@@ -403,7 +404,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                             npath, citem = self.validatePaths(retval,citem)
                             if npath: pathLST.append(npath)
                     elif key == 'save': 
-                        self.madeChanges = True
                         paths = pathLST
                         break
                     elif path in pathLST:
@@ -448,7 +448,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                         nrule, citem = self.getRule(citem, arules[lastXID])
                         if not nrule is None: ruleLST.update({str(nrule.myId):nrule})
                     elif key == 'save':
-                        self.madeChanges = True
                         rules = ruleLST
                         break
                     elif ruleLST.get(str(myId)):
@@ -818,21 +817,34 @@ class Manager(xbmcgui.WindowXMLDialog):
             cntrl.setEnableCondition(condition)
         except Exception as e: self.log("setEnableCondition, failed! %s"%(e), xbmc.LOGERROR)
 
+
+    def resetPagination(self, citem):
+        if isinstance(citem, list): [self.resetPagination(item) for item in citem]
+        else: 
+            with self.toggleSpinner():
+                self.log('resetPagination, citem = %s'%(citem))
+                [self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id')]
+    
         
     def saveChannelItems(self, citem: dict={}, open=False):
         self.log('saveChannelItems [%s], open = %s'%(citem.get('id'),open))
-        self.newChannels[citem['number'] - 1] = citem
+        if self.madeItemchange:
+            self.madeChanges = True
+            self.newChannels[citem['number'] - 1] = citem
         self.fillChanList(self.newChannels,True,(citem['number'] - 1),citem if open else None)
+        self.madeItemchange = False
         return citem
     
-    
+
+    def closeChannel(self, citem, focus=0, open=False):
+        self.log('closeChannel')
+        if self.madeItemchange:
+            if DIALOG.yesnoDialog(LANGUAGE(32243)): return self.saveChannelItems(citem, open)
+        self.togglechanList(focus=focus)
+                    
+            
     def saveChanges(self):
         self.log("saveChanges")
-        if DIALOG.yesnoDialog(LANGUAGE(32234)): self.saveChannels() 
-        else:                                   self.closeManager()
-
-
-    def saveChannels(self):
         def __validateChannels(channelList):
             def _validate(citem):
                 if citem.get('name') and citem.get('path'):
@@ -841,38 +853,32 @@ class Manager(xbmcgui.WindowXMLDialog):
             channelList = setDictLST(self.channels.sortChannels([_f for _f in [_validate(channel) for channel in channelList] if _f]))
             self.log('__validateChannels, channelList = %s'%(len(channelList)))
             return channelList
-              
-        if   not self.madeChanges: return
-        elif not DIALOG.yesnoDialog(LANGUAGE(32076)): return
-        with self.toggleSpinner():
-            channels = __validateChannels(self.newChannels)
-            changes  = __validateChannels(diffLSTDICT(self.channelList,self.newChannels))
-            ids      = [citem.get('id') for citem in changes]
-            self.log("saveChannels, channels = %s, ids = %s"%(len(channels), ids))
-            if self.server:
-                return DIALOG.notificationDialog(LANGUAGE(32197))
-                # payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'channels':self.newChannels}
-                # requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
-                #todo write tmp file if post fails, add to que to repost when url online.
-            elif self.channels.setChannels(channels): #save changes
-                self.resetPagination(changes) #clear pagination cache
-                SETTINGS.setResetChannels(ids) #clear guidedata
-                SETTINGS.setUpdateChannels(ids) #update channel meta.
+        
+        if self.madeChanges:
+            if DIALOG.yesnoDialog(LANGUAGE(32076)):
+                with self.toggleSpinner():
+                    channels = __validateChannels(self.newChannels)
+                    changes  = __validateChannels(diffLSTDICT(self.channelList,self.newChannels))
+                    ids      = [citem.get('id') for citem in changes]
+                    self.log("saveChanges, channels = %s, ids = %s"%(len(channels), ids))
+                    if self.server:
+                        return DIALOG.notificationDialog(LANGUAGE(32197))
+                        # payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'channels':self.newChannels}
+                        # requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
+                        #todo write tmp file if post fails, add to que to repost when url online.
+                    elif self.channels.setChannels(channels): #save changes
+                        self.resetPagination(changes) #clear pagination cache
+                        SETTINGS.setResetChannels(ids) #clear guidedata
+                        SETTINGS.setUpdateChannels(ids) #update channel meta.
+                    PROPERTIES.setEpochTimer('chkChannels')
+        self.madeChanges = False
         self.closeManager()
             
-        
-    def resetPagination(self, citem):
-            if isinstance(citem, list): [self.resetPagination(item) for item in citem]
-            else: 
-                with self.toggleSpinner():
-                    self.log('resetPagination, citem = %s'%(citem))
-                    [self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id')]
-        
-        
+
     def closeManager(self):
         self.log('closeManager')
-        if self.madeChanges: PROPERTIES.setEpochTimer('chkChannels')
-        self.close()
+        if self.madeChanges: self.saveChanges() 
+        else:                self.close()
 
         
     def __exit__(self):
@@ -922,12 +928,10 @@ class Manager(xbmcgui.WindowXMLDialog):
             if actionId in ACTION_PREVIOUS_MENU:
                 self.log('onAction: actionId = %s'%(actionId))
                 if   xbmcgui.getCurrentWindowDialogId() == "13001": BUILTIN.executebuiltin("Action(Back)")
-                elif self.isVisible(self.itemList): self.togglechanList(focus=self.getFocusItems().get('position'))
-                elif self.isVisible(self.chanList):
-                    if self.madeChanges: self.saveChanges()
-                    else:                self.closeManager()
+                elif self.isVisible(self.itemList): self.closeChannel(self.getFocusItems().get('citem'),self.getFocusItems().get('position'))
+                elif self.isVisible(self.chanList): self.closeManager()
             
-        
+            
     def onFocus(self, controlId):
         self.log('onFocus: controlId = %s'%(controlId))
 
@@ -954,19 +958,20 @@ class Manager(xbmcgui.WindowXMLDialog):
             else: self.switchLogo(focusCitem,focusPOS)
         #side buttons
         elif controlId in [9001,9002,9003,9004]:
-            if   focusLabel == LANGUAGE(32059): self.saveChannels() #Save 
+            if   focusLabel == LANGUAGE(32059): self.saveChanges() #Save 
             elif focusLabel == LANGUAGE(32061): self.clearChannel(focusCitem)#Delete
             elif focusLabel == LANGUAGE(32239): self.clearChannel(focusCitem,open=True)#Clear
             elif focusLabel == LANGUAGE(32136): self.moveChannel(focusCitem,focusPOS)#Move 
             elif focusLabel == LANGUAGE(32062): #Close
-                if   self.isVisible(self.itemList): self.togglechanList(focus=focusPOS)
+                if   self.isVisible(self.itemList): self.closeChannel(focusCitem,focus=focusPOS)
                 elif self.isVisible(self.chanList): self.closeManager()
             elif focusLabel == LANGUAGE(32060): #Cancel
-                if   self.isVisible(self.itemList): self.togglechanList(focus=focusPOS)
+                if   self.isVisible(self.itemList): self.closeChannel(focusCitem)
                 elif self.isVisible(self.chanList): self.closeManager()
             elif focusLabel == LANGUAGE(32240): #Confirm
-                if   self.isVisible(self.itemList) and self.madeChanges: self.saveChannelItems(focusCitem)
-                elif self.isVisible(self.chanList) and self.madeChanges: self.saveChanges()
+                if   self.isVisible(self.itemList): self.saveChannelItems(focusCitem)
+                elif self.isVisible(self.chanList): self.saveChanges()
             elif focusLabel == LANGUAGE(32235): #Preview
-                if self.madeChanges: self.saveChannelItems(focusCitem, open=True)
+                if self.isVisible(self.itemList) and self.madeItemchange: self.closeChannel(focusCitem, open=True)
                 self.previewChannel(focusCitem, focusID)
+                

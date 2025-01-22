@@ -310,7 +310,7 @@ msgid "Debugging"
 msgstr ""
 
 msgctxt "#30073"
-msgid "%s\nVersion: [B]%s[/B]"
+msgid "Version: [B]%s[/B]"
 msgstr ""
 
 msgctxt "#30074"
@@ -1795,6 +1795,10 @@ msgctxt "#32242"
 msgid "PVR Search"
 msgstr ""
 
+msgctxt "#32243"
+msgid "Save Current Channel Changes?"
+msgstr ""
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"
@@ -2127,6 +2131,10 @@ msgstr ""
 
 msgctxt "#33168"
 msgid "QRCode - Visit PseudoTV Live Wiki."
+msgstr ""
+
+msgctxt "#33169"
+msgid "Be sure to install the Lunatixz Beta repository in-order to stay update.\nInformation available in the readme or in the official Kodi Forums."
 msgstr ""
 
 msgctxt "#33170"

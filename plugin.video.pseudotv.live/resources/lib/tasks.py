@@ -25,18 +25,17 @@ from autotune   import Autotune
 from builder    import Builder
 from backup     import Backup
 from multiroom  import Multiroom
-from manager    import Manager
 from server     import HTTP
 
-
 class Tasks():
-    def __init__(self, service=None):
-        self.log('__init__')
-        self.cache       = SETTINGS.cache
-        self.service     = service
+    def __init__(self, service):
+        self.service     = service       
         self.jsonRPC     = service.jsonRPC
-        self.httpServer  = HTTP(service=service)
-        self.quePriority = CustomQueue(priority=True,service=service)
+        self.player      = service.player
+        self.monitor     = service.monitor
+        self.cache       = SETTINGS.cache
+        self.httpServer  = HTTP(service=self.service)
+        self.quePriority = CustomQueue(priority=True,service=self.service)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -149,7 +148,7 @@ class Tasks():
         ONLINE_VERSION = self.getOnlineVersion()
         if ADDON_VERSION < ONLINE_VERSION: 
             update = True
-            DIALOG.notificationDialog(LANGUAGE(30073)%(LANGUAGE(32168),ONLINE_VERSION))
+            DIALOG.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
         elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion', checksum=ADDON_VERSION) or '0.0.0'):
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION, checksum=ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py,Show_Changelog)'%(ADDON_ID))
@@ -222,7 +221,7 @@ class Tasks():
                     self.service.currentChannels = channels #update service channels
                     
             if len(channels) > 0:
-                complete, updated = Builder(self.service).build(channels)
+                complete, updated = Builder(service=self.service).build(channels)
                 self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
                 if complete:
                     if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
@@ -254,8 +253,8 @@ class Tasks():
 
 
     def chkPVRToggle(self):
-        isIdle      = self.service.monitor.isIdle
-        isPlaying   = self.service.player.isPlaying()
+        isIdle      = self.monitor.isIdle
+        isPlaying   = self.player.isPlaying()
         isScanning  = BUILTIN.getInfoBool('IsScanningVideo','Library')
         isRecording = BUILTIN.getInfoBool('IsRecording','Pvr')
         self.log('chkPVRToggle, isIdle = %s, isPlaying = %s'%(isIdle,isPlaying))
@@ -291,7 +290,7 @@ class Tasks():
 
     def chkAutoTune(self):
         self.log('chkAutoTune')
-        try: SETTINGS.setAutotuned(Autotune(service=self.service)._runTune())
+        try: SETTINGS.setAutotuned(Autotune()._runTune())
         except Exception as e: self.log('chkAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
     
@@ -312,7 +311,7 @@ class Tasks():
 
     def getChannels(self):
         try:
-            channels = Builder(self.service).getChannels()
+            channels = Builder(service=self.service).getChannels()
             self.log('getChannels, channels = %s'%(len(channels)))
             return channels
         except Exception as e: 

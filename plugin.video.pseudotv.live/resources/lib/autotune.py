@@ -23,11 +23,12 @@ from library    import Library
 from channels   import Channels
 
 class Autotune:
-    def __init__(self, sysARG=sys.argv, service=None):
+    def __init__(self, sysARG=sys.argv):
         self.log('__init__, sysARG = %s'%(sysARG))
+        if service is None: service = Service()
         self.sysARG   = sysARG 
-        self.library  = Library(service)
         self.channels = Channels()
+        self.library  = Library()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):

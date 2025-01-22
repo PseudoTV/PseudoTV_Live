@@ -28,6 +28,7 @@ REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Service:
     from jsonrpc import JSONRPC
+    player  = xbmc.Player()
     monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
     def _interrupt(self) -> bool:
@@ -40,14 +41,14 @@ class Library:
     def __init__(self, service=None):
         if service is None: service = Service()
         self.service      = service
-        self.parserCount  = 0
-        self.parserMSG    = ''
-        self.parserDialog = None
         self.jsonRPC      = service.jsonRPC
         self.cache        = service.jsonRPC.cache
         self.predefined   = Predefined()
         self.channels     = Channels()
-        self.resources    = Resources(service)
+        self.resources    = Resources(service=self.service)
+        self.parserCount  = 0
+        self.parserMSG    = ''
+        self.parserDialog = None
         self.libraryDATA  = getJSON(LIBRARYFLE_DEFAULT)
         self.libraryTEMP  = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())

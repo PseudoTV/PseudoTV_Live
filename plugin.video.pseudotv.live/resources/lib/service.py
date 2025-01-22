@@ -445,7 +445,7 @@ class Service():
         
         self.pendingShutdown   = PROPERTIES.setPendingShutdown(False)
         self.pendingRestart    = PROPERTIES.setPendingRestart(False)
-        self.jsonRPC           = JSONRPC()
+        self.jsonRPC           = JSONRPC(service=self)
         self.player            = Player(service=self)
         self.monitor           = Monitor(service=self)
         self.tasks             = Tasks(service=self)
@@ -454,8 +454,10 @@ class Service():
         self.currentSettings   = dict(SETTINGS.getCurrentSettings())
         self.runWhilePlaying   = SETTINGS.getSettingBool('Run_While_Playing')
         
-        self.player.service  = self
-        self.monitor.service = self
+        self.jsonRPC.service   = self
+        self.player.service    = self
+        self.monitor.service   = self
+        self.tasks.service     = self
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):

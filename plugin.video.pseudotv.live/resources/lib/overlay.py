@@ -159,7 +159,7 @@ class Overlay():
         self.cache      = SETTINGS.cache
         self.jsonRPC    = jsonRPC
         self.player     = player
-        self.resources  = Resources(player.service)
+        self.resources  = Resources(service=player.service)
         self.runActions = self.player.runActions
 
         self.windowID = 12005

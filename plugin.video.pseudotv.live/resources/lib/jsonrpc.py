@@ -20,9 +20,20 @@
 from globals     import *
 from videoparser import VideoParser
 
+class Service:
+    player  = xbmc.Player()
+    monitor = xbmc.Monitor()
+    def _interrupt(self) -> bool:
+        return PROPERTIES.isPendingInterrupt()
+    def _suspend(self) -> bool:
+        return PROPERTIES.isPendingSuspend()
+        
+          
 class JSONRPC:
-    def __init__(self):
-        self.cache = SETTINGS.cacheDB
+    def __init__(self, service=None):
+        if service is None: service = Service()
+        self.service = service        
+        self.cache   = SETTINGS.cacheDB
         self.videoParser = VideoParser()
 
 
@@ -32,15 +43,13 @@ class JSONRPC:
     
     @contextmanager
     def sendLocker(self): #kodi jsonrpc not thread safe avoid request collision during threading.
-        monitor = MONITOR()
-        while not monitor.abortRequested() and PROPERTIES.getPropertyBool('sendLocker'):
-            if monitor.waitForAbort(0.1): break
+        while not self.service.monitor.abortRequested() and PROPERTIES.getPropertyBool('sendLocker'):
+            if self.service.monitor.waitForAbort(0.1): break
         PROPERTIES.setPropertyBool('sendLocker',True)
         try: yield
         finally: #throttle calls, low power devices suffer segfault during rpc flood.
-            monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
+            self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
             PROPERTIES.setPropertyBool('sendLocker',False)
-        del monitor
 
 
     def sendJSON(self, param, timeout=-1):
@@ -546,17 +555,15 @@ class JSONRPC:
     def padItems(self, files, page=SETTINGS.getSettingInt('Page_Limit')):
         # Balance media limits, by filling with duplicates to meet min. pagination.
         self.log("padItems; files In = %s"%(len(files)))
-        monitor = MONITOR()
         if len(files) < page:
             iters = cycle(files)
-            while not monitor.abortRequested() and (len(files) < page and len(files) > 0):
+            while not self.service.monitor.abortRequested() and (len(files) < page and len(files) > 0):
                 item = next(iters).copy()
                 if self.getDuration(item.get('file'),item) == 0:
                     try: files.pop(files.index(item))
                     except: break
                 else: files.append(item)
         self.log("padItems; files Out = %s"%(len(files)))
-        del monitor
         return files
 
 

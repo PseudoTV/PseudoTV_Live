@@ -29,6 +29,7 @@ STUDIO_RESOURCE = ["resource.images.studios.white"]
 
 class Service:
     from jsonrpc import JSONRPC
+    player  = xbmc.Player()
     monitor = xbmc.Monitor()
     jsonRPC = JSONRPC()
     def _interrupt(self) -> bool:
@@ -170,15 +171,15 @@ class Resources:
         return image
             
             
-    @cacheit()
     def isMono(self, file: str) -> bool:
         if file.startswith('resource://') and (bool(set([match in file.lower() for match in ['transparent','white','mono']]))):
             return True
         elif hasAddon('script.module.pil'):
             try:
                 from PIL import Image, ImageStat
-                file = FileAccess.translatePath(unquoteString(file.replace('resource://','special://home/addons/').replace('image://','')).replace('\\','/'))
-                mono = reduce(lambda x, y: x and y < 0.005, ImageStat.Stat(Image.open(FileAccess.open(file,'rb'))).var, True)
+                fle  = FileAccess.open(unquoteString(file.replace('resource://','special://home/addons/').replace('image://','')).replace('\\','/'),'rb')
+                mono = reduce(lambda x, y: x and y < 0.005, ImageStat.Stat(Image.open(fle)).var, True)
+                fle.close()
                 self.log('isMono, mono = %s, file = %s'%(mono,file))
                 return mono
             except Exception as e: self.log("isMono, failed! %s\nfile = %s"%(e,file), xbmc.LOGWARNING)

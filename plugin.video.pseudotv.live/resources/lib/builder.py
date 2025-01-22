@@ -28,7 +28,7 @@ from resources  import Resources
 from seasonal   import Seasonal 
 
 class Service:
-    class player:
+    class player(xbmc.Player):
         from rules import RulesList
         runActions = RulesList().runActions
     from jsonrpc import JSONRPC
@@ -96,7 +96,7 @@ class Builder:
         self.xsp              = XSP()
         self.xmltv            = XMLTVS()
         self.m3u              = M3U()
-        self.resources        = Resources(service)
+        self.resources        = Resources(service=self.service)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
