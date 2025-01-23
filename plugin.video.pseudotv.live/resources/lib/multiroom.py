@@ -199,7 +199,7 @@ class Multiroom:
             self.selServer()
         elif param == 'Remove_server': 
             ctl = (5,12)
-        return openAddonSettings(ctl)
+        return SETTINGS.openSettings(ctl)
 
 
 if __name__ == '__main__': Multiroom(sys.argv).run()

@@ -152,7 +152,7 @@ class Settings:
     
     
     def getRealSettings(self):
-        try:    return xbmcaddon.Addon(id=ADDON_ID)#xbmcaddon.Addon('id').getSettings()
+        try:    return xbmcaddon.Addon(id=ADDON_ID)
         except: return REAL_SETTINGS
 
 
@@ -161,7 +161,20 @@ class Settings:
         #todo build json of third-party addon settings
         # self.pluginMeta.setdefault(addonID,{})['settings'] = [{'key':'value'}]
  
-                
+    
+    def openSettings(ctl=(0,1), id=ADDON_ID):
+        builtin = Builtin()
+        builtin.closeBusyDialog()
+        with builtin.busy_dialog():
+            builtin.executebuiltin(f'Addon.OpenSettings({id})')
+            xbmc.sleep(100)
+            builtin.executebuiltin('SetFocus(%i)'%(ctl[0]-200))
+            xbmc.sleep(50)
+            builtin.executebuiltin('SetFocus(%i)'%(ctl[1]-180))
+        del builtin
+        return True
+    
+ 
     def openGuide(self, instance=ADDON_NAME):
         def __match(label):
             items = jsonRPC.getDirectory({"directory":baseURL}).get('files',[])
@@ -649,6 +662,154 @@ class Properties:
         log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def setEpochTimer(self, key, time=0):
+        return self.setPropertyInt(key,time)
+
+
+    def setPropTimer(self, key, state=True):
+        return self.setEXTPropertyBool('%s.%s'%(ADDON_ID,key),state)
+
+
+    def setRemoteHost(self, value):
+        return self.setProperty('%s.Remote_Host'%(ADDON_ID),value)
+        
+        
+    def getRemoteHost(self):
+        remote = self.getProperty('%s.Remote_Host'%(ADDON_ID))
+        if not remote: remote = self.setRemoteHost('%s:%s'%(Settings().getIP(),Settings().getSettingInt('TCP_PORT')))
+        return remote
+
+
+    @contextmanager
+    def setRunning(self, key):
+        if not self.isRunning(key):
+            self.setEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key),True)
+            try: yield
+            finally: self.setEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key),False)
+        else: yield
+        
+        
+    def isRunning(self, key):
+        return self.getEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key))
+
+
+    def setChannels(self, state=True):
+        return self.setEXTPropertyBool('%s.has.Channels'%(ADDON_ID),state)
+
+
+    def hasChannels(self):
+        return self.getEXTPropertyBool('%s.has.Channels'%(ADDON_ID))
+
+
+    def setBackup(self, state=True):
+        return self.setEXTPropertyBool('%s.has.Backup'%(ADDON_ID),state)
+
+
+    def hasBackup(self):
+        return self.getEXTPropertyBool('%s.has.Backup'%(ADDON_ID))
+        
+        
+    def setServers(self, state=True):
+        return self.setEXTPropertyBool('%s.has.Servers'%(ADDON_ID),state)
+        
+
+    def hasServers(self):
+        return self.getEXTPropertyBool('%s.has.Servers'%(ADDON_ID))
+        
+                
+    def setEnabledServers(self, state=True):
+        return self.setEXTPropertyBool('%s.has.Enabled_Servers'%(ADDON_ID),state)
+        
+        
+    def hasEnabledServers(self):
+        return self.getEXTPropertyBool('%s.has.Enabled_Servers'%(ADDON_ID))
+        
+    
+    def setPendingShutdown(self, state=True):
+        if state: Dialog().notificationDialog(LANGUAGE(32141))
+        return self.setEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID),state)
+        
+
+    def isPendingShutdown(self):
+        return self.getEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID))
+
+                
+    def setPendingRestart(self, state=True):
+        if state: Dialog().notificationDialog(LANGUAGE(32124))
+        return self.setEXTPropertyBool('%s.pendingRestart'%(ADDON_ID),state)
+
+
+    def isPendingRestart(self):
+        return self.getEXTPropertyBool('%s.pendingRestart'%(ADDON_ID))
+
+       
+    @contextmanager
+    def interruptActivity(self): #suspend/quit running background task
+        monitor = MONITOR()
+        while not monitor.abortRequested and self.isInterruptActivity():
+            if monitor.waitForAbort(0.1): break
+        del monitor
+        self.setInterruptActivity(True)
+        try: yield
+        finally: self.setInterruptActivity(False)
+         
+        
+    def setInterruptActivity(self, state=True):
+        return self.setEXTPropertyBool('interruptActivity',state)
+        
+
+    def isInterruptActivity(self):
+        return self.getEXTPropertyBool('interruptActivity')
+
+
+    def setPendingInterrupt(self, state=True):
+        return self.setEXTPropertyBool('pendingInterrupt',state)
+
+
+    def isPendingInterrupt(self):
+        return self.getEXTPropertyBool('pendingInterrupt')
+
+        
+    @contextmanager
+    def suspendActivity(self): #suspend/quit running background task.
+        monitor = MONITOR()
+        while not monitor.abortRequested and self.isSuspendActivity():
+            if monitor.waitForAbort(0.1): break
+        del monitor
+        self.setSuspendActivity(True)
+        try: yield
+        finally: self.setSuspendActivity(False)
+
+
+    def setSuspendActivity(self, state=True):
+        return self.setEXTPropertyBool('suspendActivity',state)
+
+
+    def isSuspendActivity(self):
+        return self.getEXTPropertyBool('suspendActivity')
+        
+        
+    def setPendingSuspend(self, state=True):
+        return self.setEXTPropertyBool('pendingSuspend',state)
+        
+        
+    def isPendingSuspend(self):
+        return self.getEXTPropertyBool('pendingSuspend')
+
+
+    @contextmanager
+    def legacy(self):
+        if not self.isPseudoTVRunning():
+            self.setEXTPropertyBool('PseudoTVRunning',True)
+            try: yield
+            finally: self.setEXTPropertyBool('PseudoTVRunning',False)
+        else: yield
+
+
+    def isPseudoTVRunning(self):
+        return self.getEXTPropertyBool('PseudoTVRunning')
+
+
     def clrInstanceID(self):
         instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
         if instanceID: self.clearTrash(instanceID)
@@ -664,154 +825,6 @@ class Properties:
         instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
         if not instanceID: instanceID = self.setInstanceID()
         return instanceID
-
-
-    def getRemoteHost(self):
-        remote = self.getProperty('%s.Remote_Host'%(ADDON_ID))
-        if not remote: remote = self.setRemoteHost('%s:%s'%(Settings().getIP(),Settings().getSettingInt('TCP_PORT')))
-        return remote
-
-
-    def setRemoteHost(self, value):
-        return self.setProperty('%s.Remote_Host'%(ADDON_ID),value)
-        
-
-    def isRunning(self, key):
-        return self.getEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key))
-
-
-    def getLegacy(self):
-        return self.getEXTPropertyBool('PseudoTVRunning')
-
-
-    def setEpochTimer(self, key, time=0):
-        return self.setPropertyInt(key,time)
-
-
-    def setPropTimer(self, key, state=True):
-        return self.setEXTPropertyBool('%s.%s'%(ADDON_ID,key),state)
-
-
-    def setChannels(self, state=True):
-        return self.setEXTPropertyBool('%s.has.Channels'%(ADDON_ID),state)
-
-
-    def setBackup(self, state=True):
-        return self.setEXTPropertyBool('%s.has.Backup'%(ADDON_ID),state)
-
-
-    def setServers(self, state=True):
-        return self.setEXTPropertyBool('%s.has.Servers'%(ADDON_ID),state)
-        
-        
-    def setEnabledServers(self, state=True):
-        return self.setEXTPropertyBool('%s.has.Enabled_Servers'%(ADDON_ID),state)
-        
-        
-    def setPendingShutdown(self, state=True):
-        if state: Dialog().notificationDialog(LANGUAGE(32141))
-        return self.setEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID),state)
-        
-        
-    def setPendingRestart(self, state=True):
-        if state: Dialog().notificationDialog(LANGUAGE(32124))
-        return self.setEXTPropertyBool('%s.pendingRestart'%(ADDON_ID),state)
-        
-
-    def setPendingInterrupt(self, state=True):
-        return self.setEXTPropertyBool('pendingInterrupt',state)
-
-        
-    def setInterruptActivity(self, state=True):
-        return self.setEXTPropertyBool('interruptActivity',state)
-        
-        
-    def setPendingSuspend(self, state=True):
-        return self.setEXTPropertyBool('pendingSuspend',state)
-        
-
-    def setSuspendActivity(self, state=True):
-        return self.setEXTPropertyBool('suspendActivity',state)
-
-
-    @contextmanager
-    def legacy(self):
-        if not self.isPseudoTVRunning():
-            self.setEXTPropertyBool('PseudoTVRunning',True)
-            try: yield
-            finally: self.setEXTPropertyBool('PseudoTVRunning',False)
-        else: yield
-
-
-    @contextmanager
-    def setRunning(self, key):
-        if not self.isRunning(key):
-            self.setEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key),True)
-            try: yield
-            finally: self.setEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key),False)
-        else: yield
-
-
-    @contextmanager
-    def interruptActivity(self): #suspend/quit running background task
-        if not self.isInterruptActivity():
-            self.setInterruptActivity(True)
-            try: yield
-            finally: self.setInterruptActivity(False)
-        else: yield
-        
-        
-    @contextmanager
-    def suspendActivity(self): #suspend/quit running background task.
-        if not self.isSuspendActivity():
-            self.setSuspendActivity(True)
-            try: yield
-            finally: self.setSuspendActivity(False)
-        else: yield
-
-
-    def hasChannels(self):
-        return self.getEXTPropertyBool('%s.has.Channels'%(ADDON_ID))
-
-
-    def hasBackup(self):
-        return self.getEXTPropertyBool('%s.has.Backup'%(ADDON_ID))
-        
-
-    def hasServers(self):
-        return self.getEXTPropertyBool('%s.has.Servers'%(ADDON_ID))
-        
-        
-    def hasEnabledServers(self):
-        return self.getEXTPropertyBool('%s.has.Enabled_Servers'%(ADDON_ID))
-        
-                
-    def isPendingShutdown(self):
-        return self.getEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID))
-
-        
-    def isPendingRestart(self):
-        return self.getEXTPropertyBool('%s.pendingRestart'%(ADDON_ID))
-
-        
-    def isPendingInterrupt(self):
-        return self.getEXTPropertyBool('pendingInterrupt')
-
-
-    def isInterruptActivity(self):
-        return self.getEXTPropertyBool('interruptActivity')
-
-
-    def isPendingSuspend(self):
-        return self.getEXTPropertyBool('pendingSuspend')
-
-
-    def isSuspendActivity(self):
-        return self.getEXTPropertyBool('suspendActivity')
-
-        
-    def isPseudoTVRunning(self):
-        return self.getEXTPropertyBool('PseudoTVRunning')
 
 
     def getKey(self, key, instanceID=True):
@@ -889,7 +902,9 @@ class Properties:
         
         
     def setEXTPropertyBool(self, key, value):
-        return self.setEXTProperty(key,str(value).lower()) == 'true'
+        if value: self.setEXTProperty(key,str(value).lower())
+        else:     self.clrEXTProperty(key)
+        return str(value).lower() == 'true'
         
         
     def setProperty(self, key, value):
@@ -904,7 +919,9 @@ class Properties:
         
         
     def setPropertyBool(self, key, value):
-        return self.setProperty(key, value)
+        if value: self.setProperty(key, value)
+        else:     self.clrProperty(key)
+        return str(value).lower() == 'true'
         
         
     def setPropertyDict(self, key, value={}):
@@ -927,7 +944,7 @@ class Properties:
         return key
 
         
-    def clearTrash(self, instanceID=None): #clear abandoned properties after instanceID change
+    def clearTrash(self, instanceID): #clear abandoned properties after instanceID change
         self.log('clearTrash, instanceID = %s'%(instanceID))
         tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
         for prop in tmpDCT.get(instanceID,[]): self.clrEXTProperty(prop)
@@ -935,7 +952,7 @@ class Properties:
 
     def __exit__(self):
         self.log('__exit__')
-        self.clearTrash()
+        self.clearTrash(self.getInstanceID())
         
         
 class ListItems:
@@ -1145,6 +1162,7 @@ class Dialog:
     properties = Properties()
     listitems  = ListItems()
     builtin    = Builtin()
+    dialog     = xbmcgui.Dialog()
     
     def __init__(self):
         self.settings.dialog   = self
@@ -1211,7 +1229,7 @@ class Dialog:
 
 
     def colorDialog(self, colorlist=[], preselect="", colorfile="", heading=ADDON_NAME):
-        return xbmcgui.Dialog().colorpicker(heading, preselect, colorfile, colorlist)
+        return self.dialog.colorpicker(heading, preselect, colorfile, colorlist)
     
     
     def _closeOkDialog(self):
@@ -1227,7 +1245,7 @@ class Dialog:
         if usethread: return self._okDialog(msg, heading, autoclose)
         else:
             if autoclose > 0: timerit(self._closeOkDialog)(autoclose)
-            return xbmcgui.Dialog().ok(heading, msg)
+            return self.dialog.ok(heading, msg)
             
             
     def qrDialog(self, url, msg, heading='%s - %s'%(ADDON_NAME,LANGUAGE(30158)), autoclose=AUTOCLOSE_DELAY):
@@ -1286,17 +1304,17 @@ class Dialog:
         if usethread: return self._textViewer(msg, heading, usemono, autoclose)
         else:
             if autoclose > 0: timerit(self._closeTextViewer)(autoclose)
-            xbmcgui.Dialog().textviewer(heading, msg, usemono)
+            self.dialog.textviewer(heading, msg, usemono)
             return True
             
         
     def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=AUTOCLOSE_DELAY): 
         if customlabel:
             # Returns the integer value for the selected button (-1:cancelled, 0:no, 1:yes, 2:custom)
-            return xbmcgui.Dialog().yesnocustom(heading, message, customlabel, nolabel, yeslabel, (autoclose*1000))
+            return self.dialog.yesnocustom(heading, message, customlabel, nolabel, yeslabel, (autoclose*1000))
         else: 
             # Returns True if 'Yes' was pressed, else False.
-            return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, (autoclose*1000))
+            return self.dialog.yesno(heading, message, nolabel, yeslabel, (autoclose*1000))
 
 
     def _notificationWait(self, message, header, wait):
@@ -1314,7 +1332,7 @@ class Dialog:
         return True
 
 
-    def updateProgress(self, percent=0, control=None, message='', header=ADDON_NAME):
+    def updateProgress(self, percent=-1, control=None, message='', header=ADDON_NAME):
         self.log('updateProgress: percent = %s, control = %s, message = %s, header = %s'%(percent, control, message, header))
         if   isinstance(control,xbmcgui.DialogProgressBG): return self.progressBGDialog(percent, control, message, header)
         elif isinstance(control,xbmcgui.DialogProgress):
@@ -1334,8 +1352,7 @@ class Dialog:
             control = xbmcgui.DialogProgress()
             control.create(header, message)  
         elif control:
-            if int(percent) == 100 or control.iscanceled(): 
-                return control.close()
+            if   int(percent) == 100 or control.iscanceled(): return control.close()
             elif hasattr(control, 'update'): control.update(int(percent), message)
         return control
         
@@ -1346,14 +1363,13 @@ class Dialog:
             control = xbmcgui.DialogProgressBG()
             control.create(header, message)
         elif control:
-            if int(percent) == 100 or control.isFinished(): 
-                return control.close()
+            if   int(percent) == 100 or control.isFinished(): return control.close()
             elif hasattr(control,'update'): control.update(int(percent), header, message)
         return control
         
 
     def infoDialog(self, listitem):
-        xbmcgui.Dialog().info(listitem)
+        self.dialog.info(listitem)
         
 
     def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO, show=True):
@@ -1363,7 +1379,7 @@ class Dialog:
         ## - xbmcgui.NOTIFICATION_WARNING
         ## - xbmcgui.NOTIFICATION_ERROR
         if show:
-            try:    xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
+            try:    self.dialog.notification(header, message, icon, time, sound=False)
             except: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
         return True
              
@@ -1392,12 +1408,12 @@ class Dialog:
         if custom: return self.customSelect(items, header, preselect, useDetails, autoclose, multi)
         elif multi == True:
             if not preselect: preselect = [-1]
-            select = xbmcgui.Dialog().multiselect(header, items, (autoclose*1000), preselect, useDetails)
+            select = self.dialog.multiselect(header, items, (autoclose*1000), preselect, useDetails)
             if select == [-1]: return
         else:
             if not preselect: preselect = -1
             elif isinstance(preselect,list) and len(preselect) > 0: preselect = preselect[0]
-            select = xbmcgui.Dialog().select(header, items, (autoclose*1000), preselect, useDetails)
+            select = self.dialog.select(header, items, (autoclose*1000), preselect, useDetails)
             if select == -1: return
         return select
       
@@ -1409,7 +1425,7 @@ class Dialog:
         ## - xbmcgui.INPUT_TIME (format: HH:MM)
         ## - xbmcgui.INPUT_IPADDRESS (format: #.#.#.#)
         ## - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
-        return xbmcgui.Dialog().input(message, default, key, opt, close)
+        return self.dialog.input(message, default, key, opt, close)
         
 
     def importSTRM(self, strm):
@@ -1475,14 +1491,14 @@ class Dialog:
                     {"idx":21, "label":LANGUAGE(32201)                    , "label2":""                                      , "default":""                                   , "shares":"pictures", "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
                     {"idx":22, "label":LANGUAGE(32202)                    , "label2":"Resource Plugin"                       , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi}]
 
-        options = include.copy()
-        options.extend([opt for opt in opts if not opt.get('idx',-1) in exclude])
-        options = setDictLST(options)
-        if default: options.insert(0,{"idx":0, "label":LANGUAGE(32203), "label2":default, "default":default, "shares":shares, "mask":mask, "type":type, "multi":multi})
-        lizLST = poolit(__buildMenuItem)(sorted(options, key=itemgetter('idx')))
+            options = include.copy()
+            options.extend([opt for opt in opts if not opt.get('idx',-1) in exclude])
+            options = setDictLST(options)
+            if default: options.insert(0,{"idx":0, "label":LANGUAGE(32203), "label2":default, "default":default, "shares":shares, "mask":mask, "type":type, "multi":multi})
+            lizLST = poolit(__buildMenuItem)(sorted(options, key=itemgetter('idx')))
+       
         select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
         if select is None: return
-        
         default = options[select]['default']
         shares  = options[select]['shares']
         mask    = options[select]['mask']
@@ -1502,8 +1518,8 @@ class Dialog:
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#gafa1e339e5a98ae4ea4e3d3bb3e1d028c
         if monitor: self.toggleInfoMonitor(True)
-        if multi == True and type > 0:  retval = xbmcgui.Dialog().browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
-        else:                           retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
+        if multi == True and type > 0:  retval = self.dialog.browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
+        else:                           retval = self.dialog.browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
         if monitor: self.toggleInfoMonitor(False)
         if not retval is None and retval != default:
             return retval
@@ -1737,13 +1753,3 @@ class Dialog:
         enumKEY = {'Enter':{'func':__getInput},'Browse':{'func':__getBrowse},'Select':{'func':__getSelect}}
         enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
         if not enumSEL is None: return [quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
-
-
-    @contextmanager
-    def sudo_dialog(self, msg):
-        cyc = cycle(['|', '/', '-', '\\'])
-        dia = self.progressBGDialog((int(time.time()) % 60),self.progressBGDialog(message='%s - %s'%(msg,next(cyc))))
-        try:
-            dia = self.progressBGDialog((int(time.time()) % 60),self.progressBGDialog(message='%s - %s'%(msg,next(cyc))))
-        finally: 
-            dia = self.progressBGDialog(100,dia)

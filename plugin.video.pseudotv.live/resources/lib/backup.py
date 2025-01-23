@@ -95,6 +95,6 @@ class Backup:
             except: param = None
             if   param == 'Backup_Channels':  self.backupChannels()
             elif param == 'Recover_Channels': self.recoverChannels()
-            return openAddonSettings(ctl)
+            return SETTINGS.openSettings(ctl)
         
 if __name__ == '__main__': Backup(sys.argv).run()

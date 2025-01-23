@@ -147,6 +147,7 @@ class Builder:
                     else:       self.pDialog = DIALOG.progressBGDialog()
                     
                     for idx, citem in enumerate(channels):
+                        self.pCount = int(idx*100//len(channels))
                         citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
                         self.log('build, id = %s, rules = %s, preview = %s'%(citem['id'],citem.get('rules',{}),preview))
                         if self.service._interrupt():
@@ -162,7 +163,6 @@ class Builder:
                         else:
                             self.pMSG   = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
                             self.pName  = citem['name']
-                            self.pCount = int(idx*100//len(channels))
                             self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
                             
                             if not preview and citem['id'] in clrIDS: __clrChannel({'id':clrIDS.pop(clrIDS.index(citem['id']))}) #clear channel m3u/xmltv

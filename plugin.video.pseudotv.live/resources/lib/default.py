@@ -45,7 +45,7 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         elif mode == 'broadcast':               threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
         elif mode == 'radio':                   threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
         elif mode == 'guide'                and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openGuide()
-        elif mode == 'settings'             and hasAddon(PVR_CLIENT_ID,install=True,enable=True): openAddonSettings()
+        elif mode == 'settings'             and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openSettings()
         else: DIALOG.notificationDialog(LANGUAGE(32000))
         MONITOR().waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
         

@@ -159,7 +159,7 @@ class Player(xbmc.Player):
 
     def getPlayerTime(self):
         try:    return self.getTotalTime()
-        except: return (self.sysInfo.get('fitem',{}).get('runtime') or -1)
+        except: return (self.sysInfo.get('fitem',{}).get('runtime') or 0)
             
             
     def getElapsedTime(self):
@@ -350,8 +350,8 @@ class Monitor(xbmc.Monitor):
         
         def __chkBackground():
             if not self.overlay is None:
-                isFullscreen = BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window')
-                if isFullscreen and self.overlay.background is None and abs(floor(self.service.player.getRemainingTime())) <= 2:
+                # isFullscreen = BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window')
+                if self.overlay.background is None and abs(floor(self.service.player.getRemainingTime())) <= 2:
                     self.overlay.toggleBackground()
         
         self.isIdle, self.idleTime = __getIdle()
@@ -505,7 +505,7 @@ class Service():
 
 
     def __tasks(self):
-        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,10)
+        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
            
                 
     def __initialize(self):

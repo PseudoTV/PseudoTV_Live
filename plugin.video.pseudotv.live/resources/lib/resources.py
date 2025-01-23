@@ -177,7 +177,8 @@ class Resources:
         elif hasAddon('script.module.pil'):
             try:
                 from PIL import Image, ImageStat
-                fle  = FileAccess.open(unquoteString(file.replace('resource://','special://home/addons/').replace('image://','')).replace('\\','/'),'rb')
+                file = unquoteString(file.replace('resource://','special://home/addons/').replace('image://','')).replace('\\','/')
+                fle  = FileAccess.open(file.encode('utf-8').strip(),'rb')
                 mono = reduce(lambda x, y: x and y < 0.005, ImageStat.Stat(Image.open(fle)).var, True)
                 fle.close()
                 self.log('isMono, mono = %s, file = %s'%(mono,file))

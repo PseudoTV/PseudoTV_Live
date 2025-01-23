@@ -177,7 +177,7 @@ class Utilities:
                 except Exception as e: 
                     self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
                     return DIALOG.notificationDialog(LANGUAGE(32000))
-        else: openAddonSettings((6,1))
+        else: SETTINGS.openSettings((6,1))
          
          
     def _runAutotune(self):
@@ -277,7 +277,7 @@ class Utilities:
             elif param == 'Debug_QR':
                 ctl = (6,1)
                 return self.qrDebug()
-            return openAddonSettings(ctl)
+            return SETTINGS.openSettings(ctl)
 
 if __name__ == '__main__': Utilities(sys.argv).run()
    

@@ -71,7 +71,7 @@ class JSONRPC:
         params = queuePool.setdefault('params',[])
         params.append(param)
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('setting',''))
-        queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',-1))
+        queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',0))
         queuePool['params'].reverse() #prioritize setsetting,playcount rollback over duration amendments.
         self.log("queueJSON, saving = %s\n%s"%(len(queuePool['params']),param))
         SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
@@ -333,7 +333,7 @@ class JSONRPC:
     
     def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected during playback, accurate meta...
         self.cache.set('getRuntime.%s'%(getMD5(item.get('file'))), runtime, checksum=getMD5(item.get('file')), expiration=datetime.timedelta(days=28), json_data=False)
-        if save and item: self.queDuration(item, runtime=runtime)
+        if save and item and runtime > 0: self.queDuration(item, runtime=runtime)
         return runtime
     
         

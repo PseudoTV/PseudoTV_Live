@@ -173,7 +173,7 @@ class Overlay():
         self.maxProgress        = SETTINGS.getSettingInt('Seek_Threshold')
         self.enableChannelBug   = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
-        self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
+        self.forceBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         self.onNextColor        = '0x%s'%((SETTINGS.getSetting('OnNext_Color')     or 'FFFFFFFF'))
         
@@ -338,11 +338,10 @@ class Overlay():
             if not self._hasControl(self.channelBug):
                 self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
                 self._addControl(self.channelBug)
-                
-            self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
-                                           ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
+                self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
+                                               ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
             
-            if   self.channelBugDiffuse:      self.channelBug.setColorDiffuse(self.channelBugColor)
+            if   self.forceBugDiffuse:        self.channelBug.setColorDiffuse(self.channelBugColor)
             elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
             self.channelBug.setImage(logo)
             self._setVisible(self.channelBug,True)
@@ -399,40 +398,39 @@ class Overlay():
                 if not self._hasControl(self.onNext_Text):
                     self.onNext_Text = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
                     self._addControl(self.onNext_Text)
+                    self.onNext_Text.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                    ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
+                                                    ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                    ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
+                                                    ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                    ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
 
                 self.onNext_Text.setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
-                self.onNext_Text.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
-                                                ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
-                                                ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
                 if self.onNextMode == 2:
                     landscape = getThumb(nitem)    
                     
                     if not self._hasControl(self.onNext_Border):
                         self.onNext_Border = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, os.path.join(MEDIA_LOC,'colors','white.png'), 0, '0xC0%s'%(COLOR_BACKGROUND))#todo adv. rule to change color.
                         self._addControl(self.onNext_Border)
+                        self.onNext_Border.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                          ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
+                                                          ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                          ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
+                                                          ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                          ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
 
-                    self.onNext_Border.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                       ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
-                                                       ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                       ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
-                                                       ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                       ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
          
                     if not self._hasControl(self.onNext_Artwork):
                         self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 230, 125, ' ', aspectRatio=0)
                         self._addControl(self.onNext_Artwork)
+                        self.onNext_Artwork.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                           ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
+                                                           ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                           ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
+                                                           ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                           ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
                         
                     self.onNext_Artwork.setImage(COLOR_FANART if landscape == FANART else landscape, useCache=True)
-                    self.onNext_Artwork.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                       ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
-                                                       ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                       ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
-                                                       ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                       ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
-     
                     self._setVisible(self.onNext_Border,True)
                     self._setVisible(self.onNext_Artwork,True)
                 self._setVisible(self.onNext_Text,True)

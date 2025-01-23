@@ -25,7 +25,6 @@ from channels   import Channels
 class Autotune:
     def __init__(self, sysARG=sys.argv):
         self.log('__init__, sysARG = %s'%(sysARG))
-        if service is None: service = Service()
         self.sysARG   = sysARG 
         self.channels = Channels()
         self.library  = Library()
@@ -204,6 +203,6 @@ class Autotune:
             elif param == 'Clear_Autotune' : self.clearLibrary()
             elif param == 'Clear_BlackList': self.clearBlacklist()
             elif param == None: return
-            return openAddonSettings(ctl)
+            return SETTINGS.openSettings(ctl)
         
 if __name__ == '__main__': Autotune(sys.argv).run()
