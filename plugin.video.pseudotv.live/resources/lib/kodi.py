@@ -162,7 +162,7 @@ class Settings:
         # self.pluginMeta.setdefault(addonID,{})['settings'] = [{'key':'value'}]
  
     
-    def openSettings(ctl=(0,1), id=ADDON_ID):
+    def openSettings(self, ctl=(0,1), id=ADDON_ID):
         builtin = Builtin()
         builtin.closeBusyDialog()
         with builtin.busy_dialog():
@@ -172,7 +172,6 @@ class Settings:
             xbmc.sleep(50)
             builtin.executebuiltin('SetFocus(%i)'%(ctl[1]-180))
         del builtin
-        return True
     
  
     def openGuide(self, instance=ADDON_NAME):
@@ -1108,6 +1107,14 @@ class Builtin:
         return self.getInfoBool('Player.Paused')
                 
                 
+    def isRecording(self):
+        return self.getInfoBool('IsRecording','Pvr')
+        
+        
+    def isScanning(self):
+        return (self.getInfoBool('IsScanningVideo','Library') & self.getInfoBool('IsScanningMusic','Library'))
+          
+          
     def isBusyDialog(self):
         return (Properties().isRunning('OVERLAY_BUSY') | self.getInfoBool('IsActive(busydialognocancel)','Window') | self.getInfoBool('IsActive(busydialog)','Window'))
 

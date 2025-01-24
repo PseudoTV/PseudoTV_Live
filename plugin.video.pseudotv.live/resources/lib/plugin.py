@@ -356,7 +356,7 @@ class Plugin:
             if self.sysInfo.get('chid') == oldInfo.get('chid',random.random()):
                 if self.sysInfo.get('start') == oldInfo.get('start',random.random()):
                     self.sysInfo['playcount'] = oldInfo.get('playcount',0) + 1 #carry over playcount
-                    self.sysInfo['runtime']   = oldInfo.get('runtime',-1)      #carry over previous player runtime
+                    self.sysInfo['runtime']   = oldInfo.get('runtime',0)       #carry over previous player runtime
                     
                     if self.sysInfo['now'] >= self.sysInfo['stop']:
                         self.log('playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo['now'],self.sysInfo['stop']))

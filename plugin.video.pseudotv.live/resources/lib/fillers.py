@@ -51,15 +51,9 @@ class Fillers:
         items = list(self.builder.bctTypes.items())
         for ftype, values in items:
             if not values.get('enabled',False): continue
-            if self.builder.bctTypes.get(ftype,{}).get("incIspot",False):
-                self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).append(self.getAdvertPath())
-                
-            if self.builder.bctTypes.get(ftype,{}).get('incIMDB',False):
-                self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).extend(IMDB_PATHS) 
-                
-            if self.builder.bctTypes.get(ftype,{}).get('incKODI',False):
-                self.builder.bctTypes.get(ftype,{})["items"] = mergeDictLST(self.builder.bctTypes.get(ftype,{}).get("items",[]), self.builder.kodiTrailers())
-
+            if self.builder.bctTypes.get(ftype,{}).get("incIspot",False): self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).append(self.getAdvertPath())
+            if self.builder.bctTypes.get(ftype,{}).get('incIMDB',False):  self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).extend(IMDB_PATHS) 
+            if self.builder.bctTypes.get(ftype,{}).get('incKODI',False):  self.builder.bctTypes.get(ftype,{})["items"] = mergeDictLST(self.builder.bctTypes.get(ftype,{}).get("items",[]), self.builder.kodiTrailers())
             for id   in values["sources"].get("ids",[]):   values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,id))   #parse resource packs
             for path in values["sources"].get("paths",[]): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,path)) #parse vfs paths
             values['items'] = lstSetDictLst(values['items'])
@@ -147,21 +141,27 @@ class Fillers:
                 if isinstance(fgenre,list) and len(fgenre) > 0: fgenre = fgenre[0]
                 
                 #pre roll - bumpers/ratings
-                preFileList = []
-                for ftype in ['ratings','bumpers']:
-                    preIncludeTypes = {'ratings':MOVIE_TYPES ,'bumpers':TV_TYPES}[ftype]
-                    preKeys = {'ratings':[fmpaa, fcodec],'bumpers':[chname, fgenre]}[ftype]
-                    if self.builder.bctTypes[ftype].get('enabled',False) and dbtype.startswith(tuple(preIncludeTypes)) and chtype not in IGNORE_CHTYPE:
+                if dbtype.startswith(tuple(MOVIE_TYPES)):
+                    ftype   = 'ratings'
+                    preKeys = [fmpaa, fcodec]
+                elif dbtype.startswith(tuple(TV_TYPES)):
+                    ftype   = 'bumpers'
+                    preKeys = [chname, fgenre]
+                else:
+                    ftype   = None
+                
+                if ftype:
+                    preFileList = []
+                    if self.builder.bctTypes[ftype].get('enabled',False) and chtype not in IGNORE_CHTYPE:
                         preFileList.extend(self.getSingle(ftype, preKeys, chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
 
-                for item in setDictLST(preFileList):
-                    if (item.get('duration') or 0) == 0: continue
-                    else:
-                        runtime += item.get('duration')
-                        self.log('injectBCTs, adding pre-roll %s - %s'%(item.get('duration'),item.get('file')))
-                        if self.builder.pDialog: self.builder.pDialog = DIALOG.updateProgress(self.builder.pCount, self.builder.pDialog, message='Filling Pre-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                        item.update({'title':'Pre-Roll','episodetitle':item.get('label'),'genre':['Pre-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
-                        nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
+                    for item in setDictLST(preFileList):
+                        if (item.get('duration') or 0) > 0:
+                            runtime += item.get('duration')
+                            self.log('injectBCTs, adding pre-roll %s - %s'%(item.get('duration'),item.get('file')))
+                            if self.builder.pDialog: self.builder.pDialog = DIALOG.updateProgress(self.builder.pCount, self.builder.pDialog, message='Filling Pre-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
+                            item.update({'title':'Pre-Roll','episodetitle':item.get('label'),'genre':['Pre-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
+                            nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
 
                 # original media
                 nfileList.append(fileItem)
@@ -174,8 +174,7 @@ class Fillers:
                     postFillRuntime = diffRuntime(runtime) if self.builder.bctTypes[ftype]['auto'] else self.builder.bctTypes[ftype]['max']
                     if self.builder.bctTypes[ftype].get('enabled',False) and chtype not in postIgnoreTypes:
                         postFileList.extend(self.getMulti(ftype, [chname, fgenre], (PAGE_LIMIT * 2) if self.builder.bctTypes[ftype]['auto'] else self.builder.bctTypes[ftype]['min'],chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
-                    postFileList  = randomShuffle(postFileList)
-                    postFillCount = len(postFileList)
+                    postFillCount = len(randomShuffle(postFileList))
 
                 if len(postFileList) > 0:
                     self.log('injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))

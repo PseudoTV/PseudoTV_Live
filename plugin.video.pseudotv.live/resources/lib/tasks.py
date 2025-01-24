@@ -195,38 +195,41 @@ class Tasks():
         
     def chkLibrary(self, force=PROPERTIES.getPropertyBool('ForceLibrary')):
         self.log('chkLibrary, force = %s'%(force))
-        try: 
-            library = Library(service=self.service)
-            library.importPrompt()
-            complete = library.updateLibrary(force)
-            del library
-            if complete: 
-                if force: PROPERTIES.setPropertyBool('ForceLibrary',False)
-                self.chkAutoTune() #run autotune for the first time this Kodi/PTVL instance.
-            else: self._que(self.chkLibrary,2,force)
+        try:
+            if not BUILTIN.isScanning():
+                library = Library(service=self.service)
+                library.importPrompt()
+                complete = library.updateLibrary(force)
+                del library
+                if complete: 
+                    if force: PROPERTIES.setPropertyBool('ForceLibrary',False)
+                    return self.chkAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            self._que(self.chkLibrary,2,force)
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
     def chkChannels(self, channels: list=[]):
         try:
-            if not channels:
-                ids = SETTINGS.getUpdateChannels()
-                if ids:
-                    channels = self.getChannels()
-                    channels = [citem for id in ids for citem in channels if citem.get('id') == id]
-                else:
-                    channels = self.getChannels()
-                    SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
-                    PROPERTIES.setChannels(len(channels) > 0)
-                    self.service.currentChannels = channels #update service channels
-                    
-            if len(channels) > 0:
-                complete, updated = Builder(service=self.service).build(channels)
-                self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
-                if complete:
-                    if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
-                    if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
-                else: self._que(self.chkChannels,3,channels)
+            if not BUILTIN.isScanning():
+                if not channels:
+                    ids = SETTINGS.getUpdateChannels()
+                    if ids:
+                        channels = self.getChannels()
+                        channels = [citem for id in ids for citem in channels if citem.get('id') == id]
+                    else:
+                        channels = self.getChannels()
+                        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
+                        PROPERTIES.setChannels(len(channels) > 0)
+                        self.service.currentChannels = channels #update service channels
+                        
+                if len(channels) > 0:
+                    complete, updated = Builder(service=self.service).build(channels)
+                    self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
+                    if complete:
+                        if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
+                        if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
+                        return True
+            self._que(self.chkChannels,3,channels)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
 
@@ -255,10 +258,8 @@ class Tasks():
     def chkPVRToggle(self):
         isIdle      = self.monitor.isIdle
         isPlaying   = self.player.isPlaying()
-        isScanning  = BUILTIN.getInfoBool('IsScanningVideo','Library')
-        isRecording = BUILTIN.getInfoBool('IsRecording','Pvr')
         self.log('chkPVRToggle, isIdle = %s, isPlaying = %s'%(isIdle,isPlaying))
-        if isIdle and not (isPlaying | isScanning | isRecording): togglePVR(False,True)
+        if isIdle and not (isPlaying | BUILTIN.isScanning() | BUILTIN.isRecording()): togglePVR(False,True)
         else: PROPERTIES.setPropTimer('chkPVRRefresh')
 
 
