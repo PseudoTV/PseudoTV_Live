@@ -79,19 +79,19 @@ class Builder:
         self.completedBuild   = False
         
         self.bctTypes         = {"ratings" :{"min":-1, "max":SETTINGS.getSettingInt('Enable_Preroll'), "auto":SETTINGS.getSettingInt('Enable_Preroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')), "chance":SETTINGS.getSettingInt('Random_Pre_Chance'),
-                                 "sources" :{"ids":SETTINGS.getSetting('Resource_Ratings').split('|'),"paths":[os.path.join(FILLER_LOC,'Ratings' ,'')]},"items":{}},
+                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Ratings').split('|'),"paths":[os.path.join(FILLER_LOC,'Ratings' ,'')]},"items":{}},
                                  
                                  "bumpers" :{"min":-1, "max":SETTINGS.getSettingInt('Enable_Preroll'), "auto":SETTINGS.getSettingInt('Enable_Preroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')), "chance":SETTINGS.getSettingInt('Random_Pre_Chance'),
-                                 "sources" :{"ids":SETTINGS.getSetting('Resource_Bumpers').split('|'),"paths":[os.path.join(FILLER_LOC,'Bumpers' ,'')]},"items":{}},
+                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Bumpers').split('|'),"paths":[os.path.join(FILLER_LOC,'Bumpers' ,'')]},"items":{}},
                                  
                                  "adverts" :{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":MIN_EPG_DURATION, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
-                                 "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{},
-                                 "incIspot":SETTINGS.getSettingBool('Include_Adverts_iSpot')},
+                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{},
+                                             "incIspot":SETTINGS.getSettingBool('Include_Adverts_iSpot')},
                                  
                                  "trailers":{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":MIN_EPG_DURATION, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
-                                 "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{},
-                                 "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI'),
-                                 "incIMDB":SETTINGS.getSettingBool('Include_Trailers_IMDB')}}
+                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{},
+                                             "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI'),
+                                             "incIMDB":SETTINGS.getSettingBool('Include_Trailers_IMDB')}}
 
         self.xsp              = XSP()
         self.xmltv            = XMLTVS()
@@ -114,7 +114,7 @@ class Builder:
                 self.log('verify, [%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem))
                 continue
             citem['name'] = validString(citem['name']) #todo temp. correct existing file names; drop by v.0.6
-            citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
+            citem['logo'] = self.resources.getLogo(citem,logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
             self.log('verify, [%s] VERIFIED - channel %s: %s'%(citem['id'],citem['number'],citem['name']))
             yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
 

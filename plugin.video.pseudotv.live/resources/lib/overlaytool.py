@@ -77,7 +77,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         self.vignetteControl = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, self.vinImage, aspectRatio=0) #IDX 0
         self.channelBug      = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, COLOR_LOGO, 2, self.channelBugDiffuse) #IDX 1
         self.onNext_Artwork  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, COLOR_FANART, 0) #IDX 2
-        self.onNext_Text     = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', '0xFFFFFFFF')
+        self.onNext_Text     = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 72, 'font27', '0xFFFFFFFF')
         self.onNext_Text.setText('%s %s\n%s %s'%(LANGUAGE(32104),ADDON_NAME,LANGUAGE(32116),ADDON_NAME))
         
         self._addCntrl(self.vignetteControl)  

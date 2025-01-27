@@ -54,8 +54,8 @@ class Fillers:
             if self.builder.bctTypes.get(ftype,{}).get("incIspot",False): self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).append(self.getAdvertPath())
             if self.builder.bctTypes.get(ftype,{}).get('incIMDB',False):  self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).extend(IMDB_PATHS) 
             if self.builder.bctTypes.get(ftype,{}).get('incKODI',False):  self.builder.bctTypes.get(ftype,{})["items"] = mergeDictLST(self.builder.bctTypes.get(ftype,{}).get("items",[]), self.builder.kodiTrailers())
-            for id   in values["sources"].get("ids",[]):   values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,id))   #parse resource packs
-            for path in values["sources"].get("paths",[]): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,path)) #parse vfs paths
+            for id   in values["sources"].get("ids",[]):   values['items'] = mergeDictLST(values.get('items',{}),self.buildSource(ftype,id))   #parse resource packs
+            for path in values["sources"].get("paths",[]): values['items'] = mergeDictLST(values.get('items',{}),self.buildSource(ftype,path)) #parse vfs paths
             values['items'] = lstSetDictLst(values['items'])
     
     

@@ -52,21 +52,21 @@ class Resources:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getLogo(self, chname: str, type: str="Custom", logo=None) -> str:
-        if not logo: logo = self.getLocalLogo(chname)              #local
-        if not logo: logo = self.getLogoResources(chname, type)    #resource
-        if not logo: logo = self.getTVShowLogo(chname)             #tvshow 
+    def getLogo(self, citem: dict, logo=None) -> str:
+        if not logo: logo = self.getLocalLogo(citem.get('name')) #local
+        if not logo: logo = self.getLogoResources(citem) #resource
+        if not logo: logo = self.getTVShowLogo(citem.get('name')) #tvshow 
         if not logo: logo = LOGO
-        self.log('getLogo, chname = %s, logo = %s'%(chname, logo))
+        self.log('getLogo, chname = %s, logo = %s'%(citem.get('name'), logo))
         return logo
         
         
-    def selectLogo(self, chname: str, type: str="Custom") -> list:
+    def selectLogo(self, citem: dict) -> list:
         logos = []
-        logos.extend(self.getLocalLogo(chname,select=True))
-        logos.extend(self.getLogoResources(chname,type,select=True))
-        logos.append(self.getTVShowLogo(chname))
-        self.log('selectLogo, chname = %s, logos = %s'%(chname, len(logos)))
+        logos.extend(self.getLocalLogo(citem.get('name'),select=True))
+        logos.extend(self.getLogoResources(citem,select=True))
+        logos.append(self.getTVShowLogo(citem.get('name')))
+        self.log('selectLogo, chname = %s, logos = %s'%(citem.get('name'), len(logos)))
         return list([_f for _f in logos if _f])
 
 
@@ -80,19 +80,18 @@ class Resources:
         if select: return logos
         
         
-    def getLogoResources(self, chname: str, type: str, select: bool=False) -> dict and None:
-        self.log('getLogoResources, chname = %s, type = %s'%(chname, type))
+    def getLogoResources(self, citem: dict, select: bool=False) -> dict and None:
+        self.log('getLogoResources, chname = %s, type = %s'%(citem.get('name'), citem.get('type')))
         resources = SETTINGS.getSetting('Resource_Logos').split('|').copy()
-        if   type in ["TV Genres","Movie Genres"]:    resources.extend(GENRE_RESOURCE)
-        elif type in ["TV Networks","Movie Studios"]: resources.extend(STUDIO_RESOURCE)
-        elif type in ["Music Genres","Radio"]:        resources.extend(MUSIC_RESOURCE)
+        if   citem.get('type') in ["TV Genres","Movie Genres"]:               resources.extend(GENRE_RESOURCE)
+        elif citem.get('type') in ["TV Networks","Movie Studios"]:            resources.extend(STUDIO_RESOURCE)
+        elif citem.get('type') in ["Music Genres","Radio"] or isRadio(citem): resources.extend(MUSIC_RESOURCE)
         else:
             resources.extend(GENRE_RESOURCE)
             resources.extend(STUDIO_RESOURCE)
-            resources.extend(MUSIC_RESOURCE)
         
         logos = []
-        cacheName = 'getLogoResources.%s.%s'%(getMD5(chname),select)
+        cacheName = 'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select)
         cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
@@ -108,7 +107,7 @@ class Resources:
                     for path, images in list(results.items()):
                         for image in images:
                             name, ext = os.path.splitext(image)
-                            if self.matchName(chname, name, type, auto=select):
+                            if self.matchName(citem.get('name'), name, citem.get('type','Custom'), auto=select):
                                 self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
                                 if select: logos.append('%s/%s'%(path,image))
                                 else: return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))

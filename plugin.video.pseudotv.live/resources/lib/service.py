@@ -214,15 +214,17 @@ class Player(xbmc.Player):
         sysInfo = self.getPlayerSysInfo() #get current sysInfo
         #items that only run once per channel change. ie. set adv. rules and variables. 
         self.log('_onPlay, [%s], mode = %s, chid = %s'%(sysInfo.get('citem',{}).get('id'),sysInfo.get('mode'),sysInfo.get('chid')))
-        if sysInfo.get('chid') == oldInfo.get('chid',random.random()):
+        if sysInfo.get('chid') == oldInfo.get('chid',random.random()):#New Program
+            self.sysInfo = sysInfo
             self.toggleInfo(self.infoOnChange)
-        else:
+            if not self.service.monitor.overlay is None: self.service.monitor.overlay.toggleBackground(False)
+        else: #New channel
             self.service.monitor.toggleOverlay(False)
             self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), sysInfo, inherited=self)
             self.setRuntime(self.saveDuration,self.sysInfo.get('fitem',{}),self.sysInfo.get('runtime'))
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             self.setTrakt(self.disableTrakt)
-            self.toggleRestart()
+            self.toggleRestart(bool(self.restartPercentage))
             
         if self.sysInfo.get('isPlaylist',False) and self.service.monitor.isIdle:
             if self.sysInfo.get('radio',False): timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(visualisation)'])
@@ -271,36 +273,32 @@ class Player(xbmc.Player):
         self.log('_onError, playing file = %s'%(self.getPlayerFile()))
         if REAL_SETTINGS.getSetting('Debug_Enable').lower() == 'true':
             DIALOG.notificationDialog(LANGUAGE(32000))
-            timerit(BUILTIN.executebuiltin)(0.5,['Action(PlayPvr)'])
+            timerit(BUILTIN.executebuiltin)(0.5,['Number(0)'])
             self.stop()
             
     
     def toggleInfo(self, state: bool=True):
-        if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
-        elif state and self.service.player.enableOverlay:
-            self.log('toggleInfo, state = %s'%(state))
-            BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
-            timerit(self.toggleInfo)(float(OSD_TIMER),[False])
+        self.log('toggleInfo, state = %s'%(state))
+        if state and self.service.player.enableOverlay:
+            if not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
+                BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
+                timerit(self.toggleInfo)(float(OSD_TIMER),[False])
         elif not state and BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
-            self.log('toggleInfo, state = %s'%(state))
             BUILTIN.executebuiltin('Action(back)')  
 
                  
     def toggleRestart(self, state: bool=True):
-        if state and bool(self.restartPercentage):
+        self.log('toggleRestart, state = %s'%(state))
+        if state and self.service.player.enableOverlay:
             if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
             progress = self.getPlayerProgress()
             seekTHD = SETTINGS.getSettingInt('Seek_Threshold')
             self.log('toggleRestart, progress = %s, restartPercentage = %s, seekTHD = %s'%(progress,self.restartPercentage,seekTHD))
-            #todo apply zoom to to posxy
             if self.restart is None and (progress >= self.restartPercentage and progress < seekTHD) and self.sysInfo.get('fitem'):
                 self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
-                self.log('toggleRestart, state = %s'%(state))
                 self.restart.doModal()
-                del self.restart
                 self.restart = None
         elif not state and hasattr(self.restart,'onClose'):
-            self.log('toggleRestart, state = %s'%(state))
             self.restart = self.restart.onClose()
 
 
@@ -332,7 +330,7 @@ class Monitor(xbmc.Monitor):
             return idleState, idleTime
 
         def __chkPlayback():
-            if not BUILTIN.isBusyDialog() and self.service.player.pendingPlay >= 0 and abs(self.idleTime - self.service.player.pendingPlay) > 30:
+            if not BUILTIN.isBusyDialog() and self.service.player.pendingPlay >= 0 and abs(self.idleTime - self.service.player.pendingPlay) > 90:
                 self.log('__chkPlayback, pendingPlay Error\nsysInfo = %s'%(self.service.player.sysInfo))
                 self.service.player.onPlayBackError()
 
@@ -350,8 +348,7 @@ class Monitor(xbmc.Monitor):
         
         def __chkBackground():
             if not self.overlay is None:
-                # isFullscreen = BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window')
-                if self.overlay.background is None and abs(floor(self.service.player.getRemainingTime())) <= 2:
+                if self.overlay.background is None and abs(floor(self.service.player.getRemainingTime())) <= 3:
                     self.overlay.toggleBackground()
         
         self.isIdle, self.idleTime = __getIdle()
@@ -362,18 +359,17 @@ class Monitor(xbmc.Monitor):
                 __chkResumeTime()
                 __chkSleepTimer()
                 __chkBackground()
-            if self.isIdle: self.toggleOverlay(True)
+            if self.isIdle: self.toggleOverlay(self.service.player.enableOverlay)
             else:           self.toggleOverlay(False)
             
 
     def toggleOverlay(self, state: bool=True):
         self.log("toggleOverlay, state = %s"%(state))
         def __chkConditions():
-            isPlaying    = self.service.player.isPlaying()
-            isEnabled    = self.service.player.enableOverlay
+            isOverlay    = not self.overlay is None
             isFullscreen = not BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window')
-            isOverlay    = not PROPERTIES.getPropertyBool('Overlay.Show')
-            return (isPlaying | isEnabled | isFullscreen | isOverlay)
+            isPlaying    = self.service.player.isPlaying()
+            return (isPlaying | isFullscreen | isOverlay)
             
         if state and __chkConditions() :
             if self.overlay is None: self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
@@ -497,7 +493,7 @@ class Service():
         if self.monitor.pendingInterrupt:
             pendingSuspend = False
         else:
-            pendingSuspend = (self.__playing() | PROPERTIES.isSuspendActivity())
+            pendingSuspend = (self.__playing() | PROPERTIES.isSuspendActivity() | BUILTIN.isScanning())
         if pendingSuspend != self.monitor.pendingSuspend:
             self.monitor.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))

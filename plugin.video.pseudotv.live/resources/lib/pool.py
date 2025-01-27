@@ -106,7 +106,7 @@ def timerit(method):
                 try: timer.join()
                 except: pass
                 log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
-        timer = Timer(wait, method, *args, **kwargs)
+        timer = Timer(float(wait), method, *args, **kwargs)
         timer.name = thread_name
         timer.start()
         log('%s, starting %s wait = %s'%(method.__qualname__.replace('.',': '),thread_name,wait))

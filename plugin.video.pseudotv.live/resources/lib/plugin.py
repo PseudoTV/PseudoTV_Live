@@ -27,8 +27,10 @@ class Plugin:
         if self.playCheck(loadJSON(decodeString(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID))))):
             try: yield
             finally: PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
-        else: yield self.playError()
-
+        else:  #todo evaluate potential for error handling.
+            if REAL_SETTINGS.getSetting('Debug_Enable').lower() == 'true':
+                yield self.playError()
+        
 
     def __init__(self, sysARG=sys.argv, sysInfo={}):
         with BUILTIN.busy_dialog():
@@ -376,23 +378,24 @@ class Plugin:
                         return False
             return True
             
-        status = bool([_chkPath(),_chkLoop()])
+        status = _chkPath()
+        if status: status = _chkLoop()
         self.log('playCheck [%s], status = %s\nsysInfo=%s\noldInfo = %s'%(self.sysInfo.get('citem',{}).get('id'),status, self.sysInfo,oldInfo))
-        return status
+        return True
         
         
     def playError(self):
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
         self.log('playError, id = %s, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo.get('playcount'),self.sysInfo))
-        if self.sysInfo.get('playcount') == 1:
-            DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',1.0)))
+        self._resolveURL(False, xbmcgui.ListItem()) #release pending playback
+        if self.sysInfo.get('playcount',0) == 0:
+            DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',0)))
+            timerit(BUILTIN.executebuiltin)(0.5,['AlarmClock(last,Number(0),.5,true,false)']) #last channel
+        elif self.sysInfo.get('playcount',3) < 3:
+            DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',3)))
             timerit(BUILTIN.executebuiltin)(0.5,['PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])]) #retry channel
-        elif self.sysInfo.get('playcount') == 2:
-            DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',1.0)))
-            timerit(BUILTIN.executebuiltin)(0.5,['AlarmClock(last,Number(0),.5,true,false)'])
         else:
             DIALOG.notificationDialog(LANGUAGE(32000))
             PROPERTIES.setPropTimer('chkPVRRefresh')
             timerit(DIALOG.okDialog)(0.5,[LANGUAGE(32134)%(ADDON_NAME)])
-        self._resolveURL(False, xbmcgui.ListItem()) #release pending playback
             

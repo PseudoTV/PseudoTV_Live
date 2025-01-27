@@ -443,8 +443,60 @@ class Settings:
         payload['updated']   = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         payload['md5']       = getMD5(dumpJSON(payload))
         return payload
+    # todo add "Valid","Passed","Failed" entries for m3u,xmltv instead of detailed listings.
+     # @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
+        # def getPayload(self, inclDebug: bool=False):
+            # self.log("getPayload, inclDebug! %s"%(inclDebug))
+            # def __getM3U():
+                # from m3u import M3U
+                # m3u = M3U()
+                # stations   = m3u.getStations()
+                # recordings = m3u.getRecordings()
+                # del m3u
+                # return stations, recordings
+                
+            # def __getXMLTV():
+                # from xmltvs import XMLTVS
+                # xmltv = XMLTVS()
+                # stations   = xmltv.getChannels()
+                # recordings = xmltv.getRecordings()
+                # del xmltv
+                # return stations, recordings
+            
+            
+            # def __getMeta(payload):
+                # from library   import Library 
+                # from multiroom import Multiroom
+                
+                # payload.pop('updated')
+                # payload.pop('md5')
+                
+                # now  = getUTCstamp()
+                # stop = datetime.datetime.fromtimestamp(roundTimeDown(now,offset=60)).strftime(DTFORMAT)
+                
+                # payload['now'] = datetime.datetime.fromtimestamp(now).strftime(DTFORMAT)
+                # payload['m3u'] = dict(poolit(__chkM3U, *(stop,M3U().getM3U())))
+                # print('payload[m3u]'payload['m3u'])
+                
+                
+                
+                # return '[%s] - %s'%(station.get('id'),station.get('name')), {True:'[COLOR=green][B]PASSED[/B][/COLOR]',False:'[COLOR=red][B]Failed![/B][/COLOR]'}[not station.get('id') is None]
 
+                
+                # # payload['xmltv']   = {'stations'  :[{'id':station.get('id'),'display-name':station.get('display-name',[['','']])[0][0],'icon':station.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for station in stations],
+                                      # # 'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in recordings], 
+                                      # # 'programmes':[{'id':key,'end-time':datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
+                # payload['library'] = Library().getLibrary()
+                # payload['servers'] = Multiroom().getDiscovery()
+                # return payload
 
+            # payload = __getMeta(self.getBonjour(inclChannels=True))
+            # if inclDebug: payload['debug'] = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_ID))).get('DEBUG',{})
+            # payload['updated']   = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
+            # payload['md5']       = getMD5(dumpJSON(payload))
+            # return payload
+            
+            
     @cacheit(expiration=datetime.timedelta(minutes=5))
     def getPayloadUI(self):
         return Json2Html().convert(self.getPayload(inclDebug=True))
@@ -1181,24 +1233,24 @@ class Dialog:
         log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def toggleInfoMonitor(self, state, wait=0.1):
+    def toggleInfoMonitor(self, state, wait=0.5):
         self.log('toggleInfoMonitor, state = %s'%(state))
-        if self.properties.setPropertyBool('chkInfoMonitor',state): 
+        self.properties.setPropertyBool('chkInfoMonitor',state)
+        if state:
             self.properties.clrProperty('monitor.montiorList')
-            timerit(self.doInfoMonitor)(0.5)
+            timerit(self.doInfoMonitor)(wait)
 
 
-    def doInfoMonitor(self):
+    def doInfoMonitor(self, wait=0.5):
         monitor = MONITOR()
         while not monitor.abortRequested():
-            if not self.fillInfoMonitor() or monitor.waitForAbort(0.1): break
+            if not self.fillInfoMonitor() or monitor.waitForAbort(wait): break
         del monitor
             
 
     def fillInfoMonitor(self, type='ListItem'):
         #todo catch full listitem not singular properties.
         try:
-            if not self.properties.getPropertyBool('chkInfoMonitor'): return False
             item = {'label'       :self.builtin.getInfoLabel('Label'       ,type),
                     'label2'      :self.builtin.getInfoLabel('Label2'      ,type),
                     'set'         :self.builtin.getInfoLabel('Set'         ,type),
@@ -1221,7 +1273,7 @@ class Dialog:
                 montiorList = self.getInfoMonitor()
                 if item.get('label') not in montiorList: montiorList.insert(0,item)
                 self.setInfoMonitor(montiorList)
-            return True
+            return self.properties.getPropertyBool('chkInfoMonitor')
         except Exception as e:
             self.log("fillInfoMonitor, failed! %s"%(e), xbmc.LOGERROR)
             return False

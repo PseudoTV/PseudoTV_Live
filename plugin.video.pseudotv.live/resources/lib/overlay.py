@@ -62,7 +62,6 @@ class Busy(xbmcgui.WindowXMLDialog):
         actionId = act.getId()
         log('Busy: onAction: actionId = %s'%(actionId))
         if actionId in ACTION_PREVIOUS_MENU: self.close()
-        else: pass
 
 
 class Restart(xbmcgui.WindowXMLDialog):
@@ -136,8 +135,8 @@ class Overlay():
 
         def onAVStarted(self):
             self.overlay.log('onAVStarted')
-            self.overlay.toggleBug()
-            self.overlay.toggleOnNext()
+            self.overlay.toggleBug(self.overlay.enableChannelBug)
+            self.overlay.toggleOnNext(self.overlay.enableOnNext)
             self.overlay.toggleBackground(False)
             
 
@@ -193,7 +192,7 @@ class Overlay():
         except: self.onNextX, self.onNextY = abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h) #auto
         self.onNext_Border  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, ' ', aspectRatio=0)
         self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 230, 125, ' ', aspectRatio=0)
-        self.onNext_Text    = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
+        self.onNext_Text    = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 72, 'font27', self.onNextColor)
 
         self._bugThread    = Timer(0.1, self.toggleBug, [False])
         self._onNextThread = Timer(0.1, self.toggleOnNext, [False])
@@ -205,16 +204,13 @@ class Overlay():
 
         
     def show(self):
-        if PROPERTIES.getPropertyBool('Overlay.Show'): return
         self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
-        PROPERTIES.setPropertyBool('Overlay.Show',True)
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
-        self._player.onAVStarted(), self.toggleVignette()
+        self._player.onAVStarted(), self.toggleVignette(self.enableVignette)
 
    
     def close(self):
         self.log('close')
-        PROPERTIES.setPropertyBool('Overlay.Show',False)
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
         self._player.onPlayBackStopped(), self.toggleVignette(False)
         self._clrRemaining()
@@ -267,7 +263,7 @@ class Overlay():
                 if genre.lower() in ['pre-roll','post-roll']: return True
             return False
             
-        if not self.enableOnNext or self.player.sysInfo.get('nitem',{}).get('duration', 0) < self.minDuration: return False
+        if (self.player.sysInfo.get('nitem',{}).get('duration', 0) < self.minDuration): return False
         elif __isFiller(): return False
         return True
 
@@ -278,7 +274,7 @@ class Overlay():
                 if genre.lower() in ['pre-roll','post-roll']: return True
             return False
             
-        if not self.enableChannelBug or self.player.sysInfo.get('fitem',{}).get('duration', 0) < self.minDuration or not self.player.isPlaying(): return False
+        if (self.player.sysInfo.get('fitem',{}).get('duration', 0) < self.minDuration) or not self.player.isPlaying(): return False
         elif self.player.getPlayerProgress() >= self.maxProgress: return False
         elif __isFiller(): return False
         return True
@@ -286,17 +282,16 @@ class Overlay():
 
     def toggleBackground(self, state: bool=True):
         self.log('toggleBackground, state = %s'%(state))
-        if state:
-            if self.background is None: self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", overlay=self)
+        if state and self.background is None:
+            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", overlay=self)
             self.background.doModal()
-            del self.background
             self.background = None
-        elif hasattr(self.background,'close'):
+        elif not state and hasattr(self.background,'close'):
             self.background = self.background.close()
             
 
     def toggleVignette(self, state: bool=True):
-        if state and self.enableVignette:
+        if state:
             if not self._hasControl(self.vignette):
                 self.vignette = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
                 self._addControl(self.vignette)
@@ -320,8 +315,8 @@ class Overlay():
                 onVAL  = remaining
                 offVAL = FIFTEEN
             elif self.channelBugInterval == 0: #random
-                onVAL  = random.randint(0,remaining//2)
-                offVAL = random.randint(0,(onVAL// 2))
+                onVAL  = random.randint(roundupDIV(remaining,4),roundupDIV(remaining,2))
+                offVAL = random.randint(roundupDIV(remaining,8),roundupDIV(remaining,4))
             else: #set time
                 setVal = self.channelBugInterval * 60
                 onVAL  = setVal if setVal <= remaining else remaining
@@ -355,7 +350,7 @@ class Overlay():
             try: self._bugThread.join()
             except: pass
             
-        if cancel or wait < 1: return self.log('toggleBug, cancelling timer...')
+        if cancel: return self.log('toggleBug, cancelling timer...')
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
         self._bugThread = Timer(wait, self.toggleBug, [nstate])
         self._bugThread.name = "_bugThread"
@@ -364,30 +359,30 @@ class Overlay():
 
     
     def toggleOnNext(self, state: bool=True, cancel: bool=False):
-        def __getOnNextInterval(interval, displayTime):
-            conditions = self.chkOnNextConditions()
-            totalTime  = int(self.player.getPlayerTime() * (self.maxProgress / 100))
-            remaining  = int(totalTime - self.player.getPlayedTime())
-            threshold  = roundupDIV(totalTime,4)
-            intTime    = roundupDIV(threshold,interval)
+        def __getOnNextInterval(state, interval, show):
+            totalTime = int(self.player.getPlayerTime() * (self.maxProgress / 100))
+            threshold = roundupDIV(totalTime,4)
+            intTime   = roundupDIV(threshold,interval)
+            remaining = int(totalTime - self.player.getPlayedTime())
+            self.log('toggleOnNext, totalTime = %s, threshold = %s, remaining = %s, intTime = %s, show = %s'%(totalTime, threshold, remaining, intTime, show))
+            if  (remaining <= self.minDuration or remaining <= show or not self.chkOnNextConditions()): return False, 0, 0
+            elif remaining > threshold: return False, 0, (remaining - threshold)
+            elif remaining < intTime:
+                if not state: return False, 0, 0
+                return __getOnNextInterval(state, interval+1, show)
+            return state, show, (intTime - show)
             
-            self.log('toggleOnNext, conditions = %s, totalTime = %s, remaining = %s, threshold = %s, intTime = %s'%(conditions, totalTime, remaining, threshold, intTime))
-            if not conditions or remaining <= self.minDuration: return False, remaining, 0
-            elif remaining > threshold:                         return False, (remaining - threshold), 0
-            elif remaining < intTime:                           return __getOnNextInterval(interval+1, displayTime)
-            else:                                               return True, (intTime - displayTime), displayTime
-            
-        showOnNext, sleepTime, displayTime = __getOnNextInterval(ON_NEXT_COUNT,int(OSD_TIMER * ON_NEXT_COUNT))
-        self.log('toggleOnNext, showOnNext = %s, sleepTime = %s, displayTime = %s'%(showOnNext, sleepTime, displayTime))
-        
-        wait    = {True:displayTime,False:sleepTime}[showOnNext]
+        state, show, sleep = __getOnNextInterval(state, ON_NEXT_COUNT, int(OSD_TIMER * ON_NEXT_COUNT))
+        self.log('toggleOnNext, state = %s, show = %s, sleep = %s, cancel = %s'%(state, show, sleep, cancel))
         nstate  = not bool(state)
-        sysInfo = self.player.sysInfo.copy()
-        citem   = sysInfo.get('citem',{}) #channel
-        fitem   = sysInfo.get('fitem',{}) #onnow
-        nitem   = sysInfo.get('nitem',{}) #onnext
+        wait    = {True:show,False:sleep}[state]
         
-        if state and showOnNext:
+        if state:
+            sysInfo = self.player.sysInfo.copy()
+            citem   = sysInfo.get('citem',{}) #channel
+            fitem   = sysInfo.get('fitem',{}) #onnow
+            nitem   = sysInfo.get('nitem',{}) #onnext
+            
             if self.onNextMode in [1,2]:                    
                 chname    = citem.get('name'     ,BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
                 nowTitle  = fitem.get('label'    ,BUILTIN.getInfoLabel('Title','VideoPlayer'))
@@ -396,7 +391,7 @@ class Overlay():
                 onNext = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
                 
                 if not self._hasControl(self.onNext_Text):
-                    self.onNext_Text = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 70, 'font27', self.onNextColor)
+                    self.onNext_Text = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 72, 'font27', self.onNextColor)
                     self._addControl(self.onNext_Text)
                     self.onNext_Text.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
                                                     ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
@@ -406,6 +401,8 @@ class Overlay():
                                                     ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
 
                 self.onNext_Text.setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
+                self._setVisible(self.onNext_Text,True)
+                
                 if self.onNextMode == 2:
                     landscape = getThumb(nitem)    
                     
@@ -433,7 +430,6 @@ class Overlay():
                     self.onNext_Artwork.setImage(COLOR_FANART if landscape == FANART else landscape, useCache=True)
                     self._setVisible(self.onNext_Border,True)
                     self._setVisible(self.onNext_Artwork,True)
-                self._setVisible(self.onNext_Text,True)
 
             elif self.onNextMode == 3: self.player.toggleInfo()
             elif self.onNextMode == 4: self._updateUpNext(fitem,nitem)
@@ -449,7 +445,7 @@ class Overlay():
             try: self._onNextThread.join()
             except: pass
             
-        if cancel or wait < 1: return self.log('toggleOnNext, cancelling timer...')
+        if cancel or wait <= 0: return self.log('toggleOnNext, cancelling timer...')
         self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
         self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
         self._onNextThread.name = "onNextThread"

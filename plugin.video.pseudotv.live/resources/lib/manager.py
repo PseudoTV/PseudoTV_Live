@@ -205,12 +205,10 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     @contextmanager
-    def toggleSpinner(self, state=None):
-        if state is None:
-            self.setVisibility(self.spinner,True)
-            try: yield
-            finally: self.setVisibility(self.spinner,False)
-        else: self.setVisibility(self.spinner,state)
+    def toggleSpinner(self, state=True):
+        self.setVisibility(self.spinner,state)
+        try: yield
+        finally: self.setVisibility(self.spinner,False)
 
 
     def togglechanList(self, state=True, focus=0, reset=False):
@@ -504,7 +502,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             else:     logo = citem.get('logo')
             if not logo or logo in [LOGO,COLOR_LOGO,ICON]:
                 with self.toggleSpinner():
-                    citem['logo'] = self.resource.getLogo(name, citem.get('type',"Custom"))
+                    citem['logo'] = self.resource.getLogo(citem)
         self.log('setLogo, id = %s, logo = %s, force = %s'%(citem.get('id'),citem.get('logo'),force))
         return citem
        
@@ -690,7 +688,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         with self.toggleSpinner():
             if item['number'] > CHANNEL_LIMIT: return DIALOG.notificationDialog(LANGUAGE(32238))
             elif prompt and not DIALOG.yesnoDialog(LANGUAGE(32073)): return item
-            self.madeChanges = True
+            self.madeItemchange = True
             nitem = self.newChannel.copy()
             nitem['number'] = item['number'] #preserve channel number
             self.saveChannelItems(nitem, open)
@@ -700,20 +698,20 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('moveChannel, channelPOS = %s'%(channelPOS))
         if citem['number'] > CHANNEL_LIMIT: return DIALOG.notificationDialog(LANGUAGE(32064))
         retval = DIALOG.inputDialog(LANGUAGE(32137), key=xbmcgui.INPUT_NUMERIC, opt=citem['number'])
-        if not retval: return citem, channelPOS
-        retval = int(retval)
-        if (retval > 0 and retval < CHANNEL_LIMIT) and retval != channelPOS + 1:
-            if DIALOG.yesnoDialog('%s %s %s from [B]%s[/B] to [B]%s[/B]?'%(LANGUAGE(32136),citem['name'],LANGUAGE(32023),citem['number'],retval)):
-                with self.toggleSpinner():
-                    if retval in [channel.get('number') for channel in self.newChannels if channel.get('path')]: DIALOG.notificationDialog(LANGUAGE(32138))
-                    else:
-                        self.madeChanges = True
-                        nitem = self.newChannel.copy()
-                        nitem['number'] = channelPOS + 1
-                        self.newChannels[channelPOS] = nitem
-                        citem['number'] = retval
-                        self.saveChannelItems(citem)
-        
+        if retval:
+            retval = int(retval)
+            if (retval > 0 and retval < CHANNEL_LIMIT) and retval != channelPOS + 1:
+                if DIALOG.yesnoDialog('%s %s %s from [B]%s[/B] to [B]%s[/B]?'%(LANGUAGE(32136),citem['name'],LANGUAGE(32023),citem['number'],retval)):
+                    with self.toggleSpinner():
+                        if retval in [channel.get('number') for channel in self.newChannels if channel.get('path')]: DIALOG.notificationDialog(LANGUAGE(32138))
+                        else:
+                            self.madeItemchange = True
+                            nitem = self.newChannel.copy()
+                            nitem['number'] = channelPOS + 1
+                            self.newChannels[channelPOS] = nitem
+                            citem['number'] = retval
+                            self.saveChannelItems(citem)
+            
 
     def switchLogo(self, channelData, channelPOS):
         def __cleanLogo(chlogo):
@@ -729,7 +727,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 
             DIALOG.notificationDialog(LANGUAGE(32140))
             with self.toggleSpinner():
-                logos = self.resource.selectLogo(chname)
+                logos = self.resource.selectLogo(channelData)
                 listitems = poolit(_build)(logos)
             select = DIALOG.selectDialog(listitems,'%s (%s)'%(LANGUAGE(32066).split('[CR]')[1],chname),useDetails=True,multi=False)
             if select is not None: return listitems[select].getPath()

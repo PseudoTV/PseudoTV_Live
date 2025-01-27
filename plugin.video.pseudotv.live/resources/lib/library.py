@@ -206,8 +206,8 @@ class Library:
 
     def getMixed(self):
         MixedList = []
-        MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo(LANGUAGE(32001),"Mixed")}) #"Recently Added"
-        MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':{"800":{"values":{"0":LANGUAGE(32002)}}}}) #"Seasonal"
+        MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed"})}) #"Recently Added"
+        MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo({'name':LANGUAGE(32002),'type':"Mixed"}),'rules':{"800":{"values":{"0":LANGUAGE(32002)}}}}) #"Seasonal"
         MixedList.extend(self.getPVRRecordings())#"PVR Recordings"
         MixedList.extend(self.getPVRSearches())  #"PVR Searches"
         self.log('getMixed, mixed = %s' % (len(MixedList)))
@@ -218,7 +218,7 @@ class Library:
         recordList = []
         json_response = self.jsonRPC.getPVRRecordings()
         paths = [item.get('file') for idx, item in enumerate(json_response) if item.get('label','').endswith('(%s)'%(ADDON_NAME))]
-        if len(paths) > 0: recordList.append({'name':LANGUAGE(32003),'type':"Mixed",'path':[paths],'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")})
+        if len(paths) > 0: recordList.append({'name':LANGUAGE(32003),'type':"Mixed",'path':[paths],'logo':self.resources.getLogo({'name':LANGUAGE(32003),'type':"Mixed"})})
         self.log('getPVRRecordings, recordings = %s' % (len(recordList)))
         return sorted(recordList,key=itemgetter('name'))
 
@@ -228,7 +228,7 @@ class Library:
         json_response = self.jsonRPC.getPVRSearches()
         for idx, item in enumerate(json_response):
             if not item.get('file'): continue
-            searchList.append({'name':"%s (%s)"%(item.get('label',LANGUAGE(32241)),LANGUAGE(32241)),'type':"Mixed",'path':[item.get('file')],'logo':self.resources.getLogo(item.get('label',LANGUAGE(32241)),"Mixed")})
+            searchList.append({'name':"%s (%s)"%(item.get('label',LANGUAGE(32241)),LANGUAGE(32241)),'type':"Mixed",'path':[item.get('file')],'logo':self.resources.getLogo({'name':item.get('label',LANGUAGE(32241)),'type':"Mixed"})})
         self.log('getPVRSearches, searches = %s' % (len(searchList)))
         return sorted(searchList,key=itemgetter('name'))
                 
@@ -284,13 +284,13 @@ class Library:
             nNetworkList = []
             for network in NetworkList:
                 rules = {"800":{"values":{"0":network}}}
-                nNetworkList.append({'name':network, 'type':"TV Networks", 'path': self.predefined.createNetworkPlaylist(network),'logo':self.resources.getLogo(network,"TV Networks"),'rules':rules})
+                nNetworkList.append({'name':network, 'type':"TV Networks", 'path': self.predefined.createNetworkPlaylist(network),'logo':self.resources.getLogo({'name':network,'type':"TV Networks"}),'rules':rules})
             NetworkList = nNetworkList
             
             nShowGenreList = []
             for tvgenre in ShowGenreList:
                 rules = {"800":{"values":{"0":tvgenre}}}
-                nShowGenreList.append({'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createTVGenrePlaylist(tvgenre),'logo':self.resources.getLogo(tvgenre,"TV Genres"),'rules':rules})
+                nShowGenreList.append({'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createTVGenrePlaylist(tvgenre),'logo':self.resources.getLogo({'name':tvgenre,'type':"TV Genres"}),'rules':rules})
             ShowGenreList = nShowGenreList
             
         else: NetworkList = ShowGenreList = TVShows = []
@@ -321,8 +321,8 @@ class Library:
                 MovieGenreList = (sorted(set(list(MovieGenreList.keys()))))
                 
             #search resources for studio/genre logos
-            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio)    ,'logo':self.resources.getLogo(studio,"Movie Studios"),'rules':{"800":{"values":{"0":studio}}}} for studio in StudioList]
-            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre) ,'logo':self.resources.getLogo(genre ,"Movie Genres") ,'rules':{"800":{"values":{"0":genre}}}}  for genre  in MovieGenreList]
+            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio)    ,'logo':self.resources.getLogo({'name':studio,'type':"Movie Studios"}),'rules':{"800":{"values":{"0":studio}}}} for studio in StudioList]
+            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre) ,'logo':self.resources.getLogo({'name':genre,'type':"Movie Genres"}) ,'rules':{"800":{"values":{"0":genre}}}}  for genre  in MovieGenreList]
             
         else: StudioList = MovieGenreList = []
         self.log('getMovieInfo, studios = %s, genres = %s' % (len(StudioList), len(MovieGenreList)))
@@ -349,7 +349,7 @@ class Library:
                 MusicGenreList = (sorted(set(list(MusicGenreList.keys()))))
 
             #search resources for studio/genre logos
-            MusicGenreList = [{'name':genre, 'type':"Music Genres", 'path': self.predefined.createMusicGenrePlaylist(genre),'logo':self.resources.getLogo(genre,"Music Genres")} for genre in MusicGenreList]
+            MusicGenreList = [{'name':genre, 'type':"Music Genres", 'path': self.predefined.createMusicGenrePlaylist(genre),'logo':self.resources.getLogo({'name':genre,'type':"Music Genres"})} for genre in MusicGenreList]
 
         else: MusicGenreList = []
         self.log('getMusicInfo, found genres = %s' % (len(MusicGenreList)))
