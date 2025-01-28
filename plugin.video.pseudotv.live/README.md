@@ -24,7 +24,6 @@ Repository Installation:
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/PseudoTV/PseudoTV_Live.svg?color=red&style=flat-square)](https://github.com/PseudoTV/PseudoTV_Live/commits?author=Lunatixz)
 [![Kodi URL](https://img.shields.io/badge/Supports-Kodi%2019+-blue.svg?style=flat-square)](https://kodi.tv/download)
 [![Kodi Donate](https://img.shields.io/badge/Donate%20to-Kodi-blue.svg?style=flat-square)](https://kodi.tv/contribute/donate)
-[![Lunatixz Coffee](https://img.shields.io/badge/Buy%20%20Coffee-Lunatixz-blue.svg?style=flat-square)](https://www.buymeacoffee.com/Lunatixz)
 [![Lunatixz Patreon](https://img.shields.io/badge/Patreon-Lunatixz-blue.svg?style=flat-square)](https://www.patreon.com/pseudotv)
 [![Lunatixz Paypal](https://img.shields.io/badge/Paypal-Lunatixz-blue.svg?style=flat-square)](https://paypal.me/Lunatixz)
 
