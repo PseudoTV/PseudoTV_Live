@@ -72,21 +72,22 @@ class Player(xbmc.Player):
     def onPlayBackStarted(self):
         self.pendingStop  = True
         self.lastSubState = BUILTIN.isSubtitle()
+        self.isPseudoTV   = self.isPseudoTVPlaying()
         self.pendingPlay  = self.service.monitor.idleTime
-        self.log('onPlayBackStarted, pendingStop = %s'%(self.pendingStop))
+        self.log('onPlayBackStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         
 
     def onAVChange(self):
         isPlaylist = self.sysInfo.get('isPlaylist',False)
         self.log('onAVChange, pendingStop = %s, isPseudoTV = %s, isPlaylist = %s'%(self.pendingStop,self.isPseudoTV,isPlaylist))
         self.service.monitor.chkIdle()
-        if self.isPseudoTV and isPlaylist: self._onChange(isPlaylist)
+        if self.isPseudoTV:
+            if isPlaylist: self._onChange(isPlaylist)
         else: self.service.monitor.toggleOverlay(False)
 
         
     def onAVStarted(self):
         self.pendingPlay = -1
-        self.isPseudoTV  = self.isPseudoTVPlaying()
         self.log('onAVStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if    self.isPseudoTV: self._onPlay()
         else: self.service.monitor.toggleOverlay(False)
@@ -281,16 +282,17 @@ class Player(xbmc.Player):
         self.log('toggleInfo, state = %s'%(state))
         if state and self.service.player.enableOverlay:
             if not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
-                BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
+                self.log("toggleInfo, opening info")
                 timerit(self.toggleInfo)(float(OSD_TIMER),[False])
+                BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
         elif not state and BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
+            self.log("toggleInfo, closing info")
             BUILTIN.executebuiltin('Action(back)')  
 
                  
     def toggleRestart(self, state: bool=True):
         self.log('toggleRestart, state = %s'%(state))
-        if state and self.service.player.enableOverlay:
-            if BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE: return
+        if state and self.service.player.enableOverlay and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
             progress = self.getPlayerProgress()
             seekTHD = SETTINGS.getSettingInt('Seek_Threshold')
             self.log('toggleRestart, progress = %s, restartPercentage = %s, seekTHD = %s'%(progress,self.restartPercentage,seekTHD))
@@ -299,6 +301,7 @@ class Player(xbmc.Player):
                 self.restart.doModal()
                 self.restart = None
         elif not state and hasattr(self.restart,'onClose'):
+            self.log("toggleRestart, closing restart")
             self.restart = self.restart.onClose()
 
 
@@ -366,15 +369,17 @@ class Monitor(xbmc.Monitor):
     def toggleOverlay(self, state: bool=True):
         self.log("toggleOverlay, state = %s"%(state))
         def __chkConditions():
-            isOverlay    = not self.overlay is None
-            isFullscreen = not BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window')
+            isOverlay    = self.overlay is None
+            isFullscreen = BUILTIN.getInfoBool('IsTopMost(fullscreenvideo)','Window')
             isPlaying    = self.service.player.isPlaying()
             return (isPlaying | isFullscreen | isOverlay)
             
-        if state and __chkConditions() :
+        if state and __chkConditions():
+            self.log("toggleOverlay, opening overlay")
             if self.overlay is None: self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.service.player)
             self.overlay.show()
         elif not state and hasattr(self.overlay, 'close'):
+            self.log("toggleOverlay, closing overlay")
             self.overlay = self.overlay.close()
             
 
@@ -432,13 +437,9 @@ class Monitor(xbmc.Monitor):
 class Service():
     currentChannels = []
     currentSettings = []
-    PROPERTIES.clrInstanceID()
 
     def __init__(self):
-        self.log('__init__')
-        PROPERTIES.getInstanceID()
-        SETTINGS.getMYUUID()
-        
+        self.log('__init__')        
         self.pendingShutdown   = PROPERTIES.setPendingShutdown(False)
         self.pendingRestart    = PROPERTIES.setPendingRestart(False)
         self.jsonRPC           = JSONRPC(service=self)

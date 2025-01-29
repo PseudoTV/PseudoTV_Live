@@ -34,7 +34,7 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
         log("Default: run, params = %s"%(params))
         
-        if   PROPERTIES.isRunning('togglePVR'): DIALOG.notificationDialog(LANGUAGE(32000))
+        if   PROPERTIES.isRunning('togglePVR'): DIALOG.notificationDialog(LANGUAGE(32166))
         elif mode == 'live':
             if params.get('start') == '{utc}':
                 DIALOG.okDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME,ADDON_NAME))

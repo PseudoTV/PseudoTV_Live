@@ -54,16 +54,16 @@ class Library:
         self.libraryDATA.update(self._load())
 
         self.libraryFUNCS = {"Playlists"    :{'func':self.getPlaylists   ,'life':datetime.timedelta(minutes=FIFTEEN)},
-                             "TV Networks"  :{'func':self.getNetworks    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                             "TV Networks"  :{'func':self.getNetworks    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                              "TV Shows"     :{'func':self.getTVShows     ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
-                             "TV Genres"    :{'func':self.getTVGenres    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
-                             "Movie Genres" :{'func':self.getMovieGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
-                             "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
-                             "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                             "TV Genres"    :{'func':self.getTVGenres    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                             "Movie Genres" :{'func':self.getMovieGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                             "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                             "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                              "Mixed"        :{'func':self.getMixed       ,'life':datetime.timedelta(minutes=FIFTEEN)},
                              "Recommended"  :{'func':self.getRecommend   ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
                              "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
-                             "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)}}
+                             "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)}}
              
 
     def log(self, msg, level=xbmc.LOGDEBUG):

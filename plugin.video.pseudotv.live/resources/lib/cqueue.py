@@ -75,30 +75,28 @@ class CustomQueue:
         except Exception as e: self.log("__run, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
                 
-    def __exists(self, package):
+    def __exists(self, priority, package):
         for idx, item in enumerate(self.min_heap):
-            _,epriority,epackage = item
-            if epackage == package[2]:
-                if epriority >= package[1]: return True
-                else:
+            epriority,_,epackage = item
+            if package == epackage:
+                if priority < epriority:
                     try:
                         self.min_heap.pop(idx)
-                        self.log("__exists, pop func = %s"%(epackage[0].__name__))
-                    except: self.log("__exists, pop failed func = %s, idx = %s"%(epackage[0].__name__,idx))
-                    return False
+                        self.log("__exists, replacing queue: func = %s, priority %s => %s"%(epackage[0].__name__,epriority,priority))
+                    except: self.log("__exists, replacing queue: func = %s, idx = %s failed!"%(epackage[0].__name__,idx))
+                else: return True
         return False
              
              
     def _push(self, package: tuple, priority: int=0, delay: int=0):
         node = LlNode(package, priority, delay)
         if self.priority:
-            if not self.__exists((1,priority,package)):
+            if not self.__exists(priority, package):
                 try:
                     self.qsize += 1
-                    item = (priority, package)
                     self.itemCount[priority] += 1
                     self.log("_push, func = %s, priority = %s"%(package[0].__name__,priority))
-                    heapq.heappush(self.min_heap, (item[0], self.itemCount[priority], item[1]))
+                    heapq.heappush(self.min_heap, (priority, self.itemCount[priority], package))
                 except Exception as e: self.log("_push, func = %s failed! %s"%(package[0].__name__,e), xbmc.LOGFATAL)
             else: self.log("_push, func = %s exists; ignoring package"%(package[0].__name__))
         elif self.head:
@@ -140,7 +138,7 @@ class CustomQueue:
                     self.log("__pop, The priority queue is empty!")
                     break
                 else:
-                    try: min_num, _, package = heapq.heappop(self.min_heap)
+                    try: priority, _, package = heapq.heappop(self.min_heap)
                     except Exception as e:
                         self.log("__pop, heappop failed! %s\nmin_heap = %s"%(e,self.min_heap), xbmc.LOGERROR)
                         continue

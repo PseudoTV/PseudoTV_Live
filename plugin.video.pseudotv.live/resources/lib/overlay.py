@@ -283,10 +283,12 @@ class Overlay():
     def toggleBackground(self, state: bool=True):
         self.log('toggleBackground, state = %s'%(state))
         if state and self.background is None:
+            self.log("toggleBackground, opening background")
             self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", overlay=self)
             self.background.doModal()
             self.background = None
         elif not state and hasattr(self.background,'close'):
+            self.log("toggleBackground, closing background")
             self.background = self.background.close()
             
 
@@ -350,7 +352,7 @@ class Overlay():
             try: self._bugThread.join()
             except: pass
             
-        if cancel: return self.log('toggleBug, cancelling timer...')
+        if cancel or wait <= 0 or self.player.service._interrupt(): return self.log('toggleBug, cancelling timer...')
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
         self._bugThread = Timer(wait, self.toggleBug, [nstate])
         self._bugThread.name = "_bugThread"
@@ -445,7 +447,7 @@ class Overlay():
             try: self._onNextThread.join()
             except: pass
             
-        if cancel or wait <= 0: return self.log('toggleOnNext, cancelling timer...')
+        if cancel or wait <= 0 or self.player.service._interrupt(): return self.log('toggleOnNext, cancelling timer...')
         self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
         self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
         self._onNextThread.name = "onNextThread"

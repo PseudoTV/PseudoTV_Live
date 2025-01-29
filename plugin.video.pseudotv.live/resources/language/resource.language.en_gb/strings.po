@@ -1496,7 +1496,7 @@ msgid "No Changes Applied!"
 msgstr ""
 
 msgctxt "#32166"
-msgid "Playback Unavailable! Guide data is outdated.\n%s will refresh in under %s minutes."
+msgid "Playback Unavailable! Guide data is updating\nTry again later..."
 msgstr ""
 
 msgctxt "#32167"
@@ -1974,7 +1974,7 @@ msgid "Stop Playback when Idle for x Hours.\nCancelable with prompt and countdow
 msgstr ""
 
 msgctxt "#33084"
-msgid "Not recommend!! Only use if you understand the impact of theses changes."
+msgid "Disable if you experience system instability."
 msgstr ""
 
 msgctxt "#33085"

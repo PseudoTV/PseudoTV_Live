@@ -280,6 +280,9 @@ class Plugin:
                     liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
                     self._resolveURL(True, liz)
                 else: #-> VOD called by non-current EPG cell. (Unreliable during playback)
+                    if (self.sysInfo.get('start') <= self.sysInfo.get('now')) and (self.sysInfo.get('now') < self.sysInfo.get('stop')):
+                        PROPERTIES.setPropTimer('chkPVRRefresh')
+                        DIALOG.notificationDialog('%s %s\nTry Clearing Kodi PVR Guidedata'%(LANGUAGE(32164).replace('!',':'),self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
                     url = self.sysInfo['fitem'].get('catchup-id')
                     self.log('playLive, id = %s, VOD = %s'%(chid, url))
                     self.sysInfo['vid'] = self.sysInfo['fitem'].get('file',url)

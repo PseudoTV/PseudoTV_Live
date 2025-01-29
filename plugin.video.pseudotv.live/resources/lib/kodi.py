@@ -706,7 +706,6 @@ class Properties:
     def __init__(self, winID=10000):
         self.winID      = winID
         self.window     = xbmcgui.Window(winID)
-        self.InstanceID = self.getInstanceID()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -861,14 +860,8 @@ class Properties:
         return self.getEXTPropertyBool('PseudoTVRunning')
 
 
-    def clrInstanceID(self):
-        instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
-        if instanceID: self.clearTrash(instanceID)
-        self.clrEXTProperty('%s.InstanceID'%(ADDON_ID))
-
-
     def setInstanceID(self):
-        self.clrInstanceID()
+        self.clearTrash(self.getEXTProperty('%s.InstanceID'%(ADDON_ID)))
         return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4()))
 
 
@@ -878,11 +871,11 @@ class Properties:
         return instanceID
 
 
-    def getKey(self, key, instanceID=True):
+    def getKey(self, key, useInstance=True):
         if not isinstance(key,str): key = str(key)
         if self.winID == 10000 and not key.startswith(ADDON_ID): #create unique id 
-            if instanceID: return self.setTrash('%s.%s.%s'%(ADDON_ID,key,self.InstanceID))
-            else:          return '%s.%s'%(ADDON_ID,key)
+            if useInstance: return self.setTrash('%s.%s.%s'%(ADDON_ID,key,self.getInstanceID()))
+            else:           return '%s.%s'%(ADDON_ID,key)
         return key
 
         
@@ -987,18 +980,23 @@ class Properties:
         return self.setProperty(key, float(value))
 
     
-    def setTrash(self, key): #catalog instance properties that may become abandoned. 
+    def setTrash(self, key): #catalog instance properties that may become abandoned
+        instanceID = self.getInstanceID()
         tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
-        if key not in tmpDCT.setdefault(self.InstanceID,[]):
-            tmpDCT.setdefault(self.InstanceID,[]).append(key)
+        if key not in tmpDCT.setdefault(instanceID,[]): tmpDCT.setdefault(instanceID,[]).append(key)
         self.setEXTProperty('%s.TRASH'%(ADDON_ID),dumpJSON(tmpDCT))
         return key
 
         
-    def clearTrash(self, instanceID): #clear abandoned properties after instanceID change
-        self.log('clearTrash, instanceID = %s'%(instanceID))
+    def clearTrash(self, instanceID=None): #clear abandoned properties after instanceID change
+        if instanceID is None: instanceID = self.getInstanceID()
         tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
-        for prop in tmpDCT.get(instanceID,[]): self.clrEXTProperty(prop)
+        if instanceID in tmpDCT:
+            self.log('clearTrash, instanceID = %s'%(instanceID))
+            tmpLST = tmpDCT.pop(instanceID)
+            for prop in tmpLST:
+                self.clrProperty(prop)
+                self.clrEXTProperty(prop)
 
 
     def __exit__(self):
@@ -1238,13 +1236,14 @@ class Dialog:
         self.properties.setPropertyBool('chkInfoMonitor',state)
         if state:
             self.properties.clrProperty('monitor.montiorList')
-            timerit(self.doInfoMonitor)(wait)
+            timerit(self.doInfoMonitor)(0.1)
 
 
-    def doInfoMonitor(self, wait=0.5):
+    def doInfoMonitor(self):
         monitor = MONITOR()
         while not monitor.abortRequested():
-            if not self.fillInfoMonitor() or monitor.waitForAbort(wait): break
+            if not self.fillInfoMonitor(): break
+            elif monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000)): break
         del monitor
             
 
@@ -1392,7 +1391,6 @@ class Dialog:
 
 
     def updateProgress(self, percent=-1, control=None, message='', header=ADDON_NAME):
-        self.log('updateProgress: percent = %s, control = %s, message = %s, header = %s'%(percent, control, message, header))
         if   isinstance(control,xbmcgui.DialogProgressBG): return self.progressBGDialog(percent, control, message, header)
         elif isinstance(control,xbmcgui.DialogProgress):
             title = header.replace('%s, '%(ADDON_NAME),'')
@@ -1406,7 +1404,6 @@ class Dialog:
 
 
     def progressDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
-        self.log('progressDialog: percent = %s, control = %s, message = %s, header = %s'%(percent, control, message, header))
         if control is None and int(percent) == 0:
             control = xbmcgui.DialogProgress()
             control.create(header, message)  
@@ -1417,7 +1414,6 @@ class Dialog:
         
         
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
-        self.log('progressBGDialog: percent = %s, control = %s, message = %s, header = %s'%(percent, control, message, header))
         if control is None and int(percent) == 0:
             control = xbmcgui.DialogProgressBG()
             control.create(header, message)

@@ -1389,7 +1389,7 @@
                 </setting>
                 <setting id="Enable_Executor" type="boolean" label="30198" help="33084" parent="Debug_Enable">
                     <level>3</level>
-                    <default>false</default>
+                    <default>true</default>
                     <control type="toggle"/>
                     <dependencies>
                         <dependency type="visible">
