@@ -301,10 +301,6 @@ RULES_ACTION_BACKGROUND_CLOSE = 33 #Background closed
 ##playback
 RULES_ACTION_PLAYBACK_RESUME = 40 #Prior to playback trigger resume to received a FileList
 
-ISPOT_PATHS = ['plugin://plugin.video.ispot.tv']
-IMDB_PATHS  = ['plugin://plugin.video.imdb.trailers/?action=list1&key=showing',
-               'plugin://plugin.video.imdb.trailers/?action=list1&key=coming']
-               
 HEADER      = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246"}
 
 MUSIC_LISTITEM_TYPES =   {'tracknumber'             : (int,),  #integer (8)

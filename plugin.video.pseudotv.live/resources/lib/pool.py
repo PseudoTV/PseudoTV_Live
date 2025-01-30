@@ -103,6 +103,7 @@ def timerit(method):
         thread_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
         for timer in thread_enumerate():
             if timer.name == thread_name and timer.is_alive():
+                if hasattr(timer, 'cancel'): timer.cancel()
                 try: timer.join()
                 except: pass
                 log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))

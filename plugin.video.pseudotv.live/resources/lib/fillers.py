@@ -38,21 +38,11 @@ class Fillers:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
-        
-    def getAdvertPath(self, id: str='plugin.video.ispot.tv') -> list:
-        if hasAddon(id):
-            try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'resources','').replace('/resources/resources','/resources').replace('\\','/')
-            except: folder = 'special://profile/addon_data/%s/resources/'%(id)
-            self.log('getAdvertPath, folder = %s'%(folder))
-            return folder
-       
 
     def fillSources(self):
         items = list(self.builder.bctTypes.items())
         for ftype, values in items:
             if not values.get('enabled',False): continue
-            if self.builder.bctTypes.get(ftype,{}).get("incIspot",False): self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).append(self.getAdvertPath())
-            if self.builder.bctTypes.get(ftype,{}).get('incIMDB',False):  self.builder.bctTypes.get(ftype,{}).get("sources",{}).get("paths",[]).extend(IMDB_PATHS) 
             if self.builder.bctTypes.get(ftype,{}).get('incKODI',False):  self.builder.bctTypes.get(ftype,{})["items"] = mergeDictLST(self.builder.bctTypes.get(ftype,{}).get("items",[]), self.builder.kodiTrailers())
             for id   in values["sources"].get("ids",[]):   values['items'] = mergeDictLST(values.get('items',{}),self.buildSource(ftype,id))   #parse resource packs
             for path in values["sources"].get("paths",[]): values['items'] = mergeDictLST(values.get('items',{}),self.buildSource(ftype,path)) #parse vfs paths

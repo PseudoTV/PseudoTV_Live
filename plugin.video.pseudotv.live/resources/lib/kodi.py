@@ -390,6 +390,7 @@ class Settings:
         payload = {'id'      :ADDON_ID,
                    'uuid'    :self.getMYUUID(),
                    'version' :ADDON_VERSION,
+                   'python'  :platform.python_version(),
                    'machine' :platform.machine(),
                    'platform':self.builtin.getInfoLabel('OSVersionInfo','System'),
                    'build'   :self.builtin.getInfoLabel('BuildVersion','System'),

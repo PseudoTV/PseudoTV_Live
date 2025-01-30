@@ -638,10 +638,11 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         def __fileList(citem):
             from builder import Builder
-            monitor = MONITOR()
-            builder = Builder()
+            monitor    = MONITOR()
+            builder    = Builder()
+            fileList   = []
             start_time = 0
-            end_time = 0
+            end_time   = 0
             PROPERTIES.setInterruptActivity(False)
             while not monitor.abortRequested() and PROPERTIES.isRunning('OVERLAY_MANAGER'):
                 if monitor.waitForAbort(1.0): break

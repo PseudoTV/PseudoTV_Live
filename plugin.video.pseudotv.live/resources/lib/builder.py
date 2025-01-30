@@ -85,13 +85,10 @@ class Builder:
                                              "sources" :{"ids":SETTINGS.getSetting('Resource_Bumpers').split('|'),"paths":[os.path.join(FILLER_LOC,'Bumpers' ,'')]},"items":{}},
                                  
                                  "adverts" :{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":MIN_EPG_DURATION, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
-                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{},
-                                             "incIspot":SETTINGS.getSettingBool('Include_Adverts_iSpot')},
+                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{}},
                                  
                                  "trailers":{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":MIN_EPG_DURATION, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
-                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{},
-                                             "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI'),
-                                             "incIMDB":SETTINGS.getSettingBool('Include_Trailers_IMDB')}}
+                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{}, "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI')}}
 
         self.xsp              = XSP()
         self.xmltv            = XMLTVS()

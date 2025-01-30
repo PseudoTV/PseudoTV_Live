@@ -28,10 +28,8 @@ from seasonal   import Seasonal
 # Enable_Postroll
 # Random_Post_Chance
 # Build_Post_Folders
-# Include_Adverts_iSpot
 # Resource_Trailers
 # Include_Trailers_KODI
-# Include_Trailers_IMDB
 
 
 # Resource_Overlay
@@ -1078,9 +1076,9 @@ class PostRoll(BaseRule):
         self.exclude            = False
         self.name               = "Post-Roll"
         self.description        = "Post-Roll Options"
-        self.optionLabels       = [LANGUAGE(30019),LANGUAGE(30134),LANGUAGE(30030),"Adverts Folder",LANGUAGE(30136),LANGUAGE(30031),"Trailers Folder",LANGUAGE(30126),LANGUAGE(30125)]
-        self.optionValues       = [SETTINGS.getSettingInt('Enable_Postroll'),SETTINGS.getSettingInt('Random_Post_Chance'),SETTINGS.getSetting('Resource_Adverts'),[os.path.join(FILLER_LOC,'Adverts','')],SETTINGS.getSettingBool('Include_Adverts_iSpot'),SETTINGS.getSetting('Resource_Trailers'),[os.path.join(FILLER_LOC,'Trailers','')],SETTINGS.getSettingBool('Include_Trailers_KODI'),SETTINGS.getSettingBool('Include_Trailers_IMDB')]
-        self.optionDescriptions = [LANGUAGE(30020),LANGUAGE(33134),LANGUAGE(33030),"",LANGUAGE(33136),LANGUAGE(33031),"",LANGUAGE(33126),LANGUAGE(33125)]
+        self.optionLabels       = [LANGUAGE(30019),LANGUAGE(30134),LANGUAGE(30030),"Adverts Folder",LANGUAGE(30136),LANGUAGE(30031),"Trailers Folder",LANGUAGE(30126)]
+        self.optionValues       = [SETTINGS.getSettingInt('Enable_Postroll'),SETTINGS.getSettingInt('Random_Post_Chance'),SETTINGS.getSetting('Resource_Adverts'),[os.path.join(FILLER_LOC,'Adverts','')],SETTINGS.getSetting('Resource_Trailers'),[os.path.join(FILLER_LOC,'Trailers','')],SETTINGS.getSettingBool('Include_Trailers_KODI')]
+        self.optionDescriptions = [LANGUAGE(30020),LANGUAGE(33134),LANGUAGE(33030),"",LANGUAGE(33031),"",LANGUAGE(33126)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0,LANGUAGE(30026):1,LANGUAGE(30024):2,LANGUAGE(30025):3},list(range(0,101,1)),[]]
         self.storedValues       = [{},{}]
@@ -1110,8 +1108,8 @@ class PostRoll(BaseRule):
         if actionid == RULES_ACTION_CHANNEL_START:
             self.storedValues[0] = builder.bctTypes.get('adverts',{})
             self.storedValues[1] = builder.bctTypes.get('trailers',{})
-            builder.bctTypes['adverts'].update({"min":self.optionValues[0] , "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[2].split('|'),"paths":self.optionValues[3], "incIspot":self.optionValues[4]}})
-            builder.bctTypes['trailers'].update({"min":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[5].split('|'),"paths":self.optionValues[6], "incKODI":self.optionValues[7] ,"incIMDB":self.optionValues[8]}})
+            builder.bctTypes['adverts'].update({"min":self.optionValues[0] , "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[2].split('|'),"paths":self.optionValues[3]}})
+            builder.bctTypes['trailers'].update({"min":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[5].split('|'),"paths":self.optionValues[6], "incKODI":self.optionValues[7]}})
             self.log("runAction, setting bctTypes = %s"%(builder.bctTypes))
 
         elif actionid == RULES_ACTION_CHANNEL_STOP:

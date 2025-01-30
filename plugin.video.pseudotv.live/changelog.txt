@@ -1,6 +1,8 @@
 v.0.5.9
+- Removed iSpot Adverts and IMDB Trailers settings. Users can manual add these sources as needed via. Adv. Channel rules.
 - Introduced new parsing procedures for reading `pvr://` directories.
   - This enhancement aims to resolve playback issues with PVR recordings and newly added saved searches.
+  - Please if you have not done so already add 'pvr://' as a video source in Kodi to whitelist this directory.
 - Added support for saved PVR searches (currently supports PseudoTV Channels only); available under "Mixed" Autotuning.
 
 v.0.5.8

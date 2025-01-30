@@ -1688,7 +1688,7 @@ msgid "Enable Multi-Room Instances?"
 msgstr ""
 
 msgctxt "#32216"
-msgid "[B]Welcome to %s![/B][CR][CR]If you're new please visit our wiki for helpful tips & guides.[CR][CR]Thank you for your support, enjoy![CR][B][I]              %s[/I][/B]"
+msgid "[B]Welcome to %s![/B][CR][CR]If you're new please visit our wiki for helpful tips & guides.[CR][CR]Thank you for your support, enjoy![CR][CR][B][I]%s[/I][/B]"
 msgstr ""
 
 msgctxt "#32217"

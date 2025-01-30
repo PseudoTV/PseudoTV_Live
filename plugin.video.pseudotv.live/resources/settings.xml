@@ -37,7 +37,7 @@
                         <allowempty>false</allowempty>
                     </constraints>
                     <dependencies>
-                        <dependency type="enable">
+                        <dependency type="visible">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Enabled_Servers),true)</condition>
                         </dependency>
                     </dependencies>
@@ -48,12 +48,11 @@
                 </setting>
                 <setting id="Backup_Channels" type="string" label="32110" help="33110" parent="Select_Channels">
                     <level>2</level>
-                    <default/>
                     <constraints>
                         <allowempty>true</allowempty>
                     </constraints>
                     <dependencies>
-                        <dependency type="enable">
+                        <dependency type="visible">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Channels),true)</condition>
                         </dependency>
                     </dependencies>
@@ -69,8 +68,11 @@
                         <allowempty>true</allowempty>
                     </constraints>
                     <dependencies>
-                        <dependency type="enable">
+                        <dependency type="visible">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Backup),true)</condition>
+                        </dependency>
+                        <dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Channels),true)</condition>
                         </dependency>
                     </dependencies>
                     <control type="button" format="action">
@@ -988,19 +990,6 @@
                         <multiselect>true</multiselect>
                     </control>
                 </setting>
-                <setting id="Include_Adverts_iSpot" type="boolean" label="30136" help="" parent="Resource_Adverts">
-                    <level>2</level>
-                    <default>false</default>
-                    <control type="toggle"/>
-                    <dependencies>
-                        <dependency type="enable">
-                            <and>
-                                <condition operator="!is" setting="Enable_Postroll">0</condition>
-                                <condition on="property" name="InfoBool">System.HasAddon(plugin.video.ispot.tv)</condition>
-                            </and>
-                        </dependency>
-                    </dependencies>
-                </setting>
                 <setting id="Resource_Trailers" type="list[addon]" label="30031" help="" parent="Enable_Postroll">
                     <level>2</level>
                     <default>resource.videos.trailers.pseudotv</default>
@@ -1026,17 +1015,6 @@
                         <dependency type="enable">
                             <condition operator="!is" setting="Enable_Postroll">0</condition>
                             <condition on="property" name="InfoBool">Library.HasContent(Movies)</condition>
-                        </dependency>
-                    </dependencies>
-                </setting>
-                <setting id="Include_Trailers_IMDB" type="boolean" label="30125" help="33125" parent="Resource_Trailers">
-                    <level>2</level>
-                    <default>false</default>
-                    <control type="toggle"/>
-                    <dependencies>
-                        <dependency type="enable">
-                            <condition operator="!is" setting="Enable_Postroll">0</condition>
-                            <condition on="property" name="InfoBool">System.HasAddon(plugin.video.imdb.trailers)</condition>
                         </dependency>
                     </dependencies>
                 </setting>

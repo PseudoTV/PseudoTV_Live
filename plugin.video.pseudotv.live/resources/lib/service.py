@@ -72,12 +72,12 @@ class Player(xbmc.Player):
     def onPlayBackStarted(self):
         self.pendingStop  = True
         self.lastSubState = BUILTIN.isSubtitle()
-        self.isPseudoTV   = self.isPseudoTVPlaying()
         self.pendingPlay  = self.service.monitor.idleTime
-        self.log('onPlayBackStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
+        self.log('onPlayBackStarted, pendingStop = %s'%(self.pendingStop))
         
 
     def onAVChange(self):
+        self.isPseudoTV = self.isPseudoTVPlaying()
         isPlaylist = self.sysInfo.get('isPlaylist',False)
         self.log('onAVChange, pendingStop = %s, isPseudoTV = %s, isPlaylist = %s'%(self.pendingStop,self.isPseudoTV,isPlaylist))
         self.service.monitor.chkIdle()
@@ -218,7 +218,7 @@ class Player(xbmc.Player):
         if sysInfo.get('chid') == oldInfo.get('chid',random.random()):#New Program
             self.sysInfo = sysInfo
             self.toggleInfo(self.infoOnChange)
-            if not self.service.monitor.overlay is None: self.service.monitor.overlay.toggleBackground(False)
+            self.service.monitor.toggleBackground(False)
         else: #New channel
             self.service.monitor.toggleOverlay(False)
             self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), sysInfo, inherited=self)
@@ -350,9 +350,7 @@ class Monitor(xbmc.Monitor):
                 self.triggerSleep()
         
         def __chkBackground():
-            if not self.overlay is None:
-                if self.overlay.background is None and abs(floor(self.service.player.getRemainingTime())) <= 3:
-                    self.overlay.toggleBackground()
+            if abs(floor(self.service.player.getRemainingTime())) <= 3: self.toggleBackground()
         
         self.isIdle, self.idleTime = __getIdle()
         if SETTINGS.getSettingBool('Debug_Enable'): self.log('chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
@@ -365,6 +363,17 @@ class Monitor(xbmc.Monitor):
             if self.isIdle: self.toggleOverlay(self.service.player.enableOverlay)
             else:           self.toggleOverlay(False)
             
+
+    def toggleBackground(self, state: bool=True):
+        self.log("toggleBackground, state = %s"%(state))
+        if self.overlay is None: return
+        elif state and self.overlay.background is None:
+            self.log("toggleBackground, opening background")
+            self.overlay.toggleBackground(True)
+        elif not state:
+            self.log("toggleBackground, closing background")
+            self.overlay.toggleBackground(False)
+
 
     def toggleOverlay(self, state: bool=True):
         self.log("toggleOverlay, state = %s"%(state))

@@ -242,7 +242,7 @@ class Tasks():
                     if   self.service._interrupt(): break
                     elif len(params) > 0:
                         param = params.pop(0)
-                        self.log("chkJSONQUE, queueing = %s\n%s"%(len(params),param))
+                        self.log("chkJSONQUE, queuing = %s\n%s"%(len(params),param))
                         self._que(self.jsonRPC.sendJSON,-1, param)
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
@@ -322,7 +322,7 @@ class Tasks():
     def chkChannelChange(self, channels=[]):
         nChannels = self.getChannels()
         if channels != nChannels:
-            self.log('chkChannelChange, channels changed %s => %s: queueing chkChannels'%(len(channels),len(nChannels)))
+            self.log('chkChannelChange, channels changed %s => %s: queuing chkChannels'%(len(channels),len(nChannels)))
             self._que(self.chkChannels,3,diffLSTDICT(channels,nChannels))
             return nChannels
         return channels
