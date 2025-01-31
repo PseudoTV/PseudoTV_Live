@@ -135,23 +135,23 @@ class Overlay():
 
         def onAVStarted(self):
             self.overlay.log('onAVStarted')
+            self.overlay.toggleBackground(False)
             self.overlay.toggleBug(self.overlay.enableChannelBug)
             self.overlay.toggleOnNext(self.overlay.enableOnNext)
-            self.overlay.toggleBackground(False)
             
 
         def onPlayBackEnded(self):
             self.overlay.log('onPlayBackEnded')
+            self.overlay.toggleBackground()
             self.overlay.toggleBug(False)
             self.overlay.toggleOnNext(False)
-            self.overlay.toggleBackground()
                 
             
         def onPlayBackStopped(self):
             self.overlay.log('onPlayBackStopped')
+            self.overlay.toggleBackground(False)
             self.overlay.toggleBug(False, cancel=True)
             self.overlay.toggleOnNext(False, cancel=True)
-            self.overlay.toggleBackground(False)
             
 
     def __init__(self, jsonRPC, player=None):
@@ -352,7 +352,7 @@ class Overlay():
             try: self._bugThread.join()
             except: pass
             
-        if cancel or wait <= 0 or self.player.service._interrupt(): return self.log('toggleBug, cancelling timer...')
+        if cancel or wait <= 0: return self.log('toggleBug, cancelling timer...')
         self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
         self._bugThread = Timer(wait, self.toggleBug, [nstate])
         self._bugThread.name = "_bugThread"
@@ -367,14 +367,11 @@ class Overlay():
             intTime   = roundupDIV(threshold,interval)
             remaining = int(totalTime - self.player.getPlayedTime())
             self.log('toggleOnNext, totalTime = %s, threshold = %s, remaining = %s, intTime = %s, show = %s'%(totalTime, threshold, remaining, intTime, show))
-            if  (remaining <= self.minDuration or remaining <= show or not self.chkOnNextConditions()): return False, 0, 0
-            elif remaining > threshold: return False, 0, (remaining - threshold)
-            elif remaining < intTime:
-                if not state: return False, 0, 0
-                return __getOnNextInterval(state, interval+1, show)
-            return state, show, (intTime - show)
+            if  (remaining <= self.minDuration or remaining <= show or not self.chkOnNextConditions() or remaining < intTime): return False, 0, 0
+            elif remaining > threshold: return False, 0, abs(remaining - threshold)
+            else:                       return state, show, (intTime - show)
             
-        state, show, sleep = __getOnNextInterval(state, ON_NEXT_COUNT, int(OSD_TIMER * ON_NEXT_COUNT))
+        state, show, sleep = __getOnNextInterval(state, interval=ON_NEXT_COUNT, show=int(OSD_TIMER * ON_NEXT_COUNT))
         self.log('toggleOnNext, state = %s, show = %s, sleep = %s, cancel = %s'%(state, show, sleep, cancel))
         nstate  = not bool(state)
         wait    = {True:show,False:sleep}[state]
@@ -407,7 +404,6 @@ class Overlay():
                 
                 if self.onNextMode == 2:
                     landscape = getThumb(nitem)    
-                    
                     if not self._hasControl(self.onNext_Border):
                         self.onNext_Border = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, os.path.join(MEDIA_LOC,'colors','white.png'), 0, '0xC0%s'%(COLOR_BACKGROUND))#todo adv. rule to change color.
                         self._addControl(self.onNext_Border)
@@ -447,7 +443,7 @@ class Overlay():
             try: self._onNextThread.join()
             except: pass
             
-        if cancel or wait <= 0 or self.player.service._interrupt(): return self.log('toggleOnNext, cancelling timer...')
+        if cancel or wait <= 0: return self.log('toggleOnNext, cancelling timer...')
         self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
         self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
         self._onNextThread.name = "onNextThread"
