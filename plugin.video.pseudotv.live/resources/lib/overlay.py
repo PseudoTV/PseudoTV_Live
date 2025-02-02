@@ -361,20 +361,19 @@ class Overlay():
 
     
     def toggleOnNext(self, state: bool=True, cancel: bool=False):
-        def __getOnNextInterval(state, interval, show):
+        def __getOnNextInterval(state):
             totalTime = int(self.player.getPlayerTime() * (self.maxProgress / 100))
             threshold = roundupDIV(totalTime,4)
-            intTime   = roundupDIV(threshold,interval)
             remaining = int(totalTime - self.player.getPlayedTime())
-            self.log('toggleOnNext, totalTime = %s, threshold = %s, remaining = %s, intTime = %s, show = %s'%(totalTime, threshold, remaining, intTime, show))
-            if  (remaining <= self.minDuration or remaining <= show or not self.chkOnNextConditions() or remaining < intTime): return False, 0, 0
-            elif remaining > threshold: return False, 0, abs(remaining - threshold)
-            else:                       return state, show, (intTime - show)
-            
-        state, show, sleep = __getOnNextInterval(state, interval=ON_NEXT_COUNT, show=int(OSD_TIMER * ON_NEXT_COUNT))
-        self.log('toggleOnNext, state = %s, show = %s, sleep = %s, cancel = %s'%(state, show, sleep, cancel))
+            self.log('toggleOnNext, totalTime = %s, threshold = %s, remaining = %s'%(totalTime, threshold, remaining))
+            if self.chkOnNextConditions() and remaining > self.minDuration:
+                if   remaining < threshold and state: return True , OSD_TIMER
+                elif remaining > threshold:           return False, abs(remaining - threshold)
+            return False, 0
+
+        state, wait = __getOnNextInterval(state)
+        self.log('toggleOnNext, state = %s, wait = %s, cancel = %s'%(state, wait, cancel))
         nstate  = not bool(state)
-        wait    = {True:show,False:sleep}[state]
         
         if state:
             sysInfo = self.player.sysInfo.copy()

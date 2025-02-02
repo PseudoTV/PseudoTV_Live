@@ -215,7 +215,7 @@ class Cores:
 
 class ThreadPool:
     CPUCount    = Cores().CPUcount()
-    ThreadCount = CPUCount*8
+    ThreadCount = CPUCount*2
     
     def __init__(self):
         self.log("__init__, ThreadPool Threads = %s, CPU's = %s"%(self.ThreadCount, self.CPUCount))

@@ -744,6 +744,14 @@ class Properties:
         return self.getEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key))
 
 
+    def setInitRun(self, state=True):
+        return self.setEXTPropertyBool('%s.Init.Run'%(ADDON_ID),state)
+
+
+    def hasInitRun(self):
+        return self.getEXTPropertyBool('%s.Init.Run'%(ADDON_ID))
+
+
     def setChannels(self, state=True):
         return self.setEXTPropertyBool('%s.has.Channels'%(ADDON_ID),state)
 

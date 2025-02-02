@@ -48,7 +48,7 @@ class CustomQueue:
         self.itemCount = defaultdict(int)
         self.popThread = Thread(target=self.__pop)
         self.pool      = ThreadPool()
-        self.execute   = SETTINGS.getSettingBool('Enable_Executor')
+        self.executor  = SETTINGS.getSettingBool('Enable_Executors')
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -68,9 +68,9 @@ class CustomQueue:
 
 
     def __run(self, func, *args, **kwargs):
-        self.log("__run, func = %s, execute = %s"%(func.__name__,self.execute))
+        self.log("__run, func = %s, executor = %s"%(func.__name__,self.executor))
         try:
-            if self.execute: return self.pool.executor(func, None, *args, **kwargs)
+            if self.executor: return self.pool.executor(func, None, *args, **kwargs)
             else:            return func(*args, **kwargs)
         except Exception as e: self.log("__run, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
@@ -117,7 +117,7 @@ class CustomQueue:
     def __pop(self):
         self.isRunning = True
         self.log("__pop, starting")
-        self.execute = SETTINGS.getSettingBool('Enable_Executor')
+        self.executor = SETTINGS.getSettingBool('Enable_Executors')
         while not self.service.monitor.abortRequested():
             if self.service.monitor.waitForAbort(1.0): 
                 self.log("__pop, waitForAbort")

@@ -210,12 +210,11 @@ class Tasks():
     def chkChannels(self, channels: list=[]):
         try:
             if not channels:
+                channels = self.getChannels()
                 ids = SETTINGS.getUpdateChannels()
-                if ids:
-                    channels = self.getChannels()
+                if ids: 
                     channels = [citem for id in ids for citem in channels if citem.get('id') == id]
                 else:
-                    channels = self.getChannels()
                     SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
                     PROPERTIES.setChannels(len(channels) > 0)
                     self.service.currentChannels = channels #update service channels
@@ -227,8 +226,8 @@ class Tasks():
                     if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
                     if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
                     return True
+                else: self._que(self.chkChannels,3,channels)
             elif PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
-            self._que(self.chkChannels,3,channels)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
 
@@ -335,7 +334,7 @@ class Tasks():
             actions = {'User_Folder':{'func':self.setUserPath,'kwargs':{'old':value,'new':nSettings.get(setting)}}}
             if nSettings.get(setting) != value and actions.get(setting):
                 action = actions.get(setting)
-                self.log('chkSettingsChange, detected change in %s - from: %s to: %s\naction = %s'%(setting,value,nSettings.get(setting),action))
+                self.log('chkSettingsChange, detected change in %s: %s => %s\naction = %s'%(setting,value,nSettings.get(setting),action))
                 self._que(action.get('func'),1,*action.get('args',()),**action.get('kwargs',{}))
         return nSettings
 

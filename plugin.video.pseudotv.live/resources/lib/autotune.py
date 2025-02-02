@@ -169,16 +169,16 @@ class Autotune:
                           "favorite": True})
                           
             match, eitem = self.channels.findAutotuned(citem, channels=existingAUTOTUNE)
-            if match is None:
+            if match is None: #new autotune
                 citem['id']       = getChannelID(citem['name'],citem['path'],citem['number']) #generate new channelid
                 citem['number']   = next(usesableNUMBERS,0) #first available channel number
-            else:
+                SETTINGS.setUpdateChannels(citem['id'])
+            else: #update existing autotune
                 citem['id']       = eitem.get('id')
                 citem['number']   = eitem.get('number')
                 citem['logo']     = eitem.get('logo',citem.get('logo',LOGO))
                 citem['favorite'] = eitem.get('favorite',False)
             self.channels.addChannel(citem)
-            SETTINGS.setUpdateChannels(citem['id'])
         return self.channels.setChannels()
        
        

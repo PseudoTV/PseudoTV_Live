@@ -367,7 +367,7 @@ class Plugin:
                         self.log('playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo['now'],self.sysInfo['stop']))
                         DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']),show=self.debugEnabled)
                         return False
-                    elif self.sysInfo['duration'] > self.sysInfo['runtime'] and self.sysInfo['runtime'] > 0:
+                    elif self.sysInfo['runtime'] > 0 and self.sysInfo['duration'] > self.sysInfo['runtime']:
                         self.log('playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
                         DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['runtime'],self.sysInfo['duration']),show=self.debugEnabled)
                         return False

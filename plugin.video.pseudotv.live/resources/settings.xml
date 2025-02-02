@@ -1365,9 +1365,9 @@
                         </dependency>
                     </dependencies>
                 </setting>
-                <setting id="Enable_Executor" type="boolean" label="30198" help="33084" parent="Debug_Enable">
+                <setting id="Enable_Executors" type="boolean" label="30198" help="33084" parent="Debug_Enable">
                     <level>3</level>
-                    <default>true</default>
+                    <default>false</default>
                     <control type="toggle"/>
                     <dependencies>
                         <dependency type="visible">

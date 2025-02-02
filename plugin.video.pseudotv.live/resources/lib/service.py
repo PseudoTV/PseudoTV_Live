@@ -332,7 +332,7 @@ class Monitor(xbmc.Monitor):
             return idleState, idleTime
 
         def __chkPlayback():
-            if not BUILTIN.isBusyDialog() and self.service.player.pendingPlay >= 0 and abs(self.idleTime - self.service.player.pendingPlay) > 90:
+            if not BUILTIN.isBusyDialog() and self.service.player.pendingPlay >= 0 and abs(self.idleTime - self.service.player.pendingPlay) > 120:
                 self.log('__chkPlayback, pendingPlay Error\nsysInfo = %s'%(self.service.player.sysInfo))
                 self.service.player.onPlayBackError()
 

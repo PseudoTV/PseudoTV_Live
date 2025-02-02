@@ -57,7 +57,6 @@ RADIO_ITEM_LIMIT    = 250
 CHANNEL_LIMIT       = 999
 AUTOTUNE_LIMIT      = 3
 FILLER_LIMIT        = 250
-ON_NEXT_COUNT       = 3
 
 FILLER_TYPE         = ['Rating',
                        'Bumper',
