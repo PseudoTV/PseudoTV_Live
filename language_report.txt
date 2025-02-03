@@ -245,7 +245,7 @@ Language IDS not found in py files, possibly only in xml: {
     "33071": "Open IPTV Simple's settings",
     "33074": "Automatically configure IPTV-Simple for use with PseudoTV Live [Minimal risk of overriding existing user configurations].",
     "33078": "Stop Playback when Idle for x Hours.\\nCancelable with prompt and countdown.",
-    "33084": "Disable if you experience system instability.",
+    "33084": "Boost Background Processing through Multi-Threading. [Disabled Default]\\nDisable if you experience system instability.",
     "33085": "",
     "33089": "QRCode - Visit PseudoTV Live Wiki",
     "33092": "Multi-room help",

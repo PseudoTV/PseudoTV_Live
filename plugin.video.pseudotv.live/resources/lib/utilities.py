@@ -141,7 +141,7 @@ class Utilities:
     def openPositionUtil(self, idx):
         self.log('openPositionUtil, idx = %s'%(idx))
         if not PROPERTIES.isRunning('OVERLAY_UTILITY'):
-            with PROPERTIES.setRunning('OVERLAY_UTILITY'), PROPERTIES.suspendActivity():
+            with PROPERTIES.setRunning('OVERLAY_UTILITY'), PROPERTIES.interruptActivity():
                 with BUILTIN.busy_dialog():
                     from overlaytool import OverlayTool
                 overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)

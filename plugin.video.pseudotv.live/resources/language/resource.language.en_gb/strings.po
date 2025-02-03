@@ -1974,7 +1974,7 @@ msgid "Stop Playback when Idle for x Hours.\nCancelable with prompt and countdow
 msgstr ""
 
 msgctxt "#33084"
-msgid "Disable if you experience system instability."
+msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\nDisable if you experience system instability."
 msgstr ""
 
 msgctxt "#33085"

@@ -119,7 +119,7 @@ class CustomQueue:
         self.log("__pop, starting")
         self.executor = SETTINGS.getSettingBool('Enable_Executors')
         while not self.service.monitor.abortRequested():
-            if self.service.monitor.waitForAbort(1.0): 
+            if self.service.monitor.waitForAbort(0.1): 
                 self.log("__pop, waitForAbort")
                 break
             elif self.service._interrupt(): 

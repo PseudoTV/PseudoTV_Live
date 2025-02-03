@@ -55,7 +55,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     if retitem: return channel
                     else:       return idx
             
-        with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
+        with BUILTIN.busy_dialog():
             self.server         = {}
             self.lockAutotune   = True
             self.madeChanges    = False
@@ -101,6 +101,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         try:
+            PROPERTIES.setInterruptActivity(True)
             self.focusItems    = dict()
             self.spinner       = self.getControl(4)
             self.chanList      = self.getControl(5)
@@ -875,6 +876,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def closeManager(self):
         self.log('closeManager')
+        PROPERTIES.setInterruptActivity(False)
         if self.madeChanges: self.saveChanges() 
         else:                self.close()
 

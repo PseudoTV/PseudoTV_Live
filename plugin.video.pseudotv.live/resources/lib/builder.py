@@ -148,11 +148,13 @@ class Builder:
                         citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
                         self.log('build, id = %s, rules = %s, preview = %s'%(citem['id'],citem.get('rules',{}),preview))
                         if self.service._interrupt():
+                            self.log("build, _interrupt")
                             self.completedBuild = False
                             self.pErrors = [LANGUAGE(32160)]
                             self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                             break
                         elif self.service._suspend():
+                            self.log("build, _suspend")
                             channels.insert(idx,citem)
                             self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
                             self.service.monitor.waitForAbort(SUSPEND_TIMER)
@@ -383,10 +385,12 @@ class Builder:
                 if not item.get('type'): item['type'] = query.get('key','files')
                 
                 if self.service._interrupt():
+                    self.log("buildList, _interrupt")
                     self.jsonRPC.autoPagination(citem['id'], path, query, limits) #rollback pagination limits
                     return [], []
                     
                 elif self.service._suspend(): 
+                    self.log("buildList, _suspend")
                     items.insert(idx,item)
                     self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
                     self.service.monitor.waitForAbort(SUSPEND_TIMER)

@@ -803,7 +803,7 @@ class Properties:
 
        
     @contextmanager
-    def interruptActivity(self): #suspend/quit running background task
+    def interruptActivity(self): #quit background task
         monitor = MONITOR()
         while not monitor.abortRequested and self.isInterruptActivity():
             if monitor.waitForAbort(0.1): break
@@ -830,7 +830,7 @@ class Properties:
 
         
     @contextmanager
-    def suspendActivity(self): #suspend/quit running background task.
+    def suspendActivity(self): #pause background task.
         monitor = MONITOR()
         while not monitor.abortRequested and self.isSuspendActivity():
             if monitor.waitForAbort(0.1): break

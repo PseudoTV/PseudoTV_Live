@@ -137,9 +137,11 @@ class Library:
         types = AUTOTUNE_TYPES
         for idx, type in enumerate(types):
             if self.service._interrupt():
+                self.log("updateLibrary, _interrupt")
                 complete = False
                 break
             elif self.service._suspend():
+                self.log("updateLibrary, _suspend")
                 types.insert(idx, type)
                 self.service.monitor.waitForAbort(SUSPEND_TIMER)
                 continue
