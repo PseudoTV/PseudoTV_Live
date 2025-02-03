@@ -115,6 +115,7 @@ class Tasks():
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
         self._chkPropTimer('chkFillers'       , self.chkFillers      , 2)
         self._chkPropTimer('chkAutoTune'      , self.chkAutoTune     , 2)
+        self._chkPropTimer('chkUpdate'        , self.chkUpdate       , 3)
                   
         
     def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
@@ -207,17 +208,22 @@ class Tasks():
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
+    def chkUpdate(self):
+        ids = SETTINGS.getUpdateChannels()
+        if ids:
+            channels = self.getChannels()
+            channels = [citem for id in ids for citem in channels if citem.get('id') == id]
+            self.log('chkUpdate, channels = %s'%(len(channels)))
+            self._que(self.chkChannels,3,channels)
+
+
     def chkChannels(self, channels: list=[]):
         try:
             if not channels:
                 channels = self.getChannels()
-                ids = SETTINGS.getUpdateChannels()
-                if ids: 
-                    channels = [citem for id in ids for citem in channels if citem.get('id') == id]
-                else:
-                    SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
-                    PROPERTIES.setChannels(len(channels) > 0)
-                    self.service.currentChannels = channels #update service channels
+                SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
+                PROPERTIES.setChannels(len(channels) > 0)
+                self.service.currentChannels = channels #update service channels
                     
             if len(channels) > 0:
                 complete, updated = Builder(service=self.service).build(channels)

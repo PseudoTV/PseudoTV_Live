@@ -869,7 +869,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                         self.resetPagination(changes) #clear pagination cache
                         SETTINGS.setResetChannels(ids) #clear guidedata
                         SETTINGS.setUpdateChannels(ids) #update channel meta.
-                    PROPERTIES.setEpochTimer('chkChannels')
         self.madeChanges = False
         self.closeManager()
             

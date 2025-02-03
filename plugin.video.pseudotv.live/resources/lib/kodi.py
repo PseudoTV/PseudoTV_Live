@@ -369,7 +369,7 @@ class Settings:
         ids = self.getUpdateChannels()
         if isinstance(id, list): ids.extend(id)
         else:                    ids.append(id)
-        Properties().setEpochTimer('chkChannels')
+        Properties().setPropTimer('chkUpdate')
         return self.setCacheSetting('updateChannels',list(set(ids)))
     
     
