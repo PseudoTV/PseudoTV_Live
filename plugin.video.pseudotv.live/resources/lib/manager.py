@@ -37,6 +37,7 @@ ACTION_SHOW_INFO     = [11,24,401]
 ACTION_PREVIOUS_MENU = [92, 10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61448]
      
 class Manager(xbmcgui.WindowXMLDialog):
+    monitor     = MONITOR()
     focusIndex  = -1
     newChannels = []
     
@@ -384,7 +385,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if citem.get('radio',False): excLST = [10,12,21,22]
         else:                        excLST = [11,13,21]
         
-        while not MONITOR().abortRequested() and not select is None:
+        while not self.monitor.abortRequested() and not select is None:
             with self.toggleSpinner():
                 npath   = None
                 lizLST  = [self.buildListItem('%s|'%(idx+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(idx+1)),items={'citem':citem,'idx':idx+1}) for idx, path in enumerate(pathLST) if path]
@@ -424,7 +425,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             ruleLST = rules.copy()
             lastIDX = None
             lastXID = None
-            while not MONITOR().abortRequested() and not select is None:
+            while not self.monitor.abortRequested() and not select is None:
                 with self.toggleSpinner():
                     nrule  = None
                     crules = self.rule.loadRules([citem],append=True,incRez=False).get(citem['id'],{}) #all rule instances w/ channel rules
@@ -467,7 +468,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if rule.exclude and True in list(set([True for p in citem.get('path',[]) if p.endswith('.xsp')])): return DIALOG.notificationDialog(LANGUAGE(32178))
         else:
             select = -1
-            while not MONITOR().abortRequested() and not select is None:
+            while not self.monitor.abortRequested() and not select is None:
                 with self.toggleSpinner():
                     lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],icon=DUMMY_ICON.format(text=str(idx+1)),items={'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
                 select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
@@ -560,7 +561,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             return path, self.setLogo(citem.get('name'),citem)
             
         def __seek(item, citem):
-            monitor = MONITOR()
             player  = PLAYER()
             file    = item.get('file')
             dur     = item.get('duration')
@@ -575,10 +575,10 @@ class Manager(xbmcgui.WindowXMLDialog):
             getTime  = 0
             waitTime = 30
             threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(file))
-            while not monitor.abortRequested():
+            while not self.monitor.abortRequested():
                 waitTime -= 1
                 self.log('validatePaths _seek, waiting (%s) to seek %s'%(waitTime, item.get('file')))
-                if monitor.waitForAbort(1.0) or waitTime < 1: break
+                if self.monitor.waitForAbort(1.0) or waitTime < 1: break
                 elif not player.isPlaying(): continue
                 elif ((int(player.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
                     player.stop()
@@ -596,7 +596,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     items = self.jsonRPC.walkFileDirectory(path, media, depth=5, retItem=True)
                 
                 for idx, dir in enumerate(items):
-                    if MONITOR().waitForAbort(0.1): break
+                    if self.monitor.waitForAbort(0.1): break
                     else:
                         item = random.choice(items.get(dir,[]))
                         dia  = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path','%s...'%(str(dir)[:48]),'%s...'%(str(item.get('file',''))[:48])))
@@ -639,14 +639,13 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         def __fileList(citem):
             from builder import Builder
-            monitor    = MONITOR()
             builder    = Builder()
             fileList   = []
             start_time = 0
             end_time   = 0
             PROPERTIES.setInterruptActivity(False)
-            while not monitor.abortRequested() and PROPERTIES.isRunning('OVERLAY_MANAGER'):
-                if monitor.waitForAbort(1.0): break
+            while not self.monitor.abortRequested() and PROPERTIES.isRunning('OVERLAY_MANAGER'):
+                if self.monitor.waitForAbort(1.0): break
                 elif not PROPERTIES.isRunning('builder.build') and not PROPERTIES.isInterruptActivity():
                     DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32236),citem.get('name','Untitled'),LANGUAGE(32140)))
                     tmpcitem = citem.copy()
@@ -657,7 +656,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                     if not fileList or isinstance(fileList,list): break
                 
             del builder
-            del monitor
             PROPERTIES.setInterruptActivity(True)
             return fileList, round(abs(end_time-start_time),2)
             

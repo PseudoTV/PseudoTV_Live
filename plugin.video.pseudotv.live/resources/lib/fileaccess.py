@@ -272,6 +272,8 @@ class VFSFile:
         
 
 class FileLock(object):
+    monitor = xbmc.Monitor()
+    
     # https://github.com/dmfrey/FileLock
     """ A file locking mechanism that has context-manager support so 
         you can use it in a with statement. This should be relatively cross
@@ -313,8 +315,8 @@ class FileLock(object):
             an exception.
         """
         start_time = time.time()
-        while not xbmc.Monitor().abortRequested():
-            if xbmc.Monitor().waitForAbort(self.delay): break
+        while not self.monitor.abortRequested():
+            if self.monitor.waitForAbort(self.delay): break
             else:
                 try:
                     self.fd = FileAccess.open(self.lockfile, 'w')

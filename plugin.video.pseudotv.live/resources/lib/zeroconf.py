@@ -34,6 +34,9 @@ import threading
 import select
 import traceback
 from functools import reduce
+from kodi_six import xbmc
+
+monitor = xbmc.Monitor()
 
 pythree = (sys.version_info[0] >= 3)
 
@@ -517,7 +520,7 @@ class DNSIncoming(object):
         next = -1
         first = off
 
-        while True:
+        while not monitor.abortRequested():
             length = getByte(self.data[off])
             off += 1
             if length == 0:
@@ -778,7 +781,7 @@ class Engine(threading.Thread):
         self.start()
 
     def run(self):
-        while not _GLOBAL_DONE:
+        while not monitor.abortRequested() and not _GLOBAL_DONE:
             rs = self.getReaders()
             if len(rs) == 0:
                 # No sockets to manage, but we wait for the timeout
@@ -871,7 +874,7 @@ class Reaper(threading.Thread):
         self.start()
 
     def run(self):
-        while True:
+        while not monitor.abortRequested():
             self.zc.wait(10 * 1000)
             if _GLOBAL_DONE:
                 return
@@ -936,7 +939,7 @@ class ServiceBrowser(threading.Thread):
         self.zc.notifyAll()
 
     def run(self):
-        while True:
+        while not monitor.abortRequested():
             event = None
             now = currentTimeMillis()
             if len(self.list) == 0 and self.nextTime > now:
@@ -1030,7 +1033,7 @@ class ServiceInfo(object):
             end = len(text)
             index = 0
             strs = []
-            while index < end:
+            while not monitor.abortRequested() and index < end:
                 length = getByte(text[index])
                 index += 1
                 val = text[index:index+length]
@@ -1129,8 +1132,7 @@ class ServiceInfo(object):
         result = False
         try:
             zc.addListener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
-            while (self.server is None or self.address is None or
-                   self.text is None):
+            while not monitor.abortRequested() and (self.server is None or self.address is None or self.text is None):
                 if last <= now:
                     return False
                 if next <= now:
@@ -1301,7 +1303,7 @@ class Zeroconf(object):
         now = currentTimeMillis()
         nextTime = now
         i = 0
-        while i < 3:
+        while not monitor.abortRequested() and i < 3:
             if now < nextTime:
                 self.wait(nextTime - now)
                 now = currentTimeMillis()
@@ -1334,7 +1336,7 @@ class Zeroconf(object):
         now = currentTimeMillis()
         nextTime = now
         i = 0
-        while i < 3:
+        while not monitor.abortRequested() and i < 3:
             if now < nextTime:
                 self.wait(nextTime - now)
                 now = currentTimeMillis()
@@ -1360,7 +1362,7 @@ class Zeroconf(object):
             now = currentTimeMillis()
             nextTime = now
             i = 0
-            while i < 3:
+            while not monitor.abortRequested() and i < 3:
                 if now < nextTime:
                     self.wait(nextTime - now)
                     now = currentTimeMillis()
@@ -1387,7 +1389,7 @@ class Zeroconf(object):
         now = currentTimeMillis()
         nextTime = now
         i = 0
-        while i < 3:
+        while not monitor.abortRequested() and i < 3:
             for record in self.cache.entriesWithName(info.type):
                 if (record.type == _TYPE_PTR and
                     not record.isExpired(now) and
@@ -1526,7 +1528,7 @@ class Zeroconf(object):
         """Sends an outgoing packet."""
         packet = out.packet()
         try:
-            while packet:
+            while not monitor.abortRequested() and packet:
                 bytes_sent = self.socket.sendto(packet, 0, (addr, port))
                 if bytes_sent < 0:
                     break

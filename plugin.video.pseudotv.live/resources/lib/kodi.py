@@ -1173,7 +1173,11 @@ class Builtin:
     def isScanning(self):
         return (self.getInfoBool('IsScanningVideo','Library') & self.getInfoBool('IsScanningMusic','Library'))
           
-          
+                      
+    def isSettingsOpened(self) -> bool:
+        return (self.getInfoBool('IsVisible(addonsettings)','Window') | self.getInfoBool('IsVisible(selectdialog)' ,'Window'))
+
+  
     def isBusyDialog(self):
         return (Properties().isRunning('OVERLAY_BUSY') | self.getInfoBool('IsActive(busydialognocancel)','Window') | self.getInfoBool('IsActive(busydialog)','Window'))
 

@@ -24,7 +24,7 @@ from fileaccess import FileAccess
 
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
-
+        
 def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VERSION, json_data=False):
     def internal(method):
         @wraps(method)
@@ -39,17 +39,24 @@ def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VE
         return wrapper
     return internal
     
+class Service:
+    monitor = xbmc.Monitor()
+    def _interrupt(self) -> bool:
+        return xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)) == "true"
+    def _suspend(self) -> bool:
+        return xbmcgui.Window(10000).getProperty('%s.suspendActivity'%(ADDON_ID)) == "true"
+
 class Cache:
-    lock  = Lock()
-    cache = SimpleCache()
+    lock    = Lock()
+    cache   = SimpleCache()
+    service = Service()
 
 
     @contextmanager
     def cacheLocker(self): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
-        monitor = MONITOR()
-        while not monitor.abortRequested() and xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true':
-            if monitor.waitForAbort(0.1): break
-        del monitor
+        while not self.service.monitor.abortRequested():
+            if self.service.monitor.waitForAbort(0.1) or self.service._interrupt(): break
+            elif xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) != 'true': break
         xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
         try: yield
         finally:

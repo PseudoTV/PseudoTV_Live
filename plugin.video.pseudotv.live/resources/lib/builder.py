@@ -214,7 +214,9 @@ class Builder:
             else:     cacheResponse = self.buildChannel(citem)
             
             if isinstance(cacheResponse,list): return sorted(self.addScheduling(citem, cacheResponse, start, self.padScheduling), key=itemgetter('start'))
-            elif  self.service._interrupt():   return True
+            elif self.service._interrupt():   
+                self.log("getFileList, _interrupt")
+                return True
             else:                              return cacheResponse
         except Exception as e: self.log("getFileList, [%s] failed! %s"%(citem['id'],e), xbmc.LOGERROR)
         return False
@@ -303,7 +305,9 @@ class Builder:
         if not _validFileList(fileArray): #if valid array bypass build
             paths = citem.get('path',[])
             for idx, file in enumerate(paths):
-                if self.service._interrupt(): return []
+                if self.service._interrupt():
+                    self.log("buildChannel, _interrupt")
+                    return []
                 else:
                     if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
                     fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
@@ -341,7 +345,9 @@ class Builder:
         
         while not self.service.monitor.abortRequested():
             #Not all results are flat hierarchies; walk all paths until fileList limit is reached. ie. Plugins with [NEXT PAGE]
-            if self.service._interrupt(): return []
+            if self.service._interrupt(): 
+                self.log("buildFileList, _interrupt")
+                return []
             elif len(fileList) >= limit:  break
             elif len(dirList) > 0:
                 dir = dirList.pop(0)

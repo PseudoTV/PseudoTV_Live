@@ -244,7 +244,9 @@ class Tasks():
                 queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
                 params = queuePool.get('params',[])
                 for i in list(range(SETTINGS.getSettingInt('Page_Limit'))):
-                    if   self.service._interrupt(): break
+                    if self.service._interrupt(): 
+                        self.log("chkJSONQUE, _interrupt")
+                        break
                     elif len(params) > 0:
                         param = params.pop(0)
                         self.log("chkJSONQUE, queuing = %s\n%s"%(len(params),param))
@@ -256,7 +258,7 @@ class Tasks():
 
     def chkPVRRefresh(self):
         self.log('chkPVRRefresh')
-        timerit(self._que)(FIFTEEN,[self.chkPVRToggle,1])
+        self._que(self.chkPVRToggle,1)
 
 
     def chkPVRToggle(self):
@@ -316,7 +318,7 @@ class Tasks():
 
     def getChannels(self):
         try:
-            channels = Builder(service=self.service).getChannels()
+            channels = list(Builder(service=self.service).getChannels())
             self.log('getChannels, channels = %s'%(len(channels)))
             return channels
         except Exception as e: 

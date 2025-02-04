@@ -367,15 +367,14 @@ class Overlay():
             remaining = int(totalTime - self.player.getPlayedTime())
             self.log('toggleOnNext, totalTime = %s, threshold = %s, remaining = %s'%(totalTime, threshold, remaining))
             if self.chkOnNextConditions() and remaining > self.minDuration:
-                if   remaining < threshold and state: return True , OSD_TIMER
-                elif remaining > threshold:           return False, abs(remaining - threshold)
+                if   remaining > threshold: return False, abs(remaining - threshold)
+                elif remaining < threshold: return True , OSD_TIMER*3
             return False, 0
 
-        state, wait = __getOnNextInterval(state)
-        self.log('toggleOnNext, state = %s, wait = %s, cancel = %s'%(state, wait, cancel))
-        nstate  = not bool(state)
+        show, wait = __getOnNextInterval(state)
+        self.log('toggleOnNext, state = %s, show = %s wait = %s'%(state,show,wait))
         
-        if state:
+        if state and show:
             sysInfo = self.player.sysInfo.copy()
             citem   = sysInfo.get('citem',{}) #channel
             fitem   = sysInfo.get('fitem',{}) #onnow
@@ -443,8 +442,9 @@ class Overlay():
             except: pass
             
         if cancel or wait <= 0: return self.log('toggleOnNext, cancelling timer...')
+        nstate = not bool(state)
         self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
-        self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
+        self._onNextThread = Timer(float(wait), self.toggleOnNext, [nstate])
         self._onNextThread.name = "onNextThread"
         self._onNextThread.daemon=True
         self._onNextThread.start()

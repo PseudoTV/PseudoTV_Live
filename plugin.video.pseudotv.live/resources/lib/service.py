@@ -72,7 +72,7 @@ class Player(xbmc.Player):
     def onPlayBackStarted(self):
         self.pendingStop  = True
         self.pendingPlay  = self.service.monitor.idleTime
-        self.log('onPlayBackStarted, pendingStop = %s'%(self.pendingStop))
+        self.log('onPlayBackStarted, pendingStop = %s, pendingPlay = %s'%(self.pendingStop,self.pendingPlay))
         
 
     def onAVChange(self):
@@ -305,17 +305,15 @@ class Player(xbmc.Player):
 
 
 class Monitor(xbmc.Monitor):
-    idleTime   = 0
-    isIdle     = False
-    overlay    = None
+    idleTime = 0
+    isIdle   = False
+    overlay  = None
     
     def __init__(self, service=None):
         self.log('__init__')
         xbmc.Monitor.__init__(self)
-        self.service          = service
-        self.jsonRPC          = service.jsonRPC
-        self.pendingSuspend   = False
-        self.pendingInterrupt = False
+        self.service = service
+        self.jsonRPC = service.jsonRPC
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -332,8 +330,9 @@ class Monitor(xbmc.Monitor):
             return idleState, idleTime
 
         def __chkPlayback():
-            if not BUILTIN.isBusyDialog() and self.service.player.pendingPlay >= 0 and abs(self.idleTime - self.service.player.pendingPlay) > 120:
-                self.log('__chkPlayback, pendingPlay Error\nsysInfo = %s'%(self.service.player.sysInfo))
+            pendingTime = (self.idleTime - self.service.player.pendingPlay)
+            if not BUILTIN.isBusyDialog() and self.service.player.pendingPlay > 0 and pendingTime > 120:
+                self.log('__chkPlayback, pendingPlay Error (%s)\nsysInfo = %s'%(pendingTime,self.service.player.sysInfo))
                 self.service.player.onPlayBackError()
 
         def __chkResumeTime():
@@ -417,11 +416,7 @@ class Monitor(xbmc.Monitor):
     def onNotification(self, sender, method, data):
         self.log("onNotification, sender %s - method: %s  - data: %s" % (sender, method, data))
             
-            
-    def isSettingsOpened(self) -> bool:
-        return (BUILTIN.getInfoBool('IsVisible(addonsettings)','Window') | BUILTIN.getInfoBool('IsVisible(selectdialog)' ,'Window'))
 
-  
     def onSettingsChanged(self):
         self.log('onSettingsChanged')
         if self.service: timerit(self.onSettingsChangedTimer)(15.0)
@@ -440,13 +435,15 @@ class Monitor(xbmc.Monitor):
         
 
 class Service():
-    currentChannels = []
-    currentSettings = []
+    currentChannels  = []
+    currentSettings  = []
+    pendingSuspend   = PROPERTIES.setPendingSuspend(False)
+    pendingInterrupt = PROPERTIES.setPendingInterrupt(False)
+    pendingShutdown  = PROPERTIES.setPendingShutdown(False)
+    pendingRestart   = PROPERTIES.setPendingRestart(False)
 
     def __init__(self):
         self.log('__init__')        
-        self.pendingShutdown   = PROPERTIES.setPendingShutdown(False)
-        self.pendingRestart    = PROPERTIES.setPendingRestart(False)
         self.jsonRPC           = JSONRPC(service=self)
         self.player            = Player(service=self)
         self.monitor           = Monitor(service=self)
@@ -488,22 +485,19 @@ class Service():
          
 
     def _interrupt(self) -> bool: #break
-        pendingInterrupt = (self.pendingShutdown | self.pendingRestart | PROPERTIES.isInterruptActivity() | self.monitor.isSettingsOpened())
-        if pendingInterrupt != self.monitor.pendingInterrupt:
-            self.monitor.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
-            self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
-        return self.monitor.pendingInterrupt
+        pendingInterrupt = (self.pendingShutdown | self.pendingRestart | PROPERTIES.isInterruptActivity() | BUILTIN.isSettingsOpened())
+        if pendingInterrupt != self.pendingInterrupt:
+            self.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
+            self.log('_interrupt, pendingInterrupt = %s'%(self.pendingInterrupt))
+        return self.pendingInterrupt
     
 
     def _suspend(self) -> bool: #continue
-        if self.monitor.pendingInterrupt:
-            pendingSuspend = False
-        else:
-            pendingSuspend = (self.__playing() | PROPERTIES.isSuspendActivity() | BUILTIN.isScanning())
-        if pendingSuspend != self.monitor.pendingSuspend:
-            self.monitor.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
-            self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))
-        return self.monitor.pendingSuspend
+        pendingSuspend = (self.__playing() | PROPERTIES.isSuspendActivity() | BUILTIN.isScanning())
+        if pendingSuspend != self.pendingSuspend:
+            self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
+            self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))
+        return self.pendingSuspend
 
 
     def __tasks(self):
@@ -512,8 +506,8 @@ class Service():
                 
     def __initialize(self):
         self.log('__initialize')
-        self.tasks._initialize()
         if self.player.isPlaying(): self.player.onAVStarted()
+        self.tasks._initialize()
         
 
     def _start(self):
@@ -528,15 +522,14 @@ class Service():
 
 
     def _stop(self):
-        self.monitor.pendingSuspend   = False
-        self.monitor.pendingInterrupt = True
+        PROPERTIES.setInterruptActivity(True)
         for thread in thread_enumerate():
             if thread.name != "MainThread" and thread.is_alive():
                 if hasattr(thread, 'cancel'): thread.cancel()
                 try: thread.join(1.0)
                 except: pass
                 self.log('_stop, closing %s...'%(thread.name))
-                
+            
         if self.pendingRestart: 
             self.log('_stop, finished: restarting!')
             Service()._start()

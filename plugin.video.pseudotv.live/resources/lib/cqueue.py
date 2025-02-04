@@ -123,7 +123,6 @@ class CustomQueue:
                 self.log("__pop, waitForAbort")
                 break
             elif self.service._interrupt(): 
-                self.isRunning = False
                 self.log("__pop, _interrupt")
                 break
             elif self.service._suspend():
@@ -172,8 +171,8 @@ class CustomQueue:
                 self.log("__pop, queue undefined!")
                 break
                 
-        self.log("__pop, finished shutting down!")
         self.isRunning = False
+        self.log("__pop, finished shutting down!")
                 
                 
 # def quePriority(package: tuple, priority: int=0):
