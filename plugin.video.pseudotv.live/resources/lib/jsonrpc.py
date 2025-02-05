@@ -153,7 +153,7 @@ class JSONRPC:
     def getEnums(self, id, type='', key='enums'):
         self.log('getEnums id = %s, type = %s, key = %s' % (id, type, key))
         param = {"method":"JSONRPC.Introspect","params":{"getmetadata":True,"filterbytransport":True,"filter":{"getreferences":False,"id":id,"type":"type"}}}
-        json_response = loadJSON(self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('BuildVersion','System'))).get('result',{}).get('types',{}).get(id,{})
+        json_response = self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('BuildVersion','System')).get('result',{}).get('types',{}).get(id,{})
         return (json_response.get('properties',{}).get(type,{}).get(key) or json_response.get(type,{}).get(key) or json_response.get(key,[]))
 
 
