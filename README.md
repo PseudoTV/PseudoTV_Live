@@ -29,9 +29,8 @@ PseudoTV Live is not an IPTV service, it does not provide media or support IPTV 
 [![Codacy Badge](https://img.shields.io/codacy/grade/efcc007bd689449f8cf89569ac6a311b.svg?style=flat-square)](https://www.codacy.com/app/PseudoTV/PseudoTV_Live/dashboard)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/PseudoTV/PseudoTV_Live.svg?color=red&style=flat-square)](https://github.com/PseudoTV/PseudoTV_Live/commits?author=Lunatixz)
 [![Kodi URL](https://img.shields.io/badge/Supports-Kodi%2019+-blue.svg?style=flat-square)](https://kodi.tv/download)
-[![Kodi Donate](https://img.shields.io/badge/Donate%20to-Kodi-blue.svg?style=flat-square)](https://kodi.tv/contribute/donate)
 [![Donate to Kodi](https://img.shields.io/badge/Donate%20to-Kodi-blue.svg?style=flat-square)](https://kodi.tv/contribute/donate)
-[![Donate to Lunatixzl](https://img.shields.io/badge/Paypal-Lunatixz-blue.svg?style=flat-square)](https://paypal.me/Lunatixz)
+[![Donate to Lunatixzl](https://img.shields.io/badge/Donate%20to-Lunatixz-blue.svg?style=flat-square)](https://paypal.me/Lunatixz)
 
 # Special Thanks:
 - @xbmc If you are enjoying this project please donate to Kodi!
