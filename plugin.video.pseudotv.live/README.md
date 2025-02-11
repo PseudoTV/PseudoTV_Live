@@ -5,7 +5,7 @@
 
 ## What is it?
 
-PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) into linear TV simliar to broadcast television, complete with configurable channels & Advanced channel rules. Interface provided by Kodi via IPTV Simple PVR Backend.
+PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) into linear TV similar to broadcast television, complete with configurable channels & Advanced channel rules. Interface provided by Kodi via IPTV Simple PVR Backend.
 
 ## What it isn't!
 
