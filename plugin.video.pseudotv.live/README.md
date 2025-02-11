@@ -3,13 +3,15 @@
 
 # PseudoTV Live for Kodi™
 
-## What is it?:
+## What is it?
 
 PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) into linear TV simliar to broadcast television, complete with configurable channels & Advanced channel rules. Interface is Provided by Kodi via IPTV Simple PVR Backend.
 
 ## What it isn't!
 
 PseudoTV Live is not an IPTV service, it does not provide media or support IPTV Streams. Users are required to supply media scraped to Kodi's library. 
+
+---
 
 [Changelog](https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/changelog.txt)
 
@@ -20,8 +22,6 @@ PseudoTV Live is not an IPTV service, it does not provide media or support IPTV 
 [Discussion: Kodi](https://forum.kodi.tv/showthread.php?tid=346803)
 
 [Discussion: Github](https://github.com/PseudoTV/PseudoTV_Live/discussions)
-
-Repository Installation:
 
 [![License](https://img.shields.io/github/license/PseudoTV/PseudoTV_Live?style=flat-square)](https://github.com/PseudoTV/PseudoTV_Live/blob/master/LICENSE)
 [![Codacy Badge](https://img.shields.io/codacy/grade/efcc007bd689449f8cf89569ac6a311b.svg?style=flat-square)](https://www.codacy.com/app/PseudoTV/PseudoTV_Live/dashboard)
