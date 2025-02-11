@@ -9,7 +9,7 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 
 ## What it isn't!
 
-PseudoTV Live is not an IPTV service, it does not provide media or support IPTV Streams. Users are required to supply media scraped to Kodi's library. 
+PseudoTV Live is not an IPTV service, it does not provide content or support live streams. Users are required to supply media via Kodi library. 
 
 ---
 
