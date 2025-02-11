@@ -23,7 +23,7 @@ PseudoTV Live is not an IPTV service, it does not provide media or support IPTV 
 
 [Discussion: Github](https://github.com/PseudoTV/PseudoTV_Live/discussions)
 
-[Discussion: Reddit]([https://github.com/PseudoTV/PseudoTV_Live/discussions](https://www.reddit.com/r/PseudoTV/))
+[Discussion: Reddit](https://github.com/PseudoTV/PseudoTV_Live/discussions](https://www.reddit.com/r/PseudoTV/)
 
 [![License](https://img.shields.io/github/license/PseudoTV/PseudoTV_Live?style=flat-square)](https://github.com/PseudoTV/PseudoTV_Live/blob/master/LICENSE)
 [![Codacy Badge](https://img.shields.io/codacy/grade/efcc007bd689449f8cf89569ac6a311b.svg?style=flat-square)](https://www.codacy.com/app/PseudoTV/PseudoTV_Live/dashboard)
