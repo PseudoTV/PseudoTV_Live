@@ -33,7 +33,7 @@ class Record:
         
     def add(self):
         if not PROPERTIES.isRunning('Record.add'):
-            with PROPERTIES.setRunning('Record.add'):
+            with PROPERTIES.chkRunning('Record.add'):
                 now   = timeString2Seconds(BUILTIN.getInfoLabel('Time(hh:mm:ss)','System'))
                 start = timeString2Seconds(BUILTIN.getInfoLabel('StartTime').split(' ')[0] +':00')
                 stop  = timeString2Seconds(BUILTIN.getInfoLabel('EndTime').split(' ')[0] +':00')
@@ -61,7 +61,7 @@ class Record:
  
     def remove(self):
         if not PROPERTIES.isRunning('Record.remove'):
-            with PROPERTIES.setRunning('Record.remove'):
+            with PROPERTIES.chkRunning('Record.remove'):
                 if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(self.fitem['label'])):
                     with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                         ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})

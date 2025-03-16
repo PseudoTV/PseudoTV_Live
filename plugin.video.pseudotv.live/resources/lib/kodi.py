@@ -133,8 +133,10 @@ def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
                 _match(item.get(item_key,''),value)
             else: _match(item,value)
     return matches
-    
+
 class Settings:
+    monitor = MONITOR()
+    
     def __init__(self):
         self.cacheDB = Cache()
         self.cache   = Cache(mem_cache=True)
@@ -254,7 +256,7 @@ class Settings:
     
     
     def getCacheSetting(self, key, checksum=1, json_data=False, revive=True):
-        if revive: return self.setCacheSetting(key, self.cacheDB.get(key, checksum, json_data), checksum, json_data=json_data)
+        if revive: return self.setCacheSetting(key, self.cacheDB.get(key, checksum, json_data), checksum, json_data)
         else:      return self.cacheDB.get(key, checksum, json_data)
         
         
@@ -281,24 +283,16 @@ class Settings:
 
         
     def getResetChannels(self):
-        ids = (self.getCacheSetting('clearChannels') or [])
-        self.clrCacheSetting('clearChannels')
-        return ids
+        return (self.getCacheSetting('clearChannels') or [])
 
 
-    def getUpdateChannels(self):
-        ids = (self.getCacheSetting('updateChannels') or [])
-        self.clrCacheSetting('updateChannels')
-        return ids
-    
-    
     def hasAutotuned(self):
         return self.getCacheSetting('has.Autotuned') == True
         
         
     #CLR
-    def clrCacheSetting(self, key, checksum=1, life=datetime.timedelta(days=84), json_data=False):
-        self.setCacheSetting(key, None, checksum, life, json_data)
+    def clrCacheSetting(self, key):
+        self.cache.clear(key)
     
     
     #SET
@@ -357,22 +351,14 @@ class Settings:
         return self.setSetting(key,encodeString(dumpJSON(values)))
             
             
-    def setCacheSetting(self, key, value, checksum=1, life=datetime.timedelta(days=84), json_data=False):
-        return self.cacheDB.set(key, value, checksum, life, json_data)
+    def setCacheSetting(self, key, value, checksum=1, json_data=False):
+        return self.cacheDB.set(key, value, checksum, datetime.timedelta(days=84), json_data)
             
 
     def setEXTSetting(self, id, key, value):
         return xbmcaddon.Addon(id).setSetting(key,value)
 
 
-    def setUpdateChannels(self, id):
-        ids = self.getUpdateChannels()
-        if isinstance(id, list): ids.extend(id)
-        else:                    ids.append(id)
-        Properties().setPropTimer('chkUpdate')
-        return self.setCacheSetting('updateChannels',list(set(ids)))
-    
-    
     def setResetChannels(self, id):
         ids = self.getResetChannels()
         if isinstance(id, list): ids.extend(id)
@@ -444,59 +430,7 @@ class Settings:
         payload['updated']   = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         payload['md5']       = getMD5(dumpJSON(payload))
         return payload
-    # todo add "Valid","Passed","Failed" entries for m3u,xmltv instead of detailed listings.
-     # @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
-        # def getPayload(self, inclDebug: bool=False):
-            # self.log("getPayload, inclDebug! %s"%(inclDebug))
-            # def __getM3U():
-                # from m3u import M3U
-                # m3u = M3U()
-                # stations   = m3u.getStations()
-                # recordings = m3u.getRecordings()
-                # del m3u
-                # return stations, recordings
-                
-            # def __getXMLTV():
-                # from xmltvs import XMLTVS
-                # xmltv = XMLTVS()
-                # stations   = xmltv.getChannels()
-                # recordings = xmltv.getRecordings()
-                # del xmltv
-                # return stations, recordings
-            
-            
-            # def __getMeta(payload):
-                # from library   import Library 
-                # from multiroom import Multiroom
-                
-                # payload.pop('updated')
-                # payload.pop('md5')
-                
-                # now  = getUTCstamp()
-                # stop = datetime.datetime.fromtimestamp(roundTimeDown(now,offset=60)).strftime(DTFORMAT)
-                
-                # payload['now'] = datetime.datetime.fromtimestamp(now).strftime(DTFORMAT)
-                # payload['m3u'] = dict(poolit(__chkM3U, *(stop,M3U().getM3U())))
-                # print('payload[m3u]'payload['m3u'])
-                
-                
-                
-                # return '[%s] - %s'%(station.get('id'),station.get('name')), {True:'[COLOR=green][B]PASSED[/B][/COLOR]',False:'[COLOR=red][B]Failed![/B][/COLOR]'}[not station.get('id') is None]
 
-                
-                # # payload['xmltv']   = {'stations'  :[{'id':station.get('id'),'display-name':station.get('display-name',[['','']])[0][0],'icon':station.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for station in stations],
-                                      # # 'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in recordings], 
-                                      # # 'programmes':[{'id':key,'end-time':datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
-                # payload['library'] = Library().getLibrary()
-                # payload['servers'] = Multiroom().getDiscovery()
-                # return payload
-
-            # payload = __getMeta(self.getBonjour(inclChannels=True))
-            # if inclDebug: payload['debug'] = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_ID))).get('DEBUG',{})
-            # payload['updated']   = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
-            # payload['md5']       = getMD5(dumpJSON(payload))
-            # return payload
-            
             
     @cacheit(expiration=datetime.timedelta(minutes=5))
     def getPayloadUI(self):
@@ -605,9 +539,8 @@ class Settings:
         
     def chkPVRInstance(self, instance=ADDON_NAME):
         found   = False
-        monitor = MONITOR()
         for file in [filename for filename in FileAccess.listdir(PVR_CLIENT_LOC)[1] if filename.endswith('.xml')]:
-            if monitor.waitForAbort(0.1): break
+            if self.monitor.waitForAbort(0.001): break
             elif file.startswith('instance-settings-'):
                 try:
                     xml = FileAccess.open(os.path.join(PVR_CLIENT_LOC,file), "r")
@@ -630,7 +563,6 @@ class Settings:
                         FileAccess.delete(os.path.join(PVR_CLIENT_LOC,file))
                         self.log('chkPVRInstance, removing duplicate entry %s'%(file))
                 self.log('chkPVRInstance, found %s file = %s'%(name,found))
-        del monitor
         return found
 
 
@@ -661,14 +593,13 @@ class Settings:
         self.log('chkPluginSettings, id = %s, instance = %s, prompt=%s'%(id,instance,prompt))
         addon   = xbmcaddon.Addon(id)
         dialog  = Dialog()
-        monitor = MONITOR()
         if addon is None: dialog.notificationDialog(LANGUAGE(32034)%(id))
         else:
             changes   = {}
             name      = addon.getAddonInfo('name')
             osettings = self.getPVRInstanceSettings(instance)
             for setting, newvalue in list(nsettings.items()):
-                if monitor.waitForAbort(0.1): return False
+                if self.monitor.waitForAbort(0.001): return False
                 default, oldvalue = osettings.get(setting,({},{}))
                 if str(newvalue).lower() != str(oldvalue).lower(): 
                     changes[setting] = (oldvalue, newvalue)
@@ -684,7 +615,7 @@ class Settings:
                     return False
                 
             for s, v in list(changes.items()):
-                if monitor.waitForAbort(0.1): return False
+                if self.monitor.waitForAbort(0.001): return False
                 addon.setSetting(s, v[1])
                 self.log('chkPluginSettings, setting = %s, current value = %s => %s'%(s,oldvalue,v[1]))
             self.setPVRInstance(instance)
@@ -692,7 +623,6 @@ class Settings:
             del dialog
             return True
         del dialog
-        del monitor
         
 
     def getCurrentSettings(self):
@@ -703,6 +633,7 @@ class Settings:
                
 
 class Properties:
+    monitor = MONITOR()
     
     def __init__(self, winID=10000):
         self.winID      = winID
@@ -732,12 +663,30 @@ class Properties:
 
 
     @contextmanager
-    def setRunning(self, key):
+    def chkRunning(self, key):
         if not self.isRunning(key):
-            self.setEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key),True)
+            self.setRunning(key,True)
             try: yield
-            finally: self.setEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key),False)
+            finally: self.setRunning(key,False)
         else: yield
+        
+        
+    def setUpdateChannels(self, id):
+        ids = self.getUpdateChannels()
+        if isinstance(id, list): ids.extend(id)
+        else:                    ids.append(id)
+        timerit(self.setPropTimer)(FIFTEEN,['chkUpdate'])
+        return self.setPropertyList('updateChannels',list(set(ids)))
+    
+    
+    def getUpdateChannels(self):
+        ids = (self.getPropertyList('updateChannels') or [])
+        self.clrProperty('updateChannels')
+        return ids
+    
+    
+    def setRunning(self, key, state=True):
+        return self.setEXTPropertyBool('%s.Running.%s'%(ADDON_ID,key),state)
         
         
     def isRunning(self, key):
@@ -804,10 +753,8 @@ class Properties:
        
     @contextmanager
     def interruptActivity(self): #quit background task
-        monitor = MONITOR()
-        while not monitor.abortRequested and self.isInterruptActivity():
-            if monitor.waitForAbort(0.1): break
-        del monitor
+        while not self.monitor.abortRequested and self.isInterruptActivity():
+            if self.monitor.waitForAbort(0.001): break
         self.setInterruptActivity(True)
         try: yield
         finally: self.setInterruptActivity(False)
@@ -831,10 +778,8 @@ class Properties:
         
     @contextmanager
     def suspendActivity(self): #pause background task.
-        monitor = MONITOR()
-        while not monitor.abortRequested and self.isSuspendActivity():
-            if monitor.waitForAbort(0.1): break
-        del monitor
+        while not self.monitor.abortRequested and self.isSuspendActivity():
+            if self.monitor.waitForAbort(0.001): break
         self.setSuspendActivity(True)
         try: yield
         finally: self.setSuspendActivity(False)
@@ -1107,7 +1052,9 @@ class ListItems:
             
     
 class Builtin:
-    busy = None
+    busy    = None
+    monitor = MONITOR()
+    
     
     def __init__(self):
         ...
@@ -1206,27 +1153,61 @@ class Builtin:
         else: yield
 
 
+    def getIdle(self):
+        return int(xbmc.getGlobalIdleTime() or '0')
+            
+    
+    @contextmanager
+    def kodiLocker(self, wait=0.1):
+        while not self.monitor.abortRequested(): #try and make kodi api thread safe / thread locks not working? todo debug.
+            if self.monitor.waitForAbort(wait) or xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)) == 'true': break
+            elif xbmcgui.Window(10000).getProperty('%s.kodiLocker'%(ADDON_ID)) != 'true': break
+            else: log('kodiLocker, avoiding collision')
+        xbmcgui.Window(10000).setProperty('%s.kodiLocker'%(ADDON_ID),'true')
+        try: yield
+        finally: xbmcgui.Window(10000).setProperty('%s.kodiLocker'%(ADDON_ID),'false')
+
+
     def getInfoLabel(self, key, param='ListItem', default=''):
-        value = "Busy"
-        while not MONITOR().abortRequested() and value == "Busy":
+        with self.kodiLocker():
             value = xbmc.getInfoLabel('%s.%s'%(param,key))
-        value = (value or default)
+        if value == "Busy": 
+            if not MONITOR().waitForAbort(1.0): return self.getInfoLabel(key,param,default)
         self.log('getInfoLabel, key = %s.%s, value = %s'%(param,key,value))
-        return value
+        return (value or default)
         
 
-    def getInfoBool(self, key, param='Library', default=False):
-        value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or default)
+    def getInfoBool(self, key, param='Library'):
+        with self.kodiLocker():
+            value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or False)
         self.log('getInfoBool, key = %s.%s, value = %s'%(param,key,value))
         return value
         
-    
+        
     def executebuiltin(self, key, wait=False):
+        with self.kodiLocker():
+            xbmc.executebuiltin('%s'%(key),wait)
         self.log('executebuiltin, key = %s, wait = %s'%(key,wait))
-        xbmc.executebuiltin('%s'%(key),wait)
         return True
         
         
+    @contextmanager
+    def sendLocker(self, wait=0.1):
+        while not self.monitor.abortRequested(): #try and make kodi api thread safe / thread locks not working? todo debug.
+            if self.monitor.waitForAbort(wait) or xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)) == 'true': break
+            elif xbmcgui.Window(10000).getProperty('%s.sendLocker'%(ADDON_ID)) != 'true': break
+            else: log('sendLocker, avoiding collision')
+        xbmcgui.Window(10000).setProperty('%s.sendLocker'%(ADDON_ID),'true')
+        try: yield
+        finally: xbmcgui.Window(10000).setProperty('%s.sendLocker'%(ADDON_ID),'false')
+
+
+    def executeJSONRPC(self, command):
+        self.log('executeJSONRPC, command = %s'%(command))
+        with self.sendLocker():
+            return xbmc.executeJSONRPC(command)
+
+
 class Dialog:
     settings   = Settings()
     properties = Properties()
@@ -1238,6 +1219,7 @@ class Dialog:
         self.settings.dialog   = self
         self.settings.property = self.properties
         self.settings.builtin  = self.builtin
+        self.monitor           = self.builtin.monitor
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -1249,15 +1231,13 @@ class Dialog:
         self.properties.setPropertyBool('chkInfoMonitor',state)
         if state:
             self.properties.clrProperty('monitor.montiorList')
-            timerit(self.doInfoMonitor)(0.1)
+            timerit(self.doInfoMonitor)(0.001)
 
 
     def doInfoMonitor(self):
-        monitor = MONITOR()
-        while not monitor.abortRequested():
+        while not self.monitor.abortRequested():
             if not self.fillInfoMonitor(): break
-            elif monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000)): break
-        del monitor
+            elif self.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000)): break
             
 
     def fillInfoMonitor(self, type='ListItem'):
@@ -1349,7 +1329,7 @@ class Dialog:
                 self.close()
 
         if not self.properties.isRunning('qrDialog'):
-            with self.properties.setRunning('qrDialog'):
+            with self.properties.chkRunning('qrDialog'):
                 with self.builtin.busy_dialog():
                     imagefile = os.path.join(FileAccess.translatePath(TEMP_LOC),'%s.png'%(getMD5(str(url.split('/')[-1]))))
                     if not FileAccess.exists(imagefile):
@@ -1459,16 +1439,18 @@ class Dialog:
 
             def onInit(self):
                 log("DialogSelect: onInit")
+                #todo get list control, convert items to listitems, additems to list control.
                
             def onAction(self, act):
                 actionId = act.getId()
                 log('DialogSelect: onAction: actionId = %s'%(actionId))
                 if actionId in ACTION_PREVIOUS_MENU: self.close()
                 else: pass
-
-        dialogSelect = DialogSelect(DIALOG_SELECT, ADDON_PATH, "default")
-        dialogSelect.doModal()
-        del dialogSelect
+                
+        if not self.properties.isRunning('SELECT_DIALOG'):
+            dialogSelect = DialogSelect(DIALOG_SELECT, ADDON_PATH, "default")
+            dialogSelect.doModal()
+            del dialogSelect
         
 
     def selectDialog(self, items, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=SELECT_DELAY, multi=True, custom=False):
@@ -1694,7 +1676,7 @@ class Dialog:
             
         def getRule(params={}, rule={"field":"","operator":"","value":[]}):
             enumSEL = -1
-            while not monitor.abortRequested() and not enumSEL is None:
+            while not self.monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
                 enumSEL = self.selectDialog(enumLST,header="Select method",preselect=-1, multi=False)
                 if not enumSEL is None: rule.update({enumLST[enumSEL].getProperty('key'):({"field":field,"operator":operator,"value":value}[enumLST[enumSEL].getProperty('key')])(params,rule)})
@@ -1703,7 +1685,7 @@ class Dialog:
         def getRules(params={}):
             enumSEL = -1
             eparams = params.copy()
-            while not monitor.abortRequested() and not enumSEL is None:
+            while not self.monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),dumpJSON(params.get('rules',{}).get(key,[])),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key}) for key in ["and","or"]]
                 enumSEL = self.selectDialog(enumLST,header="Edit Rules",multi=False)
                 if not enumSEL is None:
@@ -1711,7 +1693,7 @@ class Dialog:
                         CONSEL  = -1
                         CONLKEY = enumLST[enumSEL].getProperty('key')
                         ruleLST = params.get('rules',{}).get(CONLKEY,[])
-                        while not monitor.abortRequested() and not CONSEL is None:
+                        while not self.monitor.abortRequested() and not CONSEL is None:
                             andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),dumpJSON(value),icon=DUMMY_ICON.format(text=str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
                             andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,props={'key':'add'}))
                             if len(ruleLST) > 0 and eparams != params: andLST.insert(1,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,props={'key':'save'}))
@@ -1730,7 +1712,7 @@ class Dialog:
 
         def getOrder(params={}):
             enumSEL = -1
-            while not monitor.abortRequested() and not enumSEL is None:
+            while not self.monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
                 enumLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,props={'key':'save'}))
                 enumSEL = self.selectDialog(enumLST,header="Edit Selection",preselect=-1,multi=False)
@@ -1751,8 +1733,7 @@ class Dialog:
         self.log('buildDXSP, path = %s, params = %s'%(path,params))
         
         enumSEL = -1
-        monitor = MONITOR()
-        while not monitor.abortRequested() and not enumSEL is None:
+        while not self.monitor.abortRequested() and not enumSEL is None:
             enumLST = [self.listitems.buildMenuListItem('Path',path,icon=ICON),self.listitems.buildMenuListItem('Order',dumpJSON(params.get('order',{})),icon=ICON),self.listitems.buildMenuListItem('Rules',dumpJSON(params.get('rules',{})),icon=ICON)]
             enumSEL = self.selectDialog(enumLST,header="Edit Dynamic Path", multi=False)
             if not enumSEL is None:

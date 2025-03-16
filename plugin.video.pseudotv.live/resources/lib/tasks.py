@@ -209,7 +209,7 @@ class Tasks():
 
 
     def chkUpdate(self):
-        ids = SETTINGS.getUpdateChannels()
+        ids = PROPERTIES.getUpdateChannels()
         if ids:
             channels = self.getChannels()
             channels = [citem for id in ids for citem in channels if citem.get('id') == id]
@@ -218,29 +218,29 @@ class Tasks():
 
 
     def chkChannels(self, channels: list=[]):
-        try:
-            if not channels:
-                channels = self.getChannels()
-                SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
-                PROPERTIES.setChannels(len(channels) > 0)
-                self.service.currentChannels = channels #update service channels
-                    
-            if len(channels) > 0:
-                complete, updated = Builder(service=self.service).build(channels)
-                self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
-                if complete:
-                    if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
-                    if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
-                    return True
-                else: self._que(self.chkChannels,3,channels)
-            elif PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
-        except Exception as e:
-            self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
-
+        complete = False
+        builder  = Builder(service=self.service)
+        if not channels:
+            channels = builder.getChannels()
+            SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
+            PROPERTIES.setChannels(len(channels) > 0)
+            self.service.currentChannels = channels #update service channels
+                
+        if len(channels) > 0:
+            complete, updated = builder.build(channels)
+            self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
+            if complete:
+                if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
+                if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
+            else: self._que(self.chkChannels,3,channels)
+        elif PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
+        del builder
+        return complete
+        
 
     def chkJSONQUE(self):
         if not PROPERTIES.isRunning('chkJSONQUE'):
-            with PROPERTIES.setRunning('chkJSONQUE'):
+            with PROPERTIES.chkRunning('chkJSONQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
                 params = queuePool.get('params',[])
                 for i in list(range(SETTINGS.getSettingInt('Page_Limit'))):
@@ -297,7 +297,9 @@ class Tasks():
 
     def chkAutoTune(self):
         self.log('chkAutoTune')
-        try: SETTINGS.setAutotuned(Autotune()._runTune())
+        try: 
+            SETTINGS.setAutotuned(Autotune()._runTune())
+            PROPERTIES.setEpochTimer('chkChannels')
         except Exception as e: self.log('chkAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
     
@@ -329,8 +331,9 @@ class Tasks():
     def chkChannelChange(self, channels=[]):
         nChannels = self.getChannels()
         if channels != nChannels:
-            self.log('chkChannelChange, channels changed %s => %s: queuing chkChannels'%(len(channels),len(nChannels)))
-            self._que(self.chkChannels,3,diffLSTDICT(channels,nChannels))
+            difference = diffLSTDICT(channels,nChannels)
+            self.log('chkChannelChange, channels changed %s => %s: queuing (%s) chkChannels'%(len(channels),len(nChannels),len(difference)))
+            self._que(self.chkChannels,3,difference)
             return nChannels
         return channels
 

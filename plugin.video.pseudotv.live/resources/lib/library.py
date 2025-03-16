@@ -61,8 +61,8 @@ class Library:
                              "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                              "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                              "Mixed"        :{'func':self.getMixed       ,'life':datetime.timedelta(minutes=FIFTEEN)},
-                             "Recommended"  :{'func':self.getRecommend   ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
-                             "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
+                             "Recommended"  :{'func':self.getRecommend   ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                             "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                              "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)}}
              
 
@@ -119,12 +119,12 @@ class Library:
             entry.update(item)
             return entry
             
-        def _fill(type, func):
+        def __fill(type, func):
             try: items = func()
             except Exception as e:
-                self.log("_fill, %s failed! %s"%(type,e), xbmc.LOGERROR)
+                self.log("__fill, %s failed! %s"%(type,e), xbmc.LOGERROR)
                 items = []
-            self.log('_fill, returning %s (%s)'%(type,len(items)))
+            self.log('__fill, returning %s (%s)'%(type,len(items)))
             return items
 
         if force: #clear library cache.
@@ -146,15 +146,15 @@ class Library:
                 self.service.monitor.waitForAbort(SUSPEND_TIMER)
                 continue
             else:
-                msg  = LANGUAGE(30014)
                 func = self.libraryFUNCS[type]['func']
                 cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
                 items = self.cache.get(cacheName)
-                if not items: msg = LANGUAGE(32022)
+                if not items: msg = LANGUAGE(30014) #Parsing
+                else:         msg = LANGUAGE(32022) #Updating
                 self.parserMSG    = AUTOTUNE_TYPES[idx]
                 self.parserCount  = int(idx*100//len(AUTOTUNE_TYPES))
                 self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
-                if not items: items = _fill(type, func)
+                if not items: items = __fill(type, func)
                 if items: self.cache.set(cacheName, items, expiration=self.libraryFUNCS[type]['life'])
                 self.setLibrary(type, [__update(type,item) for item in items])
         
@@ -200,8 +200,7 @@ class Library:
         tvGenres    = self.getTVGenres()
         movieGenres = self.getMovieGenres()
         for tv in [tv for tv in tvGenres for movie in movieGenres if tv.get('name','').lower() == movie.get('name','').lower()]:
-            rules = {"800":{"values":{"0":tv.get('name')}}}
-            MixedGenreList.append({'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createGenreMixedPlaylist(tv.get('name')),'logo':tv.get('logo'),'rules':rules})
+            MixedGenreList.append({'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createGenreMixedPlaylist(tv.get('name')),'logo':tv.get('logo'),'rules':{"800":{"values":{"0":tv.get('name')}}}})
         self.log('getMixedGenres, genres = %s' % (len(MixedGenreList)))
         return sorted(MixedGenreList,key=itemgetter('name'))
     
@@ -217,7 +216,7 @@ class Library:
 
 
     def getPVRRecordings(self):
-        recordList = []
+        recordList    = []
         json_response = self.jsonRPC.getPVRRecordings()
         paths = [item.get('file') for idx, item in enumerate(json_response) if item.get('label','').endswith('(%s)'%(ADDON_NAME))]
         if len(paths) > 0: recordList.append({'name':LANGUAGE(32003),'type':"Mixed",'path':[paths],'logo':self.resources.getLogo({'name':LANGUAGE(32003),'type':"Mixed"})})
@@ -226,7 +225,7 @@ class Library:
 
 
     def getPVRSearches(self):
-        searchList = []
+        searchList    = []
         json_response = self.jsonRPC.getPVRSearches()
         for idx, item in enumerate(json_response):
             if not item.get('file'): continue
@@ -239,10 +238,10 @@ class Library:
         PlayList = []
         types    = ['video','mixed','music']
         for type in types:
-            results = self.jsonRPC.getDirectory(param={"directory":"special://profile/playlists/%s"%(type)})
-            for idx, result in enumerate(results.get('files',[])):
+            results = self.jsonRPC.getSmartPlaylists(type)
+            for idx, result in enumerate(results):
                 if not self.parserDialog is None:
-                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s (%s): %s'%(self.parserMSG,type.title(),int((idx+1)*100//len(results.get('files',[]))))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s (%s): %s'%(self.parserMSG,type.title(),int((idx+1)*100//len(results)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
                 
                 if not result.get('label'): continue
                 logo = result.get('thumbnail')

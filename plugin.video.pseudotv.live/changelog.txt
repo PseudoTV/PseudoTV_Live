@@ -1,4 +1,6 @@
 v.0.5.9
+- Miscellaneous tweaks & improvements.
+- Added JSONRPC query timeout to Misc. settings (only viewable when debugging is enabled). 
 - Removed iSpot Adverts and IMDB Trailers settings. Users can manual add these sources as needed via. Adv. Channel rules.
 - Introduced new parsing procedures for reading `pvr://` directories.
   - This enhancement aims to resolve playback issues with PVR recordings and newly added saved searches.

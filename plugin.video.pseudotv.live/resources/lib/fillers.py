@@ -43,7 +43,7 @@ class Fillers:
         items = list(self.builder.bctTypes.items())
         for ftype, values in items:
             if not values.get('enabled',False): continue
-            if self.builder.bctTypes.get(ftype,{}).get('incKODI',False):  self.builder.bctTypes.get(ftype,{})["items"] = mergeDictLST(self.builder.bctTypes.get(ftype,{}).get("items",[]), self.builder.kodiTrailers())
+            if self.builder.bctTypes.get(ftype,{}).get('incKODI',False):  self.builder.bctTypes.get(ftype,{})["items"] = mergeDictLST(self.builder.bctTypes.get(ftype,{}).get("items",[]), self.builder.getTrailers())
             for id   in values["sources"].get("ids",[]):   values['items'] = mergeDictLST(values.get('items',{}),self.buildSource(ftype,id))   #parse resource packs
             for path in values["sources"].get("paths",[]): values['items'] = mergeDictLST(values.get('items',{}),self.buildSource(ftype,path)) #parse vfs paths
             values['items'] = lstSetDictLst(values['items'])
@@ -91,6 +91,9 @@ class Fillers:
         mpaa = mpaa.replace('TV-Y','G').replace('TV-Y7','G').replace('TV-G','G').replace('NA','NR').replace('TV-PG','PG').replace('TV-14','PG-13').replace('TV-MA','R')
         return mpaa
 
+#todo always add a bumper for pseudo/kodi (based on build ver.)
+# resource.videos.bumpers.kodi
+# resource.videos.bumpers.pseudotv
 
     def getSingle(self, type, keys=['resources'], chance=False):
         items  = []
@@ -148,14 +151,14 @@ class Fillers:
                     for item in setDictLST(preFileList):
                         if (item.get('duration') or 0) > 0:
                             runtime += item.get('duration')
-                            self.log('injectBCTs, adding pre-roll %s - %s'%(item.get('duration'),item.get('file')))
+                            self.log('[%s] injectBCTs, adding pre-roll %s - %s'%(citem.get('id'),item.get('duration'),item.get('file')))
                             if self.builder.pDialog: self.builder.pDialog = DIALOG.updateProgress(self.builder.pCount, self.builder.pDialog, message='Filling Pre-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
                             item.update({'title':'Pre-Roll','episodetitle':item.get('label'),'genre':['Pre-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
                             nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
 
                 # original media
                 nfileList.append(fileItem)
-                self.log('injectBCTs, adding media %s - %s'%(fileItem.get('duration'),fileItem.get('file')))
+                self.log('[%s] injectBCTs, adding media %s - %s'%(citem.get('id'),fileItem.get('duration'),fileItem.get('file')))
                 
                 # post roll - adverts/trailers
                 postFileList = []
@@ -164,24 +167,24 @@ class Fillers:
                     postFillRuntime = diffRuntime(runtime) if self.builder.bctTypes[ftype]['auto'] else self.builder.bctTypes[ftype]['max']
                     if self.builder.bctTypes[ftype].get('enabled',False) and chtype not in postIgnoreTypes:
                         postFileList.extend(self.getMulti(ftype, [chname, fgenre], (PAGE_LIMIT * 2) if self.builder.bctTypes[ftype]['auto'] else self.builder.bctTypes[ftype]['min'],chanceBool(self.builder.bctTypes[ftype].get('chance',0))))
-                    postFillCount = len(randomShuffle(postFileList))
 
                 if len(postFileList) > 0:
-                    self.log('injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
-                    while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and postFillCount > 0:
-                        if len(postFileList) == 0: break
+                    postFileList = len(randomShuffle(postFileList))
+                    self.log('[%s] injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(citem.get('id'),runtime, postFillRuntime,len(postFileList)))
+                    while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and len(postFileList) > 0:
+                        if self.builder.service.monitor.waitForAbort(0.001): break
+                        elif len(postFileList) == 0: break
                         else:
                             item = postFileList.pop(0)
                             if (item.get('duration') or 0) == 0: continue
                             elif postFillRuntime <= 0: break
                             elif postFillRuntime >= item.get('duration'):
                                 postFillRuntime -= item.get('duration')
-                                self.log('injectBCTs, adding post-roll %s - %s'%(item.get('duration'),item.get('file')))
+                                self.log('[%s] injectBCTs, adding post-roll %s - %s'%(citem.get('id'),item.get('duration'),item.get('file')))
                                 if self.builder.pDialog: self.builder.pDialog = DIALOG.updateProgress(self.builder.pCount, self.builder.pDialog, message='Filling Post-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
                                 item.update({'title':'Post-Roll','episodetitle':item.get('label'),'genre':['Post-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
                                 nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
-                            elif postFillRuntime < item.get('duration'):
-                                postFillCount -= 1
-                                postFileList.append(item)
-                        if (self.builder.bctTypes['adverts']['auto'] and self.builder.bctTypes['trailers']['auto']): self.log('injectBCTs, unused post roll runtime %s'%(postFillRuntime))
+                            elif postFillRuntime < item.get('duration'): postFileList.append(item)
+                        if (self.builder.bctTypes['adverts']['auto'] and self.builder.bctTypes['trailers']['auto']): self.log('[%s] injectBCTs, unused post roll runtime %s'%(citem.get('id'),postFillRuntime))
+        self.log('[%s] injectBCTs, finished'%(citem.get('id')))
         return nfileList

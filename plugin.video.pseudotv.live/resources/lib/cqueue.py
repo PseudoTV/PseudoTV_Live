@@ -71,7 +71,7 @@ class CustomQueue:
         self.log("__run, func = %s, executor = %s"%(func.__name__,self.executor))
         try:
             if self.executor: return self.pool.executor(func, None, *args, **kwargs)
-            else:            return func(*args, **kwargs)
+            else:             return func(*args, **kwargs)
         except Exception as e: self.log("__run, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
                 
@@ -119,7 +119,7 @@ class CustomQueue:
         self.log("__pop, starting")
         self.executor = SETTINGS.getSettingBool('Enable_Executors')
         while not self.service.monitor.abortRequested():
-            if self.service.monitor.waitForAbort(0.1): 
+            if self.service.monitor.waitForAbort(0.001): 
                 self.log("__pop, waitForAbort")
                 break
             elif self.service._interrupt(): 
@@ -138,9 +138,7 @@ class CustomQueue:
                     break
                 else:
                     try: priority, _, package = heapq.heappop(self.min_heap)
-                    except Exception as e:
-                        self.log("__pop, heappop failed! %s\nmin_heap = %s"%(e,self.min_heap), xbmc.LOGERROR)
-                        continue
+                    except Exception as e: continue
                     self.qsize -= 1
                     self.__run(package[0],*package[1],**package[2])
                     

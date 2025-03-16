@@ -102,7 +102,7 @@ class Plugin:
 
 
     def _matchChannel(self, chname: str, id: str, radio: bool=False):
-        self.log('_matchChannel, id = %s, chname = %s, radio = %s'%(id,chname,radio))
+        self.log('[%s] _matchChannel, chname = %s, radio = %s'%(id,chname,radio))
         def __match():
             channels = self.jsonRPC.getPVRChannels(radio)
             for channel in channels:
@@ -110,7 +110,7 @@ class Plugin:
                     for key in ['broadcastnow', 'broadcastnext']:
                         if decodePlot(channel.get(key,{}).get('plot','')).get('citem',{}).get('id') == id:
                             channel['broadcastnext'] = [channel.get('broadcastnext',{})]
-                            self.log('_matchChannel: __match, id = %s, found pvritem = %s'%(id,channel))
+                            self.log('[%s] _matchChannel: __match, found pvritem = %s'%(id,channel))
                             return channel
         
         def __extend(pvritem: dict={}) -> dict:
@@ -141,7 +141,7 @@ class Plugin:
 
 
     def getPausedItems(self, name, chid):
-        self.log('getPausedItems, id = %s'%(chid))
+        self.log('[%s] getPausedItems'%(chid))
         def __buildfItem(idx, item, seekTHD):
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
@@ -187,7 +187,7 @@ class Plugin:
 
 
     def getPVRItems(self, name: str, chid: str) -> list:
-        self.log('getPVRItems, id = %s, chname = %s'%(chid,name))
+        self.log('[%s] getPVRItems, chname = %s'%(chid,name))
         def __buildfItem(idx, item):
             sysInfo = self.sysInfo.copy()
             nowitem = decodePlot(item.get('plot',''))
@@ -226,7 +226,7 @@ class Plugin:
                     file  = self.sysInfo.get('fitem',{}).get('file') if self.sysInfo.get('fitem') else self.sysInfo.get('vid')
                     if file == fitem.get('file') and self.sysInfo.get('citem',{}).get('id') == fitem.get('citem',{}).get('id',str(random.random())):
                         found = True
-                        self.log('getPVRItems, id = %s found matching fitem'%(chid))
+                        self.log('[%s] getPVRItems found matching fitem'%(chid))
                         del nextitems[0:pos] # start array at correct position
                         break
                         
@@ -236,7 +236,7 @@ class Plugin:
                     ntime = datetime.datetime.fromtimestamp(float(self.sysInfo.get('now')))
                     if ntime >= strpTime(nextitem.get('starttime')) and ntime < strpTime(nextitem.get('endtime')) and chid == fitem.get('citem',{}).get('id',str(random.random())):
                         found = True
-                        self.log('getPVRItems, id = %s found matching starttime'%(chid))
+                        self.log('[%s] getPVRItems found matching starttime'%(chid))
                         del nextitems[0:pos] # start array at correct position
                         break
                 
@@ -257,11 +257,11 @@ class Plugin:
                 return [__buildfItem(idx, item) for idx, item in enumerate(nextitems)]
             else: DIALOG.notificationDialog(LANGUAGE(32164))
         else: DIALOG.notificationDialog(LANGUAGE(32000))
-        return []
+        return [xbmcgui.ListItem()]
     
 
     def playTV(self, name: str, chid: str):
-        self.log('playTV, id = %s'%(chid))
+        self.log('[%s] playTV'%(chid))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             if self.sysInfo.get('fitem') and (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')): #-> live
                 liz = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo['fitem']))
@@ -272,32 +272,37 @@ class Plugin:
         
 
     def playLive(self, name: str, chid: str, vid: str):
-        self.log('playLive, id = %s, name = %s'%(chid, name))
+        self.log('[%s] playLive, name = %s'%(chid, name))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
-            if self.sysInfo.get('fitem'):#-> live playback from UI incl. listitem
-                if self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0'): #-> live
-                    liz = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo['fitem']))
-                    liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-                    self._resolveURL(True, liz)
-                else: #-> VOD called by non-current EPG cell. (Unreliable during playback)
-                    if (self.sysInfo.get('start') <= self.sysInfo.get('now')) and (self.sysInfo.get('now') < self.sysInfo.get('stop')):
-                        PROPERTIES.setPropTimer('chkPVRRefresh')
-                        DIALOG.notificationDialog('%s %s\nTry Clearing Kodi PVR Guidedata'%(LANGUAGE(32164).replace('!',':'),self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
-                    url = self.sysInfo['fitem'].get('catchup-id')
-                    self.log('playLive, id = %s, VOD = %s'%(chid, url))
-                    self.sysInfo['vid'] = self.sysInfo['fitem'].get('file',url)
-                    DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
-                    timerit(BUILTIN.executebuiltin)(0.5,['PlayMedia(%s)'%(url)])
-                    self._resolveURL(False, xbmcgui.ListItem())
-            else:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
+            if self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0'):#-> live playback from UI incl. listitem
+                liz = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo['fitem']))
+                liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+                self._resolveURL(True, liz)
+            elif self.sysInfo.get('fitem'):#-> VOD called by non-current EPG cell. (Unreliable during playback)  
+                # self.sysInfo['mode'] = 'vod'
+                self.sysInfo['name'] = self.sysInfo['fitem'].get('label')
+                self.sysInfo['vid']  = self.sysInfo['fitem'].get('file')
+                self.sysInfo["seek"] = -1
+                self.sysInfo["progresspercentage"] = -1
+                self.log('[%s] playLive, VOD = %s'%(chid, self.sysInfo['vid']))
+                DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['name']))
+                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+                liz.setProperty("IsPlayable","true")
+                liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+                timerit(PLAYER().play)(1.0,[self.sysInfo['vid'],liz,True])
+                self._resolveURL(False, liz)
+            elif vid:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
+                self.log('[%s] playLive, VID = %s'%(chid, vid))
                 liz = self._setResume(xbmcgui.ListItem(name,path=vid))
                 liz.setProperty("IsPlayable","true")
                 liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
                 self._resolveURL(True, liz)
+            else:
+                self.playTV(name, chid)
 
 
     def playBroadcast(self, name: str, chid: str, vid: str): #-> catchup-source
-        self.log('playBroadcast, id = %s'%(chid))
+        self.log('[%s] playBroadcast'%(chid))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             if self.sysInfo.get('fitem'): #-> catchup-id called via ui "play programme"
                 liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
@@ -313,17 +318,22 @@ class Plugin:
     def playVOD(self, title: str, vid: str): #-> catchup-id
         self.log('playVOD, title = %s, vid = %s'%(title,vid))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
-            if self.sysInfo.get('fitem') and self.sysInfo.get('mode','').lower() != 'dvr': #-> live playback from UI incl. listitem/widget
-                liz = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-            else: #-> recordings, non UI callbacks
-                liz = self._setResume(xbmcgui.ListItem(title,path=vid))
-                liz.setProperty("IsPlayable","true")
+            liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+            liz.setProperty("IsPlayable","true")
+            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            self._resolveURL(True, liz)
+
+
+    def playDVR(self, title: str, vid: str): #-> catchup-id
+        self.log('playDVR, title = %s, vid = %s'%(title,vid))
+        with self.preparingPlayback(), PROPERTIES.suspendActivity():
+            liz = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self._resolveURL(True, liz)
 
 
     def playRadio(self, name: str, chid: str, vid: str):
-        self.log('playRadio, id = %s'%(chid))
+        self.log('[%s] playRadio'%(chid))
         def __buildfItem(idx, item: dict={}): return LISTITEMS.buildItemListItem(item, 'music')
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             items = randomShuffle(self.getRadioItems(name, chid, vid))
@@ -333,7 +343,7 @@ class Plugin:
 
 
     def playPlaylist(self, name: str, chid: str):
-        self.log('playPlaylist, id = %s'%(chid))
+        self.log('[%s] playPlaylist'%(chid))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             listitems = self.getPVRItems(name, chid)
             if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems),windowed=True)
@@ -341,7 +351,7 @@ class Plugin:
 
 
     def playPaused(self, name: str, chid: str):
-        self.log('playPaused, id = %s'%(chid))
+        self.log('[%s] playPaused'%(chid))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             listitems = self.getPausedItems(name, chid)
             if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems),windowed=True)
@@ -351,9 +361,10 @@ class Plugin:
     def playCheck(self, oldInfo: dict={}) -> bool:
         def _chkPath():
             status = True
-            if       self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): status = hasAddon(self.sysInfo['vid'])
+            if   oldInfo.get('isPlaylist'): status = True
+            elif self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): status = hasAddon(self.sysInfo['vid'])
             elif not self.sysInfo.get('vid','').startswith(tuple(WEB_TYPES)): status = FileAccess.exists(self.sysInfo['vid'])
-            self.log('playCheck _chkPath, valid = %s\npath %s'%(status,self.sysInfo.get('vid')))
+            self.log('[%s] playCheck _chkPath, valid = %s\npath %s'%(self.sysInfo.get('citem',{}).get('id'),status,self.sysInfo.get('vid')))
             if not status: DIALOG.notificationDialog(LANGUAGE(32167),show=self.debugEnabled)
             return status
             
@@ -364,32 +375,32 @@ class Plugin:
                     self.sysInfo['runtime']   = oldInfo.get('runtime',0)       #carry over previous player runtime
                     
                     if self.sysInfo['now'] >= self.sysInfo['stop']:
-                        self.log('playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo['now'],self.sysInfo['stop']))
+                        self.log('[%s] playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo['now'],self.sysInfo['stop']))
                         DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']),show=self.debugEnabled)
                         return False
                     elif self.sysInfo['runtime'] > 0 and self.sysInfo['duration'] > self.sysInfo['runtime']:
-                        self.log('playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
+                        self.log('[%s] playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo['duration'],self.sysInfo['runtime']))
                         DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['runtime'],self.sysInfo['duration']),show=self.debugEnabled)
                         return False
                     elif self.sysInfo['seek'] >= oldInfo.get('runtime',self.sysInfo['duration']):
-                        self.log('playCheck _chkLoop, failed! Seeking to a position (%s) past media runtime (%s).'%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
+                        self.log('[%s] playCheck _chkLoop, failed! Seeking to a position (%s) past media runtime (%s).'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
                         DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])),show=self.debugEnabled)
                         return False
                     elif self.sysInfo['seek'] == oldInfo.get('seek',self.sysInfo['seek']):
-                        self.log('playCheck _chkLoop, failed! Seeking to same position.')
+                        self.log('[%s] playCheck _chkLoop, failed! Seeking to same position.'%(self.sysInfo.get('citem',{}).get('id')))
                         DIALOG.notificationDialog("Playback Failed: Seeking to same position",show=self.debugEnabled)
                         return False
             return True
             
         status = _chkPath()
         if status: status = _chkLoop()
-        self.log('playCheck [%s], status = %s\nsysInfo=%s\noldInfo = %s'%(self.sysInfo.get('citem',{}).get('id'),status, self.sysInfo,oldInfo))
+        self.log('[%s] playCheck, status = %s\nsysInfo=%s\noldInfo = %s'%(self.sysInfo.get('citem',{}).get('id'),status, self.sysInfo,oldInfo))
         return True
         
         
     def playError(self):
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
-        self.log('playError, id = %s, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo.get('playcount'),self.sysInfo))
+        self.log('[%s] playError, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo.get('playcount'),self.sysInfo))
         self._resolveURL(False, xbmcgui.ListItem()) #release pending playback
         if self.sysInfo.get('playcount',0) == 0:
             DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',0)))

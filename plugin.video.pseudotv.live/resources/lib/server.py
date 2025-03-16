@@ -66,7 +66,7 @@ class Discovery:
 
     def _start(self):
         if not PROPERTIES.isRunning('Discovery'):
-            with PROPERTIES.setRunning('Discovery'):
+            with PROPERTIES.chkRunning('Discovery'):
                 zconf = Zeroconf()
                 zcons = self.multiroom._getStatus()
                 self.log("_start, Multicast DNS Service Discovery (%s)"%(ZEROCONF_SERVICE))
@@ -120,7 +120,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             
         self.log('do_POST, incoming path = %s'%(self.path))
         if not PROPERTIES.isRunning('do_POST'):
-            with PROPERTIES.setRunning('do_POST'):
+            with PROPERTIES.chkRunning('do_POST'):
                 if self.path.lower().endswith('.json'):
                     try:    incoming = loadJSON(self.rfile.read(int(self.headers['content-length'])).decode())
                     except: incoming = {}
@@ -142,7 +142,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.log('do_GET, incoming path = %s'%(self.path))
         if not PROPERTIES.isRunning('do_GET'):
-            with PROPERTIES.setRunning('do_GET'):
+            with PROPERTIES.chkRunning('do_GET'):
                 path = None
                 if self.path.lower() == '/%s'%(BONJOURFLE.lower()):
                     path    = self.path.lower()
@@ -191,7 +191,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                                 self._set_headers(content)
                                 while not self.monitor.abortRequested():
                                     chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                                    if not chunk or self.monitor.waitForAbort(0.1): break
+                                    if not chunk or self.monitor.waitForAbort(0.001): break
                                     self.send_header('content-length', len(chunk))
                                     self.wfile.write(chunk)
                         self.wfile.close()
@@ -246,7 +246,7 @@ class HTTP:
 
     def _start(self):
         try:
-            if self.service.monitor.waitForAbort(0.1): self._stop()
+            if self.service.monitor.waitForAbort(0.001): self._stop()
             elif not self.isRunning:
                 self.isRunning = True
                 IP  = SETTINGS.getIP()

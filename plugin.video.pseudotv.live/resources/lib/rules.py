@@ -107,7 +107,7 @@ class RulesList:
                         ruleList.update({str(rule.myId):ruleInstance})
                     elif append: ruleList.update({str(rule.myId):rule.copy()})
                 except Exception as e: log('loadRules: _load failed! %s\nchrule = %s'%(e,chrule), xbmc.LOGERROR)
-            self.log('loadRules, id = %s, append = %s, incRez = %s, rule myIds = %s'%(citem.get('id'),append, incRez,list(ruleList.keys())))
+            self.log('[%s] loadRules, append = %s, incRez = %s, rule myIds = %s'%(citem.get('id'),append, incRez,list(ruleList.keys())))
             rules.update({citem.get('id'):ruleList})
             
         rules = dict()
@@ -127,12 +127,12 @@ class RulesList:
         
     def runActions(self, action, citem={}, parameter=None, inherited=None):
         if inherited is None: inherited = self
-        self.log("runActions, %s action = %s, id = %s"%(inherited.__class__.__name__,action,citem.get('id')))
+        self.log("[%s] runActions, %s action = %s"%(citem.get('id'),inherited.__class__.__name__,action))
         rules = self.loadRules([citem]).get(citem.get('id',''))
         if not rules: rules = (self.loadRules([citem]).get(citem.get('id','')) or {})
         for myId, rule in list(sorted(rules.items())):
             if action in rule.actions:
-                self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
+                self.log("[%s] runActions, %s performing channel rule: %s"%(citem.get('id'),inherited.__class__.__name__,rule.name))
                 parameter = rule.runAction(action, citem, parameter, inherited)
         return parameter
 
@@ -220,7 +220,7 @@ class BaseRule:
 
 
     def validateDaysofWeekBox(self, optionindex):
-        log("validateDaysofWeekBox")
+        self.log("validateDaysofWeekBox")
         daysofweek = "UMTWHFS"
         newstr = ''
         for day in daysofweek:
@@ -231,12 +231,12 @@ class BaseRule:
 
     def validateRange(self, optionindex, minimum, maximum, default):
         if int(self.optionValues[optionindex]) < minimum:
-            log("Invalid minimum range")
+            self.log("Invalid minimum range")
             self.dialog.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
             self.optionValues[optionindex] = default
             return
         elif int(self.optionValues[optionindex]) > maximum:
-            log("Invalid maximum range")
+            self.log("Invalid maximum range")
             self.dialog.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
             self.optionValues[optionindex] = default
             return
@@ -255,36 +255,36 @@ class BaseRule:
 
     
     def onActionToggleBool(self, optionindex):
-        log("onActionToggleBool")
+        self.log("onActionToggleBool")
         self.optionValues[optionindex] = not self.optionValues[optionindex]
 
 
     def onActionFunction(self, optionindex):
-        log("onActionFunction")
+        self.log("onActionFunction")
         value = self.selectBoxOption[optionindex]()
         if value: self.optionValues[optionindex] = value
 
 
     def onActionPickColor(self, optionindex, colorlist=[], colorfile=""):
-        log("onActionPickColor")
+        self.log("onActionPickColor")
         value = self.dialog.colorDialog(colorlist, self.optionValues[optionindex], colorfile, self.name)
         if value: self.optionValues[optionindex] = value
         
 
     def onActionTextBox(self, optionindex):
-        log("onActionTextBox")
+        self.log("onActionTextBox")
         value = self.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
         if value: self.optionValues[optionindex] = value
 
 
     def onActionDigitBox(self, optionindex):
-        log("onActionDigitBox")
+        self.log("onActionDigitBox")
         info =  self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None: self.optionValues[optionindex] = info
 
 
     def onActionTimeBox(self, optionindex):
-        log("onActionTimeBox")
+        self.log("onActionTimeBox")
         info = self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None:
             if info[0] == ' ': info = info[1:]
@@ -293,7 +293,7 @@ class BaseRule:
 
 
     def onActionSelect(self, optionindex, header=None, preselect=None, useDetails=False, autoclose=SELECT_DELAY, multi=False):
-        log("onActionSelect")
+        self.log("onActionSelect")
         if header is None:
             if multi: header = '%s - %s'%(ADDON_NAME,LANGUAGE(32017)%(''))
             else:     header = '%s - %s'%(ADDON_NAME,LANGUAGE(32223)%(''))
@@ -314,13 +314,13 @@ class BaseRule:
                 
           
     def onActionBrowse(self, optionindex, type=0, heading=ADDON_NAME, shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, options=[], exclude=[]):
-        log("onActionBrowse")
+        self.log("onActionBrowse")
         info = self.dialog.browseSources(type, heading, self.optionValues[optionindex], shares, mask, useThumbs, treatAsFolder, multi, monitor, options, exclude)
         if info is not None: self.optionValues[optionindex] = info 
     
     
     def onActionMultiBrowse(self, optionindex, header=ADDON_NAME, exclude=[], monitor=True):
-        log("onActionMultiBrowse")
+        self.log("onActionMultiBrowse")
         info = self.dialog.multiBrowse(self.optionValues[optionindex], header, exclude, monitor)
         if info is not None: self.optionValues[optionindex] = info 
 
@@ -1567,12 +1567,12 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             
     def _getResume(self, id):
         resume = (SETTINGS.getCacheSetting('resumeChannel.%s'%(id), json_data=True) or {"idx":0,"position":0.0,"total":0.0,"file":""})
-        self.log('_getResume, id = %s, resume = %s'%(id,resume))
+        self.log('[%s] _getResume, resume = %s'%(id,resume))
         return resume
 
 
     def _setResume(self, id, resume: dict={"idx":0,"position":0.0,"total":0.0,"file":""}):
-        self.log('_setResume, id = %s, resume = %s'%(id, SETTINGS.setCacheSetting('resumeChannel.%s'%(id),resume, json_data=True)))
+        self.log('[%s] _setResume, resume = %s'%(id, SETTINGS.setCacheSetting('resumeChannel.%s'%(id),resume, json_data=True)))
 
 
     def _getPosition(self, id):
@@ -1587,7 +1587,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
 
     def _getFileList(self, id):
         idx = self._getPosition(id)
-        self.log('_getFileList, id = %s, idx = %s'%(id,idx))
+        self.log('[%s] _getFileList, idx = %s'%(id,idx))
         try:
             fileList = SETTINGS.getCacheSetting('pausedFileList.%s'%(id), json_data=True)[idx:]
             self._setPosition(id) #reset idx, keep resume
@@ -1595,12 +1595,12 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             fileList = []
             self._setResume(id) #reset all
         finally: 
-            self.log('_getFileList, fileList = %s, resetting position to 0, resume = %s'%(len(fileList),self._getResume(id)))
+            self.log('[%s] _getFileList, fileList = %s, resetting position to 0, resume = %s'%(id, len(fileList),self._getResume(id)))
             return self._setFileList(id, fileList)
             
             
     def _setFileList(self, id, fileList: list=[]):
-        self.log('_setFileList, id = %s, fileList = %s'%(id,len(fileList)))
+        self.log('[%s] _setFileList, fileList = %s'%(id,len(fileList)))
         return SETTINGS.setCacheSetting('pausedFileList.%s'%(id), fileList, json_data=True)
         
 
@@ -1615,7 +1615,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
         
         
     def _buildSchedule(self, citem, fileList, builder):     
-        self.log('_buildSchedule, id = %s, fileList = %s'%(citem.get('id'),len(fileList)))
+        self.log('[%s] _buildSchedule, fileList = %s'%(citem.get('id'),len(fileList)))
         return builder.buildCells(citem, duration=self._getTotDuration(fileList), entries=1, 
                                   info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
                                         "episodetitle":'Updated: %s'%(datetime.datetime.fromtimestamp(time.time()).strftime(DTJSONFORMAT)),
@@ -1667,7 +1667,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
                     self.log("runAction, restoring last resume point = %s"%(resume))
                     item['resume'] = resume
                 self.storedValues[1].insert(0,item)
-                if self._getTotDuration(self.storedValues[1]) < (MIN_GUIDEDAYS * 86400) : SETTINGS.setUpdateChannels(citem.get('id'))
+                if self._getTotDuration(self.storedValues[1]) < (MIN_GUIDEDAYS * 86400) : PROPERTIES.setUpdateChannels(citem.get('id'))
                 return self.storedValues[1]
             return []
                                             

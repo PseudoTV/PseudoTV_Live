@@ -24,7 +24,7 @@ from plugin    import Plugin
 def run(sysARG, fitem: dict={}, nitem: dict={}):
     with BUILTIN.busy_dialog():
         params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-        mode   = (params.get("mode")  or 'guide')
+        mode = (params.get("mode")  or 'guide')
         params['fitem']      = fitem
         params['nitem']      = nitem
         params['vid']        = decodeString(params.get("vid",''))
@@ -43,7 +43,8 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
             elif params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
             elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
             else:                               threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
-        elif mode in ['vod','dvr']:             threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
+        elif mode == 'vod':                     threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
+        elif mode == 'dvr':                     threadit(Plugin(sysARG, sysInfo=params).playDVR)(params["title"],params["vid"])
         elif mode == 'resume':                  threadit(Plugin(sysARG, sysInfo=params).playPaused)(params["name"],params["chid"])
         elif mode == 'broadcast':               threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
         elif mode == 'radio':                   threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])

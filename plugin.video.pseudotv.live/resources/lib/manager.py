@@ -596,7 +596,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     items = self.jsonRPC.walkFileDirectory(path, media, depth=5, retItem=True)
                 
                 for idx, dir in enumerate(items):
-                    if self.monitor.waitForAbort(0.1): break
+                    if self.monitor.waitForAbort(0.001): break
                     else:
                         item = random.choice(items.get(dir,[]))
                         dia  = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path','%s...'%(str(dir)[:48]),'%s...'%(str(item.get('file',''))[:48])))
@@ -660,7 +660,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             return fileList, round(abs(end_time-start_time),2)
             
         if not PROPERTIES.isRunning('previewChannel'):
-            with PROPERTIES.setRunning('previewChannel'), self.toggleSpinner():
+            with PROPERTIES.chkRunning('previewChannel'), self.toggleSpinner():
                 listitems = []
                 fileList, run_time = __fileList(citem)
                 if not isinstance(fileList,list) and not fileList: DIALOG.notificationDialog('%s or\n%s'%(LANGUAGE(32030),LANGUAGE(32000)))
@@ -867,7 +867,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     elif self.channels.setChannels(channels): #save changes
                         self.resetPagination(changes) #clear pagination cache
                         SETTINGS.setResetChannels(ids) #clear guidedata
-                        SETTINGS.setUpdateChannels(ids) #update channel meta.
+                        PROPERTIES.setUpdateChannels(ids) #update channel meta.
         self.madeChanges = False
         self.closeManager()
             

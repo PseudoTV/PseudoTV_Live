@@ -25,8 +25,8 @@ from resources import Resources
 class Background(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.overlay   = kwargs.get('overlay', None)
-        self.sysInfo   = self.overlay.player.sysInfo.copy()
+        self.player    = kwargs.get('player', None)
+        self.sysInfo   = kwargs.get('sysInfo', self.player.sysInfo)
         self.citem     = self.sysInfo.get('citem',{})
         self.fitem     = self.sysInfo.get('fitem',{})
         self.nitem     = self.sysInfo.get('nitem',{})
@@ -38,21 +38,26 @@ class Background(xbmcgui.WindowXMLDialog):
         self.nextTitle = self.nitem.get('showlabel', BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
         self.onNow     = '%s on %s'%(self.nowTitle,self.chname) if self.chname not in validString(self.nowTitle) else self.fitem.get('showlabel',self.nowTitle)
         self.onNext    = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),self.nextTitle)
-        
-        
+
+
     def onInit(self):
         try:
-            log("Background: onInit")
+            log("Background: onInit")     
+            self.window_h, self.window_w = (self.getHeight(), self.getWidth())
             self.getControl(40004).setImage(COLOR_FANART if self.land == FANART else self.land, useCache=True)
             self.getControl(40003).setText('%s %s[CR]%s %s'%(LANGUAGE(32104),self.onNow,LANGUAGE(32116),self.onNext))
             self.getControl(40002).setImage(COLOR_LOGO if self.logo.endswith('wlogo.png') else self.logo)
-            self.getControl(40001).setPosition(self.overlay.onNextX, self.overlay.onNextY)
-            self.getControl(40001).setVisible(self.overlay.chkOnNextConditions())
+            self.getControl(40001).setPosition(abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356)
         except Exception as e:
             log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
-            self.close()
-            
+            self.onClose()
        
+       
+    def onClose(self):
+        log("Background: onClose")
+        self.close()
+            
+            
 class Busy(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
@@ -69,7 +74,7 @@ class Restart(xbmcgui.WindowXMLDialog):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.closing = False
         self.player  = kwargs.get('player', None)
-        
+        self.sysInfo = kwargs.get('sysInfo', self.player.sysInfo)
         
     def onInit(self):
         try:
@@ -79,7 +84,7 @@ class Restart(xbmcgui.WindowXMLDialog):
             self._progressLoop(self.getControl(40000))
             self.setFocusId(40001)
         except Exception as e:
-            log("Restart: onInit, failed! %s\ncitem = %s"%(e,self.player.sysInfo), xbmc.LOGERROR)
+            log("Restart: onInit, failed! %s\ncitem = %s"%(e,self.sysInfo), xbmc.LOGERROR)
             self.onClose()
 
 
@@ -103,13 +108,11 @@ class Restart(xbmcgui.WindowXMLDialog):
         actionId = act.getId()
         log('Restart: onAction: actionId = %s'%(actionId))
         if actionId in ACTION_SELECT_ITEM and self.getFocusId(40001): 
-            sysInfo = self.player.sysInfo
-            if   sysInfo.get('isPlaylist',False): self.player.seekTime(0)
-            elif sysInfo.get('fitem'): 
-                liz = LISTITEMS.buildItemListItem(sysInfo.get('fitem',{}))
-                liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
-                self.player.sysInfo = {}
-                self.player.play(sysInfo.get('fitem',{}).get('catchup-id'),liz)
+            if   self.sysInfo.get('isPlaylist',False): self.player.seekTime(0)
+            elif self.sysInfo.get('fitem'): 
+                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem',{}))
+                liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+                self.player.play(self.sysInfo.get('fitem',{}).get('catchup-id'),liz)
             else: DIALOG.notificationDialog(LANGUAGE(30154))
         elif actionId == ACTION_MOVE_UP:       timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(up,Action(up),.5,true,false)'])
         elif actionId == ACTION_MOVE_DOWN:     timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(down,Action(down),.5,true,false)'])
@@ -121,39 +124,10 @@ class Restart(xbmcgui.WindowXMLDialog):
         log("Restart: onClose")
         self.closing = True
   
-  
+    
 class Overlay():
-    onNext         = None
-    background     = None
     controlManager = dict()
     
-    class Player(PLAYER):
-        def __init__(self, overlay=None):
-            PLAYER.__init__(self)
-            self.overlay = overlay
-            
-
-        def onAVStarted(self):
-            self.overlay.log('onAVStarted')
-            self.overlay.toggleBackground(False)
-            self.overlay.toggleBug(self.overlay.enableChannelBug)
-            self.overlay.toggleOnNext(self.overlay.enableOnNext)
-            
-
-        def onPlayBackEnded(self):
-            self.overlay.log('onPlayBackEnded')
-            self.overlay.toggleBackground()
-            self.overlay.toggleBug(False)
-            self.overlay.toggleOnNext(False)
-                
-            
-        def onPlayBackStopped(self):
-            self.overlay.log('onPlayBackStopped')
-            self.overlay.toggleBackground(False)
-            self.overlay.toggleBug(False, cancel=True)
-            self.overlay.toggleOnNext(False, cancel=True)
-            
-
     def __init__(self, jsonRPC, player=None):
         self.cache      = SETTINGS.cache
         self.jsonRPC    = jsonRPC
@@ -172,7 +146,7 @@ class Overlay():
         self.maxProgress        = SETTINGS.getSettingInt('Seek_Threshold')
         self.enableChannelBug   = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
-        self.forceBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
+        self.forceBugDiffuse    = SETTINGS.getSettingBool('Force_Diffuse')
         self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         self.onNextColor        = '0x%s'%((SETTINGS.getSetting('OnNext_Color')     or 'FFFFFFFF'))
         
@@ -184,37 +158,37 @@ class Overlay():
         
         #channelBug
         try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-        except: self.channelBugX, self.channelBugY = abs(int(self.window_w // 8) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto
+        except: self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto
         self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
         
         #onNext
         try:    self.onNextX, self.onNextY = eval(SETTINGS.getSetting("OnNext_Position_XY")) #user
-        except: self.onNextX, self.onNextY = abs(int(self.window_w // 8)), abs(int(self.window_h // 16) - self.window_h) #auto
-        self.onNext_Border  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, ' ', aspectRatio=0)
-        self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 230, 125, ' ', aspectRatio=0)
-        self.onNext_Text    = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 72, 'font27', self.onNextColor)
-
-        self._bugThread    = Timer(0.1, self.toggleBug, [False])
-        self._onNextThread = Timer(0.1, self.toggleOnNext, [False])
-        self._player       = self.Player(overlay=self)
+        except: self.onNextX, self.onNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
+        self.onNext_Border  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 256, 128, ' ', aspectRatio=0)
+        self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 246, 118, ' ', aspectRatio=0)
+        self.onNext_Text    = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 156), 960, 72, 'font27', self.onNextColor)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
         
-    def show(self):
-        self.log('show, id = %s, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
+    def open(self):
+        self.log('[%s] open, rules = %s'%(self.player.sysInfo.get('citem',{}).get('id'),self.player.sysInfo.get('rules',{})))
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
-        self._player.onAVStarted(), self.toggleVignette(self.enableVignette)
+        self.toggleVignette(self.enableVignette)
+        self.toggleBug()
+        self.toggleOnNext()
 
    
     def close(self):
         self.log('close')
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
-        self._player.onPlayBackStopped(), self.toggleVignette(False)
+        self.toggleVignette(False)
+        self.toggleBug(False,cancel=True)
+        self.toggleOnNext(False,cancel=True)
         self._clrRemaining()
-                
+    
         
     def _clrRemaining(self):
         for control, visible in list(self.controlManager.items()):
@@ -231,66 +205,35 @@ class Overlay():
 
 
     def _setVisible(self, control, state: bool=False):
-        try:
-            self.log('_setVisible, %s = %s'%(control,state))
-            if self._hasControl(control): control.setVisible(state)
-        except Exception('_setVisible, failed! control does not exist'): pass
-        return state
+        self.log('_setVisible, %s = %s'%(control,state))
+        if self._hasControl(control): 
+            try:
+                control.setVisible(state)
+                return state
+            except Exception as e: 
+                self.log('_setVisible, failed! control = %s %s'%(control,e))
+                self._delControl(control)
+                return False
 
 
     def _addControl(self, control):
-        try:
-            self.log('_addControl, %s'%(control))
-            if not self._hasControl(control):
+        self.log('_addControl, %s'%(control))
+        if not self._hasControl(control):
+            try: 
                 self.window.addControl(control)
                 self.controlManager[control] = self._setVisible(control,False)
-                MONITOR().waitForAbort(0.5)
-        except Exception as e: self.log('_addControl failed! %s'%(e), xbmc.LOGERROR)
+            except Exception as e: 
+                self.log('_addControl failed! control = %s %s'%(control, e), xbmc.LOGERROR)
+                self._delControl(control)
         
         
     def _delControl(self, control):
-        try:
-            self.log('_delControl, %s'%(control))
-            if self._hasControl(control):
-                self.window.removeControl(control)
-                self.controlManager.pop(control)
-        except Exception as e: self.log('_delControl failed! control = %s %s'%(control, e), xbmc.LOGERROR)
+        self.log('_delControl, %s'%(control))
+        if self._hasControl(control):
+            try: self.window.removeControl(control)
+            except Exception as e: self.log('_delControl failed! control = %s %s'%(control, e), xbmc.LOGERROR)
+            self.controlManager.pop(control)
 
-
-    def chkOnNextConditions(self):
-        def __isFiller():
-            for genre in self.player.sysInfo.get('fitem',{}).get('genre',[]) + self.player.sysInfo.get('nitem',{}).get('genre',[]):
-                if genre.lower() in ['pre-roll','post-roll']: return True
-            return False
-            
-        if (self.player.sysInfo.get('nitem',{}).get('duration', 0) < self.minDuration): return False
-        elif __isFiller(): return False
-        return True
-
-        
-    def chkBugConditions(self):
-        def __isFiller():
-            for genre in self.player.sysInfo.get('fitem',{}).get('genre',[]):
-                if genre.lower() in ['pre-roll','post-roll']: return True
-            return False
-            
-        if (self.player.sysInfo.get('fitem',{}).get('duration', 0) < self.minDuration) or not self.player.isPlaying(): return False
-        elif self.player.getPlayerProgress() >= self.maxProgress: return False
-        elif __isFiller(): return False
-        return True
-
-
-    def toggleBackground(self, state: bool=True):
-        self.log('toggleBackground, state = %s'%(state))
-        if state and self.background is None:
-            self.log("toggleBackground, opening background")
-            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", overlay=self)
-            self.background.doModal()
-            self.background = None
-        elif not state and hasattr(self.background,'close'):
-            self.log("toggleBackground, closing background")
-            self.background = self.background.close()
-            
 
     def toggleVignette(self, state: bool=True):
         if state:
@@ -309,146 +252,163 @@ class Overlay():
             timerit(self.jsonRPC.setViewMode)(0.5,[self.defaultView])
             self.log('toggleVignette, state = %s, image = %s\nmode = %s'%(state, self.vinImage,self.defaultView))
             
+
+    def chkBugConditions(self):
+        def __isFiller():
+            for genre in self.player.sysInfo.get('fitem',{}).get('genre',[]):
+                if genre.lower() in ['pre-roll','post-roll']: return True
+            return False
+            
+        if   self.player.sysInfo.get('fitem',{}).get('duration', 0) < self.minDuration: return False
+        elif self.player.getPlayerProgress() >= self.maxProgress: return False
+        elif __isFiller() or PROPERTIES.isRunning('Overlay.close'): return False
+        return True
+
                 
     def toggleBug(self, state: bool=True, cancel=False):
-        def __getWait(state, remaining):
-            if (remaining <= self.minDuration or not self.chkBugConditions()): return False, remaining
-            elif self.channelBugInterval == -1: #Indefinitely 
-                onVAL  = remaining
-                offVAL = FIFTEEN
-            elif self.channelBugInterval == 0: #random
-                onVAL  = random.randint(roundupDIV(remaining,4),roundupDIV(remaining,2))
-                offVAL = random.randint(roundupDIV(remaining,8),roundupDIV(remaining,4))
-            else: #set time
-                setVal = self.channelBugInterval * 60
-                onVAL  = setVal if setVal <= remaining else remaining
-                offVAL = round(onVAL//2)
-            self.log('toggleBug, _getWait onVAL, offVAL (%s,%s)'%(onVAL, offVAL))
-            return state, {True:float(onVAL),False:float(offVAL)}[state]
+        def __show(state, remaining):
+            try:
+                if (remaining <= self.minDuration or not self.chkBugConditions()): return False, OSD_TIMER
+                elif self.channelBugInterval < 0: #Indefinitely 
+                    onVAL  = remaining
+                    offVAL = FIFTEEN
+                elif self.channelBugInterval == 0: #random
+                    onVAL  = random.randint(roundupDIV(remaining,4),roundupDIV(remaining,2))
+                    offVAL = random.randint(roundupDIV(remaining,8),roundupDIV(remaining,4))
+                else: #set time
+                    setVal = self.channelBugInterval * 60
+                    onVAL  = setVal if setVal <= remaining else remaining
+                    offVAL = round(onVAL//2)
+                self.log('toggleBug, __show: onVAL, offVAL (%s,%s)'%(onVAL, offVAL))
+                return state, {True:float(onVAL),False:float(offVAL)}[state]
+            except:
+                return False, OSD_TIMER
 
-        state, wait = __getWait(state, int(floor(self.player.getRemainingTime())))
-        nstate = not bool(state)
+        show, wait = __show(state, int(floor(self.player.getRemainingTime())))
+        self.log('toggleBug, show = %s, wait = %s'%(show, wait))
         
-        if state:
+        if state and show:
             logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
             
             if not self._hasControl(self.channelBug):
                 self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
                 self._addControl(self.channelBug)
-                self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False'),
-                                               ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=False')])
-            
             if   self.forceBugDiffuse:        self.channelBug.setColorDiffuse(self.channelBugColor)
             elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
             self.channelBug.setImage(logo)
+            self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=false'),
+                                           ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=True reversible=false')])
             self._setVisible(self.channelBug,True)
             self.log('toggleBug, logo = %s, setColorDiffuse = %s, POSXY (%s,%s))'%(logo, self.channelBugColor, self.channelBugX, self.channelBugY))
             
-        elif self._hasControl(self.channelBug):
-            self._delControl(self.channelBug)
-            
-        if self._bugThread.is_alive():
-            if hasattr(self._bugThread, 'cancel'): self._bugThread.cancel()
-            try: self._bugThread.join()
-            except: pass
-            
-        if cancel or wait <= 0: return self.log('toggleBug, cancelling timer...')
-        self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
-        self._bugThread = Timer(wait, self.toggleBug, [nstate])
-        self._bugThread.name = "_bugThread"
-        self._bugThread.daemon=True
-        self._bugThread.start()
+        elif self._hasControl(self.channelBug): self._delControl(self.channelBug)
 
-    
+        if not cancel:
+            nstate = not bool(state)
+            self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
+            timerit(self.toggleBug)(wait,[nstate])
+
+
+    def chkOnNextConditions(self):
+        def __isFiller():
+            for genre in self.player.sysInfo.get('fitem',{}).get('genre',[]) + self.player.sysInfo.get('nitem',{}).get('genre',[]):
+                if genre.lower() in ['pre-roll','post-roll']: return True
+            return False
+            
+        def __isShort():
+            for item in [self.player.sysInfo.get('fitem',{}),self.player.sysInfo.get('nitem',{})]:
+                if item.get('duration', self.minDuration) < self.minDuration: return True
+            return False
+                
+        if __isFiller() or __isShort() or PROPERTIES.isRunning('Overlay.close'): return False
+        return True
+
+        
     def toggleOnNext(self, state: bool=True, cancel: bool=False):
-        def __getOnNextInterval(state):
-            totalTime = int(self.player.getPlayerTime() * (self.maxProgress / 100))
-            threshold = roundupDIV(totalTime,4)
-            remaining = int(totalTime - self.player.getPlayedTime())
-            self.log('toggleOnNext, totalTime = %s, threshold = %s, remaining = %s'%(totalTime, threshold, remaining))
-            if self.chkOnNextConditions() and remaining > self.minDuration:
-                if   remaining > threshold: return False, abs(remaining - threshold)
-                elif remaining < threshold: return True , OSD_TIMER*3
-            return False, 0
-
-        show, wait = __getOnNextInterval(state)
-        self.log('toggleOnNext, state = %s, show = %s wait = %s'%(state,show,wait))
+        def __show(state, interval=3):
+            try:
+                totalTime = int(self.player.getTotalTime() * (self.maxProgress / 100))
+                threshold = abs((totalTime - (totalTime * .75)) - (OSD_TIMER*interval)*interval)
+                remaining = floor(totalTime - self.player.getPlayedTime())
+                intTime   = roundupDIV(threshold,interval)
+                if state:
+                    if remaining < intTime: return __show(state,interval+1)
+                    show = (self.chkOnNextConditions() and remaining <= threshold)
+                    self.log('toggleOnNext, __show: totalTime = %s, threshold = %s, remaining = %s, intTime = %s, interval = %s'%(totalTime, threshold, remaining, intTime, interval))
+                    return show, {True:OSD_TIMER*interval,False:intTime}[show]
+                return False, remaining - threshold
+            except: 
+                return False, 0
+        
+        show, wait = __show(state)
+        self.log('toggleOnNext, state = %s, cancel = %s, show = %s, wait = %s'%(state,cancel,show,wait))
         
         if state and show:
-            sysInfo = self.player.sysInfo.copy()
-            citem   = sysInfo.get('citem',{}) #channel
-            fitem   = sysInfo.get('fitem',{}) #onnow
-            nitem   = sysInfo.get('nitem',{}) #onnext
+            citem   = self.player.sysInfo.get('citem',{}) #channel
+            fitem   = self.player.sysInfo.get('fitem',{}) #onnow
+            nitem   = self.player.sysInfo.get('nitem',{}) #onnext
             
             if self.onNextMode in [1,2]:                    
                 chname    = citem.get('name'     ,BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
                 nowTitle  = fitem.get('label'    ,BUILTIN.getInfoLabel('Title','VideoPlayer'))
                 nextTitle = nitem.get('showlabel',BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
-                onNow  = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else fitem.get('showlabel',nowTitle)
-                onNext = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle)
+                onNow     = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else fitem.get('showlabel',nowTitle)
+                onNext    = '[B]@ %s[/B] %s'%(BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'),nextTitle if chname not in validString(nextTitle) else nitem.get('showlabel',nextTitle))
                 
                 if not self._hasControl(self.onNext_Text):
-                    self.onNext_Text = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 72, 'font27', self.onNextColor)
+                    self.onNext_Text = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 156), 960, 72, 'font27', self.onNextColor)
                     self._addControl(self.onNext_Text)
-                    self.onNext_Text.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                    ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
-                                                    ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                    ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
-                                                    ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                    ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
-
                 self.onNext_Text.setText('%s %s[CR]%s %s'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
+                self.onNext_Text.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
+                                                ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
+                                                ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
                 self._setVisible(self.onNext_Text,True)
                 
                 if self.onNextMode == 2:
-                    landscape = getThumb(nitem)    
+                    landscape = getThumb(nitem)
+                    
                     if not self._hasControl(self.onNext_Border):
-                        self.onNext_Border = xbmcgui.ControlImage(self.onNextX, self.onNextY, 240, 135, os.path.join(MEDIA_LOC,'colors','white.png'), 0, '0xC0%s'%(COLOR_BACKGROUND))#todo adv. rule to change color.
+                        self.onNext_Border = xbmcgui.ControlImage(self.onNextX, self.onNextY, 256, 128, os.path.join(MEDIA_LOC,'colors','white.png'), 0, '0xC0%s'%(COLOR_BACKGROUND))#todo adv. rule to change color.
                         self._addControl(self.onNext_Border)
-                        self.onNext_Border.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                          ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
-                                                          ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                          ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
-                                                          ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                          ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
+                    self.onNext_Border.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                      ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
+                                                      ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                      ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
+                                                      ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                      ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
 
          
                     if not self._hasControl(self.onNext_Artwork):
-                        self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 230, 125, ' ', aspectRatio=0)
+                        self.onNext_Artwork = xbmcgui.ControlImage((self.onNextX + 5), (self.onNextY + 5), 246, 118, ' ', aspectRatio=0)
                         self._addControl(self.onNext_Artwork)
-                        self.onNext_Artwork.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                           ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
-                                                           ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                           ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
-                                                           ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
-                                                           ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
+                    self.onNext_Artwork.setImage(COLOR_FANART if landscape == FANART else landscape, useCache=False)
+                    self.onNext_Artwork.setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                       ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
+                                                       ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                       ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
+                                                       ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
+                                                       ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
                         
-                    self.onNext_Artwork.setImage(COLOR_FANART if landscape == FANART else landscape, useCache=True)
-                    self._setVisible(self.onNext_Border,True)
                     self._setVisible(self.onNext_Artwork,True)
+                    self._setVisible(self.onNext_Border,True)
+                    xbmc.playSFX(BING_WAV)
 
             elif self.onNextMode == 3: self.player.toggleInfo()
             elif self.onNextMode == 4: self._updateUpNext(fitem,nitem)
-            timerit(playSFX)(0.5,[BING_WAV])
                 
         elif self._hasControl(self.onNext_Text):
             self._delControl(self.onNext_Text)
             if self._hasControl(self.onNext_Border):  self._delControl(self.onNext_Border)
             if self._hasControl(self.onNext_Artwork): self._delControl(self.onNext_Artwork)
-                        
-        if self._onNextThread.is_alive():
-            if hasattr(self._onNextThread, 'cancel'): self._onNextThread.cancel()
-            try: self._onNextThread.join()
-            except: pass
+   
+        if not cancel and wait > 0:
+            nstate = not bool(show)
+            self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
+            timerit(self.toggleOnNext)(wait,[nstate])
             
-        if cancel or wait <= 0: return self.log('toggleOnNext, cancelling timer...')
-        nstate = not bool(state)
-        self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
-        self._onNextThread = Timer(float(wait), self.toggleOnNext, [nstate])
-        self._onNextThread.name = "onNextThread"
-        self._onNextThread.daemon=True
-        self._onNextThread.start()
-        
         
     def _updateUpNext(self, nowItem: dict={}, nextItem: dict={}):
         self.log('_updateUpNext')

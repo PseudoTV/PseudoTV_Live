@@ -372,14 +372,14 @@ class M3U:
 
 
     def delStation(self, citem):
-        self.log('delStation id = %s'%(citem['id']))
+        self.log('[%s] delStation'%(citem['id']))
         idx, line = self.findStation(citem)
         if not idx is None: self.M3UDATA['stations'].pop(idx)
         return True
         
 
     def delRecording(self, ritem):
-        self.log('delRecording id = %s'%((ritem.get('id') or ritem.get('label'))))
+        self.log('[%s] delRecording'%((ritem.get('id') or ritem.get('label'))))
         idx, line = self.findRecording(ritem)
         if not idx is None:
             self.M3UDATA['recordings'].pop(idx)

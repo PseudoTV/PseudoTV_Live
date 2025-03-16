@@ -1,5 +1,4 @@
 Language IDS w\empty strings: {
-    "33085": "",
     "33130": ""
 }
 
@@ -158,6 +157,7 @@ Language IDS not found in py files, possibly only in xml: {
     "30172": "Channel List",
     "30189": "Last Position",
     "30198": "Enable Threaded Queue Executor",
+    "30201": "JSONRPC Timer",
     "32004": "TV Networks",
     "32005": "TV Shows",
     "32006": "TV Genres",
@@ -246,7 +246,6 @@ Language IDS not found in py files, possibly only in xml: {
     "33074": "Automatically configure IPTV-Simple for use with PseudoTV Live [Minimal risk of overriding existing user configurations].",
     "33078": "Stop Playback when Idle for x Hours.\\nCancelable with prompt and countdown.",
     "33084": "Boost Background Processing through Multi-Threading. [Disabled Default]\\nDisable if you experience system instability.",
-    "33085": "",
     "33089": "QRCode - Visit PseudoTV Live Wiki",
     "33092": "Multi-room help",
     "33097": "Only recommend you change port if a conflict exists.",
@@ -279,6 +278,7 @@ Language IDS not found in py files, possibly only in xml: {
     "33178": "Select Vignette Image",
     "33182": "Enabled in discovered servers in the list below.",
     "33186": "Vignette Non-Linear Stretch",
+    "33201": "How long to wait for JSONRPC response in minutes [0 Disabled, 3 Default]\\nPervent system hangs while waiting for a lengthy response.",
     "33202": "Minimum Debugging Level [LOGERROR - Default]\\nIf submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error.",
     "33214": "Default Sort Method for all channels, overridden per channel by SmartPlaylist, DynamicPlaylist and Adv. Channel rules.",
     "33308": "Install Log Uploader.",

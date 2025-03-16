@@ -132,7 +132,7 @@ class Utilities:
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.isRunning('OVERLAY_MANAGER'):
-            with PROPERTIES.setRunning('OVERLAY_MANAGER'), BUILTIN.busy_dialog():
+            with PROPERTIES.chkRunning('OVERLAY_MANAGER'), BUILTIN.busy_dialog():
                 from manager import Manager
                 chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
                 del chmanager
@@ -141,7 +141,7 @@ class Utilities:
     def openPositionUtil(self, idx):
         self.log('openPositionUtil, idx = %s'%(idx))
         if not PROPERTIES.isRunning('OVERLAY_UTILITY'):
-            with PROPERTIES.setRunning('OVERLAY_UTILITY'), PROPERTIES.interruptActivity():
+            with PROPERTIES.chkRunning('OVERLAY_UTILITY'), PROPERTIES.interruptActivity():
                 with BUILTIN.busy_dialog():
                     from overlaytool import OverlayTool
                 overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
@@ -190,7 +190,6 @@ class Utilities:
         if full:
             SETTINGS.setAutotuned(False)
             PROPERTIES.setEpochTimer('chkLibrary')
-            PROPERTIES.setPendingRestart()
                
 
     def deleteFiles(self, msg, full: bool=False):

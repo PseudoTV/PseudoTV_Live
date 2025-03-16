@@ -425,7 +425,7 @@ class XMLTVS:
         
         
     def delRecording(self, ritem: dict):
-        self.log('delRecording id = %s'%((ritem.get('id') or ritem.get('label'))))
+        self.log('[%s] delRecording'%((ritem.get('id') or ritem.get('label'))))
         recordings = self.XMLTVDATA['recordings'].copy()
         programmes = self.XMLTVDATA['programmes'].copy()
         idx, recording = self.findRecording(ritem)

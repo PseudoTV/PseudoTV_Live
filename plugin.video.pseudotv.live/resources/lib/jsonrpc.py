@@ -39,32 +39,21 @@ class JSONRPC:
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
-    
-    
-    @contextmanager
-    def sendLocker(self): #kodi jsonrpc not thread safe avoid request collision during threading.
-        while not self.service.monitor.abortRequested():
-            if self.service.monitor.waitForAbort(0.1) or self.service._interrupt(): break
-            elif not PROPERTIES.getPropertyBool('sendLocker'): break
-        PROPERTIES.setPropertyBool('sendLocker',True)
-        try: yield
-        finally: #throttle calls, low power devices suffer segfault during rpc flood.
-            self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
-            PROPERTIES.setPropertyBool('sendLocker',False)
 
 
     def sendJSON(self, param, timeout=-1):
-        with self.sendLocker():
-            command = param
-            command["jsonrpc"] = "2.0"
-            command["id"] = ADDON_ID
-            self.log('sendJSON, timeout = %s, command = %s'%(timeout,dumpJSON(command)))
-            if timeout > 0: response = loadJSON((killit(xbmc.executeJSONRPC)(timeout,dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
-            else:           response = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))
-            if response.get('error'):
-                self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
-                response.setdefault('result',{})['error'] = response.pop('error')
-            return response
+        command  = param
+        command["jsonrpc"] = "2.0"
+        command["id"] = ADDON_ID
+        self.log('sendJSON, timeout = %s, command = %s'%(timeout,dumpJSON(command)))
+        if timeout > 0: response = loadJSON((killit(BUILTIN.executeJSONRPC)(timeout,dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
+        else:           response = loadJSON(BUILTIN.executeJSONRPC(dumpJSON(command)))
+        if response.get('error'):
+            self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
+            response.setdefault('result',{})['error'] = response.pop('error')
+        #throttle calls, low power devices suffer segfault during rpc flood
+        self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
+        return response
 
 
     def queueJSON(self, param):
@@ -82,7 +71,7 @@ class JSONRPC:
         cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
-            cacheResponse = self.sendJSON(param,timeout)
+            cacheResponse = self.sendJSON(param, timeout)
             if cacheResponse.get('result',{}): self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
         return cacheResponse
 
@@ -252,11 +241,11 @@ class JSONRPC:
         else:     return self.sendJSON(param).get('result', {}).get('genres', [])
 
 
-    def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), timeout=-1):
         param["properties"] = self.getEnums("List.Fields.Files", type='items')
         param = {"method":"Files.GetDirectory","params":param}
-        if cache: return self.cacheJSON(param, expiration, checksum).get('result', {})
-        else:     return self.sendJSON(param).get('result', {})
+        if cache: return self.cacheJSON(param, expiration, checksum, timeout).get('result', {})
+        else:     return self.sendJSON(param, timeout).get('result', {})
         
         
     def getLibrary(self, method, param={}, cache=True):
@@ -328,6 +317,24 @@ class JSONRPC:
         param = {"method":"Files.GetDirectory","params":{"directory":f"pvr://search/tv/savedsearches/{id}/","media":media,"properties":self.getEnums("List.Fields.Files", type='items')}}
         if cache: return self.cacheJSON(param).get('result', {}).get('files', [])
         else:     return self.sendJSON(param).get('result', {}).get('files', [])
+    
+    
+    def getSmartPlaylists(self, type='video', cache=True):
+        param = {"method":"Files.GetDirectory","params":{"directory":f"special://profile/playlists/{type}/","media":"video","properties":self.getEnums("List.Fields.Files", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('files', [])
+        else:     return self.sendJSON(param).get('result', {}).get('files', [])
+        
+        
+    def getInfoLabel(self, key, cache=False):
+        param = {"method":"XBMC.GetInfoLabels","params":{"labels":[key]}}
+        if cache: return self.cacheJSON(param).get('result', {}).get(key)
+        else:     return self.sendJSON(param).get('result', {}).get(key)
+
+
+    def getInfoBool(self, key, cache=False):
+        param = {"method":"XBMC.GetInfoBooleans","params":{"booleans":[key]}}
+        if cache: return self.cacheJSON(param).get('result', {}).get(key)
+        else:     return self.sendJSON(param).get('result', {}).get(key)
     
     
     def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected during playback, accurate meta...
@@ -411,7 +418,7 @@ class JSONRPC:
                 if   duration == 0: mtype['params'].pop('resume')  #save file duration meta
                 elif runtime  == 0: mtype['params'].pop('runtime') #save player runtime meta
                 id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
-                self.log('queDuration, id = %s, media = %s, duration = %s, runtime = %s'%(id,item['type'],duration,runtime))
+                self.log('[%s] queDuration, media = %s, duration = %s, runtime = %s'%(id,item['type'],duration,runtime))
                 self.queueJSON(mtype['params'])
         except Exception as e: self.log("queDuration, failed! %s\nmtype = %s\nitem = %s"%(e,mtype,item), xbmc.LOGERROR)
         
@@ -473,19 +480,19 @@ class JSONRPC:
         
         if limits.get('end',-1) == -1: #global default, replace with autoPagination.
             limits = self.autoPagination(citem['id'], path, query) #get
-            self.log('requestList, id = %s autoPagination limits = %s'%(citem['id'],limits))
+            self.log('[%s] requestList, autoPagination limits = %s'%(citem['id'],limits))
             if limits.get('total',0) > page and sort.get("method","") == "random":
                 limits = self.randomPagination(page,limits)
-                self.log('requestList, id = %s generating random limits = %s'%(citem['id'],limits))
+                self.log('[%s] requestList, generating random limits = %s'%(citem['id'],limits))
 
         param["limits"]          = {}
         param["limits"]["start"] = 0 if limits.get('end', 0) == -1 else limits.get('end', 0)
         param["limits"]["end"]   = abs(limits.get('end', 0) + page)
         param["sort"] = sort
-        self.log('requestList, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
+        self.log('[%s] requestList, page = %s\nparam = %s'%(citem['id'], page, param))
         
         if getDirectory:
-            results = self.getDirectory(param, cache=False)
+            results = self.getDirectory(param,timeout=float(SETTINGS.getSettingInt('RPC_Timer')*60))
             if 'filedetails' in results: key = 'filedetails'
             else:                        key = 'files'
         else:
@@ -495,7 +502,7 @@ class JSONRPC:
         limits = results.get('limits', param["limits"])
         if (limits.get('end',0) >= limits.get('total',0) or limits.get('start',0) >= limits.get('total',0)):
             # restart page to 0, exceeding boundaries.
-            self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
+            self.log('[%s] requestList, resetting limits to 0'%(citem['id']))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
         self.autoPagination(citem['id'], path, query, limits) #set 
         
@@ -504,10 +511,10 @@ class JSONRPC:
         
         if len(items) == 0 and limits.get('total',0) > 0:
             # retry last request with fresh limits.
-            self.log("requestList, id = %s, trying again with start limits at 0"%(citem['id']))
+            self.log("[%s] requestList, trying again with start limits at 0"%(citem['id']))
             return self.requestList(citem, path, media, page, sort, {"end": 0, "start": 0, "total": limits.get('total',0)}, query)
         else:
-            self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
+            self.log("[%s] requestList, return items = %s" % (citem['id'], len(items)))
             return items, limits, errors
 
 
@@ -558,7 +565,8 @@ class JSONRPC:
             iters = cycle(files)
             while not self.service.monitor.abortRequested() and (len(files) < page and len(files) > 0):
                 item = next(iters).copy()
-                if self.getDuration(item.get('file'),item) == 0:
+                if   self.service.monitor.waitForAbort(0.001): break
+                elif self.getDuration(item.get('file'),item) == 0:
                     try: files.pop(files.index(item))
                     except: break
                 else: files.append(item)
@@ -582,8 +590,8 @@ class JSONRPC:
             
             
     def getCallback(self, sysInfo={}):
-        self.log('getCallback, id = %s, mode = %s, radio = %s, isPlaylist = %s'%(sysInfo.get('chid'),sysInfo.get('mode'),sysInfo.get('radio',False),sysInfo.get('isPlaylist',False)))
-        def _matchJSON():#requires 'pvr://' json whitelisting.
+        self.log('[%s] getCallback, mode = %s, radio = %s, isPlaylist = %s'%(sysInfo.get('chid'),sysInfo.get('mode'),sysInfo.get('radio',False),sysInfo.get('isPlaylist',False)))
+        def _matchJSON():#requires 'pvr://' json whitelisting
             results = self.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir={'True':'radio','False':'tv'}[str(sysInfo.get('radio',False))])}, cache=False).get('files',[])
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
@@ -592,13 +600,15 @@ class JSONRPC:
                         channels = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=FIFTEEN)).get('files',[])
                         for item in channels:
                             if item.get('label','').lower() == sysInfo.get('name','').lower() and decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
-                                self.log('getCallback: _matchJSON, id = %s, found file = %s'%(sysInfo.get('chid'),item.get('file')))
+                                self.log('[%s] getCallback: _matchJSON, found file = %s'%(sysInfo.get('chid'),item.get('file')))
                                 return item.get('file')
                   
         if sysInfo.get('mode','').lower() == 'live' and sysInfo.get('chpath'):
             callback = sysInfo.get('chpath')
         elif sysInfo.get('isPlaylist'):
             callback = sysInfo.get('citem',{}).get('url')
+        elif sysInfo.get('mode').lower() == 'vod' and sysInfo.get('nitem',{}).get('file'):
+            callback = sysInfo.get('nitem',{}).get('file')
         else:
             callback = sysInfo.get('callback','')
         if not callback: callback = _matchJSON()

@@ -41,7 +41,7 @@ def timeit(method):
     
 def killit(method):
     @wraps(method)
-    def wrapper(wait=60, *args, **kwargs):
+    def wrapper(wait=30, *args, **kwargs):
         class waiter(Thread):
             def __init__(self):
                 Thread.__init__(self)
@@ -57,13 +57,11 @@ def killit(method):
         try: timer.join(wait)
         except: pass
         log('%s, starting %s'%(method.__qualname__.replace('.',': '),timer.name))
-        if (timer.is_alive() or timer.error):
-            log('%s, Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),timer.error), xbmc.LOGERROR)
+        if (timer.is_alive() or timer.error): log('%s, Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),timer.error), xbmc.LOGERROR)
         return timer.result
     return wrapper
 
 def poolit(method):
-    @timeit
     @wraps(method)
     def wrapper(items=[], *args, **kwargs):
         try:
@@ -79,7 +77,6 @@ def poolit(method):
     return wrapper
 
 def threadit(method):
-    @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
         thread_name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
@@ -97,7 +94,6 @@ def threadit(method):
     return wrapper
 
 def timerit(method):
-    @timeit
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
         thread_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
@@ -115,7 +111,6 @@ def timerit(method):
     return wrapper  
 
 def executeit(method):
-    @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
         pool = ThreadPool()
@@ -207,9 +202,12 @@ class Cores:
                 dmesg = dmesgProcess.communicate()[0]
 
             res = 0
-            while not MONITOR().abortRequested() and '\ncpu%s:'%(res) in dmesg:
+            monitor = MONITOR()
+            while not monitor.abortRequested() and '\ncpu%s:'%(res) in dmesg:
+                if monitor.waitForAbort(0.001): break
                 res += 1
             if res > 0: return res
+            del monitor
         except OSError: pass
         return 1
 
@@ -225,7 +223,6 @@ class ThreadPool:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    @timeit
     def executor(self, func, timeout=None, *args, **kwargs):
         self.log("executor, func = %s, timeout = %s"%(func.__name__,timeout))
         with ThreadPoolExecutor(self.ThreadCount) as executor:
