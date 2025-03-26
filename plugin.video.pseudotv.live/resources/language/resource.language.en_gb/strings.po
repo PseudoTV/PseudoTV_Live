@@ -598,7 +598,7 @@ msgid "Change channel Bug attributes."
 msgstr ""
 
 msgctxt "#30145"
-msgid "Show Channel Bug (%s) w/%s offset, %s %s"
+msgid "Show Channel Bug"
 msgstr ""
 
 msgctxt "#30146"
@@ -1300,7 +1300,7 @@ msgid "Running as a client."
 msgstr ""
 
 msgctxt "#32116"
-msgid "[B]Next:[/B]"
+msgid "[B]Next[/B]"
 msgstr ""
 
 msgctxt "#32117"

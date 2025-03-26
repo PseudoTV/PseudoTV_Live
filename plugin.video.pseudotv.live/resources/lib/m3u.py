@@ -334,7 +334,7 @@ class M3U:
         ritem['label']         = (fitem.get('showlabel') or '%s%s'%(fitem.get('label',''),' - %s'%(fitem.get('episodelabel','')) if fitem.get('episodelabel','') else ''))
         ritem['name']          = ritem['label']
         ritem['number']        = random.Random(str(fitem.get('id',1))).random()
-        ritem['logo']          = cleanImage(getThumb(fitem,opt=EPG_ARTWORK))
+        ritem['logo']          = cleanImage((getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
         ritem['media']         = True
         ritem['media-size']    = str(fitem.get('size',0))
         ritem['media-dir']     = ''#todo optional add parent directory via user prompt?

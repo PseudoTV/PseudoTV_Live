@@ -101,45 +101,6 @@ class Plugin:
         return channelPlaylist
 
 
-    def _matchChannel(self, chname: str, id: str, radio: bool=False):
-        self.log('[%s] _matchChannel, chname = %s, radio = %s'%(id,chname,radio))
-        def __match():
-            channels = self.jsonRPC.getPVRChannels(radio)
-            for channel in channels:
-                if channel.get('label').lower() == chname.lower():
-                    for key in ['broadcastnow', 'broadcastnext']:
-                        if decodePlot(channel.get(key,{}).get('plot','')).get('citem',{}).get('id') == id:
-                            channel['broadcastnext'] = [channel.get('broadcastnext',{})]
-                            self.log('[%s] _matchChannel: __match, found pvritem = %s'%(id,channel))
-                            return channel
-        
-        def __extend(pvritem: dict={}) -> dict:
-            channelItem = {}
-            def _parseBroadcast(broadcast={}):
-                if broadcast.get('progresspercentage',0) == 100:
-                    channelItem.setdefault('broadcastpast',[]).append(broadcast)
-                elif broadcast.get('progresspercentage',0) > 0 and broadcast.get('progresspercentage',100) < 100:
-                    channelItem['broadcastnow'] = broadcast
-                elif broadcast.get('progresspercentage',0) == 0 and broadcast.get('progresspercentage',100) < 100:
-                    channelItem.setdefault('broadcastnext',[]).append(broadcast)
-                    
-            broadcasts = self.jsonRPC.getPVRBroadcasts(pvritem.get('channelid',{}))
-            [_parseBroadcast(broadcast) for broadcast in broadcasts]
-            pvritem['broadcastnext'] = channelItem.get('broadcastnext',pvritem['broadcastnext'])
-            self.log('_matchChannel: __extend, broadcastnext = %s entries'%(len(pvritem['broadcastnext'])))
-            return pvritem
-            
-        cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s'%(chname,id,radio)))
-        cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
-        if not cacheResponse:
-            pvritem = __match()
-            if pvritem:
-                self.sysInfo.update({'citem':decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',self.sysInfo.get('citem'))})
-                self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)# or (('%s%s'%(self.sysARG[0],self.sysARG[2])).split('%s&'%(slugify(ADDON_NAME))))[0])
-                cacheResponse = self.cache.set(cacheName, __extend(pvritem), checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=FIFTEEN), json_data=True)
-        return cacheResponse
-
-
     def getPausedItems(self, name, chid):
         self.log('[%s] getPausedItems'%(chid))
         def __buildfItem(idx, item, seekTHD):
@@ -212,14 +173,14 @@ class Plugin:
             return liz
             
         found   = False
-        pvritem = self._matchChannel(name,chid,radio=False)
+        pvritem = self.jsonRPC.matchChannel(name,chid,radio=False)
         if pvritem:
             pastItems = pvritem.get('broadcastpast',[])
             nowitem   = pvritem.get('broadcastnow',{})
             nextitems = pvritem.get('broadcastnext',[]) # upcoming items
             nextitems.insert(0,nowitem)
             nextitems = pastItems + nextitems
-            
+       
             if (self.sysInfo.get('fitem') or self.sysInfo.get('vid')):
                 for pos, nextitem in enumerate(nextitems):
                     fitem = decodePlot(nextitem.get('plot',{}))
@@ -230,7 +191,7 @@ class Plugin:
                         del nextitems[0:pos] # start array at correct position
                         break
                         
-            elif self.sysInfo.get('now'):
+            elif self.sysInfo.get('now') and self.sysInfo.get('vid'):
                 for pos, nextitem in enumerate(nextitems):
                     fitem = decodePlot(nextitem.get('plot',{}))
                     ntime = datetime.datetime.fromtimestamp(float(self.sysInfo.get('now')))
@@ -239,6 +200,8 @@ class Plugin:
                         self.log('[%s] getPVRItems found matching starttime'%(chid))
                         del nextitems[0:pos] # start array at correct position
                         break
+                        
+            elif nowitem: found = True
                 
             if found:
                 nowitem = nextitems.pop(0)
@@ -250,7 +213,9 @@ class Plugin:
                     self.log('getPVRItems, progress start at the beginning')
                     nowitem['progress']           = 0
                     nowitem['progresspercentage'] = 0
-
+                        
+                self.sysInfo.update({'citem':decodePlot(nowitem.get('plot','')).get('citem',self.sysInfo.get('citem'))})
+                self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
                 del nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
                 nextitems.insert(0,nowitem)
                 self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
@@ -334,11 +299,16 @@ class Plugin:
 
     def playRadio(self, name: str, chid: str, vid: str):
         self.log('[%s] playRadio'%(chid))
-        def __buildfItem(idx, item: dict={}): return LISTITEMS.buildItemListItem(item, 'music')
+        def __buildfItem(idx, item: dict={}):
+            return LISTITEMS.buildItemListItem(item, 'music')
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             items = randomShuffle(self.getRadioItems(name, chid, vid))
             listitems = [__buildfItem(idx, item) for idx, item in enumerate(items)]
-            if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True),windowed=True)
+            if len(listitems) > 0: 
+                playlist = self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True)
+                timerit(BUILTIN.executebuiltin)(OSD_TIMER,['ReplaceWindow(visualisation)'])
+                BUILTIN.executebuiltin("Dialog.Close(all)")
+                PLAYER().play(playlist,windowed=True)
             self._resolveURL(False, xbmcgui.ListItem())
 
 
@@ -346,7 +316,11 @@ class Plugin:
         self.log('[%s] playPlaylist'%(chid))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             listitems = self.getPVRItems(name, chid)
-            if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems),windowed=True)
+            if len(listitems) > 0: 
+                playlist = self._quePlaylist(listitems)
+                timerit(BUILTIN.executebuiltin)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
+                BUILTIN.executebuiltin("Dialog.Close(all)")
+                PLAYER().play(playlist,windowed=True)
             self._resolveURL(False, xbmcgui.ListItem())
 
 
@@ -354,14 +328,18 @@ class Plugin:
         self.log('[%s] playPaused'%(chid))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             listitems = self.getPausedItems(name, chid)
-            if len(listitems) > 0: PLAYER().play(self._quePlaylist(listitems),windowed=True)
+            if len(listitems) > 0: 
+                playlist = self._quePlaylist(listitems)
+                timerit(BUILTIN.executebuiltin)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
+                BUILTIN.executebuiltin("Dialog.Close(all)")
+                PLAYER().play(playlist,windowed=True)
             self._resolveURL(False, xbmcgui.ListItem())
 
 
     def playCheck(self, oldInfo: dict={}) -> bool:
         def _chkPath():
             status = True
-            if   oldInfo.get('isPlaylist'): status = True
+            if oldInfo.get('isPlaylist') or not self.sysInfo.get('vid',''): status = True
             elif self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): status = hasAddon(self.sysInfo['vid'])
             elif not self.sysInfo.get('vid','').startswith(tuple(WEB_TYPES)): status = FileAccess.exists(self.sysInfo['vid'])
             self.log('[%s] playCheck _chkPath, valid = %s\npath %s'%(self.sysInfo.get('citem',{}).get('id'),status,self.sysInfo.get('vid')))

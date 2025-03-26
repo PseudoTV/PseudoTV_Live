@@ -609,23 +609,6 @@
                     </dependencies>
                     <control type="spinner" format="string"/>
                 </setting>
-                <setting id="OnNext_Color" type="string" label="30044" help="33044" parent="OnNext_Enable">
-                    <level>2</level>
-                    <default>FFFFFFFF</default>
-                    <control type="colorbutton"/>
-                    <dependencies>
-                        <dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Overlay_Enable">true</condition>
-                                <condition operator="gt" setting="OnNext_Enable">0</condition>
-                                <condition operator="lt" setting="OnNext_Enable">3</condition>
-                            </and>
-                        </dependency>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(System.BuildVersion,20)</condition>
-                        </dependency>
-                    </dependencies>
-                </setting>
                 <setting id="OnNext_Position_XY" type="string" label="32229" help="33229" parent="OnNext_Enable">
                     <level>3</level>
                     <default>Auto</default>
@@ -715,26 +698,6 @@
                         </dependency>
                     </dependencies>
                     <control type="toggle"/>
-                </setting>
-                <setting id="Channel_Bug_Interval" type="integer" label="30086" help="33086" parent="Enable_ChannelBug">
-                    <level>2</level>
-                    <default>0</default>
-                    <dependencies>
-                        <dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Overlay_Enable">true</condition>
-                                <condition operator="is" setting="Enable_ChannelBug">true</condition>
-                            </and>
-                        </dependency>
-                    </dependencies>
-                    <constraints>
-                        <minimum>-1</minimum>
-                        <step>1</step>
-                        <maximum>15</maximum>
-                    </constraints>
-                    <control type="slider" format="integer">
-                        <popup>false</popup>
-                    </control>
                 </setting>
                 <setting id="Channel_Bug_Position_XY" type="string" label="30112" help="33112" parent="Enable_ChannelBug">
                     <level>3</level>

@@ -148,7 +148,7 @@ class Channels:
     def findAutotuned(self, citem: dict={}, channels: list=[]) -> tuple:
         if len(channels) == 0: channels = self.getAutotuned()
         for idx, eitem in enumerate(channels):
-            if (citem.get('id') == eitem.get('id',str(random.random()))) or (citem.get('type') == eitem.get('type',str(random.random())) and citem.get('name').lower() == eitem.get('name',str(random.random())).lower()):
+            if (citem.get('id') == eitem.get('id',str(random.random()))) or (citem.get('type') == eitem.get('type',str(random.random())) and citem.get('name','').lower() == eitem.get('name',str(random.random())).lower()):
                 return idx, eitem
         return None, {}
             

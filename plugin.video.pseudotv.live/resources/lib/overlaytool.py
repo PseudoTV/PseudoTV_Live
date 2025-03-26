@@ -38,30 +38,34 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             self.jsonRPC = JSONRPC()
             if BUILTIN.getInfoBool('Playing','Player'): self.window = xbmcgui.Window(12005) 
             else:                                       self.window = xbmcgui.Window(10000) 
-            self.window_h, self.window_w = (self.window.getHeight() , self.window.getWidth())
-            
+            self.window_h, self.window_w = 1080, 1920
             self.advRule  = (kwargs.get("ADV_RULES") or False)
             self.focusIDX = (kwargs.get("Focus_IDX") or 1)
             
-            self.defaultView = self.jsonRPC.getViewMode()
+            self.defaultView = {}#self.jsonRPC.getViewMode()
             self.vinView     = (kwargs.get("Vignette_VideoMode") or self.defaultView)
             self.vinImage    = (kwargs.get("Vignette_Image")     or os.path.join(MEDIA_LOC,'overlays','ratio.png'))
+            self.channelBugColor = '0x%s'%((kwargs.get("ChannelBug_Color") or SETTINGS.getSetting('ChannelBug_Color')))
             
-            self.channelBugDiffuse = '0x%s'%((kwargs.get("ChannelBug_Color") or SETTINGS.getSetting('ChannelBug_Color')))
-            self.autoBugX, self.autoBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto
-            try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-            except: self.channelBugX, self.channelBugY = self.autoBugX, self.autoBugY
+            try:
+                self.autoBugX, self.autoBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto
+                self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+            except:
+                self.channelBugX, self.channelBugY = self.autoBugX, self.autoBugY
 
-            self.onNextColor = '0x%s'%((kwargs.get("OnNext_Color") or SETTINGS.getSetting("OnNext_Color")))
-            self.autoNextX, self.autoNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
-            try:    self.onNextX, self.onNextY = eval(kwargs.get("OnNext_Position_XY",SETTINGS.getSetting("OnNext_Position_XY")))
+            try:    
+                self.autoNextX, self.autoNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
+                self.onNextX, self.onNextY = eval(kwargs.get("OnNext_Position_XY",SETTINGS.getSetting("OnNext_Position_XY")))
             except: self.onNextX, self.onNextY = self.autoNextX, self.autoNextY
             
         try: 
-            # if isplaying() timerit(self.jsonRPC.setViewMode)(0.5,[self._defZoom, self._defVShift, self._defPratio, self._defNLS]) #todo add video mode changes
+            # self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
+            # if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,[self.vinView])
             if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
             self.doModal()
-        except Exception as e: self.log("__init__, failed! %s"%(e), xbmc.LOGERROR)
+        except Exception as e: 
+            self.log("__init__, failed! %s"%(e), xbmc.LOGERROR)
+            self.close()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -75,10 +79,10 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         self.posx, self.posy = 0, 0
         
         self.vignetteControl = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, self.vinImage, aspectRatio=0) #IDX 0
-        self.channelBug      = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, COLOR_LOGO, 2, self.channelBugDiffuse) #IDX 1
+        self.channelBug      = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, COLOR_LOGO, 2, self.channelBugColor) #IDX 1
         self.onNext_Artwork  = xbmcgui.ControlImage(self.onNextX, self.onNextY, 256, 128, COLOR_FANART, 0) #IDX 2
-        self.onNext_Text     = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 156), 960, 72, 'font27', '0xFFFFFFFF')
-        self.onNext_Text.setText('%s %s\n%s %s'%(LANGUAGE(32104),ADDON_NAME,LANGUAGE(32116),ADDON_NAME))
+        self.onNext_Text     = xbmcgui.ControlTextBox(self.onNextX, (self.onNextY + 140), 960, 72, 'font27', '0xFFFFFFFF')
+        self.onNext_Text.setText('%s %s[CR]%s: %s'%(LANGUAGE(32104),ADDON_NAME,LANGUAGE(32116),ADDON_NAME))
         
         self._addCntrl(self.vignetteControl)  
         self._addCntrl(self.channelBug)
@@ -136,6 +140,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             self.log('save, saving %s'%(changes))
             if DIALOG.yesnoDialog(LANGUAGE(32096)): 
                 for cntrl, value in list(changes.items()): self.set(cntrl,value[0],value[1],value[2])
+        # if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,[self.defaultView])
         self.close()
 
     
@@ -169,7 +174,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         self.log('onAction: actionId = %s'%(actionId))
         lastaction = time.time() - self.lastActionTime
         # during certain times we just want to discard all input
-        if lastaction < 2 and lastaction > 1 and actionId not in ACTION_PREVIOUS_MENU:
+        if lastaction < 3 and lastaction > 1 and actionId not in ACTION_PREVIOUS_MENU:
             self.log('Not allowing actions')
             action = ACTION_INVALID
         elif actionId in ACTION_SELECT_ITEM:   self.switch(self.focusCycle())

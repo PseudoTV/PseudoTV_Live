@@ -339,8 +339,7 @@ class JSONRPC:
     
     def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected during playback, accurate meta...
         self.cache.set('getRuntime.%s'%(getMD5(item.get('file'))), runtime, checksum=getMD5(item.get('file')), expiration=datetime.timedelta(days=28), json_data=False)
-        if save and item and runtime > 0: self.queDuration(item, runtime=runtime)
-        return runtime
+        if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)) and save and runtime > 0: self.queDuration(item, runtime=runtime)
     
         
     def _getRuntime(self, item={}): #get runtime collected during playback, else less accurate provider meta
@@ -423,7 +422,7 @@ class JSONRPC:
         except Exception as e: self.log("queDuration, failed! %s\nmtype = %s\nitem = %s"%(e,mtype,item), xbmc.LOGERROR)
         
         
-    def quePlaycount(self, item):
+    def quePlaycount(self, item, save=SETTINGS.getSettingBool('Rollback_Watched')):
         param = {'video'      : {},
                  'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
                  'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
@@ -433,13 +432,13 @@ class JSONRPC:
                  'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
                  'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
                  'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}}}
-        try:
-            if not item.get('file','').startswith(tuple(VFS_TYPES)):
+
+        if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)):
+            try:
                 params = param.get(item.get('type'))
-                if params:
-                    self.log('quePlaycount, params = %s'%(params.get('params',{})))
-                    self.queueJSON(params)
-        except Exception as e: self.log("quePlaycount, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
+                self.log('quePlaycount, params = %s'%(params.get('params',{})))
+                self.queueJSON(params)
+            except: pass
 
 
     def requestList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, query={}):
@@ -607,13 +606,54 @@ class JSONRPC:
             callback = sysInfo.get('chpath')
         elif sysInfo.get('isPlaylist'):
             callback = sysInfo.get('citem',{}).get('url')
-        elif sysInfo.get('mode').lower() == 'vod' and sysInfo.get('nitem',{}).get('file'):
+        elif sysInfo.get('mode','').lower() == 'vod' and sysInfo.get('nitem',{}).get('file'):
             callback = sysInfo.get('nitem',{}).get('file')
         else:
             callback = sysInfo.get('callback','')
         if not callback: callback = _matchJSON()
         self.log('getCallback: returning callback = %s'%(callback))
-        return callback
+        return callback# or (('%s%s'%(self.sysARG[0],self.sysARG[2])).split('%s&'%(slugify(ADDON_NAME))))[0])
         
         
+    def matchChannel(self, chname: str, id: str, radio: bool=False):
+        self.log('[%s] matchChannel, chname = %s, radio = %s'%(id,chname,radio))
+        def __match():
+            channels = self.getPVRChannels(radio)
+            for channel in channels:
+                if channel.get('label','').lower() == chname.lower():
+                    for key in ['broadcastnow', 'broadcastnext']:
+                        if decodePlot(channel.get(key,{}).get('plot','')).get('citem',{}).get('id') == id:
+                            channel['broadcastnext'] = [channel.get('broadcastnext',{})]
+                            self.log('[%s] matchChannel: __match, found pvritem = %s'%(id,channel))
+                            return channel
         
+        def __extend(pvritem: dict={}) -> dict:
+            channelItem = {}
+            def _parseBroadcast(broadcast={}):
+                if broadcast.get('progresspercentage',0) == 100:
+                    channelItem.setdefault('broadcastpast',[]).append(broadcast)
+                elif broadcast.get('progresspercentage',0) > 0 and broadcast.get('progresspercentage',100) < 100:
+                    channelItem['broadcastnow'] = broadcast
+                elif broadcast.get('progresspercentage',0) == 0 and broadcast.get('progresspercentage',100) < 100:
+                    channelItem.setdefault('broadcastnext',[]).append(broadcast)
+                    
+            broadcasts = self.getPVRBroadcasts(pvritem.get('channelid',{}))
+            [_parseBroadcast(broadcast) for broadcast in broadcasts]
+            pvritem['broadcastnext'] = channelItem.get('broadcastnext',pvritem['broadcastnext'])
+            self.log('matchChannel: __extend, broadcastnext = %s entries'%(len(pvritem['broadcastnext'])))
+            return pvritem
+            
+        cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s'%(chname,id,radio)))
+        cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
+        
+        if not cacheResponse:
+            pvritem = __match()
+            if pvritem: cacheResponse = self.cache.set(cacheName, __extend(pvritem), checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=FIFTEEN), json_data=True)
+        return cacheResponse
+        
+        
+    def getNextItem(self, citem, nitem): #return next broadcast ignoring fillers
+        nextitems = self.matchChannel(citem.get('name',''), citem.get('id',''), citem.get('radio',False)).get('broadcastnext',[])
+        for nextitem in nextitems:
+            if not isFiller(nextitem): return decodePlot(nextitem.get('plot'))
+        return nitem

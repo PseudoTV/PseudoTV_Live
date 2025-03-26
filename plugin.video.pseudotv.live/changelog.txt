@@ -1,3 +1,8 @@
+v.0.6.0
+- Refactored Overlays.
+- Fixed "Run Autotune" in utilities menu.
+- Miscellaneous tweaks & improvements.
+
 v.0.5.9
 - Miscellaneous tweaks & improvements.
 - Added JSONRPC query timeout to Misc. settings (only viewable when debugging is enabled). 

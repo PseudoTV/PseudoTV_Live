@@ -260,7 +260,7 @@ class XMLTVS:
     def findRecording(self, ritem: dict, recordings: list=[]) -> tuple:
         if not recordings: recordings = self.getRecordings()
         for idx, eitem in enumerate(recordings):
-            if (ritem.get('id') == eitem.get('id',str(random.random()))) or (ritem.get('name').lower() == eitem.get('display-name')[0][0].lower()):
+            if (ritem.get('id') == eitem.get('id',str(random.random()))) or (ritem.get('name','').lower() == eitem.get('display-name')[0][0].lower()):
                 self.log('findRecording, found ritem = %s'%(eitem))
                 return idx, eitem
         return None, {}
@@ -281,8 +281,8 @@ class XMLTVS:
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
         
-        item['thumb']         = cleanImage(getThumb(fItem,EPG_ARTWORK)) #unify thumbnail by user preference 
-        fItem.get('art',{})['thumb'] = getThumb(fItem,{0:1,1:0}[EPG_ARTWORK])  #unify thumbnail artwork, opposite of EPG_Artwork
+        item['thumb']         = cleanImage((getThumb(fItem,EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK])) #unify thumbnail by user preference 
+        fItem.get('art',{})['thumb'] = cleanImage(getThumb(fItem,{0:1,1:0}[EPG_ARTWORK]) or {0:FANART,1:COLOR_LOGO}[{0:1,1:0}[EPG_ARTWORK]]) #unify thumbnail artwork, opposite of EPG_Artwork
         
         item['date']          = fItem.get('premiered','')
         item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=quoteString(item['title']),chid=quoteString(citem['id']),vid=quoteString(encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=quoteString(citem['name']))

@@ -37,9 +37,10 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         if   PROPERTIES.isRunning('togglePVR'): DIALOG.notificationDialog(LANGUAGE(32166))
         elif mode == 'live':
             if params.get('start') == '{utc}':
-                BUILTIN.closeBusyDialog()
-                DIALOG.okDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME,ADDON_NAME))
                 PROPERTIES.setPropTimer('chkPVRRefresh')
+                params.update({'start':0,'stop':0,'duration':0})
+                if params['isPlaylist']:        threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
+                elif params['vid'] :            threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
             elif params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
             elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
             else:                               threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])

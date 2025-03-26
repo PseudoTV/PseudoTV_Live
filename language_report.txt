@@ -8,6 +8,10 @@ Language IDS w\duplicate strings: {
         "30021",
         "30079"
     ],
+    "Show Channel Bug": [
+        "30043",
+        "30145"
+    ],
     "Browse": [
         "30087",
         "32068"
@@ -138,6 +142,7 @@ Language IDS not found in py files, possibly only in xml: {
     "30140": "Build Filler Folders",
     "30141": "Overlay Resource",
     "30142": "Disable Overlay",
+    "30146": "Every %s Minutes",
     "30149": "Enable Recording Cleanup",
     "30150": "Copy Logo Folder?",
     "30151": "Copy Fillers Folder?",
@@ -167,6 +172,7 @@ Language IDS not found in py files, possibly only in xml: {
     "32011": "Music Genres",
     "32012": "Recommended",
     "32013": "Services",
+    "32024": "Autotuning samples available via Misc. Utilities",
     "32033": "Offline",
     "32048": "Select Servers",
     "32049": "Restarting...",
@@ -181,6 +187,7 @@ Language IDS not found in py files, possibly only in xml: {
     "32114": "Online",
     "32115": "Running as a client.",
     "32128": "Rebuilding Autotuned Channels",
+    "32129": "%s is missing guide data for this channel\\nPlease wait for Kodi and %s to finish updating.",
     "32130": "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled\\nIt's recommended you re-enable when finished debugging",
     "32133": "[COLOR=yellow][B]Notice!! [/B][/COLOR] Something went wrong, Please double check your PVR configurations and reboot Kodi.",
     "32143": "Debugging Disabled!",
@@ -210,6 +217,9 @@ Language IDS not found in py files, possibly only in xml: {
     "32220": "%s Disabled",
     "32221": "Add",
     "32222": "Save",
+    "32224": "Indefinitely",
+    "32225": "Randomly",
+    "32226": "Forcing",
     "32234": "Changes Detected, Do you want to save?",
     "32237": "Waiting for Background Service to idle...",
     "32242": "PVR Search",
@@ -246,6 +256,7 @@ Language IDS not found in py files, possibly only in xml: {
     "33074": "Automatically configure IPTV-Simple for use with PseudoTV Live [Minimal risk of overriding existing user configurations].",
     "33078": "Stop Playback when Idle for x Hours.\\nCancelable with prompt and countdown.",
     "33084": "Boost Background Processing through Multi-Threading. [Disabled Default]\\nDisable if you experience system instability.",
+    "33086": "Interval between channel Bug appearances (Minutes). [-1 Indefinitely, 0 Random]",
     "33089": "QRCode - Visit PseudoTV Live Wiki",
     "33092": "Multi-room help",
     "33097": "Only recommend you change port if a conflict exists.",

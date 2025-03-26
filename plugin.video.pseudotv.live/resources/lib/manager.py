@@ -635,7 +635,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def previewChannel(self, citem, retCntrl=None):
         def __buildItem(fileList, fitem):
-            return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=getThumb(fitem,opt=EPG_ARTWORK))
+            return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
             
         def __fileList(citem):
             from builder import Builder

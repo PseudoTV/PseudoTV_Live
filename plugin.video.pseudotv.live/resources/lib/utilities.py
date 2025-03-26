@@ -181,15 +181,15 @@ class Utilities:
          
          
     def _runAutotune(self):
-        SETTINGS.setAutotuned(False)
+        self.log('_runAutotune')
+        SETTINGS.setCacheSetting('has.Autotuned',False)
         PROPERTIES.setPropTimer('chkAutoTune')
          
          
     def _runUpdate(self, full=False):
+        self.log('_runUpdate, full = %s'%(full))
+        if full: PROPERTIES.setEpochTimer('chkLibrary')
         PROPERTIES.setEpochTimer('chkChannels')
-        if full:
-            SETTINGS.setAutotuned(False)
-            PROPERTIES.setEpochTimer('chkLibrary')
                
 
     def deleteFiles(self, msg, full: bool=False):

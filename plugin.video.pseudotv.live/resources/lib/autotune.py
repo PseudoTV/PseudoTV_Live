@@ -52,19 +52,16 @@ class Autotune:
         autoEnabled    = []
         customChannels = self.getCustom()
         autoChannels   = self.getAutotuned()
-        hasAutotuned   = SETTINGS.hasAutotuned()
-        self.log('_runTune, custom channels = %s,  autotune channels = %s,  has autotuned = %s'%(len(customChannels),len(autoChannels),hasAutotuned))
+        self.log('_runTune, customChannels = %s,  autoChannels = %s'%(len(customChannels),len(autoChannels)))
         
         if len(autoChannels) > 0: #rebuild existing autotune, no samples needed
             rebuild = True
             PROPERTIES.setEXTPropertyBool('%s.has.Predefined'%(ADDON_ID),True)
-        elif len(customChannels) == 0 and not hasAutotuned: #begin check if samples needed
+        elif len(customChannels) == 0: #begin check if samples needed
             [autoEnabled.extend(self.library.getEnabled(type)) for type in AUTOTUNE_TYPES]
             if len(autoEnabled) > 0:
                 self.log('_runTune, library enabled items = %s; recovering enabled items'%(len(autoEnabled)))
                 rebuild = True #recover empty channels.json with enabled library.json items.
-            elif hasAutotuned: # autotune already ran once, manual only going forward
-                return DIALOG.notificationDialog(LANGUAGE(32024))
             else:
                 samples = True #create sample channels "autotune".
             
@@ -106,14 +103,14 @@ class Autotune:
         def _match(enabledItems):
             for item in enabledItems:
                 for idx, liz in enumerate(lizlst):
-                    if item.get('name').lower() == liz.getLabel().lower():
+                    if item.get('name','').lower() == liz.getLabel().lower():
                         yield idx
 
         def _set(ATtype, selects=[]):
             for item in items:
                 item['enabled'] = False #disable everything before selecting new items.
                 for select in selects:
-                    if item.get('name').lower() == lizlst[select].getLabel().lower():
+                    if item.get('name','').lower() == lizlst[select].getLabel().lower():
                         item['enabled'] = True
             self.library.setLibrary(ATtype, items)
            

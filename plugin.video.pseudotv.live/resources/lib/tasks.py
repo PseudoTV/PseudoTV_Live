@@ -48,7 +48,7 @@ class Tasks():
         self.quePriority._push((func, args, kwargs), priority)
         
 
-    def _initialize(self, sleep=FIFTEEN):
+    def _initialize(self):
         tasks = [self.chkInstanceID,
                  self.chkDirs,
                  self.chkWelcome,
@@ -56,8 +56,6 @@ class Tasks():
                  self.chkBackup,
                  self.chkServers,
                  self.chkPVRBackend]
-                 
-        DIALOG.notificationWait(LANGUAGE(32054),wait=sleep)
         for func in tasks: self._que(func)
         self.log('_initialize, finished...')
         
@@ -297,10 +295,9 @@ class Tasks():
 
     def chkAutoTune(self):
         self.log('chkAutoTune')
-        try: 
-            SETTINGS.setAutotuned(Autotune()._runTune())
+        if not SETTINGS.getCacheSetting('has.Autotuned'):
+            SETTINGS.setCacheSetting('has.Autotuned',Autotune()._runTune())
             PROPERTIES.setEpochTimer('chkChannels')
-        except Exception as e: self.log('chkAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
     
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)

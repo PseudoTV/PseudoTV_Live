@@ -61,7 +61,6 @@ def getThumb(item={},opt=0): #unify thumbnail artwork
                item.get('art',{}).get(key)                    or
                item.get(key) or '')
         if art: return art
-    return {0:FANART,1:COLOR_LOGO}[opt]
 
 def setDictLST(lst=[]):
     return [loadJSON(s) for s in list(OrderedDict.fromkeys([dumpJSON(d) for d in lst]))]
@@ -255,9 +254,10 @@ class Settings:
         return loadJSON(decodeString(self.getSetting(key)))
     
     
-    def getCacheSetting(self, key, checksum=1, json_data=False, revive=True):
-        if revive: return self.setCacheSetting(key, self.cacheDB.get(key, checksum, json_data), checksum, json_data)
-        else:      return self.cacheDB.get(key, checksum, json_data)
+    def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False, revive=True):
+        value = self.cacheDB.get(key, checksum, json_data)
+        if revive: return self.setCacheSetting(key, value, checksum, json_data)
+        else:      return value
         
         
     def getEXTMeta(self, id):
@@ -286,10 +286,6 @@ class Settings:
         return (self.getCacheSetting('clearChannels') or [])
 
 
-    def hasAutotuned(self):
-        return self.getCacheSetting('has.Autotuned') == True
-        
-        
     #CLR
     def clrCacheSetting(self, key):
         self.cache.clear(key)
@@ -351,7 +347,7 @@ class Settings:
         return self.setSetting(key,encodeString(dumpJSON(values)))
             
             
-    def setCacheSetting(self, key, value, checksum=1, json_data=False):
+    def setCacheSetting(self, key, value, checksum=ADDON_VERSION, json_data=False):
         return self.cacheDB.set(key, value, checksum, datetime.timedelta(days=84), json_data)
             
 
@@ -364,10 +360,6 @@ class Settings:
         if isinstance(id, list): ids.extend(id)
         else:                    ids.append(id)
         return self.setCacheSetting('clearChannels',list(set(ids)))
-
-
-    def setAutotuned(self, state=True):
-        return self.setCacheSetting('has.Autotuned',state)
 
 
     @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
@@ -987,8 +979,8 @@ class ListItems:
         if 'pvritem' in info: properties.update({'pvritem':info.pop('pvritem')}) # write dump to single key
         
         if media != 'video': #unify default artwork for music.
-            art['poster'] = getThumb(info,opt=1)
-            art['fanart'] = getThumb(info)
+            art['poster'] = (getThumb(info,opt=1) or COLOR_LOGO)
+            art['fanart'] = (getThumb(info)       or FANART)
             
         listitem = self.getListItem(info.pop('label',''), info.pop('label2',''), info.pop('file',''), offscreen=oscreen)
         listitem.setArt(art)
@@ -1052,8 +1044,9 @@ class ListItems:
             
     
 class Builtin:
-    busy    = None
-    monitor = MONITOR()
+    busy       = None
+    monitor    = MONITOR()
+    properties = Properties()
     
     
     def __init__(self):
@@ -1126,7 +1119,7 @@ class Builtin:
 
   
     def isBusyDialog(self):
-        return (Properties().isRunning('OVERLAY_BUSY') | self.getInfoBool('IsActive(busydialognocancel)','Window') | self.getInfoBool('IsActive(busydialog)','Window'))
+        return (self.properties.isRunning('OVERLAY_BUSY') | self.getInfoBool('IsActive(busydialognocancel)','Window') | self.getInfoBool('IsActive(busydialog)','Window'))
 
 
     def closeBusyDialog(self):
@@ -1160,12 +1153,12 @@ class Builtin:
     @contextmanager
     def kodiLocker(self, wait=0.1):
         while not self.monitor.abortRequested(): #try and make kodi api thread safe / thread locks not working? todo debug.
-            if self.monitor.waitForAbort(wait) or xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)) == 'true': break
-            elif xbmcgui.Window(10000).getProperty('%s.kodiLocker'%(ADDON_ID)) != 'true': break
+            if self.monitor.waitForAbort(wait) or self.properties.getEXTPropertyBool('%s.pendingInterrupt'%(ADDON_ID)): break
+            elif not self.properties.getEXTPropertyBool('%s.kodiLocker'%(ADDON_ID)): break
             else: log('kodiLocker, avoiding collision')
-        xbmcgui.Window(10000).setProperty('%s.kodiLocker'%(ADDON_ID),'true')
+        self.properties.setEXTPropertyBool('%s.kodiLocker'%(ADDON_ID),True)
         try: yield
-        finally: xbmcgui.Window(10000).setProperty('%s.kodiLocker'%(ADDON_ID),'false')
+        finally: self.properties.setEXTPropertyBool('%s.kodiLocker'%(ADDON_ID),False)
 
 
     def getInfoLabel(self, key, param='ListItem', default=''):
@@ -1194,12 +1187,12 @@ class Builtin:
     @contextmanager
     def sendLocker(self, wait=0.1):
         while not self.monitor.abortRequested(): #try and make kodi api thread safe / thread locks not working? todo debug.
-            if self.monitor.waitForAbort(wait) or xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)) == 'true': break
-            elif xbmcgui.Window(10000).getProperty('%s.sendLocker'%(ADDON_ID)) != 'true': break
+            if self.monitor.waitForAbort(wait) or self.properties.getEXTPropertyBool('%s.pendingInterrupt'%(ADDON_ID)): break
+            elif not self.properties.getEXTPropertyBool('%s.sendLocker'%(ADDON_ID)): break
             else: log('sendLocker, avoiding collision')
-        xbmcgui.Window(10000).setProperty('%s.sendLocker'%(ADDON_ID),'true')
+        self.properties.setEXTPropertyBool('%s.sendLocker'%(ADDON_ID),True)
         try: yield
-        finally: xbmcgui.Window(10000).setProperty('%s.sendLocker'%(ADDON_ID),'false')
+        finally: self.properties.setEXTPropertyBool('%s.sendLocker'%(ADDON_ID),False)
 
 
     def executeJSONRPC(self, command):
@@ -1289,7 +1282,7 @@ class Dialog:
         
         
     def _okDialog(self, msg, heading, autoclose, url):
-        timerit(self.okDialog)(0.5,[msg, heading, autoclose])
+        return timerit(self.okDialog)(0.5,[msg, heading, autoclose])
 
 
     def okDialog(self, msg, heading=ADDON_NAME, autoclose=AUTOCLOSE_DELAY, usethread=False):
@@ -1348,7 +1341,7 @@ class Dialog:
         
         
     def _textViewer(self, msg, heading, usemono, autoclose):
-        timerit(self.textviewer)(0.5,[msg, heading, usemono, autoclose])
+        return timerit(self.textviewer)(0.5,[msg, heading, usemono, autoclose])
         
         
     def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=AUTOCLOSE_DELAY, usethread=False):
@@ -1369,7 +1362,7 @@ class Dialog:
 
 
     def _notificationWait(self, message, header, wait):
-        timerit(self.notificationWait)(0.5,[message, header, wait])
+        return timerit(self.notificationWait)(0.5,[message, header, wait])
 
 
     def notificationWait(self, message, header=ADDON_NAME, wait=4, usethread=False):

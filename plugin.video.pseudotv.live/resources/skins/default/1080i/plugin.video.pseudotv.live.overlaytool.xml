@@ -53,7 +53,7 @@
                     <font>font32_title</font>
                     <textcolor>ffffffff</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
-                    <label>Move logo into position.[CR]Enter/Select to focus.[CR]Back to save.</label>
+                    <label>Move logo into position.[CR]Enter/Select toggle focus.[CR]Press back to save.</label>
                 </control>
             </control>
         </control>

@@ -75,13 +75,10 @@ class Library:
     
     
     def _save(self, file=LIBRARYFLEPATH):
+        self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
         return setJSON(file, self.libraryDATA)
         
-        
-    def getTemplate(self):
-        return self.libraryDATA.get('library',{}).get('Item',{}).copy()
-        
-        
+  
     def getLibrary(self, type=None):
         self.log('getLibrary, type = %s'%(type))
         if type is None: return self.libraryDATA.get('library',{})
@@ -90,7 +87,6 @@ class Library:
         
     def setLibrary(self, type, items=[]):
         self.log('setLibrary, type = %s, items = %s'%(type,len(items)))
-        self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
         self.libraryDATA['library'][type] = items
         PROPERTIES.setEXTPropertyBool('%s.has.%s'%(ADDON_ID,slugify(type)),len(items) > 0)
         SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabled(type)),len(items)))
@@ -102,7 +98,10 @@ class Library:
         return [item for item in items if item.get('enabled',False)]
 
 
-    def updateLibrary(self, force: bool=False) -> bool:
+    def updateLibrary(self, force: bool=False) -> bool:      
+        def __temp():
+            return self.libraryDATA.get('library',{}).get('Item',{}).copy()
+        
         def __clear():
             items = list(self.libraryFUNCS.items())
             for label, params in items:
@@ -112,10 +111,10 @@ class Library:
                 
         def __update(type, item):
             #check existing library for enabled itemss
-            [item.update({'enabled':True}) for eitem in self.getEnabled(type) if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name').lower()]
+            [item.update({'enabled':True}) for eitem in self.getEnabled(type) if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name','').lower()]
             #check existing channels for enabled items
-            [item.update({'enabled':True}) for channel in self.channels.getType(type) if getChannelSuffix(item.get('name'), type).lower() == channel.get('name').lower()]
-            entry = self.getTemplate()
+            [item.update({'enabled':True}) for channel in self.channels.getType(type) if getChannelSuffix(item.get('name'), type).lower() == channel.get('name','').lower()]
+            entry = __temp()
             entry.update(item)
             return entry
             

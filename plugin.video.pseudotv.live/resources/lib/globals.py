@@ -445,3 +445,15 @@ def isCenterlized():
         return False
     return True
                 
+def isFiller(item={}):
+    for genre in item.get('genre',[]):
+        if genre.lower() in ['pre-roll','post-roll']: return True
+    return False
+
+def isShort(item={}, minDuration=SETTINGS.getSettingInt('Seek_Tolerance')):
+    if item.get('duration', minDuration) < minDuration: return True
+    else: return False
+   
+def isEnding(progress=100):
+    if progress >= SETTINGS.getSettingInt('Seek_Threshold'): return True
+    else: return False
