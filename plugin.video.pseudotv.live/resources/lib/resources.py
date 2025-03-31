@@ -22,7 +22,7 @@ from globals    import *
 from functools  import reduce
 from difflib    import SequenceMatcher
         
-LOCAL_RESOURCES = [LOGO_LOC, IMAGE_LOC]
+LOCAL_FOLDERS   = [LOGO_LOC, IMAGE_LOC]
 MUSIC_RESOURCE  = ["resource.images.musicgenreicons.text"]
 GENRE_RESOURCE  = ["resource.images.moviegenreicons.transparent"]
 STUDIO_RESOURCE = ["resource.images.studios.white"]
@@ -52,45 +52,79 @@ class Resources:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getLogo(self, citem: dict, logo=None) -> str:
-        if not logo: logo = self.getLocalLogo(citem.get('name')) #local
-        if not logo: logo = self.getLogoResources(citem) #resource
-        if not logo: logo = self.getTVShowLogo(citem.get('name')) #tvshow 
+    def getLogo(self, citem: dict, logo=LOGO) -> str:
+        logo = logo.replace(LOGO,'')
+        if not logo: logo = self.getLocalLogo(citem.get('name'))  #local
+        if not logo: logo = self.getCachedLogo(citem)             #cache
         if not logo: logo = LOGO
         self.log('getLogo, chname = %s, logo = %s'%(citem.get('name'), logo))
         return logo
         
-        
+
     def selectLogo(self, citem: dict) -> list:
         logos = []
         logos.extend(self.getLocalLogo(citem.get('name'),select=True))
-        logos.extend(self.getLogoResources(citem,select=True))
+        logos.extend(self.getLogoResources(citem, select=True))
         logos.append(self.getTVShowLogo(citem.get('name')))
         self.log('selectLogo, chname = %s, logos = %s'%(citem.get('name'), len(logos)))
         return list([_f for _f in logos if _f])
 
 
+    def getCachedLogo(self, citem, select=False):
+        self.log('getCachedLogo, chname = %s, type = %s'%(citem.get('name'), citem.get('type')))
+        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select),'checksum':getMD5('|'.join(self.getResources(citem))), 'args':(citem,select)},
+                      {'name':'getTVShowLogo.%s'%(getMD5(citem.get('name')))             ,'checksum':ADDON_VERSION                             , 'args':(citem.get('name'),)}]
+        for cacheItem in cacheFuncs:
+            cacheResponse = self.cache.get(cacheItem.get('name',''),cacheItem.get('checksum',ADDON_VERSION))
+            if cacheResponse: return cacheResponse
+            else: self.queueLOGO(cacheItem)
+                
+
+    def queueLOGO(self, param):
+        queuePool = (SETTINGS.getCacheSetting('queueLOGO', json_data=True) or {})
+        params = queuePool.setdefault('params',[])
+        params.append(param)
+        queuePool['params'] = setDictLST(params)
+        self.log("queueLOGO, saving = %s\n%s"%(len(queuePool['params']),param))
+        SETTINGS.setCacheSetting('queueLOGO', queuePool, json_data=True)
+
+
     def getLocalLogo(self, chname: str, select: bool=False) -> list:
         logos = []
-        for path in LOCAL_RESOURCES:
+        for path in LOCAL_FOLDERS:
             for ext in IMG_EXTS:
                 if FileAccess.exists(os.path.join(path,'%s%s'%(chname,ext))):
+                    self.log('getLocalLogo, found %s'%(os.path.join(path,'%s%s'%(chname,ext))))
                     if select: logos.append(os.path.join(path,'%s%s'%(chname,ext)))
                     else: return os.path.join(path,'%s%s'%(chname,ext))
         if select: return logos
         
         
-    def getLogoResources(self, citem: dict, select: bool=False) -> dict and None:
-        self.log('getLogoResources, chname = %s, type = %s'%(citem.get('name'), citem.get('type')))
+    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
+    def fillLogoResource(self, id, version=ADDON_VERSION):
+        results  = {}
+        response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=version, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+        for path, images in list(response.items()):
+            for image in images:
+                name, ext = os.path.splitext(image)
+                results[name] = os.path.join(path,image)
+        return results
+        
+        
+    def getResources(self, citem={}):
         resources = SETTINGS.getSetting('Resource_Logos').split('|').copy()
         if   citem.get('type') in ["TV Genres","Movie Genres"]:               resources.extend(GENRE_RESOURCE)
         elif citem.get('type') in ["TV Networks","Movie Studios"]:            resources.extend(STUDIO_RESOURCE)
         elif citem.get('type') in ["Music Genres","Radio"] or isRadio(citem): resources.extend(MUSIC_RESOURCE)
-        else:
-            resources.extend(GENRE_RESOURCE)
-            resources.extend(STUDIO_RESOURCE)
+        else:                                                                 resources.extend(GENRE_RESOURCE + STUDIO_RESOURCE)
+        self.log('getResources, type = %s\nresources = %s'%(citem.get('type'),resources))
+        return resources
         
-        logos = []
+        
+    def getLogoResources(self, citem: dict, select: bool=False) -> dict and None:
+        self.log('getLogoResources, chname = %s, type = %s'%(citem.get('name'), citem.get('type')))
+        logos     = []
+        resources = self.getResources(citem)
         cacheName = 'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select)
         cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
@@ -102,64 +136,48 @@ class Resources:
                     self.log('getLogoResources, missing %s'%(id))
                     continue
                 else:
-                    self.log('getLogoResources, checking %s'%(id))
-                    results = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
-                    for path, images in list(results.items()):
-                        for image in images:
-                            name, ext = os.path.splitext(image)
-                            if self.matchName(citem.get('name'), name, citem.get('type','Custom'), auto=select):
-                                self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
-                                if select: logos.append('%s/%s'%(path,image))
-                                else: return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
-            if select:
-                if len(logos) > 0: cacheResponse = self.cache.set(cacheName, logos, checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
-                else:              cacheResponse = []
+                    results = self.fillLogoResource(id, self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION))
+                    self.log('getLogoResources, checking %s, results = %s'%(id,len(results)))
+                    for name, logo in list(results.items()):
+                        if self.matchName(citem.get('name'), name):
+                            self.log('getLogoResources, found %s'%(logo))
+                            if select: logos.append(logo)
+                            else: return self.cache.set(cacheName, logo, checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            if select: return self.cache.set(cacheName, logos, checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
         
-        
+
     def getTVShowLogo(self, chname: str) -> dict and None:
         self.log('getTVShowLogo, chname = %s'%(chname))
+        items     = self.jsonRPC.getTVshows()
         cacheName = 'getTVShowLogo.%s'%(getMD5(chname))
         cacheResponse = self.cache.get(cacheName)
         if not cacheResponse:
-            items = self.jsonRPC.getTVshows()
             for item in items:
                 if self.matchName(chname, item.get('title','')):
                     keys = ['clearlogo','logo','logos','clearart','icon']
                     for key in keys:
-                        art = item.get('art',{}).get(key,'').replace('image://DefaultFolder.png/','')
-                        if art:
-                            self.log('getTVShowLogo, found %s'%(art))
-                            return self.cache.set(cacheName, art, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                        logo = item.get('art',{}).get(key,'').replace('image://DefaultFolder.png/','')
+                        if logo:
+                            self.log('getTVShowLogo, found %s'%(logo))
+                            return self.cache.set(cacheName, logo, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
         
-    #todo refactor this mess, proper pattern matching...
-    def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None:
-        if auto: return ((SequenceMatcher(None, chname, name).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name.split(' ')[0]).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name).ratio() > .8) | (SequenceMatcher(None, chname, name.split(' ')[0]).ratio() > .8))
-        else:
-            chnames  = list(set([chname, slugify(chname), validString(chname), chname.replace('and', '&'), chname.replace('&','and')]))
-            renames  = list(set([name, slugify(name), validString(name)]))
-            patterns = [getChannelSuffix, cleanChannelSuffix, stripRegion, splitYear]
-            for chname in chnames:
-                if not chname or not name: continue
-                elif chname.lower() == name.lower(): return True
-                for rename in renames:
-                    if not rename: continue
-                    elif chname.lower() == rename.lower(): return True
-                    for pattern in patterns:
-                        try:
-                            rrename = pattern(rename,type)
-                            rchname = pattern(chname,type)
-                        except: 
-                            rrename = pattern(rename)
-                            rchname = pattern(chname)
-                        finally:
-                            if isinstance(rchname,(list,tuple)) and len(rchname) > 1: rchname = rchname[0]
-                            if isinstance(rrename,(list,tuple)) and len(rrename) > 1: rrename = rrename[0]
-                            if not rchname or not rrename: continue
-                            elif chname.lower() == rrename.lower() or rename.lower() == rchname.lower() or rchname.lower() == rrename.lower(): return True
         
-
+    #todo refactor this mess, proper pattern matching...
+    def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None: #todo auto setting SETTINGS.getSettingBool('')
+        chnames = list(set([chname, slugify(chname), validString(chname), chname.replace('and', '&'), chname.replace('&','and'), stripRegion(chname), getChannelSuffix(chname, type), cleanChannelSuffix(chname, type)]))
+        renames = list(set([name, slugify(name), validString(name), splitYear(name)[0], stripRegion(name)]))
+        for chname in chnames:
+            if not chname: continue
+            elif auto: return SequenceMatcher(None, chname, name).ratio() > .8
+            elif chname.lower() == name.lower(): return True
+            for rename in renames:
+                if not rename: continue
+                elif chname.lower() == rename.lower(): return True
+        return False
+        
+        
     def buildWebImage(self, image: str) -> str:
         #convert any local images to url via local server and/or kodi web server.
         if image.startswith(LOGO_LOC) and self.remoteHost:
@@ -171,8 +189,7 @@ class Resources:
             
             
     def isMono(self, file: str) -> bool:
-        if file.startswith('resource://') and (bool(set([match in file.lower() for match in ['transparent','white','mono']]))):
-            return True
+        if file.startswith('resource://') and (bool(set([match in file.lower() for match in ['transparent','white','mono']]))): return True
         elif hasAddon('script.module.pil'):
             try:
                 from PIL import Image, ImageStat

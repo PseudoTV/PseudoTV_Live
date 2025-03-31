@@ -40,6 +40,10 @@ Language IDS w\duplicate strings: {
         "32059",
         "32222"
     ],
+    "Parsing": [
+        "30014",
+        "32245"
+    ],
     "Include 3D Media": [
         "30055",
         "33055"
@@ -163,11 +167,6 @@ Language IDS not found in py files, possibly only in xml: {
     "30189": "Last Position",
     "30198": "Enable Threaded Queue Executor",
     "30201": "JSONRPC Timer",
-    "32004": "TV Networks",
-    "32005": "TV Shows",
-    "32006": "TV Genres",
-    "32007": "Movie Genres",
-    "32008": "Movie Studios",
     "32009": "Mixed Genres",
     "32011": "Music Genres",
     "32012": "Recommended",
@@ -223,6 +222,8 @@ Language IDS not found in py files, possibly only in xml: {
     "32234": "Changes Detected, Do you want to save?",
     "32237": "Waiting for Background Service to idle...",
     "32242": "PVR Search",
+    "32246": "Loading",
+    "32247": "Starting",
     "33001": "Only enable for short DEBUGGING sessions. The Kodi log will be spammed; You may experience poor system performance while enabled.",
     "33002": "AutoTune Video/Mixed/Music SmartPlaylists.",
     "33003": "AutoTune from Recommended (Supported) plugins installed on Kodi.\\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins.",
@@ -255,7 +256,7 @@ Language IDS not found in py files, possibly only in xml: {
     "33071": "Open IPTV Simple's settings",
     "33074": "Automatically configure IPTV-Simple for use with PseudoTV Live [Minimal risk of overriding existing user configurations].",
     "33078": "Stop Playback when Idle for x Hours.\\nCancelable with prompt and countdown.",
-    "33084": "Boost Background Processing through Multi-Threading. [Disabled Default]\\nDisable if you experience system instability.",
+    "33084": "Not recommend!! Only disable if you understand the impact of theses changes.",
     "33086": "Interval between channel Bug appearances (Minutes). [-1 Indefinitely, 0 Random]",
     "33089": "QRCode - Visit PseudoTV Live Wiki",
     "33092": "Multi-room help",
@@ -289,6 +290,7 @@ Language IDS not found in py files, possibly only in xml: {
     "33178": "Select Vignette Image",
     "33182": "Enabled in discovered servers in the list below.",
     "33186": "Vignette Non-Linear Stretch",
+    "33198": "Boost Background Processing through Multi-Threading. [Disabled Default]\\nDisable if you experience system instability.",
     "33201": "How long to wait for JSONRPC response in minutes [0 Disabled, 3 Default]\\nPervent system hangs while waiting for a lengthy response.",
     "33202": "Minimum Debugging Level [LOGERROR - Default]\\nIf submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error.",
     "33214": "Default Sort Method for all channels, overridden per channel by SmartPlaylist, DynamicPlaylist and Adv. Channel rules.",

@@ -53,7 +53,7 @@ class Cache:
 
 
     @contextmanager
-    def cacheLocker(self, wait=0.1): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
+    def cacheLocker(self, wait=0.001): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
         while not self.service.monitor.abortRequested():
             if self.service.monitor.waitForAbort(wait) or self.service._interrupt(): break
             elif xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) != 'true': break
@@ -79,7 +79,7 @@ class Cache:
         
         
     def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
-        if not self.disable_cache:
+        if not self.disable_cache or (not isinstance(value,bool) and not value):
             with self.cacheLocker():
                 self.log('set, name = %s, value = %s'%(self.getname(name),'%s...'%(str(value)[:128])))
                 self.cache.set(self.getname(name),value,checksum,expiration,json_data)

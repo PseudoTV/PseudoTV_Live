@@ -57,14 +57,14 @@ class JSONRPC:
 
 
     def queueJSON(self, param):
-        queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
+        queuePool = (SETTINGS.getCacheSetting('queueJSON', json_data=True) or {})
         params = queuePool.setdefault('params',[])
         params.append(param)
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('setting',''))
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',0))
         queuePool['params'].reverse() #prioritize setsetting,playcount rollback over duration amendments.
         self.log("queueJSON, saving = %s\n%s"%(len(queuePool['params']),param))
-        SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
+        SETTINGS.setCacheSetting('queueJSON', queuePool, json_data=True)
 
         
     def cacheJSON(self, param, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, timeout=-1):

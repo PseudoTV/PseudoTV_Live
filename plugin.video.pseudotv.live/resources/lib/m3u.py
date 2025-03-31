@@ -349,7 +349,7 @@ class M3U:
         self.log('addStation,\nchannel item = %s\nfound existing = %s'%(citem,line))
         mitem = self.getMitem()
         mitem.update(citem)            
-        mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes.
+        mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes
         mitem['logo']          = citem['logo']
         mitem['realtime']      = False
         mitem['provider']      = '%s (%s)'%(ADDON_NAME,SETTINGS.getFriendlyName())

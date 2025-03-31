@@ -119,6 +119,10 @@ class Channels:
         return True
     
     
+    def delChannels(self, channels: list=[]) -> bool:
+        return [self.delChannel(channel) for channel in channels]
+        
+    
     def addChannel(self, citem: dict={}) -> bool:
         idx, channel = self.findChannel(citem)
         if idx is not None:
@@ -135,6 +139,10 @@ class Channels:
             self.log('addChannel, [%s] adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
             self.channelDATA.setdefault('channels',[]).append(citem)
         return True
+        
+        
+    def addChannels(self, channels: list=[]) -> bool:
+        return [self.addChannel(channel) for channel in channels]
         
         
     def findChannel(self, citem: dict={}, channels: list=[]) -> tuple:

@@ -27,6 +27,29 @@ from backup     import Backup
 from multiroom  import Multiroom
 from server     import HTTP
 
+class Tasker(Thread):
+    def __init__(self, tasks):
+        Thread.__init__(self,daemon=True)
+        self.tasks   = tasks
+        self.service = tasks.service 
+        self.start()
+        
+        
+    def run(self):
+        log("Tasker: run")
+        while not self.service.monitor.abortRequested():
+            if   self.service.monitor.waitForAbort(FIFTEEN): break
+            elif self.service._interrupt(): 
+                log("Tasker: run, _interrupt")
+                break
+            elif self.service._suspend():
+                log("Tasker/; run, _suspend")
+                self.service.monitor.waitForAbort(SUSPEND_TIMER)
+                continue
+            else:
+                self.tasks._chkQueTimer()
+            
+
 class Tasks():
     def __init__(self, service):
         self.service     = service       
@@ -55,8 +78,9 @@ class Tasks():
                  self.chkDebugging,
                  self.chkBackup,
                  self.chkServers,
-                 self.chkPVRBackend]
-        for func in tasks: self._que(func)
+                 self.chkPVRBackend,]
+        for func in tasks: self._que(func,1)
+        Tasker(self)
         self.log('_initialize, finished...')
         
         
@@ -99,7 +123,6 @@ class Tasks():
               
 
     def _chkQueTimer(self):
-        self.log('_chkQueTimer')
         self._chkEpochTimer('chkVersion'      , self.chkVersion      , 21600)
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
         self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 900)
@@ -108,6 +131,7 @@ class Tasks():
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 900)
         self._chkEpochTimer('chkChannels'     , self.chkChannels     , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
+        self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 300)
         self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
@@ -116,13 +140,13 @@ class Tasks():
         self._chkPropTimer('chkUpdate'        , self.chkUpdate       , 3)
                   
         
-    def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
+    def _chkEpochTimer(self, key, func, runevery=900, priority=-1, nextrun=None, *args, **kwargs):
         if nextrun is None: nextrun = PROPERTIES.getPropertyInt(key,default=0)# nextrun == 0 => force que
         epoch = int(time.time())
         if epoch >= nextrun:
-            self.log('_chkEpochTimer, key = %s'%(key))
+            self.log('_chkEpochTimer, key = %s, last run %s'%(key,epoch-nextrun))
             PROPERTIES.setPropertyInt(key,(epoch+runevery))
-            return self._que(func, -1, *args, **kwargs)
+            return self._que(func, priority, *args, **kwargs)
         
 
     def _chkPropTimer(self, key, func, priority=-1, *args, **kwargs):
@@ -196,7 +220,7 @@ class Tasks():
         self.log('chkLibrary, force = %s'%(force))
         try:
             library = Library(service=self.service)
-            library.importPrompt()
+            # library.importPrompt() #refactor feature
             complete = library.updateLibrary(force)
             del library
             if complete: 
@@ -211,7 +235,7 @@ class Tasks():
         if ids:
             channels = self.getChannels()
             channels = [citem for id in ids for citem in channels if citem.get('id') == id]
-            self.log('chkUpdate, channels = %s'%(len(channels)))
+            self.log('chkUpdate, channels = %s\nid = %s'%(len(channels),ids))
             self._que(self.chkChannels,3,channels)
 
 
@@ -239,9 +263,9 @@ class Tasks():
     def chkJSONQUE(self):
         if not PROPERTIES.isRunning('chkJSONQUE'):
             with PROPERTIES.chkRunning('chkJSONQUE'):
-                queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
+                queuePool = (SETTINGS.getCacheSetting('queueJSON', json_data=True) or {})
                 params = queuePool.get('params',[])
-                for i in list(range(SETTINGS.getSettingInt('Page_Limit'))):
+                for i in list(range(FIFTEEN)):
                     if self.service._interrupt(): 
                         self.log("chkJSONQUE, _interrupt")
                         break
@@ -251,8 +275,35 @@ class Tasks():
                         self._que(self.jsonRPC.sendJSON,-1, param)
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
-                SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
+                SETTINGS.setCacheSetting('queueJSON', queuePool, json_data=True)
 
+
+    def chkLOGOQUE(self):
+        if not PROPERTIES.isRunning('chkLOGOQUE'):
+            with PROPERTIES.chkRunning('chkLOGOQUE'):
+                updated   = False
+                library   = Library(service=self.service)
+                resources = library.resources
+                queuePool = (SETTINGS.getCacheSetting('queueLOGO', json_data=True) or {})
+                params = queuePool.get('params',[])
+                for i in list(range(FIFTEEN)):
+                    if self.service._interrupt(): 
+                        self.log("chkLOGOQUE, _interrupt")
+                        break
+                    elif len(params) > 0:
+                        param   = params.pop(0)
+                        updated = True
+                        self.log("chkLOGOQUE, queuing = %s\n%s"%(len(params),param))
+                        if param.get('name','').startswith('getLogoResources'):
+                            self._que(resources.getLogoResources, -1, *param.get('args',()), **param.get('kwargs',{}))
+                        elif param.get('name','').startswith('getTVShowLogo'):
+                            self._que(resources.getTVShowLogo, -1, *param.get('args',()), **param.get('kwargs',{}))
+                queuePool['params'] = setDictLST(params)
+                if updated and len(queuePool['params']) == 0: PROPERTIES.setPropertyBool('ForceLibrary',True)
+                self.log('chkLOGOQUE, remaining = %s'%(len(queuePool['params'])))
+                SETTINGS.setCacheSetting('queueLOGO', queuePool, json_data=True)
+                del library
+                
 
     def chkPVRRefresh(self):
         self.log('chkPVRRefresh')
@@ -260,10 +311,9 @@ class Tasks():
 
 
     def chkPVRToggle(self):
-        isIdle      = self.monitor.isIdle
-        isPlaying   = self.player.isPlaying()
-        self.log('chkPVRToggle, isIdle = %s, isPlaying = %s'%(isIdle,isPlaying))
-        if isIdle and not (isPlaying | BUILTIN.isScanning() | BUILTIN.isRecording()): togglePVR(False,True)
+        isPlaying = self.player.isPlaying()
+        self.log('chkPVRToggle, isPlaying = %s'%(isPlaying))
+        if not (isPlaying | BUILTIN.isScanning() | BUILTIN.isRecording()): togglePVR(False,True)
         else: PROPERTIES.setPropTimer('chkPVRRefresh')
 
 
@@ -324,16 +374,6 @@ class Tasks():
             self.log('getChannels failed! %s'%(e), xbmc.LOGERROR)
             return []
         
-
-    def chkChannelChange(self, channels=[]):
-        nChannels = self.getChannels()
-        if channels != nChannels:
-            difference = diffLSTDICT(channels,nChannels)
-            self.log('chkChannelChange, channels changed %s => %s: queuing (%s) chkChannels'%(len(channels),len(nChannels),len(difference)))
-            self._que(self.chkChannels,3,difference)
-            return nChannels
-        return channels
-
         
     def chkSettingsChange(self, settings={}):
         self.log('chkSettingsChange, settings = %s'%(settings))

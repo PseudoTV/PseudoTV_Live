@@ -1,3 +1,18 @@
+v.0.6.1
+- Fixed Adv. rule vignette image selection from resources. 
+- Fixed Vignette overlay size not applying to resolutions above 1080p.
+- Fixed Progressive channel updating bug.
+- Added Many miscellaneous improvements.
+- Improved Logo parsing:
+  - Logos no longer bottleneck startup performance; missing logos are now queued for future caching.
+  - Once the cache is complete, logos will slowly make there way into circulation; automatically.
+- Known issue: 
+  - Kodi PVR fails to update changed m3u logos. I'm Looking into a work around.
+  - Temporarily disabled "Restart" button.
+  - There maybe issues with missing channel logos.
+- Notice Let us push to make the new PseudoTV Live 100% bug free by its 5th project birthday (June 29th 2025).
+  Please; break it, then help me fix it! https://github.com/PseudoTV/PseudoTV_Live/wiki/Support
+
 v.0.6.0
 - Refactored Overlays.
 - Fixed "Run Autotune" in utilities menu.

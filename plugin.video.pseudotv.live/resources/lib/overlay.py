@@ -79,20 +79,11 @@ class Restart(xbmcgui.WindowXMLDialog):
     
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.player     = kwargs.get('player', None)
-        self.sysInfo    = kwargs.get('sysInfo', self.player.sysInfo)
-        self.monitor    = self.player.service.monitor
-        self.runActions = self.player.runActions
-        self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
+        self.player  = kwargs.get('player', None)
+        self.sysInfo = kwargs.get('sysInfo', self.player.sysInfo)
+        self.monitor = self.player.service.monitor
         
-        self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self) #todo restartPercentage adv. rule
-        if bool(self.restartPercentage) and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
-            progress = self.player.getPlayerProgress()
-            seekTHD  = SETTINGS.getSettingInt('Seek_Threshold')
-            self.log('toggleRestart, progress = %s, restartPercentage = %s, seekTHD = %s'%(progress,self.restartPercentage,seekTHD))
-            if (progress >= self.restartPercentage and progress < seekTHD) and self.sysInfo.get('fitem'): self.doModal()
-
-
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
@@ -104,7 +95,7 @@ class Restart(xbmcgui.WindowXMLDialog):
             wait = OSD_TIMER*2
             tot  = wait
             control = self.getControl(40000)
-            control.setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo)] + Window.IsVisible(fullscreenvideo)]')
+            control.setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo) + Window.IsVisible(fullscreenvideo)]')
             xpos = control.getX()
             
             while not self.monitor.abortRequested():
@@ -116,12 +107,10 @@ class Restart(xbmcgui.WindowXMLDialog):
             
             control.setAnimations([('Conditional', 'effect=fade start=%s end=0 time=240 delay=0.240 condition=True'%(prog))])
             control.setVisible(False)
-            self.log('onInit, stopped')
-            self.close()
             self.setFocusId(40001)
-        except Exception as e:
-            self.log("onInit, failed! %s\ncitem = %s"%(e,self.sysInfo), xbmc.LOGERROR)
-            self.close()
+        except Exception as e: self.log("onInit, failed! %s\ncitem = %s"%(e,self.sysInfo), xbmc.LOGERROR)
+        self.log("onInit, closing")
+        self.close()
 
 
     def onAction(self, act):
@@ -140,8 +129,20 @@ class Restart(xbmcgui.WindowXMLDialog):
         elif actionId == ACTION_MOVE_UP:       timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(up,Action(up),.5,true,false)'])
         elif actionId == ACTION_MOVE_DOWN:     timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(down,Action(down),.5,true,false)'])
         elif actionId in ACTION_PREVIOUS_MENU: timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(back,Action(back),.5,true,false)'])
-        self.close()
 
+
+    def open(self):
+        self.log("open, restartPercentage = %s"%(self.player.restartPercentage))
+        if bool(self.player.restartPercentage) and self.sysInfo.get('fitem'):
+            progress = self.player.getPlayerProgress()
+            if (progress >= self.player.restartPercentage and progress < self.player.maxProgress) and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
+                self.doModal()
+
+
+    def onClose(self):
+        self.log("onClose")
+        self.closing = True
+        
 
 class Overlay():
     channelBug     = None
@@ -171,7 +172,6 @@ class Overlay():
         self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
-        self.open()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -218,9 +218,9 @@ class Overlay():
             
     def open(self):
         if self.player.isPlaying():
-            # self.window_h, self.window_w = (self.window.getHeight(), self.window.getWidth())
             if self.enableVignette:
-                self.vignette = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, ' ', aspectRatio=0)
+                window_h, window_w = (self.window.getHeight(), self.window.getWidth())
+                self.vignette = xbmcgui.ControlImage(0, 0, window_w, window_h, ' ', aspectRatio=0)
                 self._addControl(self.vignette)
                 self.vignette.setImage(self.vinImage)
                 if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,[self.vinView])
@@ -298,13 +298,13 @@ class OnNext(xbmcgui.WindowXMLDialog):
             threshold = abs((totalTime - (totalTime * .75)) - FIFTEEN)
             remaining = floor(totalTime - self.player.getPlayedTime())
             intTime   = roundupDIV(threshold,3)
-            if remaining < intTime: intTime = remaining
+            if remaining < intTime: intTime = remaining - FIFTEEN
             
             if self.enableOnNext and not isFiller(self.fitem):
                 # self.window_h, self.window_w = (self.window.getHeight(), self.window.getWidth())
                 self.log('onInit, remaining = %s, onNextMode = %s'%(remaining,self.onNextMode))
                 self.getControl(40001).setPosition(self.onNextX, self.onNextY)
-                self.getControl(40001).setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo)] + Window.IsVisible(fullscreenvideo)]')
+                self.getControl(40001).setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo) + Window.IsVisible(fullscreenvideo)]')
                 self.getControl(40001).setAnimations([('WindowOpen' , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
                                                       ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
                                                       ('WindowClose', 'effect=zoom start=100 end=80 center=%s,%s delay=160 tween=back time=240 reversible=false'%(self.onNextX, self.onNextY)),
@@ -325,9 +325,10 @@ class OnNext(xbmcgui.WindowXMLDialog):
                         self.onNext_Artwork.setVisible(True)
                         xbmc.playSFX(BING_WAV)
                         
-                        show = FIFTEEN
+                        show = FIFTEEN*2
                         while not self.monitor.abortRequested():
-                            if self.monitor.waitForAbort(1.0) or self.closing or not self.player.isPlaying() or show < 1: break
+                            self.log('onInit, showing (%s)'%(show))
+                            if self.monitor.waitForAbort(0.5) or self.closing or not self.player.isPlaying() or show < 1: break
                             else: show -= 1
                             
                         self.onNext_Text.setVisible(False)
@@ -336,11 +337,14 @@ class OnNext(xbmcgui.WindowXMLDialog):
                     elif  self.onNextMode == 3: self.player.toggleInfo()
                     elif  self.onNextMode == 4: self._updateUpNext(fitem,nitem) 
                     
-                    wait = intTime
-                    while not self.monitor.abortRequested():
-                        if self.monitor.waitForAbort(1.0) or self.closing or not self.player.isPlaying() or wait < 1: break
-                        else: wait -= 1
+                    if intTime > 0:
+                        wait = intTime*2
+                        while not self.monitor.abortRequested():
+                            self.log('onInit, waiting (%s)'%(wait))
+                            if self.monitor.waitForAbort(0.5) or self.closing or not self.player.isPlaying() or wait < 1: break
+                            else: wait -= 1
         except Exception as e: self.log("onInit, failed! %s"%(e), xbmc.LOGERROR)
+        self.log("onInit, closing")
         self.close()
                 
                 
@@ -385,17 +389,22 @@ class OnNext(xbmcgui.WindowXMLDialog):
         
     def onAction(self, act):
         actionId = act.getId()
+        self.closing = True
         self.log('onAction: actionId = %s'%(actionId))
         if   actionId == ACTION_MOVE_UP:       timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(up,Action(up),.5,true,false)'])
         elif actionId == ACTION_MOVE_DOWN:     timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(down,Action(down),.5,true,false)'])
         elif actionId in ACTION_PREVIOUS_MENU: timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(back,Action(back),.5,true,false)'])
-        self.close()
 
 
     def open(self):
         self.log('open')
-        self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
-        self.doModal()
+        totalTime = int(self.player.getPlayerTime() * (self.player.maxProgress / 100))
+        threshold = abs((totalTime - (totalTime * .75)) - FIFTEEN)
+        remaining = floor(totalTime - self.player.getPlayedTime())
+        intTime   = roundupDIV(threshold,3)
+        if remaining > FIFTEEN:
+            self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
+            self.doModal()
         
 
     def onClose(self):

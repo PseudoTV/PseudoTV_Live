@@ -173,7 +173,7 @@ class Autotune:
             else: #update existing autotune
                 citem['id']       = eitem.get('id')
                 citem['number']   = eitem.get('number')
-                citem['logo']     = eitem.get('logo',citem.get('logo',LOGO))
+                citem['logo']     = chkLogo(eitem.get('logo',''),citem.get('logo',LOGO))
                 citem['favorite'] = eitem.get('favorite',False)
             self.log('[%s] buildAUTOTUNE, number = %s, match = %s'%(citem['id'],citem['number'],match))
             self.channels.addChannel(citem)

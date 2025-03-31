@@ -83,8 +83,7 @@ def threadit(method):
         for thread in thread_enumerate():
             if thread.name == thread_name and thread.is_alive():
                 if hasattr(thread, 'cancel'): thread.cancel()
-                log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
-                
+                log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))        
         thread = Thread(None, method, None, args, kwargs)
         thread.name = thread_name
         thread.daemon=True

@@ -72,7 +72,8 @@ def stripNumber(s):
     
 def stripRegion(s):
     match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(s)
-    if match: return match.group(1)
+    try:    return match.group(1)
+    except: return s
     
 def chanceBool(percent=25):
     return random.randrange(100) <= percent
@@ -156,10 +157,9 @@ def setURL(url, file):
     except Exception as e: log('Globals: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
 
 def diffLSTDICT(old, new):
-    sOLD = set([dumpJSON(e) for e in old])
-    sNEW = set([dumpJSON(e) for e in new])
-    sDIFF = sOLD.symmetric_difference(sNEW)
-    return setDictLST([loadJSON(e) for e in sDIFF])
+    set1 = {dumpJSON(d, sortkey=True) for d in old}
+    set2 = {dumpJSON(d, sortkey=True) for d in new}
+    return {"added": [loadJSON(s) for s in set2 - set1], "removed": [loadJSON(s) for s in set1 - set2]}
 
 def getChannelID(name, path, number):
     if isinstance(path, list): path = '|'.join(path)
@@ -295,6 +295,7 @@ def togglePVR(state=True, reverse=False, wait=FIFTEEN):
         if (state and isEnabled) or (not state and not isEnabled): return
         elif not PROPERTIES.isRunning('togglePVR'):
             with PROPERTIES.chkRunning('togglePVR'):
+                BUILTIN.executebuiltin("Dialog.Close(all)") 
                 log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
                 BUILTIN.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
             if reverse:
@@ -457,3 +458,7 @@ def isShort(item={}, minDuration=SETTINGS.getSettingInt('Seek_Tolerance')):
 def isEnding(progress=100):
     if progress >= SETTINGS.getSettingInt('Seek_Threshold'): return True
     else: return False
+
+def chkLogo(old, new=LOGO):
+    if new.endswith('wlogo.png') and not old.endswith('wlogo.png'): return old
+    return new

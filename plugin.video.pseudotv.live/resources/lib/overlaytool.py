@@ -60,7 +60,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             
         try: 
             # self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
-            # if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,[self.vinView])
+            # if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.1,[self.vinView])
             if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
             self.doModal()
         except Exception as e: 
@@ -140,7 +140,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             self.log('save, saving %s'%(changes))
             if DIALOG.yesnoDialog(LANGUAGE(32096)): 
                 for cntrl, value in list(changes.items()): self.set(cntrl,value[0],value[1],value[2])
-        # if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,[self.defaultView])
+        # if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.1,[self.defaultView])
         self.close()
 
     

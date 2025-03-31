@@ -9,15 +9,15 @@
             <posx>0</posx>
             <posy>0</posy>
             <animation type="WindowOpen" reversible="false">
-                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="480"/>
+                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" start="0" end="100" time="480"/>
             </animation>
             <animation type="WindowClose" reversible="false">
-                <effect type="zoom" start="100" end="80" center="50%,50%" easing="in" tween="back" time="480"/>
+                <effect type="zoom" start="100" end="80" center="50%,50%" easing="in" tween="back" time="240"/>
                 <effect type="fade" start="100" end="0" time="480"/>
             </animation>
             <animation type="Visible" reversible="false">
-                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="480"/>
+                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" end="100" time="480"/>
             </animation>
             <control type="image">

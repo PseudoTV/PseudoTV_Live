@@ -856,18 +856,22 @@ class Manager(xbmcgui.WindowXMLDialog):
             if DIALOG.yesnoDialog(LANGUAGE(32076)):
                 with self.toggleSpinner():
                     channels = __validateChannels(self.newChannels)
-                    changes  = __validateChannels(diffLSTDICT(self.channelList,self.newChannels))
-                    ids      = [citem.get('id') for citem in changes]
-                    self.log("saveChanges, channels = %s, ids = %s"%(len(channels), ids))
+                    changes  = diffLSTDICT(__validateChannels(self.channelList),channels)
+                    added    = [citem.get('id') for citem in changes.get('added',[])]
+                    removed  = [citem.get('id') for citem in changes.get('removed',[])]
+                    ids      = added+removed
+                    citems   = changes.get('added',[])+changes.get('removed',[])
+                    self.log("saveChanges, channels = %s, added = %s, removed = %s"%(len(channels), len(added), len(removed)))
                     if self.server:
                         return DIALOG.notificationDialog(LANGUAGE(32197))
-                        # payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'channels':self.newChannels}
+                        # payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'channels':channels}
                         # requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
-                        #todo write tmp file if post fails, add to que to repost when url online.
-                    elif self.channels.setChannels(channels): #save changes
-                        self.resetPagination(changes) #clear pagination cache
-                        SETTINGS.setResetChannels(ids) #clear guidedata
-                        PROPERTIES.setUpdateChannels(ids) #update channel meta.
+                        #todo write tmp file if post fails, add to que to repost when url online. 
+                    else:
+                        self.channels.setChannels(channels)  #save changes
+                        self.resetPagination(citems)         #clear auto pagination cache
+                        SETTINGS.setResetChannels(ids)       #clear guidedata
+                        PROPERTIES.setUpdateChannels(ids)    #update channel meta.
         self.madeChanges = False
         self.closeManager()
             
@@ -945,21 +949,18 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         self.log('onClick: controlId = %s\nitems = %s'%(controlId,focusItems))
         if   controlId == 0: self.closeManager()
-        #item list
-        elif controlId == 5: self.buildChannelItem(focusCitem)
+        elif controlId == 5: self.buildChannelItem(focusCitem) #item list
         elif controlId == 6:
             if    self.lockAutotune and autoTuned: DIALOG.notificationDialog(LANGUAGE(32064))
             else: self.buildChannelItem(self.itemInput(focusItems.get('item')),focusItems.get('item').getProperty('key'))
-        #logo button
-        elif controlId == 10: 
+        elif controlId == 10: #logo button
             if    self.lockAutotune and autoTuned: DIALOG.notificationDialog(LANGUAGE(32064))
             else: self.switchLogo(focusCitem,focusPOS)
-        #side buttons
-        elif controlId in [9001,9002,9003,9004]:
-            if   focusLabel == LANGUAGE(32059): self.saveChanges() #Save 
-            elif focusLabel == LANGUAGE(32061): self.clearChannel(focusCitem)#Delete
+        elif controlId in [9001,9002,9003,9004]: #side buttons
+            if   focusLabel == LANGUAGE(32059): self.saveChanges()                     #Save 
+            elif focusLabel == LANGUAGE(32061): self.clearChannel(focusCitem)          #Delete
             elif focusLabel == LANGUAGE(32239): self.clearChannel(focusCitem,open=True)#Clear
-            elif focusLabel == LANGUAGE(32136): self.moveChannel(focusCitem,focusPOS)#Move 
+            elif focusLabel == LANGUAGE(32136): self.moveChannel(focusCitem,focusPOS)  #Move 
             elif focusLabel == LANGUAGE(32062): #Close
                 if   self.isVisible(self.itemList): self.closeChannel(focusCitem,focus=focusPOS)
                 elif self.isVisible(self.chanList): self.closeManager()

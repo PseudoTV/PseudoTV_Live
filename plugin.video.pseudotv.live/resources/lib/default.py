@@ -22,7 +22,7 @@ from globals   import *
 from plugin    import Plugin
 
 def run(sysARG, fitem: dict={}, nitem: dict={}):
-    with BUILTIN.busy_dialog():
+    with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
         params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
         mode = (params.get("mode")  or 'guide')
         params['fitem']      = fitem

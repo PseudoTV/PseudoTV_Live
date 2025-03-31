@@ -133,7 +133,8 @@ class RulesList:
         for myId, rule in list(sorted(rules.items())):
             if action in rule.actions:
                 self.log("[%s] runActions, %s performing channel rule: %s"%(citem.get('id'),inherited.__class__.__name__,rule.name))
-                parameter = rule.runAction(action, citem, parameter, inherited)
+                try: parameter = rule.runAction(action, citem, parameter, inherited)
+                except Exception as e: log('[%s] runActions, failed! %s\nrule = %s'%(citem.get('id'),e,rule), xbmc.LOGERROR)
         return parameter
 
 
@@ -522,7 +523,7 @@ class SetScreenVingette(BaseRule):
 
 
     def onAction(self, optionindex):
-        if   optionindex == 1:       self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), exclude=[12,13,14,15,16,17,22])
+        if   optionindex == 1:       self.onActionBrowse(optionindex, type=1, heading=self.optionLabels[1], mask=xbmc.getSupportedMedia('picture'), exclude=[12,13,14,15,16,17])
         elif optionindex in [0,5]:   self.onActionToggleBool(optionindex)
         elif optionindex in [2,3,4]: self.onActionSelect(optionindex, self.optionLabels[optionindex])
         return self.optionValues[optionindex]
@@ -1224,7 +1225,7 @@ class ProvisionalRule(BaseRule): #PARSING RULES [800-999]
                             if not builder.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                                 provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
                                                                                    {"field":"episode","operator":"greaterthan","value":"0"}])
-                            fileList, dirList = builder.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits=builder.limits, dirItem={}, query=provisional)
+                            fileList, dirList, nlimits, errors = builder.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits=builder.limits, dirItem={}, query=provisional)
                             if len(fileList) > 0: self.storedValues[0].append(fileList)
                     return [fileList for fileList in self.storedValues[0] if fileList]
                 except Exception as e: self.log("runAction, failed! %s"%(e), xbmc.LOGERROR)

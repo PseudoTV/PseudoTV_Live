@@ -112,7 +112,7 @@ class Builder:
                 self.log('[%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem))
                 continue
             citem['name'] = validString(citem['name']) #todo temp. correct existing file names; drop by v.0.6
-            citem['logo'] = self.resources.getLogo(citem,logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
+            citem['logo'] = self.resources.getLogo(citem,logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else citem.get('logo',LOGO))
             self.log('[%s] VERIFIED - channel %s: %s'%(citem['id'],citem['number'],citem['name']))
             yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
 
@@ -142,6 +142,7 @@ class Builder:
                     updated  = set()
                     now      = getUTCstamp()
                     start    = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
+                    fallback = datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)
                     clrIDS   = SETTINGS.getResetChannels()
                     
                     if preview: self.pDialog = DIALOG.progressDialog()
@@ -166,18 +167,20 @@ class Builder:
                             self.service.monitor.waitForAbort(SUSPEND_TIMER)
                             continue
                         else:
-                            self.pMSG   = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
-                            self.pName  = citem['name']
+                            self.pMSG  = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
+                            self.pName = citem['name']
                             self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
                             
                             if not preview and citem['id'] in clrIDS: __clrChannel({'id':clrIDS.pop(clrIDS.index(citem['id']))}) #clear channel m3u/xmltv
-                            stopTimes = dict(self.xmltv.loadStopTimes([citem], fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT))) #check last stop times
+                            stopTimes = dict(self.xmltv.loadStopTimes([citem], fallback=fallback)) #check last stop times
                             
                             if    preview:                                                                           self.pMSG = LANGUAGE(32236)                           #Preview
                             elif  (stopTimes.get(citem['id']) or start) > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
+                            elif  (stopTimes.get(citem['id']) or fallback) == fallback:                              self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(32023)) #Building
                             elif  stopTimes.get(citem['id']):                                                        self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
-                            else:                                                                                    self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(32023)) #Building
+                            else:                                                                                    self.pMSG = '%s %s'%(LANGUAGE(32245),LANGUAGE(32023)) #Parsing  
                             
+                            self.pDialog  = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s %s...'%(self.pName, self.pMSG, LANGUAGE(32099)), header=ADDON_NAME)
                             cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                             if preview: return cacheResponse
                             elif cacheResponse:
@@ -335,6 +338,7 @@ class Builder:
 
     def buildFileList(self, citem: dict, path: str, media: str='video', limit: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}) -> list: #build channel via vfs path.
         self.log("[%s] buildFileList, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
+        #todo treat "TV Show" Smartplaylists as multi-path. ie each dir. becomes a path to parse.
         if path.endswith('.xsp'): #smartplaylist - parse xsp for path, sort info
             paths, media, sort, limit = self.xsp.parseXSP(path, media, sort, limit)
             if len(paths) > 0: return interleave([self.buildFileList(citem, xsp, media, limit, sort, limits) for xsp in paths], self.interleaveValue)
@@ -342,27 +346,33 @@ class Builder:
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
             path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules.
             
+        counter  = 0
         fileList = []
+        nlimits  = limits
         dirList  = [{'file':path}]
         self.loopback = {}
         self.log("[%s] buildFileList, limit = %s, sort = %s, limits = %s\npath = %s"%(citem['id'],limit,sort,limits,path))
         
         while not self.service.monitor.abortRequested():
-            #Not all results are flat hierarchies; walk all paths until fileList limit is reached. ie. folders with pagination and/or directories 
+            #Not all results are flat hierarchies; walk all paths until fileList limit is reached. ie. folders with pagination and/or directories
             if self.service._interrupt(): 
                 self.log("[%s] buildFileList, _interrupt"%(citem['id']))
                 return []
             elif len(fileList) >= limit:  break
             elif len(dirList) > 0:
                 dir = dirList.pop(0)
-                subfileList, subdirList = self.buildList(citem, dir.get('file'), media, limit, sort, limits, dir)
+                subfileList, subdirList, nlimits, errors = self.buildList(citem, dir.get('file'), media, limit, sort, limits, dir) #parse all directories under root. Flattened hierarchies required to stream line channel building.
                 fileList += subfileList
                 dirList = setDictLST(dirList + subdirList)
                 self.log('[%s] buildFileList, parsing %s, adding = %s/%s'%(citem['id'],dir.get('file'),len(subfileList),limit))
-            else:
-                self.log('[%s] buildFileList, no more folders to parse'%(citem['id']))
-                break
-               
+            elif len(dirList) == 0:
+                if len(fileList) < limit and nlimits.get('total') >= limit and counter < nlimits.get('total'): 
+                    self.log("[%s] buildFileList, retrying with new autoPagination limits"%(citem['id']))
+                    fileList.extend(self.buildFileList(citem, path, media, limit, sort, nlimits))
+                    counter += limit
+                else:
+                    self.log('[%s] buildFileList, no more folders to parse'%(citem['id']))
+                    break
         self.log("[%s] buildFileList, returning fileList %s/%s"%(citem['id'],len(fileList),limit))
         return fileList
 
@@ -374,17 +384,17 @@ class Builder:
         
         if errors.get('message'):
             self.pErrors.append(errors['message'])
-            return fileList, dirList
+            return fileList, dirList, nlimits, errors
             
         elif items == self.loopback and limits != nlimits:# malformed jsonrpc queries will return root response, catch a re-parse and return.
             self.log("[%s] buildList, loopback detected using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
             self.pErrors.append(LANGUAGE(32030))
-            return fileList, dirList
+            return fileList, dirList, nlimits, errors
             
         elif not items and len(fileList) == 0:
             self.log("[%s] buildList, no request items found using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
             self.pErrors.append(LANGUAGE(32026))
-            return fileList, dirList
+            return fileList, dirList, nlimits, errors
             
         elif items:
             self.loopback = items
@@ -397,7 +407,7 @@ class Builder:
                 if self.service._interrupt():
                     self.log("[%s] buildList, _interrupt"%(citem['id']))
                     self.jsonRPC.autoPagination(citem['id'], path, query, limits) #rollback pagination limits
-                    return [], []
+                    return [], [], nlimits, errors
                     
                 elif self.service._suspend(): 
                     self.log("[%s] buildList, _suspend"%(citem['id']))
@@ -511,7 +521,7 @@ class Builder:
                 
             self.getTrailers(trailersdict)
             self.log("[%s] buildList, returning (%s) files, (%s) dirs; parsed (%s) trailers"%(citem['id'],len(fileList),len(dirList),len(trailersdict)))
-            return fileList, dirList
+            return fileList, dirList, nlimits, errors
 
  
     def isHD(self, item: dict) -> bool:

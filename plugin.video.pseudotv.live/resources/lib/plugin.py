@@ -382,12 +382,12 @@ class Plugin:
         self._resolveURL(False, xbmcgui.ListItem()) #release pending playback
         if self.sysInfo.get('playcount',0) == 0:
             DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',0)))
-            timerit(BUILTIN.executebuiltin)(0.5,['AlarmClock(last,Number(0),.5,true,false)']) #last channel
+            timerit(BUILTIN.executebuiltin)(0.1,['AlarmClock(last,Number(0),.5,true,false)']) #last channel
         elif self.sysInfo.get('playcount',3) < 3:
             DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',3)))
-            timerit(BUILTIN.executebuiltin)(0.5,['PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])]) #retry channel
+            timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])]) #retry channel
         else:
             DIALOG.notificationDialog(LANGUAGE(32000))
             PROPERTIES.setPropTimer('chkPVRRefresh')
-            timerit(DIALOG.okDialog)(0.5,[LANGUAGE(32134)%(ADDON_NAME)])
+            timerit(DIALOG.okDialog)(0.1,[LANGUAGE(32134)%(ADDON_NAME)])
             

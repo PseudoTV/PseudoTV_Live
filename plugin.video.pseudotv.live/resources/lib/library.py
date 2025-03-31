@@ -49,6 +49,7 @@ class Library:
         self.parserCount  = 0
         self.parserMSG    = ''
         self.parserDialog = None
+        self.parserHeader = '%s, %s'%(ADDON_NAME,LANGUAGE(32041))
         self.libraryDATA  = getJSON(LIBRARYFLE_DEFAULT)
         self.libraryTEMP  = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
@@ -98,10 +99,7 @@ class Library:
         return [item for item in items if item.get('enabled',False)]
 
 
-    def updateLibrary(self, force: bool=False) -> bool:      
-        def __temp():
-            return self.libraryDATA.get('library',{}).get('Item',{}).copy()
-        
+    def updateLibrary(self, force: bool=False) -> bool:    
         def __clear():
             items = list(self.libraryFUNCS.items())
             for label, params in items:
@@ -109,12 +107,15 @@ class Library:
                 DIALOG.notificationDialog(LANGUAGE(30070)%(label),time=5)
                 self.cache.clear(cacheName,wait=5)
                 
-        def __update(type, item):
-            #check existing library for enabled itemss
-            [item.update({'enabled':True}) for eitem in self.getEnabled(type) if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name','').lower()]
-            #check existing channels for enabled items
-            [item.update({'enabled':True}) for channel in self.channels.getType(type) if getChannelSuffix(item.get('name'), type).lower() == channel.get('name','').lower()]
-            entry = __temp()
+        def __update(type, item, newLST=False):
+            if newLST:
+                #check existing library for enabled itemss
+                [item.update({'enabled':True}) for eitem in self.getEnabled(type) if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name','').lower()]
+                #check existing channels for enabled items
+                [item.update({'enabled':True}) for channel in self.channels.getType(type) if getChannelSuffix(item.get('name'), type).lower() == channel.get('name','').lower()]
+            else:
+                item['logo'] = self.resources.getLogo(item,item.get('logo',LOGO)) #update logo
+            entry = self.libraryDATA.get('library',{}).get('Item',{}).copy()
             entry.update(item)
             return entry
             
@@ -131,9 +132,7 @@ class Library:
                 __clear()
                 
         complete = True 
-        self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32041)))
-        
-        types = AUTOTUNE_TYPES
+        types    = AUTOTUNE_TYPES
         for idx, type in enumerate(types):
             if self.service._interrupt():
                 self.log("updateLibrary, _interrupt")
@@ -146,18 +145,21 @@ class Library:
                 continue
             else:
                 func = self.libraryFUNCS[type]['func']
-                cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
-                items = self.cache.get(cacheName)
-                if not items: msg = LANGUAGE(30014) #Parsing
-                else:         msg = LANGUAGE(32022) #Updating
-                self.parserMSG    = AUTOTUNE_TYPES[idx]
-                self.parserCount  = int(idx*100//len(AUTOTUNE_TYPES))
-                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
-                if not items: items = __fill(type, func)
-                if items: self.cache.set(cacheName, items, expiration=self.libraryFUNCS[type]['life'])
-                self.setLibrary(type, [__update(type,item) for item in items])
-        
-        self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
+                cacheName     = "%s.%s"%(self.__class__.__name__,func.__name__)
+                cacheResponse = (self.cache.get(cacheName) or[])
+                self.log("updateLibrary, type = %s, cached items = %s"%(type,len(cacheResponse)))
+                if not cacheResponse: msg = LANGUAGE(30014) #Parsing
+                else:                 msg = LANGUAGE(32022) #Updating
+                if not cacheResponse:
+                    self.parserDialog = DIALOG.progressBGDialog(header=self.parserHeader)
+                    self.parserMSG    = AUTOTUNE_TYPES[idx]
+                    self.parserCount  = int(idx*100//len(AUTOTUNE_TYPES))
+                    self.parserHeader = '%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041)))
+                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,header=self.parserHeader)
+                    cacheResponse     = self.cache.set(cacheName, __fill(type, func), expiration=self.libraryFUNCS[type]['life'])
+                    self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025))                    
+                self.setLibrary(type, [__update(type,item,msg==LANGUAGE(30014)) for item in cacheResponse])
+                self.log("updateLibrary, type = %s, saved items = %s"%(type,len(cacheResponse)))
         self.log('updateLibrary, force = %s, complete = %s'%(force,  complete))
         return  complete
         
@@ -241,10 +243,9 @@ class Library:
             for idx, result in enumerate(results):
                 if not self.parserDialog is None:
                     self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s (%s): %s'%(self.parserMSG,type.title(),int((idx+1)*100//len(results)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-                
                 if not result.get('label'): continue
                 logo = result.get('thumbnail')
-                if not logo: logo = (self.resources.getLocalLogo(result.get('label')) or LOGO)
+                if not logo: logo = self.resources.getLogo({'name':result.get('label',''),'type':"Custom"})
                 PlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':logo})
         self.log('getPlaylists, PlayList = %s' % (len(PlayList)))
         PlayList = sorted(PlayList,key=itemgetter('name'))
@@ -252,18 +253,21 @@ class Library:
         return PlayList
 
 
+    @cacheit()
     def getTVInfo(self, sortbycount=True):
         self.log('getTVInfo')
         if BUILTIN.hasTV():
             NetworkList   = Counter()
             ShowGenreList = Counter()
             TVShows       = Counter()
+            if not self.parserDialog is None:
+                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,LANGUAGE(32140)),'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
             json_response = self.jsonRPC.getTVshows()
             
             for idx, info in enumerate(json_response):
                 if not self.parserDialog is None:
-                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*100//len(json_response)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-                
+                    self.parserMSG    = LANGUAGE(32005)
+                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*99//len(json_response)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
                 if not info.get('label'): continue
                 TVShows.update({json.dumps({'name': info.get('label'), 'type':"TV Shows", 'path': self.predefined.createShowPlaylist(info.get('label')), 'logo': info.get('art', {}).get('clearlogo', ''),'rules':{"800":{"values":{"0":info.get('label')}}}}): info.get('episode', 0)})
                 NetworkList.update([studio for studio in info.get('studio', [])])
@@ -282,15 +286,19 @@ class Library:
                 
             #search resources for studio/genre logos
             nNetworkList = []
-            for network in NetworkList:
-                rules = {"800":{"values":{"0":network}}}
-                nNetworkList.append({'name':network, 'type':"TV Networks", 'path': self.predefined.createNetworkPlaylist(network),'logo':self.resources.getLogo({'name':network,'type':"TV Networks"}),'rules':rules})
+            for idx, network in enumerate(NetworkList):
+                if not self.parserDialog is None:
+                    self.parserMSG    = LANGUAGE(32004)
+                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*99//len(NetworkList)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+                nNetworkList.append({'name':network, 'type':"TV Networks", 'path': self.predefined.createNetworkPlaylist(network),'logo':self.resources.getLogo({'name':network,'type':"TV Networks"}),'rules':{"800":{"values":{"0":network}}}})
             NetworkList = nNetworkList
             
             nShowGenreList = []
-            for tvgenre in ShowGenreList:
-                rules = {"800":{"values":{"0":tvgenre}}}
-                nShowGenreList.append({'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createTVGenrePlaylist(tvgenre),'logo':self.resources.getLogo({'name':tvgenre,'type':"TV Genres"}),'rules':rules})
+            for idx, tvgenre in enumerate(ShowGenreList):
+                if not self.parserDialog is None:
+                    self.parserMSG    = LANGUAGE(32006)
+                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*100//len(ShowGenreList)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32006))))
+                nShowGenreList.append({'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createTVGenrePlaylist(tvgenre),'logo':self.resources.getLogo({'name':tvgenre,'type':"TV Genres"}),'rules':{"800":{"values":{"0":tvgenre}}}})
             ShowGenreList = nShowGenreList
             
         else: NetworkList = ShowGenreList = TVShows = []
@@ -298,20 +306,20 @@ class Library:
         return {'studios':NetworkList,'genres':ShowGenreList,'shows':TVShows}
 
 
+    @cacheit()
     def getMovieInfo(self, sortbycount=True):
         self.log('getMovieInfo')
-        if BUILTIN.hasMovie():        
+        if BUILTIN.hasMovie():     
             StudioList     = Counter()
             MovieGenreList = Counter()
-            json_response  = self.jsonRPC.getMovies() #we can't parse for genres directly from Kodi json ie.getGenres; because we need the weight of each genre to prioritize list.
+            if not self.parserDialog is None:
+                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,LANGUAGE(32140)),'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+            json_response = self.jsonRPC.getMovies() #we can't parse for genres directly from Kodi json ie.getGenres; because we need the weight of each genre to prioritize list.
 
             for idx, info in enumerate(json_response):
-                if not self.parserDialog is None:
-                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*100//len(json_response)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-                    
                 StudioList.update([studio for studio in info.get('studio', [])])
                 MovieGenreList.update([genre for genre in info.get('genre', [])])
-
+                
             if sortbycount:
                 StudioList     = [x[0] for x in sorted(StudioList.most_common(25))]
                 MovieGenreList = [x[0] for x in sorted(MovieGenreList.most_common(25))]
@@ -321,24 +329,37 @@ class Library:
                 MovieGenreList = (sorted(set(list(MovieGenreList.keys()))))
                 
             #search resources for studio/genre logos
-            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio)    ,'logo':self.resources.getLogo({'name':studio,'type':"Movie Studios"}),'rules':{"800":{"values":{"0":studio}}}} for studio in StudioList]
-            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre) ,'logo':self.resources.getLogo({'name':genre,'type':"Movie Genres"}) ,'rules':{"800":{"values":{"0":genre}}}}  for genre  in MovieGenreList]
+            nStudioList = []
+            for idx, studio in enumerate(StudioList):
+                if not self.parserDialog is None:
+                    self.parserMSG    = LANGUAGE(32008)
+                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*99//len(StudioList)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+                nStudioList.append({'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio)    ,'logo':self.resources.getLogo({'name':studio,'type':"Movie Studios"}),'rules':{"800":{"values":{"0":studio}}}})
+            StudioList = nStudioList
+            
+            nMovieGenreList = []
+            for idx, genre in enumerate(MovieGenreList):
+                if not self.parserDialog is None:
+                    self.parserMSG    = LANGUAGE(32007)
+                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*100//len(MovieGenreList)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+                nMovieGenreList.append({'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre) ,'logo':self.resources.getLogo({'name':genre,'type':"Movie Genres"}) ,'rules':{"800":{"values":{"0":genre}}}})   
+            MovieGenreList = nMovieGenreList
             
         else: StudioList = MovieGenreList = []
         self.log('getMovieInfo, studios = %s, genres = %s' % (len(StudioList), len(MovieGenreList)))
         return {'studios':StudioList,'genres':MovieGenreList}
         
         
+    @cacheit()
     def getMusicInfo(self, sortbycount=True):
         self.log('getMusicInfo')
         if BUILTIN.hasMusic():
             MusicGenreList = Counter()
-            json_response  = self.jsonRPC.getMusicGenres()
+            if not self.parserDialog is None:
+                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,LANGUAGE(32140)),'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+            json_response = self.jsonRPC.getMusicGenres()
             
             for idx, info in enumerate(json_response):
-                if not self.parserDialog is None:
-                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*100//len(json_response)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-                
                 MusicGenreList.update([genre.strip() for genre in info.get('label','').split(';')])
             
             if sortbycount:
@@ -349,7 +370,12 @@ class Library:
                 MusicGenreList = (sorted(set(list(MusicGenreList.keys()))))
 
             #search resources for studio/genre logos
-            MusicGenreList = [{'name':genre, 'type':"Music Genres", 'path': self.predefined.createMusicGenrePlaylist(genre),'logo':self.resources.getLogo({'name':genre,'type':"Music Genres"})} for genre in MusicGenreList]
+            nMusicGenreList = []
+            for idx, genre in enumerate(MusicGenreList):
+                if not self.parserDialog is None:
+                    self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*100//len(json_response)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+                    nMusicGenreList.append({'name':genre, 'type':"Music Genres", 'path': self.predefined.createMusicGenrePlaylist(genre),'logo':self.resources.getLogo({'name':genre,'type':"Music Genres"})})
+            MusicGenreList = nMusicGenreList
 
         else: MusicGenreList = []
         self.log('getMusicInfo, found genres = %s' % (len(MusicGenreList)))

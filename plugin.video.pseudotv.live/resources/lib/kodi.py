@@ -62,7 +62,7 @@ def getThumb(item={},opt=0): #unify thumbnail artwork
                item.get(key) or '')
         if art: return art
 
-def setDictLST(lst=[]):
+def setDictLST(lst=[]): #set lst of dicts then return
     return [loadJSON(s) for s in list(OrderedDict.fromkeys([dumpJSON(d) for d in lst]))]
 
 def dumpJSON(item, idnt=None, sortkey=False, separators=(',', ':')):
@@ -1151,7 +1151,7 @@ class Builtin:
             
     
     @contextmanager
-    def kodiLocker(self, wait=0.1):
+    def kodiLocker(self, wait=0.001):
         while not self.monitor.abortRequested(): #try and make kodi api thread safe / thread locks not working? todo debug.
             if self.monitor.waitForAbort(wait) or self.properties.getEXTPropertyBool('%s.pendingInterrupt'%(ADDON_ID)): break
             elif not self.properties.getEXTPropertyBool('%s.kodiLocker'%(ADDON_ID)): break
@@ -1185,7 +1185,7 @@ class Builtin:
         
         
     @contextmanager
-    def sendLocker(self, wait=0.1):
+    def sendLocker(self, wait=0.001):
         while not self.monitor.abortRequested(): #try and make kodi api thread safe / thread locks not working? todo debug.
             if self.monitor.waitForAbort(wait) or self.properties.getEXTPropertyBool('%s.pendingInterrupt'%(ADDON_ID)): break
             elif not self.properties.getEXTPropertyBool('%s.sendLocker'%(ADDON_ID)): break
@@ -1282,7 +1282,7 @@ class Dialog:
         
         
     def _okDialog(self, msg, heading, autoclose, url):
-        return timerit(self.okDialog)(0.5,[msg, heading, autoclose])
+        return timerit(self.okDialog)(0.1,[msg, heading, autoclose])
 
 
     def okDialog(self, msg, heading=ADDON_NAME, autoclose=AUTOCLOSE_DELAY, usethread=False):
@@ -1341,7 +1341,7 @@ class Dialog:
         
         
     def _textViewer(self, msg, heading, usemono, autoclose):
-        return timerit(self.textviewer)(0.5,[msg, heading, usemono, autoclose])
+        return timerit(self.textviewer)(0.1,[msg, heading, usemono, autoclose])
         
         
     def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=AUTOCLOSE_DELAY, usethread=False):
@@ -1362,7 +1362,7 @@ class Dialog:
 
 
     def _notificationWait(self, message, header, wait):
-        return timerit(self.notificationWait)(0.5,[message, header, wait])
+        return timerit(self.notificationWait)(0.1,[message, header, wait])
 
 
     def notificationWait(self, message, header=ADDON_NAME, wait=4, usethread=False):
@@ -1499,7 +1499,7 @@ class Dialog:
             return self.listitems.buildMenuListItem(resource['name'],resource['description'],resource['thumbnail'],url=resource['addonid'])
              
         def __getResources():
-            return jsonRPC.getAddons({"type":"kodi.resource.images","content":"video","enabled":True})
+            return jsonRPC.getAddons({"enabled":True})
         
         from jsonrpc import JSONRPC
         jsonRPC = JSONRPC()
@@ -1548,11 +1548,11 @@ class Dialog:
         type    = options[select]['type']
         multi   = options[select]['multi']
         if type == 0:
-            if "resource."   in default or options[select]["idx"] == 22: return self._resourcePath(default)
+            if "resource."   in default or options[select]["idx"] == 22: return self._resourcePath(default, {xbmc.getSupportedMedia('video'):'videos',xbmc.getSupportedMedia('picture'):'images'}.get(mask,xbmc.getSupportedMedia('video')))
         elif type == 1:
             if   "?xsp="     in default or options[select]["idx"] == 15: return self.buildDXSP(default)
             elif ".strm"     in default or options[select]["idx"] == 16: return self.importSTRM(default)
-            elif "resource." in default or options[select]["idx"] == 22: default = self._resourcePath(default)
+            elif "resource." in default or options[select]["idx"] == 22: default = self._resourcePath(default, {xbmc.getSupportedMedia('video'):'videos',xbmc.getSupportedMedia('picture'):'images'}.get(mask,xbmc.getSupportedMedia('video')))
         return self.browseDialog(type, heading, default, shares, mask, useThumbs, treatAsFolder, multi, monitor)
             
     

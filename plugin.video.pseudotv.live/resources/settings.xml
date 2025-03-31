@@ -464,50 +464,10 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
-            </group>
-            <group id="3" label="30111">
                 <setting id="Run_While_Playing" type="boolean" label="32150" help="33150">
                     <level>3</level>
                     <default>true</default>
                     <control type="toggle"/>
-                </setting>
-                <setting id="RPC_Delay" type="integer" label="30110" help="33109">
-                    <level>3</level>
-                    <default>1</default>
-                    <constraints>
-                        <minimum>1</minimum>
-                        <step>10</step>
-                        <maximum>2000</maximum>
-                    </constraints>
-                    <dependencies>
-                        <dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Debug_Enable">true</condition>
-                            </and>
-                        </dependency>
-                    </dependencies>
-                    <control type="slider" format="integer">
-                        <popup>false</popup>
-                    </control>
-                </setting>
-                <setting id="RPC_Timer" type="integer" label="30201" help="33201">
-                    <level>3</level>
-                    <default>3</default>
-                    <constraints>
-                        <minimum>0</minimum>
-                        <step>1</step>
-                        <maximum>10</maximum>
-                    </constraints>
-                    <dependencies>
-                        <dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Debug_Enable">true</condition>
-                            </and>
-                        </dependency>
-                    </dependencies>
-                    <control type="slider" format="integer">
-                        <popup>false</popup>
-                    </control>
                 </setting>
             </group>
         </category>
@@ -572,23 +532,6 @@
                     <level>1</level>
                     <default>true</default>
                     <control type="toggle"/>
-                </setting>
-                <setting id="Resource_Overlay" type="list[addon]" label="30141" help="33160" parent="Overlay_Enable">
-                    <level>2</level>
-                    <default>resource.images.overlays.crttv</default>
-                    <constraints>
-                        <addontype>kodi.resource.images</addontype>
-                    </constraints>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Overlay_Enable">true</condition>
-                        </dependency>
-                    </dependencies>
-                    <control type="button" format="addon">
-                        <heading>30141</heading>
-                        <show more="true" details="true">installed</show>
-                        <multiselect>true</multiselect>
-                    </control>
                 </setting>
                 <setting id="OnNext_Enable" type="integer" label="30045" help="33045" parent="Overlay_Enable">
                     <level>2</level>
@@ -1335,29 +1278,69 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <setting id="Disable_Cache" type="boolean" label="30084" help="33084" parent="Debug_Enable">
+            </group>
+            <group id="4" label="30111">
+                <setting id="Disable_Cache" type="boolean" label="30084" help="33084">
                     <level>3</level>
                     <default>false</default>
                     <control type="toggle"/>
                     <dependencies>
-                        <dependency type="visible">
+                        <dependency type="enable">
                             <and>
                                 <condition operator="is" setting="Debug_Enable">true</condition>
                             </and>
                         </dependency>
                     </dependencies>
                 </setting>
-                <setting id="Enable_Executors" type="boolean" label="30198" help="33084" parent="Debug_Enable">
+                <setting id="Enable_Executors" type="boolean" label="30198" help="33198">
                     <level>3</level>
                     <default>false</default>
                     <control type="toggle"/>
                     <dependencies>
-                        <dependency type="visible">
+                        <dependency type="enable">
                             <and>
                                 <condition operator="is" setting="Debug_Enable">true</condition>
                             </and>
                         </dependency>
                     </dependencies>
+                </setting>
+                <setting id="RPC_Delay" type="integer" label="30110" help="33109">
+                    <level>3</level>
+                    <default>1</default>
+                    <constraints>
+                        <minimum>1</minimum>
+                        <step>10</step>
+                        <maximum>2000</maximum>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="enable">
+                            <and>
+                                <condition operator="is" setting="Debug_Enable">true</condition>
+                            </and>
+                        </dependency>
+                    </dependencies>
+                    <control type="slider" format="integer">
+                        <popup>false</popup>
+                    </control>
+                </setting>
+                <setting id="RPC_Timer" type="integer" label="30201" help="33201">
+                    <level>3</level>
+                    <default>3</default>
+                    <constraints>
+                        <minimum>0</minimum>
+                        <step>1</step>
+                        <maximum>10</maximum>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="enable">
+                            <and>
+                                <condition operator="is" setting="Debug_Enable">true</condition>
+                            </and>
+                        </dependency>
+                    </dependencies>
+                    <control type="slider" format="integer">
+                        <popup>false</popup>
+                    </control>
                 </setting>
             </group>
         </category>

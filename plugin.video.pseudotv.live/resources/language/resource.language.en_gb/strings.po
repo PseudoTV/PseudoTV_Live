@@ -1052,7 +1052,7 @@ msgid "Settings"
 msgstr ""
 
 msgctxt "#32054"
-msgid "Initializing..."
+msgid "Initializing"
 msgstr ""
 
 msgctxt "#32055"
@@ -1232,7 +1232,7 @@ msgid "Validating"
 msgstr ""
 
 msgctxt "#32099"
-msgid "This may take a moment."
+msgid "This may take a moment"
 msgstr ""
 
 msgctxt "#32100"
@@ -1807,6 +1807,18 @@ msgctxt "#32244"
 msgid "Removing"
 msgstr ""
 
+msgctxt "#32245"
+msgid "Parsing"
+msgstr ""
+
+msgctxt "#32246"
+msgid "Loading"
+msgstr ""
+
+msgctxt "#32247"
+msgid "Starting"
+msgstr ""
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"
@@ -1981,8 +1993,9 @@ msgctxt "#33078"
 msgid "Stop Playback when Idle for x Hours.\nCancelable with prompt and countdown."
 msgstr ""
 
+
 msgctxt "#33084"
-msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\nDisable if you experience system instability."
+msgid "Not recommend!! Only disable if you understand the impact of theses changes."
 msgstr ""
 
 msgctxt "#33085"
@@ -2199,6 +2212,10 @@ msgstr ""
 
 msgctxt "#33186"
 msgid "Vignette Non-Linear Stretch"
+msgstr ""
+
+msgctxt "#33198"
+msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\nDisable if you experience system instability."
 msgstr ""
 
 msgctxt "#33201"
