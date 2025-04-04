@@ -27,29 +27,6 @@ from backup     import Backup
 from multiroom  import Multiroom
 from server     import HTTP
 
-class Tasker(Thread):
-    def __init__(self, tasks):
-        Thread.__init__(self,daemon=True)
-        self.tasks   = tasks
-        self.service = tasks.service 
-        self.start()
-        
-        
-    def run(self):
-        log("Tasker: run")
-        while not self.service.monitor.abortRequested():
-            if   self.service.monitor.waitForAbort(FIFTEEN): break
-            elif self.service._interrupt(): 
-                log("Tasker: run, _interrupt")
-                break
-            elif self.service._suspend():
-                log("Tasker/; run, _suspend")
-                self.service.monitor.waitForAbort(SUSPEND_TIMER)
-                continue
-            else:
-                self.tasks._chkQueTimer()
-            
-
 class Tasks():
     def __init__(self, service):
         self.service     = service       
@@ -80,7 +57,6 @@ class Tasks():
                  self.chkServers,
                  self.chkPVRBackend,]
         for func in tasks: self._que(func,1)
-        Tasker(self)
         self.log('_initialize, finished...')
         
         
@@ -130,8 +106,8 @@ class Tasks():
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 900)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 900)
         self._chkEpochTimer('chkChannels'     , self.chkChannels     , (MAX_GUIDEDAYS*3600))
-        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
-        self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 300)
+        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 600)
+        self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 600)
         self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
@@ -261,7 +237,7 @@ class Tasks():
         
 
     def chkJSONQUE(self):
-        if not PROPERTIES.isRunning('chkJSONQUE'):
+        if not PROPERTIES.isRunning('chkJSONQUE') and self.service.monitor.isIdle:
             with PROPERTIES.chkRunning('chkJSONQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queueJSON', json_data=True) or {})
                 params = queuePool.get('params',[])
@@ -279,7 +255,7 @@ class Tasks():
 
 
     def chkLOGOQUE(self):
-        if not PROPERTIES.isRunning('chkLOGOQUE'):
+        if not PROPERTIES.isRunning('chkLOGOQUE') and self.service.monitor.isIdle:
             with PROPERTIES.chkRunning('chkLOGOQUE'):
                 updated   = False
                 library   = Library(service=self.service)

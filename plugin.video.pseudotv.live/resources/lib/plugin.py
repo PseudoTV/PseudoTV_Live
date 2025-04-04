@@ -285,7 +285,7 @@ class Plugin:
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
             liz.setProperty("IsPlayable","true")
-            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            # liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self._resolveURL(True, liz)
 
 
@@ -293,7 +293,7 @@ class Plugin:
         self.log('playDVR, title = %s, vid = %s'%(title,vid))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             liz = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            # liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self._resolveURL(True, liz)
 
 

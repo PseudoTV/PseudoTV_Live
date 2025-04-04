@@ -20,7 +20,15 @@
                 <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" end="100" time="480"/>
             </animation>
-            <control type="image">
+            <control type="videowindow">
+                <description>Video Window</description>
+                <posx>0</posx>
+                <posy>0</posy>
+                <width>auto</width>
+                <height>auto</height>
+                <visible>!Control.IsVisible(40000)</visible>
+            </control>
+            <control type="image" id="40000">
                 <description>Hide Background</description>
                 <posx>0</posx>
                 <posy>0</posy>
@@ -31,8 +39,9 @@
                 <colordiffuse>black</colordiffuse>
                 <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
                 <bordertexture border="5" infill="false" colordiffuse="black">colors/white.png</bordertexture><!-- #FF01416b -->
+                <visible>!Window.IsVisible(fullscreenvideo)</visible>
             </control>
-            <control type="image" id="40000">
+            <control type="image">
                 <description>Background Dynamic</description>
                 <top>40</top>
                 <left>360</left>
@@ -41,6 +50,7 @@
                 <texture>backgrounds/background.gif</texture>
                 <aspectratio scalediffuse="false" align="center" aligny="center">keep</aspectratio>
                 <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+                <visible>Control.IsVisible(40000)</visible>
             </control>
             <control type="image" id="40002">
                 <description>Background Logo</description>

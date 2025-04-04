@@ -243,10 +243,14 @@ def roundTimeUp(dt=None, roundTo=60):
    rounding = (seconds+roundTo/2) // roundTo * roundTo
    return dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond)
    
-def strpTime(datestring, format=DTJSONFORMAT): #convert json pvr datetime string to datetime obj, thread safe!
+def strpTime(datestring, format=DTJSONFORMAT): #convert pvr infolabel datetime string to datetime obj, thread safe!
     try:              return datetime.datetime.strptime(datestring, format)
     except TypeError: return datetime.datetime.fromtimestamp(time.mktime(time.strptime(datestring, format)))
     except:           return ''
+   
+def epochTime(timestamp, tz=True): #convert pvr json datetime string to datetime obj
+    if tz: timestamp -= getTimeoffset()
+    return datetime.datetime.fromtimestamp(timestamp)
 
 def getTimeoffset():
     return (int((datetime.datetime.now() - datetime.datetime.utcnow()).days * 86400 + round((datetime.datetime.now() - datetime.datetime.utcnow()).seconds, -1)))

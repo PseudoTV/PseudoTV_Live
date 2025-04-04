@@ -82,8 +82,9 @@ def threadit(method):
         thread_name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
         for thread in thread_enumerate():
             if thread.name == thread_name and thread.is_alive():
-                if hasattr(thread, 'cancel'): thread.cancel()
-                log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))        
+                if hasattr(thread, 'cancel'):
+                    thread.cancel()
+                    log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))        
         thread = Thread(None, method, None, args, kwargs)
         thread.name = thread_name
         thread.daemon=True
@@ -98,10 +99,13 @@ def timerit(method):
         thread_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
         for timer in thread_enumerate():
             if timer.name == thread_name and timer.is_alive():
-                if hasattr(timer, 'cancel'): timer.cancel()
-                try: timer.join()
+                if hasattr(timer, 'cancel'): 
+                    timer.cancel()
+                    log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))    
+                try: 
+                    timer.join()
+                    log('%s, joining %s'%(method.__qualname__.replace('.',': '),thread_name))    
                 except: pass
-                log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
         timer = Timer(float(wait), method, *args, **kwargs)
         timer.name = thread_name
         timer.start()

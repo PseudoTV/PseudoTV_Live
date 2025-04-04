@@ -235,6 +235,7 @@ COLOR_WARNING_CHANNEL     = 'red'
 COLOR_NEW_CHANNEL         = 'green'
 COLOR_RADIO_CHANNEL       = 'cyan'
 COLOR_FAVORITE_CHANNEL    = 'yellow'
+#https://github.com/xbmc/xbmc/blob/656052d108297e4dd8c5c6fc7db86606629e457e/system/colors.xml
 
 #urls
 URL_WIKI                  = 'https://github.com/PseudoTV/PseudoTV_Live/wiki'
@@ -247,12 +248,11 @@ URL_README                = 'https://github.com/PseudoTV/PseudoTV_Live/blob/mast
 
 #images
 LOGO                = os.path.join(MEDIA_LOC,'wlogo.png')
+DIM_LOGO            = os.path.join(MEDIA_LOC,'dimlogo.png')
 COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 COLOR_FANART        = os.path.join(MEDIA_LOC,'fanart.jpg')
 HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
 DUMMY_ICON          = 'https://dummyimage.com/512x512/%s/%s.png&text={text}'%(COLOR_BACKGROUND,COLOR_TEXT)
-MST3K_1             = os.path.join(MEDIA_LOC,'overlays','MST3K_1.gif')
-MST3K_2             = os.path.join(MEDIA_LOC,'overlays','MST3K_2.gif')
 
 #skins
 BUSY_XML        = '%s.busy.xml'%(ADDON_ID)

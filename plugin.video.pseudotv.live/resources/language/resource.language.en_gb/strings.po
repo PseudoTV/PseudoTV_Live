@@ -1819,6 +1819,14 @@ msgctxt "#32247"
 msgid "Starting"
 msgstr ""
 
+msgctxt "#32248"
+msgid "Querying"
+msgstr ""
+
+
+
+
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"

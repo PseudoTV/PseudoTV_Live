@@ -457,8 +457,10 @@ class Settings:
                 'genresPathType'                :'0',
                 'genresPath'                    :'0',
                 'genresUrl'                     :'0',
+                'useEpgGenreText'               :'true',
                 'logoPathType'                  :'0',
                 'logoPath'                      :LOGO_LOC,
+                'logoFromEpg'                   :'2',
                 'mediaTitleSeasonEpisode'       :'true',
                 'timeshiftEnabled'              :'false',
                 'catchupEnabled'                :'true',
@@ -1162,8 +1164,8 @@ class Builtin:
 
 
     def getInfoLabel(self, key, param='ListItem', default=''):
-        with self.kodiLocker():
-            value = xbmc.getInfoLabel('%s.%s'%(param,key))
+        # with self.kodiLocker():
+        value = xbmc.getInfoLabel('%s.%s'%(param,key))
         if value == "Busy": 
             if not MONITOR().waitForAbort(1.0): return self.getInfoLabel(key,param,default)
         self.log('getInfoLabel, key = %s.%s, value = %s'%(param,key,value))
@@ -1171,15 +1173,15 @@ class Builtin:
         
 
     def getInfoBool(self, key, param='Library'):
-        with self.kodiLocker():
-            value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or False)
+        # with self.kodiLocker():
+        value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or False)
         self.log('getInfoBool, key = %s.%s, value = %s'%(param,key,value))
         return value
         
         
     def executebuiltin(self, key, wait=False):
-        with self.kodiLocker():
-            xbmc.executebuiltin('%s'%(key),wait)
+        # with self.kodiLocker():
+        xbmc.executebuiltin('%s'%(key),wait)
         self.log('executebuiltin, key = %s, wait = %s'%(key,wait))
         return True
         
@@ -1197,8 +1199,8 @@ class Builtin:
 
     def executeJSONRPC(self, command):
         self.log('executeJSONRPC, command = %s'%(command))
-        with self.sendLocker():
-            return xbmc.executeJSONRPC(command)
+        # with self.sendLocker():
+        return xbmc.executeJSONRPC(command)
 
 
 class Dialog:

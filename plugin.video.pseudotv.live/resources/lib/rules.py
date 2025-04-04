@@ -560,8 +560,9 @@ class MST3k(BaseRule):
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_OPEN+.1,RULES_ACTION_OVERLAY_CLOSE]
         self.storedValues       = [[],[],[]]
         self.threadTimer        = Timer(5.0, self.runAction)
-        
-        
+        self.optionImages       = [os.path.join(MEDIA_LOC,'overlays','MST3K_1.gif'), os.path.join(MEDIA_LOC,'overlays','MST3K_2.gif')]
+
+   
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
                   
@@ -595,13 +596,13 @@ class MST3k(BaseRule):
             self.storedValues[1] = overlay._vinOffsetXY
             self.storedValues[2] = overlay._vinZoom
             
-            overlay.vinImage    = self.setImage(actionid+.1, citem, overlay, MST3K_1)
+            overlay.vinImage    = self.setImage(actionid+.1, citem, overlay, self.optionImages[0])
             overlay._vinOffsetXY = (0,0)
             overlay._vinZoom     = 1.0
             self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay.vinImage, overlay._vinOffsetXY, overlay._vinZoom))
             
         elif actionid == RULES_ACTION_OVERLAY_OPEN+.1:
-            overlay.vinImage = self.setImage(actionid, citem, overlay, MST3K_2)
+            overlay.vinImage = self.setImage(actionid, citem, overlay, self.optionImages[1])
             overlay._setImage(overlay.vignette,overlay.vinImage)
             self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay.vinImage, overlay._vinOffsetXY, overlay._vinZoom))
             

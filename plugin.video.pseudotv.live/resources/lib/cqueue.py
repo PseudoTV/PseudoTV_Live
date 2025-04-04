@@ -142,6 +142,7 @@ class CustomQueue:
                     self.qsize -= 1
                     self.__run(package[0],*package[1],**package[2])
                     
+                    
             elif self.fifo or self.lifo:
                 curr_node = self.head if self.fifo else self.tail
                 if curr_node is None: break
@@ -155,7 +156,8 @@ class CustomQueue:
                     if self.fifo: self.head = next_node
                     else:         self.tail = next_node
                     
-                    if not self.delay: package, self.__run(*package)
+                    if not self.delay:
+                        package, self.__run(*package) 
                     else:
                         popTimer = Timer(curr_node.wait, *package)
                         if popTimer.is_alive(): 
@@ -170,7 +172,7 @@ class CustomQueue:
                 break
                 
         self.isRunning = False
-        self.log("__pop, finished shutting down!")
+        self.log("__pop, finished: shutting down!")
                 
                 
 # def quePriority(package: tuple, priority: int=0):

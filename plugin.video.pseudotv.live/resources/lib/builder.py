@@ -180,7 +180,7 @@ class Builder:
                             elif  stopTimes.get(citem['id']):                                                        self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
                             else:                                                                                    self.pMSG = '%s %s'%(LANGUAGE(32245),LANGUAGE(32023)) #Parsing  
                             
-                            self.pDialog  = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s %s...'%(self.pName, self.pMSG, LANGUAGE(32099)), header=ADDON_NAME)
+                            self.pDialog  = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32248),self.pName), header='%s, %s'%(ADDON_NAME,self.pMSG))
                             cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                             if preview: return cacheResponse
                             elif cacheResponse:
@@ -338,13 +338,12 @@ class Builder:
 
     def buildFileList(self, citem: dict, path: str, media: str='video', limit: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}) -> list: #build channel via vfs path.
         self.log("[%s] buildFileList, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
-        #todo treat "TV Show" Smartplaylists as multi-path. ie each dir. becomes a path to parse.
         if path.endswith('.xsp'): #smartplaylist - parse xsp for path, sort info
             paths, media, sort, limit = self.xsp.parseXSP(path, media, sort, limit)
             if len(paths) > 0: return interleave([self.buildFileList(citem, xsp, media, limit, sort, limits) for xsp in paths], self.interleaveValue)
             
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
-            path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules.
+            path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules
             
         counter  = 0
         fileList = []
@@ -358,7 +357,7 @@ class Builder:
             if self.service._interrupt(): 
                 self.log("[%s] buildFileList, _interrupt"%(citem['id']))
                 return []
-            elif len(fileList) >= limit:  break
+            # elif len(fileList) >= limit:  break
             elif len(dirList) > 0:
                 dir = dirList.pop(0)
                 subfileList, subdirList, nlimits, errors = self.buildList(citem, dir.get('file'), media, limit, sort, limits, dir) #parse all directories under root. Flattened hierarchies required to stream line channel building.

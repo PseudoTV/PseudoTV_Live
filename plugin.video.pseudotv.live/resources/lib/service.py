@@ -153,19 +153,19 @@ class Player(xbmc.Player):
 
 
     def getPlayerTime(self):
-        try:    return self.getTotalTime()
+        try:    return (self.getTimeLabel('Duration') or self.getTotalTime())
         except: return (self.sysInfo.get('fitem',{}).get('runtime') or -1)
             
-            
-    def getRemainingTime(self):
-        try:    return self.getTotalTime() - self.getTime()
-        except: return -1
-
        
     def getPlayedTime(self):
-        try:    return self.getTime()
+        try:    return (self.getTimeLabel('Time') or self.getTime()) #getTime retrieves Guide times not actual media time.
         except: return -1
        
+            
+    def getRemainingTime(self):
+        try:    return self.getPlayerTime() - self.getPlayedTime()
+        except: return (self.getTimeLabel('TimeRemaining') or -1)
+
        
     def getPlayerProgress(self):
         try:    return int((self.getRemainingTime() / self.getPlayerTime()) * 100)
@@ -174,7 +174,6 @@ class Player(xbmc.Player):
 
     def getTimeLabel(self, prop: str='TimeRemaining') -> int and float: #prop='EpgEventElapsedTime'
         if self.isPlaying(): return timeString2Seconds(BUILTIN.getInfoLabel('%s(hh:mm:ss)'%(prop),'Player'))
-        else:                return -1
 
 
     def setTrakt(self, state: bool=SETTINGS.getSettingBool('Disable_Trakt')):
@@ -192,7 +191,6 @@ class Player(xbmc.Player):
 
 
     def _onPlay(self):
-        self.toggleBackground(False)
         oldInfo = self.sysInfo
         sysInfo = self.getPlayerSysInfo()
         newChan = oldInfo.get('chid',random.random()) != sysInfo.get('chid')
@@ -215,14 +213,14 @@ class Player(xbmc.Player):
             
     def _onChange(self):
         if not self.sysInfo.get('isPlaylist',False):
-            with PROPERTIES.suspendActivity():
-                self.log('_onChange, [%s], isPlaylist = %s, callback = %s'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo.get('isPlaylist',False),self.sysInfo.get('callback')))
-                self.toggleBackground(self.enableOverlay)
-                self.toggleOverlay(False)
-                self.toggleRestart(False)
-                self.toggleInfo(False)
-                BUILTIN.executebuiltin('PlayMedia(%s)'%(self.sysInfo.get('callback')))
-        elif self.sysInfo:
+            self.log('_onChange, [%s], isPlaylist = %s, callback = %s'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo.get('isPlaylist',False),self.sysInfo.get('callback')))
+            self.toggleBackground(self.enableOverlay)
+            self.toggleOverlay(False)
+            self.toggleRestart(False)
+            self.toggleOnNext(False)
+            self.toggleInfo(False)
+            BUILTIN.executebuiltin('PlayMedia(%s)'%(self.sysInfo.get('callback')))
+        elif self.sysInfo: #isPlaylist
             ...
         
         
@@ -232,6 +230,7 @@ class Player(xbmc.Player):
             self.toggleBackground(False)
             self.toggleOverlay(False)
             self.toggleRestart(False)
+            self.toggleOnNext(False)
             self.toggleInfo(False)
             self.setTrakt(False)
             if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
@@ -248,7 +247,7 @@ class Player(xbmc.Player):
             
 
     def toggleBackground(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
-        if state and self.background is None:
+        if state and self.background is None and self.service.monitor.isIdle:
             self.log("toggleBackground, state = %s"%(state))
             BUILTIN.executebuiltin("Dialog.Close(all)")
             self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self)
@@ -256,6 +255,7 @@ class Player(xbmc.Player):
         elif not state and hasattr(self.background,'close'):
             self.log("toggleBackground, state = %s"%(state))
             self.background = self.background.close()
+        self.log("toggleBackground, background = %s"%(self.background))
 
 
     def toggleOverlay(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
@@ -266,6 +266,7 @@ class Player(xbmc.Player):
         elif not state and hasattr(self.overlay,'close'):
             self.log("toggleOverlay, state = %s"%(state))
             self.overlay = self.overlay.close()
+        self.log("toggleOverlay, overlay = %s"%(self.overlay))
 
 
     def toggleRestart(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
@@ -276,6 +277,7 @@ class Player(xbmc.Player):
         elif not state and hasattr(self.restart,'onClose'):
             self.log("toggleRestart, state = %s"%(state))
             self.restart = self.restart.onClose()
+        self.log("toggleRestart, restart = %s"%(self.restart))
         
         
     def toggleOnNext(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
@@ -286,18 +288,18 @@ class Player(xbmc.Player):
         elif hasattr(self.onnext,'onClose'):
             self.log("toggleOnNext, state = %s"%(state))
             self.onnext = self.onnext.onClose()
+        self.log("toggleOnNext, onnext = %s"%(self.onnext))
     
         
     def toggleInfo(self, state: bool=SETTINGS.getSettingBool('Enable_OnInfo')):
-        if state:
-            if not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
-                self.log('toggleInfo, state = %s'%(state))
-                timerit(self.toggleInfo)(float(OSD_TIMER),[False])
-                BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
-        elif not state and BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
-            self.log("toggleInfo, closing info")
+        if state and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
             self.log('toggleInfo, state = %s'%(state))
-            BUILTIN.executebuiltin('Action(back)')  
+            timerit(self.toggleInfo)(float(OSD_TIMER),[False])
+            BUILTIN.executebuiltin('ActivateWindow(fullscreeninfo)')
+        elif not state and BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
+            self.log('toggleInfo, state = %s'%(state))
+            BUILTIN.executebuiltin('Action(back)')
+            BUILTIN.executebuiltin("Dialog.Close(fullscreeninfo)")
 
 
 class Monitor(xbmc.Monitor):
@@ -320,7 +322,7 @@ class Monitor(xbmc.Monitor):
             try:    self.idleTime = BUILTIN.getIdle()
             except: self.idleTime = -1
             self.isIdle = (self.idleTime > OSD_TIMER)
-            if SETTINGS.getSettingBool('Debug_Enable'): self.log('__chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
+            self.log('__chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
 
         def __chkPlayback():
             if self.service.player.pendingPlay > 0:
@@ -335,30 +337,38 @@ class Monitor(xbmc.Monitor):
 
         def __chkSleepTimer():
             if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)):
-                if not PROPERTIES.isRunning('triggerSleep'):
-                    with PROPERTIES.chkRunning('triggerSleep'):
+                if not PROPERTIES.isRunning('__chkSleepTimer'):
+                    with PROPERTIES.chkRunning('__chkSleepTimer'):
                         if self.sleepTimer(): self.service.player.stop()
         
         def __chkBackground():
-            if ceil(self.service.player.getRemainingTime()) <= 6: self.service.player.toggleBackground(self.service.player.enableOverlay)
+            remaining = floor(self.service.player.getRemainingTime())
+            played    = ceil(self.service.player.getPlayedTime())
+            self.log('__chkBackground, isIdle = %s, remaining = %s, played = %s'%(self.isIdle, remaining, played))
+            if self.isIdle and remaining < 30:  self.service.player.toggleBackground(self.service.player.enableOverlay)
+            elif remaining > 30 and played > 3: self.service.player.toggleBackground(False)
 
         def __chkOverlay():
-            if self.isIdle and self.service.player.getPlayedTime() > 6 and self.service.player.background is None: self.service.player.toggleOverlay(self.service.player.enableOverlay)
-            else: self.service.player.toggleOverlay(False)
+            played = ceil(self.service.player.getPlayedTime())
+            self.log('__chkOverlay, isIdle = %s, played = %s'%(self.isIdle, played))
+            if self.isIdle and played > 30: 
+                self.service.player.toggleOverlay(self.service.player.enableOverlay)
 
         def __chkOnNext():
             totalTime = int(self.service.player.getPlayerTime() * (self.service.player.maxProgress / 100))
             threshold = abs((totalTime - (totalTime * .75)) - FIFTEEN)
-            if round(self.service.player.getRemainingTime()) <= threshold: self.service.player.toggleOnNext(self.service.player.enableOverlay)
-            else: self.service.player.toggleOnNext(False)
+            remaining = ceil(self.service.player.getRemainingTime())
+            self.log('__chkOnNext, isIdle = %s, remaining = %s'%(self.isIdle, remaining))
+            if self.isIdle and remaining <= threshold and remaining > 0 and self.service.player.background is None: 
+                self.service.player.toggleOnNext(self.service.player.enableOverlay)
                  
         __chkIdle()
         if self.service.player.isPlaying() and self.service.player.isPseudoTV:
             __chkPlayback()
-            __chkBackground()
-            __chkOverlay()
             __chkResumeTime()
             __chkSleepTimer()
+            __chkBackground()
+            __chkOverlay()
             __chkOnNext()
 
 
@@ -459,6 +469,10 @@ class Service():
             self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))
         return self.pendingSuspend
+        
+        
+    def __tasks(self):
+        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
 
 
     def _start(self):
@@ -471,10 +485,11 @@ class Service():
                 self.monitor.chkIdle()
                 if    self.__shutdown(): break
                 elif  self.__restart():  break
+                else: self.__tasks()
             self._stop(self.pendingRestart)
 
 
-    def _stop(self, pendingRestart=False):
+    def _stop(self, pendingRestart: bool=False):
         if self.player.isPlaying(): self.player.onPlayBackStopped()
         with PROPERTIES.interruptActivity():
             for thread in thread_enumerate():

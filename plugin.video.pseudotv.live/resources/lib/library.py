@@ -99,26 +99,7 @@ class Library:
         return [item for item in items if item.get('enabled',False)]
 
 
-    def updateLibrary(self, force: bool=False) -> bool:    
-        def __clear():
-            items = list(self.libraryFUNCS.items())
-            for label, params in items:
-                cacheName = "%s.%s"%(self.__class__.__name__,params['func'].__name__)
-                DIALOG.notificationDialog(LANGUAGE(30070)%(label),time=5)
-                self.cache.clear(cacheName,wait=5)
-                
-        def __update(type, item, newLST=False):
-            if newLST:
-                #check existing library for enabled itemss
-                [item.update({'enabled':True}) for eitem in self.getEnabled(type) if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name','').lower()]
-                #check existing channels for enabled items
-                [item.update({'enabled':True}) for channel in self.channels.getType(type) if getChannelSuffix(item.get('name'), type).lower() == channel.get('name','').lower()]
-            else:
-                item['logo'] = self.resources.getLogo(item,item.get('logo',LOGO)) #update logo
-            entry = self.libraryDATA.get('library',{}).get('Item',{}).copy()
-            entry.update(item)
-            return entry
-            
+    def updateLibrary(self, force: bool=False) -> bool:  
         def __fill(type, func):
             try: items = func()
             except Exception as e:
@@ -127,9 +108,26 @@ class Library:
             self.log('__fill, returning %s (%s)'%(type,len(items)))
             return items
 
+        def __update(type, items, existing=None, new=False):
+            if not existing: existing = self.channels.getType(type)
+            for item in items:
+                if new:
+                    for eitem in existing:
+                        if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name','').lower():
+                            item['enabled'] = True
+                            break
+                else: item['logo'] = self.resources.getLogo(item,item.get('logo',LOGO)) #update logo
+                entry = self.libraryDATA.get('library',{}).get('Item',{}).copy()
+                entry.update(item)
+                yield entry
+
         if force: #clear library cache.
             with BUILTIN.busy_dialog():
-                __clear()
+                items = list(self.libraryFUNCS.items())
+                for label, params in items:
+                    cacheName = "%s.%s"%(self.__class__.__name__,params['func'].__name__)
+                    DIALOG.notificationDialog(LANGUAGE(30070)%(label),time=5)
+                    self.cache.clear(cacheName,wait=5)
                 
         complete = True 
         types    = AUTOTUNE_TYPES
@@ -146,19 +144,19 @@ class Library:
             else:
                 func = self.libraryFUNCS[type]['func']
                 cacheName     = "%s.%s"%(self.__class__.__name__,func.__name__)
-                cacheResponse = (self.cache.get(cacheName) or[])
+                cacheResponse = (self.cache.get(cacheName) or [])
                 self.log("updateLibrary, type = %s, cached items = %s"%(type,len(cacheResponse)))
-                if not cacheResponse: msg = LANGUAGE(30014) #Parsing
-                else:                 msg = LANGUAGE(32022) #Updating
                 if not cacheResponse:
+                    msg = LANGUAGE(30014) #Parsing
                     self.parserDialog = DIALOG.progressBGDialog(header=self.parserHeader)
                     self.parserMSG    = AUTOTUNE_TYPES[idx]
                     self.parserCount  = int(idx*100//len(AUTOTUNE_TYPES))
                     self.parserHeader = '%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041)))
                     self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,header=self.parserHeader)
                     cacheResponse     = self.cache.set(cacheName, __fill(type, func), expiration=self.libraryFUNCS[type]['life'])
-                    self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025))                    
-                self.setLibrary(type, [__update(type,item,msg==LANGUAGE(30014)) for item in cacheResponse])
+                    self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025))  
+                else: msg = LANGUAGE(32022) #Updating
+                self.setLibrary(type, list(__update(type,cacheResponse,self.getEnabled(type),msg==LANGUAGE(30014))))
                 self.log("updateLibrary, type = %s, saved items = %s"%(type,len(cacheResponse)))
         self.log('updateLibrary, force = %s, complete = %s'%(force,  complete))
         return  complete
