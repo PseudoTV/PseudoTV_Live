@@ -23,7 +23,6 @@ from rules      import RulesList
 from tasks      import Tasks
 from jsonrpc    import JSONRPC
 
-
 class Player(xbmc.Player):
     sysInfo      = {}
     isPseudoTV   = False
@@ -191,6 +190,7 @@ class Player(xbmc.Player):
 
 
     def _onPlay(self):
+        self.toggleBackground(False)
         oldInfo = self.sysInfo
         sysInfo = self.getPlayerSysInfo()
         newChan = oldInfo.get('chid',random.random()) != sysInfo.get('chid')
@@ -324,6 +324,7 @@ class Monitor(xbmc.Monitor):
             self.isIdle = (self.idleTime > OSD_TIMER)
             self.log('__chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
 
+
         def __chkPlayback():
             if self.service.player.pendingPlay > 0:
                 pendingTime = (time.time() - self.service.player.pendingPlay)
@@ -343,10 +344,8 @@ class Monitor(xbmc.Monitor):
         
         def __chkBackground():
             remaining = floor(self.service.player.getRemainingTime())
-            played    = ceil(self.service.player.getPlayedTime())
-            self.log('__chkBackground, isIdle = %s, remaining = %s, played = %s'%(self.isIdle, remaining, played))
-            if self.isIdle and remaining < 30:  self.service.player.toggleBackground(self.service.player.enableOverlay)
-            elif remaining > 30 and played > 3: self.service.player.toggleBackground(False)
+            self.log('__chkBackground, isIdle = %s, remaining = %s'%(self.isIdle, remaining))
+            if self.isIdle and remaining <= 30:  self.service.player.toggleBackground(self.service.player.enableOverlay)
 
         def __chkOverlay():
             played = ceil(self.service.player.getPlayedTime())
@@ -359,10 +358,11 @@ class Monitor(xbmc.Monitor):
             threshold = abs((totalTime - (totalTime * .75)) - FIFTEEN)
             remaining = ceil(self.service.player.getRemainingTime())
             self.log('__chkOnNext, isIdle = %s, remaining = %s'%(self.isIdle, remaining))
-            if self.isIdle and remaining <= threshold and remaining > 0 and self.service.player.background is None: 
+            if self.isIdle and remaining <= threshold and self.service.player.background is None: 
                 self.service.player.toggleOnNext(self.service.player.enableOverlay)
-                 
-        __chkIdle()
+                
+        idle_thread = Thread(target=__chkIdle)
+        idle_thread.start()
         if self.service.player.isPlaying() and self.service.player.isPseudoTV:
             __chkPlayback()
             __chkResumeTime()
@@ -478,14 +478,15 @@ class Service():
     def _start(self):
         self.log('_start')
         if DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=OSD_TIMER):
-            self.currentSettings = dict(SETTINGS.getCurrentSettings())
             self.tasks._initialize()
             if self.player.isPlaying() and self.player.overlay is None: self.player.onAVStarted()
             while not self.monitor.abortRequested():
                 self.monitor.chkIdle()
                 if    self.__shutdown(): break
                 elif  self.__restart():  break
-                else: self.__tasks()
+                else:
+                    self.__tasks()
+                    self.monitor.waitForAbort(0.1)
             self._stop(self.pendingRestart)
 
 

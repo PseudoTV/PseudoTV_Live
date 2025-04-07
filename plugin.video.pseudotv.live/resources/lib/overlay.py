@@ -52,7 +52,7 @@ class Background(xbmcgui.WindowXMLDialog):
 
         try: self.nextTime = epochTime(self.nitem['start']).strftime('%I:%M%p')
         except Exception as e: 
-            self.log("__init__, nextTime failed! %s\nstart = %s"%(e,self.nitem['start']), xbmc.LOGERROR)
+            self.log("__init__, nextTime failed! %s\nstart = %s"%(e,self.nitem.get('start')), xbmc.LOGERROR)
             self.nextTime = BUILTIN.getInfoLabel('NextStartTime','VideoPlayer')
             
         self.onNow  = '%s on %s'%(self.nowTitle,self.chname) if self.chname not in validString(self.nowTitle) else self.nowTitle
@@ -289,7 +289,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         
         try: self.nextTime = epochTime(self.nitem['start']).strftime('%I:%M%p')
         except Exception as e: 
-            self.log("__init__, nextTime failed! %s\nstart = %s"%(e,self.nitem['start']), xbmc.LOGERROR)
+            self.log("__init__, nextTime failed! %s\nstart = %s"%(e,self.nitem.get('start')), xbmc.LOGERROR)
             self.nextTime = BUILTIN.getInfoLabel('NextStartTime','VideoPlayer')
             
         self.onNow  = '%s on %s'%(self.nowTitle,self.chname) if self.chname not in validString(self.nowTitle) else self.nowTitle

@@ -1294,7 +1294,7 @@
                 </setting>
                 <setting id="Enable_Executors" type="boolean" label="30198" help="33198">
                     <level>3</level>
-                    <default>false</default>
+                    <default>true</default>
                     <control type="toggle"/>
                     <dependencies>
                         <dependency type="enable">

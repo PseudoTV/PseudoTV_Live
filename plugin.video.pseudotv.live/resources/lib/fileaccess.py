@@ -218,6 +218,8 @@ class FileAccess:
 
 
 class VFSFile:
+    monitor = xbmc.Monitor()
+    
     def __init__(self, filename, mode):
         if mode == 'w':
             if not FileAccess.exists(filename): 
@@ -259,17 +261,27 @@ class VFSFile:
 
 
     def readlines(self):
-        return self.currentFile.read().split('\n')
+        return list(self.read_in_chunks())
 
 
     def readline(self):
-        return self.currentFile.read().split('\n')
+        for line in self.read_in_chunks():
+            yield line
 
 
     def tell(self):
         try:    return self.currentFile.tell()
         except: return self.currentFile.seek(0, 1)
         
+        
+    def read_in_chunks(self, chunk_size=1024):
+        """Lazy function (generator) to read a file piece by piece."""
+        while not self.monitor.abortRequested():
+            data = self.currentFile.read(chunk_size)
+            if not data: break
+            try:     yield data
+            except:  yield data.decode(DEFAULT_ENCODING, 'backslashreplace')
+
 
 class FileLock(object):
     monitor = xbmc.Monitor()

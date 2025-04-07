@@ -50,6 +50,7 @@ class Tasks():
 
     def _initialize(self):
         tasks = [self.chkInstanceID,
+                 self.chkSettings,
                  self.chkDirs,
                  self.chkWelcome,
                  self.chkDebugging,
@@ -59,7 +60,11 @@ class Tasks():
         for func in tasks: self._que(func,1)
         self.log('_initialize, finished...')
         
-        
+
+    def chkSettings(self):
+        self.service.currentSettings = dict(SETTINGS.getCurrentSettings())
+
+
     def chkInstanceID(self):
         self.log('chkInstanceID')
         PROPERTIES.getInstanceID()
@@ -101,36 +106,33 @@ class Tasks():
     def _chkQueTimer(self):
         self._chkEpochTimer('chkVersion'      , self.chkVersion      , 21600)
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
-        self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 900)
+        self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 600)
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
-        self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 900)
-        self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 900)
-        self._chkEpochTimer('chkChannels'     , self.chkChannels     , (MAX_GUIDEDAYS*3600))
-        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 600)
-        self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 600)
+        self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 600)
+        self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 3600)
+        self._chkEpochTimer('chkQueue'        , self.chkQueue        , 600)
         self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
         self._chkPropTimer('chkFillers'       , self.chkFillers      , 2)
-        self._chkPropTimer('chkAutoTune'      , self.chkAutoTune     , 2)
         self._chkPropTimer('chkUpdate'        , self.chkUpdate       , 3)
                   
         
     def _chkEpochTimer(self, key, func, runevery=900, priority=-1, nextrun=None, *args, **kwargs):
-        if nextrun is None: nextrun = PROPERTIES.getPropertyInt(key,default=0)# nextrun == 0 => force que
+        if nextrun is None: nextrun = PROPERTIES.getPropertyInt(key, default=0)  # nextrun == 0 => force que
         epoch = int(time.time())
         if epoch >= nextrun:
-            self.log('_chkEpochTimer, key = %s, last run %s'%(key,epoch-nextrun))
-            PROPERTIES.setPropertyInt(key,(epoch+runevery))
+            self.log('_chkEpochTimer, key = %s, last run %s' % (key, epoch - nextrun))
+            PROPERTIES.setPropertyInt(key, (epoch + runevery))
             return self._que(func, priority, *args, **kwargs)
-        
+
 
     def _chkPropTimer(self, key, func, priority=-1, *args, **kwargs):
-        key = '%s.%s'%(ADDON_ID,key)
+        key = '%s.%s' % (ADDON_ID, key)
         if PROPERTIES.getEXTPropertyBool(key):
-            self.log('_chkPropTimer, key = %s'%(key))
+            self.log('_chkPropTimer, key = %s' % (key))
             PROPERTIES.clrEXTProperty(key)
-            self._que(func, priority , *args, **kwargs)
+            self._que(func, priority, *args, **kwargs)
             
 
     @cacheit(expiration=datetime.timedelta(minutes=10))
@@ -169,8 +171,7 @@ class Tasks():
     def chkFiles(self):
         self.log('chkFiles')
         self.chkDirs()
-        if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,2)
-        if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels,3)
+        if not (FileAccess.exists(LIBRARYFLEPATH) & FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkLibrary,2)
 
 
     def chkHTTP(self):
@@ -196,13 +197,11 @@ class Tasks():
         self.log('chkLibrary, force = %s'%(force))
         try:
             library = Library(service=self.service)
-            # library.importPrompt() #refactor feature
+            library.importPrompt() #refactor feature
             complete = library.updateLibrary(force)
             del library
-            if complete: 
-                if force: PROPERTIES.setPropertyBool('ForceLibrary',False)
-                return self.chkAutoTune() #run autotune for the first time this Kodi/PTVL instance.
-            self._que(self.chkLibrary,2,force)
+            if complete: self._que(self.chkChannels,3)
+            else:        self._que(self.chkLibrary,2,force)
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
@@ -223,7 +222,7 @@ class Tasks():
             SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
             PROPERTIES.setChannels(len(channels) > 0)
             self.service.currentChannels = channels #update service channels
-                
+
         if len(channels) > 0:
             complete, updated = builder.build(channels)
             self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
@@ -231,9 +230,17 @@ class Tasks():
                 if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
                 if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
             else: self._que(self.chkChannels,3,channels)
+        elif not SETTINGS.getCacheSetting('has.Autotuned'):
+            SETTINGS.setCacheSetting('has.Autotuned',Autotune()._runTune())
+            self._que(self.chkChannels,3)
         elif PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
+        else: DIALOG.notificationDialog(LANGUAGE(32058))
         del builder
         return complete
+        
+        
+    def chkQueue(self):
+        self.chkJSONQUE(), self.chkLOGOQUE()
         
 
     def chkJSONQUE(self):
@@ -319,13 +326,6 @@ class Tasks():
         pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
     
 
-    def chkAutoTune(self):
-        self.log('chkAutoTune')
-        if not SETTINGS.getCacheSetting('has.Autotuned'):
-            SETTINGS.setCacheSetting('has.Autotuned',Autotune()._runTune())
-            PROPERTIES.setEpochTimer('chkChannels')
-    
-    
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
     def getGenreNames(self):
         self.log('getGenres')

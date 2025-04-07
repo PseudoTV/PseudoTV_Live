@@ -1068,7 +1068,7 @@ msgid "%s is busy, try again later..."
 msgstr ""
 
 msgctxt "#32058"
-msgid "Cancelling Autotune\nExisting Channels Detected..."
+msgid "No Channels Configured!"
 msgstr ""
 
 msgctxt "#32059"

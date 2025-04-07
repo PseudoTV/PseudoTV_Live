@@ -177,7 +177,6 @@ Language IDS not found in py files, possibly only in xml: {
     "32049": "Restarting...",
     "32053": "Settings",
     "32057": "%s is busy, try again later...",
-    "32058": "Cancelling Autotune\\nExisting Channels Detected...",
     "32063": "OK",
     "32074": "Adding Channel",
     "32075": "Saving...",

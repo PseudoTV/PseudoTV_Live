@@ -159,7 +159,8 @@ class Library:
                 self.setLibrary(type, list(__update(type,cacheResponse,self.getEnabled(type),msg==LANGUAGE(30014))))
                 self.log("updateLibrary, type = %s, saved items = %s"%(type,len(cacheResponse)))
         self.log('updateLibrary, force = %s, complete = %s'%(force,  complete))
-        return  complete
+        if complete and force: PROPERTIES.setPropertyBool('ForceLibrary',False)
+        return complete
         
 
     def resetLibrary(self, ATtypes=AUTOTUNE_TYPES):

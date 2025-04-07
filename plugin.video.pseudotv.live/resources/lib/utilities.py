@@ -183,7 +183,7 @@ class Utilities:
     def _runAutotune(self):
         self.log('_runAutotune')
         SETTINGS.setCacheSetting('has.Autotuned',False)
-        PROPERTIES.setPropTimer('chkAutoTune')
+        PROPERTIES.setPropTimer('chkChannels')
          
          
     def _runUpdate(self, full=False):

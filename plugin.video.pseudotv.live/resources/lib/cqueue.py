@@ -71,7 +71,9 @@ class CustomQueue:
         self.log("__run, func = %s, executor = %s"%(func.__name__,self.executor))
         try:
             if self.executor: return self.pool.executor(func, None, *args, **kwargs)
-            else:             return func(*args, **kwargs)
+            else:
+                thread = Thread(target=func, args=args, kwargs=kwargs)
+                thread.start()
         except Exception as e: self.log("__run, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
                 
@@ -157,16 +159,9 @@ class CustomQueue:
                     else:         self.tail = next_node
                     
                     if not self.delay:
-                        package, self.__run(*package) 
+                        package, self.__run(*package)
                     else:
-                        popTimer = Timer(curr_node.wait, *package)
-                        if popTimer.is_alive(): 
-                            if hasattr(popTimer, 'cancel'): popTimer.cancel()
-                            try: popTimer.join()
-                            except: pass
-                        else:
-                            popTimer.daemon = True
-                            popTimer.start()
+                        timerit(curr_node.wait,[*package])
             else:
                 self.log("__pop, queue undefined!")
                 break

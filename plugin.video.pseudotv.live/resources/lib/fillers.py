@@ -96,23 +96,25 @@ class Fillers:
 # resource.videos.bumpers.pseudotv
 
     def getSingle(self, type, keys=['resources'], chance=False):
-        items  = []
-        for key in keys:
-            tmpLST = self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[])
-            if   len(tmpLST) > 0:            items.append(random.choice(tmpLST))
-            elif len(items) == 0 and chance: items.extend(self.getSingle(type))
-        self.log('getSingle, type = %s, keys = %s, chance = %s, returning = %s'%(type,keys,chance,len(items)))
+        items = [random.choice(tmpLST) for key in keys if (tmpLST := self.builder.bctTypes.get(type, {}).get('items', {}).get(key.lower(), []))]
+        if not items and chance:
+            items.extend(self.getSingle(type))
+        self.log('getSingle, type = %s, keys = %s, chance = %s, returning = %s' % (type, keys, chance, len(items)))
         return setDictLST(items)
         
 
     def getMulti(self, type, keys=['resources'], count=1, chance=False):
-        items  = []
+        items = []
         tmpLST = []
-        for key in keys: tmpLST.extend(self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
-        if   len(tmpLST) >= count: items = random.sample(tmpLST, count)
-        elif len(tmpLST) > 0:      items = setDictLST(random.choices(tmpLST,k=count))
-        if len(items) < count and chance: items.extend(self.getMulti(type,count=(count-len(items))))#parse root for anything
-        self.log('getMulti, type = %s, keys = %s, count = %s, chance = %s, returning = %s'%(type,keys,count,chance,len(items)))
+        for key in keys:
+            tmpLST.extend(self.builder.bctTypes.get(type, {}).get('items', {}).get(key.lower(), []))
+        if len(tmpLST) >= count:
+            items = random.sample(tmpLST, count)
+        elif tmpLST:
+            items = setDictLST(random.choices(tmpLST, k=count))
+        if len(items) < count and chance:
+            items.extend(self.getMulti(type, count=(count - len(items))))
+        self.log('getMulti, type = %s, keys = %s, count = %s, chance = %s, returning = %s' % (type, keys, count, chance, len(items)))
         return setDictLST(items)
     
 
