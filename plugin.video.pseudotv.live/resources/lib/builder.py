@@ -365,7 +365,7 @@ class Builder:
                 dirList = setDictLST(dirList + subdirList)
                 self.log('[%s] buildFileList, parsing %s, adding = %s/%s'%(citem['id'],dir.get('file'),len(subfileList),limit))
             elif len(dirList) == 0:
-                if len(fileList) < limit and nlimits.get('total') >= limit and counter < nlimits.get('total'): 
+                if len(fileList) < limit and nlimits.get('total') > limit and counter < nlimits.get('total') and nlimits != limits: 
                     self.log("[%s] buildFileList, retrying with new autoPagination limits"%(citem['id']))
                     fileList.extend(self.buildFileList(citem, path, media, limit, sort, nlimits))
                     counter += limit
