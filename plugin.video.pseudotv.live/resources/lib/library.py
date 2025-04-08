@@ -115,6 +115,8 @@ class Library:
                     for eitem in existing:
                         if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name','').lower():
                             item['enabled'] = True
+                            if (item.get('logo') or LOGO) == LOGO and (eitem.get('logo') or LOGO) != LOGO: 
+                                item['logo'] = eitem.get('logo',LOGO) #restore previously used logo.
                             break
                 else: item['logo'] = self.resources.getLogo(item,item.get('logo',LOGO)) #update logo
                 entry = self.libraryDATA.get('library',{}).get('Item',{}).copy()

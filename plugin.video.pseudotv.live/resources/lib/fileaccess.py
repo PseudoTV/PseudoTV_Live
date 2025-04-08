@@ -277,10 +277,10 @@ class VFSFile:
     def read_in_chunks(self, chunk_size=1024):
         """Lazy function (generator) to read a file piece by piece."""
         while not self.monitor.abortRequested():
-            data = self.currentFile.read(chunk_size)
+            try:    data = self.currentFile.read(chunk_size)
+            except: data = self.currentFile.readBytes(chunk_size)
             if not data: break
-            try:     yield data
-            except:  yield data.decode(DEFAULT_ENCODING, 'backslashreplace')
+            yield data
 
 
 class FileLock(object):

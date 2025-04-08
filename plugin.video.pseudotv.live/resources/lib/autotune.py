@@ -119,9 +119,7 @@ class Autotune:
             if SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog(LANGUAGE(32018)%(ATtype))
             return
         
-        with BUILTIN.busy_dialog(rebuildChannels):
-            lizlst = poolit(__buildMenuItem)(items)
-            
+        lizlst = poolit(__buildMenuItem)(items)
         if rebuildChannels:#rebuild channels.json entries
             selects = list(_match(self.library.getEnabled(ATtype)))
         elif autoSelect:#build sample channels
