@@ -214,14 +214,19 @@ class Cores:
         except OSError: pass
         return 1
 
+
 class ThreadPool:
-    CPUCount    = Cores().CPUcount()
-    ThreadCount = CPUCount*2
-    
     def __init__(self):
-        self.log("__init__, ThreadPool Threads = %s, CPU's = %s"%(self.ThreadCount, self.CPUCount))
+        self.CPUCount = Cores().CPUcount()
+        self.ThreadCount = self._calculate_thread_count()
+        self.log(f"__init__, ThreadPool Threads = {self.ThreadCount}, CPUs = {self.CPUCount}")
 
 
+    def _calculate_thread_count(self):
+        # Use environment variable or default logic to set threads
+        return int(os.getenv('THREAD_COUNT', self.CPUCount * 2))
+            
+            
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 

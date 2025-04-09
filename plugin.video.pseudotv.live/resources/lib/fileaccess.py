@@ -261,7 +261,7 @@ class VFSFile:
 
 
     def readlines(self):
-        return list(self.read_in_chunks())
+        return list(self.readline())
 
 
     def readline(self):
@@ -277,8 +277,7 @@ class VFSFile:
     def read_in_chunks(self, chunk_size=1024):
         """Lazy function (generator) to read a file piece by piece."""
         while not self.monitor.abortRequested():
-            try:    data = self.currentFile.read(chunk_size)
-            except: data = self.currentFile.readBytes(chunk_size)
+            data = self.read(chunk_size)
             if not data: break
             yield data
 

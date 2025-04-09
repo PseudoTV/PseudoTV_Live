@@ -110,7 +110,8 @@ class Tasks():
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 600)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 3600)
-        self._chkEpochTimer('chkQueue'        , self.chkQueue        , 600)
+        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
+        self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 900)
         self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
@@ -237,10 +238,6 @@ class Tasks():
         else: DIALOG.notificationDialog(LANGUAGE(32058))
         del builder
         return complete
-        
-        
-    def chkQueue(self):
-        self.chkJSONQUE(), self.chkLOGOQUE()
         
 
     def chkJSONQUE(self):

@@ -126,7 +126,11 @@ def elem_to_channel(elem):
     append_icons(d, elem)
     append_text(d, 'url', elem, with_lang=False)
     return d
-
+    
+def sanitize_xml_data(data):
+    if isinstance(data,list): return [sanitize_xml_data(line) for line in data]
+    else:                     return data.replace('&', '&amp;')
+    
 def read_channels(fp=None, tree=None):
     """
     read_channels(fp=None, tree=None) -> list
@@ -137,14 +141,17 @@ def read_channels(fp=None, tree=None):
     channels = []
     if fp:
         if hasattr(fp, 'readlines'):
-            tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
-            fp.close()
+            try:    tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+            except: tree = fromstringlist(fp.read().split('/n'), parser=XMLParser(encoding=locale))
+            finally: fp.close()
         else: 
             tree = parse(fp, parser=XMLParser(encoding=locale))
     for elem in tree.findall('channel'):
         channel = elem_to_channel(elem) 
-        try:    channel['icon'] = [{'src':elem.findall('icon')[0].get('src')}]
-        except: channel['icon'] = ''  #temp fix
+        try: channel['icon'] = [{'src': elem.findall('icon')[0].get('src')}]
+        except IndexError:
+            log("Icon element missing or malformed", xbmc.LOGERROR)
+            channel['icon'] = []
         channels.append(channel)
     return channels
 
