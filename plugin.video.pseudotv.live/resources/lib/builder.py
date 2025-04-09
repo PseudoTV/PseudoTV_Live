@@ -357,7 +357,7 @@ class Builder:
             if self.service._interrupt(): 
                 self.log("[%s] buildFileList, _interrupt"%(citem['id']))
                 return []
-            # elif len(fileList) >= limit:  break
+            elif len(fileList) >= limit and not path.endswith(('.xsp','.xml')): break #only recursively parse nodes and smartplaylists.
             elif len(dirList) > 0:
                 dir = dirList.pop(0)
                 subfileList, subdirList, nlimits, errors = self.buildList(citem, dir.get('file'), media, limit, sort, limits, dir) #parse all directories under root. Flattened hierarchies required to stream line channel building.

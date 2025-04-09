@@ -1,4 +1,5 @@
 v.0.6.1
+- Fixed "Post-Roll" Adv. Channel rule.
 - Fixed Adv. rule vignette image selection from resources. 
 - Fixed Vignette overlay size not applying to resolutions above 1080p.
 - Fixed Progressive channel updating bug.

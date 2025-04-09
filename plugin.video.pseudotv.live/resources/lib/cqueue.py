@@ -84,6 +84,7 @@ class CustomQueue:
                 if priority < epriority:
                     try:
                         self.min_heap.pop(idx)
+                        heapq.heapify(self.min_heap)  # Ensure heap property is maintained
                         self.log("__exists, replacing queue: func = %s, priority %s => %s"%(epackage[0].__name__,epriority,priority))
                     except: self.log("__exists, replacing queue: func = %s, idx = %s failed!"%(epackage[0].__name__,idx))
                 else: return True

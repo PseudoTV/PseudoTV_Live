@@ -103,12 +103,13 @@ class Cache:
         self.log('clear, name = %s'%self.getname(name))
         sc = FileAccess.translatePath(xbmcaddon.Addon(id='script.module.simplecache').getAddonInfo('profile'))
         dbpath = os.path.join(sc, 'simplecache.db')
-        connection = sqlite3.connect(dbpath, timeout=wait, isolation_level=None)
         try:
+            connection = sqlite3.connect(dbpath, timeout=wait, isolation_level=None)
             connection.execute('DELETE FROM simplecache WHERE id LIKE ?', (self.getname(name) + '%',))
             connection.commit()
-            connection.close()
-        except sqlite3.Error as e: self.log('clear, failed! %s'%(e), xbmc.LOGERROR)
+        except sqlite3.Error as e: self.log('clear, failed! %s' % e, xbmc.LOGERROR)
         finally:
-            del connection
+            if connection:
+                connection.close()
+                del connection
             del sqlite3

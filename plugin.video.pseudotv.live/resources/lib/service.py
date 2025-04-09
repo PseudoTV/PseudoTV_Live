@@ -128,17 +128,18 @@ class Player(xbmc.Player):
                     return combineDicts(citem,item)
             return citem
             
-        sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
-        sysInfo['chfile']   = BUILTIN.getInfoLabel('Filename','Player')
-        sysInfo['chfolder'] = BUILTIN.getInfoLabel('Folderpath','Player')
-        sysInfo['chpath']   = BUILTIN.getInfoLabel('Filenameandpath','Player')
-        if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
-        if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
-        sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),__update(sysInfo.get('citem',{}).get('id'))),'runtime':int(self.getPlayerTime())}) #still needed for adv. rules?
-        if not sysInfo.get('callback'): sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
-        self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
-        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
-        return sysInfo
+        with self.service.lock:  # Ensure thread safety
+            sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
+            sysInfo['chfile']   = BUILTIN.getInfoLabel('Filename','Player')
+            sysInfo['chfolder'] = BUILTIN.getInfoLabel('Folderpath','Player')
+            sysInfo['chpath']   = BUILTIN.getInfoLabel('Filenameandpath','Player')
+            if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
+            if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
+            sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),__update(sysInfo.get('citem',{}).get('id'))),'runtime':int(self.getPlayerTime())}) #still needed for adv. rules?
+            if not sysInfo.get('callback'): sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
+            self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
+            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
+            return sysInfo
         
         
     def getPlayerItem(self):
@@ -411,6 +412,7 @@ class Monitor(xbmc.Monitor):
         
 
 class Service():
+    lock = Lock()
     currentSettings  = []
     pendingSuspend   = PROPERTIES.setPendingSuspend(False)
     pendingInterrupt = PROPERTIES.setPendingInterrupt(False)
