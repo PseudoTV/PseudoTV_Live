@@ -1149,7 +1149,8 @@ class Builtin:
 
 
     def getIdle(self):
-        return int(xbmc.getGlobalIdleTime() or '0')
+        try:    return int(xbmc.getGlobalIdleTime() or '0')
+        except: return 0
             
     
     @contextmanager
