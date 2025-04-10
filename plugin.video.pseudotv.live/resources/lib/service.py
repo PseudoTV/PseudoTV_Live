@@ -338,7 +338,7 @@ class Monitor(xbmc.Monitor):
 
         def __chkOverlay(played):
             if self.isIdle and played > 30: 
-                self.log('__chkOverlay, isIdle = %s'%(self.isIdle, played))
+                self.log('__chkOverlay, isIdle = %s, played = %s'%(self.isIdle, played))
                 self.service.player.toggleOverlay(self.service.player.enableOverlay)
 
         def __chkOnNext(remaining):
