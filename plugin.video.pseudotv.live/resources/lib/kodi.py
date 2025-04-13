@@ -1233,7 +1233,7 @@ class Dialog:
     def doInfoMonitor(self):
         while not self.monitor.abortRequested():
             if not self.fillInfoMonitor(): break
-            elif self.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000)): break
+            elif self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')/1000)): break
             
 
     def fillInfoMonitor(self, type='ListItem'):

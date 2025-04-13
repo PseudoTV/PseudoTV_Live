@@ -84,10 +84,10 @@ class Builder:
                                  "bumpers" :{"min":-1, "max":SETTINGS.getSettingInt('Enable_Preroll'), "auto":SETTINGS.getSettingInt('Enable_Preroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')), "chance":SETTINGS.getSettingInt('Random_Pre_Chance'),
                                              "sources" :{"ids":SETTINGS.getSetting('Resource_Bumpers').split('|'),"paths":[os.path.join(FILLER_LOC,'Bumpers' ,'')]},"items":{}},
                                  
-                                 "adverts" :{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":MIN_EPG_DURATION, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
+                                 "adverts" :{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":PAGE_LIMIT, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
                                              "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{}},
                                  
-                                 "trailers":{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":MIN_EPG_DURATION, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
+                                 "trailers":{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":PAGE_LIMIT, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
                                              "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{}, "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI')}}
 
         self.xsp              = XSP()
@@ -98,6 +98,13 @@ class Builder:
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+        
+        
+    def updateProgress(self, percent, message, header):
+        """Utility function to update progress dialogs."""
+        if self.pDialog:
+            self.log('updateProgress, percent = %s, message = %s, header = %s'%(percent,message,header))
+            self.pDialog = DIALOG.updateProgress(percent, self.pDialog, message=message, header=header)
 
 
     def getChannels(self):
@@ -158,14 +165,8 @@ class Builder:
                             self.log("[%s] build, _interrupt"%(citem['id']))
                             self.completedBuild = False
                             self.pErrors = [LANGUAGE(32160)]
-                            self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
+                            self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                             break
-                        elif self.service._suspend():
-                            self.log("[%s] build, _suspend"%(citem['id']))
-                            channels.insert(idx,citem)
-                            self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
-                            self.service.monitor.waitForAbort(SUSPEND_TIMER)
-                            continue
                         else:
                             self.pMSG  = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
                             self.pName = citem['name']
@@ -180,7 +181,7 @@ class Builder:
                             elif  stopTimes.get(citem['id']):                                                        self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
                             else:                                                                                    self.pMSG = '%s %s'%(LANGUAGE(32245),LANGUAGE(32023)) #Parsing  
                             
-                            self.pDialog  = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32248),self.pName), header='%s, %s'%(ADDON_NAME,self.pMSG))
+                            self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32248),self.pName), header='%s, %s'%(ADDON_NAME,self.pMSG))
                             cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                             if preview: return cacheResponse
                             elif cacheResponse:
@@ -189,9 +190,9 @@ class Builder:
                                 if self.completedBuild: self.pErrors.append(LANGUAGE(32026))
                                 chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
                                 self.log('[%s] build, In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
-                                self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
+                                self.updateProgress(self.pCount, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
                                 if not __hasGuideData(citem): 
-                                    self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message=self.pName,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32244),LANGUAGE(32023))))
+                                    self.updateProgress(self.pCount, message=self.pName,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32244),LANGUAGE(32023))))
                                     self.delChannelStation(citem) #remove m3u/xmltv references when no valid programmes found. # todo del citem causes issues down the road with citem missing params. reeval need to remove here
                             self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                          
@@ -207,7 +208,7 @@ class Builder:
         self.log('[%s] getFileList, start = %s'%(citem['id'],start))
         try:
             if start > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): #max guidedata days to seconds, minus fill buffer (12hrs) in seconds.
-                if self.pDialog: self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message=self.pName, header='%s, %s'%(ADDON_NAME,self.pMSG))
+                self.updateProgress(self.pCount, message=self.pName, header='%s, %s'%(ADDON_NAME,self.pMSG))
                 self.log('[%s] getFileList, programmes over MAX_DAYS! start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
             
@@ -222,8 +223,10 @@ class Builder:
             if isinstance(cacheResponse,list): return sorted(self.addScheduling(citem, cacheResponse, now, start, self.padScheduling), key=itemgetter('start'))
             elif self.service._interrupt():   
                 self.log("[%s] getFileList, _interrupt"%(citem['id']))
+                self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                 return True
-            else:                              return cacheResponse
+            else:
+                return cacheResponse
         except Exception as e: self.log("[%s] getFileList, failed! %s"%(citem['id'],e), xbmc.LOGERROR)
         return False
 
@@ -272,7 +275,7 @@ class Builder:
                     start = item['stop']
                     totDur += item['duration']
                     tmpList.append(item)
-                    if self.pDialog: self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message="%s: %s %s/%s"%(self.pName,LANGUAGE(33085),totDur,MIN_EPG_DURATION),header='%s, %s'%(ADDON_NAME,self.pMSG))
+                    self.updateProgress(self.pCount, message="%s: %s %s/%s"%(self.pName,LANGUAGE(33085),totDur,MIN_EPG_DURATION),header='%s, %s'%(ADDON_NAME,self.pMSG))
                     self.log("[%s] addScheduling, ADD fileList = %s, totDur = %s/%s, stop = %s"%(citem['id'],len(tmpList),totDur,MIN_EPG_DURATION,tmpList[-1].get('stop')))
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
@@ -292,7 +295,7 @@ class Builder:
             
         def _injectFillers(citem, fileList, enable=False):
             self.log("[%s] buildChannel: _injectFillers, fileList = %s, enable = %s"%(citem['id'],len(fileList),enable))
-            if enable: return Fillers(builder=self).injectBCTs(citem, fileList)
+            if enable: return Fillers(self,citem).injectBCTs(fileList)
             else:      return fileList
           
         def _injectRules(citem):
@@ -314,6 +317,7 @@ class Builder:
             for idx, file in enumerate(paths):
                 if self.service._interrupt():
                     self.log("[%s]  buildChannel, _interrupt"%(citem['id']))
+                    self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                     return []
                 else:
                     if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
@@ -338,15 +342,19 @@ class Builder:
 
     def buildFileList(self, citem: dict, path: str, media: str='video', limit: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}) -> list: #build channel via vfs path.
         self.log("[%s] buildFileList, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
+        fileList = []
         if path.endswith('.xsp'): #smartplaylist - parse xsp for path, sort info
             paths, media, sort, limit = self.xsp.parseXSP(path, media, sort, limit)
-            if len(paths) > 0: return interleave([self.buildFileList(citem, xsp, media, limit, sort, limits) for xsp in paths], self.interleaveValue)
-            
+            if len(paths) > 0:
+                for idx, npath in enumerate(paths):
+                    self.pName = '%s %s/%s'%(citem['name'],idx+1,len(paths))
+                    fileList.append(self.buildFileList(citem, npath, media, limit, sort, limits))
+                return interleave(fileList, self.interleaveValue)
+        
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
             path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules
             
         counter  = 0
-        fileList = []
         nlimits  = limits
         dirList  = [{'file':path}]
         self.loopback = {}
@@ -356,8 +364,14 @@ class Builder:
             #Not all results are flat hierarchies; walk all paths until fileList limit is reached. ie. folders with pagination and/or directories
             if self.service._interrupt(): 
                 self.log("[%s] buildFileList, _interrupt"%(citem['id']))
-                return []
-            elif len(fileList) >= limit and not path.endswith(('.xsp','.xml')): break #only recursively parse nodes and smartplaylists.
+                self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
+                return []       
+            elif self.service._suspend(): 
+                self.log("[%s] buildFileList, _suspend"%(citem['id']))
+                self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
+                self.service.monitor.waitForAbort(SUSPEND_TIMER)
+                continue
+            elif len(fileList) >= limit: break
             elif len(dirList) > 0:
                 dir = dirList.pop(0)
                 subfileList, subdirList, nlimits, errors = self.buildList(citem, dir.get('file'), media, limit, sort, limits, dir) #parse all directories under root. Flattened hierarchies required to stream line channel building.
@@ -376,7 +390,7 @@ class Builder:
         return fileList
 
 
-    def buildList(self, citem: dict, path: str, media: str='video', page: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}, dirItem: dict={}, query: dict={}) -> tuple:
+    def buildList(self, citem: dict, path: str, media: str='video', page: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}, dirItem: dict={}, query: dict={}):
         self.log("[%s] buildList, media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
         dirList, fileList, seasoneplist, trailersdict = [], [], [], {}
         items, nlimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
@@ -405,18 +419,20 @@ class Builder:
                 
                 if self.service._interrupt():
                     self.log("[%s] buildList, _interrupt"%(citem['id']))
+                    self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                     self.jsonRPC.autoPagination(citem['id'], path, query, limits) #rollback pagination limits
                     return [], [], nlimits, errors
                     
                 elif self.service._suspend(): 
                     self.log("[%s] buildList, _suspend"%(citem['id']))
                     items.insert(idx,item)
-                    if self.pDialog: self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
+                    self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
                     self.service.monitor.waitForAbort(SUSPEND_TIMER)
                     continue
                     
                 elif fileType == 'directory':
                     dirList.append(item)
+                    self.updateProgress(self.pCount, message='%s: %s'%(self.pName,int(idx*100)//page)+'%\nAppending: %s'%(item.get('label')),header='%s, %s'%(ADDON_NAME,self.pMSG))
                     self.log("[%s] buildList, IDX = %s, appending directory: %s"%(citem['id'],idx,file),xbmc.LOGINFO)
 
                 elif fileType == 'file':                        
@@ -449,8 +465,7 @@ class Builder:
                         item['media']        = media
                         item['originalpath'] = path #use for path sorting/playback verification 
                         if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554
-                        if self.pDialog: self.pDialog = DIALOG.updateProgress(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
-
+                        
                         title   = (item.get("title")     or item.get("label") or dirItem.get('label') or '')
                         tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')
 
@@ -476,6 +491,8 @@ class Builder:
                         if not label: 
                             self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))
                             continue
+                        else: 
+                            self.updateProgress(self.pCount, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
                             
                         spTitle, spYear = splitYear(label)
                         item['label'] = spTitle

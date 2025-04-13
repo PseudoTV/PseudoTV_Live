@@ -562,7 +562,7 @@ msgid "Include"
 msgstr ""
 
 msgctxt "#30136"
-msgid "Include iSpot Adverts"
+msgid ""
 msgstr ""
 
 msgctxt "#30137"
@@ -2239,7 +2239,7 @@ msgid "Default Sort Method for all channels, overridden per channel by SmartPlay
 msgstr ""
 
 msgctxt "#33215"
-msgid "Interleave individual paths in sets of x *see wiki for details [0 Disabled, 1 Default]"
+msgid "Interleave individual paths in sets of x *see wiki for details [0 Disabled]"
 msgstr ""
 
 msgctxt "#33228"

@@ -23,9 +23,11 @@ from library          import Library
 
 class XSP:
     def __init__(self):
-        ...
-
-
+        self.library    = Library()
+        self.jsonRPC    = self.library.jsonRPC
+        self.predefined = self.library.predefined
+        
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
@@ -63,15 +65,21 @@ class XSP:
 
     def findXSP(self, name: str) -> str:
         self.log("findXSP, name = %s"%(name))
-        library   = Library()
-        playlists = library.getPlaylists()
-        del library
+        playlists = self.library.getPlaylists()
         for item in playlists:
             if item.get('name','').lower() == name.lower():
                 self.log("findXSP, found = %s"%(item.get('path')))
                 return item.get('path')
         return ""
         
+
+    def _parseRoot(self, path, media='files', checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+        self.log("_parseRoot, path = %s"%(path))
+        paths = []
+        items = self.jsonRPC.getDirectory({"directory":path,"media":media},True,checksum,expiration).get('files',[])
+        [paths.extend(self.predefined.createShowPlaylist(item.get('label'))) for item in items if item.get('filetype') == 'directory' and item.get('label')]
+        return paths
+
 
     def parseXSP(self, path: str, media: str='video', sort: dict={}, limit: int=SETTINGS.getSettingInt('Page_Limit')):
         try: 
@@ -98,11 +106,12 @@ class XSP:
 
             try:
                 type = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
-                if type.lower() in ["mixed"]:
+                if type.lower() == "mixed":
                     for rule in dom.getElementsByTagName('rule'):
                         if rule.getAttribute('operator').lower() == 'is':
                             if   rule.getAttribute('field').lower() == 'path':                       paths.append(rule.getElementsByTagName("value")[0].childNodes[0].data)
                             elif rule.getAttribute('field').lower() in ['playlist','virtualfolder']: paths.extend(self.findXSP(rule.getElementsByTagName("value")[0].childNodes[0].data))
+                elif type.lower() == "tvshows": paths.extend(list(self._parseRoot(path)))
             except Exception as e:
                 self.log("parseXSP, parsing paths failed! %s"%(e), xbmc.LOGDEBUG)
                 type  = 'Unknown'

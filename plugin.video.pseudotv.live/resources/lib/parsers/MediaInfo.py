@@ -33,11 +33,8 @@ class MediaInfo:
             else:
                 try:
                     mi = MediaInfo.parse(FileAccess.translatePath(filename))
-                    log("MediaInfo: parsing %s"%(filename))
-                except: 
-                    with xbmcvfs.File(filename) as fle:
-                        mi = MediaInfo.parse(FileAccess.translatePath(fle.read()))
-                        log("MediaInfo: reading %s"%(filename))
+                    log("MediaInfo: parsing %s"%(FileAccess.translatePath(filename)))
+                except Exception as e: log("MediaInfo: failed %s"%(e), xbmc.LOGERROR)
             if not mi is None: dur = int(mi.tracks[0].duration // 1000)
             log('MediaInfo: Duration is %s'%(dur))
             return dur

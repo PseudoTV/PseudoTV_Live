@@ -654,7 +654,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                     fileList = builder.build([tmpcitem],preview=True)
                     end_time = time.time()
                     if not fileList or isinstance(fileList,list): break
-                
             del builder
             PROPERTIES.setInterruptActivity(True)
             return fileList, round(abs(end_time-start_time),2)

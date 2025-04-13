@@ -1,18 +1,20 @@
 v.0.6.1
-- Fixed "Post-Roll" Adv. Channel rule.
-- Fixed Adv. rule vignette image selection from resources. 
-- Fixed Vignette overlay size not applying to resolutions above 1080p.
-- Fixed Progressive channel updating bug.
-- Added Many miscellaneous improvements.
-- Improved Logo parsing:
-  - Logos no longer bottleneck startup performance; missing logos are now queued for future caching.
-  - Once the cache is complete, logos will slowly make there way into circulation; automatically.
-- Known issue: 
-  - Kodi PVR fails to update changed m3u logos. I'm Looking into a work around.
-  - Temporarily disabled "Restart" button.
-  - There maybe issues with missing channel logos.
-- Notice Let us push to make the new PseudoTV Live 100% bug free by its 5th project birthday (June 29th 2025).
-  Please; break it, then help me fix it! https://github.com/PseudoTV/PseudoTV_Live/wiki/Support
+- Fixed Adv. Channel rules "Post-Roll" and "Pause Channel".
+- Changed how "TVShow" type Smart-playlist are handled in-order to flatten hierarchy for cleaner parsing.
+- Resolved issue with the "Post-Roll" advanced channel rule.
+- Corrected advanced rule vignette image selection from resources.
+- Fixed vignette overlay size not applying to resolutions above 1080p.
+- Addressed a bug affecting progressive channel updates.
+- Included various miscellaneous improvements.
+- Enhanced logo parsing:
+  - Improved startup performance by queuing missing logos for future caching.
+  - Once the cache is complete, logos are gradually integrated into circulation automatically.
+- Known issues:
+  - Kodi PVR does not update modified M3U logos. A workaround is being investigated.
+  - The "Restart" button has been temporarily disabled.
+  - There may be issues with missing channel logos.
+- Notice: Let us aim to make PseudoTV Live 100% bug-free by its 5th anniversary (June 29, 2025).
+  Please test thoroughly and help report issues: https://github.com/PseudoTV/PseudoTV_Live/wiki/Support
 
 v.0.6.0
 - Refactored Overlays.

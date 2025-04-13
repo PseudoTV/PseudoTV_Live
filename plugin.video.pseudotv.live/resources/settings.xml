@@ -900,7 +900,7 @@
                 </setting>
                 <setting id="Resource_Adverts" type="list[addon]" label="30030" help="" parent="Enable_Postroll">
                     <level>2</level>
-                    <default>resource.videos.adverts.pseudotv</default>
+                    <default></default>
                     <constraints>
                         <addontype>kodi.resource.images</addontype>
                     </constraints>
@@ -917,7 +917,7 @@
                 </setting>
                 <setting id="Resource_Trailers" type="list[addon]" label="30031" help="" parent="Enable_Postroll">
                     <level>2</level>
-                    <default>resource.videos.trailers.pseudotv</default>
+                    <default></default>
                     <constraints>
                         <addontype>kodi.resource.images</addontype>
                     </constraints>

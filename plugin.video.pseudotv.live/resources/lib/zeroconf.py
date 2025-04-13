@@ -796,8 +796,7 @@ class Engine(threading.Thread):
                     for socket in rr:
                         try:
                             self.readers[socket].handle_read()
-                        except:
-                            traceback.print_exc()
+                        except Exception as e: self.log("__init__, failed! %s"%(e), xbmc.LOGERROR)
                 except:
                     pass
 
@@ -1059,8 +1058,8 @@ class ServiceInfo(object):
                     result[key] = value
 
             self.properties = result
-        except:
-            traceback.print_exc()
+        except Exception as e:
+            self.log("setText, failed! %s"%(e), xbmc.LOGERROR)
             self.properties = None
 
     def getType(self):
@@ -1188,13 +1187,26 @@ class ServiceInfo(object):
 
 
 class Zeroconf(object):
-    """Implementation of Zeroconf Multicast DNS Service Discovery
+    """
+    Implementation of Zeroconf Multicast DNS Service Discovery.
 
-    Supports registration, unregistration, queries and browsing.
+    This class supports:
+    - Registration and unregistration of services.
+    - Queries and browsing for services.
+    - Multicast DNS (mDNS) communication.
+
+    Attributes:
+        bindaddress (str): The IP address to bind to for multicast communication.
+        services (dict): Dictionary of registered services.
+        cache (DNSCache): Cache of DNS entries.
     """
     def __init__(self, bindaddress=None):
-        """Creates an instance of the Zeroconf class, establishing
-        multicast communications, listening and reaping threads."""
+        """
+        Initializes the Zeroconf instance, setting up multicast communication.
+
+        Args:
+            bindaddress (str): (Optional) The IP address to bind to. Defaults to None.
+        """
         global _GLOBAL_DONE
         _GLOBAL_DONE = False
         if bindaddress is None:
@@ -1517,8 +1529,7 @@ class Zeroconf(object):
                         out.addAdditionalAnswer(DNSAddress(service.server,
                             _TYPE_A, _CLASS_IN | _CLASS_UNIQUE,
                             _DNS_TTL, service.address))
-                except:
-                    traceback.print_exc()
+                except Exception as e: self.log("handleQuery, failed! %s"%(e), xbmc.LOGERROR)
 
         if out is not None and out.answers:
             out.id = msg.id

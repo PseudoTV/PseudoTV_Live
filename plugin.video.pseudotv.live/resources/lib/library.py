@@ -119,7 +119,7 @@ class Library:
                                 item['logo'] = eitem.get('logo',LOGO) #restore previously used logo.
                             break
                 else: item['logo'] = self.resources.getLogo(item,item.get('logo',LOGO)) #update logo
-                entry = self.libraryDATA.get('library',{}).get('Item',{}).copy()
+                entry = self.libraryTEMP.copy()
                 entry.update(item)
                 yield entry
 

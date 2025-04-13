@@ -55,6 +55,7 @@ class Utilities:
             def __addColor(text):
                 text = text.replace('- Added'      ,'[COLOR=green][B]- Added:[/B][/COLOR]')
                 text = text.replace('- Introduced' ,'[COLOR=green][B]- Introduced:[/B][/COLOR]')
+                text = text.replace('- Addressed'  ,'[COLOR=green][B]- Introduced:[/B][/COLOR]')
                 text = text.replace('- New!'       ,'[COLOR=yellow][B]- New!:[/B][/COLOR]')
                 text = text.replace('- Optimized'  ,'[COLOR=yellow][B]- Optimized:[/B][/COLOR]')
                 text = text.replace('- Improved'   ,'[COLOR=yellow][B]- Improved:[/B][/COLOR]')
@@ -64,6 +65,7 @@ class Utilities:
                 text = text.replace('- Tweaked'    ,'[COLOR=yellow][B]- Tweaked:[/B][/COLOR]')
                 text = text.replace('- Updated'    ,'[COLOR=yellow][B]- Updated:[/B][/COLOR]')
                 text = text.replace('- Changed'    ,'[COLOR=yellow][B]- Changed:[/B][/COLOR]')
+                text = text.replace('- Included'   ,'[COLOR=yellow][B]- Changed:[/B][/COLOR]')
                 text = text.replace('- Notice'     ,'[COLOR=orange][B]- Notice:[/B][/COLOR]')
                 text = text.replace('- Fixed'      ,'[COLOR=orange][B]- Fixed:[/B][/COLOR]')
                 text = text.replace('- Resolved'   ,'[COLOR=orange][B]- Resolved:[/B][/COLOR]')
@@ -131,11 +133,12 @@ class Utilities:
 
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
-        if not PROPERTIES.isRunning('OVERLAY_MANAGER'):
+        if not PROPERTIES.isRunning('OVERLAY_MANAGER') or PROPERTIES.isPendingInterrupt() or PROPERTIES.isPendingSuspend():
             with PROPERTIES.chkRunning('OVERLAY_MANAGER'), BUILTIN.busy_dialog():
                 from manager import Manager
                 chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
                 del chmanager
+        else: DIALOG.notificationDialog(LANGUAGE(32057)%(ADDON_NAME))
      
         
     def openPositionUtil(self, idx):
