@@ -21,8 +21,8 @@ from globals     import *
 from videoparser import VideoParser
 
 class Service:
-    player  = xbmc.Player()
-    monitor = xbmc.Monitor()
+    player  = PLAYER()
+    monitor = MONITOR()
     def _interrupt(self) -> bool:
         return PROPERTIES.isPendingInterrupt()
     def _suspend(self) -> bool:
@@ -360,7 +360,7 @@ class JSONRPC:
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("getDuration, accurate = %s, path = %s, save = %s" % (accurate, path, save))
         if not item: item = {'file':path}
-        runtime  = self._getRuntime(item)
+        runtime = self._getRuntime(item)
         if runtime == 0 or accurate:
             duration = 0
             if isStack(path):# handle "stacked" videos
@@ -395,7 +395,7 @@ class JSONRPC:
             ## save parsed duration to Kodi database, if enabled.
             if runsafe:
                 runtime = duration
-                # if save and not path.startswith(tuple(VFS_TYPES)): self.queDuration(item, duration)
+                if save and not path.startswith(tuple(VFS_TYPES)): self.queDuration(item, duration)
         else: runtime = duration
         self.log("__parseDuration, returning runtime = %s" % (runtime))
         return runtime
@@ -655,5 +655,5 @@ class JSONRPC:
     def getNextItem(self, citem, nitem): #return next broadcast ignoring fillers
         nextitems = self.matchChannel(citem.get('name',''), citem.get('id',''), citem.get('radio',False)).get('broadcastnext',[])
         for nextitem in nextitems:
-            if not isFiller(nextitem): return decodePlot(nextitem.get('plot'))
+            if not isFiller(nextitem): return decodePlot(nextitem.get('plot',''))
         return nitem

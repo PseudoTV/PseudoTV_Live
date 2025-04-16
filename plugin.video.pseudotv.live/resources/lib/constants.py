@@ -48,6 +48,8 @@ MIN_EPG_DURATION    = 10800 #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'
+BACKUP_TIME_FORMAT  = '%Y-%m-%d %I:%M %p'
+
 LANG                = 'en' #todo parse kodi region settings
 DEFAULT_ENCODING    = "utf-8"
 PROMPT_DELAY        = 4000 #msecs

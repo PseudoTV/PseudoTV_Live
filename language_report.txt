@@ -1,5 +1,4 @@
 Language IDS w\empty strings: {
-    "30136": "",
     "33130": ""
 }
 
@@ -142,7 +141,6 @@ Language IDS not found in py files, possibly only in xml: {
     "30128": "Searching for %s logo",
     "30133": "Player",
     "30135": "Include",
-    "30136": "",
     "30137": "Node Editor",
     "30138": "Smartplaylist Editor",
     "30140": "Build Filler Folders",

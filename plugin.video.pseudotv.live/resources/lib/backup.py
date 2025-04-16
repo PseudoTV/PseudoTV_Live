@@ -22,8 +22,6 @@ from globals    import *
 from library    import Library
 from channels   import Channels
 
-BACKUP_TIME_FORMAT = '%Y-%m-%d %I:%M %p'
-
 class Backup:
     def __init__(self, sysARG=sys.argv):
         self.sysARG = sysARG

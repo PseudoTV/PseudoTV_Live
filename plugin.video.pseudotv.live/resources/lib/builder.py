@@ -26,14 +26,12 @@ from m3u        import M3U
 from fillers    import Fillers
 from resources  import Resources
 from seasonal   import Seasonal 
+from rules      import RulesList
 
 class Service:
-    class player(xbmc.Player):
-        from rules import RulesList
-        runActions = RulesList().runActions
     from jsonrpc import JSONRPC
-    player  = player()
-    monitor = xbmc.Monitor()
+    player  = PLAYER()
+    monitor = MONITOR()
     jsonRPC = JSONRPC()
     def _interrupt(self) -> bool:
         return PROPERTIES.isPendingInterrupt()
@@ -49,7 +47,7 @@ class Builder:
         self.service      = service        
         self.jsonRPC      = service.jsonRPC
         self.cache        = service.jsonRPC.cache
-        self.runActions   = service.player.runActions
+        self.runActions   = RulesList(Channels().getChannels()).runActions
 
         #global dialog
         self.pDialog    = None
@@ -251,7 +249,6 @@ class Builder:
         totDur   = 0
         tmpList  = []
         fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)
-        
         for idx, item in enumerate(fileList):
             item["idx"]   = idx
             item['start'] = start
@@ -315,6 +312,7 @@ class Builder:
         if not _validFileList(fileArray): #if valid array bypass build
             paths = citem.get('path',[])
             for idx, file in enumerate(paths):
+                self.counter = 0
                 if self.service._interrupt():
                     self.log("[%s]  buildChannel, _interrupt"%(citem['id']))
                     self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
@@ -354,7 +352,6 @@ class Builder:
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
             path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules
             
-        counter  = 0
         nlimits  = limits
         dirList  = [{'file':path}]
         self.loopback = {}
@@ -377,12 +374,14 @@ class Builder:
                 subfileList, subdirList, nlimits, errors = self.buildList(citem, dir.get('file'), media, limit, sort, limits, dir) #parse all directories under root. Flattened hierarchies required to stream line channel building.
                 fileList += subfileList
                 dirList = setDictLST(dirList + subdirList)
-                self.log('[%s] buildFileList, parsing %s, adding = %s/%s'%(citem['id'],dir.get('file'),len(subfileList),limit))
+                self.log('[%s] buildFileList, adding = %s/%s remaining dirs (%s)\npath = %s'%(citem['id'],len(subfileList),limit,len(dirList),dir.get('file')))
             elif len(dirList) == 0:
-                if len(fileList) < limit and nlimits.get('total') > limit and counter < nlimits.get('total') and nlimits != limits: 
-                    self.log("[%s] buildFileList, retrying with new autoPagination limits"%(citem['id']))
-                    fileList.extend(self.buildFileList(citem, path, media, limit, sort, nlimits))
-                    counter += limit
+                if len(fileList) < limit and nlimits.get('total') > limit and self.counter < nlimits.get('total',0) and nlimits != limits: 
+                    self.log("[%s] buildFileList, retrying (%s/%s) with new autoPagination limits %s"%(citem['id'],self.counter,nlimits.get('total',0),nlimits))
+                    self.counter += limit
+                    limits = nlimits
+                    dirList.insert(0,{'file':path})
+                    # fileList.extend(self.buildFileList(citem, path, media, limit, sort, nlimits))
                 else:
                     self.log('[%s] buildFileList, no more folders to parse'%(citem['id']))
                     break

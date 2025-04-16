@@ -34,8 +34,7 @@ class Player(xbmc.Player):
     onnext       = None
     overlay      = None
     channelBug   = None
-    rules        = RulesList()
-    runActions   = rules.runActions
+    runActions   = RulesList().runActions
     
     """ 
     Player() Trigger Order
@@ -63,7 +62,6 @@ class Player(xbmc.Player):
         self.sleepTime         = SETTINGS.getSettingInt('Idle_Timer')
         self.runWhilePlaying   = SETTINGS.getSettingBool('Run_While_Playing')
         self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
-        
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -198,7 +196,8 @@ class Player(xbmc.Player):
         newChan = oldInfo.get('chid',random.random()) != sysInfo.get('chid')
         self.log('_onPlay, [%s], mode = %s, isPlaylist = %s, new channel = %s'%(sysInfo.get('citem',{}).get('id'), sysInfo.get('mode'), sysInfo.get('isPlaylist',False), newChan))
         if newChan: #New channel
-            self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, sysInfo.get('citem',{}), sysInfo, inherited=self)
+            self.runActions = RulesList([sysInfo.get('citem',{})]).runActions
+            self.sysInfo    = self.runActions(RULES_ACTION_PLAYER_START, sysInfo.get('citem',{}), sysInfo, inherited=self)
             self.setTrakt(self.disableTrakt)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             # self.toggleRestart(self.enableOverlay)
@@ -222,7 +221,7 @@ class Player(xbmc.Player):
             self.toggleInfo(False)
             BUILTIN.executebuiltin('PlayMedia(%s)'%(self.sysInfo.get('callback')))
         elif self.sysInfo: #isPlaylist
-            ...
+            self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)
         
         
     def _onStop(self):
@@ -234,10 +233,11 @@ class Player(xbmc.Player):
             self.toggleOnNext(False)
             self.toggleInfo(False)
             self.setTrakt(False)
-            if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             self.jsonRPC.quePlaycount(self.sysInfo.get('fitem',{}),self.rollbackPlaycount)
-            self.sysInfo = self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), {}, inherited=self)
-    
+            if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+            self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)
+            self.sysInfo = {}
+
 
     def _onError(self): #todo evaluate potential for error handling.
         if REAL_SETTINGS.getSetting('Debug_Enable').lower() == 'true':
@@ -311,19 +311,20 @@ class Monitor(xbmc.Monitor):
 
     def chkIdle(self):
         def __chkIdle():
+            __chkResumeTime()
             self.idleTime = BUILTIN.getIdle()
             self.isIdle   = bool(self.idleTime) | self.idleTime > OSD_TIMER
             self.log('__chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
 
-        def __chkPlayback():
-            if self.service.player.pendingPlay > 0:
-                if not BUILTIN.isBusyDialog() and (time.time() - self.service.player.pendingPlay) > 60: self.service.player.onPlayBackError()
-
         def __chkResumeTime():
-            if self.service.player.sysInfo.get('isPlaylist',False):
+            if self.service.player.isPlaying() and self.service.player.sysInfo.get('isPlaylist',False):
                 file = self.service.player.getPlayingFile()
                 if self.service.player.sysInfo.get('fitem',{}).get('file') == file:
                     self.service.player.sysInfo.setdefault('resume',{}).update({"position":self.service.player.getTime(),"total":self.service.player.getPlayerTime(),"file":file})
+
+        def __chkPlayback():
+            if self.service.player.pendingPlay > 0:
+                if not BUILTIN.isBusyDialog() and (time.time() - self.service.player.pendingPlay) > 60: self.service.player.onPlayBackError()
 
         def __chkSleepTimer():
             if self.service.player.sleepTime > 0 and (self.idleTime > (self.service.player.sleepTime * 10800)):
@@ -353,7 +354,6 @@ class Monitor(xbmc.Monitor):
         if self.service.player.isPlaying() and self.service.player.isPseudoTV:
             remaining = floor(self.service.player.getRemainingTime())
             __chkPlayback()
-            __chkResumeTime()
             __chkSleepTimer()
             __chkBackground(remaining)
             __chkOverlay(ceil(self.service.player.getPlayedTime()))

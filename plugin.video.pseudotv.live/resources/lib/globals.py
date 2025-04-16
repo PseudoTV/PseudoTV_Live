@@ -25,11 +25,14 @@ import uuid, base64, binascii, hashlib
 import time, datetime
 import heapq, requests, pyqrcode
 
-from six.moves           import urllib 
-from io                  import StringIO, BytesIO
-from threading           import Lock, Thread, Event, Timer, BoundedSemaphore
-from threading           import enumerate as thread_enumerate
-from xml.dom.minidom     import parse, parseString, Document
+from six.moves             import urllib 
+from io                    import StringIO, BytesIO
+from threading             import Lock, Thread, Event, Timer, BoundedSemaphore
+from threading             import enumerate as thread_enumerate
+from xml.dom.minidom       import parse, parseString, Document
+from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstringlist, fromstring
+from xml.etree.ElementTree import parse as ETparse
+from typing                import Dict, List, Union, Optional
 
 from variables           import *
 from kodi_six            import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs

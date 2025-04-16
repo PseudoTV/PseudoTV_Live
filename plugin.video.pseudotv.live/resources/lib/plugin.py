@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 from globals     import *
 from jsonrpc     import JSONRPC
+from rules       import RulesList
 
 
 class Plugin:
@@ -103,42 +104,29 @@ class Plugin:
 
     def getPausedItems(self, name, chid):
         self.log('[%s] getPausedItems'%(chid))
-        def __buildfItem(idx, item, seekTHD):
+        def __buildfItem(idx, item):
+            if 'citem' in item: item.pop('citem')
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
-            
-            if idx == 0 and round(sysInfo.get('progresspercentage',0)) > seekTHD:
-                self.IDXModifier = 1
-            
-            nowitem = nextitems[idx+self.IDXModifier][1] #now broadcast
-            if 'citem' in nowitem: nowitem.pop('citem')
-            sysInfo.update({'fitem':nowitem,'resume':{"idx":idx}})
-            
-            try: #next broadcast
-                nextitem = nextitems[idx+self.IDXModifier+1][1]
-                if 'citem' in nextitem: nextitem.pop('citem')
-                sysInfo.update({'nitem':nextitem})
-            except: pass
-            
-            liz = LISTITEMS.buildItemListItem(nowitem,'video')
-            if idx == 0 and item.get('resume'):
+            liz = LISTITEMS.buildItemListItem(item,'video')
+            if idx == 0 and item.get('file') == lastPOS.get('file',str(random.random())):
+                item['resume'] = lastPOS
                 seektime = int(item.get('resume',{}).get('position',0.0))
                 runtime  = int(item.get('resume',{}).get('total',0.0))
                 self.log('getPausedItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(runtime, seektime))
                 liz.setProperty('startoffset', str(seektime)) #secs
                 infoTag = ListItemInfoTag(liz, 'video')
                 infoTag.set_resume_point({'ResumeTime':seektime, 'TotalTime':runtime * 60})
+                
+            sysInfo.update({'fitem':item,'resume':{"idx":idx}})
             liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
             return liz
         
-        from rules import RulesList
-        nextitems = RulesList().runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
+        nextitems, lastPOS = RulesList([self.sysInfo.get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
         if nextitems:
-            seekTHD = SETTINGS.getSettingInt('Seek_Threshold')
-            self.IDXModifier = 0
             del nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
             self.log('getPausedItems, building nextitems (%s)'%(len(nextitems)))
-            return [__buildfItem(idx, nextitem, seekTHD) for idx, nextitem in enumerate(nextitems)]
+            return [__buildfItem(idx, nextitem) for idx, nextitem in enumerate(nextitems)]
         else: DIALOG.notificationDialog(LANGUAGE(32000))
         return []
     

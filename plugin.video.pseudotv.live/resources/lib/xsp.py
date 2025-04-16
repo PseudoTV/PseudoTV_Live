@@ -26,8 +26,8 @@ class XSP:
         self.library    = Library()
         self.jsonRPC    = self.library.jsonRPC
         self.predefined = self.library.predefined
-        
-        
+
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
@@ -71,8 +71,8 @@ class XSP:
                 self.log("findXSP, found = %s"%(item.get('path')))
                 return item.get('path')
         return ""
-        
-
+      
+      
     def _parseRoot(self, path, media='files', checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         self.log("_parseRoot, path = %s"%(path))
         paths = []
@@ -146,5 +146,3 @@ class XSP:
         except Exception as e: self.log("parseDXSP, failed! %s"%(e), xbmc.LOGERROR)
         return opath, media, sort, {}
         
-if __name__ == '__main__':
-    main()

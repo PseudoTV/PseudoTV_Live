@@ -218,7 +218,7 @@ class FileAccess:
 
 
 class VFSFile:
-    monitor = xbmc.Monitor()
+    monitor = MONITOR()
     
     def __init__(self, filename, mode):
         if mode == 'w':
@@ -283,7 +283,7 @@ class VFSFile:
 
 
 class FileLock(object):
-    monitor = xbmc.Monitor()
+    monitor = MONITOR()
     
     # https://github.com/dmfrey/FileLock
     """ A file locking mechanism that has context-manager support so 

@@ -23,8 +23,8 @@ from server     import Discovery
 
 class Service:
     from jsonrpc import JSONRPC
-    player  = xbmc.Player()
-    monitor = xbmc.Monitor()
+    player  = PLAYER()
+    monitor = MONITOR()
     jsonRPC = JSONRPC()
     def _interrupt(self) -> bool:
         return PROPERTIES.isPendingInterrupt()

@@ -34,9 +34,8 @@ import threading
 import select
 import traceback
 from functools import reduce
-from kodi_six import xbmc
-
-monitor = xbmc.Monitor()
+from globals import *
+monitor = MONITOR()
 
 pythree = (sys.version_info[0] >= 3)
 

@@ -21,7 +21,7 @@
 
 # class Service:
     # from jsonrpc import JSONRPC
-    # monitor = xbmc.Monitor()
+    # monitor = MONITOR()
     # jsonRPC = JSONRPC()
     # def _interrupt(self) -> bool:
         # return PROPERTIES.isPendingInterrupt()

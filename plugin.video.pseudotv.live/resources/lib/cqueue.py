@@ -81,7 +81,7 @@ class CustomQueue:
             else:
                 thread = Thread(target=func, args=args, kwargs=kwargs)
                 thread.start()
-        except (ThreadError, RuntimeError) as e:
+        except Exception as e:
             self.log(f"__run, func = {func.__name__} failed! {e}\nargs = {args}, kwargs = {kwargs}", xbmc.LOGERROR)
                
                

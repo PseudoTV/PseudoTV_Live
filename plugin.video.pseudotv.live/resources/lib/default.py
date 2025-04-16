@@ -22,6 +22,37 @@ from globals   import *
 from plugin    import Plugin
 
 def run(sysARG, fitem: dict={}, nitem: dict={}):
+    """
+    Main entry point for PseudoTV Live's functionality.
+
+    This function handles various modes of playback and interaction based on the parameters passed.
+    These modes include live TV, video-on-demand (VOD), DVR playback, guide display, and more.
+    It also processes system arguments and settings to determine the appropriate behavior.
+
+    Args:
+        sysARG (list): System arguments passed by the Kodi interface.
+        fitem (dict, optional): Dictionary containing information about the current (featured) item. Defaults to an empty dictionary.
+        nitem (dict, optional): Dictionary containing information about the next item. Defaults to an empty dictionary.
+
+    Behavior:
+        - Parses system arguments and determines the mode of operation.
+        - Depending on the mode, it invokes the appropriate plugin functionality (e.g., play live TV, VOD, DVR, etc.).
+        - Utilizes utility functions like `threadit` for threading and `PROPERTIES` for managing app states.
+
+    Supported Modes:
+        - 'live': Plays live TV or a playlist based on the provided parameters.
+        - 'vod': Plays video-on-demand content.
+        - 'dvr': Plays DVR recordings.
+        - 'resume': Resumes paused playback.
+        - 'broadcast': Simulates broadcast playback.
+        - 'radio': Plays radio streams.
+        - 'guide': Opens the TV guide using the PVR client.
+        - 'settings': Opens the settings menu.
+
+    Notifications:
+        - Displays notification dialogs for unsupported modes or errors.
+
+    """
     with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
         params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
         mode = (params.get("mode")  or 'guide')
@@ -54,4 +85,11 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         else: DIALOG.notificationDialog(LANGUAGE(32000))
         MONITOR().waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
         
-if __name__ == '__main__': run(sys.argv,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')),nitem=decodePlot(BUILTIN.getInfoLabel('NextPlot')))
+if __name__ == '__main__':
+    """
+    Runs the script when executed as the main module.
+
+    It decodes information about the current and next items using the `decodePlot` function
+    and then invokes the `run` function with the appropriate arguments.
+    """
+    run(sys.argv, fitem=decodePlot(BUILTIN.getInfoLabel('Plot')), nitem=decodePlot(BUILTIN.getInfoLabel('NextPlot')))

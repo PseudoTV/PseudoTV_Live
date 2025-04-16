@@ -40,7 +40,7 @@ def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VE
     return internal
     
 class Service:
-    monitor = xbmc.Monitor()
+    monitor = MONITOR()
     def _interrupt(self) -> bool:
         return xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)) == "true"
     def _suspend(self) -> bool:

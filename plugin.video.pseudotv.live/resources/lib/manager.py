@@ -564,27 +564,28 @@ class Manager(xbmcgui.WindowXMLDialog):
             player  = PLAYER()
             file    = item.get('file')
             dur     = item.get('duration')
-            if player.isPlaying() or not file.startswith(tuple(VFS_TYPES)) and not file.endswith('.strm'): return True
-            # todo test seek for support disable via adv. rule if fails.
-            # todo set seeklock rule if seek == False
-            liz = xbmcgui.ListItem('Seek Test', path=file)
-            liz.setProperty('startoffset', str(int(dur//8)))
-            infoTag = ListItemInfoTag(liz, 'video')
-            infoTag.set_resume_point({'ResumeTime':int(dur/4),'TotalTime':int(dur/4)})
-        
-            getTime  = 0
-            waitTime = 30
-            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(file))
-            while not self.monitor.abortRequested():
-                waitTime -= 1
-                self.log('validatePaths _seek, waiting (%s) to seek %s'%(waitTime, item.get('file')))
-                if self.monitor.waitForAbort(1.0) or waitTime < 1: break
-                elif not player.isPlaying(): continue
-                elif ((int(player.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
-                    player.stop()
-                    return True
-            player.stop()
-            return False
+            if player.isPlaying(): return DIALOG.notificationDialog(LANGUAGE(30136))
+            else:
+                # todo test seek for support disable via adv. rule if fails.
+                # todo set seeklock rule if seek == False
+                liz = xbmcgui.ListItem('Seek Test', path=file)
+                liz.setProperty('startoffset', str(int(dur//8)))
+                infoTag = ListItemInfoTag(liz, 'video')
+                infoTag.set_resume_point({'ResumeTime':int(dur/4),'TotalTime':int(dur/4)})
+            
+                getTime  = 0
+                waitTime = 30
+                threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(file))
+                while not self.monitor.abortRequested():
+                    waitTime -= 1
+                    self.log('validatePaths _seek, waiting (%s) to seek %s'%(waitTime, item.get('file')))
+                    if self.monitor.waitForAbort(1.0) or waitTime < 1: break
+                    elif not player.isPlaying(): continue
+                    elif ((int(player.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
+                        player.stop()
+                        return True
+                player.stop()
+                return DIALOG.yesnoDialog(LANGUAGE(30202))
             
         def __vfs(path, citem):
             if isRadio({'path':[path]}) or isMixed_XSP({'path':[path]}): return True

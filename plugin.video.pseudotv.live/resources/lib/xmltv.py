@@ -35,8 +35,6 @@ You should have received a copy of the GNU Lesser General Public License along
 with this software; if not, see <http://www.gnu.org/licenses/>.
 """
 from globals               import *
-from typing                import Dict, List, Union, Optional
-from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstringlist, fromstring, parse
 
 # The Python-XMLTV version
 VERSION = "1.4.4_PSEUDOTV"
@@ -46,16 +44,15 @@ locale           = DEFAULT_ENCODING  #'utf-8'
 date_format      = DTZFORMAT         #'%Y%m%d%H%M%S %Z'
 date_format_notz = DTFORMAT          #'%Y%m%d%H%M%S'
 
-def set_attrs(d: Dict, elem: Element, attrs: List[str]) -> None:
+def set_attrs(d, elem, attrs):
     """
-    Add attributes specified in 'attrs' from 'elem' to 'd' if they exist.
+    set_attrs(d, elem, attrs) -> None
+
+    Add any attributes in 'attrs' found in 'elem' to 'd'
     """
-    if not attrs or not isinstance(attrs, list):
-        return  # Ensure attrs is a valid list
     for attr in attrs:
-        value = elem.get(attr)
-        if value:  # Only add attributes with a value
-            d[attr] = value
+        if attr in elem:
+            d[attr] = elem.get(attr)
 
 def set_boolean(d, name, elem):
     """
@@ -71,23 +68,21 @@ def set_boolean(d, name, elem):
         elif node.text.lower() == 'no':
             d[name] = False
 
-def append_text(d: Dict, name: str, elem: Element, with_lang: bool = True) -> None:
+def append_text(d, name, elem, with_lang=True):
     """
-    Append text nodes with the given 'name' from 'elem' to 'd[name]'.
-    Supports optional language attribute.
-    """
-    nodes = elem.findall(name)
-    if not nodes:
-        return
+    append_text(d, name, elem, with_lang=True) -> None
 
-    d.setdefault(name, [])  # Ensure 'name' key exists in dictionary
-    for node in nodes:
-        text = node.text or ''  # Safely handle None text values
-        if with_lang:
-            lang = node.get('lang', '')
-            d[name].append((text, lang))
-        else:
-            d[name].append(text)
+    Append any text nodes with 'name' found in 'elem' to 'd'['name']. If
+    'with_lang' is 'True', a tuple of ('text', 'lang') is appended
+    """
+    for node in elem.findall(name):
+        if node is not None:
+            if name not in d:
+                d[name] = []
+            if with_lang:
+                d[name].append((node.text, node.get('lang', '')))
+            else:
+                d[name].append(node.text)
 
 def set_text(d, name, elem, with_lang=True):
     """
@@ -131,38 +126,35 @@ def elem_to_channel(elem):
     append_text(d, 'url', elem, with_lang=False)
     return d
     
-def sanitize_xml_data(data: Union[str, List[str]]) -> Union[str, List[str]]:
-    """
-    Sanitize XML data by replacing '&' with '&amp;'.
-    Recursively handles lists of strings.
-    """
-    if isinstance(data, list):
-        return [line.replace('&', '&amp;') if isinstance(line, str) else line for line in data]
-    elif isinstance(data, str):
-        return data.replace('&', '&amp;')
-    return data  # Return as-is if not string or list
+def sanitize_xml_data(data):
+    if isinstance(data,list): return [sanitize_xml_data(line) for line in data]
+    else:                     return data.replace('&', '&amp;')
     
-def read_channels(fp=None, tree: Optional[ElementTree] = None) -> List[Dict]:
+def read_channels(fp=None, tree=None):
     """
-    Parse channels from a file object or an ElementTree.
+    read_channels(fp=None, tree=None) -> list
+
+    Return a list of channel dictionaries from file object 'fp' or the
+    ElementTree 'tree'
     """
     channels = []
-
     if fp:
-        if hasattr(fp, 'read'):
-            tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-        elif hasattr(fp, 'readlines'):
+        if hasattr(fp, 'readlines'):
             tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+        elif hasattr(fp, 'read'):
+            tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
         else: 
-            tree = parse(fp, parser=XMLParser(encoding=locale))
-        if hasattr(fp, 'close'): fp.close()
-    
+            tree = ETparse(fp, parser=XMLParser(encoding=locale))
+        fp.close()
     for elem in tree.findall('channel'):
-        channel = elem_to_channel(elem)
-        icons = elem.findall('icon')
-        channel['icon'] = [{'src': icon.get('src')} for icon in icons if icon.get('src')]
+        channel = elem_to_channel(elem) 
+        try: channel['icon'] = [{'src': elem.findall('icon')[0].get('src')}]
+        except IndexError:
+            log("Icon element missing or malformed", xbmc.LOGERROR)
+            channel['icon'] = []
         channels.append(channel)
     return channels
+
 
 def elem_to_programme(elem):
     """
@@ -289,13 +281,13 @@ def read_programmes(fp=None, tree=None):
     ElementTree 'tree'
     """
     if fp:
-        if hasattr(fp, 'read'):
-            tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-        elif hasattr(fp, 'readlines'):
+        if hasattr(fp, 'readlines'):
             tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+        elif hasattr(fp, 'read'):
+            tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
         else: 
-            tree = parse(fp, parser=XMLParser(encoding=locale))
-        if hasattr(fp, 'close'): fp.close()
+            tree = ETparse(fp, parser=XMLParser(encoding=locale))
+        fp.close()
     return [elem_to_programme(elem) for elem in tree.findall('programme')]
 
 
@@ -306,15 +298,14 @@ def read_data(fp=None, tree=None):
     Get the source and other info from file object fp or the ElementTree
     'tree'
     """
-    if fp:
-        if hasattr(fp, 'read'):
-            tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-        elif hasattr(fp, 'readlines'):
+    if fp: 
+        if hasattr(fp, 'readlines'):
             tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+        elif hasattr(fp, 'read'):
+            tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
         else: 
-            tree = parse(fp, parser=XMLParser(encoding=locale))
-        if hasattr(fp, 'close'): fp.close()
-        
+            tree = ETparse(fp, parser=XMLParser(encoding=locale))
+        fp.close()
     d = {}
     set_attrs(d, tree, ('date', 'source-info-url', 'source-info-name',
                         'source-data-url', 'generator-info-name',
