@@ -102,6 +102,10 @@ class Plugin:
         return channelPlaylist
 
 
+    def getRadioItems(self, name, chid, vid, limit=RADIO_ITEM_LIMIT):
+        return interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in vid.split('|')], SETTINGS.getSettingInt('Interleave_Value'))
+
+
     def getPausedItems(self, name, chid):
         self.log('[%s] getPausedItems'%(chid))
         def __buildfItem(idx, item):
@@ -109,8 +113,9 @@ class Plugin:
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             liz = LISTITEMS.buildItemListItem(item,'video')
-            if idx == 0 and item.get('file') == lastPOS.get('file',str(random.random())):
-                item['resume'] = lastPOS
+            print('__buildfItem',idx, item.get('file'),item.get('resume',{}))
+            
+            if idx == 0 and item.get('file') == item.get('resume',{}).get('file',str(random.random())):
                 seektime = int(item.get('resume',{}).get('position',0.0))
                 runtime  = int(item.get('resume',{}).get('total',0.0))
                 self.log('getPausedItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(runtime, seektime))
@@ -122,7 +127,7 @@ class Plugin:
             liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
             return liz
         
-        nextitems, lastPOS = RulesList([self.sysInfo.get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
+        nextitems = RulesList([self.sysInfo.get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
         if nextitems:
             del nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
             self.log('getPausedItems, building nextitems (%s)'%(len(nextitems)))
@@ -131,10 +136,6 @@ class Plugin:
         return []
     
         
-    def getRadioItems(self, name, chid, vid, limit=RADIO_ITEM_LIMIT):
-        return interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in vid.split('|')], SETTINGS.getSettingInt('Interleave_Value'))
-
-
     def getPVRItems(self, name: str, chid: str) -> list:
         self.log('[%s] getPVRItems, chname = %s'%(chid,name))
         def __buildfItem(idx, item):
@@ -294,7 +295,7 @@ class Plugin:
             listitems = [__buildfItem(idx, item) for idx, item in enumerate(items)]
             if len(listitems) > 0: 
                 playlist = self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True)
-                timerit(BUILTIN.executebuiltin)(OSD_TIMER,['ReplaceWindow(visualisation)'])
+                timerit(BUILTIN.executeWindow)(OSD_TIMER,['ReplaceWindow(visualisation)'])
                 BUILTIN.executebuiltin("Dialog.Close(all)")
                 PLAYER().play(playlist,windowed=True)
             self._resolveURL(False, xbmcgui.ListItem())
@@ -306,7 +307,8 @@ class Plugin:
             listitems = self.getPVRItems(name, chid)
             if len(listitems) > 0: 
                 playlist = self._quePlaylist(listitems)
-                timerit(BUILTIN.executebuiltin)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
+                if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('PlayerControl(Stop)')
+                timerit(BUILTIN.executeWindow)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
                 BUILTIN.executebuiltin("Dialog.Close(all)")
                 PLAYER().play(playlist,windowed=True)
             self._resolveURL(False, xbmcgui.ListItem())
@@ -318,7 +320,8 @@ class Plugin:
             listitems = self.getPausedItems(name, chid)
             if len(listitems) > 0: 
                 playlist = self._quePlaylist(listitems)
-                timerit(BUILTIN.executebuiltin)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
+                if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('PlayerControl(Stop)')
+                timerit(BUILTIN.executeWindow)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
                 BUILTIN.executebuiltin("Dialog.Close(all)")
                 PLAYER().play(playlist,windowed=True)
             self._resolveURL(False, xbmcgui.ListItem())
@@ -340,22 +343,23 @@ class Plugin:
                     self.sysInfo['playcount'] = oldInfo.get('playcount',0) + 1 #carry over playcount
                     self.sysInfo['runtime']   = oldInfo.get('runtime',0)       #carry over previous player runtime
                     
-                    if self.sysInfo['now'] >= self.sysInfo['stop']:
-                        self.log('[%s] playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo['now'],self.sysInfo['stop']))
-                        DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']),show=self.debugEnabled)
-                        return False
-                    elif self.sysInfo['runtime'] > 0 and self.sysInfo['duration'] > self.sysInfo['runtime']:
-                        self.log('[%s] playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo['duration'],self.sysInfo['runtime']))
-                        DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['runtime'],self.sysInfo['duration']),show=self.debugEnabled)
-                        return False
-                    elif self.sysInfo['seek'] >= oldInfo.get('runtime',self.sysInfo['duration']):
-                        self.log('[%s] playCheck _chkLoop, failed! Seeking to a position (%s) past media runtime (%s).'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
-                        DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])),show=self.debugEnabled)
-                        return False
-                    elif self.sysInfo['seek'] == oldInfo.get('seek',self.sysInfo['seek']):
-                        self.log('[%s] playCheck _chkLoop, failed! Seeking to same position.'%(self.sysInfo.get('citem',{}).get('id')))
-                        DIALOG.notificationDialog("Playback Failed: Seeking to same position",show=self.debugEnabled)
-                        return False
+                    if self.sysInfo['mode'] == 'live':
+                        if self.sysInfo['now'] >= self.sysInfo['stop']:
+                            self.log('[%s] playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo['now'],self.sysInfo['stop']))
+                            DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']),show=self.debugEnabled)
+                            return False
+                        elif self.sysInfo['runtime'] > 0 and self.sysInfo['duration'] > self.sysInfo['runtime']:
+                            self.log('[%s] playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo['duration'],self.sysInfo['runtime']))
+                            DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['runtime'],self.sysInfo['duration']),show=self.debugEnabled)
+                            return False
+                        elif self.sysInfo['seek'] >= oldInfo.get('runtime',self.sysInfo['duration']):
+                            self.log('[%s] playCheck _chkLoop, failed! Seeking to a position (%s) past media runtime (%s).'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
+                            DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])),show=self.debugEnabled)
+                            return False
+                        elif self.sysInfo['seek'] == oldInfo.get('seek',self.sysInfo['seek']):
+                            self.log('[%s] playCheck _chkLoop, failed! Seeking to same position.'%(self.sysInfo.get('citem',{}).get('id')))
+                            DIALOG.notificationDialog("Playback Failed: Seeking to same position",show=self.debugEnabled)
+                            return False
             return True
             
         status = _chkPath()

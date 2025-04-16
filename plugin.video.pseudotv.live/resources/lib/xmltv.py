@@ -139,13 +139,14 @@ def read_channels(fp=None, tree=None):
     """
     channels = []
     if fp:
-        if hasattr(fp, 'readlines'):
-            tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
-        elif hasattr(fp, 'read'):
-            tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-        else: 
-            tree = ETparse(fp, parser=XMLParser(encoding=locale))
-        fp.close()
+        try:
+            tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+        except Exception as e:
+            log("xmltv: read_channels: failed %s, retrying as string."%(e), xbmc.LOGERROR)
+            if   hasattr(fp, 'readlines'): tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+            elif hasattr(fp, 'read'):      tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
+        finally:
+            fp.close()
     for elem in tree.findall('channel'):
         channel = elem_to_channel(elem) 
         try: channel['icon'] = [{'src': elem.findall('icon')[0].get('src')}]
@@ -281,13 +282,14 @@ def read_programmes(fp=None, tree=None):
     ElementTree 'tree'
     """
     if fp:
-        if hasattr(fp, 'readlines'):
-            tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
-        elif hasattr(fp, 'read'):
-            tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-        else: 
-            tree = ETparse(fp, parser=XMLParser(encoding=locale))
-        fp.close()
+        try:
+            tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+        except Exception as e:
+            log("xmltv: read_programmes: failed %s, retrying as string."%(e), xbmc.LOGERROR)
+            if   hasattr(fp, 'readlines'): tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+            elif hasattr(fp, 'read'):      tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
+        finally:
+            fp.close()
     return [elem_to_programme(elem) for elem in tree.findall('programme')]
 
 
@@ -298,14 +300,15 @@ def read_data(fp=None, tree=None):
     Get the source and other info from file object fp or the ElementTree
     'tree'
     """
-    if fp: 
-        if hasattr(fp, 'readlines'):
-            tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
-        elif hasattr(fp, 'read'):
-            tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-        else: 
-            tree = ETparse(fp, parser=XMLParser(encoding=locale))
-        fp.close()
+    if fp:
+        try:
+            tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+        except Exception as e:
+            log("xmltv: read_data: failed %s, retrying as string."%(e), xbmc.LOGERROR)
+            if   hasattr(fp, 'readlines'): tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+            elif hasattr(fp, 'read'):      tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
+        finally:
+            fp.close()
     d = {}
     set_attrs(d, tree, ('date', 'source-info-url', 'source-info-name',
                         'source-data-url', 'generator-info-name',

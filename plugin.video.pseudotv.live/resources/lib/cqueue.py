@@ -128,7 +128,7 @@ class CustomQueue:
     def __process(self, node, fifo=True):
         package = node.package
         self.log(f"process_node, package = {package}")
-        next_node = node.next if fifo else node.prev
+        next_node = node.__next__ if fifo else node.prev
         if next_node: next_node.prev = None if fifo else next_node.prev
         if node.prev: node.prev.next = None if fifo else node.prev
         if fifo: self.head = next_node

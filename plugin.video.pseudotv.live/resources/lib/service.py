@@ -34,7 +34,7 @@ class Player(xbmc.Player):
     onnext       = None
     overlay      = None
     channelBug   = None
-    runActions   = RulesList().runActions
+    runActions   = None
     
     """ 
     Player() Trigger Order
@@ -197,7 +197,7 @@ class Player(xbmc.Player):
         self.log('_onPlay, [%s], mode = %s, isPlaylist = %s, new channel = %s'%(sysInfo.get('citem',{}).get('id'), sysInfo.get('mode'), sysInfo.get('isPlaylist',False), newChan))
         if newChan: #New channel
             self.runActions = RulesList([sysInfo.get('citem',{})]).runActions
-            self.sysInfo    = self.runActions(RULES_ACTION_PLAYER_START, sysInfo.get('citem',{}), sysInfo, inherited=self)
+            self.sysInfo    = self._runActions(RULES_ACTION_PLAYER_START, sysInfo.get('citem',{}), sysInfo, inherited=self)
             self.setTrakt(self.disableTrakt)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             # self.toggleRestart(self.enableOverlay)
@@ -221,7 +221,7 @@ class Player(xbmc.Player):
             self.toggleInfo(False)
             BUILTIN.executebuiltin('PlayMedia(%s)'%(self.sysInfo.get('callback')))
         elif self.sysInfo: #isPlaylist
-            self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)
+            self._runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)
         
         
     def _onStop(self):
@@ -235,7 +235,7 @@ class Player(xbmc.Player):
             self.setTrakt(False)
             self.jsonRPC.quePlaycount(self.sysInfo.get('fitem',{}),self.rollbackPlaycount)
             if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-            self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)
+            self._runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)
             self.sysInfo = {}
 
 
@@ -246,6 +246,11 @@ class Player(xbmc.Player):
             timerit(BUILTIN.executebuiltin)(0.5,['Number(0)'])
             self.stop()
             
+            
+    def _runActions(self, action, citem={}, parameter=None, inherited=None):
+        if self.runActions: return self.runActions(action, citem, parameter, inherited)
+        else:               return parameter
+
 
     def toggleBackground(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
         if state and self.background is None and self.service.monitor.isIdle:
@@ -311,16 +316,17 @@ class Monitor(xbmc.Monitor):
 
     def chkIdle(self):
         def __chkIdle():
-            __chkResumeTime()
             self.idleTime = BUILTIN.getIdle()
             self.isIdle   = bool(self.idleTime) | self.idleTime > OSD_TIMER
             self.log('__chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
 
         def __chkResumeTime():
-            if self.service.player.isPlaying() and self.service.player.sysInfo.get('isPlaylist',False):
+            if self.service.player.sysInfo.get('isPlaylist',False):
                 file = self.service.player.getPlayingFile()
                 if self.service.player.sysInfo.get('fitem',{}).get('file') == file:
-                    self.service.player.sysInfo.setdefault('resume',{}).update({"position":self.service.player.getTime(),"total":self.service.player.getPlayerTime(),"file":file})
+                    resume = {"position":self.service.player.getPlayedTime(),"total":self.service.player.getPlayerTime(),"file":file}
+                    self.log('__chkResumeTime, resume = %s'%(resume))
+                    self.service.player.sysInfo.setdefault('resume',{}).update(resume)
 
         def __chkPlayback():
             if self.service.player.pendingPlay > 0:
@@ -332,32 +338,34 @@ class Monitor(xbmc.Monitor):
                     with PROPERTIES.chkRunning('__chkSleepTimer'):
                         if self.sleepTimer(): self.service.player.stop()
         
-        def __chkBackground(remaining):
+        def __chkBackground():
+            remaining = floor(self.service.player.getRemainingTime())
             if self.isIdle and remaining <= 30:
                 self.log('__chkBackground, isIdle = %s, remaining = %s'%(self.isIdle, remaining))
                 self.service.player.toggleBackground(self.service.player.enableOverlay)
 
-        def __chkOverlay(played):
+        def __chkOverlay():
+            played = ceil(self.service.player.getPlayedTime())
             if self.isIdle and played > 30: 
                 self.log('__chkOverlay, isIdle = %s, played = %s'%(self.isIdle, played))
                 self.service.player.toggleOverlay(self.service.player.enableOverlay)
 
-        def __chkOnNext(remaining):
+        def __chkOnNext():
+            remaining = floor(self.service.player.getRemainingTime())
             totalTime = int(self.service.player.getPlayerTime() * (self.service.player.maxProgress / 100))
             threshold = abs((totalTime - (totalTime * .75)) - FIFTEEN)
             if self.isIdle and remaining <= threshold and self.service.player.background is None: 
                 self.log('__chkOnNext, isIdle = %s, remaining = %s'%(self.isIdle, remaining))
                 self.service.player.toggleOnNext(self.service.player.enableOverlay)
                 
-        idle_thread = Thread(target=__chkIdle)
-        idle_thread.start()
+        Thread(target=__chkIdle).start()
         if self.service.player.isPlaying() and self.service.player.isPseudoTV:
-            remaining = floor(self.service.player.getRemainingTime())
-            __chkPlayback()
+            Thread(target=__chkResumeTime).start()
+            Thread(target=__chkBackground).start()
+            Thread(target=__chkOverlay).start()
             __chkSleepTimer()
-            __chkBackground(remaining)
-            __chkOverlay(ceil(self.service.player.getPlayedTime()))
-            __chkOnNext(remaining)
+            __chkPlayback()
+            __chkOnNext()
 
 
     def sleepTimer(self):

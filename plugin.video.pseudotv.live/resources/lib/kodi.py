@@ -1180,6 +1180,11 @@ class Builtin:
         return value
         
         
+    def executeWindow(self, key):
+        if self.getInfoBool('Playing','Player'):
+            self.executebuiltin(key)
+        
+        
     def executebuiltin(self, key, wait=False):
         # with self.kodiLocker():
         xbmc.executebuiltin('%s'%(key),wait)

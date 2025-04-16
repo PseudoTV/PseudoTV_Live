@@ -1544,14 +1544,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
         self.actions            = [RULES_ACTION_PLAYBACK_RESUME, RULES_ACTION_PLAYER_START, RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP, RULES_ACTION_CHANNEL_START, RULES_ACTION_CHANNEL_STOP, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN, RULES_ACTION_CHANNEL_BUILD_TIME_PRE, RULES_ACTION_CHANNEL_TEMP_CITEM]
         self.storedValues       = [[],[],False]
         
-        f"""
-        {self.__class__.__name__}
-        
-        {self.myId}. "{self.name}" - {self.description}
-              * "{self.optionLabels[0]}" - {self.optionDescriptions[0]}
-                    
-        """
-        
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
                   
@@ -1569,76 +1562,95 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
         return self.optionValues[optionindex]
         
         
-    def _getResume(self, id):
-        resume = (SETTINGS.getCacheSetting('resumeChannel.%s'%(id), checksum=-1, json_data=True) or {"idx":0,"position":0.0,"total":0.0,"file":""})
-        self.log('[%s] _getResume, resume = %s'%(id,resume))
-        return resume
-
-
-    def _setResume(self, id, resume: dict={"idx":0,"position":0.0,"total":0.0,"file":""}):
-        self.log('[%s] _setResume, resume = %s'%(id, SETTINGS.setCacheSetting('resumeChannel.%s'%(id), resume, checksum=-1, json_data=True)))
-
-
-    def _getPosition(self, id):
-        return self._getResume(id)["idx"]
-
+    def _setURL(self, id):
+        return 'http://%s/filelist/%s.json'%(PROPERTIES.getRemoteHost(),getMD5(id))
         
-    def _setPosition(self, id, idx: int=0):
-        resume = self._getResume(id)
-        resume["idx"] = idx
-        return self._setResume(id, resume)
         
-
-    def _getFileList(self, id):
-        idx = self._getPosition(id)
-        self.log('[%s] _getFileList, idx = %s'%(id,idx))
-        try:
-            fileList = SETTINGS.getCacheSetting('pausedFileList.%s'%(id), checksum=-1, json_data=True)[idx:]
-            self._setPosition(id) #reset idx, keep resume
-        except:
-            fileList = []
-            self._setResume(id) #reset all
-        finally: 
-            self.log('[%s] _getFileList, fileList = %s, resetting position to 0, resume = %s'%(id, len(fileList),self._getResume(id)))
-            return self._setFileList(id, fileList)
-            
-            
-    def _setFileList(self, id, fileList: list=[]):
-        self.log('[%s] _setFileList, fileList = %s'%(id,len(fileList)))
-        return SETTINGS.setCacheSetting('pausedFileList.%s'%(id), fileList, checksum=-1, json_data=True)
-        
-
-    def _getTotDuration(self, fileList=[]):
+    def _getTotDuration(self, id, filelist=[]):
         from jsonrpc import JSONRPC
-        return JSONRPC().getTotRuntime(fileList)
+        self.log('[%s] _getTotDuration, filelist = %s'%(id,len(filelist)))
+        return JSONRPC().getTotRuntime(filelist)
             
-            
-    def _getduration(self, fileList=[]):
-        from jsonrpc import JSONRPC
-        return JSONRPC()._getRuntime(fileList)
-        
-        
-    def _buildSchedule(self, citem, fileList, builder):     
-        self.log('[%s] _buildSchedule, fileList = %s'%(citem.get('id'),len(fileList)))
-        return builder.buildCells(citem, duration=self._getTotDuration(fileList), entries=1, 
+
+    def _buildSchedule(self, citem, filelist, builder):     
+        self.log('[%s] _buildSchedule, filelist = %s'%(citem.get('id'),len(filelist)))
+        return builder.buildCells(citem, duration=self._getTotDuration(citem.get('id'), filelist), entries=1, 
                                   info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
                                         "episodetitle":'%s: %s'%(LANGUAGE(32249),datetime.datetime.fromtimestamp(time.time()).strftime(BACKUP_TIME_FORMAT)),
-                                        "plot":'Size: %s videos \nTotal Runtime: %s hrs.'%(len(fileList),round(self._getTotDuration(fileList)//60//60)),
+                                        "plot":'Size: %s videos \nTotal Runtime: %s hrs.'%(len(filelist),round(self._getTotDuration(citem.get('id'), filelist)//60//60)),
                                         "art":{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
+
+
+
+
+
+    # def _getResume(self, id):
+        # resume = (self._getFileList(id).get('resume') or {"idx":0,"position":0.0,"total":0.0,"file":""})
+        # self.log('[%s] _getResume, resume = %s'%(id,resume))
+        # return resume
+        
+
+    # def _setResume(self, id, resume: dict={"idx":0,"position":0.0,"total":0.0,"file":""}):
+        # self.log('[%s] _setResume, resume = %s'%(id, resume))
+        # self._setFileList(id,self._getFileList(id),resume)
+
+
+    # def _getPosition(self, id):
+        # return self._getResume(id).get("idx",0)
+
+        
+    # def _setPosition(self, id, idx: int=0):
+        # resume = self._getResume(id)
+        # resume["idx"] = idx
+        # self._setResume(id, resume)
+
+
+        # idx = self._getPosition(id)
+        # try:
+            # fileList = getJSON(os.path.join(TEMP_LOC,'%s.json'%(getMD5(id)))).get('filelist',[])[idx:]
+            # self._setPosition(id) #reset idx, keep resume
+        # except:
+            # fileList = []
+            # self._setResume(id) #reset all
+        # finally: 
+            # self.log('[%s] _getFileList, idx = %s, fileList = %s, resetting position to 0'%(id,idx,len(fileList)))
+            # self._setFileList(id, fileList)
+            # return fileList
+            
+            
+    # @30 cache
+    def _get(self, id):
+        return getJSON(os.path.join(TEMP_LOC,'%s.json'%(getMD5(id))))
+        
+        
+    def _getResume(self, id):
+        return (self._get(id).get('resume') or {"idx":0,"position":0.0,"total":0.0,"file":""})
+        
+        
+    def _getFilelist(self, id):
+        return (self._get(id).get('filelist') or [])
+        
+        
+    def _set(self, id, filelist=None, resume={"idx":0,"position":0.0,"total":0.0,"file":""}):
+        if filelist is None: filelist = self._getFilelist(id)
+        self.log("[%s] runAction, _set filelist = %s, resume = %s"%(citem.get('id'),len(filelist),resume))
+        return setJSON(os.path.join(TEMP_LOC,'%s.json'%(getMD5(id))),{'resume':resume,'filelist':filelist})
+        
 
     def runAction(self, actionid, citem, parameter, inherited):
         self.log('[%s] runAction, actionid = %s,'%(citem.get('id'),actionid))
         if actionid == RULES_ACTION_CHANNEL_START:
             self.storedValues[0]    = inherited.padScheduling
+            self.storedValues[1]    = self._getFilelist(citem.get('id'))
             inherited.padScheduling = False #disable guide padding with duplicates to fill quota.
             self.log("[%s] runAction, setting padScheduling = %s"%(citem.get('id'),inherited.padScheduling))
             
         elif actionid == RULES_ACTION_CHANNEL_TEMP_CITEM: 
-            parameter['resume'] = True
+            ...
+            # parameter['resume'] = True
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: #load cached filelist if not outdated, else new buildFileList
-            self.storedValues[1] = self._getFileList(citem.get('id'))
-            if self._getTotDuration(self.storedValues[1]) >= (MIN_GUIDEDAYS * 86400): 
+            if self._getTotDuration(citem.get('id'), self.storedValues[1]) >= (MIN_GUIDEDAYS * 86400): 
                 self.log("[%s] runAction, returning valid cached filelist = %s"%(citem.get('id'),len(self.storedValues[1])))
                 return [self.storedValues[1]]
             
@@ -1651,32 +1663,47 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             if self.storedValues[2] and len(parameter) > 0:
                 self.log("[%s] runAction, updating fileList (%s) extending by (%s)"%(citem.get('id'),len(self.storedValues[1]),len(parameter)))
                 self.storedValues[1].extend(parameter)
-                self.storedValues[1] = self._setFileList(citem.get('id'), self.storedValues[1])
+                self._set(citem.get('id'), self.storedValues[1], self._getResume(id))
                 
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN:
             if parameter: return self.storedValues[1]
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_PRE:
             if len(parameter) > 0: 
-                if inherited.xmltv.clrProgrammes(citem):
-                    return self._buildSchedule(citem, parameter, inherited)
+                if inherited.xmltv.clrProgrammes(citem): return self._buildSchedule(citem, parameter, inherited)
 
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             inherited.padScheduling = self.storedValues[0]
+            self.storedValues[1] = []
             self.log("[%s] runAction, restoring padScheduling = %s"%(citem.get('id'),inherited.padScheduling))
             
         elif actionid == RULES_ACTION_PLAYBACK_RESUME:
-            if len(self.storedValues[1]) == 0: self.storedValues[1] = self._getFileList(citem.get('id'))
-            if len(self.storedValues[1]) > 0:
-                if self._getTotDuration(self.storedValues[1]) < (MIN_GUIDEDAYS * 86400) : PROPERTIES.setUpdateChannels(citem.get('id'))
-                return self.storedValues[1], self._getResume(citem.get('id'))
-            return [], {}
+            ...
+            # self.storedValues[1] = self._getFilelist(citem.get('id'))
+            # if len(self.storedValues[1]) > 0:
+                # if self._getTotDuration(citem.get('id'), self.storedValues[1]) < (MIN_GUIDEDAYS * 86400) : PROPERTIES.setUpdateChannels(citem.get('id'))
+                # resume = self._getResume(citem.get('id'))
+                # print('storedValues resume',resume)
+                # for idx, item in enumerate(self.storedValues[1]):
+                    # print('storedValues 0',idx, item.get('file'))
+                    # if item.get('file') == resume.get('file',str(random.random())):
+                        # item['resume'] = resume
+                    # else:
+                        # item['resume'] = {}
+                # # item = self.storedValues[1].pop(0)
+                # # item['resume'] = self._getResume(citem.get('id'))
+                # print('self.storedValues[1]',self.storedValues[1])
+                # return self.storedValues[1]
+            # return []
                                             
         elif actionid == RULES_ACTION_PLAYER_START:
-            if len(self.storedValues[1]) == 0: self.storedValues[1] = self._getFileList(citem.get('id'))
+            # self.storedValues[1] = self._getFilelist(citem.get('id'))
+            ...
             
         elif actionid in [RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP]:
-            self._setResume(citem.get('id'), parameter.get('resume'))
-            self.log("[%s] runAction, updating resume = %s"%(citem.get('id'),self._getResume(citem.get('id'))))
+            ...
+            # self._set(citem.get('id'),resume=parameter.get('resume'))
+            # self.log("[%s] runAction, updating resume = %s"%(citem.get('id'),parameter.get('resume')))
         return parameter
        
+               

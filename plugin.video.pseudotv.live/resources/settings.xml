@@ -957,6 +957,17 @@
                         <data/>
                     </control>
                 </setting>
+                <setting id="Remote_NAME" type="string" label="30203" parent="Remote_Status">
+                    <level>0</level>
+                    <default/>
+                    <enable>false</enable>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <control type="edit" format="string">
+                        <heading/>
+                    </control>
+                </setting>
                 <setting id="Remote_M3U" type="string" label="30094" parent="Remote_Status">
                     <level>0</level>
                     <default/>

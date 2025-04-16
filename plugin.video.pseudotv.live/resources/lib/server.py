@@ -157,6 +157,13 @@ class RequestHandler(BaseHTTPRequestHandler):
                         content = "text/html"
                         chunk   = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
                     else: self.send_error(404, "Not found")
+                elif self.path.lower().startswith('/filelist'):
+                    self.path.replace('/filelist/','')
+                    path = self.path.lower()
+                    if self.path.lower().endswith('.json'):
+                        content = "application/json"
+                        chunk   = dumpJSON(getJSON((os.path.join(TEMP_LOC,path)))).encode(encoding=DEFAULT_ENCODING)
+                    else: self.send_error(404, "Not found")
                 elif self.path.lower() == '/%s'%(M3UFLE.lower()):
                     content = "application/vnd.apple.mpegurl"
                     path    = M3UFLEPATH
@@ -256,6 +263,7 @@ class HTTP:
                 elif PORT != TCP: SETTINGS.setSettingInt('TCP_PORT',PORT)
                 LOCAL_HOST = PROPERTIES.setRemoteHost('%s:%s'%(IP,PORT))
                 self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
+                SETTINGS.setSetting('Remote_NAME'  ,SETTINGS.getFriendlyName())
                 SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
                 SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
                 SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))

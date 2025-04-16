@@ -1,5 +1,6 @@
 v.0.6.1
-- Fixed Adv. Channel rules "Post-Roll" and "Pause Channel".
+- Temporarily disabled the "Pause Channel" rule, while I properly refactor the code to support shared multi-room instances. 
+- Fixed Adv. Channel rules "Post-Roll.
 - Changed how "TVShow" type Smart-playlist are handled in-order to flatten hierarchy for cleaner parsing.
 - Resolved issue with the "Post-Roll" advanced channel rule.
 - Corrected advanced rule vignette image selection from resources.

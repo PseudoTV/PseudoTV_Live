@@ -833,6 +833,9 @@ msgctxt "#30202"
 msgid "Failed to validate!, Force Approval?"
 msgstr ""
 
+msgctxt "#30203"
+msgid "Name:"
+msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins
 

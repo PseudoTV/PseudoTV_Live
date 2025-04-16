@@ -47,7 +47,6 @@ class Builder:
         self.service      = service        
         self.jsonRPC      = service.jsonRPC
         self.cache        = service.jsonRPC.cache
-        self.runActions   = RulesList(Channels().getChannels()).runActions
 
         #global dialog
         self.pDialog    = None
@@ -92,6 +91,7 @@ class Builder:
         self.xmltv            = XMLTVS()
         self.m3u              = M3U()
         self.resources        = Resources(service=self.service)
+        self.runActions       = RulesList(Channels().getChannels()).runActions
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -463,6 +463,9 @@ class Builder:
                         item['duration']     = dur
                         item['media']        = media
                         item['originalpath'] = path #use for path sorting/playback verification 
+                        item['friendlyname'] = SETTINGS.getSetting("Remote_NAME")
+                        item['remote']       = PROPERTIES.getRemoteHost()
+                        
                         if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554
                         
                         title   = (item.get("title")     or item.get("label") or dirItem.get('label') or '')
