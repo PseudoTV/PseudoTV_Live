@@ -168,10 +168,10 @@ class JSONRPC:
         else:     return (self.sendJSON(param).get('result',{}).get('value')  or default)
 
 
-    def setSettingValue(self, key, value, que=True):
+    def setSettingValue(self, key, value, queue=False):
         param = {"method":"Settings.SetSettingValue","params":{"setting":key,"value":value}}
-        if que: self.queueJSON(param)
-        else:   self.sendJSON(param)
+        if queue: self.queueJSON(param)
+        else:      self.sendJSON(param)
 
 
     def getSources(self, media='video', cache=True):
@@ -583,7 +583,7 @@ class JSONRPC:
                     if not friendly or friendly.lower() == 'kodi':
                         return self.inputFriendlyName()
                     else:
-                        self.setSettingValue("services.devicename",friendly,que=False)
+                        self.setSettingValue("services.devicename",friendly)
                         self.log('inputFriendlyName, setting device name = %s'%(friendly))
         return friendly
             

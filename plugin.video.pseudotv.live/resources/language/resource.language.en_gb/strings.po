@@ -975,7 +975,7 @@ msgid "No Duration Found!"
 msgstr ""
                
 msgctxt "#32033"
-msgid "Offline"
+msgid ""
 msgstr ""
 
 msgctxt "#32034"
@@ -1298,10 +1298,6 @@ msgctxt "#32113"
 msgid "Recovering Channel"
 msgstr ""
 
-msgctxt "#32114"
-msgid "Online"
-msgstr ""
-
 msgctxt "#32115"
 msgid "Running as a client."
 msgstr ""
@@ -1475,8 +1471,9 @@ msgid "Changes Detected!"
 msgstr ""
 
 msgctxt "#32158"
-msgid "[COLOR=yellow][B]Initializing[/B][/COLOR]"
+msgid "Online"
 msgstr ""
+
 
 msgctxt "#32159"
 msgid "Rebuild Library"
@@ -1834,9 +1831,21 @@ msgctxt "#32249"
 msgid "Updated"
 msgstr ""
 
+msgctxt "#32250"
+msgid "Viewed"
+msgstr ""
 
+msgctxt "#32251"
+msgid "New"
+msgstr ""
 
+msgctxt "#32252"
+msgid "Listening"
+msgstr ""
 
+msgctxt "#32253"
+msgid "Offline"
+msgstr 
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 

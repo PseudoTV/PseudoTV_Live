@@ -34,7 +34,6 @@ class Tasks():
         self.player      = service.player
         self.monitor     = service.monitor
         self.cache       = SETTINGS.cache
-        self.httpServer  = HTTP(service=self.service)
         self.quePriority = CustomQueue(priority=True,service=self.service)
 
 
@@ -55,6 +54,7 @@ class Tasks():
                  self.chkWelcome,
                  self.chkDebugging,
                  self.chkBackup,
+                 self.chkHTTP,
                  self.chkServers,
                  self.chkPVRBackend,]
         for func in tasks: self._que(func,1)
@@ -83,12 +83,17 @@ class Tasks():
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Debug_Enable',False)
                 DIALOG.notificationDialog(LANGUAGE(321423))
-        # self.jsonRPC.setSettingValue("debug.showloginfo",SETTINGS.getSettingBool('Debug_Enable'))
+        self.jsonRPC.setSettingValue("debug.showloginfo",SETTINGS.getSettingBool('Debug_Enable'))
 
 
     def chkBackup(self):
         self.log('chkBackup')
         Backup().hasBackup()
+
+
+    def chkHTTP(self):
+        self.log('chkHTTP')
+        HTTP(service=self.service)
 
 
     def chkServers(self):
@@ -106,7 +111,6 @@ class Tasks():
     def _chkQueTimer(self):
         self._chkEpochTimer('chkVersion'      , self.chkVersion      , 21600)
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
-        self._chkEpochTimer('chkHTTP'         , self.chkHTTP         , 600)
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 600)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 3600)
@@ -174,11 +178,6 @@ class Tasks():
         self.chkDirs()
         if not (FileAccess.exists(LIBRARYFLEPATH) & FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkLibrary,2)
 
-
-    def chkHTTP(self):
-        self.log('chkHTTP')
-        timerit(self.httpServer._start)(1.0)
-              
 
     def chkDiscovery(self):
         self.log('chkDiscovery')
@@ -287,6 +286,24 @@ class Tasks():
                 SETTINGS.setCacheSetting('queueLOGO', queuePool, json_data=True)
                 del library
                 
+
+    def chkURLQUE(self):
+        if not PROPERTIES.isRunning('chkURLQUE') and self.service.monitor.isIdle:
+            with PROPERTIES.chkRunning('chkURLQUE'):
+                queuePool = (SETTINGS.getCacheSetting('queueURL', json_data=True) or {})
+                params = queuePool.get('params',[])
+                for i in list(range(FIFTEEN)):
+                    if self.service._interrupt(): 
+                        self.log("chkURLQUE, _interrupt")
+                        break
+                    elif len(params) > 0:
+                        param = params.pop(0)
+                        self.log("chkURLQUE, queuing = %s\n%s"%(len(params),param))
+                        self._que(requestURL,-1, param)
+                queuePool['params'] = setDictLST(params)
+                self.log('chkURLQUE, remaining = %s'%(len(queuePool['params'])))
+                SETTINGS.setCacheSetting('queueURL', queuePool, json_data=True)
+
 
     def chkPVRRefresh(self):
         self.log('chkPVRRefresh')

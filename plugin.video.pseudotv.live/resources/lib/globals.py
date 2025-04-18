@@ -111,19 +111,18 @@ def setJSON(file, data):
         fle.close()
     return True
 
-def requestURL(url, params={}, data={}, header=HEADER, timeout=FIFTEEN, json_data=False, cache=None, checksum=ADDON_VERSION, life=datetime.timedelta(minutes=15)):
+def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, json_data=False, cache=None, checksum=ADDON_VERSION, life=datetime.timedelta(minutes=15)):
     def __error(json_data):
         return {} if json_data else ""
     
     def __getCache(key,json_data,cache,checksum):
-        cacheName = 'requestURL.%s'%(key)
-        return (cache.get(cacheName, checksum, json_data) or __error(json_data))
+        return (cache.get('requestURL.%s'%(key), checksum, json_data) or __error(json_data))
         
-    def __setCache(key,data,json_data,cache,checksum,life):
-        cacheName = 'requestURL.%s'%(key)
-        return cache.set(cacheName, data, checksum, life, json_data)
-    
-    cacheKey = '.'.join([url,dumpJSON(params),dumpJSON(data),dumpJSON(header)])
+    def __setCache(key,results,json_data,cache,checksum,life):
+        return cache.set('requestURL.%s'%(key), results, checksum, life, json_data)
+        
+    complete = False
+    cacheKey = '.'.join([url,dumpJSON(params),dumpJSON(payload),dumpJSON(header)])
     session  = requests.Session()
     retries  = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     adapter  = HTTPAdapter(max_retries=retries)
@@ -132,27 +131,37 @@ def requestURL(url, params={}, data={}, header=HEADER, timeout=FIFTEEN, json_dat
     try:
         headers = HEADER.copy()
         headers.update(header)
-        if data: response = session.post(url, data=data, headers=headers, timeout=timeout)
-        else:    response = session.get(url, params=params, headers=headers, timeout=timeout)
+        if payload: response = session.post(url, data=dumpJSON(payload), headers=headers, timeout=timeout)
+        else:       response = session.get(url, params=params, headers=headers, timeout=timeout)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log("Globals: requestURL, url = %s, status = %s"%(url,response.status_code))
+        complete = True
+
         if json_data: results = response.json()
         else:         results = response.content
         if results and cache: return __setCache(cacheKey,results,json_data,cache,checksum,life)
-        else:                 return results                       
-    #todo write tmp file or que retry if post fails, add to que to repost when url online. 
+        else:                 return results 
+        
     except requests.exceptions.ConnectionError as e:
         log("Globals: requestURL, failed! Error connecting to the server: %s"%('Returning cache' if cache else 'No Response'))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
     except requests.exceptions.HTTPError as e:
         log("Globals: requestURL, failed! HTTP error occurred: %s"%('Returning cache' if cache else 'No Response'))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
-    except requests.exceptions.RequestException as e:
-        log("Globals: requestURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
     except Exception as e:
         log("Globals: requestURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
         return __error(json_data)
-     
+    finally:
+        if not complete and payload: queueURL({"url":url, "params":params, "payload":payload, "header":header, "timeout":timeout, "json_data":json_data, "cache":cache, "checksum":checksum, "life":life}) #retry post
+
+def queueURL(param):
+    queuePool = (SETTINGS.getCacheSetting('queueURL', json_data=True) or {})
+    params = queuePool.setdefault('params',[])
+    params.append(param)
+    queuePool['params'] = setDictLST(params)
+    log("Globals: queueURL, saving = %s\n%s"%(len(queuePool['params']),param))
+    SETTINGS.setCacheSetting('queueURL', queuePool, json_data=True)
+
 def setURL(url, file):
     try:
         contents = requestURL(url)

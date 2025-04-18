@@ -68,9 +68,9 @@ class Multiroom:
         for server in list(servers.values()):
             online = server.get('online',False)
             if self.getRemote(server.get('remotes',{}).get('bonjour')): server['online'] = True
-            else:                                                server['online'] = False
+            else:                                                       server['online'] = False
             if server.get('enabled',False):
-                if online != server.get('online',False): DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)])))
+                if online != server.get('online',False): DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))
                 __chkSettings(loadJSON(server.get('settings')))
         SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
         self.log('chkServers, servers = %s'%(len(servers)))
@@ -129,7 +129,7 @@ class Multiroom:
     def delServer(self, servers={}):
         self.log('delServer')
         def __build(idx, payload):
-            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:'Online',False:'Offline'}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             if not servers: servers = self.getDiscovery()
@@ -145,7 +145,7 @@ class Multiroom:
     def selServer(self):
         self.log('selServer')
         def __build(idx, payload):
-            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:'Online',False:'Offline'}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
@@ -177,12 +177,12 @@ class Multiroom:
 
     def enableZeroConf(self):
         self.log('enableZeroConf')
-        if SETTINGS.getSetting('ZeroConf_Status') == '[COLOR=red][B]Offline[/B][/COLOR]':
+        if SETTINGS.getSetting('ZeroConf_Status') == '[COLOR=red][B]%s[/B][/COLOR]'%(LANGUAGE(32253)):
             if BUILTIN.getInfoLabel('Platform.Windows','System'): 
                 BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Show_ZeroConf_QR)'%(ADDON_ID))
             if DIALOG.yesnoDialog(message=LANGUAGE(30129)):
                 with PROPERTIES.interruptActivity():
-                    if self.jsonRPC.setSettingValue("services.zeroconf","true",que=False):
+                    if self.jsonRPC.setSettingValue("services.zeroconf",True,que=False):
                         DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30035)))
                         PROPERTIES.setEpochTimer('chkKodiSettings')
         else: DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30034)))

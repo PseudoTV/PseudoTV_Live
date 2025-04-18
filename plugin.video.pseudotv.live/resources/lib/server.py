@@ -70,15 +70,14 @@ class Discovery:
                 zconf = Zeroconf()
                 zcons = self.multiroom._getStatus()
                 self.log("_start, Multicast DNS Service Discovery (%s)"%(ZEROCONF_SERVICE))
-                SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32158))
+                SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
                 ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
                 self.service.monitor.waitForAbort(DISCOVER_INTERVAL)
-                SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:'Online',False:'Offline'}[zcons]))
+                SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
                 zconf.close()
                         
             
 class RequestHandler(BaseHTTPRequestHandler):
-    CHUNK_SIZE = 64 * 1024
     
     def __init__(self, request, client_address, server, monitor):
         self.monitor = monitor
@@ -118,7 +117,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                 from multiroom  import Multiroom
                 for server in list(Multiroom().getDiscovery().values()):
                     if server.get('uuid') == uuid: return True
-            return False
             
         self.log('do_POST, incoming path = %s'%(self.path))
         if not PROPERTIES.isRunning('do_POST'):
@@ -127,34 +125,44 @@ class RequestHandler(BaseHTTPRequestHandler):
                     try:    incoming = loadJSON(self.rfile.read(int(self.headers['content-length'])).decode())
                     except: incoming = {}
                     if _verifyUUID(incoming.get('uuid')):
-                        self.log('do_POST verified incoming uuid = %s'%(incoming.get('uuid')))
+                        self.log('do_POST incoming uuid [%s] verified!'%(incoming.get('uuid')))
                         #channels - channel manager save
                         if self.path.lower() == '/%s'%(CHANNELFLE.lower()) and incoming.get('payload'):
                             from channels import Channels
-                            channels = list(Channels()._verify(incoming.get('payload')))
-                            self.log('do_POST incoming verified channels = %s'%(len(channels)))
-                            if Channels().setChannels(channels): DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30108),incoming.get('name',ADDON_NAME)))
+                            if Channels().setChannels(list(Channels()._verify(incoming.get('payload')))):
+                                DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30108),incoming.get('name',ADDON_NAME)))
                             return self.send_response(200, "OK")
                         #filelist w/resume - paused channel rule
                         elif self.path.lower().startswith('/filelist') and incoming.get('payload'):
-                            self.log('do_POST incoming file = %s'%(self.path.replace('/filelist/','')))
-                            if setJSON(os.path.join(TEMP_LOC,self.path.replace('/filelist/','')),incoming.get('payload')): DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30060),incoming.get('name',ADDON_NAME)))
+                            if setJSON(os.path.join(TEMP_LOC,self.path.replace('/filelist/','')),incoming.get('payload')):
+                                DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30060),incoming.get('name',ADDON_NAME)))
                             return self.send_response(200, "OK")
-                        else: self.send_error(401, "Not found")
-                    return self.send_error(401, "Not verified")
+                        else: self.send_error(401, "Path Not found")
+                    else: return self.send_error(401, "UUID Not verified!")
                 else: return self.do_GET()
         
         
     def do_GET(self):
-        self.log('do_GET, incoming path = %s'%(self.path))
         def _sendChunk(path, content, chunk):
             self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
             self._set_headers(content,chunk)
-            self.log('do_GET, sending = remote payload, size = %s'%(len(chunk)))
+            self.log('do_GET, sending chunk, size = %s'%(len(chunk)))
             self.wfile.write(chunk)
             self.wfile.close()
 
+        def _sendChunks(path, content):
+            self._set_headers(content)
+            self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
+            while not self.monitor.abortRequested():
+                chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
+                if not chunk or self.monitor.waitForAbort(0.001): break
+                self.send_header('content-length', len(chunk))
+                self.log('do_GET, sending = %s, chunk = %s'%(path, chunk))
+                self.wfile.write(chunk)
+            self.wfile.close()
+
         def _sendFile(path, content):
+            self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
             with xbmcvfs.File(path, "r") as fle:
                 chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
                 self._set_headers(content,chunk)
@@ -163,23 +171,18 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.close()
 
         def _sendZip(path, content):
+            self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
             with xbmcvfs.File(path, "r") as fle:
                 if 'gzip' in self.headers.get('accept-encoding'):
-                    self.log('do_GET, gzip compressing')
                     data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
                     self._set_headers(content,data,True)
+                    self.log('do_GET, sending = %s, gzip compressing'%(path))
                     self.wfile.write(data)
-                else:
-                    self._set_headers(content)
-                    while not self.monitor.abortRequested():
-                        chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                        self.log('do_GET, sending = %s, chunk = %s'%(path, chunk))
-                        if not chunk or self.monitor.waitForAbort(0.001): break
-                        self.send_header('content-length', len(chunk))
-                        self.wfile.write(chunk)
-            self.wfile.close()
+                    self.wfile.close()
+                else: self._sendChunks(path, content)
 
         def _sendImage(path, content):
+            self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
             with xbmcvfs.File(path, "r") as fle:
                 chunk = fle.readBytes()
                 self._set_headers(content,chunk)
@@ -187,6 +190,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(chunk)
             self.wfile.close()
 
+        self.log('do_GET, incoming path = %s'%(self.path))
         if not PROPERTIES.isRunning('do_GET'):
             with PROPERTIES.chkRunning('do_GET'), PROPERTIES.interruptActivity():
                 #Bonjour json/html
@@ -199,7 +203,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                         _sendChunk(self.path.lower(), "application/json", dumpJSON(SETTINGS.getPayload(),idnt=4).encode(encoding=DEFAULT_ENCODING))
                     elif self.path.lower().endswith('.html'):
                         _sendChunk(self.path.lower(), "text/html", SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING))
-                    else: self.send_error(404, "Not found")
+                    else: self.send_error(404, "Path Not found")
                 #filelist - Paused Channels
                 elif self.path.lower().startswith('/filelist') and self.path.lower().endswith('.json'):
                     _sendChunk(self.path.lower(), "application/json", dumpJSON(getJSON((os.path.join(TEMP_LOC,self.path.replace('/filelist/',''))))).encode(encoding=DEFAULT_ENCODING))
@@ -215,8 +219,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 #Images - image server
                 elif self.path.lower().startswith("/images/"):
                     _sendImage(os.path.join(LOGO_LOC,unquoteString(self.path.replace('/images/',''))), mimetypes.guess_type(self.path[1:])[0])
-                    
-                else: self.send_error(404, "Not found")
+                else: self.send_error(404, "Path Not found")
         
 class HTTP:
     isRunning = False
@@ -224,6 +227,7 @@ class HTTP:
     def __init__(self, service=None):
         self.log('__init__')
         self.service = service
+        timerit(self._start)(0.1)
         
                     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -252,10 +256,9 @@ class HTTP:
 
 
     def _start(self):
-        try:
-            if self.service.monitor.waitForAbort(0.001): self._stop()
-            elif not self.isRunning:
-                self.isRunning = True
+        if self.service.monitor.waitForAbort(0.001): self._stop()
+        elif not self.isRunning:
+            try:
                 IP  = SETTINGS.getIP()
                 TCP = SETTINGS.getSettingInt('TCP_PORT')
                 PORT= self.chkPort(TCP,redirect=True)
@@ -263,20 +266,21 @@ class HTTP:
                 elif PORT != TCP: SETTINGS.setSettingInt('TCP_PORT',PORT)
                 LOCAL_HOST = PROPERTIES.setRemoteHost('%s:%s'%(IP,PORT))
                 self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
+                
                 SETTINGS.setSetting('Remote_NAME' ,SETTINGS.getFriendlyName())
                 SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
                 SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
                 SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
-
+                
+                self.isRunning = True
                 self._server = ThreadedHTTPServer((IP, PORT), partial(RequestHandler,monitor=self.service.monitor))
                 self._server.allow_reuse_address = True
                 self._httpd_thread = Thread(target=self._server.serve_forever)
                 self._httpd_thread.daemon=True
                 self._httpd_thread.start()
-            SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:'Online',False:'Offline'}[self.isRunning]))
-            
-        except Exception as e: 
-            self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
+            except Exception as e: self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
+        DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[self.isRunning])))
+        SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[self.isRunning]))
         
         
     def _stop(self):

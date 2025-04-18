@@ -132,7 +132,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         elif name == 'Ask':
             def __buildItem(servers, server):
                 if server.get('online',False):
-                    return self.buildListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:'Online',False:'Offline'}[server.get('online',False)]),server.get('host'),len(server.get('channels',[]))),icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
+                    return self.buildListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)]),server.get('host'),len(server.get('channels',[]))),icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
             servers = self.getServers()
             lizlst = poolit(__buildItem)(*(list(servers.values()),list(servers.values())))
             lizlst.insert(0,self.buildListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(channels)),icon=ICON))
@@ -864,7 +864,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     self.log("saveChanges, channels = %s, added = %s, removed = %s"%(len(channels), len(added), len(removed)))
                     if self.server:
                         payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels}
-                        requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
+                        requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=payload, header=HEADER, json_data=True)
                     else:
                         self.channels.setChannels(channels)  #save changes
                         self.resetPagination(citems)         #clear auto pagination cache

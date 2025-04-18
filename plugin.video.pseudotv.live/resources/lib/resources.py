@@ -166,9 +166,8 @@ class Resources:
         
     #todo refactor this mess, proper pattern matching...
     def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None: #todo auto setting SETTINGS.getSettingBool('')
-        chnames = list(set([chname, slugify(chname), validString(chname), chname.replace('and', '&'), chname.replace('&','and'), getChannelSuffix(chname, type), cleanChannelSuffix(chname, type), stripRegion(chname), splitYear(name)[0]]))
+        chnames = list(set([chname, slugify(chname), validString(chname), chname.replace('and', '&'), chname.replace('&','and'), stripRegion(chname), getChannelSuffix(chname, type), cleanChannelSuffix(chname, type)]))
         renames = list(set([name, slugify(name), validString(name), splitYear(name)[0], stripRegion(name)]))
-        self.log('matchName, chname = %s\nchnames = %s\nrenames = %s'%(chname,chnames,renames))
         for chname in chnames:
             if not chname: continue
             elif auto: return SequenceMatcher(None, chname, name).ratio() > .8

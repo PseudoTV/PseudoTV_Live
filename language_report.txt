@@ -1,4 +1,5 @@
 Language IDS w\empty strings: {
+    "32033": "",
     "33130": ""
 }
 
@@ -172,7 +173,7 @@ Language IDS not found in py files, possibly only in xml: {
     "32012": "Recommended",
     "32013": "Services",
     "32024": "Autotuning samples available via Misc. Utilities",
-    "32033": "Offline",
+    "32033": "",
     "32048": "Select Servers",
     "32049": "Restarting...",
     "32053": "Settings",
@@ -181,7 +182,6 @@ Language IDS not found in py files, possibly only in xml: {
     "32075": "Saving...",
     "32082": "Clear this Channels Configurations",
     "32113": "Recovering Channel",
-    "32114": "Online",
     "32115": "Running as a client.",
     "32128": "Rebuilding Autotuned Channels",
     "32129": "%s is missing guide data for this channel\\nPlease wait for Kodi and %s to finish updating.",

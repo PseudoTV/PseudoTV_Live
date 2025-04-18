@@ -1578,18 +1578,20 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
 
     def _buildSchedule(self, citem, filelist, builder):     
         self.log('[%s] _buildSchedule, filelist = %s'%(citem.get('id'),len(filelist)))
+        updated = self._getResume(citem.get('id')).get('updated',{})
+        try:    viewed = '%s: %s (%s)'%(LANGUAGE(32250),datetime.datetime.fromtimestamp(updated.get('time')).strftime(BACKUP_TIME_FORMAT),updated.get('instance'))
+        except: viewed = LANGUAGE(32251)
         return builder.buildCells(citem, duration=self._getTotDuration(citem.get('id'), filelist), entries=1, 
                                   info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
-                                        "episodetitle":'%s: %s'%(LANGUAGE(32249),datetime.datetime.fromtimestamp(time.time()).strftime(BACKUP_TIME_FORMAT)),
-                                        "plot":'Size: %s videos \nTotal Runtime: %s hrs.'%(len(filelist),round(self._getTotDuration(citem.get('id'), filelist)//60//60)),
+                                        "episodetitle":viewed,
+                                        "plot":'%s: %s\nSize: %s\nRuntime: ~%s hrs.'%(LANGUAGE(32249),datetime.datetime.fromtimestamp(time.time()).strftime(BACKUP_TIME_FORMAT),len(filelist),round(self._getTotDuration(citem.get('id'), filelist)//60//60)),
                                         "art":{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
+
             
-            
-    def _set(self, id, filelist=[], resume={"idx":0,"position":0.0,"total":0.0,"file":""}):
+    def _set(self, id, filelist=[], resume={"idx":0,"position":0.0,"total":0.0,"file":"","update":{"instance":"","time":-1}}):
         self.log("[%s] runAction, _set: filelist = %s, resume = %s, url = %s"%(id,len(filelist),resume,self.optionValues[1]))
         if self.optionValues[1]:
-            payload = {'uuid':SETTINGS.getMYUUID(),'name':SETTINGS.getFriendlyName(),'payload':{'resume':resume,'filelist':filelist}}
-            return requestURL(self.optionValues[1],data=dumpJSON(payload),json_data=True)
+            return requestURL(self.optionValues[1],payload={'uuid':SETTINGS.getMYUUID(),'name':SETTINGS.getFriendlyName(),'payload':{'resume':resume,'filelist':filelist}},json_data=True)
         else:
             return setJSON(self._getPath(id),{'resume':resume,'filelist':filelist})
         
@@ -1601,7 +1603,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
 
 
     def _getResume(self, id):
-        return (self._get(id).get('resume') or {"idx":0,"position":0.0,"total":0.0,"file":""})
+        return (self._get(id).get('resume') or {"idx":0,"position":0.0,"total":0.0,"file":"","update":{"instance":"","time":-1}})
         
         
     def _getFilelist(self, id):
@@ -1655,7 +1657,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             if self.storedValues[2] and len(parameter) > 0:
                 self.log("[%s] runAction, updating fileList (%s) extending by (%s)"%(citem.get('id'),len(self.storedValues[1]),len(parameter)))
                 self.storedValues[1].extend(parameter)
-                self._set(citem.get('id'), self.storedValues[1], self._getResume(id))
+                self._set(citem.get('id'), self.storedValues[1], self._getResume(citem.get('id')))
                 
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN:
             if parameter: 
@@ -1678,7 +1680,11 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             self.storedValues[1] = self._getFilelist(citem.get('id'))
             
         elif actionid in [RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP]:
-            if parameter.get('resume',{}).get('file'): self._set(citem.get('id'),self.storedValues[1],parameter.get('resume'))
+            now = getUTCstamp()
+            if parameter.get('resume',{}).get('file') and (parameter.get('resume',{}).get('updated',{}).get('time') or -1) < now:
+                parameter.get('resume').update({'updated':{'instance':SETTINGS.getFriendlyName(),'time':now}})
+                self.log("[%s] runAction, updating resume = %s"%(citem.get('id'),parameter.get('resume')))
+                self._set(citem.get('id'),self.storedValues[1],parameter.get('resume'))
             
         return parameter
        
