@@ -1538,10 +1538,10 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
         self.exclude            = False
         self.name               = LANGUAGE(32230)
         self.description        = LANGUAGE(33228)
-        self.optionLabels       = [LANGUAGE(32231)]
-        self.optionValues       = [True]
-        self.optionDescriptions = [LANGUAGE(32231)]
-        self.actions            = [RULES_ACTION_PLAYBACK_RESUME, RULES_ACTION_PLAYER_START, RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP, RULES_ACTION_CHANNEL_START, RULES_ACTION_CHANNEL_STOP, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN, RULES_ACTION_CHANNEL_BUILD_TIME_PRE, RULES_ACTION_CHANNEL_TEMP_CITEM]
+        self.optionLabels       = [LANGUAGE(32231),"URL"]
+        self.optionValues       = [True,""]
+        self.optionDescriptions = [LANGUAGE(32231),"Self Generated URL"]
+        self.actions            = [RULES_ACTION_PLAYBACK_RESUME, RULES_ACTION_PLAYER_START, RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP, RULES_ACTION_CHANNEL_START, RULES_ACTION_CHANNEL_STOP, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN, RULES_ACTION_CHANNEL_BUILD_TIME_PRE, RULES_ACTION_CHANNEL_CITEM, RULES_ACTION_CHANNEL_TEMP_CITEM]
         self.storedValues       = [[],[],False]
         
 
@@ -1562,8 +1562,12 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
         return self.optionValues[optionindex]
         
         
-    def _setURL(self, id):
-        return 'http://%s/filelist/%s.json'%(PROPERTIES.getRemoteHost(),getMD5(id))
+    def _getURL(self, id):
+        return 'http://%s/filelist/%s.json'%(PROPERTIES.getRemoteHost(),getMD5('%s.%s'%(SETTINGS.getFriendlyName(),id)))
+        
+        
+    def _getPath(self, id):
+        return os.path.join(TEMP_LOC,'%s.json'%(getMD5('%s.%s'%(SETTINGS.getFriendlyName(),id))))
         
         
     def _getTotDuration(self, id, filelist=[]):
@@ -1579,50 +1583,23 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
                                         "episodetitle":'%s: %s'%(LANGUAGE(32249),datetime.datetime.fromtimestamp(time.time()).strftime(BACKUP_TIME_FORMAT)),
                                         "plot":'Size: %s videos \nTotal Runtime: %s hrs.'%(len(filelist),round(self._getTotDuration(citem.get('id'), filelist)//60//60)),
                                         "art":{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
-
-
-
-
-
-    # def _getResume(self, id):
-        # resume = (self._getFileList(id).get('resume') or {"idx":0,"position":0.0,"total":0.0,"file":""})
-        # self.log('[%s] _getResume, resume = %s'%(id,resume))
-        # return resume
-        
-
-    # def _setResume(self, id, resume: dict={"idx":0,"position":0.0,"total":0.0,"file":""}):
-        # self.log('[%s] _setResume, resume = %s'%(id, resume))
-        # self._setFileList(id,self._getFileList(id),resume)
-
-
-    # def _getPosition(self, id):
-        # return self._getResume(id).get("idx",0)
-
-        
-    # def _setPosition(self, id, idx: int=0):
-        # resume = self._getResume(id)
-        # resume["idx"] = idx
-        # self._setResume(id, resume)
-
-
-        # idx = self._getPosition(id)
-        # try:
-            # fileList = getJSON(os.path.join(TEMP_LOC,'%s.json'%(getMD5(id)))).get('filelist',[])[idx:]
-            # self._setPosition(id) #reset idx, keep resume
-        # except:
-            # fileList = []
-            # self._setResume(id) #reset all
-        # finally: 
-            # self.log('[%s] _getFileList, idx = %s, fileList = %s, resetting position to 0'%(id,idx,len(fileList)))
-            # self._setFileList(id, fileList)
-            # return fileList
             
             
-    # @30 cache
+    def _set(self, id, filelist=[], resume={"idx":0,"position":0.0,"total":0.0,"file":""}):
+        self.log("[%s] runAction, _set: filelist = %s, resume = %s, url = %s"%(id,len(filelist),resume,self.optionValues[1]))
+        if self.optionValues[1]:
+            payload = {'uuid':SETTINGS.getMYUUID(),'name':SETTINGS.getFriendlyName(),'payload':{'resume':resume,'filelist':filelist}}
+            return requestURL(self.optionValues[1],data=dumpJSON(payload),json_data=True)
+        else:
+            return setJSON(self._getPath(id),{'resume':resume,'filelist':filelist})
+        
+        
     def _get(self, id):
-        return getJSON(os.path.join(TEMP_LOC,'%s.json'%(getMD5(id))))
-        
-        
+        self.log("[%s] runAction, _get: url = %s"%(id,self.optionValues[1]))
+        if self.optionValues[1]: return requestURL(self.optionValues[1],json_data=True)
+        else:                    return getJSON(self._getPath(id))
+
+
     def _getResume(self, id):
         return (self._get(id).get('resume') or {"idx":0,"position":0.0,"total":0.0,"file":""})
         
@@ -1630,13 +1607,21 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
     def _getFilelist(self, id):
         return (self._get(id).get('filelist') or [])
         
-        
-    def _set(self, id, filelist=None, resume={"idx":0,"position":0.0,"total":0.0,"file":""}):
-        if filelist is None: filelist = self._getFilelist(id)
-        self.log("[%s] runAction, _set filelist = %s, resume = %s"%(citem.get('id'),len(filelist),resume))
-        return setJSON(os.path.join(TEMP_LOC,'%s.json'%(getMD5(id))),{'resume':resume,'filelist':filelist})
-        
 
+    def _getPlaylist(self, id):
+        resume   = self._getResume(id)
+        filelist = self._getFilelist(id)
+        if len(filelist) > 0:
+            for idx, item in enumerate(filelist):
+                if item.get('file') == resume.get('file',-1):
+                    resume.update({'idx':0})
+                    item['resume'] = resume
+                    filelist = filelist[idx:]
+                    if self._set(id, filelist, resume): break
+        self.log('[%s] runAction, _getPlaylist: filelist = %s, resume = %s'%(id,len(filelist),resume))
+        return filelist
+        
+        
     def runAction(self, actionid, citem, parameter, inherited):
         self.log('[%s] runAction, actionid = %s,'%(citem.get('id'),actionid))
         if actionid == RULES_ACTION_CHANNEL_START:
@@ -1645,9 +1630,17 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             inherited.padScheduling = False #disable guide padding with duplicates to fill quota.
             self.log("[%s] runAction, setting padScheduling = %s"%(citem.get('id'),inherited.padScheduling))
             
+            
+        elif actionid == RULES_ACTION_CHANNEL_CITEM:
+            try:
+                parameter["rules"]["3000"]["values"].update({"1":self._getURL(parameter.get('id'))})
+                self.log("runAction, updated rule values = %s"%( parameter["rules"]["3000"]["values"]), xbmc.LOGERROR)
+            except Exception as e:
+                self.log("runAction, updated rule values failed! %s"%(e), xbmc.LOGERROR)
+            
+            
         elif actionid == RULES_ACTION_CHANNEL_TEMP_CITEM: 
-            ...
-            # parameter['resume'] = True
+            parameter['resume'] = True
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: #load cached filelist if not outdated, else new buildFileList
             if self._getTotDuration(citem.get('id'), self.storedValues[1]) >= (MIN_GUIDEDAYS * 86400): 
@@ -1655,8 +1648,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
                 return [self.storedValues[1]]
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST: #check if cached filelist is the same as existing filelist.
-            if [self.storedValues[1]] != parameter:
-                self.storedValues[2] = True #finish building new filelist ie. injection rules.
+            if [self.storedValues[1]] != parameter: self.storedValues[2] = True #finish building new filelist ie. injection rules.
             elif len(self.storedValues[1]) > 0: return True #use cached filelist
 
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:#update cached filelist
@@ -1666,7 +1658,9 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
                 self._set(citem.get('id'), self.storedValues[1], self._getResume(id))
                 
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN:
-            if parameter: return self.storedValues[1]
+            if parameter: 
+                self.log("[%s] runAction, returning fileList (%s)"%(citem.get('id'),len(self.storedValues[1])))
+                return self.storedValues[1]
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_PRE:
             if len(parameter) > 0: 
@@ -1678,32 +1672,14 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             self.log("[%s] runAction, restoring padScheduling = %s"%(citem.get('id'),inherited.padScheduling))
             
         elif actionid == RULES_ACTION_PLAYBACK_RESUME:
-            ...
-            # self.storedValues[1] = self._getFilelist(citem.get('id'))
-            # if len(self.storedValues[1]) > 0:
-                # if self._getTotDuration(citem.get('id'), self.storedValues[1]) < (MIN_GUIDEDAYS * 86400) : PROPERTIES.setUpdateChannels(citem.get('id'))
-                # resume = self._getResume(citem.get('id'))
-                # print('storedValues resume',resume)
-                # for idx, item in enumerate(self.storedValues[1]):
-                    # print('storedValues 0',idx, item.get('file'))
-                    # if item.get('file') == resume.get('file',str(random.random())):
-                        # item['resume'] = resume
-                    # else:
-                        # item['resume'] = {}
-                # # item = self.storedValues[1].pop(0)
-                # # item['resume'] = self._getResume(citem.get('id'))
-                # print('self.storedValues[1]',self.storedValues[1])
-                # return self.storedValues[1]
-            # return []
-                                            
+            return self._getPlaylist(citem.get('id'))
+                                                        
         elif actionid == RULES_ACTION_PLAYER_START:
-            # self.storedValues[1] = self._getFilelist(citem.get('id'))
-            ...
+            self.storedValues[1] = self._getFilelist(citem.get('id'))
             
         elif actionid in [RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP]:
-            ...
-            # self._set(citem.get('id'),resume=parameter.get('resume'))
-            # self.log("[%s] runAction, updating resume = %s"%(citem.get('id'),parameter.get('resume')))
+            if parameter.get('resume',{}).get('file'): self._set(citem.get('id'),self.storedValues[1],parameter.get('resume'))
+            
         return parameter
        
                

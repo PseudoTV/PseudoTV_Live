@@ -358,7 +358,7 @@ msgid "Disable Cache"
 msgstr ""
 
 msgctxt "#30085"
-msgid "Channels updated by %s"
+msgid "%s updated by %s"
 msgstr ""
 
 msgctxt "#30086"

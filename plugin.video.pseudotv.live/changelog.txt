@@ -1,5 +1,6 @@
 v.0.6.1
-- Temporarily disabled the "Pause Channel" rule, while I properly refactor the code to support shared multi-room instances. 
+- Refactored "Paused Channel" Adv. channel rule to work between multi-room instances [Experimental].
+- Added Channel editing support for multi-room instances [Experimental].
 - Fixed Adv. Channel rules "Post-Roll.
 - Changed how "TVShow" type Smart-playlist are handled in-order to flatten hierarchy for cleaner parsing.
 - Resolved issue with the "Post-Roll" advanced channel rule.

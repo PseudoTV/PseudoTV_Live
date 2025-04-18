@@ -263,7 +263,7 @@ class Player(xbmc.Player):
 
 
     def toggleOverlay(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
-        if state and self.overlay is None:
+        if state and self.overlay is None and self.isPlaying():
             self.overlay = Overlay(player=self)
             self.overlay.open()
         elif not state and hasattr(self.overlay,'close'):
@@ -272,7 +272,7 @@ class Player(xbmc.Player):
 
 
     def toggleRestart(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
-        if state and self.restart is None:
+        if state and self.restart is None and self.isPlaying():
             self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
             self.restart.open()
         elif not state and hasattr(self.restart,'onClose'):
@@ -281,7 +281,7 @@ class Player(xbmc.Player):
         
         
     def toggleOnNext(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
-        if state and self.onnext is None:
+        if state and self.onnext is None and self.isPlaying():
             self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", player=self)
             self.onnext.open()
         elif hasattr(self.onnext,'onClose'):
@@ -346,7 +346,7 @@ class Monitor(xbmc.Monitor):
 
         def __chkOverlay():
             played = ceil(self.service.player.getPlayedTime())
-            if self.isIdle and played > 30: 
+            if self.isIdle and played > OSD_TIMER: 
                 self.log('__chkOverlay, isIdle = %s, played = %s'%(self.isIdle, played))
                 self.service.player.toggleOverlay(self.service.player.enableOverlay)
 
@@ -360,11 +360,11 @@ class Monitor(xbmc.Monitor):
                 
         Thread(target=__chkIdle).start()
         if self.service.player.isPlaying() and self.service.player.isPseudoTV:
-            Thread(target=__chkResumeTime).start()
             Thread(target=__chkBackground).start()
-            Thread(target=__chkOverlay).start()
+            __chkResumeTime()
             __chkSleepTimer()
             __chkPlayback()
+            __chkOverlay()
             __chkOnNext()
 
 

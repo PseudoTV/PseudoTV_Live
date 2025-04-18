@@ -271,10 +271,13 @@ class Settings:
         
         
     def getFriendlyName(self):
-        from jsonrpc import JSONRPC
-        return JSONRPC().inputFriendlyName()
-
-
+        friendly = Properties().getProperty('INSTANCE_NAME')
+        if not friendly:
+            from jsonrpc import JSONRPC
+            friendly = Properties().setProperty('INSTANCE_NAME', JSONRPC().inputFriendlyName())
+        return friendly
+        
+        
     def getMYUUID(self):
         friendly = self.getFriendlyName()
         uuid = self.getCacheSetting('MY_UUID', checksum=friendly)

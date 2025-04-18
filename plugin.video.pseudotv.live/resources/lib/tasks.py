@@ -216,18 +216,21 @@ class Tasks():
 
 
     def chkChannels(self, channels: list=[]):
+        save     = False
         complete = False
         builder  = Builder(service=self.service)
         if not channels:
+            save     = True
             channels = builder.getChannels()
             SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
             PROPERTIES.setChannels(len(channels) > 0)
             self.service.currentChannels = channels #update service channels
-
+            
         if len(channels) > 0:
             complete, updated = builder.build(channels)
             self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
             if complete:
+                if save: builder.setChannels(channels)
                 if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
                 if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
             else: self._que(self.chkChannels,3,channels)

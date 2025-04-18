@@ -132,21 +132,24 @@ def requestURL(url, params={}, data={}, header=HEADER, timeout=FIFTEEN, json_dat
     try:
         headers = HEADER.copy()
         headers.update(header)
-        if params: response = session.post(url, data=data, headers=headers, timeout=timeout)
-        else:      response = session.get(url, params=params, headers=headers, timeout=timeout)
+        if data: response = session.post(url, data=data, headers=headers, timeout=timeout)
+        else:    response = session.get(url, params=params, headers=headers, timeout=timeout)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log("Globals: requestURL, url = %s, status = %s"%(url,response.status_code))
         if json_data: results = response.json()
         else:         results = response.content
         if results and cache: return __setCache(cacheKey,results,json_data,cache,checksum,life)
-        else:                 return results
+        else:                 return results                       
+    #todo write tmp file or que retry if post fails, add to que to repost when url online. 
     except requests.exceptions.ConnectionError as e:
         log("Globals: requestURL, failed! Error connecting to the server: %s"%('Returning cache' if cache else 'No Response'))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
     except requests.exceptions.HTTPError as e:
-        log("Globals: requestURL, failed! HTTP error occurred: %s\n%s"%('Returning cache' if cache else 'No Response'))
+        log("Globals: requestURL, failed! HTTP error occurred: %s"%('Returning cache' if cache else 'No Response'))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
     except requests.exceptions.RequestException as e:
+        log("Globals: requestURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
+    except Exception as e:
         log("Globals: requestURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
         return __error(json_data)
      
@@ -251,7 +254,7 @@ def strpTime(datestring, format=DTJSONFORMAT): #convert pvr infolabel datetime s
     except TypeError: return datetime.datetime.fromtimestamp(time.mktime(time.strptime(datestring, format)))
     except:           return ''
    
-def epochTime(timestamp, tz=True): #convert pvr json datetime string to datetime obj
+def epochTime(timestamp, tz=False): #convert pvr json datetime string to datetime obj
     if tz: timestamp -= getTimeoffset()
     return datetime.datetime.fromtimestamp(timestamp)
 
@@ -305,11 +308,11 @@ def togglePVR(state=True, reverse=False, wait=FIFTEEN):
                 BUILTIN.executebuiltin("Dialog.Close(all)") 
                 log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
                 BUILTIN.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
-            if reverse:
-                with BUILTIN.busy_dialog(): 
-                    MONITOR().waitForAbort(1.0)
-                    timerit(togglePVR)(wait,[not bool(state)])
-                DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
+                if reverse:
+                    with BUILTIN.busy_dialog(): 
+                        MONITOR().waitForAbort(1.0)
+                        timerit(togglePVR)(wait,[not bool(state)])
+                    DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
     else: DIALOG.notificationWait(LANGUAGE(30023)%(PVR_CLIENT_NAME))
         
 def isRadio(item):

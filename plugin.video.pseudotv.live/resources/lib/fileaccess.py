@@ -261,7 +261,8 @@ class VFSFile:
 
 
     def readlines(self):
-        return list(self.readline())
+        return self.read().split('\n')
+        # return list(self.readline())
 
 
     def readline(self):

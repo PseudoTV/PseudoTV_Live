@@ -863,10 +863,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                     citems   = changes.get('added',[])+changes.get('removed',[])
                     self.log("saveChanges, channels = %s, added = %s, removed = %s"%(len(channels), len(added), len(removed)))
                     if self.server:
-                        return DIALOG.notificationDialog(LANGUAGE(32197))
-                        # payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'channels':channels}
-                        # requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
-                        #todo write tmp file if post fails, add to que to repost when url online. 
+                        payload = {'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels}
+                        requestURL('http://%s/%s'%(self.server.get('host'),CHANNELFLE), data=dumpJSON(payload), header=HEADER, json_data=True)
                     else:
                         self.channels.setChannels(channels)  #save changes
                         self.resetPagination(citems)         #clear auto pagination cache

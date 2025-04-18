@@ -105,6 +105,11 @@ class Builder:
             self.pDialog = DIALOG.updateProgress(percent, self.pDialog, message=message, header=header)
 
 
+    def setChannels(self, channels=None):
+        if channels is None: channels = Channels().getChannels()
+        return Channels().setChannels(channels)
+        
+        
     def getChannels(self):
         return sorted(self.verify(), key=itemgetter('number'))
 
@@ -119,7 +124,7 @@ class Builder:
             citem['name'] = validString(citem['name']) #todo temp. correct existing file names; drop by v.0.6
             citem['logo'] = self.resources.getLogo(citem,logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else citem.get('logo',LOGO))
             self.log('[%s] VERIFIED - channel %s: %s'%(citem['id'],citem['number'],citem['name']))
-            yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
+            yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self) #inject persistent citem changes here
 
 
     def build(self, channels: list=[], preview=False):
@@ -157,7 +162,7 @@ class Builder:
                     for idx, citem in enumerate(channels):
                         self.pCount = int(idx*100//len(channels))
                         
-                        citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
+                        citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self) #inject temporary citem changes here
                         self.log('[%s] build, rules = %s'%(citem['id'],citem.get('rules',{})))
                         if self.service._interrupt():                       
                             self.log("[%s] build, _interrupt"%(citem['id']))
@@ -303,8 +308,8 @@ class Builder:
                     citem.setdefault('rules',{}).update(nrules)
                 return citem
             return __chkEvenDistro(citem)
-
-        citem     = _injectRules(citem) #inject temporary global adv. rules here
+            
+        citem     = _injectRules(citem) #inject temporary adv. channel rules here
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self)
         #Primary rule for handling fileList injection bypassing channel building below.
         self.log("[%s] buildChannel, channel pre fileArray items = %s"%(citem['id'],len(fileArray)),xbmc.LOGINFO)
@@ -463,7 +468,7 @@ class Builder:
                         item['duration']     = dur
                         item['media']        = media
                         item['originalpath'] = path #use for path sorting/playback verification 
-                        item['friendlyname'] = SETTINGS.getSetting("Remote_NAME")
+                        item['friendly']     = SETTINGS.getFriendlyName()
                         item['remote']       = PROPERTIES.getRemoteHost()
                         
                         if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554

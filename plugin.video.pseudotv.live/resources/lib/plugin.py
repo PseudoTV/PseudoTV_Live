@@ -113,9 +113,8 @@ class Plugin:
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             liz = LISTITEMS.buildItemListItem(item,'video')
-            print('__buildfItem',idx, item.get('file'),item.get('resume',{}))
             
-            if idx == 0 and item.get('file') == item.get('resume',{}).get('file',str(random.random())):
+            if item.get('file') == item.get('resume',{}).get('file',str(random.random())):
                 seektime = int(item.get('resume',{}).get('position',0.0))
                 runtime  = int(item.get('resume',{}).get('total',0.0))
                 self.log('getPausedItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(runtime, seektime))
@@ -129,7 +128,7 @@ class Plugin:
         
         nextitems = RulesList([self.sysInfo.get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
         if nextitems:
-            del nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
+            nextitems = nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
             self.log('getPausedItems, building nextitems (%s)'%(len(nextitems)))
             return [__buildfItem(idx, nextitem) for idx, nextitem in enumerate(nextitems)]
         else: DIALOG.notificationDialog(LANGUAGE(32000))
@@ -205,7 +204,7 @@ class Plugin:
                         
                 self.sysInfo.update({'citem':decodePlot(nowitem.get('plot','')).get('citem',self.sysInfo.get('citem'))})
                 self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
-                del nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
+                nextitems = nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
                 nextitems.insert(0,nowitem)
                 self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
                 return [__buildfItem(idx, item) for idx, item in enumerate(nextitems)]
@@ -306,7 +305,7 @@ class Plugin:
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             listitems = self.getPVRItems(name, chid)
             if len(listitems) > 0: 
-                playlist = self._quePlaylist(listitems)
+                playlist = self._quePlaylist(listitems,shuffle=False)
                 if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('PlayerControl(Stop)')
                 timerit(BUILTIN.executeWindow)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
                 BUILTIN.executebuiltin("Dialog.Close(all)")
@@ -319,7 +318,7 @@ class Plugin:
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             listitems = self.getPausedItems(name, chid)
             if len(listitems) > 0: 
-                playlist = self._quePlaylist(listitems)
+                playlist = self._quePlaylist(listitems,shuffle=False)
                 if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('PlayerControl(Stop)')
                 timerit(BUILTIN.executeWindow)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
                 BUILTIN.executebuiltin("Dialog.Close(all)")
