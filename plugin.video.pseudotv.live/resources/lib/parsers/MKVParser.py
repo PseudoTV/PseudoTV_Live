@@ -1,4 +1,5 @@
-# Copyright (C) 2024 Jason Anderson, Lunatixz
+#   Copyright (C) 2024Jason Anderson, Lunatixz
+#
 #
 # This file is part of PseudoTV Live.
 #
@@ -17,86 +18,79 @@
 
 from globals import *
 
-
 class MKVParser:
-    """
-    A parser for determining the duration of MKV files.
-    """
-
-    monitor = MONITOR()
-
-    def determineLength(self, filename: str) -> int:
-        """
-        Determines the duration of an MKV file.
-
-        Args:
-            filename: Path to the MKV file.
-
-        Returns:
-            The duration of the file in seconds, or 0 on failure.
-        """
-        log(f"MKVParser: determineLength {filename}")
-        try:
-            self.File = FileAccess.open(filename, "rb", None)
-        except Exception:
+    monitor = xbmc.Monitor()
+    
+    def determineLength(self, filename: str) -> int and float:
+        log("MKVParser: determineLength %s"%filename)
+        try: self.File = FileAccess.open(filename, "rb", None)
+        except:
             log("MKVParser: Unable to open the file")
             log(traceback.format_exc(), xbmc.LOGERROR)
-            return 0
+            return
 
         size = self.findHeader()
 
         if size == 0:
-            log("MKVParser: Unable to find the segment info")
-            duration = 0
+            log('MKVParser: Unable to find the segment info')
+            dur = 0
         else:
-            duration = int(round(self.parseHeader(size)))
+            dur = int(round(self.parseHeader(size)))
 
-        log(f"MKVParser: Duration is {duration}")
-        return duration
+        log("MKVParser: Duration is %s"%(dur))
+        return dur
+        
 
-    def parseHeader(self, size: int) -> float:
-        """
-        Parses the header to extract duration information.
-
-        Args:
-            size: Size of the segment info.
-
-        Returns:
-            Duration in seconds, or 0 on failure.
-        """
+    def parseHeader(self, size):
         duration = 0
         timecode = 0
-        file_end = self.File.tell() + size
+        fileend = self.File.tell() + size
+        datasize = 1
+        data = 1
 
-        while (not self.monitor.abortRequested() and
-               self.File.tell() < file_end and duration == 0):
+        while not self.monitor.abortRequested() and self.File.tell() < fileend and datasize > 0 and data > 0:
             data = self.getEBMLId()
-            data_size = self.getDataSize()
+            datasize = self.getDataSize()
 
-            if data == 0x2AD7B1:  # TimecodeScale
+            if data == 0x2ad7b1:
+                timecode = 0
+
                 try:
-                    timecode = int.from_bytes(self.getData(data_size), "big")
-                except Exception:
+                    for x in range(datasize):
+                        timecode = (timecode << 8) + struct.unpack('B', self.getData(1))[0]
+                except:
                     timecode = 0
-            elif data == 0x4489:  # Duration
+
+                if duration != 0 and timecode != 0:
+                    break
+                    
+            elif data == 0x4489:
                 try:
-                    duration = struct.unpack(">f", self.getData(data_size))[0]
-                except Exception:
-                    log("MKVParser: Error extracting duration", xbmc.LOGERROR)
+                    if datasize == 4:
+                        duration = int(struct.unpack('>f', self.getData(datasize))[0])
+                    else:
+                        duration = int(struct.unpack('>d', self.getData(datasize))[0])
+                except:
+                    log("MKVParser: Error getting duration in header, size is " + str(datasize))
                     duration = 0
 
+                if timecode != 0 and duration != 0:
+                    break
+            else:
+                try:    
+                    self.File.seek(datasize, 1)
+                except:
+                    log('MKVParser: Error while seeking')
+                    return 0
+
         if duration > 0 and timecode > 0:
-            return (duration * timecode) / 1_000_000_000
+            dur = (duration * timecode) / 1000000000
+            return dur
 
         return 0
 
-    def findHeader(self) -> int:
-        """
-        Locates the segment header in the MKV file.
 
-        Returns:
-            Size of the segment info, or 0 on failure.
-        """
+    def findHeader(self):
         log("MKVParser: findHeader")
         filesize = self.getFileSize()
         if filesize == 0:
@@ -104,83 +98,113 @@ class MKVParser:
             return 0
 
         data = self.getEBMLId()
-        if data != 0x1A45DFA3:  # EBML header
+
+        # Check for 1A 45 DF A3
+        if data != 0x1A45DFA3:
             log("MKVParser: Not a proper MKV")
             return 0
 
+        datasize = self.getDataSize()
+        
         try:
-            self.File.seek(self.getDataSize(), 1)
-        except Exception:
-            log("MKVParser: Error while seeking")
+            self.File.seek(datasize, 1)
+        except:
+            log('MKVParser: Error while seeking')
             return 0
 
-        while not self.monitor.abortRequested():
+        data = self.getEBMLId()
+
+        # Look for the segment header
+        while not self.monitor.abortRequested() and data != 0x18538067 and self.File.tell() < filesize and data > 0 and datasize > 0:
+            datasize = self.getDataSize()
+
+            try:
+                self.File.seek(datasize, 1)
+            except:
+                log('MKVParser: Error while seeking')
+                return 0
+
             data = self.getEBMLId()
-            if data == 0x18538067:  # Segment
-                return self.getDataSize()
+
+        datasize = self.getDataSize()
+        data = self.getEBMLId()
+
+        # Find segment info
+        while not self.monitor.abortRequested() and data != 0x1549A966 and self.File.tell() < filesize and data > 0 and datasize > 0:
+            datasize = self.getDataSize()
+
+            try:
+                self.File.seek(datasize, 1)
+            except:
+                log('MKVParser: Error while seeking')
+                return 0
+
+            data = self.getEBMLId()
+
+        datasize = self.getDataSize()
+
+        if self.File.tell() < filesize:
+            return datasize
 
         return 0
 
-    def getFileSize(self) -> int:
-        """
-        Retrieves the size of the file.
 
-        Returns:
-            File size in bytes.
-        """
+    def getFileSize(self):
+        size = 0
         try:
-            current_pos = self.File.tell()
+            pos = self.File.tell()
             self.File.seek(0, 2)
             size = self.File.tell()
-            self.File.seek(current_pos, 0)
-            return size
-        except Exception:
-            return 0
+            self.File.seek(pos, 0)
+        except:
+            pass
+        return size
 
-    def getData(self, size: int) -> bytes:
-        """
-        Reads a specified number of bytes.
 
-        Args:
-            size: Number of bytes to read.
+    def getData(self, datasize):
+        data = self.File.readBytes(datasize)
+        return data
 
-        Returns:
-            The read bytes.
-        """
-        return self.File.readBytes(size)
 
-    def getDataSize(self) -> int:
-        """
-        Reads the size of the next data block.
+    def getDataSize(self):
+        data = self.File.readBytes(1)
 
-        Returns:
-            Size of the data block.
-        """
         try:
-            first_byte = struct.unpack(">B", self.File.readBytes(1))[0]
-            data_size = first_byte & 0x7F
-            if first_byte >> 7 != 1:
-                for _ in range(3):
-                    next_byte = struct.unpack(">B", self.File.readBytes(1))[0]
-                    data_size = (data_size << 8) | next_byte
-            return data_size
-        except Exception:
-            return 0
+            firstbyte = struct.unpack('>B', data)[0]
+            datasize = firstbyte
+            mask = 0xFFFF
+    
+            for i in range(8):
+                if datasize >> (7 - i) == 1:
+                    mask = mask ^ (1 << (7 - i))
+                    break
 
-    def getEBMLId(self) -> int:
-        """
-        Reads the EBML ID.
+            datasize = datasize & mask
+    
+            if firstbyte >> 7 != 1:
+                for i in range(1, 8):
+                    datasize = (datasize << 8) + struct.unpack('>B', self.File.readBytes(1))[0]
 
-        Returns:
-            EBML ID.
-        """
+                    if firstbyte >> (7 - i) == 1:
+                        break
+        except:
+            datasize = 0
+
+        return datasize
+
+
+    def getEBMLId(self):
+        data = self.File.readBytes(1)
         try:
-            first_byte = struct.unpack(">B", self.File.readBytes(1))[0]
-            ebml_id = first_byte
-            if first_byte >> 7 != 1:
-                for _ in range(3):
-                    next_byte = struct.unpack(">B", self.File.readBytes(1))[0]
-                    ebml_id = (ebml_id << 8) | next_byte
-            return ebml_id
-        except Exception:
-            return 0
+            firstbyte = struct.unpack('>B', data)[0]
+            ID = firstbyte
+
+            if firstbyte >> 7 != 1:
+                for i in range(1, 4):
+                    ID = (ID << 8) + struct.unpack('>B', self.File.readBytes(1))[0]
+
+                    if firstbyte >> (7 - i) == 1:
+                        break
+        except:
+            ID = 0
+        return ID

@@ -1,4 +1,5 @@
 v.0.6.1
+-Fixed Channel Manager "Select","Auto" channel logo.
 - Refactored "Paused Channel" Adv. channel rule to work between multi-room instances [Experimental].
 - Added Channel editing support for multi-room instances [Experimental].
 - Fixed Adv. Channel rules "Post-Roll.

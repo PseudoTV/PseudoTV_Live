@@ -337,12 +337,12 @@ class JSONRPC:
         else:     return self.sendJSON(param).get('result', {}).get(key)
     
     
-    def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected during playback, accurate meta...
+    def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected by player, accurate meta.
         self.cache.set('getRuntime.%s'%(getMD5(item.get('file'))), runtime, checksum=getMD5(item.get('file')), expiration=datetime.timedelta(days=28), json_data=False)
         if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)) and save and runtime > 0: self.queDuration(item, runtime=runtime)
     
         
-    def _getRuntime(self, item={}): #get runtime collected during playback, else less accurate provider meta
+    def _getRuntime(self, item={}): #get runtime collected by player, else less accurate provider meta
         runtime = self.cache.get('getRuntime.%s'%(getMD5(item.get('file'))), checksum=getMD5(item.get('file')), json_data=False)
         return (runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         
@@ -371,13 +371,13 @@ class JSONRPC:
         return runtime
 
 
-    def getTotRuntime(self, items={}):
+    def getTotRuntime(self, items=[]):
         total = sum([self._getRuntime(item) for item in items])
         self.log("getTotRuntime, items = %s, total = %s" % (len(items), total))
         return total
 
 
-    def getTotDuration(self, items={}):
+    def getTotDuration(self, items=[]):
         total = sum([self.getDuration(item.get('file'),item) for item in items])
         self.log("getTotDuration, items = %s, total = %s" % (len(items), total))
         return total

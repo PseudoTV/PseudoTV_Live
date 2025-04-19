@@ -504,7 +504,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             else:     logo = citem.get('logo')
             if not logo or logo in [LOGO,COLOR_LOGO,ICON]:
                 with self.toggleSpinner():
-                    citem['logo'] = self.resource.getLogo(citem)
+                    citem['logo'] = self.resource.getLogo(citem,auto=True)
         self.log('setLogo, id = %s, logo = %s, force = %s'%(citem.get('id'),citem.get('logo'),force))
         return citem
        
@@ -721,52 +721,50 @@ class Manager(xbmcgui.WindowXMLDialog):
             # resource://resource.images.studios.white/Amazon.png
             return chlogo
         
-        def __select(chname):
-            def _build(logo):
-                return self.buildListItem('%s| %s'%(logos.index(logo)+1, chname), unquoteString(logo), logo, [logo])
+        def __select():
+            def _build(logos, logo):
+                label = os.path.splitext(os.path.basename(logo))[0]
+                return self.buildListItem('%s| %s'%(logos.index(logo)+1, label.upper() if len(label) <= 4 else label.title()), unquoteString(logo), logo, [logo])
                 
             DIALOG.notificationDialog(LANGUAGE(32140))
             with self.toggleSpinner():
-                logos = self.resource.selectLogo(channelData)
-                listitems = poolit(_build)(logos)
+                chname = channelData.get('name')
+                logos  = self.resource.selectLogo(channelData)
+                listitems = poolit(_build)(*(logos,logos))
             select = DIALOG.selectDialog(listitems,'%s (%s)'%(LANGUAGE(32066).split('[CR]')[1],chname),useDetails=True,multi=False)
             if select is not None: return listitems[select].getPath()
 
-        def __browse(chname):
+        def __browse():
             with self.toggleSpinner():
+                chname = channelData.get('name')
                 retval = DIALOG.browseSources(type=1,heading='%s (%s)'%(LANGUAGE(32066).split('[CR]')[0],chname), default=channelData.get('icon',''), shares='files', mask=xbmc.getSupportedMedia('picture'), exclude=[12,13,14,15,16,17,21,22])
             if FileAccess.copy(__cleanLogo(retval), os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
                 if FileAccess.exists(os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
                     return os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')
             return retval
             
-        def __match(chname):
+        def __match():
             with self.toggleSpinner():
-                return self.resource.getLogo(chname)
+                return self.resource.getLogo(channelData,auto=True)
 
-        chname  = channelData.get('name')
-        if not chname: return DIALOG.notificationDialog(LANGUAGE(32065))
-        
+        if not channelData.get('name'): return DIALOG.notificationDialog(LANGUAGE(32065))
         chlogo = None
         retval = DIALOG.yesnoDialog(LANGUAGE(32066), heading     ='%s - %s'%(ADDON_NAME,LANGUAGE(32172)),
                                                      nolabel     = LANGUAGE(32067), #Select
                                                      yeslabel    = LANGUAGE(32068), #Browse
                                                      customlabel = LANGUAGE(30022)) #Auto
               
-        if   retval == 0: chlogo = __select(chname)
-        elif retval == 1: chlogo = __browse(chname)
-        elif retval == 2: chlogo = __match(chname)
+        if   retval == 0: chlogo = __select()
+        elif retval == 1: chlogo = __browse()
+        elif retval == 2: chlogo = __match()
         else: DIALOG.notificationDialog(LANGUAGE(32070))
-        self.log('switchLogo, chname = %s, chlogo = %s'%(chname,chlogo))
-        
-        if chlogo:
+        if chlogo and chlogo != LOGO:
+            self.log('switchLogo, chname = %s, chlogo = %s'%(channelData.get('name'),chlogo))
+            DIALOG.notificationDialog(LANGUAGE(32139))
             self.madeChanges = True
             channelData['logo'] = chlogo
-            DIALOG.notificationDialog(LANGUAGE(32139))
-            if self.isVisible(self.itemList): self.buildChannelItem(channelData)
-            else:
-                self.newChannels[channelPOS] = channelData
-                self.fillChanList(self.newChannels,refresh=True,focus=channelPOS)
+            self.newChannels[channelPOS] = channelData
+            self.fillChanList(self.newChannels,refresh=True,focus=channelPOS)
 
 
     def isVisible(self, cntrl):

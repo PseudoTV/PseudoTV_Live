@@ -52,31 +52,35 @@ class Resources:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getLogo(self, citem: dict, logo=LOGO) -> str:
+    def getLogo(self, citem: dict, logo=LOGO, auto=False) -> str:
         logo = logo.replace(LOGO,'')
-        if not logo: logo = self.getLocalLogo(citem.get('name'))  #local
-        if not logo: logo = self.getCachedLogo(citem)             #cache
+        if not logo:          logo = self.getLocalLogo(citem.get('name'))  #local
+        if not logo:          logo = self.getCachedLogo(citem)             #cache
+        if not logo and auto: logo = self.getLogoResources(citem)
+        if not logo and auto: logo = self.getTVShowLogo(citem.get('name'))
         if not logo: logo = LOGO
-        self.log('getLogo, chname = %s, logo = %s'%(citem.get('name'), logo))
+        self.log('getLogo, chname = %s, logo = %s, auto = %s'%(citem.get('name'), logo, auto))
         return logo
         
 
+    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
     def selectLogo(self, citem: dict) -> list:
         logos = []
         logos.extend(self.getLocalLogo(citem.get('name'),select=True))
         logos.extend(self.getLogoResources(citem, select=True))
-        logos.append(self.getTVShowLogo(citem.get('name')))
+        logos.extend(self.getTVShowLogo(citem.get('name'), select=True))
         self.log('selectLogo, chname = %s, logos = %s'%(citem.get('name'), len(logos)))
         return list([_f for _f in logos if _f])
 
 
     def getCachedLogo(self, citem, select=False):
-        self.log('getCachedLogo, chname = %s, type = %s'%(citem.get('name'), citem.get('type')))
         cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select),'checksum':getMD5('|'.join(self.getResources(citem))), 'args':(citem,select)},
-                      {'name':'getTVShowLogo.%s'%(getMD5(citem.get('name')))             ,'checksum':ADDON_VERSION                             , 'args':(citem.get('name'),)}]
+                      {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   ,'checksum':ADDON_VERSION                             , 'args':(citem.get('name'), select)}]
         for cacheItem in cacheFuncs:
             cacheResponse = self.cache.get(cacheItem.get('name',''),cacheItem.get('checksum',ADDON_VERSION))
-            if cacheResponse: return cacheResponse
+            if cacheResponse: 
+                self.log('getCachedLogo, chname = %s, type = %s, logo = %s'%(citem.get('name'), citem.get('type'), cacheResponse))
+                return cacheResponse
             else: self.queueLOGO(cacheItem)
                 
 
@@ -85,7 +89,7 @@ class Resources:
         params = queuePool.setdefault('params',[])
         params.append(param)
         queuePool['params'] = setDictLST(params)
-        self.log("queueLOGO, saving = %s\n%s"%(len(queuePool['params']),param))
+        self.log("queueLOGO, saving = %s, param = %s"%(len(queuePool['params']),param))
         SETTINGS.setCacheSetting('queueLOGO', queuePool, json_data=True)
 
 
@@ -100,14 +104,13 @@ class Resources:
         if select: return logos
         
         
-    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
     def fillLogoResource(self, id, version=ADDON_VERSION):
         results  = {}
-        response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=version, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+        response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=version, expiration=datetime.timedelta(days=28))
         for path, images in list(response.items()):
             for image in images:
                 name, ext = os.path.splitext(image)
-                results[name] = os.path.join(path,image)
+                results[name] = '%s/%s'%(path,image)
         return results
         
         
@@ -117,29 +120,26 @@ class Resources:
         elif citem.get('type') in ["TV Networks","Movie Studios"]:            resources.extend(STUDIO_RESOURCE)
         elif citem.get('type') in ["Music Genres","Radio"] or isRadio(citem): resources.extend(MUSIC_RESOURCE)
         else:                                                                 resources.extend(GENRE_RESOURCE + STUDIO_RESOURCE)
-        self.log('getResources, type = %s\nresources = %s'%(citem.get('type'),resources))
+        self.log('getResources, type = %s, resources = %s'%(citem.get('type'),resources))
         return resources
         
         
     def getLogoResources(self, citem: dict, select: bool=False) -> dict and None:
-        self.log('getLogoResources, chname = %s, type = %s'%(citem.get('name'), citem.get('type')))
+        self.log('getLogoResources, chname = %s, type = %s, select = %s'%(citem.get('name'), citem.get('type'),select))
         logos     = []
         resources = self.getResources(citem)
         cacheName = 'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select)
         cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
-                if self.service._interrupt(): 
-                    self.log('getLogoResources, _interrupt')
-                    break
-                elif not hasAddon(id):
+                if not hasAddon(id):
                     self.log('getLogoResources, missing %s'%(id))
                     continue
                 else:
                     results = self.fillLogoResource(id, self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION))
                     self.log('getLogoResources, checking %s, results = %s'%(id,len(results)))
                     for name, logo in list(results.items()):
-                        if self.matchName(citem.get('name'), name):
+                        if self.matchName(citem.get('name'), name, auto=select):
                             self.log('getLogoResources, found %s'%(logo))
                             if select: logos.append(logo)
                             else: return self.cache.set(cacheName, logo, checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
@@ -147,30 +147,33 @@ class Resources:
         return cacheResponse
         
 
-    def getTVShowLogo(self, chname: str) -> dict and None:
-        self.log('getTVShowLogo, chname = %s'%(chname))
+    def getTVShowLogo(self, chname: str, select: bool=False) -> dict and None:
+        self.log('getTVShowLogo, chname = %s, select = %s'%(chname,select))
+        logos     = []
         items     = self.jsonRPC.getTVshows()
-        cacheName = 'getTVShowLogo.%s'%(getMD5(chname))
+        cacheName = 'getTVShowLogo.%s.%s'%(getMD5(chname),select)
         cacheResponse = self.cache.get(cacheName)
         if not cacheResponse:
             for item in items:
-                if self.matchName(chname, item.get('title','')):
+                if self.matchName(chname, item.get('title',''), auto=select):
                     keys = ['clearlogo','logo','logos','clearart','icon']
                     for key in keys:
-                        logo = item.get('art',{}).get(key,'').replace('image://DefaultFolder.png/','')
+                        logo = item.get('art',{}).get(key,'').replace('image://DefaultFolder.png/','').rstrip('/')
                         if logo:
                             self.log('getTVShowLogo, found %s'%(logo))
-                            return self.cache.set(cacheName, logo, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                            if select: logos.append(logo)
+                            else: return self.cache.set(cacheName, logo, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            if select: return self.cache.set(cacheName, logos, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
         
         
     #todo refactor this mess, proper pattern matching...
     def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None: #todo auto setting SETTINGS.getSettingBool('')
-        chnames = list(set([chname, slugify(chname), validString(chname), chname.replace('and', '&'), chname.replace('&','and'), stripRegion(chname), getChannelSuffix(chname, type), cleanChannelSuffix(chname, type)]))
-        renames = list(set([name, slugify(name), validString(name), splitYear(name)[0], stripRegion(name)]))
+        chnames = list(set([chname, chname.replace('and', '&'), chname.replace('&','and'), getChannelSuffix(chname, type), cleanChannelSuffix(chname, type), splitYear(chname)[0], stripRegion(chname), slugify(chname), validString(chname)]))
+        renames = list(set([name, splitYear(name)[0], stripRegion(name), slugify(name), validString(name)]))
         for chname in chnames:
             if not chname: continue
-            elif auto: return SequenceMatcher(None, chname, name).ratio() > .8
+            elif auto: return SequenceMatcher(None, chname.lower(), name.lower()).ratio() >= .75
             elif chname.lower() == name.lower(): return True
             for rename in renames:
                 if not rename: continue

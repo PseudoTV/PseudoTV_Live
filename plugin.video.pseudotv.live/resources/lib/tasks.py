@@ -82,8 +82,10 @@ class Tasks():
             if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=4):
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Debug_Enable',False)
-                DIALOG.notificationDialog(LANGUAGE(321423))
-        self.jsonRPC.setSettingValue("debug.showloginfo",SETTINGS.getSettingBool('Debug_Enable'))
+                DIALOG.notificationDialog(LANGUAGE(32025))
+                
+        if SETTINGS.getSettingBool('Enable_PVR_RELOAD'):
+            self.jsonRPC.setSettingValue("debug.showloginfo",SETTINGS.getSettingBool('Debug_Enable'))
 
 
     def chkBackup(self):

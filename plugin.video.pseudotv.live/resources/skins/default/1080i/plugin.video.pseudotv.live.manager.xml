@@ -397,8 +397,20 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <visible>Control.IsVisible(5)|Control.IsVisible(6)</visible>
+                    <visible>Control.IsVisible(5)</visible>
                     <texture fallback="logo.png">$INFO[Container(5).ListItem.Art(icon)]</texture>
+                </control>
+                <control type="image">
+                    <description>Logo Image</description>
+                    <left>45</left>
+                    <top>45</top>
+                    <height>210</height>
+                    <width>210</width>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <aspectratio>keep</aspectratio>
+                    <visible>Control.IsVisible(6)</visible>
+                    <texture fallback="logo.png">$INFO[Container(6).ListItem.Art(icon)]</texture>
                 </control>
             </control>
             <control type="grouplist" id="9000">

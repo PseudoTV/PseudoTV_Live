@@ -1570,9 +1570,8 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
         return os.path.join(TEMP_LOC,'%s.json'%(getMD5('%s.%s'%(SETTINGS.getFriendlyName(),id))))
         
         
-    def _getTotDuration(self, id, filelist=[]):
+    def _getTotRuntime(self, id, filelist=[]):
         from jsonrpc import JSONRPC
-        self.log('[%s] _getTotDuration, filelist = %s'%(id,len(filelist)))
         return JSONRPC().getTotRuntime(filelist)
             
 
@@ -1581,10 +1580,10 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
         updated = self._getResume(citem.get('id')).get('updated',{})
         try:    viewed = '%s: %s (%s)'%(LANGUAGE(32250),datetime.datetime.fromtimestamp(updated.get('time')).strftime(BACKUP_TIME_FORMAT),updated.get('instance'))
         except: viewed = LANGUAGE(32251)
-        return builder.buildCells(citem, duration=self._getTotDuration(citem.get('id'), filelist), entries=1, 
+        return builder.buildCells(citem, duration=self._getTotRuntime(citem.get('id'), filelist), entries=1, 
                                   info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
                                         "episodetitle":viewed,
-                                        "plot":'%s: %s\nSize: %s\nRuntime: ~%s hrs.'%(LANGUAGE(32249),datetime.datetime.fromtimestamp(time.time()).strftime(BACKUP_TIME_FORMAT),len(filelist),round(self._getTotDuration(citem.get('id'), filelist)//60//60)),
+                                        "plot":'%s: %s\nSize: %s\nRuntime: ~%s hrs.'%(LANGUAGE(32249),datetime.datetime.fromtimestamp(time.time()).strftime(BACKUP_TIME_FORMAT),len(filelist),round(self._getTotRuntime(citem.get('id'), filelist)//60//60)),
                                         "art":{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
 
             
@@ -1645,7 +1644,7 @@ class PauseRule(BaseRule): #Finial RULES [3000-~]
             parameter['resume'] = True
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: #load cached filelist if not outdated, else new buildFileList
-            if self._getTotDuration(citem.get('id'), self.storedValues[1]) >= (MIN_GUIDEDAYS * 86400): 
+            if self._getTotRuntime(citem.get('id'), self.storedValues[1]) >= (MIN_GUIDEDAYS * 86400): 
                 self.log("[%s] runAction, returning valid cached filelist = %s"%(citem.get('id'),len(self.storedValues[1])))
                 return [self.storedValues[1]]
             

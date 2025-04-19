@@ -255,32 +255,33 @@ class HTTP:
         return port
 
 
-    def _start(self):
-        if self.service.monitor.waitForAbort(0.001): self._stop()
-        elif not self.isRunning:
-            try:
-                IP  = SETTINGS.getIP()
-                TCP = SETTINGS.getSettingInt('TCP_PORT')
-                PORT= self.chkPort(TCP,redirect=True)
-                if   PORT is None: raise Exception('Port: %s In-Use!'%(PORT))
-                elif PORT != TCP: SETTINGS.setSettingInt('TCP_PORT',PORT)
-                LOCAL_HOST = PROPERTIES.setRemoteHost('%s:%s'%(IP,PORT))
-                self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
-                
-                SETTINGS.setSetting('Remote_NAME' ,SETTINGS.getFriendlyName())
-                SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
-                SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
-                SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
-                
-                self.isRunning = True
-                self._server = ThreadedHTTPServer((IP, PORT), partial(RequestHandler,monitor=self.service.monitor))
-                self._server.allow_reuse_address = True
-                self._httpd_thread = Thread(target=self._server.serve_forever)
-                self._httpd_thread.daemon=True
-                self._httpd_thread.start()
-            except Exception as e: self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
-        DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[self.isRunning])))
-        SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[self.isRunning]))
+    def _start(self, wait=900):
+        while not self.service.monitor.abortRequested():
+            if not self.isRunning:
+                try:
+                    IP  = SETTINGS.getIP()
+                    TCP = SETTINGS.getSettingInt('TCP_PORT')
+                    PORT= self.chkPort(TCP,redirect=True)
+                    if   PORT is None: raise Exception('Port: %s In-Use!'%(PORT))
+                    elif PORT != TCP: SETTINGS.setSettingInt('TCP_PORT',PORT)
+                    LOCAL_HOST = PROPERTIES.setRemoteHost('%s:%s'%(IP,PORT))
+                    self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
+                    
+                    SETTINGS.setSetting('Remote_NAME' ,SETTINGS.getFriendlyName())
+                    SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
+                    SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
+                    SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
+                    
+                    self.isRunning = True
+                    self._server = ThreadedHTTPServer((IP, PORT), partial(RequestHandler,monitor=self.service.monitor))
+                    self._server.allow_reuse_address = True
+                    self._httpd_thread = Thread(target=self._server.serve_forever)
+                    self._httpd_thread.daemon=True
+                    self._httpd_thread.start()
+                except Exception as e: self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
+                self._update()
+            if self.service.monitor.waitForAbort(wait): break
+        self._stop()
         
         
     def _stop(self):
@@ -295,6 +296,12 @@ class HTTP:
                     except: pass
         except Exception as e: self.log("_stop, Failed! %s"%(e), xbmc.LOGERROR)
         self.isRunning = False
+        self._update()
+        
+       
+    def _update(self):
+        DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[self.isRunning])))
+        SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[self.isRunning]))
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
