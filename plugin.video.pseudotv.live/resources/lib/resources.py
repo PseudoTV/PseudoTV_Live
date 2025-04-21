@@ -169,7 +169,7 @@ class Resources:
         
     #todo refactor this mess, proper pattern matching...
     def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None: #todo auto setting SETTINGS.getSettingBool('')
-        chnames = list(set([chname, chname.replace('and', '&'), chname.replace('&','and'), getChannelSuffix(chname, type), cleanChannelSuffix(chname, type), splitYear(chname)[0], stripRegion(chname), slugify(chname), validString(chname)]))
+        chnames = list(set([chname, splitYear(chname)[0], stripRegion(chname), getChannelSuffix(chname, type), cleanChannelSuffix(chname, type), chname.replace('and', '&'), chname.replace('&','and'), slugify(chname), validString(chname)]))
         renames = list(set([name, splitYear(name)[0], stripRegion(name), slugify(name), validString(name)]))
         for chname in chnames:
             if not chname: continue

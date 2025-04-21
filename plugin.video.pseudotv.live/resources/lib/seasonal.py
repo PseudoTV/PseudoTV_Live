@@ -18,9 +18,17 @@
 # -*- coding: utf-8 -*-
 # Adapted from https://github.com/sualfred/script.embuary.helper/blob/matrix
 
+# https://www.holidaysmart.com/holidays/daily/fandom
+# https://www.holidaysmart.com/holidays/daily/tv-movies
+           
 from globals     import *
-from seasons     import *
 
+TV_QUERY    = {"path":"videodb://tvshows/titles/" ,"limits":{},"sort":{},"filter":{},
+               "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}
+               
+MOVIE_QUERY = {"path":"videodb://movies/titles/"  ,"limits":{},"sort":{},"filter":{},
+               "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"}
+    
 FILTER      = {"field":"","operator":"","value":[]}
 SORT        = {"method":"","order":"","ignorearticle":True,"useartistsortname":True}
 KEY_QUERY   = {"method":"","order":"","field":'',"operator":'',"value":[]}
@@ -42,13 +50,30 @@ class Seasonal:
         """
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
-    def getMonth(self):
+    def getYear(self):
         """
-        Retrieves the current month as a full name (e.g., "January").
+        Get the current year.
 
-        :return: The name of the current month.
+        This function retrieves the current year using the `datetime` module.
+
+        returns:
+        int: The current year.
         """
-        return datetime.datetime.now().strftime('%B')
+        return datetime.datetime.now().year
+
+    def getMonth(self, name=False):
+        """
+        Get the current month in either name or numeric format.
+
+        Args:
+            name (bool): If True, returns the full name of the current month (e.g., 'April').
+                         If False, returns the numeric representation of the current month (e.g., 4).
+
+        Returns:
+            str/int: The current month as a string (full name) or as an integer (numeric format).
+        """
+        if name: return datetime.datetime.now().strftime('%B')  # Full month name
+        else:    return datetime.datetime.now().month  # Numeric month
 
     def getWeek(self):
         """
@@ -58,14 +83,54 @@ class Seasonal:
         :return: The current week of the month as an integer (1 to 5).
         """
         dt = datetime.datetime.now()
-        adjusted_dom = dt.day + dt.replace(day=1).weekday()
+        adjusted_dom = self.getDay()
         week = (adjusted_dom / 7.0)
-        if week < 1 or week > 4:
-            return int(ceil(week))
-        else:
-            return int(floor(week))
+        if week < 1 or week > 4: return int(ceil(week))
+        else:                    return int(floor(week))
 
-    @cacheit(expiration=datetime.timedelta(minutes=5), checksum=PROPERTIES.getInstanceID())
+    def getDay(self):
+        """
+        Calculate and return the adjusted day of the month.
+
+        This function adds the current day of the month to the weekday of the first day of the current month.
+        The result can be used to determine the week number or other date-based calculations.
+
+        Returns:
+            int: Adjusted day of the month.
+        """
+        dt = datetime.datetime.now()
+        return dt.day + dt.replace(day=1).weekday()
+
+    def getDOM(self, year, month):
+        """
+        Get all days of the specified month for a given year.
+
+        This function uses the `calendar.Calendar` class to iterate through all days of the specified month and year.
+        It extracts only the valid days (ignoring placeholder zeros for days outside the month) and returns them as a list.
+
+        Args:
+            year (int): The year of the desired month.
+            month (int): The month (1-12) for which to retrieve the days.
+
+        Returns:
+            list: A list of integers representing the days in the specified month.
+        """
+        cal = calendar.Calendar()
+        days_in_month = []
+        for day in cal.itermonthdays2(year, month):
+            if day[0] != 0:  # Exclude placeholder days (zeros)
+                days_in_month.append(day[0])
+        return days_in_month
+
+    @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
+    def getSeason(self, key):
+        return getJSON(HOLIDAYS).get(key,{})
+
+    @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
+    def getSeasons(self, month):
+        return getJSON(SEASONS).get(month,{})
+
+    @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
     def getHoliday(self, nearest=SETTINGS.getSettingBool('Nearest_Holiday')):
         """
         Retrieves the current or nearest holiday based on user settings.
@@ -74,10 +139,8 @@ class Seasonal:
         :return: A dictionary representing the holiday details.
         """
         self.log('getHoliday, nearest = %s' % (nearest))
-        if nearest:
-            return self.getNearestHoliday()
-        else:
-            return self.getCurrentHoliday()
+        if nearest: return self.getNearestHoliday()
+        else:       return self.getCurrentHoliday()
 
     def getCurrentHoliday(self):
         """
@@ -85,7 +148,7 @@ class Seasonal:
 
         :return: A dictionary representing the holiday details for the current month and week.
         """
-        return SEASONS.get(self.getMonth(), {}).get(self.getWeek(), {})
+        return self.getSeasons(self.getMonth(name=True)).get(self.getDay(),{})
 
     def getNearestHoliday(self, fallback=True):
         """
@@ -96,19 +159,19 @@ class Seasonal:
         :return: A dictionary representing the nearest holiday.
         """
         holiday = {}
-        month = self.getMonth()
-        week = self.getWeek()
-        weeks = [1, 2, 3, 4, 5][week - 1:]  # Running a 5-week month for extended weeks > 28 days.
+        month = self.getMonth(name=True)
+        day   = self.getDay()
+        dom   = self.getDOM(self.getYear(),self.getMonth())
+        curr  = dom[day - 1:] # Running a 5-week month for extended weeks > 28 days.
         if fallback:
-            past = [1, 2, 3, 4, 5][:week - 1]
+            past = dom[:day - 1]
             past.reverse()
-            weeks = weeks + past
-        for next in weeks:
-            holiday = SEASONS.get(month, {}).get(str(next), {})
-            if holiday.get('keyword'):
-                break
-        self.log('getNearestHoliday, using fallback = %s, month = %s, week = %s, nearest week = %s, returning = %s' %
-                 (fallback, month, week, next, holiday))
+            days = curr + past
+            
+        for next in days:
+            holiday = self.getSeasons(self.getMonth(name=True)).get(month,{}).get(str(next),{})
+            if holiday.get('keyword'): break
+        self.log('getNearestHoliday, using fallback = %s, month = %s, day = %s, nearest day = %s, returning = %s' %(fallback, month, day, next, holiday))
         return holiday
 
     def buildSeasonal(self):
@@ -120,16 +183,13 @@ class Seasonal:
         """
         self.log('buildSeasonal')
         season = self.getHoliday()
-        for query in season.get('query', []):
-            for param in KEYWORDS.get(season.get('keyword', {}), {}).get(query.get('key', {}), {}):
+        for query in [TV_QUERY, MOVIE_QUERY]:
+            for param in self.getSeason(season.get('keyword')).get(query.get('key',{})):
                 item = query.copy()
                 holiday = season.copy()
-                holiday.pop("query")
                 item["holiday"] = holiday
                 item_sort = SORT.copy()
-                if param.get("sort"):
-                    item_sort.update(param.get("sort"))
+                if param.get("sort"): item_sort.update(param.get("sort"))
                 item["sort"] = item_sort
-                if param.get("filter"):
-                    item["filter"] = param.get("filter")
+                if param.get("filter"): item["filter"] = param.get("filter")
                 yield item

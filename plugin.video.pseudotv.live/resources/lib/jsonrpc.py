@@ -615,7 +615,7 @@ class JSONRPC:
         return callback# or (('%s%s'%(self.sysARG[0],self.sysARG[2])).split('%s&'%(slugify(ADDON_NAME))))[0])
         
         
-    def matchChannel(self, chname: str, id: str, radio: bool=False):
+    def matchChannel(self, chname: str, id: str, radio: bool=False, extend=True):
         self.log('[%s] matchChannel, chname = %s, radio = %s'%(id,chname,radio))
         def __match():
             channels = self.getPVRChannels(radio)
@@ -647,13 +647,16 @@ class JSONRPC:
         cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
         
         if not cacheResponse:
-            pvritem = __match()
-            if pvritem: cacheResponse = self.cache.set(cacheName, __extend(pvritem), checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=FIFTEEN), json_data=True)
+            pvrItem = __match()
+            if extend: pvrItem = __extend(pvrItem)
+            cacheResponse = self.cache.set(cacheName, pvrItem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=FIFTEEN), json_data=True)
         return cacheResponse
         
         
     def getNextItem(self, citem, nitem): #return next broadcast ignoring fillers
-        nextitems = self.matchChannel(citem.get('name',''), citem.get('id',''), citem.get('radio',False)).get('broadcastnext',[])
+        nextitems = sorted(self.matchChannel(citem.get('name',''), citem.get('id',''), citem.get('radio',False)).get('broadcastnext',[]), key=itemgetter('starttime'))
         for nextitem in nextitems:
             if not isFiller(nextitem): return decodePlot(nextitem.get('plot',''))
         return nitem
+        
+        

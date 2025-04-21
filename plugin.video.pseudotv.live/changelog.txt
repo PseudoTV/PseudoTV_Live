@@ -1,4 +1,5 @@
 v.0.6.1
+-Updated Seasonal channel to include days of the week; expanding holiday channel content.
 -Fixed Channel Manager "Select","Auto" channel logo.
 - Refactored "Paused Channel" Adv. channel rule to work between multi-room instances [Experimental].
 - Added Channel editing support for multi-room instances [Experimental].

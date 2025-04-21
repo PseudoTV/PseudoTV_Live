@@ -1,0 +1,2221 @@
+{
+    "January": {
+        "1": {
+            "name": "New Years Anthologies",
+            "tagline": "“You're traveling through another dimension...“",
+            "keyword": "newyear",
+            "logo": "https://assets.stickpng.com/images/580b57fcd9996e24bc43c410.png"
+        },
+        "2": {
+            "name": "Science Fiction Day",
+            "tagline": "“Science fiction frees you to go anyplace and examine anything.“",
+            "keyword": "scifi",
+            "logo": "https://www.pngall.com/wp-content/uploads/6/Science-Fiction-PNG-Free-Download.png"
+        },
+        "3": {
+            "name": "Sergio Leone's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "6": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "13": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "Steven Soderbergh's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": " Regina King's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "Popeye Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "Winnie the Pooh Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "David Lynch's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "Breaking Bad Day",
+            "tagline": "“I am the one who knocks!”",
+            "keyword": "breakingbad",
+            "logo": ""
+        },
+        "22": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "23": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "Lego Day",
+            "tagline": "“With a bucket of Lego, you can tell any story.“",
+            "keyword": "lego",
+            "logo": ""
+        },
+        "29": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "31": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        }
+    },
+    "February": {
+        "1": {
+            "name": "G.I. Joe Day",
+            "tagline": "“A Real American Hero!“",
+            "keyword": "gijoe",
+            "logo": "https://preview.redd.it/zul0o3zwo2r71.png?width=640&crop=smart&auto=webp&s=4ad37682d57f808ce82dba51c9aeaebce5b59258"
+        },
+        "2": {
+            "name": "Groundhog Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "3": {
+            "name": "Anthony Russo's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "6": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "Pixar Day",
+            "tagline": "“To infinity and beyond!“",
+            "keyword": "pixar",
+            "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/0/0d/Pixar_Luxo_Icon_logo.svg/1200px-Pixar_Luxo_Icon_logo.svg.png"
+        },
+        "10": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "Darren Aronofsky's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "13": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "Valentine's Day",
+            "tagline": "“Love is in the air!“",
+            "keyword": "romance",
+            "logo": "https://icons.iconarchive.com/icons/designbolts/valentine/512/Happy-valentines-day-icon.png"
+        },
+        "15": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "Michael Bay's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "John Hughes's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "Jordan Peele's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "23": {
+            "name": "Pinocchio Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "Pokémon Day",
+            "tagline": "“Gotta Catch'em All“",
+            "keyword": "pokemon",
+            "logo": "https://1000logos.net/wp-content/uploads/2017/05/Pokemon-Logo-1998.png"
+        },
+        "28": {
+            "name": "Mardi Gras",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "29": {
+            "name": "Superman's Birthday",
+            "tagline": "“Truth, justice, and the American way.“",
+            "keyword": "superman",
+            "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Superman_S_symbol.svg/2560px-Superman_S_symbol.svg.png"
+        }
+    },
+    "March": {
+        "1": {
+            "name": "Ron Howard's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "2": {
+            "name": "Dr. Seuss Day",
+            "tagline": "“Think and wonder. Wonder and think.”",
+            "keyword": "seuss",
+            "logo": "https://static.wikia.nocookie.net/logopedia/images/9/90/Dr._Seuss.svg/revision/latest?cb=20180125222130"
+        },
+        "3": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "6": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "Barbie Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "Mario Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "Alfred Hitchcock Day",
+            "tagline": "“Always make the audience suffer...”",
+            "keyword": "hitchcock",
+            "logo": "https://upload.wikimedia.org/wikipedia/fr/6/6b/Alfred_Hitchcock_pr%C3%A9sente.png"
+        },
+        "13": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "Pi Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": "World Contact Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "Spike Lee's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "Quentin Tarantino's Birthday!",
+            "tagline": "“If you just love movies enough, you can make a good one.”",
+            "keyword": "quentin",
+            "logo": "https://rat.in.ua/wp-content/uploads/2019/11/4758-Written-and-Directed-by-Quentin-Tarantino.png"
+        },
+        "23": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "Tolkien Reading Day",
+            "tagline": "“One ring to rule them all.“",
+            "keyword": "lotr",
+            "logo": "https://www.pngall.com/wp-content/uploads/12/Lord-Of-The-Rings-Logo-PNG-Picture.png"
+        },
+        "26": {
+            "name": "Live Long and Prosper Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "29": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "31": {
+            "name": "Chloé Zhao's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        }
+    },
+    "April": {
+        "1": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "2": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "3": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "Star Trek First Contact Day",
+            "tagline": "“To Boldly Go...“",
+            "keyword": "startrek",
+            "logo": "https://assets.stickpng.com/images/613794434b96600004f67704.png"
+        },
+        "6": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "Francis Ford Coppola Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "13": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": "Emma Thompson Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "Superman Comic Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "John Waters Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "23": {
+            "name": "Shakespeare Day",
+            "tagline": "“Non Sans Droict“",
+            "keyword": "othello",
+            "logo": "https://ichef.bbci.co.uk/childrens-responsive-ichef-live/r/400/1x/cbbc/shakespeare-logov6.png"
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "Alien Day",
+            "tagline": "“In space, no one can hear you scream.“",
+            "keyword": "aliens",
+            "logo": "https://i.pngimg.me/thumb/f/720/m2i8N4d3d3A0d3d3.jpg"
+        },
+        "27": {
+            "name": "Woody Woodpecker Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "Superhero Day",
+            "tagline": "“I Can Do This All Day!“",
+            "keyword": "super",
+            "logo": "https://www.pinpng.com/pngs/m/10-106195_superhero-words-super-hero-clip-art-hostted-superhero.png"
+        },
+        "29": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "Bugs Bunny Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        }
+    },
+    "May": {
+        "1": {
+            "name": "Wes Anderson Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "2": {
+            "name": "Harry Potter Day",
+            "tagline": "“Draco Dormiens Nunquam Titillandus“",
+            "keyword": "potter",
+            "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/HP_-_Harry_Potter_wordmark.svg/438px-HP_-_Harry_Potter_wordmark.svg.png"
+        },
+        "3": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "Intergalactic Star Wars Day",
+            "tagline": "“May the force be with you.“",
+            "keyword": "starwars",
+            "logo": "https://assets.stickpng.com/thumbs/602176580ad3230004b93c22.png"
+        },
+        "5": {
+            "name": "Revenge of the Fifth",
+            "tagline": "“May the force be with you.“",
+            "keyword": "starwars",
+            "logo": "https://assets.stickpng.com/thumbs/602176580ad3230004b93c22.png"
+        },
+        "6": {
+            "name": "Orson Welles Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "Muppets Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "Twilight Zone Day",
+            "tagline": "“You are about to enter another dimension...“",
+            "keyword": "twilight",
+            "logo": "https://media.themoviedb.org/t/p/w500/4xJR8vKOczmaIYZ7BbWlEApqR0m.png"
+        },
+        "12": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "13": {
+            "name": "Top Gun Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "George Lucas / Sofia Coppola Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "Classic Movie Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "Chinonye Chukwu Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "Sherlock Holmes Day",
+            "tagline": "“The Game is Afoot!“",
+            "keyword": "watson",
+            "logo": "https://picfiles.alphacoders.com/123/123200.png"
+        },
+        "23": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "Dracula Day",
+            "tagline": "“Fidelis et mortem“",
+            "keyword": "vampire",
+            "logo": "https://assets.stickpng.com/thumbs/59f876c13cec115efb36237e.png"
+        },
+        "27": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "29": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "31": {
+            "name": "Clint Eastwood Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        }
+    },
+    "June": {
+        "1": {
+            "name": "Dinosaur  Day",
+            "tagline": "“Life finds a way.“",
+            "keyword": "jurassic",
+            "logo": "https://www.pngall.com/wp-content/uploads/13/Jurassic-Park-Logo-PNG.png"
+        },
+        "2": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "3": {
+            "name": "Wonder Woman Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "6": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "Ghostbusters Day",
+            "tagline": "“Who You Gonna Call?“",
+            "keyword": "ghosts",
+            "logo": "https://images.fineartamerica.com/images/artworkimages/medium/3/ghostbusters-original-logo-harlem-nellie-transparent.png"
+        },
+        "9": {
+            "name": "Aaron Sorkin Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "Superman Day",
+            "tagline": "“Truth, justice, and the American way.“",
+            "keyword": "superman",
+            "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Superman_shield.svg/1200px-Superman_shield.svg.png"
+        },
+        "13": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "Mermaid Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "23": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "Sidney Lumet Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "Paul Thomas Anderson Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "J.J. Abrams Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "Mel Brooks Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "29": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        }
+    },
+    "July": {
+        "1": {
+            "name": "Indiana Jones Day!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "2": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "3": {
+            "name": "Alice in Wonderland Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "Independence Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "6": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "13": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "SpongeBob Day",
+            "tagline": "“Three hours later“",
+            "keyword": "sponge",
+            "logo": "https://assets.stickpng.com/images/608b038d0517f5000437cced.png"
+        },
+        "15": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "Joseph Russo Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "Lana Wachowski Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "23": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "Stanley Kubrick Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "29": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "Christopher Nolan Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "31": {
+            "name": "Harry Potter Day",
+            "tagline": "“Draco Dormiens Nunquam Titillandus“",
+            "keyword": "potter",
+            "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/HP_-_Harry_Potter_wordmark.svg/438px-HP_-_Harry_Potter_wordmark.svg.png"
+        }
+    },
+    "August": {
+        "1": {
+            "name": "Spiderman Day",
+            "tagline": "“with great power comes great responsibility“",
+            "keyword": "spider",
+            "logo": "https://www.pngall.com/wp-content/uploads/13/Spiderman-Logo-Transparent.png"
+        },
+        "2": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "3": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "Gerta Gerwig Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "6": {
+            "name": "M. Night Shyamalan Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "13": {
+            "name": "Alfred Hitchcock Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "James Cameron Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "23": {
+            "name": "Lexi Alexander Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "24": {
+            "name": "Ava DuVernay Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "Tim Burton Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "David Fincher Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "29": {
+            "name": "Power Rangers Day",
+            "tagline": "“Everyone gets to be a Ranger!”",
+            "keyword": "ranger",
+            "logo": "https://freepngimg.com/download/power_rangers/21068-1-power-rangers-transparent-image.png"
+        },
+        "30": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "31": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        }
+    },
+    "September": {
+        "1": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "2": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "3": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "Werner Herzog Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "6": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "Star Trek Day",
+            "tagline": "“To Boldly Go...“",
+            "keyword": "startrek",
+            "logo": "https://assets.stickpng.com/images/613794434b96600004f67704.png"
+        },
+        "9": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "Guy Ritchie Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "13": {
+            "name": "Twilighters Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "Supernatural Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "Baz Luhrmann Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "Batman Day",
+            "tagline": "“I am vengeance, I am the night, I am Batman!”",
+            "keyword": "batman",
+            "logo": "https://wallpapers.com/images/hd/batman-symbol-logo-ynnut5vuvms1d5ge.jpg"
+        },
+        "21": {
+            "name": "Ethan Coen Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "Hobbit Day",
+            "tagline": "",
+            "keyword": "lotr",
+            "logo": "https://www.pngall.com/wp-content/uploads/12/Lord-Of-The-Rings-Logo-PNG-Picture.png"
+        },
+        "23": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "Comic Book Day",
+            "tagline": "Bam! Pow... BOOM!",
+            "keyword": "super",
+            "logo": "https://assets.dochipo.com/editor/animations/comic-word-art/e5bbe61b-3b6f-419f-91ff-87e08fa9a74e.gif"
+        },
+        "26": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "29": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "Thunderbirds Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        }
+    },
+    "October": {
+        "1": {
+            "name": "Willy Wonka Day",
+            "tagline": "“The Suspense Is Terrible. I Hope It’ll Last.”",
+            "keyword": "wonka",
+            "logo": "https://seeklogo.com/images/W/wonka-logo-AFC0443DD4-seeklogo.com.png"
+        },
+        "2": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "3": {
+            "name": "Mean Girls Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "6": {
+            "name": "Mad Hatter Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "Guillermo del Toro Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "Harry Potter Day",
+            "tagline": "“Draco Dormiens Nunquam Titillandus“",
+            "keyword": "potter",
+            "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/HP_-_Harry_Potter_wordmark.svg/438px-HP_-_Harry_Potter_wordmark.svg.png"
+        },
+        "13": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": "I Love Lucy Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "Danny Boyle / Anna Boden / Valerie Faris Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "Back to the Future Day",
+            "tagline": "“Great Scott!”",
+            "keyword": "future",
+            "logo": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Back_to_the_Future_film_series_logo.png"
+        },
+        "22": {
+            "name": "Spike Jonze Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "23": {
+            "name": "Ang Lee Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "24": {
+            "name": "Halloween Season",
+            "tagline": "Happy Hauntings",
+            "keyword": "horror",
+            "logo": "'https://png.pngtree.com/png-vector/20240925/ourmid/pngtree-happy-halloween-pumpkin-spooky-festival-png-image_13904615.png"
+        },
+        "25": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "29": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "Peter Jackson Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "31": {
+            "name": "Halloween",
+            "keyword": "horror",
+            "logo": "'https://png.pngtree.com/png-vector/20240925/ourmid/pngtree-happy-halloween-pumpkin-spooky-festival-png-image_13904615.png"
+        }
+    },
+    "November": {
+        "1": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "2": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "3": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "6": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "Sesame Street Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "James Bond's Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "Veterans Day",
+            "tagline": "“Honoring all who served”",
+            "keyword": "heros",
+            "logo": "https://images.vexels.com/media/users/3/207384/isolated/preview/d21b0f9e1fc67cc5579d05c9427eb2ec-veterans-day-usa-flat.png"
+        },
+        "12": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "13": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "Martin Scorsese Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "Mickey Mouse Day",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "Jodie Foster / Charlie Kaufman Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "23": {
+            "name": "Doctor Who Day",
+            "tagline": "“Run!”",
+            "keyword": "tardis",
+            "logo": "https://seeklogo.com/images/D/doctor-who-logo-8F6B73CBDE-seeklogo.com.png"
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "Kathryn Bigelow / Alfonso Cuarón Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "29": {
+            "name": "Joel Coen",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "Ridley Scott / Woody Allen Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        }
+    },
+    "December": {
+        "1": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "2": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "3": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "4": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "5": {
+            "name": "Disney Day",
+            "tagline": "“Where Dreams Come True.“",
+            "keyword": "disney",
+            "logo": "https://static.vecteezy.com/system/resources/previews/022/636/382/original/disney-logo-disney-icon-transparent-free-png.png"
+        },
+        "6": {
+            "name": "Noel Clarke Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "7": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "8": {
+            "name": "Nancy Meyers Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "9": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "10": {
+            "name": "Kenneth Branagh Birthday!",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "11": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "12": {
+            "name": "Holiday Season",
+            "tagline": "“Tis the season“",
+            "keyword": "xmas",
+            "logo": "https://www.freeiconspng.com/uploads/happy-holidays-text-png-10.png"
+        },
+        "13": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "14": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "15": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "16": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "17": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "18": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "19": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "20": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "21": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "22": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "23": {
+            "name": "Christmas Movie Marathon Day",
+            "tagline": "“Tis the season“",
+            "keyword": "xmas",
+            "logo": "https://www.freeiconspng.com/uploads/happy-holidays-text-png-10.png"
+        },
+        "24": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "25": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "26": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "27": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "28": {
+            "name": "Marvel Day",
+            "tagline": "“Excelsior!”",
+            "keyword": "marvel",
+            "logo": "https://assets.stickpng.com/thumbs/585f9333cb11b227491c3581.png"
+        },
+        "29": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "30": {
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
+        },
+        "31": {
+            "name": "New Years Anthologies",
+            "tagline": "“You're traveling through another dimension...“",
+            "keyword": "newyear",
+            "logo": "https://cdn-icons-png.flaticon.com/512/3763/3763123.png"
+        }
+    }
+}

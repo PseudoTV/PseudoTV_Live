@@ -55,7 +55,6 @@ class Tasks():
                  self.chkDebugging,
                  self.chkBackup,
                  self.chkHTTP,
-                 self.chkServers,
                  self.chkPVRBackend,]
         for func in tasks: self._que(func,1)
         self.log('_initialize, finished...')
@@ -114,6 +113,7 @@ class Tasks():
         self._chkEpochTimer('chkVersion'      , self.chkVersion      , 21600)
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
+        self._chkEpochTimer('chkServers'      , self.chkDiscovery    , 300)
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 600)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 3600)
         self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)

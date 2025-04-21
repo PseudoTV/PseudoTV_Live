@@ -22,7 +22,7 @@ import os, sys, re, json, struct, errno, zlib
 import shutil, subprocess, io, platform
 import codecs, random
 import uuid, base64, binascii, hashlib
-import time, datetime
+import time, datetime, calendar
 import heapq, requests, pyqrcode
 
 from six.moves             import urllib 
@@ -145,14 +145,18 @@ def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, json_
     except requests.exceptions.ConnectionError as e:
         log("Globals: requestURL, failed! Error connecting to the server: %s"%('Returning cache' if cache else 'No Response'))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
+        
     except requests.exceptions.HTTPError as e:
         log("Globals: requestURL, failed! HTTP error occurred: %s"%('Returning cache' if cache else 'No Response'))
         return __getCache(cacheKey,json_data,cache,checksum) if cache else __error(json_data)
+        
     except Exception as e:
         log("Globals: requestURL, failed! An error occurred: %s"%(e), xbmc.LOGERROR)
         return __error(json_data)
+        
     finally:
-        if not complete and payload: queueURL({"url":url, "params":params, "payload":payload, "header":header, "timeout":timeout, "json_data":json_data, "cache":cache, "checksum":checksum, "life":life}) #retry post
+        if not complete and payload:
+            queueURL({"url":url, "params":params, "payload":payload, "header":header, "timeout":timeout, "json_data":json_data, "cache":cache, "checksum":checksum, "life":life}) #retry post
 
 def queueURL(param):
     queuePool = (SETTINGS.getCacheSetting('queueURL', json_data=True) or {})
@@ -263,7 +267,7 @@ def strpTime(datestring, format=DTJSONFORMAT): #convert pvr infolabel datetime s
     except TypeError: return datetime.datetime.fromtimestamp(time.mktime(time.strptime(datestring, format)))
     except:           return ''
    
-def epochTime(timestamp, tz=False): #convert pvr json datetime string to datetime obj
+def epochTime(timestamp, tz=True): #convert pvr json datetime string to datetime obj
     if tz: timestamp -= getTimeoffset()
     return datetime.datetime.fromtimestamp(timestamp)
 
