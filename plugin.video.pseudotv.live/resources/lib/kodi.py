@@ -27,6 +27,14 @@ from collections import Counter, OrderedDict
 from contextlib  import contextmanager, closing
 from infotagger.listitem import ListItemInfoTag
 
+def slugify(s, lowercase=False):
+  if lowercase: s = s.lower()
+  s = s.strip()
+  s = re.sub(r'[^\w\s-]', '', s)
+  s = re.sub(r'[\s_-]+', '_', s)
+  s = re.sub(r'^-+|-+$', '', s)
+  return s
+        
 def convertString2Num(value):
     from ast import literal_eval
     try: return literal_eval(value)
@@ -629,6 +637,14 @@ class Settings:
             yield (setting,self.getSetting(setting))
                
 
+    def hasAutotuned(self):
+        return self.getCacheSetting('has.Autotuned')
+        
+        
+    def setAutotuned(self, state=True):
+        return self.setCacheSetting('has.Autotuned',state)
+
+
 class Properties:
     monitor = MONITOR()
     
@@ -729,7 +745,15 @@ class Properties:
     def hasEnabledServers(self):
         return self.getEXTPropertyBool('%s.has.Enabled_Servers'%(ADDON_ID))
         
-    
+                
+    def hasEnabledLibrary(self, type):
+        return self.getEXTPropertyBool('%s.has.%s.enabled'%(ADDON_ID,slugify(type)))
+        
+        
+    def hasLibrary(self):
+        return True in list(set([self.hasEnabledLibrary(type) for type in AUTOTUNE_TYPES]))
+        
+        
     def setPendingShutdown(self, state=True):
         if state: Dialog().notificationDialog(LANGUAGE(32141))
         return self.setEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID),state)
@@ -750,10 +774,9 @@ class Properties:
        
     @contextmanager
     def interruptActivity(self): #quit background task
-        while not self.monitor.abortRequested and self.isInterruptActivity():
-            if self.monitor.waitForAbort(0.001): break
-        self.setInterruptActivity(True)
-        try: yield
+        try:
+            self.setInterruptActivity(True)
+            yield
         finally: self.setInterruptActivity(False)
          
         
@@ -775,10 +798,9 @@ class Properties:
         
     @contextmanager
     def suspendActivity(self): #pause background task.
-        while not self.monitor.abortRequested and self.isSuspendActivity():
-            if self.monitor.waitForAbort(0.001): break
-        self.setSuspendActivity(True)
-        try: yield
+        try: 
+            self.setSuspendActivity(True)
+            yield
         finally: self.setSuspendActivity(False)
 
 

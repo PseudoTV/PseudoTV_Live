@@ -112,8 +112,8 @@ class Tasks():
     def _chkQueTimer(self):
         self._chkEpochTimer('chkVersion'      , self.chkVersion      , 21600)
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
+        self._chkEpochTimer('chkServers'      , self.chkServers      , 300)
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
-        self._chkEpochTimer('chkServers'      , self.chkDiscovery    , 300)
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 600)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 3600)
         self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
@@ -217,9 +217,15 @@ class Tasks():
 
 
     def chkChannels(self, channels: list=[]):
+        def __runAutotune():
+            self.log('chkChannels, __runAutotune')
+            SETTINGS.setAutotuned(Autotune()._runTune())
+            self._que(self.chkChannels,3)
+            
         save     = False
         complete = False
         builder  = Builder(service=self.service)
+        
         if not channels:
             save     = True
             channels = builder.getChannels()
@@ -235,11 +241,9 @@ class Tasks():
                 if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
                 if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
             else: self._que(self.chkChannels,3,channels)
-        elif not SETTINGS.getCacheSetting('has.Autotuned'):
-            SETTINGS.setCacheSetting('has.Autotuned',Autotune()._runTune())
-            self._que(self.chkChannels,3)
-        elif PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
-        else: DIALOG.notificationDialog(LANGUAGE(32058))
+        elif SETTINGS.hasAutotuned() and PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
+        else: __runAutotune()
+        
         del builder
         return complete
         

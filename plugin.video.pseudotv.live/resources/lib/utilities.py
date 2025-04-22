@@ -62,6 +62,7 @@ class Utilities:
                 text = text.replace('- Modified'   ,'[COLOR=yellow][B]- Modified:[/B][/COLOR]')
                 text = text.replace('- Enhanced'   ,'[COLOR=yellow][B]- Enhanced:[/B][/COLOR]')
                 text = text.replace('- Refactored' ,'[COLOR=yellow][B]- Refactored:[/B][/COLOR]')
+                text = text.replace('- Reworked'   ,'[COLOR=yellow][B]- Reworked:[/B][/COLOR]')
                 text = text.replace('- Tweaked'    ,'[COLOR=yellow][B]- Tweaked:[/B][/COLOR]')
                 text = text.replace('- Updated'    ,'[COLOR=yellow][B]- Updated:[/B][/COLOR]')
                 text = text.replace('- Changed'    ,'[COLOR=yellow][B]- Changed:[/B][/COLOR]')
@@ -186,7 +187,7 @@ class Utilities:
          
     def _runAutotune(self):
         self.log('_runAutotune')
-        SETTINGS.setCacheSetting('has.Autotuned',False)
+        SETTINGS.setAutotuned(False)
         PROPERTIES.setPropTimer('chkChannels')
          
          
@@ -279,6 +280,10 @@ class Utilities:
             elif param == 'Debug_QR':
                 ctl = (6,1)
                 return self.qrDebug()
+                
+            elif param == 'Run_Autotune':
+                return self._runAutotune()
+                
             return SETTINGS.openSettings(ctl)
 
 if __name__ == '__main__': Utilities(sys.argv).run()

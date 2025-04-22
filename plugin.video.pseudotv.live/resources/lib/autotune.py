@@ -48,53 +48,46 @@ class Autotune:
         return channels
 
 
-    def _runTune(self, samples: bool=False, rebuild: bool=False, dia=None):
-        autoEnabled    = []
+    def _runTune(self, prompt: bool=False, rebuild: bool=False, dia=None):
         customChannels = self.getCustom()
         autoChannels   = self.getAutotuned()
+        hasLibrary     = PROPERTIES.hasLibrary()
+        if len(autoChannels) > 0 or hasLibrary: rebuild = PROPERTIES.setEXTPropertyBool('%s.has.Predefined'%(ADDON_ID),True) #rebuild existing autotune, no prompt needed, refresh paths and logos
+        if len(customChannels) == 0: prompt  = True #begin check if prompt or recovery is needed
         self.log('_runTune, customChannels = %s,  autoChannels = %s'%(len(customChannels),len(autoChannels)))
         
-        if len(autoChannels) > 0: #rebuild existing autotune, no samples needed
-            rebuild = True
-            PROPERTIES.setEXTPropertyBool('%s.has.Predefined'%(ADDON_ID),True)
-        elif len(customChannels) == 0: #begin check if samples needed
-            [autoEnabled.extend(self.library.getEnabled(type)) for type in AUTOTUNE_TYPES]
-            if len(autoEnabled) > 0:
-                self.log('_runTune, library enabled items = %s; recovering enabled items'%(len(autoEnabled)))
-                rebuild = True #recover empty channels.json with enabled library.json items.
-            else:
-                samples = True #create sample channels "autotune".
-            
-            if samples:
-                hasBackup   = PROPERTIES.hasBackup()
-                hasServers  = PROPERTIES.hasServers()
-                hasChannels = PROPERTIES.hasChannels()
+        if prompt:
+            opt         = ''
+            msg         = (LANGUAGE(32042)%ADDON_NAME)
+            hasBackup   = PROPERTIES.hasBackup()
+            hasServers  = PROPERTIES.hasServers()
+            hasM3U      = FileAccess.exists(M3UFLEPATH) if not hasLibrary else False
+
+            if (hasBackup or hasServers or hasM3U):
+                opt = LANGUAGE(32254)
+                msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32255))
                 
-                if hasBackup:
-                    opt = LANGUAGE(32112)
-                    msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
-                elif hasServers:
-                    opt = LANGUAGE(30092)
-                    msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32215))
-                else:
-                    opt = ''
-                    msg = (LANGUAGE(32042)%ADDON_NAME)
-                
-                retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
-                if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32021))) #Yes
-                elif retval == 2: #Custom
-                    if   hasBackup:   return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/backup.py, Recover_Channels)'%(ADDON_ID))
-                    elif hasServers:  return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID))
-                elif not hasChannels: return openAddonSettings() #No w/exception
-                else: return True #No
+            retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
+            if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32021))) #Yes
+            elif retval == 2: #Custom
+                self.setInterruptActivity(True)
+                with BUILTIN.busy_dialog():
+                    menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33310),url='RunScript(special://home/addons/%s/resources/lib/utilities.py, Channel_Manager)'%(ADDON_ID))]
+                    if hasM3U:     menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(32257),LANGUAGE(32256),url='RunScript(special://home/addons/%s/resources/lib/autotune.py, Recover_M3U)'%(ADDON_ID)))
+                    if hasBackup:  menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(32112),LANGUAGE(32111),url='RunScript(special://home/addons/%s/resources/lib/backup.py, Recover_Backup)'%(ADDON_ID)))
+                    if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID)))
+                select = DIALOG.selectDialog(menu,multi=False)
+                self.setInterruptActivity(False)
+                if not select is None: return BUILTIN.executebuiltin(menu[select].getPath())
+            else: return True #No
         else: return True
             
         for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
             if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
-            self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
+            self.selectAUTOTUNE(ATtype, autoSelect=prompt, rebuildChannels=rebuild)
         return True
-        
-
+            
+            
     def selectAUTOTUNE(self, ATtype: str, autoSelect: bool=False, rebuildChannels: bool=False):
         self.log('selectAUTOTUNE, ATtype = %s, autoSelect = %s, rebuildChannels = %s'%(ATtype,autoSelect,rebuildChannels))
         def __buildMenuItem(item):
@@ -177,6 +170,14 @@ class Autotune:
             self.channels.addChannel(citem)
         return self.channels.setChannels()
        
+
+    def recoverM3U(self, autotune={}):
+        from m3u import M3U
+        stations = M3U().getStations()
+        [autotune.setdefault(AUTOTUNE_TYPES[station.get('number')//1000],[]).append(station.get('name')) for station in stations if station.get('number') > CHANNEL_LIMIT]
+        [self.library.enableByName(type, names) for type, names in list(autotune.items()) if len(names) > 0]
+        return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Run_Autotune)'%(ADDON_ID))
+       
        
     def clearLibrary(self):
         self.library.resetLibrary()
@@ -196,8 +197,9 @@ class Autotune:
             if param.replace('_',' ') in AUTOTUNE_TYPES:
                 ctl = (1,AUTOTUNE_TYPES.index(param.replace('_',' '))+1)
                 self.selectAUTOTUNE(param.replace('_',' '))
-            elif param == 'Clear_Autotune' : self.clearLibrary()
-            elif param == 'Clear_BlackList': self.clearBlacklist()
+            elif param == 'Clear_Autotune' :  self.clearLibrary()
+            elif param == 'Clear_BlackList':  self.clearBlacklist()
+            elif param == 'Recover_M3U':      self.recoverM3U()
             elif param == None: return
             return SETTINGS.openSettings(ctl)
         

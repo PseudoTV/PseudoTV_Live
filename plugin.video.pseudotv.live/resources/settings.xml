@@ -20,7 +20,7 @@
                 </setting>
             </group>
             <group id="2" label="30161">
-                <setting id="Select_Channels" type="string" label="30107" help="33107">
+                <setting id="Select_Channels" type="string" label="30107" help="33310">
                     <level>1</level>
                     <constraints>
                         <allowempty>true</allowempty>
@@ -61,7 +61,7 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <setting id="Recover_Channels" type="string" label="32107" help="33107" parent="Backup_Channels">
+                <setting id="Recover_Backup" type="string" label="32107" help="33107" parent="Backup_Channels">
                     <level>2</level>
                     <default/>
                     <constraints>
@@ -71,12 +71,9 @@
                         <dependency type="visible">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Backup),true)</condition>
                         </dependency>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Channels),true)</condition>
-                        </dependency>
                     </dependencies>
                     <control type="button" format="action">
-                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/backup.py, Recover_Channels)</data>
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/backup.py, Recover_Backup)</data>
                         <close>true</close>
                     </control>
                 </setting>

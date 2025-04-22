@@ -86,16 +86,30 @@ class Library:
         else:            return self.libraryDATA.get('library',{}).get(type,[])
         
         
+    def enableByName(self, type, names=[]):
+        self.log('enableByName, type = %s, names = %s'%(type, names))
+        items = self.getLibrary(type)
+        for name in names:
+            for item in items:
+                if name.lower() == item.get('name','').lower():
+                    item['enabled'] = True
+                else:
+                    item['enabled'] = False
+        return self.setLibrary(type, items)
+        
+        
     def setLibrary(self, type, items=[]):
         self.log('setLibrary, type = %s, items = %s'%(type,len(items)))
         self.libraryDATA['library'][type] = items
+        enabled = self.getEnabled(type, items)
         PROPERTIES.setEXTPropertyBool('%s.has.%s'%(ADDON_ID,slugify(type)),len(items) > 0)
-        SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabled(type)),len(items)))
+        PROPERTIES.setEXTPropertyBool('%s.has.%s.enabled'%(ADDON_ID,slugify(type)),len(enabled) > 0)
+        SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(enabled),len(items)))
         return self._save()
 
 
-    def getEnabled(self, type):
-        items = self.getLibrary(type)
+    def getEnabled(self, type, items=None):
+        if items is None: items = self.getLibrary(type)
         return [item for item in items if item.get('enabled',False)]
 
 
