@@ -46,6 +46,7 @@ class Library:
         self.predefined   = Predefined()
         self.channels     = Channels()
         self.resources    = Resources(service=self.service)
+        
         self.parserCount  = 0
         self.parserMSG    = ''
         self.parserDialog = None
@@ -91,10 +92,8 @@ class Library:
         items = self.getLibrary(type)
         for name in names:
             for item in items:
-                if name.lower() == item.get('name','').lower():
-                    item['enabled'] = True
-                else:
-                    item['enabled'] = False
+                if name.lower() == item.get('name','').lower(): item['enabled'] = True
+                else:                                           item['enabled'] = False
         return self.setLibrary(type, items)
         
         
@@ -252,8 +251,7 @@ class Library:
 
     def getPlaylists(self):
         PlayList = []
-        types    = ['video','mixed','music']
-        for type in types:
+        for type in ['video','mixed','music']:
             results = self.jsonRPC.getSmartPlaylists(type)
             for idx, result in enumerate(results):
                 if not self.parserDialog is None:
@@ -289,8 +287,8 @@ class Library:
                 ShowGenreList.update([genre for genre in info.get('genre', [])])
 
             if sortbycount:
-                TVShows = [json.loads(x[0]) for x in sorted(TVShows.most_common(250))]
-                NetworkList = [x[0] for x in sorted(NetworkList.most_common(50))]
+                TVShows       = [json.loads(x[0]) for x in sorted(TVShows.most_common(250))]
+                NetworkList   = [x[0] for x in sorted(NetworkList.most_common(50))]
                 ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
             else:
                 TVShows = (sorted(map(json.loads, list(TVShows.keys())), key=itemgetter('name')))

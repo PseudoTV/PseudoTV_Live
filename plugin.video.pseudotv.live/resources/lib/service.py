@@ -164,9 +164,9 @@ class Player(xbmc.Player):
         try:    return self.getPlayerTime() - self.getPlayedTime()
         except: return (self.getTimeLabel('TimeRemaining') or -1)
 
-       
+
     def getPlayerProgress(self):
-        try:    return int((self.getRemainingTime() / self.getPlayerTime()) * 100)
+        try:    return abs(int((self.getRemainingTime() / self.getPlayerTime()) * 100) - 100)
         except: return int((BUILTIN.getInfoLabel('Progress','Player') or '-1'))
 
 
@@ -191,6 +191,8 @@ class Player(xbmc.Player):
     def _onPlay(self):
         self.toggleBackground(False)
         self.toggleOverlay(False)
+        self.toggleRestart(False)
+        self.toggleOnNext(False)
         oldInfo = self.sysInfo
         sysInfo = self.getPlayerSysInfo()
         newChan = oldInfo.get('chid',random.random()) != sysInfo.get('chid')
@@ -198,9 +200,9 @@ class Player(xbmc.Player):
         if newChan: #New channel
             self.runActions = RulesList([sysInfo.get('citem',{})]).runActions
             self.sysInfo    = self._runActions(RULES_ACTION_PLAYER_START, sysInfo.get('citem',{}), sysInfo, inherited=self)
+            self.toggleRestart(self.enableOverlay)
             self.setTrakt(self.disableTrakt)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
-            # self.toggleRestart(self.enableOverlay)
         else: #New Program/Same Channel
             self.sysInfo = sysInfo
             if self.sysInfo.get('radio',False): timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(visualisation)'])
@@ -274,7 +276,6 @@ class Player(xbmc.Player):
     def toggleRestart(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
         if state and self.restart is None and self.isPlaying():
             self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
-            self.restart.open()
         elif not state and hasattr(self.restart,'onClose'):
             self.restart = self.restart.onClose()
         self.log("toggleRestart, state = %s, restart = %s"%(state,self.restart))
@@ -283,7 +284,6 @@ class Player(xbmc.Player):
     def toggleOnNext(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
         if state and self.onnext is None and self.isPlaying():
             self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", player=self)
-            self.onnext.open()
         elif hasattr(self.onnext,'onClose'):
             self.onnext = self.onnext.onClose()
         self.log("toggleOnNext, state = %s, onnext = %s"%(state,self.onnext))

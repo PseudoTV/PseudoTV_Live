@@ -1,4 +1,5 @@
 v.0.6.1
+
 -Reworked Autotuning, Backups and Recovery; Feedback appreciated...
 -Updated Seasonal channel to include days of the week; expanding holiday channel content.
 -Fixed Channel Manager "Select","Auto" channel logo.
@@ -15,9 +16,8 @@ v.0.6.1
   - Improved startup performance by queuing missing logos for future caching.
   - Once the cache is complete, logos are gradually integrated into circulation automatically.
 - Known issues:
-  - Kodi PVR does not update modified M3U logos. A workaround is being investigated.
-  - The "Restart" button has been temporarily disabled.
-  - There may be issues with missing channel logos.
+  - If you encounter incorrect channel logos, over time they will correct themselves or 
+    users can delete their Kodi\portable_data\addons\script.module.simplecache\simplecache.db file while Kodi is not running. Forcing channel logos to repopulate. 
 - Notice: Let us aim to make PseudoTV Live 100% bug-free by its 5th anniversary (June 29, 2025).
   Please test thoroughly and help report issues: https://github.com/PseudoTV/PseudoTV_Live/wiki/Support
 
