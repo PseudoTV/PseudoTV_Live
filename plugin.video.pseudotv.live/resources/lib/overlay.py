@@ -316,7 +316,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             threshold = abs((totalTime - (totalTime * .75)) - FIFTEEN)
             remaining = floor(totalTime - self.player.getPlayedTime())
             intTime   = roundupDIV(threshold,3)
-            if remaining > FIFTEEN: self.doModal()
+            if remaining >= intTime: self.doModal()
     
     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -359,7 +359,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                         show = FIFTEEN*2
                         while not self.monitor.abortRequested():
                             self.log('onInit, showing (%s)'%(show))
-                            if self.monitor.waitForAbort(0.5) or self.closing or not self.player.isPlaying() or show < 1: break
+                            if self.monitor.waitForAbort(0.5) or self.closing or not self.player.isPlaying() or show < 1 or floor(totalTime - self.player.getPlayedTime()) <= 30: break
                             else: show -= 1
                             
                         self.onNext_Text.setVisible(False)

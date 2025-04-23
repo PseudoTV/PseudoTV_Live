@@ -1,5 +1,5 @@
 v.0.6.1
-
+-Possible Fix for channel content not changing.
 -Reworked Autotuning, Backups and Recovery; Feedback appreciated...
 -Updated Seasonal channel to include days of the week; expanding holiday channel content.
 -Fixed Channel Manager "Select","Auto" channel logo.
