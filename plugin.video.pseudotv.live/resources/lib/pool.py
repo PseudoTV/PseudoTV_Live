@@ -56,7 +56,7 @@ def killit(method):
         timer.start()
         try: timer.join(wait)
         except: pass
-        log('%s, starting %s'%(method.__qualname__.replace('.',': '),timer.name))
+        log('%s, starting %s waiting (%s)'%(method.__qualname__.replace('.',': => -:'),timer.name,wait))
         if (timer.is_alive() or timer.error): log('%s, Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),timer.error), xbmc.LOGERROR)
         return timer.result
     return wrapper

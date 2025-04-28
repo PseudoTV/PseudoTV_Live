@@ -110,15 +110,14 @@ class RulesList:
                             ruleInstance.optionValues[int(key)] = value
                         ruleList.update({str(rule.myId):ruleInstance})
                     elif append: ruleList.update({str(rule.myId):rule.copy()})
-                except Exception as e: log('loadRules: _load failed! %s\nchrule = %s'%(e,chrule), xbmc.LOGERROR)
-            self.log('[%s] loadRules, append = %s, incRez = %s, rule myIds = %s'%(citem.get('id'),append, incRez,list(ruleList.keys())))
+                except Exception as e: log('[%s] loadRules: _load failed! %s\nchrule = %s'%(citem.get('id'), e, chrule), xbmc.LOGERROR)
+            self.log('[%s] loadRules: append = %s, incRez = %s, rule myIds = %s'%(citem.get('id'), append, incRez,list(ruleList.keys())))
             rules.update({citem.get('id'):ruleList})
             
         rules = dict()
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate baseRule()
         [_load(tmpruleList,channel) for channel in channels]
-        self.log('loadRules, channels = %s'%(len(channels)))
         return rules
 
 
@@ -1357,9 +1356,8 @@ class ForceEpisode(BaseRule):
     def _sortShows(self, fileList: list=[]): #group by type & show; no duplicates. 
         try:
             for fileItem in fileList:
-                if fileItem.get('type').startswith(tuple(TV_TYPES)):
-                    if fileItem not in self.storedValues[2].setdefault(fileItem['showtitle'],[]):
-                        self.storedValues[2].setdefault(fileItem['showtitle'],[]).append(fileItem)
+                if fileItem.get('type').startswith(tuple(TV_TYPES)) and fileItem.get('showtitle'):
+                    if fileItem not in self.storedValues[2].setdefault(fileItem['showtitle'],[]): self.storedValues[2].setdefault(fileItem['showtitle'],[]).append(fileItem)
                 elif fileItem not in self.storedValues[3]: self.storedValues[3].append(fileItem) #Movies/Other no duplicates allowed
             return self._episodeSort(self.storedValues[2]), sorted(self.storedValues[3], key=lambda k: k.get('year',0))
         except Exception as e: self.log("runAction, _sortShows failed! %s"%(e), xbmc.LOGERROR)
@@ -1448,7 +1446,7 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-2999]
         self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33015),LANGUAGE(33230)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST]
         self.selectBoxOptions   = [list(range(0,6)),list(range(25,501,25)),""]
-        self.storedValues       = [[],[],[],{},[]]
+        self.storedValues       = [[],[],[],{},[],[],[]]
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -1478,8 +1476,8 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-2999]
     def _sortShows(self, fileItems): #group by type & show; no duplicates. 
         try:
             for fileItem in fileItems:
-                if fileItem.get('type').startswith(tuple(TV_TYPES)): #TV Shows
-                    if fileItem not in self.storedValues[3].setdefault(fileItem['showtitle'],[]): self.storedValues[3].setdefault(fileItem['showtitle'],[]).append(fileItem)
+                if fileItem.get('type').startswith(tuple(TV_TYPES)) and fileItem.get('showtitle'): #TV Shows
+                    if fileItem not in self.storedValues[3].get(fileItem['showtitle'],[]): self.storedValues[3].setdefault(fileItem['showtitle'],[]).append(fileItem)
                 elif fileItem not in self.storedValues[4]: self.storedValues[4].append(fileItem) #Movies/Other no duplicates allowed
             if self.optionValues[2]: self.storedValues[4] = list(sorted(self.storedValues[4], key=lambda k: k.get('year',0))) #force year ordering
             return dict(self._chunkEpisodes(self.storedValues[3])), self.storedValues[4]
@@ -1503,8 +1501,8 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-2999]
             return [_f for _f in nfileList if _f]
         except Exception as e: self.log("runAction, _mergeShows failed! %s"%(e), xbmc.LOGERROR)
         return []
-        
-            
+
+
     def runAction(self, actionid, citem, parameter, builder):
         if bool(self.optionValues[0]):
             if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
@@ -1512,7 +1510,7 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-2999]
                 
             elif actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
                 if parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])):
-                    builder.limit = self.optionValues[1] * self.optionValues[0] #Double parser limit for tv content inorder to aid even distro. 
+                    builder.limit = self.optionValues[1] * self.optionValues[0] #Multiply parser limit for tv content in-order to aid even distribution. 
                 elif parameter:
                     builder.limit = self.optionValues[1]
                 self.log('runAction, setting limit %s'%(builder.limit))
@@ -1520,13 +1518,16 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-2999]
             elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
                 if len(parameter) > 0:
                     if builder.pDialog: builder.pDialog = self.dialog.updateProgress(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
-                    if self.optionValues[2]: fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0))) #force episode ordering
-                    else:                    fileItems = parameter
+                    if self.optionValues[2]: 
+                        fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0))) #force episode ordering
+                        fileItems = list(sorted(fileItems, key=lambda k: k.get('season',0))) #force season ordering
+                    else:
+                        fileItems = parameter
                     self.log('runAction, group by episode %s'%(self.optionValues[2]))
                     return self._mergeShows(*(self._sortShows(fileItems)))
                 
             elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
-                builder.limit = (self.storedValues[1] or SETTINGS.getSettingInt('Page_Limit')) #_injectedRules don't retain stored values use globals
+                builder.limit = (self.storedValues[1] or SETTINGS.getSettingInt('Page_Limit'))
                 self.log('runAction, restoring limit = %s'%(builder.limit))
         return parameter
         

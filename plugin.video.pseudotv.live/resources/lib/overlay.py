@@ -92,7 +92,7 @@ class Restart(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.player  = kwargs.get('player', None)
-        self.sysInfo = kwargs.get('sysInfo', self.player.getPlayerSysInfo())
+        self.sysInfo = kwargs.get('sysInfo', self.player.sysInfo)
         self.monitor = self.player.service.monitor
         
         if bool(self.player.restartPercentage) and self.sysInfo.get('fitem'):
@@ -233,7 +233,6 @@ class Overlay():
             
             
     def open(self):
-        self.sysInfo = self.player.getPlayerSysInfo()
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
         self.log("open, enableVignette = %s, enableChannelBug = %s"%(self.enableVignette, self.enableChannelBug))
         if self.enableVignette:
@@ -274,7 +273,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.player     = kwargs.get('player', None)
-        self.sysInfo    = kwargs.get('sysInfo', self.player.getPlayerSysInfo())
+        self.sysInfo    = kwargs.get('sysInfo', self.player.sysInfo)
         self.jsonRPC    = self.player.jsonRPC
         self.monitor    = self.player.service.monitor
         self.runActions = self.player.runActions

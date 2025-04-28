@@ -74,7 +74,6 @@ class Player(xbmc.Player):
         
 
     def onAVChange(self):
-        self.isPseudoTV   = self.isPseudoTVPlaying()
         self.lastSubState = BUILTIN.isSubtitle()
         self.log('onAVChange, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
         if not self.isPseudoTV: self._onStop()
@@ -83,8 +82,8 @@ class Player(xbmc.Player):
     def onAVStarted(self):
         self.pendingPlay = -1
         self.isPseudoTV  = self.isPseudoTVPlaying()
-        self.log('onAVStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
-        if self.isPseudoTV: self._onPlay()
+        self.log('onAVStarted, pendingStop = %s'%(self.pendingStop))
+        if self.isPseudoTV: self._onPlay(sysInfo=self.getPlayerSysInfo())
         else:               self._onStop()
         
                 
@@ -119,8 +118,8 @@ class Player(xbmc.Player):
         
         
     def getPlayerSysInfo(self):
-        def __update(id, citem={}):
-            channels = self.service.tasks.getChannels()
+        def __update(id, citem={}): #sysInfo from listitem maybe outdated, check with channels.json
+            channels = self.service.tasks.getVerifiedChannels()
             for item in channels:
                 if item.get('id',random.random()) == id: 
                     return combineDicts(citem,item)
@@ -188,13 +187,12 @@ class Player(xbmc.Player):
         self.showSubtitles(state)
 
 
-    def _onPlay(self):
+    def _onPlay(self, sysInfo={}):
         self.toggleBackground(False)
         self.toggleOverlay(False)
         self.toggleRestart(False)
         self.toggleOnNext(False)
         oldInfo = self.sysInfo
-        sysInfo = self.getPlayerSysInfo()
         newChan = oldInfo.get('chid',random.random()) != sysInfo.get('chid')
         self.log('_onPlay, [%s], mode = %s, isPlaylist = %s, new channel = %s'%(sysInfo.get('citem',{}).get('id'), sysInfo.get('mode'), sysInfo.get('isPlaylist',False), newChan))
         if newChan: #New channel

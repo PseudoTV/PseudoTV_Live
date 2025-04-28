@@ -160,7 +160,7 @@ class Tasks():
         elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion', checksum=ADDON_VERSION) or '0.0.0'):
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION, checksum=ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py,Show_Changelog)'%(ADDON_ID))
-        SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s Version: [B]%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':'None'}[str(update)])
+        SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':'None'}[str(update)])
 
 
     def chkKodiSettings(self):
@@ -210,7 +210,7 @@ class Tasks():
     def chkUpdate(self):
         ids = PROPERTIES.getUpdateChannels()
         if ids:
-            channels = self.getChannels()
+            channels = self.getVerifiedChannels()
             channels = [citem for id in ids for citem in channels if citem.get('id') == id]
             self.log('chkUpdate, channels = %s\nid = %s'%(len(channels),ids))
             self._que(self.chkChannels,3,channels)
@@ -228,7 +228,7 @@ class Tasks():
         
         if not channels:
             save     = True
-            channels = builder.getChannels()
+            channels = builder.getVerifiedChannels()
             SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
             PROPERTIES.setChannels(len(channels) > 0)
             self.service.currentChannels = channels #update service channels
@@ -237,7 +237,7 @@ class Tasks():
             complete, updated = builder.build(channels)
             self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
             if complete:
-                if save: builder.setChannels(channels)
+                if save: builder.channels.setChannels(channels)
                 if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
                 if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
             else: self._que(self.chkChannels,3,channels)
@@ -317,15 +317,13 @@ class Tasks():
 
 
     def chkPVRToggle(self):
-        isPlaying = self.player.isPlaying()
-        self.log('chkPVRToggle, isPlaying = %s'%(isPlaying))
-        if not (isPlaying | BUILTIN.isScanning() | BUILTIN.isRecording()): togglePVR(False,True)
+        if self.service.monitor.isIdle and not (self.player.isPlaying() | BUILTIN.isScanning() | BUILTIN.isRecording()): togglePVR(False,True)
         else: PROPERTIES.setPropTimer('chkPVRRefresh')
 
 
     def chkFillers(self, channels=None):
         self.log('chkFillers')
-        if channels is None: channels = self.getChannels()
+        if channels is None: channels = self.getVerifiedChannels()
         pDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
         for idx, ftype in enumerate(FILLER_TYPES):
             if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),'')): 
@@ -362,17 +360,7 @@ class Tasks():
         except Exception as e: 
             self.log('getGenres failed! %s'%(e), xbmc.LOGERROR)
             return []
-    
 
-    def getChannels(self):
-        try:
-            channels = list(Builder(service=self.service).getChannels())
-            self.log('getChannels, channels = %s'%(len(channels)))
-            return channels
-        except Exception as e: 
-            self.log('getChannels failed! %s'%(e), xbmc.LOGERROR)
-            return []
-        
         
     def chkSettingsChange(self, settings={}):
         self.log('chkSettingsChange, settings = %s'%(settings))
@@ -394,3 +382,7 @@ class Tasks():
             SETTINGS.setPVRPath(new,prompt=True,force=True)
             PROPERTIES.setPendingRestart()
             DIALOG.progressDialog(100, dia)
+            
+            
+    def getVerifiedChannels(self):
+        return Builder(service=self.service).getVerifiedChannels()

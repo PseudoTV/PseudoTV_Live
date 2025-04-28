@@ -1,4 +1,5 @@
 v.0.6.1
+-Improved logo detection.
 -Possible Fix for channel content not changing.
 -Reworked Autotuning, Backups and Recovery; Feedback appreciated...
 -Updated Seasonal channel to include days of the week; expanding holiday channel content.
@@ -44,7 +45,7 @@ v.0.5.8
   - Preview channels in order as they would appear in the EPG.
   - Paths and rules apply as they would during channel building.
   - Useful for testing paths and rules, with build time information included.
-- Some utility items are now hidden and only available when "Enable Debugging" is turned on.
+- Some utility items are now hidden and only visible with "Enable Debugging" turned on.
 - Excluded some path options based on "radio" (i.e., Music Channel) in the Channel Manager.
 - Fixed rollback playcount issue.
 - Fixed overlay tool issue saving "On Next" position.

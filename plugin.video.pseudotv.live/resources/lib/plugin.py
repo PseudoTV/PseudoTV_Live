@@ -78,9 +78,9 @@ class Plugin:
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitem)
         
         
-    def _setResume(self, liz):
+    def _setResume(self, chid, liz):
         if self.sysInfo.get('seek',0) > SETTINGS.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
-            self.log('_setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), liz.getPath()))
+            self.log('[%s] _setResume, seek = %s, progresspercentage = %s\npath = %s'%(chid, self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), liz.getPath()))
             liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
             infoTag = ListItemInfoTag(liz,'video')
             infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
@@ -90,19 +90,20 @@ class Plugin:
         return liz
             
             
-    def _quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=BUILTIN.isPlaylistRandom()):
-        self.log('_quePlaylist, listitems = %s, shuffle = %s'%(len(listitems),shuffle))
+    def _quePlaylist(self, chid, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=BUILTIN.isPlaylistRandom()):
+        self.log('[%s] _quePlaylist, listitems = %s, shuffle = %s'%(chid, len(listitems),shuffle))
         channelPlaylist = xbmc.PlayList(pltype)
         channelPlaylist.clear()
         xbmc.sleep(100) #give channelPlaylist.clear() enough time to clear queue.
         [channelPlaylist.add(liz.getPath(),liz,idx) for idx,liz in enumerate(listitems) if liz.getPath()]
-        self.log('_quePlaylist, Playlist size = %s, shuffle = %s'%(channelPlaylist.size(),shuffle))
+        self.log('[%s] _quePlaylist, Playlist size = %s, shuffle = %s'%(chid, channelPlaylist.size(),shuffle))
         if shuffle: channelPlaylist.shuffle()
         else:       channelPlaylist.unshuffle()
         return channelPlaylist
 
 
     def getRadioItems(self, name, chid, vid, limit=RADIO_ITEM_LIMIT):
+        self.log('[%s] getRadioItems'%(chid))
         return interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in vid.split('|')], SETTINGS.getSettingInt('Interleave_Value'))
 
 
@@ -117,7 +118,7 @@ class Plugin:
             if item.get('file') == item.get('resume',{}).get('file',str(random.random())):
                 seektime = int(item.get('resume',{}).get('position',0.0))
                 runtime  = int(item.get('resume',{}).get('total',0.0))
-                self.log('getPausedItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(runtime, seektime))
+                self.log('[%s] getPausedItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(chid, runtime, seektime))
                 liz.setProperty('startoffset', str(seektime)) #secs
                 infoTag = ListItemInfoTag(liz, 'video')
                 infoTag.set_resume_point({'ResumeTime':seektime, 'TotalTime':runtime * 60})
@@ -129,7 +130,7 @@ class Plugin:
         nextitems = RulesList([self.sysInfo.get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
         if nextitems:
             nextitems = nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
-            self.log('getPausedItems, building nextitems (%s)'%(len(nextitems)))
+            self.log('[%s] getPausedItems, building nextitems (%s)'%(chid, len(nextitems)))
             return [__buildfItem(idx, nextitem) for idx, nextitem in enumerate(nextitems)]
         else: DIALOG.notificationDialog(LANGUAGE(32000))
         return []
@@ -153,7 +154,7 @@ class Plugin:
             
             liz = LISTITEMS.buildItemListItem(nowitem,'video')
             if (item.get('progress',0) > 0 and item.get('runtime',0) > 0):
-                self.log('getPVRItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((item['runtime'] * 60),item['progress']))
+                self.log('[%s] getPVRItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(chid,(item['runtime'] * 60),item['progress']))
                 liz.setProperty('startoffset', str(item['progress'])) #secs
                 infoTag = ListItemInfoTag(liz, 'video')
                 infoTag.set_resume_point({'ResumeTime':item['progress'],'TotalTime':(item['runtime'] * 60)})
@@ -194,11 +195,11 @@ class Plugin:
             if found:
                 nowitem = nextitems.pop(0)
                 if round(nowitem['progresspercentage']) > SETTINGS.getSettingInt('Seek_Threshold'):
-                    self.log('getPVRItems, progress past threshold advance to nextitem')
+                    self.log('[%s] getPVRItems, progress past threshold advance to nextitem'%(chid))
                     nowitem = nextitems.pop(0)
                 
                 if round(nowitem['progress']) < SETTINGS.getSettingInt('Seek_Tolerance'):
-                    self.log('getPVRItems, progress start at the beginning')
+                    self.log('[%s] getPVRItems, progress start at the beginning'%(chid))
                     nowitem['progress']           = 0
                     nowitem['progresspercentage'] = 0
                         
@@ -206,7 +207,7 @@ class Plugin:
                 self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
                 nextitems = nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
                 nextitems.insert(0,nowitem)
-                self.log('getPVRItems, building nextitems (%s)'%(len(nextitems)))
+                self.log('[%s] getPVRItems, building nextitems (%s)'%(chid,len(nextitems)))
                 return [__buildfItem(idx, item) for idx, item in enumerate(nextitems)]
             else: DIALOG.notificationDialog(LANGUAGE(32164))
         else: DIALOG.notificationDialog(LANGUAGE(32000))
@@ -217,7 +218,7 @@ class Plugin:
         self.log('[%s] playTV'%(chid))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             if self.sysInfo.get('fitem') and (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')): #-> live
-                liz = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo['fitem']))
+                liz = self._setResume(chid, LISTITEMS.buildItemListItem(self.sysInfo['fitem']))
             else:
                 liz = self.getPVRItems(name, chid)[0]
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
@@ -228,11 +229,11 @@ class Plugin:
         self.log('[%s] playLive, name = %s'%(chid, name))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             if self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0'):#-> live playback from UI incl. listitem
-                liz = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo['fitem']))
+                liz = self._setResume(chid, LISTITEMS.buildItemListItem(self.sysInfo['fitem']))
                 liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
                 self._resolveURL(True, liz)
-            elif self.sysInfo.get('fitem'):#-> VOD called by non-current EPG cell. (Unreliable during playback)  
-                # self.sysInfo['mode'] = 'vod'
+            elif self.sysInfo.get('fitem') and self.sysInfo.get('start') <= self.sysInfo.get('now') <= self.sysInfo.get('stop'):#-> VOD called by non-current EPG cell. (Unreliable during playback)  
+                self.sysInfo['mode'] = 'vod'
                 self.sysInfo['name'] = self.sysInfo['fitem'].get('label')
                 self.sysInfo['vid']  = self.sysInfo['fitem'].get('file')
                 self.sysInfo["seek"] = -1
@@ -246,7 +247,7 @@ class Plugin:
                 self._resolveURL(False, liz)
             elif vid:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
                 self.log('[%s] playLive, VID = %s'%(chid, vid))
-                liz = self._setResume(xbmcgui.ListItem(name,path=vid))
+                liz = self._setResume(chid, xbmcgui.ListItem(name,path=vid))
                 liz.setProperty("IsPlayable","true")
                 liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
                 self._resolveURL(True, liz)
@@ -269,19 +270,19 @@ class Plugin:
             
             
     def playVOD(self, title: str, vid: str): #-> catchup-id
-        self.log('playVOD, title = %s, vid = %s'%(title,vid))
+        self.log('[%s] playVOD, title = %s'%(vid,title))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
             liz.setProperty("IsPlayable","true")
-            # liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self._resolveURL(True, liz)
 
 
     def playDVR(self, title: str, vid: str): #-> catchup-id
-        self.log('playDVR, title = %s, vid = %s'%(title,vid))
+        self.log('[%s] playDVR, title = %s'%(vid, title))
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
-            liz = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-            # liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            liz = self._setResume(vid, LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self._resolveURL(True, liz)
 
 
@@ -293,7 +294,7 @@ class Plugin:
             items = randomShuffle(self.getRadioItems(name, chid, vid))
             listitems = [__buildfItem(idx, item) for idx, item in enumerate(items)]
             if len(listitems) > 0: 
-                playlist = self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True)
+                playlist = self._quePlaylist(chid, listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True)
                 timerit(BUILTIN.executeWindow)(OSD_TIMER,['ReplaceWindow(visualisation)'])
                 BUILTIN.executebuiltin("Dialog.Close(all)")
                 PLAYER().play(playlist,windowed=True)
@@ -305,7 +306,7 @@ class Plugin:
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             listitems = self.getPVRItems(name, chid)
             if len(listitems) > 0: 
-                playlist = self._quePlaylist(listitems,shuffle=False)
+                playlist = self._quePlaylist(chid, listitems,shuffle=False)
                 if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('PlayerControl(Stop)')
                 timerit(BUILTIN.executeWindow)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
                 BUILTIN.executebuiltin("Dialog.Close(all)")
@@ -318,7 +319,7 @@ class Plugin:
         with self.preparingPlayback(), PROPERTIES.suspendActivity():
             listitems = self.getPausedItems(name, chid)
             if len(listitems) > 0: 
-                playlist = self._quePlaylist(listitems,shuffle=False)
+                playlist = self._quePlaylist(chid, listitems,shuffle=False)
                 if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executebuiltin('PlayerControl(Stop)')
                 timerit(BUILTIN.executeWindow)(OSD_TIMER,['ReplaceWindow(fullscreenvideo)'])
                 BUILTIN.executebuiltin("Dialog.Close(all)")

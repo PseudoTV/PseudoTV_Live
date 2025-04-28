@@ -73,15 +73,15 @@ class XSP:
         return ""
       
       
-    def _parseRoot(self, path, media='files', checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        self.log("_parseRoot, path = %s"%(path))
+    def _parseRoot(self, id, path, media='files', checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+        self.log("[%s] _parseRoot, path = %s"%(id,path))
         paths = []
         items = self.jsonRPC.getDirectory({"directory":path,"media":media},True,checksum,expiration).get('files',[])
         [paths.extend(self.predefined.createShowPlaylist(item.get('label'))) for item in items if item.get('filetype') == 'directory' and item.get('label')]
         return paths
 
 
-    def parseXSP(self, path: str, media: str='video', sort: dict={}, limit: int=SETTINGS.getSettingInt('Page_Limit')):
+    def parseXSP(self, id: str, path: str, media: str='video', sort: dict={}, limit: int=SETTINGS.getSettingInt('Page_Limit')):
         try: 
             paths = []
             xml   = FileAccess.open(path, "r")
@@ -89,20 +89,20 @@ class XSP:
             xml.close()
             
             try: media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
-            except Exception as e: self.log("parseXSP, no media type, fallback to %s"%(media), xbmc.LOGDEBUG)
+            except Exception as e: self.log("[%s] parseXSP, no media type, fallback to %s"%(id,media), xbmc.LOGDEBUG)
             
             try: limit = int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue)
-            except Exception as e: self.log("parseXSP, no limit set, fallback to %s"%(limit), xbmc.LOGDEBUG)
+            except Exception as e: self.log("[%s] parseXSP, no limit set, fallback to %s"%(id,limit), xbmc.LOGDEBUG)
 
             try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()})
             except Exception as e:
                 if "method" in sort: sort.pop("method")
-                self.log("parseXSP, no sort method, fallback to %s"%(sort.get('method')), xbmc.LOGDEBUG)
+                self.log("[%s] parseXSP, no sort method, fallback to %s"%(id,sort.get('method')), xbmc.LOGDEBUG)
             
             try: sort.update({"order":dom.getElementsByTagName('order')[0].getAttribute('direction').lower()})
             except Exception as e: 
                 if "order" in sort: sort.pop("order")
-                self.log("parseXSP, no sort direction, fallback to %s"%(sort.get('order')), xbmc.LOGDEBUG)
+                self.log("[%s] parseXSP, no sort direction, fallback to %s"%(id,sort.get('order')), xbmc.LOGDEBUG)
 
             try:
                 type = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
@@ -111,17 +111,17 @@ class XSP:
                         if rule.getAttribute('operator').lower() == 'is':
                             if   rule.getAttribute('field').lower() == 'path':                       paths.append(rule.getElementsByTagName("value")[0].childNodes[0].data)
                             elif rule.getAttribute('field').lower() in ['playlist','virtualfolder']: paths.extend(self.findXSP(rule.getElementsByTagName("value")[0].childNodes[0].data))
-                elif type.lower() == "tvshows": paths.extend(list(self._parseRoot(path)))
+                elif type.lower() == "tvshows": paths.extend(list(self._parseRoot(id,path)))
             except Exception as e:
-                self.log("parseXSP, parsing paths failed! %s"%(e), xbmc.LOGDEBUG)
+                self.log("[%s] parseXSP, parsing paths failed! %s"%(id,e), xbmc.LOGDEBUG)
                 type  = 'Unknown'
                 
-            self.log("parseXSP, type = %s, media = %s, sort = %s, limit = %s\npaths = %s"%(type, media, sort, limit, paths))
-        except Exception as e: self.log("parseXSP, failed! %s"%(e), xbmc.LOGERROR)
+            self.log("[%s] parseXSP, type = %s, media = %s, sort = %s, limit = %s\npaths = %s"%(id,type, media, sort, limit, paths))
+        except Exception as e: self.log("[%s] parseXSP, failed! %s"%(id,e), xbmc.LOGERROR)
         return paths, media, sort, limit
             
 
-    def parseDXSP(self, opath: str, sort: dict={}, filter: dict={}, incExtras: bool=SETTINGS.getSettingBool('Enable_Extras')):
+    def parseDXSP(self, id: str, opath: str, sort: dict={}, filter: dict={}, incExtras: bool=SETTINGS.getSettingBool('Enable_Extras')):
         try:
             path, params = opath.split('?xsp=')
             media = 'music' if path.lower().startswith('musicdb://') else 'video'
@@ -142,7 +142,7 @@ class XSP:
             #if filter: param["rules"].update(filter)
             
             opath = '%s%s?xsp=%s'%(path,flatten,quoteString(dumpJSON(param)))
-            self.log("parseDXSP, type = %s, media = %s, sort = %s, filter = %s\npath = %s"%(param["type"], media, sort, {}, opath))
-        except Exception as e: self.log("parseDXSP, failed! %s"%(e), xbmc.LOGERROR)
+            self.log("[%s] parseDXSP, type = %s, media = %s, sort = %s, filter = %s\npath = %s"%(id,param["type"], media, sort, {}, opath))
+        except Exception as e: self.log("[%s] parseDXSP, failed! %s"%(id,e), xbmc.LOGERROR)
         return opath, media, sort, {}
         

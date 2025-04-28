@@ -99,7 +99,7 @@ class Seasonal:
             int: Adjusted day of the month.
         """
         dt = datetime.datetime.now()
-        return dt.day + dt.replace(day=1).weekday()
+        return dt.day + dt.replace(day=1).weekday() - 1
 
     def getDOM(self, year, month):
         """
@@ -122,12 +122,14 @@ class Seasonal:
                 days_in_month.append(day[0])
         return days_in_month
 
-    @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
+    # @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
     def getSeason(self, key):
+        self.log('getSeason, key = %s' % (key))
         return getJSON(HOLIDAYS).get(key,{})
 
-    @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
+    # @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
     def getSeasons(self, month):
+        self.log('getSeasons, month = %s' % (month))
         return getJSON(SEASONS).get(month,{})
 
     @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
@@ -162,14 +164,15 @@ class Seasonal:
         month = self.getMonth(name=True)
         day   = self.getDay()
         dom   = self.getDOM(self.getYear(),self.getMonth())
-        curr  = dom[day - 1:] # Running a 5-week month for extended weeks > 28 days.
+        curr  = dom[day - 1:] # Running a 5-week month for extended weeks > 28 days
+        days  = curr
         if fallback:
             past = dom[:day - 1]
             past.reverse()
-            days = curr + past
+            days = days + past
             
         for next in days:
-            holiday = self.getSeasons(self.getMonth(name=True)).get(month,{}).get(str(next),{})
+            holiday = self.getSeasons(month).get(str(next),{})
             if holiday.get('keyword'): break
         self.log('getNearestHoliday, using fallback = %s, month = %s, day = %s, nearest day = %s, returning = %s' %(fallback, month, day, next, holiday))
         return holiday
@@ -181,15 +184,21 @@ class Seasonal:
 
         :yield: A dictionary representing a seasonal content query.
         """
-        self.log('buildSeasonal')
-        season = self.getHoliday()
-        for query in [TV_QUERY, MOVIE_QUERY]:
-            for param in self.getSeason(season.get('keyword')).get(query.get('key',{})):
-                item = query.copy()
-                holiday = season.copy()
+        holiday = self.getHoliday()
+        season  = self.getSeason(holiday.get('keyword'))
+        for type, params in list(season.items()):
+            for param in params:
+                item = {'episodes':TV_QUERY,'movies':MOVIE_QUERY}[type.lower()].copy()
                 item["holiday"] = holiday
+                
                 item_sort = SORT.copy()
                 if param.get("sort"): item_sort.update(param.get("sort"))
                 item["sort"] = item_sort
-                if param.get("filter"): item["filter"] = param.get("filter")
+                
+                item_filter = FILTER.copy()
+                if param.get("filter"): item_filter.update(param.get("filter"))
+                item["filter"] = item_filter
+                
+                self.log('buildSeasonal, %s - item = %s'%(holiday.get('name'),item))
                 yield item
+       

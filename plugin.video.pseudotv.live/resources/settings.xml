@@ -3,7 +3,7 @@
     <section id="plugin.video.pseudotv.live">
         <category id="channels" label="30108" help="">
             <group id="1">
-                <setting id="Update_Status" type="string" label="32168" help="33169">
+                <setting id="Update_Status" type="string" label="32033" help="33169">
                     <level>0</level>
                     <default/>
                     <constraints>

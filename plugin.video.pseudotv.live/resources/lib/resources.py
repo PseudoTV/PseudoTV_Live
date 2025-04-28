@@ -52,14 +52,13 @@ class Resources:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getLogo(self, citem: dict, logo=LOGO, auto=False) -> str:
-        logo = logo.replace(LOGO,'')
-        if not logo:          logo = self.getLocalLogo(citem.get('name'))  #local
+    def getLogo(self, citem: dict, fallback=LOGO, auto=False) -> str:
+        logo = self.getLocalLogo(citem.get('name'))                        #local
         if not logo:          logo = self.getCachedLogo(citem)             #cache
-        if not logo and auto: logo = self.getLogoResources(citem)
-        if not logo and auto: logo = self.getTVShowLogo(citem.get('name'))
-        if not logo: logo = LOGO
-        self.log('getLogo, chname = %s, logo = %s, auto = %s'%(citem.get('name'), logo, auto))
+        if not logo and auto: logo = self.getLogoResources(citem)          #resources
+        if not logo and auto: logo = self.getTVShowLogo(citem.get('name')) #tvshow
+        if not logo: logo = (fallback or LOGO)                             #fallback
+        self.log('getLogo,  = %s, logo = %s, auto = %s'%(citem.get('name'), logo, auto))
         return logo
         
 
@@ -74,8 +73,8 @@ class Resources:
 
 
     def getCachedLogo(self, citem, select=False):
-        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select),'checksum':getMD5('|'.join(self.getResources(citem))), 'args':(citem,select)},
-                      {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   ,'checksum':ADDON_VERSION                             , 'args':(citem.get('name'), select)}]
+        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select),'checksum':getMD5('|'.join(self.getResources(citem)), 'args':(citem,select)},
+                      {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   ,'checksum':ADDON_VERSION, 'args':(citem.get('name'), select)}]
         for cacheItem in cacheFuncs:
             cacheResponse = self.cache.get(cacheItem.get('name',''),cacheItem.get('checksum',ADDON_VERSION))
             if cacheResponse: 

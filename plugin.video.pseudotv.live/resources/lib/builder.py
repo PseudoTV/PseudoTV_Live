@@ -47,6 +47,7 @@ class Builder:
         self.service      = service        
         self.jsonRPC      = service.jsonRPC
         self.cache        = service.jsonRPC.cache
+        self.channels     = Channels()
 
         #global dialog
         self.pDialog    = None
@@ -91,7 +92,7 @@ class Builder:
         self.xmltv            = XMLTVS()
         self.m3u              = M3U()
         self.resources        = Resources(service=self.service)
-        self.runActions       = RulesList(Channels().getChannels()).runActions
+        self.runActions       = RulesList(self.channels.getChannels()).runActions
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -100,29 +101,21 @@ class Builder:
         
     def updateProgress(self, percent, message, header):
         """Utility function to update progress dialogs."""
-        if self.pDialog:
-            self.log('updateProgress, percent = %s, message = %s, header = %s'%(percent,message,header))
-            self.pDialog = DIALOG.updateProgress(percent, self.pDialog, message=message, header=header)
+        if self.pDialog: self.pDialog = DIALOG.updateProgress(percent, self.pDialog, message=message, header=header)
 
 
-    def setChannels(self, channels=None):
-        if channels is None: channels = Channels().getChannels()
-        return Channels().setChannels(channels)
-        
-        
-    def getChannels(self):
+    def getVerifiedChannels(self):
         return sorted(self.verify(), key=itemgetter('number'))
 
 
     def verify(self, channels=None):
-        if channels is None: channels = Channels().getChannels()
-        self.log('verify, channels = %s'%(len(channels)))
+        if channels is None: channels = self.channels.getChannels()
         for idx, citem in enumerate(channels):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
                 self.log('[%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem))
                 continue
             citem['name'] = validString(citem['name']) #todo temp. correct existing file names; drop by v.0.6
-            citem['logo'] = self.resources.getLogo(citem,logo=Seasonal().getHoliday().get('logo',LOGO) if citem['name'] == LANGUAGE(32002) else citem.get('logo',LOGO))
+            citem['logo'] = self.resources.getLogo(citem,fallback=Seasonal().getHoliday().get('logo',LOGO) if citem['name'] == LANGUAGE(32002) else citem.get('logo',LOGO))
             self.log('[%s] VERIFIED - channel %s: %s'%(citem['id'],citem['number'],citem['name']))
             yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self) #inject persistent citem changes here
 
@@ -145,7 +138,7 @@ class Builder:
                 try:    
                     if len(channels) == 0: raise Exception('No individual channels to update, updating all!')
                     else: channels = sorted(self.verify(channels), key=itemgetter('number'))
-                except: channels = self.getChannels()
+                except: channels = self.getVerifiedChannels()
                 
                 if len(channels) > 0:
                     self.completedBuild = True
@@ -158,12 +151,11 @@ class Builder:
                     if preview: self.pDialog = DIALOG.progressDialog()
                     else:       self.pDialog = DIALOG.progressBGDialog()
                     
-                    self.log('build, channels = %s, preview = %s\nclrIDS = %s'%(len(channels),preview,clrIDS))
                     for idx, citem in enumerate(channels):
                         self.pCount = int(idx*100//len(channels))
                         
                         citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self) #inject temporary citem changes here
-                        self.log('[%s] build, rules = %s'%(citem['id'],citem.get('rules',{})))
+                        self.log('[%s] build, preview = %s, rules = %s'%(citem['id'],preview,citem.get('rules',{})))
                         if self.service._interrupt():                       
                             self.log("[%s] build, _interrupt"%(citem['id']))
                             self.completedBuild = False
@@ -347,7 +339,7 @@ class Builder:
         self.log("[%s] buildFileList, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
         fileList = []
         if path.endswith('.xsp'): #smartplaylist - parse xsp for path, sort info
-            paths, media, sort, limit = self.xsp.parseXSP(path, media, sort, limit)
+            paths, media, sort, limit = self.xsp.parseXSP(citem.get('id',''), path, media, sort, limit)
             if len(paths) > 0:
                 for idx, npath in enumerate(paths):
                     self.pName = '%s %s/%s'%(citem['name'],idx+1,len(paths))
@@ -355,7 +347,7 @@ class Builder:
                 return interleave(fileList, self.interleaveValue)
         
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
-            path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules
+            path, media, sort, filter = self.xsp.parseDXSP(citem.get('id',''), path, sort, {}, self.incExtras) #todo filter adv. rules
             
         nlimits  = limits
         dirList  = [{'file':path}]
@@ -463,8 +455,35 @@ class Builder:
                         self.log("[%s] buildList, IDX = %s skipping 3D file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
                         continue
 
+                    title   = (item.get("title")     or item.get("label") or dirItem.get('label') or '')
+                    tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')
+                    if (item['type'].startswith(tuple(TV_TYPES)) or item.get("showtitle")):# This is a TV show
+                        season  = int(item.get("season","0"))
+                        episode = int(item.get("episode","0"))
+                        if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
+                            self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
+                            self.log("[%s] buildList, IDX = %s skipping extras! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
+                            continue
+
+                        label = tvtitle
+                        item["tvshowtitle"]  = tvtitle
+                        item["episodetitle"] = title
+                        item["episodelabel"] = '%s%s'%(title,' (%sx%s)'%(season,str(episode).zfill(2))) #Episode Title (SSxEE) Mimic Kodi's PVR label format
+                        item["showlabel"]    = '%s%s'%(item["tvshowtitle"],' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
+                    else: # This is a Movie
+                        label = title
+                        item["episodetitle"] = item.get("tagline","")
+                        item["episodelabel"] = item.get("tagline","")
+                        item["showlabel"]    = '%s%s'%(item["title"], ' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
+                
+                    if not label: 
+                        self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))
+                        continue
+                    
                     dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
-                    if dur > self.minDuration: #include media that's duration is above the players seek tolerance & users adv. rule.
+                    if dur > self.minDuration: #include media that's duration is above the players seek tolerance & users adv. rule
+                        self.updateProgress(self.pCount, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
+                        
                         item['duration']     = dur
                         item['media']        = media
                         item['originalpath'] = path #use for path sorting/playback verification 
@@ -472,39 +491,9 @@ class Builder:
                         item['remote']       = PROPERTIES.getRemoteHost()
                         
                         if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554
-                        
-                        title   = (item.get("title")     or item.get("label") or dirItem.get('label') or '')
-                        tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')
-
-                        if (item['type'].startswith(tuple(TV_TYPES)) or item.get("showtitle")):# This is a TV show
-                            season  = int(item.get("season","0"))
-                            episode = int(item.get("episode","0"))
-                            if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
-                                self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
-                                self.log("[%s] buildList, IDX = %s skipping extras! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                                continue
-
-                            label = tvtitle
-                            item["tvshowtitle"]  = tvtitle
-                            item["episodetitle"] = title
-                            item["episodelabel"] = '%s%s'%(title,' (%sx%s)'%(season,str(episode).zfill(2))) #Episode Title (SSxEE) Mimic Kodi's PVR label format
-                            item["showlabel"]    = '%s%s'%(item["tvshowtitle"],' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
-                        else: # This is a Movie
-                            label = title
-                            item["episodetitle"] = item.get("tagline","")
-                            item["episodelabel"] = item.get("tagline","")
-                            item["showlabel"]    = '%s%s'%(item["title"], ' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
-                    
-                        if not label: 
-                            self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))
-                            continue
-                        else: 
-                            self.updateProgress(self.pCount, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
-                            
                         spTitle, spYear = splitYear(label)
                         item['label'] = spTitle
-                        if item.get('year',0) == 0 and spYear: #replace missing item year with one parsed from show title
-                            item['year'] = spYear
+                        if item.get('year',0) == 0 and spYear: item['year'] = spYear #replace missing item year with one parsed from show title
                             
                         item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(32020)).strip()
                         if query.get('holiday'):
@@ -528,7 +517,7 @@ class Builder:
                             fileList.append(item)
                     else: 
                         self.pErrors.append(LANGUAGE(32032))
-                        self.log("[%s] buildList, IDX = %s skipping content no duration meta found! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
+                        self.log("[%s] buildList, IDX = %s skipping content no duration meta found or runtime below minDuration! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
 
             if sort.get("method","").startswith('episode'):
                 self.log("[%s] buildList, sorting by episode"%(citem['id']))
@@ -607,7 +596,6 @@ class Builder:
 
 
     def getTrailers(self, nitems: dict={}) -> dict:
-        self.log('getTrailers, nitems = %s'%(len(nitems)))
         return self.cache.set('kodiTrailers', mergeDictLST((self.cache.get('kodiTrailers', json_data=True) or {}),nitems), expiration=datetime.timedelta(days=28), json_data=True)
 
 
