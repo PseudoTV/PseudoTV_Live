@@ -73,8 +73,8 @@ class Resources:
 
 
     def getCachedLogo(self, citem, select=False):
-        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select),'checksum':getMD5('|'.join(self.getResources(citem)), 'args':(citem,select)},
-                      {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   ,'checksum':ADDON_VERSION, 'args':(citem.get('name'), select)}]
+        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select),'checksum':getMD5('|'.join(self.getResources(citem))), 'args':(citem,select)},
+                      {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   ,'checksum':ADDON_VERSION                             , 'args':(citem.get('name'), select)}]
         for cacheItem in cacheFuncs:
             cacheResponse = self.cache.get(cacheItem.get('name',''),cacheItem.get('checksum',ADDON_VERSION))
             if cacheResponse: 

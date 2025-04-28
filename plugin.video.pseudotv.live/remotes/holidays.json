@@ -5,13 +5,13 @@
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Twilight Zone","Anthology","Anthologies","Outer Limits"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Twilight Zone","Anthology","Anthologies","Outer Limits"]}]}]}}]},
             
-            "heros"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"genre"   ,"operator":"contains","value":["Sci-Fi","Science Fiction"]}]}]}}],
+            "scifi"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"genre"   ,"operator":"contains","value":["Sci-Fi","Science Fiction"]}]}]}}],
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"genre"   ,"operator":"contains","value":["Sci-Fi","Science Fiction"]}]}]}}]},
                          
-            "lotr"     :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien"]}]}]}}],
-                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien"]}]}]}}]},
+            "lotr"     :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien","Tolkien"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien","Tolkien"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien","Tolkien"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Lord of the rings","LOTR","Hobbit","J.R.R. Tolkien","Tolkien"]}]}]}}]},
                          
             "lego"     :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["LEGO"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["LEGO"]}]}]}}],
@@ -58,10 +58,6 @@
                                       {"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"plot"    ,"operator":"contains","value":["St. Patrick","Leprechaun","Irish","Luck","Lucky","Gold","Shamrock"]}]}]}}],
                          "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"plot"    ,"operator":"contains","value":["St. Patrick","Leprechaun","Irish","Luck","Lucky","Gold","Shamrock"]}]}]}}]},
             
-            "lotr"     :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Tolkien","Hobbit","Lord of the Rings"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Tolkien","Hobbit","Lord of the Rings"]}]}]}}],
-                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Tolkien","Hobbit","Lord of the Rings"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Tolkien","Hobbit","Lord of the Rings"]}]}]}}]},
             
             "quentin"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Quentin Tarantino"]},
                                                                                                                 {"field":"writers" ,"operator":"contains","value":["Quentin Tarantino"]},
@@ -120,12 +116,7 @@
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Jurassic Park"]}]}]}}],
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Jurassic Park"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Jurassic Park"]}]}]}}]},
-                                                                                                                
-            "superman" :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Superman"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Superman"]}]}]}}],
-                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Superman"]},
-                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Superman"]}]}]}}]},
-            
+
             "disney"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Disney","Walt Disney"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Disney","Walt Disney"]},
                                                                                                                 {"field":"studio"  ,"operator":"contains","value":["Disney","Walt Disney"]}]}]}}],
