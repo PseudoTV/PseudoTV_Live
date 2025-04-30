@@ -241,8 +241,8 @@ class Tasks():
                 if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
                 if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
             else: self._que(self.chkChannels,3,channels)
-        elif SETTINGS.hasAutotuned() and PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
-        else: __runAutotune()
+        elif not SETTINGS.hasAutotuned(): __runAutotune()
+        elif PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
         
         del builder
         return complete

@@ -139,7 +139,7 @@
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Twilight Zone", "Rod Serling"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Twilight Zone", "Rod Serling"]}]}]}}]},
             
-            "mavrick"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Top Gun"]},
+            "mavrick"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Top Gun"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Top Gun"]}]}]}}],
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Top Gun"]}]}]}}]},
             

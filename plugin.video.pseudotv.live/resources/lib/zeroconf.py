@@ -34,8 +34,9 @@ import threading
 import select
 import traceback
 from functools import reduce
-from globals import *
-monitor = MONITOR()
+from kodi_six import xbmc
+
+monitor = xbmc.Monitor()
 
 pythree = (sys.version_info[0] >= 3)
 
@@ -795,7 +796,8 @@ class Engine(threading.Thread):
                     for socket in rr:
                         try:
                             self.readers[socket].handle_read()
-                        except Exception as e: self.log("__init__, failed! %s"%(e), xbmc.LOGERROR)
+                        except:
+                            traceback.print_exc()
                 except:
                     pass
 
@@ -1057,8 +1059,8 @@ class ServiceInfo(object):
                     result[key] = value
 
             self.properties = result
-        except Exception as e:
-            self.log("setText, failed! %s"%(e), xbmc.LOGERROR)
+        except:
+            traceback.print_exc()
             self.properties = None
 
     def getType(self):
@@ -1186,26 +1188,13 @@ class ServiceInfo(object):
 
 
 class Zeroconf(object):
-    """
-    Implementation of Zeroconf Multicast DNS Service Discovery.
+    """Implementation of Zeroconf Multicast DNS Service Discovery
 
-    This class supports:
-    - Registration and unregistration of services.
-    - Queries and browsing for services.
-    - Multicast DNS (mDNS) communication.
-
-    Attributes:
-        bindaddress (str): The IP address to bind to for multicast communication.
-        services (dict): Dictionary of registered services.
-        cache (DNSCache): Cache of DNS entries.
+    Supports registration, unregistration, queries and browsing.
     """
     def __init__(self, bindaddress=None):
-        """
-        Initializes the Zeroconf instance, setting up multicast communication.
-
-        Args:
-            bindaddress (str): (Optional) The IP address to bind to. Defaults to None.
-        """
+        """Creates an instance of the Zeroconf class, establishing
+        multicast communications, listening and reaping threads."""
         global _GLOBAL_DONE
         _GLOBAL_DONE = False
         if bindaddress is None:
@@ -1528,7 +1517,8 @@ class Zeroconf(object):
                         out.addAdditionalAnswer(DNSAddress(service.server,
                             _TYPE_A, _CLASS_IN | _CLASS_UNIQUE,
                             _DNS_TTL, service.address))
-                except Exception as e: self.log("handleQuery, failed! %s"%(e), xbmc.LOGERROR)
+                except:
+                    traceback.print_exc()
 
         if out is not None and out.answers:
             out.id = msg.id
