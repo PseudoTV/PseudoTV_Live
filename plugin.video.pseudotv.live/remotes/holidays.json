@@ -58,7 +58,6 @@
                                       {"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"plot"    ,"operator":"contains","value":["St. Patrick","Leprechaun","Irish","Luck","Lucky","Gold","Shamrock"]}]}]}}],
                          "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"plot"    ,"operator":"contains","value":["St. Patrick","Leprechaun","Irish","Luck","Lucky","Gold","Shamrock"]}]}]}}]},
             
-            
             "quentin"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Quentin Tarantino"]},
                                                                                                                 {"field":"writers" ,"operator":"contains","value":["Quentin Tarantino"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Quentin Tarantino"]}]}]}}],
@@ -66,11 +65,54 @@
                                                                                                                 {"field":"writers" ,"operator":"contains","value":["Quentin Tarantino"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Quentin Tarantino"]}]}]}}]},
                                                                                                                 
+            "anderson" :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Wes Anderson"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["Wes Anderson"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Wes Anderson"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Wes Anderson"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["Wes Anderson"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Wes Anderson"]}]}]}}]},
+                                                                                                                
+            "lucas"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["George Lucas","Sofia Coppola"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["George Lucas","Sofia Coppola"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["George Lucas","Sofia Coppola"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["George Lucas","Sofia Coppola"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["George Lucas","Sofia Coppola"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["George Lucas","Sofia Coppola"]}]}]}}]},
+                                                                                                                
+            "welles"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Orson Welles"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["Orson Welles"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Orson Welles"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Orson Welles"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["Orson Welles"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Orson Welles"]}]}]}}]},
+                                                                                                                
+            "chukwu"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Chinonye Chukwu"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["Chinonye Chukwu"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Chinonye Chukwu"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Chinonye Chukwu"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["Chinonye Chukwu"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Chinonye Chukwu"]}]}]}}]},
+                                                                                                                
+                                                                                                                
+            "eastwood" :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Clint Eastwood"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["Clint Eastwood"]},
+                                                                                                                {"field":"cast"    ,"operator":"contains","value":["Clint Eastwood"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Clint Eastwood"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Clint Eastwood"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["Clint Eastwood"]},
+                                                                                                                {"field":"cast"    ,"operator":"contains","value":["Clint Eastwood"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Clint Eastwood"]}]}]}}]},
+                                                                                                                
             "startrek" :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Star Trek"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Star Trek"]}]}]}}],
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Star Trek"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Star Trek"]}]}]}}]},
                                                                                                                 
+            "muppets"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["The Muppets"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["The Muppets"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["The Muppets"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["The Muppets"]}]}]}}]},
+                                                          
             "othello"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["William Shakespeare","Shakespeare"]},
                                                                                                                 {"field":"writers" ,"operator":"contains","value":["William Shakespeare","Shakespeare"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["William Shakespeare","Shakespeare"]}]}]}}],
@@ -96,6 +138,10 @@
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Twilight Zone", "Rod Serling"]}]}]}}],
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Twilight Zone", "Rod Serling"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Twilight Zone", "Rod Serling"]}]}]}}]},
+            
+            "mavrick"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Top Gun"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Top Gun"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Top Gun"]}]}]}}]},
             
             "watson"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Enola Holmes", "Sherlock", "Sher-lock", "Sherlock Holmes", "Arthur Conan Doyle"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Enola Holmes", "Sherlock", "Sher-lock", "Sherlock Holmes", "Arthur Conan Doyle"]}]}]}}],

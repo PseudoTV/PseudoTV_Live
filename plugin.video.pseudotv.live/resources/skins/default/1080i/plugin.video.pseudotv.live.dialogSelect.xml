@@ -113,7 +113,7 @@
             </control>
             <control type="group" id="55">
                 <control type="list" id="5">
-                    <description>Channel List</description>
+                    <description>List</description>
                     <left>429</left>
                     <top>100</top>
                     <width>1060</width>

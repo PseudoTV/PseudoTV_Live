@@ -18,20 +18,20 @@
 # -*- coding: utf-8 -*-
 # Adapted from https://github.com/sualfred/script.embuary.helper/blob/matrix
 
+# https://www.holidaysmart.com/category/fandom
 # https://www.holidaysmart.com/holidays/daily/fandom
 # https://www.holidaysmart.com/holidays/daily/tv-movies
-           
+# https://tvtropes.org/pmwiki/pmwiki.php/Main/PopCultureHoliday
+# https://fanlore.org/wiki/List_of_Annual_Holidays,_Observances,_and_Events_in_Fandom
+
 from globals     import *
 
-TV_QUERY    = {"path":"videodb://tvshows/titles/" ,"limits":{},"sort":{},"filter":{},
-               "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}
-               
-MOVIE_QUERY = {"path":"videodb://movies/titles/"  ,"limits":{},"sort":{},"filter":{},
-               "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"}
-    
+KEY_QUERY   = {"method":"","order":"","field":'',"operator":'',"value":[]}
+LIMITS      = {"end":-1,"start":0,"total":0}
 FILTER      = {"field":"","operator":"","value":[]}
 SORT        = {"method":"","order":"","ignorearticle":True,"useartistsortname":True}
-KEY_QUERY   = {"method":"","order":"","field":'',"operator":'',"value":[]}
+TV_QUERY    = {"path":"videodb://tvshows/titles/", "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes","limits":LIMITS,"sort":SORT,"filter":FILTER}
+MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"  ,"limits":LIMITS,"sort":SORT,"filter":FILTER}
 
 class Seasonal:
     def __init__(self):
@@ -152,6 +152,11 @@ class Seasonal:
         """
         return self.getSeasons(self.getMonth(name=True)).get(self.getDay(),{})
 
+
+    def getSpecialHolidays(self, month, day): #todo check if month, day of week, day match holiday exceptions.
+        return {"Friday":{"13":{ "name": "Friday The 13th", "tagline": "", "keyword": "", "logo": ""}}}
+    
+
     def getNearestHoliday(self, fallback=True):
         """
         Retrieves the nearest holiday. If no holiday is found in the current week, it searches
@@ -190,15 +195,8 @@ class Seasonal:
             for param in params:
                 item = {'episodes':TV_QUERY,'movies':MOVIE_QUERY}[type.lower()].copy()
                 item["holiday"] = holiday
-                
-                item_sort = SORT.copy()
-                if param.get("sort"): item_sort.update(param.get("sort"))
-                item["sort"] = item_sort
-                
-                item_filter = FILTER.copy()
-                if param.get("filter"): item_filter.update(param.get("filter"))
-                item["filter"] = item_filter
-                
+                item["sort"].update(param.get("sort"))
+                item["filter"].update(param.get("filter"))
                 self.log('buildSeasonal, %s - item = %s'%(holiday.get('name'),item))
                 yield item
        

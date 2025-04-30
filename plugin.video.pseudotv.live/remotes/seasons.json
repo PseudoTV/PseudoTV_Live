@@ -67,7 +67,7 @@
             "logo": ""
         },
         "12": {
-            "name": "",
+            "name": "Pacific Rim",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -207,7 +207,7 @@
             "logo": ""
         },
         "4": {
-            "name": "",
+            "name": "Monsters, Inc.",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -395,8 +395,8 @@
             "logo": ""
         },
         "6": {
-            "name": "",
-            "tagline": "",
+            "name": "The Day of the Dude",
+            "tagline": "“I'm The Dude. ...“",
             "keyword": "",
             "logo": ""
         },
@@ -437,7 +437,7 @@
             "logo": "https://upload.wikimedia.org/wikipedia/fr/6/6b/Alfred_Hitchcock_pr%C3%A9sente.png"
         },
         "13": {
-            "name": "",
+            "name": "SpongeBob",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -503,7 +503,7 @@
             "logo": ""
         },
         "24": {
-            "name": "",
+            "name": "The Breakfast Club",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -595,7 +595,7 @@
             "logo": ""
         },
         "8": {
-            "name": "",
+            "name": "Empire Records",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -631,7 +631,7 @@
             "logo": ""
         },
         "14": {
-            "name": "",
+            "name": "Tremors Day",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -697,7 +697,7 @@
             "logo": ""
         },
         "25": {
-            "name": "",
+            "name": "Miss Congeniality",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -718,7 +718,7 @@
             "name": "Superhero Day",
             "tagline": "“I Can Do This All Day!“",
             "keyword": "super",
-            "logo": "https://www.clipartmax.com/png/middle/73-736454_super-heroes-i-look-up-to-respect-or-admire-superheroes-logo-worksheets.png"
+            "logo": "https://cdnsm5-ss2.sharpschool.com/UserFiles/Servers/Server_1586/Image/Communications/Announcements/Super%20Hero%20Takeover%20Day-01.png"
         },
         "29": {
             "name": "",
@@ -736,9 +736,9 @@
     "May": {
         "1": {
             "name": "Wes Anderson Birthday!",
-            "tagline": "",
-            "keyword": "",
-            "logo": ""
+            "tagline": "“There's no story if there isn't some conflict“",
+            "keyword": "anderson",
+            "logo": "https://d21buns5ku92am.cloudfront.net/69538/images/510580-AWA%20Logo_Primary-1c01e3-large-1699008531.png"
         },
         "2": {
             "name": "Harry Potter Day",
@@ -766,9 +766,9 @@
         },
         "6": {
             "name": "Orson Welles Birthday!",
-            "tagline": "",
-            "keyword": "",
-            "logo": ""
+            "tagline": "“We're born alone, we live alone, we die alone“",
+            "keyword": "welles",
+            "logo": "https://www.clipartmax.com/png/middle/41-414145_orson-welles-creative-arts-festival-orson-welles.png"
         },
         "7": {
             "name": "",
@@ -784,9 +784,9 @@
         },
         "9": {
             "name": "Muppets Day",
-            "tagline": "",
-            "keyword": "",
-            "logo": ""
+            "tagline": "“Keep believing, keep pretending“",
+            "keyword": "muppets",
+            "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/The_Muppets_2022_logo.png/1280px-The_Muppets_2022_logo.png"
         },
         "10": {
             "name": "",
@@ -808,15 +808,15 @@
         },
         "13": {
             "name": "Top Gun Day",
-            "tagline": "",
-            "keyword": "",
-            "logo": ""
+            "tagline": "“I feel the need, the need for speed“",
+            "keyword": "mavrick",
+            "logo": "https://cdn2.steamgriddb.com/logo_thumb/5f0ee0d25d2941f09c7372ac0fd9c292.png"
         },
         "14": {
             "name": "George Lucas / Sofia Coppola Birthday!",
             "tagline": "",
-            "keyword": "",
-            "logo": ""
+            "keyword": "lucas",
+            "logo": "https://www.shareicon.net/data/512x512/2016/07/10/119561_movie_512x512.png"
         },
         "15": {
             "name": "",
@@ -845,8 +845,8 @@
         "19": {
             "name": "Chinonye Chukwu Birthday!",
             "tagline": "",
-            "keyword": "",
-            "logo": ""
+            "keyword": "chukwu",
+            "logo": "https://www.shareicon.net/data/512x512/2016/07/10/119561_movie_512x512.png"
         },
         "20": {
             "name": "",
@@ -916,9 +916,9 @@
         },
         "31": {
             "name": "Clint Eastwood Birthday!",
-            "tagline": "",
-            "keyword": "",
-            "logo": ""
+            "tagline": "“Go ahead, make my day“",
+            "keyword": "eastwood",
+            "logo": "https://www.pngplay.com/wp-content/uploads/9/Clint-Eastwood-PNG-Photos.png"
         }
     },
     "June": {
@@ -1013,7 +1013,7 @@
             "logo": ""
         },
         "16": {
-            "name": "",
+            "name": "Captain Picard Day",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1055,7 +1055,7 @@
             "logo": ""
         },
         "23": {
-            "name": "",
+            "name": "Sonic the Hedgehog",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1159,7 +1159,7 @@
             "logo": ""
         },
         "10": {
-            "name": "",
+            "name": "Ultraman",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1177,7 +1177,7 @@
             "logo": ""
         },
         "13": {
-            "name": "",
+            "name": "Harry Potter",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1237,7 +1237,7 @@
             "logo": ""
         },
         "23": {
-            "name": "",
+            "name": "Batman Day",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1467,7 +1467,7 @@
             "logo": "https://freepngimg.com/download/power_rangers/21068-1-power-rangers-transparent-image.png"
         },
         "30": {
-            "name": "",
+            "name": "Terminator Day",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1481,7 +1481,7 @@
     },
     "September": {
         "1": {
-            "name": "",
+            "name": "Harry Potter",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1499,7 +1499,7 @@
             "logo": ""
         },
         "4": {
-            "name": "",
+            "name": "Cars",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1529,7 +1529,7 @@
             "logo": "https://assets.stickpng.com/images/613794434b96600004f67704.png"
         },
         "9": {
-            "name": "",
+            "name": "Brooklyn Nine-Nine",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1541,7 +1541,7 @@
             "logo": ""
         },
         "11": {
-            "name": "",
+            "name": "Frasier Crane Day",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1613,7 +1613,7 @@
             "logo": "https://www.pngall.com/wp-content/uploads/12/Lord-Of-The-Rings-Logo-PNG-Picture.png"
         },
         "23": {
-            "name": "",
+            "name": "Lost",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1631,7 +1631,7 @@
             "logo": "https://assets.dochipo.com/editor/animations/comic-word-art/e5bbe61b-3b6f-419f-91ff-87e08fa9a74e.gif"
         },
         "26": {
-            "name": "",
+            "name": "The Last of Us",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1643,7 +1643,7 @@
             "logo": ""
         },
         "28": {
-            "name": "",
+            "name": "Resident Evil",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1663,17 +1663,17 @@
     },
     "October": {
         "1": {
-            "name": "Willy Wonka Day",
-            "tagline": "“The Suspense Is Terrible. I Hope It’ll Last.”",
-            "keyword": "wonka",
-            "logo": "https://seeklogo.com/images/W/wonka-logo-AFC0443DD4-seeklogo.com.png"
-        },
-        "2": {
-            "name": "",
+            "name": "The Umbrella Academy",
             "tagline": "",
             "keyword": "",
             "logo": ""
         },
+        "2": {
+            "name": "Willy Wonka Day",
+            "tagline": "“The Suspense Is Terrible. I Hope It’ll Last.”",
+            "keyword": "wonka",
+            "logo": "https://seeklogo.com/images/W/wonka-logo-AFC0443DD4-seeklogo.com.png"
+        }, 
         "3": {
             "name": "Mean Girls Day",
             "tagline": "",
@@ -1687,7 +1687,7 @@
             "logo": ""
         },
         "5": {
-            "name": "",
+            "name": "James Bond Day",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1862,7 +1862,7 @@
             "logo": ""
         },
         "3": {
-            "name": "",
+            "name": "Godzilla",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1880,7 +1880,7 @@
             "logo": ""
         },
         "6": {
-            "name": "",
+            "name": "Halo Day",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -1964,7 +1964,7 @@
             "logo": ""
         },
         "20": {
-            "name": "",
+            "name": "Princess Day",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -2134,7 +2134,7 @@
             "logo": ""
         },
         "18": {
-            "name": "",
+            "name": "Elf",
             "tagline": "",
             "keyword": "",
             "logo": ""
@@ -2164,10 +2164,10 @@
             "logo": ""
         },
         "23": {
-            "name": "Christmas Movie Marathon Day",
-            "tagline": "“Tis the season“",
-            "keyword": "xmas",
-            "logo": "https://www.freeiconspng.com/uploads/happy-holidays-text-png-10.png"
+            "name": "",
+            "tagline": "",
+            "keyword": "",
+            "logo": ""
         },
         "24": {
             "name": "",
@@ -2176,10 +2176,10 @@
             "logo": ""
         },
         "25": {
-            "name": "",
-            "tagline": "",
-            "keyword": "",
-            "logo": ""
+            "name": "Christmas Movie Marathon Day",
+            "tagline": "“Tis the season“",
+            "keyword": "xmas",
+            "logo": "https://www.freeiconspng.com/uploads/happy-holidays-text-png-10.png"
         },
         "26": {
             "name": "",
