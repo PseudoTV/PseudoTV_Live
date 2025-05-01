@@ -24,3 +24,8 @@ from globals   import *
 # https://github.com/PseudoTV/PseudoTV_Live/issues/68
 
 #todo move autotuning/startup to wizard.
+
+#display welcome
+#search discovery
+#parse library
+#prompt autotune

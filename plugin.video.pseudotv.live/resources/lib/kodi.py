@@ -645,6 +645,14 @@ class Settings:
         return self.setCacheSetting('has.Autotuned',state)
 
 
+    def setWizardRun(self, state=True):
+        return self.setCacheSetting('has.wizardRun',state)
+
+
+    def hasWizardRun(self):
+        return self.getCacheSetting('has.wizardRun')
+
+       
 class Properties:
     monitor = MONITOR()
     
@@ -760,8 +768,10 @@ class Properties:
         
 
     def isPendingShutdown(self):
-        return self.getEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID))
-
+        value = self.getEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID))
+        self.clrEXTProperty('%s.pendingShutdown'%(ADDON_ID))
+        return value
+        
                 
     def setPendingRestart(self, state=True):
         if state: Dialog().notificationDialog(LANGUAGE(32124))
@@ -769,9 +779,19 @@ class Properties:
 
 
     def isPendingRestart(self):
-        return self.getEXTPropertyBool('%s.pendingRestart'%(ADDON_ID))
+        value = self.getEXTPropertyBool('%s.pendingRestart'%(ADDON_ID))
+        self.clrEXTProperty('%s.pendingRestart'%(ADDON_ID))
+        return value
 
-       
+     
+    def setFirstRun(self, state=True):
+        return self.setEXTPropertyBool('%s.has.firstRun'%(ADDON_ID),state)
+
+
+    def hasFirstRun(self):
+        return self.getEXTPropertyBool('%s.has.firstRun'%(ADDON_ID))
+
+
     @contextmanager
     def interruptActivity(self): #quit background task
         try:

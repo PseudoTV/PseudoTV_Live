@@ -62,10 +62,9 @@ class RulesList:
                           ForceRandom(),
                           EvenShowsRule(),
                           PauseRule()]
-        if channels:
-            self.ruleItems = self.loadRules(channels)
-        else:
-            self.ruleItems = []
+                          
+        if channels: self.ruleItems = self.loadRules(channels)
+        else:        self.ruleItems = []
                          
 
     def log(self, msg, level=xbmc.LOGDEBUG):

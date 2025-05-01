@@ -108,8 +108,8 @@ class Builder:
         return sorted(self.verify(), key=itemgetter('number'))
 
 
-    def verify(self, channels=None):
-        if channels is None: channels = self.channels.getChannels()
+    def verify(self, channels=[]):
+        if not channels: channels = self.channels.getChannels()
         for idx, citem in enumerate(channels):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
                 self.log('[%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem))

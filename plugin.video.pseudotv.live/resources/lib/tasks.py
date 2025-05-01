@@ -116,9 +116,12 @@ class Tasks():
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 600)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 3600)
-        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
-        self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 900)
-        self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
+        
+        if PROPERTIES.hasFirstRun():
+            self._chkEpochTimer('chkFiles'    , self.chkFiles        , 300)
+            self._chkEpochTimer('chkURLQUE'   , self.chkURLQUE       , 300)
+            self._chkEpochTimer('chkJSONQUE'  , self.chkJSONQUE      , 300)
+            self._chkEpochTimer('chkLOGOQUE'  , self.chkLOGOQUE      , 900)
         
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
         self._chkPropTimer('chkFillers'       , self.chkFillers      , 2)
@@ -196,7 +199,6 @@ class Tasks():
 
         
     def chkLibrary(self, force=PROPERTIES.getPropertyBool('ForceLibrary')):
-        self.log('chkLibrary, force = %s'%(force))
         try:
             library = Library(service=self.service)
             library.importPrompt() #refactor feature
@@ -204,6 +206,7 @@ class Tasks():
             del library
             if complete: self._que(self.chkChannels,3)
             else:        self._que(self.chkLibrary,2,force)
+            self.log('chkLibrary, force = %s, complete = %s'%(force,complete))
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
@@ -217,14 +220,12 @@ class Tasks():
 
 
     def chkChannels(self, channels: list=[]):
-        def __runAutotune():
-            self.log('chkChannels, __runAutotune')
-            SETTINGS.setAutotuned(Autotune()._runTune())
-            self._que(self.chkChannels,3)
-            
-        save     = False
-        complete = False
-        builder  = Builder(service=self.service)
+        save              = False
+        complete          = False
+        builder           = Builder(service=self.service)
+        hasAutotuned      = SETTINGS.hasAutotuned()
+        hasFirstRun       = PROPERTIES.hasFirstRun()
+        hasEnabledServers = PROPERTIES.hasEnabledServers()
         
         if not channels:
             save     = True
@@ -237,16 +238,20 @@ class Tasks():
             complete, updated = builder.build(channels)
             self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
             if complete:
-                if save: builder.channels.setChannels(channels)
+                if save: 
+                    builder.channels.setChannels(channels)
                 if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
                 if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
             else: self._que(self.chkChannels,3,channels)
-        elif not SETTINGS.hasAutotuned(): __runAutotune()
-        elif PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
-        
+        else:
+            self.log('chkChannels, hasAutotuned = %s, hasEnabledServers = %s'%(hasAutotuned,hasEnabledServers))
+            if not hasAutotuned:    complete = SETTINGS.setAutotuned(Autotune()._runTune())
+            elif hasEnabledServers: complete = PROPERTIES.setPropTimer('chkPVRRefresh')
+            else:                   complete = True
         del builder
+        if not hasFirstRun: PROPERTIES.setFirstRun(complete)
         return complete
-        
+
 
     def chkJSONQUE(self):
         if not PROPERTIES.isRunning('chkJSONQUE') and self.service.monitor.isIdle:
@@ -321,9 +326,9 @@ class Tasks():
         else: PROPERTIES.setPropTimer('chkPVRRefresh')
 
 
-    def chkFillers(self, channels=None):
+    def chkFillers(self, channels=[]):
         self.log('chkFillers')
-        if channels is None: channels = self.getVerifiedChannels()
+        if not channels: channels = self.getVerifiedChannels()
         pDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
         for idx, ftype in enumerate(FILLER_TYPES):
             if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),'')): 

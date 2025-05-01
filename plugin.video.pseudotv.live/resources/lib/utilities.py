@@ -31,23 +31,28 @@ class Utilities:
 
    
     def qrWiki(self):
-        DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
+        with PROPERTIES.suspendActivity():
+            DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
 
 
     def qrSupport(self):
-        DIALOG.qrDialog(URL_SUPPORT, LANGUAGE(30033)%(ADDON_NAME))
+        with PROPERTIES.suspendActivity():
+            DIALOG.qrDialog(URL_SUPPORT, LANGUAGE(30033)%(ADDON_NAME))
         
         
     def qrRemote(self):
-        DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteHost(),'remote.html'), LANGUAGE(30165))
+        with PROPERTIES.suspendActivity():
+            DIALOG.qrDialog('http://%s/%s'%(PROPERTIES.getRemoteHost(),'remote.html'), LANGUAGE(30165))
         
 
     def qrReadme(self):
-        DIALOG.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
+        with PROPERTIES.suspendActivity():
+            DIALOG.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
     
     
     def qrBonjourDL(self):
-        DIALOG.qrDialog(URL_WIN_BONJOUR, LANGUAGE(32217))
+        with PROPERTIES.suspendActivity():
+            DIALOG.qrDialog(URL_WIN_BONJOUR, LANGUAGE(32217))
         
         
     def showChangelog(self):

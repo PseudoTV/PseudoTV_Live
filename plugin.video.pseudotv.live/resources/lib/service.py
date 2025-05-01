@@ -467,6 +467,7 @@ class Service():
         
         
     def __tasks(self):
+        # if SETTINGS.hasWizardRun():
         self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,FIFTEEN)
 
 
