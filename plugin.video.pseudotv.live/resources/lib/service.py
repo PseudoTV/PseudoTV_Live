@@ -63,6 +63,7 @@ class Player(xbmc.Player):
         self.runWhilePlaying   = SETTINGS.getSettingBool('Run_While_Playing')
         self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
 
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -82,9 +83,11 @@ class Player(xbmc.Player):
     def onAVStarted(self):
         self.pendingPlay = -1
         self.isPseudoTV  = self.isPseudoTVPlaying()
-        self.log('onAVStarted, pendingStop = %s'%(self.pendingStop))
-        if self.isPseudoTV: self._onPlay(sysInfo=self.getPlayerSysInfo())
-        else:               self._onStop()
+        self.log('onAVStarted, pendingStop = %s, isPseudoTV = %s'%(self.pendingStop,self.isPseudoTV))
+        if self.isPseudoTV:
+            self._onPlay(sysInfo=self.getPlayerSysInfo())
+        else:
+            self._onStop()
         
                 
     def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, issue limited to pvr?
@@ -125,18 +128,18 @@ class Player(xbmc.Player):
                     return combineDicts(citem,item)
             return citem
             
-        with self.service.lock:  # Ensure thread safety
-            sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
-            sysInfo['chfile']   = BUILTIN.getInfoLabel('Filename','Player')
-            sysInfo['chfolder'] = BUILTIN.getInfoLabel('Folderpath','Player')
-            sysInfo['chpath']   = BUILTIN.getInfoLabel('Filenameandpath','Player')
-            if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
-            if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
-            sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),__update(sysInfo.get('citem',{}).get('id'))),'runtime':int(self.getPlayerTime())}) #still needed for adv. rules?
-            if not sysInfo.get('callback'): sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
-            self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
-            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
-            return sysInfo
+        # with self.service.lock:  # Ensure thread safety
+        sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
+        sysInfo['chfile']   = BUILTIN.getInfoLabel('Filename','Player')
+        sysInfo['chfolder'] = BUILTIN.getInfoLabel('Folderpath','Player')
+        sysInfo['chpath']   = BUILTIN.getInfoLabel('Filenameandpath','Player')
+        if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
+        if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
+        sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),__update(sysInfo.get('citem',{}).get('id'))),'runtime':int(self.getPlayerTime())}) #still needed for adv. rules?
+        if not sysInfo.get('callback'): sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
+        self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
+        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
+        return sysInfo
         
         
     def getPlayerItem(self):
@@ -173,13 +176,6 @@ class Player(xbmc.Player):
         if self.isPlaying(): return timeString2Seconds(BUILTIN.getInfoLabel('%s(hh:mm:ss)'%(prop),'Player'))
 
 
-    def setTrakt(self, state: bool=SETTINGS.getSettingBool('Disable_Trakt')):
-        self.log('setTrakt, disable trakt = %s'%(state))
-        # https://github.com/trakt/script.trakt/blob/d45f1363c49c3e1e83dabacb70729cc3dec6a815/resources/lib/kodiUtilities.py#L104
-        if state: PROPERTIES.setEXTPropertyBool('script.trakt.paused',state)
-        else:     PROPERTIES.clrEXTProperty('script.trakt.paused')
-
-
     def setSubtitles(self, state: bool=True):
         hasSubtitle = BUILTIN.hasSubtitle()
         self.log('setSubtitles, show subtitles = %s, hasSubtitle = %s'%(state,hasSubtitle))
@@ -199,7 +195,7 @@ class Player(xbmc.Player):
             self.runActions = RulesList([sysInfo.get('citem',{})]).runActions
             self.sysInfo    = self._runActions(RULES_ACTION_PLAYER_START, sysInfo.get('citem',{}), sysInfo, inherited=self)
             self.toggleRestart(self.enableOverlay)
-            self.setTrakt(self.disableTrakt)
+            PROPERTIES.setTrakt(self.disableTrakt)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
         else: #New Program/Same Channel
             self.sysInfo = sysInfo
@@ -232,7 +228,7 @@ class Player(xbmc.Player):
             self.toggleRestart(False)
             self.toggleOnNext(False)
             self.toggleInfo(False)
-            self.setTrakt(False)
+            PROPERTIES.setTrakt(False)
             self.jsonRPC.quePlaycount(self.sysInfo.get('fitem',{}),self.rollbackPlaycount)
             if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             self._runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)
@@ -315,7 +311,7 @@ class Monitor(xbmc.Monitor):
     def chkIdle(self):
         def __chkIdle():
             self.idleTime = BUILTIN.getIdle()
-            self.isIdle   = bool(self.idleTime) | self.idleTime > OSD_TIMER
+            self.isIdle   = bool(self.idleTime) | self.idleTime > FIFTEEN
             self.log('__chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
 
         def __chkResumeTime():
@@ -390,7 +386,7 @@ class Monitor(xbmc.Monitor):
 
     def onSettingsChanged(self):
         self.log('onSettingsChanged')
-        if self.service: timerit(self.onSettingsChangedTimer)(15.0)
+        if self.service: timerit(self.onSettingsChangedTimer)(FIFTEEN)
         
         
     def onSettingsChangedTimer(self):
@@ -399,9 +395,9 @@ class Monitor(xbmc.Monitor):
                 
                 
     def _onSettingsChanged(self):
-        self.log('_onSettingsChanged')
-        self.service.player.__init__(self.service)
-        self.service.currentSettings = self.service.tasks.chkSettingsChange(self.service.currentSettings) #check for settings change, take action if needed
+        with PROPERTIES.interruptActivity():
+            self.log('_onSettingsChanged')
+            self.service.currentSettings = self.service.tasks.chkSettingsChange(self.service.currentSettings) #check for settings change, take action if needed
         
 
 class Service():
@@ -451,7 +447,7 @@ class Service():
          
 
     def _interrupt(self) -> bool: #break
-        pendingInterrupt = (self.pendingShutdown | self.pendingRestart | PROPERTIES.isInterruptActivity() | BUILTIN.isSettingsOpened())
+        pendingInterrupt = (self.pendingShutdown | self.pendingRestart | self.__playing() | PROPERTIES.isInterruptActivity() | BUILTIN.isScanning())
         if pendingInterrupt != self.pendingInterrupt:
             self.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
             self.log('_interrupt, pendingInterrupt = %s'%(self.pendingInterrupt))
@@ -459,7 +455,7 @@ class Service():
     
 
     def _suspend(self) -> bool: #continue
-        pendingSuspend = (self.__playing() | PROPERTIES.isSuspendActivity() | BUILTIN.isScanning())
+        pendingSuspend = (PROPERTIES.isSuspendActivity() | BUILTIN.isSettingsOpened())
         if pendingSuspend != self.pendingSuspend:
             self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))
@@ -475,7 +471,7 @@ class Service():
         self.log('_start')
         if DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=OSD_TIMER):
             self.tasks._initialize()
-            if self.player.isPlaying() and self.player.overlay is None: self.player.onAVStarted()
+            if self.player.isPlaying(): self.player.onAVStarted()
             while not self.monitor.abortRequested():
                 self.monitor.chkIdle()
                 if    self.__shutdown(): break

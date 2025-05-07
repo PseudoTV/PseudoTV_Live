@@ -62,6 +62,7 @@ class Tasks():
 
     def chkSettings(self):
         self.service.currentSettings = dict(SETTINGS.getCurrentSettings())
+        self.log('chkSettings, currentSettings = %s'%(self.service.currentSettings))
 
 
     def chkInstanceID(self):
@@ -73,7 +74,7 @@ class Tasks():
     def chkWelcome(self):
         self.log('chkWelcome')
         return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Show_Wiki_QR)'%(ADDON_ID))
-        
+
 
     def chkDebugging(self):
         self.log('chkDebugging')
@@ -82,11 +83,9 @@ class Tasks():
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Debug_Enable',False)
                 DIALOG.notificationDialog(LANGUAGE(32025))
-                
-        if SETTINGS.getSettingBool('Enable_PVR_RELOAD'):
-            self.jsonRPC.setSettingValue("debug.showloginfo",SETTINGS.getSettingBool('Debug_Enable'))
-
-
+        self.jsonRPC.toggleShowLog(SETTINGS.getSettingBool('Debug_Enable'))
+                    
+                    
     def chkBackup(self):
         self.log('chkBackup')
         Backup().hasBackup()
@@ -117,12 +116,11 @@ class Tasks():
         self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 600)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 3600)
         
-        if PROPERTIES.hasFirstRun():
-            self._chkEpochTimer('chkFiles'    , self.chkFiles        , 300)
-            self._chkEpochTimer('chkURLQUE'   , self.chkURLQUE       , 300)
-            self._chkEpochTimer('chkJSONQUE'  , self.chkJSONQUE      , 300)
-            self._chkEpochTimer('chkLOGOQUE'  , self.chkLOGOQUE      , 900)
-        
+        self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
+        self._chkEpochTimer('chkURLQUE'       , self.chkURLQUE       , 300)
+        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
+        self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 900)
+    
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
         self._chkPropTimer('chkFillers'       , self.chkFillers      , 2)
         self._chkPropTimer('chkUpdate'        , self.chkUpdate       , 3)
@@ -254,11 +252,11 @@ class Tasks():
 
 
     def chkJSONQUE(self):
-        if not PROPERTIES.isRunning('chkJSONQUE') and self.service.monitor.isIdle:
+        if not PROPERTIES.isRunning('chkLOGOQUE') and PROPERTIES.hasFirstRun() and self.service.monitor.isIdle:
             with PROPERTIES.chkRunning('chkJSONQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queueJSON', json_data=True) or {})
                 params = queuePool.get('params',[])
-                for i in list(range(FIFTEEN)):
+                for i in list(range(QUEUE_CHUNK)):
                     if self.service._interrupt(): 
                         self.log("chkJSONQUE, _interrupt")
                         break
@@ -272,14 +270,14 @@ class Tasks():
 
 
     def chkLOGOQUE(self):
-        if not PROPERTIES.isRunning('chkLOGOQUE') and self.service.monitor.isIdle:
+        if not PROPERTIES.isRunning('chkLOGOQUE') and PROPERTIES.hasFirstRun() and self.service.monitor.isIdle:
             with PROPERTIES.chkRunning('chkLOGOQUE'):
                 updated   = False
                 library   = Library(service=self.service)
                 resources = library.resources
                 queuePool = (SETTINGS.getCacheSetting('queueLOGO', json_data=True) or {})
                 params = queuePool.get('params',[])
-                for i in list(range(FIFTEEN)):
+                for i in list(range(QUEUE_CHUNK)):
                     if self.service._interrupt(): 
                         self.log("chkLOGOQUE, _interrupt")
                         break
@@ -299,11 +297,11 @@ class Tasks():
                 
 
     def chkURLQUE(self):
-        if not PROPERTIES.isRunning('chkURLQUE') and self.service.monitor.isIdle:
+        if not PROPERTIES.isRunning('chkURLQUE') and PROPERTIES.hasFirstRun() and self.service.monitor.isIdle:
             with PROPERTIES.chkRunning('chkURLQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queueURL', json_data=True) or {})
                 params = queuePool.get('params',[])
-                for i in list(range(FIFTEEN)):
+                for i in list(range(QUEUE_CHUNK)):
                     if self.service._interrupt(): 
                         self.log("chkURLQUE, _interrupt")
                         break
@@ -368,10 +366,21 @@ class Tasks():
 
         
     def chkSettingsChange(self, settings={}):
-        self.log('chkSettingsChange, settings = %s'%(settings))
         nSettings = dict(SETTINGS.getCurrentSettings())
         for setting, value in list(settings.items()):
-            actions = {'User_Folder':{'func':self.setUserPath,'kwargs':{'old':value,'new':nSettings.get(setting)}}}
+            actions = {'User_Folder'       :{'func':self.setUserPath            ,'kwargs':{'old':value,'new':nSettings.get(setting)}},
+                       'Debug_Enable'      :{'func':self.jsonRPC.toggleShowLog  ,'kwargs':{'state':SETTINGS.getSettingBool('Debug_Enable')}},
+                       'Overlay_Enable'    :{'func':PROPERTIES.setPendingRestart,'kwargs':{}},
+                       'Enable_OnInfo'     :{'func':PROPERTIES.setPendingRestart,'kwargs':{}},
+                       'Disable_Trakt'     :{'func':PROPERTIES.setPendingRestart,'kwargs':{}},
+                       'Rollback_Watched'  :{'func':PROPERTIES.setPendingRestart,'kwargs':{}},
+                       'Store_Duration'    :{'func':PROPERTIES.setPendingRestart,'kwargs':{}},
+                       'Seek_Tolerance'    :{'func':PROPERTIES.setPendingRestart,'kwargs':{}},
+                       'Seek_Threshold'    :{'func':PROPERTIES.setPendingRestart,'kwargs':{}},
+                       'Idle_Timer'        :{'func':PROPERTIES.setPendingRestart,'kwargs':{}},
+                       'Run_While_Playing' :{'func':PROPERTIES.setPendingRestart,'kwargs':{}},
+                       'Restart_Percentage':{'func':PROPERTIES.setPendingRestart,'kwargs':{}},}
+                       
             if nSettings.get(setting) != value and actions.get(setting):
                 action = actions.get(setting)
                 self.log('chkSettingsChange, detected change in %s: %s => %s\naction = %s'%(setting,value,nSettings.get(setting),action))

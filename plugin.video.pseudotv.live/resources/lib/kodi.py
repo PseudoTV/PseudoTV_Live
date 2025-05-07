@@ -631,8 +631,18 @@ class Settings:
         
 
     def getCurrentSettings(self):
-        self.log('getCurrentSettings')
-        settings = ['User_Folder']
+        settings = ['User_Folder',
+                    'Debug_Enable',
+                    'Overlay_Enable',
+                    'Enable_OnInfo',
+                    'Disable_Trakt',
+                    'Rollback_Watched',
+                    'Store_Duration',
+                    'Seek_Tolerance',
+                    'Seek_Threshold',
+                    'Idle_Timer',
+                    'Run_While_Playing',
+                    'Restart_Percentage',]
         for setting in settings:
             yield (setting,self.getSetting(setting))
                
@@ -973,6 +983,13 @@ class Properties:
         return self.setProperty(key, float(value))
 
     
+    def setTrakt(self, state=False):
+        self.log('setTrakt, disable trakt = %s'%(state))
+        # https://github.com/trakt/script.trakt/blob/d45f1363c49c3e1e83dabacb70729cc3dec6a815/resources/lib/kodiUtilities.py#L104
+        if state: self.setEXTPropertyBool('script.trakt.paused',state)
+        else:     self.clrEXTProperty('script.trakt.paused')
+
+
     def setTrash(self, key): #catalog instance properties that may become abandoned
         instanceID = self.getInstanceID()
         tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
@@ -1393,11 +1410,41 @@ class Dialog:
             self.builtin.executebuiltin('Dialog.Close(textviewer)')
         
         
+    def _customTextViewer():
+        class TEXTVIEW(xbmcgui.WindowXMLDialog):
+            textbox = None
+            def __init__(self, *args, **kwargs):
+                self.head = kwargs.get('head','')
+                self.text = kwargs.get('text','')
+                self.doModal()
+            
+            def onInit(self):
+                self.getControl(1).setLabel(self.head)
+                self.textbox = self.getControl(5)
+
+            def onClick(self, control_id): pass
+            
+            def onFocus(self, control_id): pass
+            
+            def onAction(self, action):
+                if action in [xbmcgui.ACTION_PREVIOUS_MENU, xbmcgui.ACTION_NAV_BACK]: self.close()
+
+            def _updateText(self, txt):
+                try:
+                    self.textbox.setText(txt)
+                    xbmc.executebuiltin('SetFocus(3000)')
+                    xbmc.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
+                except: pass
+                
+        return TEXTVIEW("DialogTextViewer.xml", os.getcwd(), "Default")
+
+
     def _textViewer(self, msg, heading, usemono, autoclose):
         return timerit(self.textviewer)(0.1,[msg, heading, usemono, autoclose])
         
         
-    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=AUTOCLOSE_DELAY, usethread=False):
+    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=AUTOCLOSE_DELAY, usethread=False, custom=False):
+        # if custom: return self._customTextViewer(msg,heading,autoclose)
         if usethread: return self._textViewer(msg, heading, usemono, autoclose)
         else:
             if autoclose > 0: timerit(self._closeTextViewer)(autoclose)

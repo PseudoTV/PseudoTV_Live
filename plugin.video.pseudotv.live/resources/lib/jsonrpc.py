@@ -583,7 +583,7 @@ class JSONRPC:
                     if not friendly or friendly.lower() == 'kodi':
                         return self.inputFriendlyName()
                     else:
-                        self.setSettingValue("services.devicename",friendly)
+                        self.setSettingValue("services.devicename",friendly,queue=False)
                         self.log('inputFriendlyName, setting device name = %s'%(friendly))
         return friendly
             
@@ -643,12 +643,11 @@ class JSONRPC:
             self.log('matchChannel: __extend, broadcastnext = %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
             
-        cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s'%(chname,id,radio)))
+        cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,extend)))
         cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
-        
         if not cacheResponse:
             pvrItem = __match()
-            if extend: pvrItem = __extend(pvrItem)
+            if pvrItem and extend: pvrItem = __extend(pvrItem)
             cacheResponse = self.cache.set(cacheName, pvrItem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=FIFTEEN), json_data=True)
         return cacheResponse
         
@@ -658,5 +657,12 @@ class JSONRPC:
         for nextitem in nextitems:
             if not isFiller(nextitem): return decodePlot(nextitem.get('plot',''))
         return nitem
-        
-        
+
+
+    def toggleShowLog(self, state=False):
+        self.log('toggleShowLog, state = %s'%(state))
+        if SETTINGS.getSettingBool('Enable_PVR_RELOAD'): #check that users allow alternations to kodi.
+            opState = not bool(state)
+            if self.getSettingValue("debug.showloginfo") == opState:
+                self.setSettingValue("debug.showloginfo",state,queue=False)
+            

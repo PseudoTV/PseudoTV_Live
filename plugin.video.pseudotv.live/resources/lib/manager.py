@@ -675,7 +675,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getMontiorList')
         try:
             with self.toggleSpinner():
-                itemLST = [self.buildListItem(cleanLabel(value).title(),icon=ICON) for info in DIALOG.getInfoMonitor() for key, value in list(info.items()) if value not in ['','..'] and key not in ['path','logo']]
+                labels  = sorted(set([cleanLabel(value).title() for info in DIALOG.getInfoMonitor() for key, value in list(info.items()) if value not in ['','..'] and key not in ['path','logo']]))
+                itemLST = [self.buildListItem(label,icon=ICON) for label in labels]
                 if len(itemLST) == 0: raise Exception()
                 itemSEL = DIALOG.selectDialog(itemLST,LANGUAGE(32078)%('Name'),useDetails=True,multi=False)
                 if itemSEL is not None: return itemLST[itemSEL]

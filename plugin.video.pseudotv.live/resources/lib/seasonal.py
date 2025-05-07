@@ -41,6 +41,7 @@ class Seasonal:
         self.log('__init__')
         self.cache = SETTINGS.cacheDB
 
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         """
         Logs a message to the system log with the specified logging level.
@@ -49,6 +50,7 @@ class Seasonal:
         :param level: The log level (default: xbmc.LOGDEBUG).
         """
         return log('%s: %s' % (self.__class__.__name__, msg), level)
+
 
     def getYear(self):
         """
@@ -60,6 +62,7 @@ class Seasonal:
         int: The current year.
         """
         return datetime.datetime.now().year
+
 
     def getMonth(self, name=False):
         """
@@ -73,20 +76,8 @@ class Seasonal:
             str/int: The current month as a string (full name) or as an integer (numeric format).
         """
         if name: return datetime.datetime.now().strftime('%B')  # Full month name
-        else:    return datetime.datetime.now().month  # Numeric month
+        else:    return datetime.datetime.now().month           # Numeric month
 
-    def getWeek(self):
-        """
-        Calculates the current week of the month based on the adjusted day of the month.
-        Weeks are determined by dividing the adjusted day of the month by 7.
-
-        :return: The current week of the month as an integer (1 to 5).
-        """
-        dt = datetime.datetime.now()
-        adjusted_dom = self.getDay()
-        week = (adjusted_dom / 7.0)
-        if week < 1 or week > 4: return int(ceil(week))
-        else:                    return int(floor(week))
 
     def getDay(self):
         """
@@ -98,8 +89,8 @@ class Seasonal:
         Returns:
             int: Adjusted day of the month.
         """
-        dt = datetime.datetime.now()
-        return dt.day + dt.replace(day=1).weekday() - 1
+        return datetime.datetime.now().day
+
 
     def getDOM(self, year, month):
         """
@@ -122,15 +113,16 @@ class Seasonal:
                 days_in_month.append(day[0])
         return days_in_month
 
-    # @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
+
     def getSeason(self, key):
         self.log('getSeason, key = %s' % (key))
         return getJSON(HOLIDAYS).get(key,{})
 
-    # @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
+
     def getSeasons(self, month):
         self.log('getSeasons, month = %s' % (month))
         return getJSON(SEASONS).get(month,{})
+
 
     @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
     def getHoliday(self, nearest=SETTINGS.getSettingBool('Nearest_Holiday')):
@@ -143,6 +135,7 @@ class Seasonal:
         self.log('getHoliday, nearest = %s' % (nearest))
         if nearest: return self.getNearestHoliday()
         else:       return self.getCurrentHoliday()
+
 
     def getCurrentHoliday(self):
         """
@@ -169,7 +162,7 @@ class Seasonal:
         month = self.getMonth(name=True)
         day   = self.getDay()
         dom   = self.getDOM(self.getYear(),self.getMonth())
-        curr  = dom[day - 1:] # Running a 5-week month for extended weeks > 28 days
+        curr  = dom[day - 1:]
         days  = curr
         if fallback:
             past = dom[:day - 1]
@@ -181,6 +174,7 @@ class Seasonal:
             if holiday.get('keyword'): break
         self.log('getNearestHoliday, using fallback = %s, month = %s, day = %s, nearest day = %s, returning = %s' %(fallback, month, day, next, holiday))
         return holiday
+
 
     def buildSeasonal(self):
         """
