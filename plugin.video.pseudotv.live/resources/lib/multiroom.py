@@ -66,15 +66,16 @@ class Multiroom:
         if not servers: servers = self.getDiscovery()
         PROPERTIES.setServers(len(servers) > 0)
         for server in list(servers.values()):
-            online = server.get('online',False)
-            if self.getRemote(server.get('remotes',{}).get('bonjour')): server['online'] = True
-            else:                                                       server['online'] = False
+            online   = server.get('online',False)
+            response = self.getRemote(server.get('remotes',{}).get('bonjour'))
+            if response: server['online'] = True
+            else:        server['online'] = False
             if server.get('enabled',False):
                 if online != server.get('online',False): DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))
                 __chkSettings(loadJSON(server.get('settings')))
         SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
         self.log('chkServers, servers = %s'%(len(servers)))
-        return servers
+        return self.setDiscovery(servers)
 
 
     def getDiscovery(self):
@@ -82,7 +83,7 @@ class Multiroom:
 
 
     def setDiscovery(self, servers={}):
-        return setJSON(SERVER_LOC,{"servers":self.chkServers(servers)})
+        return setJSON(SERVER_LOC,{"servers":servers})
             
             
     def getEnabled(self, servers={}):
@@ -116,7 +117,7 @@ class Multiroom:
                     self.log('addServer, updating server = %s'%(server))
                     servers.update({payload['name']:payload})
             
-            if self.setDiscovery(servers):
+            if self.setDiscovery(self.chkServers(servers)):
                 instancePath = SETTINGS.hasPVRInstance(server.get('name'))
                 if       payload.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(payload.get('host'),payload.get('name'))
                 elif not payload.get('enabled',False) and instancePath:     changed = FileAccess.delete(instancePath)
@@ -138,7 +139,7 @@ class Multiroom:
         selects = DIALOG.selectDialog(lizlst,LANGUAGE(32183))
         if not selects is None:
             [servers.pop(liz.getLabel()) for idx, liz in enumerate(lizlst) if idx in selects]
-            if self.setDiscovery(servers):
+            if self.setDiscovery(self.chkServers(servers)):
                 return DIALOG.notificationDialog(LANGUAGE(30046))
 
 
@@ -172,7 +173,7 @@ class Multiroom:
                             servers[liz.getLabel()]['enabled'] = False
                         if instancePath: FileAccess.delete(instancePath)
                 with BUILTIN.busy_dialog():
-                    return self.setDiscovery(servers)
+                    return self.setDiscovery(self.chkServers(servers))
 
 
     def enableZeroConf(self):

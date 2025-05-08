@@ -155,7 +155,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.log('do_GET, outgoing path = %s, content = %s'%(path, content))
             while not self.monitor.abortRequested():
                 chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
-                if not chunk or self.monitor.waitForAbort(0.001): break
+                if not chunk or self.monitor.waitForAbort(0.0001): break
                 self.send_header('content-length', len(chunk))
                 self.log('do_GET, sending = %s, chunk = %s'%(path, chunk))
                 self.wfile.write(chunk)

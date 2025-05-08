@@ -42,7 +42,7 @@ PLAYER              = xbmc.Player
 #constants
 FIFTEEN             = 15    #unit
 DISCOVERY_TIMER     = 60    #secs
-SUSPEND_TIMER       = 15    #secs
+SUSPEND_TIMER       = 2     #secs
 DISCOVER_INTERVAL   = 30    #secs
 MIN_EPG_DURATION    = 10800 #secs
 DTFORMAT            = '%Y%m%d%H%M%S'

@@ -70,14 +70,14 @@ class Autotune:
             retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
             if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32021))) #Yes
             elif retval == 2: #Custom
-                self.setInterruptActivity(True)
+                PROPERTIES.setInterruptActivity(True)
                 with BUILTIN.busy_dialog():
                     menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33310),url='RunScript(special://home/addons/%s/resources/lib/utilities.py, Channel_Manager)'%(ADDON_ID))]
                     if hasM3U:     menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(32257),LANGUAGE(32256),url='RunScript(special://home/addons/%s/resources/lib/autotune.py, Recover_M3U)'%(ADDON_ID)))
                     if hasBackup:  menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(32112),LANGUAGE(32111),url='RunScript(special://home/addons/%s/resources/lib/backup.py, Recover_Backup)'%(ADDON_ID)))
                     if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID)))
                 select = DIALOG.selectDialog(menu,multi=False)
-                self.setInterruptActivity(False)
+                PROPERTIES.setInterruptActivity(False)
                 if not select is None: return BUILTIN.executebuiltin(menu[select].getPath())
             else: return True #No
         else: return True

@@ -597,7 +597,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     items = self.jsonRPC.walkFileDirectory(path, media, depth=5, retItem=True)
                 
                 for idx, dir in enumerate(items):
-                    if self.monitor.waitForAbort(0.001): break
+                    if self.monitor.waitForAbort(0.0001): break
                     else:
                         item = random.choice(items.get(dir,[]))
                         dia  = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path','%s...'%(str(dir)[:48]),'%s...'%(str(item.get('file',''))[:48])))

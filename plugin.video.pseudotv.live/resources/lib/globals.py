@@ -24,6 +24,7 @@ import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime, calendar
 import heapq, requests, pyqrcode
+import xml.sax.saxutils
 
 from six.moves             import urllib 
 from io                    import StringIO, BytesIO

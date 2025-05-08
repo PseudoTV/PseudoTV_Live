@@ -188,7 +188,7 @@ class Fillers:
                     postFileList = randomShuffle(postFileList)
                     self.log('[%s] injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(self.citem.get('id'),runtime, postFillRuntime,len(postFileList)))
                     while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and len(postFileList) > 0:
-                        if self.builder.service.monitor.waitForAbort(0.001): break
+                        if self.builder.service.monitor.waitForAbort(0.0001): break
                         else:
                             i += 1
                             item = postFileList.pop(0)

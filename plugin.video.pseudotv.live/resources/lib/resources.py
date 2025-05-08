@@ -39,6 +39,8 @@ class Service:
         
         
 class Resources:
+    LOGOLST = {}
+    
     def __init__(self, service=None):
         if service is None: service = Service()
         self.service    = service
@@ -80,11 +82,11 @@ class Resources:
             if cacheResponse: 
                 self.log('getCachedLogo, chname = %s, type = %s, logo = %s'%(citem.get('name'), citem.get('type'), cacheResponse))
                 return cacheResponse
-            else: self.queueLOGO(cacheItem)
+            else: threadit(self.queueLOGO)(cacheItem)
                 
 
     def queueLOGO(self, param):
-        queuePool = (SETTINGS.getCacheSetting('queueLOGO', json_data=True) or {})
+        queuePool = self.LOGOLST#(SETTINGS.getCacheSetting('queueLOGO', json_data=True) or {})
         params = queuePool.setdefault('params',[])
         params.append(param)
         queuePool['params'] = setDictLST(params)

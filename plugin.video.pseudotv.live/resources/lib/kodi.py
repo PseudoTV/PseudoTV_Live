@@ -545,7 +545,7 @@ class Settings:
     def chkPVRInstance(self, instance=ADDON_NAME):
         found   = False
         for file in [filename for filename in FileAccess.listdir(PVR_CLIENT_LOC)[1] if filename.endswith('.xml')]:
-            if self.monitor.waitForAbort(0.001): break
+            if self.monitor.waitForAbort(0.0001): break
             elif file.startswith('instance-settings-'):
                 try:
                     xml = FileAccess.open(os.path.join(PVR_CLIENT_LOC,file), "r")
@@ -604,7 +604,7 @@ class Settings:
             name      = addon.getAddonInfo('name')
             osettings = self.getPVRInstanceSettings(instance)
             for setting, newvalue in list(nsettings.items()):
-                if self.monitor.waitForAbort(0.001): return False
+                if self.monitor.waitForAbort(0.0001): return False
                 default, oldvalue = osettings.get(setting,({},{}))
                 if str(newvalue).lower() != str(oldvalue).lower(): 
                     changes[setting] = (oldvalue, newvalue)
@@ -620,7 +620,7 @@ class Settings:
                     return False
                 
             for s, v in list(changes.items()):
-                if self.monitor.waitForAbort(0.001): return False
+                if self.monitor.waitForAbort(0.0001): return False
                 addon.setSetting(s, v[1])
                 self.log('chkPluginSettings, setting = %s, current value = %s => %s'%(s,oldvalue,v[1]))
             self.setPVRInstance(instance)
@@ -1216,7 +1216,7 @@ class Builtin:
             
     
     @contextmanager
-    def kodiLocker(self, wait=0.001):
+    def kodiLocker(self, wait=0.0001):
         while not self.monitor.abortRequested(): #try and make kodi api thread safe / thread locks not working? todo debug.
             if self.monitor.waitForAbort(wait) or self.properties.getEXTPropertyBool('%s.pendingInterrupt'%(ADDON_ID)): break
             elif not self.properties.getEXTPropertyBool('%s.kodiLocker'%(ADDON_ID)): break
@@ -1249,13 +1249,12 @@ class Builtin:
         
     def executebuiltin(self, key, wait=False):
         # with self.kodiLocker():
-        xbmc.executebuiltin('%s'%(key),wait)
         self.log('executebuiltin, key = %s, wait = %s'%(key,wait))
-        return True
+        return threadit(xbmc.executebuiltin)('%s'%(key),wait)
         
         
     @contextmanager
-    def sendLocker(self, wait=0.001):
+    def sendLocker(self, wait=0.0001):
         while not self.monitor.abortRequested(): #try and make kodi api thread safe / thread locks not working? todo debug.
             if self.monitor.waitForAbort(wait) or self.properties.getEXTPropertyBool('%s.pendingInterrupt'%(ADDON_ID)): break
             elif not self.properties.getEXTPropertyBool('%s.sendLocker'%(ADDON_ID)): break
@@ -1294,7 +1293,7 @@ class Dialog:
         self.properties.setPropertyBool('chkInfoMonitor',state)
         if state:
             self.properties.clrProperty('monitor.montiorList')
-            timerit(self.doInfoMonitor)(0.001)
+            timerit(self.doInfoMonitor)(0.0001)
 
 
     def doInfoMonitor(self):

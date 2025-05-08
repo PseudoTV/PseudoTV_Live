@@ -564,7 +564,7 @@ class JSONRPC:
             iters = cycle(files)
             while not self.service.monitor.abortRequested() and (len(files) < page and len(files) > 0):
                 item = next(iters).copy()
-                if   self.service.monitor.waitForAbort(0.001): break
+                if   self.service.monitor.waitForAbort(0.0001): break
                 elif self.getDuration(item.get('file'),item) == 0:
                     try: files.pop(files.index(item))
                     except: break

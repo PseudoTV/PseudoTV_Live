@@ -207,7 +207,7 @@ class Cores:
             res = 0
             monitor = MONITOR()
             while not monitor.abortRequested() and '\ncpu%s:'%(res) in dmesg:
-                if monitor.waitForAbort(0.001): break
+                if monitor.waitForAbort(0.0001): break
                 res += 1
             if res > 0: return res
             del monitor

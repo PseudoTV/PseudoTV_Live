@@ -71,6 +71,7 @@ class Utilities:
                 text = text.replace('- Tweaked'    ,'[COLOR=yellow][B]- Tweaked:[/B][/COLOR]')
                 text = text.replace('- Updated'    ,'[COLOR=yellow][B]- Updated:[/B][/COLOR]')
                 text = text.replace('- Changed'    ,'[COLOR=yellow][B]- Changed:[/B][/COLOR]')
+                text = text.replace('- Corrected'  ,'[COLOR=yellow][B]- Corrected:[/B][/COLOR]')
                 text = text.replace('- Proper'     ,'[COLOR=yellow][B]- Proper:[/B][/COLOR]')
                 text = text.replace('- Included'   ,'[COLOR=yellow][B]- Changed:[/B][/COLOR]')
                 text = text.replace('- Notice'     ,'[COLOR=orange][B]- Notice:[/B][/COLOR]')
@@ -140,7 +141,7 @@ class Utilities:
 
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
-        if not PROPERTIES.isRunning('OVERLAY_MANAGER') or PROPERTIES.isPendingInterrupt() or PROPERTIES.isPendingSuspend():
+        if not PROPERTIES.isRunning('OVERLAY_MANAGER'):
             with PROPERTIES.chkRunning('OVERLAY_MANAGER'), BUILTIN.busy_dialog():
                 from manager import Manager
                 chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)

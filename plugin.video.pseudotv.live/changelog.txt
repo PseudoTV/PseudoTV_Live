@@ -1,3 +1,8 @@
+v.0.6.2
+-Optimized background logo tasks to prevent potential deadlocks.
+-Resolved repeated "Offline" server notifications.
+-Corrected an issue where channels failed to switch or loaded incorrectly.
+
 v.0.6.1
 -Improved logo detection.
 -Possible Fix for channel content not changing.

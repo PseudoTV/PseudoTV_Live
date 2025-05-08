@@ -256,7 +256,7 @@ class Builder:
         if padScheduling and len(tmpList) > 0:
             iters = cycle(fileList)
             while not self.service.monitor.abortRequested() and tmpList[-1].get('stop') <= (now + MIN_EPG_DURATION):
-                if   self.service.monitor.waitForAbort(0.001): break
+                if   self.service.monitor.waitForAbort(0.0001): break
                 elif tmpList[-1].get('stop') >= (now + MIN_EPG_DURATION): 
                     self.log("[%s] addScheduling, OUT fileList = %s, stop = %s"%(citem['id'],len(tmpList),tmpList[-1].get('stop')))
                     break
