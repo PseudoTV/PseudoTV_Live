@@ -837,6 +837,30 @@ msgctxt "#30203"
 msgid "Name:"
 msgstr ""
 
+msgctxt "#30204"
+msgid "Install CPU Benchmark"
+msgstr ""
+
+msgctxt "#30204"
+msgid "Enable CPU Benchmark"
+msgstr ""
+
+msgctxt "#30205"
+msgid "CPU Benchmark"
+msgstr ""
+
+msgctxt "#30206"
+msgid "Install I/O Benchmark"
+msgstr ""
+
+msgctxt "#30207"
+msgid "Enable I/O Benchmark"
+msgstr ""
+
+msgctxt "#30208"
+msgid "I/O Benchmark"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 

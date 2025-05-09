@@ -18,7 +18,7 @@
 #
 # -*- coding: utf-8 -*-
 from globals     import *
-from pool        import ThreadPool
+from pool        import ExecutorPool
 from collections import defaultdict
 
 class LlNode:
@@ -47,7 +47,7 @@ class CustomQueue:
         self.min_heap  = []
         self.itemCount = defaultdict(int)
         self.popThread = Thread(target=self.__pop)
-        self.pool      = ThreadPool()
+        self.pool      = ExecutorPool()
         self.executor  = SETTINGS.getSettingBool('Enable_Executors')
 
 

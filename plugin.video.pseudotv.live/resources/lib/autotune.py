@@ -203,4 +203,4 @@ class Autotune:
             elif param == None: return
             return SETTINGS.openSettings(ctl)
         
-if __name__ == '__main__': Autotune(sys.argv).run()
+if __name__ == '__main__': timerit(Autotune(sys.argv).run)(0.1)

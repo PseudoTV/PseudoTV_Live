@@ -321,7 +321,7 @@ class Tasks():
 
     def chkPVRToggle(self):
         if self.service.monitor.isIdle and not (self.player.isPlaying() | BUILTIN.isScanning() | BUILTIN.isRecording()): togglePVR(False,True)
-        else: PROPERTIES.setPropTimer('chkPVRRefresh')
+        else: timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
 
 
     def chkFillers(self, channels=[]):

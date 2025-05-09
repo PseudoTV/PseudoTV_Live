@@ -92,6 +92,24 @@ class Utilities:
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
 
 
+    def runCPUBench(self):
+        with BUILTIN.busy_dialog():
+            if hasAddon('script.pystone.benchmark',install=True, enable=True, notify=True):
+                return BUILTIN.executebuiltin('RunScript(script.pystone.benchmark)')
+        
+        
+    def runIOBench(self):
+        with BUILTIN.busy_dialog():
+            if hasAddon('script.io.benchmark',install=True, enable=True, notify=True):
+                return BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(escapeString(f'path={USER_LOC}')))
+        
+        
+    def runLogger(self):
+        with BUILTIN.busy_dialog():
+            if hasAddon('script.kodi.loguploader',install=True, enable=True, notify=True):
+                return BUILTIN.executebuiltin('RunScript(script.kodi.loguploader)')
+        
+
     def qrDebug(self):
         def __cleanLog(content):           
             content = re.sub('//.+?:.+?@'                  ,'//USER:PASSWORD@'     , content)
@@ -116,7 +134,8 @@ class Utilities:
             try:
                 session = requests.Session()
                 response = session.post('https://paste.kodi.tv/' + 'documents', data=data.encode('utf-8'), headers={'User-Agent':'%s: %s'%(ADDON_ID, ADDON_VERSION)})
-                if 'key' in response.json(): return True, 'https://paste.kodi.tv/' + response.json()['key']
+                if 'key' in response.json():
+                    return True, 'https://paste.kodi.tv/' + response.json()['key']
                 elif 'message' in response.json():
                     self.log('qrDebug, upload failed, paste may be too large')
                     return False, response.json()['message']
@@ -264,7 +283,13 @@ class Utilities:
             elif param == 'Show_ZeroConf_QR':
                 ctl = (5,5)
                 self.qrBonjourDL()
-
+            #Misc. Scripts
+            elif param == 'CPU_Bench':
+                self.runCPUBench()
+            elif param == 'IO_Bench':
+                self.runIOBench()
+            elif param == 'Logger':
+                self.runLogger()
             #Misc.Docs
             elif param == 'Utilities':
                 ctl = (6,1)
@@ -292,5 +317,5 @@ class Utilities:
                 
             return SETTINGS.openSettings(ctl)
 
-if __name__ == '__main__': Utilities(sys.argv).run()
+if __name__ == '__main__': timerit(Utilities(sys.argv).run)(0.1)
    

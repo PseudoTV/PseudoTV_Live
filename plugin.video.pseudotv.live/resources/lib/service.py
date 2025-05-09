@@ -82,6 +82,7 @@ class Player(xbmc.Player):
     def onAVStarted(self):
         self.pendingPlay = -1
         self.pendingStop = True
+        self.toggleOverlay(False)
         self.pendingItem = self.getPlayerSysInfo()
         self.isPseudoTV  = self.pendingItem.get('isPseudoTV',False)
         self.log('onAVStarted, pendingStop = %s isPseudoTV = %s, pendingItem = %s'%(self.pendingStop,self.isPseudoTV,self.pendingItem))

@@ -19,10 +19,18 @@
 # -*- coding: utf-8 -*-
  
 from globals            import *
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, TimeoutError
 from itertools          import repeat, count
 from functools          import partial, wraps, reduce, update_wrapper
- 
+
+try:
+    import multiprocessing
+    cpu_count   = multiprocessing.cpu_count()
+    ENABLE_POOL = False #True force disable multiproc. until monkeypatch/wrapper to fix pickling error. 
+except:
+    ENABLE_POOL = False
+    cpu_count   = os.cpu_count()
+
 def wrapped_partial(func, *args, **kwargs):
     partial_func = partial(func, *args, **kwargs)
     update_wrapper(partial_func, func)
@@ -65,7 +73,7 @@ def poolit(method):
     @wraps(method)
     def wrapper(items=[], *args, **kwargs):
         try:
-            pool = ThreadPool()
+            pool = ExecutorPool()
             name = '%s.%s'%('poolit',method.__qualname__.replace('.',': '))
             log('%s, starting %s'%(method.__qualname__.replace('.',': '),name))
             results = pool.executors(method, items, *args, **kwargs)
@@ -116,115 +124,22 @@ def timerit(method):
 def executeit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
-        pool = ThreadPool()
+        pool = ExecutorPool()
         log('%s executeit => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
         return pool.executor(method, None, *args, **kwargs)
     return wrapper
 
-class Cores:
+class ExecutorPool:
     def __init__(self):
-        self.cache = Cache(mem_cache=True)
-    
-    
-    @cacheit()
-    def CPUcount(self):
-        """ Number of available virtual or physical CPUs on this system, i.e.
-        user/real as output by time(1) when called with an optimally scaling
-        userspace-only program
-        """
-        # cpuset
-        # cpuset may restrict the number of *available* processors
-        try:
-            m = re.search(r'(?m)^Cpus_allowed:\s*(.*)$',open('/proc/self/status').read())
-            if m:
-                res = bin(int(m.group(1).replace(',', ''), 16)).count('1')
-                if res > 0: return res
-        except IOError: pass
-        
-        # Python 2.6+
-        try:
-            from multiprocessing import cpu_count
-            return cpu_count()
-        except (ImportError, NotImplementedError):
-            pass
-
-        try:
-            import psutil
-            return psutil.cpu_count()   # psutil.NUM_CPUS on old versions
-        except (ImportError, AttributeError):  pass
-
-        # POSIX
-        try:
-            res = int(os.sysconf('SC_NPROCESSORS_ONLN'))
-            if res > 0: return res
-        except (AttributeError, ValueError): pass
-
-        # Windows
-        try:
-            res = int(os.environ['NUMBER_OF_PROCESSORS'])
-            if res > 0: return res
-        except (KeyError, ValueError): pass
-
-        # jython
-        try:
-            from java.lang import Runtime
-            runtime = Runtime.getRuntime()
-            res = runtime.availableProcessors()
-            if res > 0: return res
-        except ImportError: pass
-
-        # BSD
-        try:
-            sysctl = subprocess.Popen(['sysctl', '-n', 'hw.ncpu'],stdout=subprocess.PIPE)
-            scStdout = sysctl.communicate()[0]
-            res = int(scStdout)
-            if res > 0: return res
-        except (OSError, ValueError): pass
-
-        # Linux
-        try:
-            res = open('/proc/cpuinfo').read().count('processor\t:')
-            if res > 0: return res
-        except IOError: pass
-
-        # Solaris
-        try:
-            pseudoDevices = os.listdir('/devices/pseudo/')
-            res = 0
-            for pd in pseudoDevices:
-                if re.match(r'^cpuid@[0-9]+$', pd): res += 1
-            if res > 0: return res
-        except OSError: pass
-
-        # Other UNIXes (heuristic)
-        try:
-            try:
-                dmesg = open('/var/run/dmesg.boot').read()
-            except IOError:
-                dmesgProcess = subprocess.Popen(['dmesg'], stdout=subprocess.PIPE)
-                dmesg = dmesgProcess.communicate()[0]
-
-            res = 0
-            monitor = MONITOR()
-            while not monitor.abortRequested() and '\ncpu%s:'%(res) in dmesg:
-                if monitor.waitForAbort(0.0001): break
-                res += 1
-            if res > 0: return res
-            del monitor
-        except OSError: pass
-        return 1
-
-
-class ThreadPool:
-    def __init__(self):
-        self.CPUCount = Cores().CPUcount()
-        self.ThreadCount = self._calculate_thread_count()
-        self.log(f"__init__, ThreadPool Threads = {self.ThreadCount}, CPUs = {self.CPUCount}")
+        self.CPUCount = cpu_count
+        if ENABLE_POOL: self.pool = ProcessPoolExecutor
+        else:           self.pool = ThreadPoolExecutor
+        self.log(f"__init__, multiprocessing = {ENABLE_POOL}, CORES = {self.CPUCount}, THREADS = {self._calculate_thread_count()}")
 
 
     def _calculate_thread_count(self):
-        # Use environment variable or default logic to set threads
-        return int(os.getenv('THREAD_COUNT', self.CPUCount * 2))
+        if ENABLE_POOL: return self.CPUCount
+        else:           return int(os.getenv('THREAD_COUNT', self.CPUCount * 2))
             
             
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -233,14 +148,14 @@ class ThreadPool:
 
     def executor(self, func, timeout=None, *args, **kwargs):
         self.log("executor, func = %s, timeout = %s"%(func.__name__,timeout))
-        with ThreadPoolExecutor(self.ThreadCount) as executor:
+        with self.pool(self._calculate_thread_count()) as executor:
             try: return executor.submit(func, *args, **kwargs).result(timeout)
             except Exception as e: self.log("executor, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
 
     def executors(self, func, items=[], *args, **kwargs):
         self.log("executors, func = %s, items = %s"%(func.__name__,len(items)))
-        with ThreadPoolExecutor(self.ThreadCount) as executor:
+        with self.pool(self._calculate_thread_count()) as executor:
             try: return executor.map(wrapped_partial(func, *args, **kwargs), items)
             except Exception as e: self.log("executors, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
 
