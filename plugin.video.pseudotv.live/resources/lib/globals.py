@@ -203,10 +203,10 @@ def splitYear(label):
 
 def getChannelSuffix(name, type):
     name = validString(name)
-    if   type == "TV Genres"    and not LANGUAGE(32014) in name: suffix = LANGUAGE(32014) #TV
-    elif type == "Movie Genres" and not LANGUAGE(32015) in name: suffix = LANGUAGE(32015) #Movies
-    elif type == "Mixed Genres" and not LANGUAGE(32010) in name: suffix = LANGUAGE(32010) #Mixed
-    elif type == "Music Genres" and not LANGUAGE(32016) in name: suffix = LANGUAGE(32016) #Music
+    if   type == "TV Genres"    and not LANGUAGE(32014).lower() in name.lower(): suffix = LANGUAGE(32014) #TV
+    elif type == "Movie Genres" and not LANGUAGE(32015).lower() in name.lower(): suffix = LANGUAGE(32015) #Movies
+    elif type == "Mixed Genres" and not LANGUAGE(32010).lower() in name.lower(): suffix = LANGUAGE(32010) #Mixed
+    elif type == "Music Genres" and not LANGUAGE(32016).lower() in name.lower(): suffix = LANGUAGE(32016) #Music
     else: return name
     return '%s %s'%(name,suffix)
  

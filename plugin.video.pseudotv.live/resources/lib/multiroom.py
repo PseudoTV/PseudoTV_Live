@@ -75,11 +75,14 @@ class Multiroom:
                 __chkSettings(loadJSON(server.get('settings')))
         SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
         self.log('chkServers, servers = %s'%(len(servers)))
-        return self.setDiscovery(servers)
+        self.setDiscovery(servers)
+        return servers
 
 
     def getDiscovery(self):
-        return getJSON(SERVER_LOC).get('servers',{})
+        servers = getJSON(SERVER_LOC).get('servers',{}) #temp fix remove after a by next build
+        if isinstance(servers,bool): servers = {}
+        return servers
 
 
     def setDiscovery(self, servers={}):
