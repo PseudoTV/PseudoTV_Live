@@ -63,6 +63,7 @@ class Multiroom:
         def __chkSettings(settings):
             [hasAddon(id,install=True,enable=True) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
             
+        if isinstance(servers,bool): servers = {} #temp fix remove after a by next build
         if not servers: servers = self.getDiscovery()
         PROPERTIES.setServers(len(servers) > 0)
         for server in list(servers.values()):
@@ -80,8 +81,8 @@ class Multiroom:
 
 
     def getDiscovery(self):
-        servers = getJSON(SERVER_LOC).get('servers',{}) #temp fix remove after a by next build
-        if isinstance(servers,bool): servers = {}
+        servers = getJSON(SERVER_LOC).get('servers',{})
+        if isinstance(servers,bool): servers = {} #temp fix remove after a by next build
         return servers
 
 

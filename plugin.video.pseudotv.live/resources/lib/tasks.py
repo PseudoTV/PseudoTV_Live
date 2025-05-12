@@ -73,7 +73,8 @@ class Tasks():
     @cacheit(expiration=datetime.timedelta(days=28), checksum=1)
     def chkWelcome(self):
         self.log('chkWelcome')
-        return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Show_Wiki_QR)'%(ADDON_ID))
+        if not SETTINGS.hasAutotuned():
+            return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Show_Wiki_QR)'%(ADDON_ID))
 
 
     def chkDebugging(self):

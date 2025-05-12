@@ -1214,20 +1214,8 @@ class Builtin:
         try:    return int(xbmc.getGlobalIdleTime() or '0')
         except: return 0
             
-    
-    @contextmanager
-    def kodiLocker(self, wait=0.0001):
-        while not self.monitor.abortRequested(): #try and make kodi api thread safe / thread locks not working? todo debug.
-            if self.monitor.waitForAbort(wait) or self.properties.getEXTPropertyBool('%s.pendingInterrupt'%(ADDON_ID)): break
-            elif not self.properties.getEXTPropertyBool('%s.kodiLocker'%(ADDON_ID)): break
-            else: log('kodiLocker, avoiding collision')
-        self.properties.setEXTPropertyBool('%s.kodiLocker'%(ADDON_ID),True)
-        try: yield
-        finally: self.properties.setEXTPropertyBool('%s.kodiLocker'%(ADDON_ID),False)
-
 
     def getInfoLabel(self, key, param='ListItem', default=''):
-        # with self.kodiLocker():
         value = xbmc.getInfoLabel('%s.%s'%(param,key))
         if value == "Busy": 
             if not MONITOR().waitForAbort(1.0): return self.getInfoLabel(key,param,default)
@@ -1236,7 +1224,6 @@ class Builtin:
         
 
     def getInfoBool(self, key, param='Library'):
-        # with self.kodiLocker():
         value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or False)
         self.log('getInfoBool, key = %s.%s, value = %s'%(param,key,value))
         return value
@@ -1248,7 +1235,6 @@ class Builtin:
         
         
     def executebuiltin(self, key, wait=False):
-        # with self.kodiLocker():
         self.log('executebuiltin, key = %s, wait = %s'%(key,wait))
         return threadit(xbmc.executebuiltin)('%s'%(key),wait)
         

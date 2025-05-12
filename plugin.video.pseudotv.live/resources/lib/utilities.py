@@ -263,6 +263,7 @@ class Utilities:
             ctl = (0,1)
             try:    param = self.sysARG[1]
             except: param = None
+            
             #Channels
             if param.startswith('Channel_Manager'):
                 ctl = (0,1)
@@ -283,6 +284,7 @@ class Utilities:
             elif param == 'Show_ZeroConf_QR':
                 ctl = (5,5)
                 self.qrBonjourDL()
+                
             #Misc. Scripts
             elif param == 'CPU_Bench':
                 self.runCPUBench()
@@ -290,6 +292,7 @@ class Utilities:
                 self.runIOBench()
             elif param == 'Logger':
                 self.runLogger()
+                
             #Misc.Docs
             elif param == 'Utilities':
                 ctl = (6,1)
