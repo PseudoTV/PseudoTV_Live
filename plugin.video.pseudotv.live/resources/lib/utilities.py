@@ -92,24 +92,6 @@ class Utilities:
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
 
 
-    def runCPUBench(self):
-        with BUILTIN.busy_dialog():
-            if hasAddon('script.pystone.benchmark',install=True, enable=True, notify=True):
-                return BUILTIN.executebuiltin('RunScript(script.pystone.benchmark)')
-        
-        
-    def runIOBench(self):
-        with BUILTIN.busy_dialog():
-            if hasAddon('script.io.benchmark',install=True, enable=True, notify=True):
-                return BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(escapeString(f'path={USER_LOC}')))
-        
-        
-    def runLogger(self):
-        with BUILTIN.busy_dialog():
-            if hasAddon('script.kodi.loguploader',install=True, enable=True, notify=True):
-                return BUILTIN.executebuiltin('RunScript(script.kodi.loguploader)')
-        
-
     def qrDebug(self):
         def __cleanLog(content):           
             content = re.sub('//.+?:.+?@'                  ,'//USER:PASSWORD@'     , content)
@@ -158,6 +140,103 @@ class Utilities:
         else:      DIALOG.okDialog(LANGUAGE(32190)%(data))
                 
 
+    def _runCPUBench(self):
+        with BUILTIN.busy_dialog():
+            if hasAddon('script.pystone.benchmark',install=True, enable=True, notify=True):
+                return BUILTIN.executebuiltin('RunScript(script.pystone.benchmark)')
+        
+        
+    def _runIOBench(self):
+        with BUILTIN.busy_dialog():
+            if hasAddon('script.io.benchmark',install=True, enable=True, notify=True):
+                return BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(escapeString(f'path={USER_LOC}')))
+        
+        
+    def _runLogger(self):
+        with BUILTIN.busy_dialog():
+            if hasAddon('script.kodi.loguploader',install=True, enable=True, notify=True):
+                return BUILTIN.executebuiltin('RunScript(script.kodi.loguploader)')
+        
+ 
+    def _runCleanup(self, full=False):
+        self.log('_runCleanup, full = %s'%(full))
+        files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
+                 LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
+                 LANGUAGE(30096):GENREFLEPATH,  #"Genre"
+                 LANGUAGE(30108):CHANNELFLEPATH,#"Channels"
+                 LANGUAGE(32041):LIBRARYFLEPATH}#"Library"
+
+        keys = list(files.keys())
+        if not full: keys = keys[:2]
+        if DIALOG.yesnoDialog('%s ?'%(msg)): 
+            with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
+                for key in keys:
+                    if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
+                    else:                             DIALOG.notificationDialog('%s %s'%((LANGUAGE(32127)%(key.replace(':',''))),LANGUAGE(32052)))
+        self._runUpdate(full)
+
+
+    def _runReload(self):
+        if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): PROPERTIES.setPropTimer('chkPVRRefresh')
+            
+            
+    def _runRestart(self):
+        return PROPERTIES.setPendingRestart()
+            
+            
+    def _runFillers(self):
+        return PROPERTIES.setPropTimer('chkFillers')
+
+
+    def _runLibrary(self):
+        PROPERTIES.setPropertyBool('ForceLibrary',True)
+        PROPERTIES.setEpochTimer('chkLibrary')
+        DIALOG.notificationDialog('%s %s'%(LANGUAGE(30199),LANGUAGE(30200)))
+
+
+    def _runAutotune(self):
+        self.log('_runAutotune')
+        SETTINGS.setAutotuned(False)
+        PROPERTIES.setPropTimer('chkChannels')
+         
+         
+    def _runUpdate(self, full=False):
+        self.log('_runUpdate, full = %s'%(full))
+        if full: PROPERTIES.setEpochTimer('chkLibrary')
+        PROPERTIES.setEpochTimer('chkChannels')
+               
+
+    def buildMenu(self, select=None):
+        items = [
+                 {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self._runCleanup  , 'hide':True ,'args':(False,)}, #"Rebuild M3U/XMLTV"
+                 {'label':LANGUAGE(32118)                  ,'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self._runCleanup  , 'hide':True ,'args':(True,)}, #"Clean Start"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':COLOR_LOGO,'func':self._runReload   , 'hide':False},#"Force PVR reload"
+                 {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':self._runRestart  , 'hide':False},#"Force PTVL reload"
+                 {'label':LANGUAGE(32159)                  ,'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':self._runLibrary  , 'hide':False},
+                 {'label':LANGUAGE(32180)                  ,'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':self._runFillers  , 'hide':False},
+                 {'label':LANGUAGE(32181)                  ,'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':self._runAutotune , 'hide':False},
+                 {'label':LANGUAGE(30205)                  ,'label2':LANGUAGE(30205),'icon':COLOR_LOGO,'func':self._runCPUBench , 'hide':False},
+                 {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':COLOR_LOGO,'func':self._runIOBench  , 'hide':False},
+                 ]
+
+        with BUILTIN.busy_dialog():
+            if not SETTINGS.getSettingBool('Debug_Enable'): items = [item for item in items if not item.get('hide',False)]
+            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label'))]
+            if select is None: select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
+            
+        if not select is None:
+            with PROPERTIES.interruptActivity():
+                try: 
+                    selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
+                    self.log('buildMenu, selectItem = %s'%selectItem)
+                    if selectItem.get('args'): selectItem['func'](*selectItem['args'])
+                    else:                      selectItem['func']()
+                except Exception as e: 
+                    self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
+                    return DIALOG.notificationDialog(LANGUAGE(32000))
+        else: SETTINGS.openSettings((6,1))
+         
+         
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.isRunning('OVERLAY_MANAGER'):
@@ -178,68 +257,6 @@ class Utilities:
                 del overlaytool
 
 
-    def _togglePVR(self):
-        if DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): PROPERTIES.setPropTimer('chkPVRRefresh')
-            
-
-    def buildMenu(self, select=None):
-        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32120),False), 'hide':True}, #"Rebuild M3U/XMLTV"
-                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles ,'args':(LANGUAGE(32119),True) , 'hide':True}, #"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self._togglePVR              , 'hide':False},#"Force PVR reload"
-                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPendingRestart                    , 'hide':False},#"Force PTVL reload"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':self.rescanLibrary, 'hide':False},#Rescan library
-                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setPropTimer ,'args':('chkFillers',) , 'hide':False},#Rebuild Fillers
-                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':self._runAutotune                               , 'hide':False}]#Run Autotune
-                
-        with BUILTIN.busy_dialog():
-            debugEnabled = SETTINGS.getSettingBool('Debug_Enable')
-            if not debugEnabled: items = [item for item in items if not item.get('hide',False)]
-            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label'))]
-            if select is None: select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
-            
-        if not select is None:
-            with PROPERTIES.interruptActivity():
-                try: 
-                    selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
-                    self.log('buildMenu, selectItem = %s'%selectItem)
-                    if selectItem.get('args'): selectItem['func'](*selectItem['args'])
-                    else:                      selectItem['func']()
-                except Exception as e: 
-                    self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
-                    return DIALOG.notificationDialog(LANGUAGE(32000))
-        else: SETTINGS.openSettings((6,1))
-         
-         
-    def _runAutotune(self):
-        self.log('_runAutotune')
-        SETTINGS.setAutotuned(False)
-        PROPERTIES.setPropTimer('chkChannels')
-         
-         
-    def _runUpdate(self, full=False):
-        self.log('_runUpdate, full = %s'%(full))
-        if full: PROPERTIES.setEpochTimer('chkLibrary')
-        PROPERTIES.setEpochTimer('chkChannels')
-               
-
-    def deleteFiles(self, msg, full: bool=False):
-        self.log('deleteFiles, full = %s'%(full))
-        files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
-                 LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
-                 LANGUAGE(30096):GENREFLEPATH,  #"Genre"
-                 LANGUAGE(30108):CHANNELFLEPATH,#"Channels"
-                 LANGUAGE(32041):LIBRARYFLEPATH}#"Library"
-
-        keys = list(files.keys())
-        if not full: keys = keys[:2]
-        if DIALOG.yesnoDialog('%s ?'%(msg)): 
-            with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
-                for key in keys:
-                    if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
-                    else:                             DIALOG.notificationDialog('%s %s'%((LANGUAGE(32127)%(key.replace(':',''))),LANGUAGE(32052)))
-        self._runUpdate(full)
-
-
     def defaultChannels(self):
         self.log('defaultChannels')
         with BUILTIN.busy_dialog():
@@ -250,12 +267,6 @@ class Utilities:
         select = DIALOG.selectDialog(values, LANGUAGE(30173), findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
         if not select is None: return SETTINGS.setSetting('Default_Channels',values[select])
         else:                  return SETTINGS.setSetting('Default_Channels',LANGUAGE(30022))
-
-
-    def rescanLibrary(self):
-        PROPERTIES.setPropertyBool('ForceLibrary',True)
-        PROPERTIES.setEpochTimer('chkLibrary')
-        DIALOG.notificationDialog('%s %s'%(LANGUAGE(30199),LANGUAGE(30200)))
 
 
     def run(self):
@@ -287,11 +298,11 @@ class Utilities:
                 
             #Misc. Scripts
             elif param == 'CPU_Bench':
-                self.runCPUBench()
+                self._runCPUBench()
             elif param == 'IO_Bench':
-                self.runIOBench()
+                self._runIOBench()
             elif param == 'Logger':
-                self.runLogger()
+                self._runLogger()
                 
             #Misc.Docs
             elif param == 'Utilities':

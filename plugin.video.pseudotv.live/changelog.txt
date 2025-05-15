@@ -2,9 +2,10 @@ v.0.6.2
 - Optimized background logo tasks to prevent potential deadlocks.
 - Resolved repeated "Offline" server notifications.
 - Corrected an issue where channels failed to switch or loaded incorrectly.
-- Added CPU/IO Benchmark to miscellaneous settings.
+- Added CPU/IO Benchmark to Utility Menu.
 - Fixed Reoccurring welcome prompt.
 - Fixed Failed library parsing inadvertently clearing autotuned channels.
+- Improved background logo parsing.
 
 v.0.6.1
 - Improved logo detection.

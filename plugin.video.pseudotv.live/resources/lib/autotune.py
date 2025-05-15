@@ -72,13 +72,13 @@ class Autotune:
             elif retval == 2: #Custom
                 PROPERTIES.setInterruptActivity(True)
                 with BUILTIN.busy_dialog():
-                    menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33310),url='RunScript(special://home/addons/%s/resources/lib/utilities.py, Channel_Manager)'%(ADDON_ID))]
-                    if hasM3U:     menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(32257),LANGUAGE(32256),url='RunScript(special://home/addons/%s/resources/lib/autotune.py, Recover_M3U)'%(ADDON_ID)))
-                    if hasBackup:  menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(32112),LANGUAGE(32111),url='RunScript(special://home/addons/%s/resources/lib/backup.py, Recover_Backup)'%(ADDON_ID)))
-                    if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='RunScript(special://home/addons/%s/resources/lib/multiroom.py, Select_Server)'%(ADDON_ID)))
+                    menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33310),url='special://home/addons/%s/resources/lib/utilities.py, Channel_Manager'%(ADDON_ID))]
+                    if hasM3U:     menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(32257),LANGUAGE(32256),url='special://home/addons/%s/resources/lib/autotune.py, Recover_M3U'%(ADDON_ID)))
+                    if hasBackup:  menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(32112),LANGUAGE(32111),url='special://home/addons/%s/resources/lib/backup.py, Recover_Backup'%(ADDON_ID)))
+                    if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='special://home/addons/%s/resources/lib/multiroom.py, Select_Server'%(ADDON_ID)))
                 select = DIALOG.selectDialog(menu,multi=False)
                 PROPERTIES.setInterruptActivity(False)
-                if not select is None: return BUILTIN.executebuiltin(menu[select].getPath())
+                if not select is None: return BUILTIN.executescript(menu[select].getPath())
             else: return True #No
         else: return True
             
@@ -176,7 +176,7 @@ class Autotune:
         stations = M3U().getStations()
         [autotune.setdefault(AUTOTUNE_TYPES[station.get('number')//1000],[]).append(station.get('name')) for station in stations if station.get('number') > CHANNEL_LIMIT]
         [self.library.enableByName(type, names) for type, names in list(autotune.items()) if len(names) > 0]
-        return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Run_Autotune)'%(ADDON_ID))
+        return BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Run_Autotune'%(ADDON_ID))
        
        
     def clearLibrary(self):

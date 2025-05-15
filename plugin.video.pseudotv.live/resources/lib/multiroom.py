@@ -184,7 +184,7 @@ class Multiroom:
         self.log('enableZeroConf')
         if SETTINGS.getSetting('ZeroConf_Status') == '[COLOR=red][B]%s[/B][/COLOR]'%(LANGUAGE(32253)):
             if BUILTIN.getInfoLabel('Platform.Windows','System'): 
-                BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Show_ZeroConf_QR)'%(ADDON_ID))
+                BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_ZeroConf_QR'%(ADDON_ID))
             if DIALOG.yesnoDialog(message=LANGUAGE(30129)):
                 with PROPERTIES.interruptActivity():
                     if self.jsonRPC.setSettingValue("services.zeroconf",True,queue=False):

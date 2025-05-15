@@ -1079,28 +1079,6 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <setting id="Run_Bench" type="action" label="30205" help="">
-                    <level>0</level>
-                    <default/>
-                    <constraints>
-                        <allowempty>true</allowempty>
-                    </constraints>
-                    <control type="button" format="action">
-                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, CPU_Bench)</data>
-                        <close>true</close>
-                    </control>
-                </setting>
-                <setting id="Run_ioBench" type="action" label="30208" help="">
-                    <level>0</level>
-                    <default/>
-                    <constraints>
-                        <allowempty>true</allowempty>
-                    </constraints>
-                    <control type="button" format="action">
-                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, IO_Bench)</data>
-                        <close>true</close>
-                    </control>
-                </setting>
             </group>
             <group id="2" label="30088">
                 <setting id="Show_Wiki_QR" type="action" label="30168" help="33168">

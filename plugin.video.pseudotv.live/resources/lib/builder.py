@@ -309,7 +309,6 @@ class Builder:
         if not _validFileList(fileArray): #if valid array bypass build
             paths = citem.get('path',[])
             for idx, file in enumerate(paths):
-                self.counter = 0
                 if self.service._interrupt():
                     self.log("[%s]  buildChannel, _interrupt"%(citem['id']))
                     self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
@@ -337,18 +336,20 @@ class Builder:
 
     def buildFileList(self, citem: dict, path: str, media: str='video', limit: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}) -> list: #build channel via vfs path.
         self.log("[%s] buildFileList, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
-        fileList = []
+        fileArray = []
         if path.endswith('.xsp'): #smartplaylist - parse xsp for path, sort info
             paths, media, sort, limit = self.xsp.parseXSP(citem.get('id',''), path, media, sort, limit)
             if len(paths) > 0:
                 for idx, npath in enumerate(paths):
                     self.pName = '%s %s/%s'%(citem['name'],idx+1,len(paths))
-                    fileList.append(self.buildFileList(citem, npath, media, limit, sort, limits))
-                return interleave(fileList, self.interleaveValue)
+                    fileArray.append(self.buildFileList(citem, npath, media, limit, sort, limits))
+                return interleave(fileArray, self.interleaveValue)
         
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
             path, media, sort, filter = self.xsp.parseDXSP(citem.get('id',''), path, sort, {}, self.incExtras) #todo filter adv. rules
             
+        fileList = []
+        counter  = 0
         nlimits  = limits
         dirList  = [{'file':path}]
         self.loopback = {}
@@ -373,12 +374,14 @@ class Builder:
                 dirList = setDictLST(dirList + subdirList)
                 self.log('[%s] buildFileList, adding = %s/%s remaining dirs (%s)\npath = %s'%(citem['id'],len(subfileList),limit,len(dirList),dir.get('file')))
             elif len(dirList) == 0:
-                if len(fileList) < limit and nlimits.get('total') > limit and self.counter < nlimits.get('total',0) and nlimits != limits: 
-                    self.log("[%s] buildFileList, retrying (%s/%s) with new autoPagination limits %s"%(citem['id'],self.counter,nlimits.get('total',0),nlimits))
-                    self.counter += limit
+                if path.startswith(tuple(VFS_TYPES)): 
+                    self.log('[%s] buildFileList, vfs path ignoring folder retries'%(citem['id']))
+                    break
+                elif len(fileList) < limit and nlimits.get('total') > limit and counter <= nlimits.get('total',0) and nlimits != limits: 
+                    self.log("[%s] buildFileList, retrying (%s/%s) with new autoPagination limits %s"%(citem['id'],counter,nlimits.get('total',0),nlimits))
+                    counter += limit
                     limits = nlimits
                     dirList.insert(0,{'file':path})
-                    # fileList.extend(self.buildFileList(citem, path, media, limit, sort, nlimits))
                 else:
                     self.log('[%s] buildFileList, no more folders to parse'%(citem['id']))
                     break

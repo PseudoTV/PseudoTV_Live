@@ -72,9 +72,10 @@ class Tasks():
 
     @cacheit(expiration=datetime.timedelta(days=28), checksum=1)
     def chkWelcome(self):
-        self.log('chkWelcome')
-        if not SETTINGS.hasAutotuned():
-            return BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py, Show_Wiki_QR)'%(ADDON_ID))
+        hasAutotuned = SETTINGS.hasAutotuned()
+        self.log('chkWelcome, hasAutotuned = %s'%(hasAutotuned))
+        if not hasAutotuned:
+            return BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Wiki_QR'%(ADDON_ID))
 
 
     def chkDebugging(self):
@@ -111,16 +112,16 @@ class Tasks():
 
     def _chkQueTimer(self):
         self._chkEpochTimer('chkVersion'      , self.chkVersion      , 21600)
-        self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 900)
+        self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings , 3600)
         self._chkEpochTimer('chkServers'      , self.chkServers      , 300)
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery    , 300)
-        self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 600)
+        self._chkEpochTimer('chkRecommended'  , self.chkRecommended  , 900)
         self._chkEpochTimer('chkLibrary'      , self.chkLibrary      , 3600)
         
         self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         self._chkEpochTimer('chkURLQUE'       , self.chkURLQUE       , 300)
-        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
-        self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 900)
+        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 60)
+        self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 600)
     
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
         self._chkPropTimer('chkFillers'       , self.chkFillers      , 2)
@@ -161,7 +162,7 @@ class Tasks():
             DIALOG.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
         elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion', checksum=ADDON_VERSION) or '0.0.0'):
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION, checksum=ADDON_VERSION)
-            BUILTIN.executebuiltin('RunScript(special://home/addons/%s/resources/lib/utilities.py,Show_Changelog)'%(ADDON_ID))
+            BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py,Show_Changelog'%(ADDON_ID))
         SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':'None'}[str(update)])
 
 
@@ -234,6 +235,7 @@ class Tasks():
             self.service.currentChannels = channels #update service channels
             
         if len(channels) > 0:
+            if not hasAutotuned: SETTINGS.setAutotuned(complete)
             complete, updated = builder.build(channels)
             self.log('chkChannels, channels = %s, complete = %s, updated = %s'%(len(channels),complete,updated))
             if complete:
@@ -242,18 +244,14 @@ class Tasks():
                 if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
                 if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
             else: self._que(self.chkChannels,3,channels)
-        else:
-            self.log('chkChannels, hasAutotuned = %s, hasEnabledServers = %s'%(hasAutotuned,hasEnabledServers))
-            if not hasAutotuned:    complete = SETTINGS.setAutotuned(Autotune()._runTune())
-            elif hasEnabledServers: complete = PROPERTIES.setPropTimer('chkPVRRefresh')
-            else:                   complete = True
+        elif not hasAutotuned:  return SETTINGS.setAutotuned(Autotune()._runTune())
+        elif hasEnabledServers: return PROPERTIES.setPropTimer('chkPVRRefresh')
         del builder
         if not hasFirstRun: PROPERTIES.setFirstRun(complete)
-        return complete
 
 
     def chkJSONQUE(self):
-        if not PROPERTIES.isRunning('chkLOGOQUE') and PROPERTIES.hasFirstRun() and self.service.monitor.isIdle:
+        if not PROPERTIES.isRunning('chkLOGOQUE') and PROPERTIES.hasFirstRun():
             with PROPERTIES.chkRunning('chkJSONQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queueJSON', json_data=True) or {})
                 params = queuePool.get('params',[])
@@ -271,13 +269,13 @@ class Tasks():
 
 
     def chkLOGOQUE(self):
-        if not PROPERTIES.isRunning('chkLOGOQUE') and PROPERTIES.hasFirstRun() and self.service.monitor.isIdle:
+        if not PROPERTIES.isRunning('chkLOGOQUE') and PROPERTIES.hasFirstRun():
             with PROPERTIES.chkRunning('chkLOGOQUE'):
                 updated   = False
                 library   = Library(service=self.service)
                 resources = library.resources
                 queuePool = (SETTINGS.getCacheSetting('queueLOGO', json_data=True) or {})
-                params = queuePool.get('params',[])
+                params    = randomShuffle(queuePool.get('params',[]))
                 for i in list(range(QUEUE_CHUNK)):
                     if self.service._interrupt(): 
                         self.log("chkLOGOQUE, _interrupt")
@@ -298,7 +296,7 @@ class Tasks():
                 
 
     def chkURLQUE(self):
-        if not PROPERTIES.isRunning('chkURLQUE') and PROPERTIES.hasFirstRun() and self.service.monitor.isIdle:
+        if not PROPERTIES.isRunning('chkURLQUE') and PROPERTIES.hasFirstRun():
             with PROPERTIES.chkRunning('chkURLQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queueURL', json_data=True) or {})
                 params = queuePool.get('params',[])

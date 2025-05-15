@@ -509,7 +509,7 @@ class JSONRPC:
         items  = results.get(key, [])
         
         if len(items) == 0 and limits.get('total',0) > 0:
-            # retry last request with fresh limits.
+            # retry last request with fresh limits when no items are returned.
             self.log("[%s] requestList, trying again with start limits at 0"%(citem['id']))
             return self.requestList(citem, path, media, page, sort, {"end": 0, "start": 0, "total": limits.get('total',0)}, query)
         else:

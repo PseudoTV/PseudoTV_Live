@@ -1236,7 +1236,14 @@ class Builtin:
         
     def executebuiltin(self, key, wait=False):
         self.log('executebuiltin, key = %s, wait = %s'%(key,wait))
-        return threadit(xbmc.executebuiltin)('%s'%(key),wait)
+        xbmc.executebuiltin('%s'%(key),wait)
+        return True
+        
+        
+    def executescript(self, path):
+        self.log('executescript, path = %s'%(path))
+        xbmc.executescript('%s'%(path))
+        return True
         
         
     @contextmanager

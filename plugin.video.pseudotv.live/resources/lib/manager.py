@@ -560,7 +560,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.log('validatePaths, path = %s'%path)
             return path, self.setLogo(citem.get('name'),citem)
             
-        def __seek(item, citem):
+        def __seek(item, citem, cnt, dia):
             player  = PLAYER()
             file    = item.get('file')
             dur     = item.get('duration')
@@ -574,7 +574,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 infoTag.set_resume_point({'ResumeTime':int(dur/4),'TotalTime':int(dur/4)})
             
                 getTime  = 0
-                waitTime = 30
+                waitTime = FIFTEEN
                 threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(file))
                 while not self.monitor.abortRequested():
                     waitTime -= 1
@@ -585,29 +585,39 @@ class Manager(xbmcgui.WindowXMLDialog):
                         player.stop()
                         return True
                 player.stop()
-                return DIALOG.yesnoDialog(LANGUAGE(30202))
+                retval = DIALOG.yesnoDialog(LANGUAGE(30202),customlabel='Try Again (%s)'%(cnt))
+                if   retval == 1: return True
+                elif retval == 2: return
+                return False
             
         def __vfs(path, citem):
             if isRadio({'path':[path]}) or isMixed_XSP({'path':[path]}): return True
             else:
                 valid   = False
                 media   = 'music' if isRadio({'path':[path]}) else 'video'
-                dia     = DIALOG.progressDialog(message='%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),'%s...'%(str(path)[:48])))
+                cnt     = 3
+                msg     = '%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),'%s...'%(str(path)))
+                dia     = DIALOG.progressDialog(message=msg)
                 with BUILTIN.busy_dialog():
                     items = self.jsonRPC.walkFileDirectory(path, media, depth=5, retItem=True)
                 
                 for idx, dir in enumerate(items):
                     if self.monitor.waitForAbort(0.0001): break
-                    else:
+                    elif cnt <= 3 and cnt > 0:
                         item = random.choice(items.get(dir,[]))
-                        dia  = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path','%s...'%(str(dir)[:48]),'%s...'%(str(item.get('file',''))[:48])))
+                        msg  = '%s %s...\n%s\n%s'%(LANGUAGE(32098),'Duration','%s...'%(dir),'%s...'%(item.get('file','')))
+                        dia  = DIALOG.progressDialog(int((idx*100)//len(items)), control=dia, message=msg)
                         item.update({'duration':self.jsonRPC.getDuration(item.get('file'), item, accurate=bool(SETTINGS.getSettingInt('Duration_Type')))})
                         if item.get('duration',0) == 0: continue
-                        dia = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Seeking','%s...'%(str(dir)[:48]),'%s...'%(str(item.get('file',''))[:48])))
-                        if __seek(item, citem):
+                        msg = '%s %s...\n%s\n%s'%(LANGUAGE(32098),'Seeking','%s...'%(str(dir)),'%s...'%(str(item.get('file',''))))
+                        dia = DIALOG.progressDialog(int((idx*100)//len(items)), control=dia, message=msg)
+                        retval = __seek(item, citem, cnt, dia)
+                        if retval:
                             self.log('validatePaths _vfs, found playable and seek-able file %s'%(item.get('file')))
                             valid = True
                             break
+                        elif retval is None: cnt -= 1
+                        else: break
                 DIALOG.progressDialog(100,control=dia)
                 return valid
 
