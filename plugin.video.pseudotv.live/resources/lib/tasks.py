@@ -147,14 +147,12 @@ class Tasks():
 
     @cacheit(expiration=datetime.timedelta(minutes=10))
     def getOnlineVersion(self):
-        try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(requestURL(ADDON_URL)))[0]
-        except: ONLINE_VERSON = ADDON_VERSION
-        self.log('getOnlineVersion, ONLINE_VERSON = %s'%(ONLINE_VERSON))
-        return ONLINE_VERSON
+        try:    ONLINE_VERSION = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(requestURL(ADDON_URL)))[0]
+        except: ONLINE_VERSION = ADDON_VERSION
+        return ONLINE_VERSION
         
         
     def chkVersion(self):
-        self.log('chkVersion')
         update = False
         ONLINE_VERSION = self.getOnlineVersion()
         if ADDON_VERSION < ONLINE_VERSION: 
@@ -162,7 +160,8 @@ class Tasks():
             DIALOG.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
         elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion', checksum=ADDON_VERSION) or '0.0.0'):
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION, checksum=ADDON_VERSION)
-            BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py,Show_Changelog'%(ADDON_ID))
+            BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
+        self.log('chkVersion, update = %s, installed version = %s, online version = %s'%(update,ADDON_VERSION,ONLINE_VERSION))
         SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':'None'}[str(update)])
 
 

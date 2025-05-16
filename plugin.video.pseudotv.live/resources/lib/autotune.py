@@ -58,14 +58,14 @@ class Autotune:
         
         if prompt:
             opt         = ''
-            msg         = (LANGUAGE(32042)%ADDON_NAME)
+            msg         = '%s?'%(LANGUAGE(32042)%(ADDON_NAME))
             hasBackup   = PROPERTIES.hasBackup()
             hasServers  = PROPERTIES.hasServers()
             hasM3U      = FileAccess.exists(M3UFLEPATH) if not hasLibrary else False
 
             if (hasBackup or hasServers or hasM3U):
                 opt = LANGUAGE(32254)
-                msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32255))
+                msg = '%s\n%s'%(LANGUAGE(32042)%(ADDON_NAME),LANGUAGE(32255))
                 
             retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
             if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(32021))) #Yes

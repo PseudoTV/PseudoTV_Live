@@ -39,25 +39,27 @@ class Background(xbmcgui.WindowXMLDialog):
         self.player     = kwargs.get('player', None)
         self.sysInfo    = kwargs.get('sysInfo', self.player.sysInfo)
         self.jsonRPC    = self.player.jsonRPC
-        self.citem      = self.sysInfo.get('citem',{})
-        self.fitem      = self.sysInfo.get('fitem',{})
-        self.nitem      = self.jsonRPC.getNextItem(self.citem,self.sysInfo.get('nitem',{'title':BUILTIN.getInfoLabel('NextTitle','VideoPlayer'),'label':BUILTIN.getInfoLabel('NextTitle','VideoPlayer')}))
-        self.log('__init__, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
         
-        self.logo      = self.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
-        self.land      = (getThumb(self.nitem)        or COLOR_FANART)
-        self.chname    = (self.citem.get('name')      or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
-        self.nowTitle  = (self.fitem.get('label')     or BUILTIN.getInfoLabel('Title','VideoPlayer'))
-        self.nextTitle = (self.nitem.get('showlabel') or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or self.chname)
-
-        try: self.nextTime = epochTime(self.nitem['start']).strftime('%I:%M%p')
-        except Exception as e: 
-            self.log("__init__, nextTime failed! %s\nstart = %s"%(e,self.nitem.get('start')), xbmc.LOGERROR)
-            self.nextTime = BUILTIN.getInfoLabel('NextStartTime','VideoPlayer')
+        self.citem = self.sysInfo.get('citem',{})
+        if self.citem:
+            self.fitem      = self.sysInfo.get('fitem',{})
+            self.nitem      = self.jsonRPC.getNextItem(self.citem,self.sysInfo.get('nitem',{'title':BUILTIN.getInfoLabel('NextTitle','VideoPlayer'),'label':BUILTIN.getInfoLabel('NextTitle','VideoPlayer')}))
+            self.log('__init__, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
             
-        self.onNow  = '%s on %s'%(self.nowTitle,self.chname) if self.chname not in validString(self.nowTitle) else self.nowTitle
-        self.onNext = '@ %s: %s'%(self.nextTime,self.nextTitle)
-        
+            self.logo      = self.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
+            self.land      = (getThumb(self.nitem)        or COLOR_FANART)
+            self.chname    = (self.citem.get('name')      or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
+            self.nowTitle  = (self.fitem.get('label')     or BUILTIN.getInfoLabel('Title','VideoPlayer'))
+            self.nextTitle = (self.nitem.get('showlabel') or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or self.chname)
+
+            try: self.nextTime = epochTime(self.nitem['start']).strftime('%I:%M%p')
+            except Exception as e: 
+                self.log("__init__, nextTime failed! %s\nstart = %s"%(e,self.nitem.get('start')), xbmc.LOGERROR)
+                self.nextTime = BUILTIN.getInfoLabel('NextStartTime','VideoPlayer')
+                
+            self.onNow  = '%s on %s'%(self.nowTitle,self.chname) if self.chname not in validString(self.nowTitle) else self.nowTitle
+            self.onNext = '@ %s: %s'%(self.nextTime,self.nextTitle)
+            
     
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -280,42 +282,43 @@ class OnNext(xbmcgui.WindowXMLDialog):
         self.window     = xbmcgui.Window(12005) 
         self.window_h, self.window_w = 1080, 1920
         
-        self.citem      = self.sysInfo.get('citem',{})
-        self.fitem      = self.sysInfo.get('fitem',{})
-        self.nitem      = self.jsonRPC.getNextItem(self.citem,self.sysInfo.get('nitem',{}))
-        self.log('__init__, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
-        
-        self.logo      = self.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
-        self.land      = (getThumb(self.nitem)        or COLOR_FANART)
-        self.chname    = (self.citem.get('name')      or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
-        self.nowTitle  = (self.fitem.get('label')     or BUILTIN.getInfoLabel('Title','VideoPlayer'))
-        self.nextTitle = (self.nitem.get('showlabel') or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or self.chname)
-        
-        try: self.nextTime = epochTime(self.nitem['start']).strftime('%I:%M%p')
-        except Exception as e: 
-            self.log("__init__, nextTime failed! %s\nstart = %s"%(e,self.nitem.get('start')), xbmc.LOGERROR)
-            self.nextTime = BUILTIN.getInfoLabel('NextStartTime','VideoPlayer')
+        self.citem = self.sysInfo.get('citem',{})
+        if self.citem:
+            self.fitem      = self.sysInfo.get('fitem',{})
+            self.nitem      = self.jsonRPC.getNextItem(self.citem,self.sysInfo.get('nitem',{}))
+            self.log('__init__, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
             
-        self.onNow  = '%s on %s'%(self.nowTitle,self.chname) if self.chname not in validString(self.nowTitle) else self.nowTitle
-        self.onNext = '@ %s: %s'%(self.nextTime,self.nextTitle)
-    
-        #onNext
-        self.enableOnNext = bool(SETTINGS.getSettingInt('OnNext_Enable'))
-        self.onNextMode   = SETTINGS.getSettingInt('OnNext_Enable')
+            self.logo      = self.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
+            self.land      = (getThumb(self.nitem)        or COLOR_FANART)
+            self.chname    = (self.citem.get('name')      or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
+            self.nowTitle  = (self.fitem.get('label')     or BUILTIN.getInfoLabel('Title','VideoPlayer'))
+            self.nextTitle = (self.nitem.get('showlabel') or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or self.chname)
+            
+            try: self.nextTime = epochTime(self.nitem['start']).strftime('%I:%M%p')
+            except Exception as e: 
+                self.log("__init__, nextTime failed! %s\nstart = %s"%(e,self.nitem.get('start')), xbmc.LOGERROR)
+                self.nextTime = BUILTIN.getInfoLabel('NextStartTime','VideoPlayer')
+                
+            self.onNow  = '%s on %s'%(self.nowTitle,self.chname) if self.chname not in validString(self.nowTitle) else self.nowTitle
+            self.onNext = '@ %s: %s'%(self.nextTime,self.nextTitle)
         
-        try:    self.onNextX, self.onNextY = eval(SETTINGS.getSetting("OnNext_Position_XY")) #user
-        except: self.onNextX, self.onNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
-    
-        self.citem   = self.sysInfo.get('citem',{})
-        self.fitem   = self.sysInfo.get('fitem',{})
-        self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
-        self.log('__init__, enableOnNext = %s'%(self.enableOnNext))
-        if bool(self.enableOnNext) and not isFiller(self.fitem):
-            totalTime = int(self.player.getPlayerTime() * (self.player.maxProgress / 100))
-            threshold = abs((totalTime - (totalTime * .75)) - FIFTEEN)
-            remaining = floor(totalTime - self.player.getPlayedTime())
-            intTime   = roundupDIV(threshold,3)
-            if remaining >= intTime: self.doModal()
+            #onNext
+            self.enableOnNext = bool(SETTINGS.getSettingInt('OnNext_Enable'))
+            self.onNextMode   = SETTINGS.getSettingInt('OnNext_Enable')
+            
+            try:    self.onNextX, self.onNextY = eval(SETTINGS.getSetting("OnNext_Position_XY")) #user
+            except: self.onNextX, self.onNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
+        
+            self.citem   = self.sysInfo.get('citem',{})
+            self.fitem   = self.sysInfo.get('fitem',{})
+            self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
+            self.log('__init__, enableOnNext = %s'%(self.enableOnNext))
+            if bool(self.enableOnNext) and not isFiller(self.fitem):
+                totalTime = int(self.player.getPlayerTime() * (self.player.maxProgress / 100))
+                threshold = abs((totalTime - (totalTime * .75)) - FIFTEEN)
+                remaining = floor(totalTime - self.player.getPlayedTime())
+                intTime   = roundupDIV(threshold,3)
+                if remaining >= intTime: self.doModal()
     
     
     def log(self, msg, level=xbmc.LOGDEBUG):

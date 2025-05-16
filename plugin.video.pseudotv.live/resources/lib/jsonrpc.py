@@ -652,7 +652,7 @@ class JSONRPC:
         return cacheResponse
         
         
-    def getNextItem(self, citem, nitem): #return next broadcast ignoring fillers
+    def getNextItem(self, citem={}, nitem={}): #return next broadcast ignoring fillers
         nextitems = sorted(self.matchChannel(citem.get('name',''), citem.get('id',''), citem.get('radio',False)).get('broadcastnext',[]), key=itemgetter('starttime'))
         for nextitem in nextitems:
             if not isFiller(nextitem): return decodePlot(nextitem.get('plot',''))

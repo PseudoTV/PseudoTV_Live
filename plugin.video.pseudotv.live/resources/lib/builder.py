@@ -100,7 +100,6 @@ class Builder:
         
         
     def updateProgress(self, percent, message, header):
-        """Utility function to update progress dialogs."""
         if self.pDialog: self.pDialog = DIALOG.updateProgress(percent, self.pDialog, message=message, header=header)
 
 
