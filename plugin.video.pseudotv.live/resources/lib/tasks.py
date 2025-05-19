@@ -203,8 +203,11 @@ class Tasks():
             library.importPrompt() #refactor feature
             complete = library.updateLibrary(force)
             del library
-            if complete: self._que(self.chkChannels,3)
-            else:        self._que(self.chkLibrary,2,force)
+            if complete:
+                self._que(self.chkChannels,3)
+                if force: PROPERTIES.setPropertyBool('ForceLibrary',False)
+            else:
+                self._que(self.chkLibrary,2,force)
             self.log('chkLibrary, force = %s, complete = %s'%(force,complete))
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 

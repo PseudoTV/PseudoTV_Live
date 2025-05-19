@@ -70,7 +70,7 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
             if params.get('start') == '{utc}':
                 PROPERTIES.setPropTimer('chkPVRRefresh')
                 params.update({'start':0,'stop':0,'duration':0})
-                if params['isPlaylist']:        threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
+                if   params['isPlaylist']:      threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
                 elif params['vid'] :            threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
             elif params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
             elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
@@ -82,8 +82,8 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         elif mode == 'radio':                   threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
         elif mode == 'guide'                and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openGuide()
         elif mode == 'settings'             and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openSettings()
-        else: DIALOG.notificationDialog(LANGUAGE(32000))
-        MONITOR().waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
+        else:                                   DIALOG.notificationDialog(LANGUAGE(32000))
+        MONITOR().waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000)) #delay to avoid thread crashes when fast channel changing.
         
 if __name__ == '__main__':
     """

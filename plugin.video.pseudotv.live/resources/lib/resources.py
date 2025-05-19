@@ -75,14 +75,14 @@ class Resources:
 
 
     def getCachedLogo(self, citem, select=False):
-        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select),'checksum':getMD5('|'.join(self.getResources(citem))), 'args':(citem,select)},
-                      {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   ,'checksum':ADDON_VERSION                             , 'args':(citem.get('name'), select)}]
+        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select), 'args':(citem,select)             ,'checksum':getMD5('|'.join([dict(SETTINGS.getEXTMeta(id)).get('version',ADDON_VERSION) for id in self.getResources(citem)]))},
+                      {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   , 'args':(citem.get('name'), select),'checksum':ADDON_VERSION}]
         for cacheItem in cacheFuncs:
             cacheResponse = self.cache.get(cacheItem.get('name',''),cacheItem.get('checksum',ADDON_VERSION))
             if cacheResponse: 
                 self.log('getCachedLogo, chname = %s, type = %s, logo = %s'%(citem.get('name'), citem.get('type'), cacheResponse))
                 return cacheResponse
-            else: threadit(self.queueLOGO)(cacheItem)
+            else: self.queueLOGO(cacheItem)
                 
 
     def queueLOGO(self, param):
@@ -105,9 +105,9 @@ class Resources:
         if select: return logos
         
         
-    def fillLogoResource(self, id, version=ADDON_VERSION):
+    def fillLogoResource(self, id):
         results  = {}
-        response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=version, expiration=datetime.timedelta(days=28))
+        response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=dict(SETTINGS.getEXTMeta(id)).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=28))
         for path, images in list(response.items()):
             for image in images:
                 name, ext = os.path.splitext(image)
@@ -130,14 +130,14 @@ class Resources:
         logos     = []
         resources = self.getResources(citem)
         cacheName = 'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select)
-        cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
+        cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join([dict(SETTINGS.getEXTMeta(id)).get('version',ADDON_VERSION) for id in resources])))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
                 if not hasAddon(id):
                     self.log('getLogoResources, missing %s'%(id))
                     continue
                 else:
-                    results = self.fillLogoResource(id, self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION))
+                    results = self.fillLogoResource(id)
                     self.log('getLogoResources, checking %s, results = %s'%(id,len(results)))
                     for name, logo in list(results.items()):
                         if self.matchName(citem.get('name'), name, auto=select):

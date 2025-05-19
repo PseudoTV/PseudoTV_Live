@@ -647,8 +647,10 @@ class JSONRPC:
         cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
         if not cacheResponse:
             pvrItem = __match()
-            if pvrItem and extend: pvrItem = __extend(pvrItem)
-            cacheResponse = self.cache.set(cacheName, pvrItem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=FIFTEEN), json_data=True)
+            if pvrItem:
+                if extend: pvrItem = __extend(pvrItem)
+                cacheResponse = self.cache.set(cacheName, pvrItem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=FIFTEEN), json_data=True)
+            else: return {}
         return cacheResponse
         
         

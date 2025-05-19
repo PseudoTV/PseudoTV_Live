@@ -129,10 +129,12 @@ class Library:
             if not existing: existing = self.channels.getType(type)
             self.log('__update, type = %s, items = %s, existing = %s'%(type,len(items),len(existing)))
             for item in items:
-                for eitem in existing:
-                    if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name','').lower():
-                        if not item.get('enabled',False): item['enabled'] = True
-                        break
+                if not item.get('enabled',False):
+                    for eitem in existing:
+                        if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name','').lower():
+                            if eitem['logo'] not in [LOGO,COLOR_LOGO] and item['logo'] in [LOGO,COLOR_LOGO]: item['logo'] = eitem['logo']
+                            item['enabled'] = True
+                            break
                 item['logo'] = self.resources.getLogo(item,item.get('logo',LOGO)) #update logo
                 entry = self.libraryTEMP.copy()
                 entry.update(item)
@@ -143,37 +145,42 @@ class Library:
                 for label, params in list(__funcs().items()):
                     DIALOG.notificationDialog(LANGUAGE(30070)%(label),time=5)
                     self.cache.clear("%s.%s"%(self.__class__.__name__,params['func'].__name__),wait=5)
+                
         
         complete = True 
-        types    = AUTOTUNE_TYPES
+        types    =  list(__funcs().keys())
         for idx, type in enumerate(types):
+            self.pMSG    = type
+            self.pCount  = int(idx*100//len(types))
             self.pHeader = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32028),LANGUAGE(32041))
             self.pDialog = DIALOG.progressBGDialog(header=self.pHeader)
+            
             if PROPERTIES.hasFirstRun():
                 if self.service._interrupt():
                     self.log("updateLibrary, _interrupt")
                     complete = False
+                    self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, '%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), self.pHeader)
                     break
                 elif self.service._suspend():
                     self.log("updateLibrary, _suspend")
                     types.insert(idx, type)
+                    self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, '%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), self.pHeader)
                     self.service.monitor.waitForAbort(SUSPEND_TIMER)
                     continue
 
-            self.pMSG     = AUTOTUNE_TYPES[idx]
-            self.pCount   = int(idx*100//len(AUTOTUNE_TYPES))
             self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, self.pMSG, self.pHeader)
             cacheResponse = self.cache.get("%s.%s"%(self.__class__.__name__,__funcs()[type]['func'].__name__))
             if not cacheResponse:
                 self.pHeader  = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(32041))
-                self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, self.pMSG, self.pHeader)
                 cacheResponse = self.cache.set("%s.%s"%(self.__class__.__name__,__funcs()[type]['func'].__name__), __fill(type, __funcs()[type]['func']), expiration=__funcs()[type]['life'])
+                
             if complete:
                 self.setLibrary(type, list(__update(type,cacheResponse,self.getEnabled(type))))
                 self.log("updateLibrary, type = %s, saved items = %s"%(type,len(cacheResponse)))
+                
             self.pDialog  = DIALOG.progressBGDialog(100, self.pDialog, header='%s, %s %s'%(ADDON_NAME,LANGUAGE(32041),LANGUAGE(32025)))
+            
         self.log('updateLibrary, force = %s, complete = %s'%(force,  complete))
-        if complete and force: PROPERTIES.setPropertyBool('ForceLibrary',False)
         return complete
         
 
@@ -181,7 +188,8 @@ class Library:
         self.log('resetLibrary')
         for ATtype in ATtypes: 
             items = self.getLibrary(ATtype)
-            for item in items: item['enabled'] = False #disable everything before selecting new items.
+            for item in items:
+                item['enabled'] = False #disable everything before selecting new items.
             self.setLibrary(ATtype, items)
 
 

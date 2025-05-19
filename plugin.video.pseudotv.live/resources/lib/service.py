@@ -34,7 +34,6 @@ class Player(xbmc.Player):
     restart      = None
     onnext       = None
     overlay      = None
-    channelBug   = None
     runActions   = None
     
     """ 
@@ -121,12 +120,12 @@ class Player(xbmc.Player):
             return citem
             
         # with self.service.lock:  # Ensure thread safety
-        plyItem = self.getPlayerItem()
-        sysInfo = loadJSON((decodeString(plyItem.getProperty('sysInfo')) or plyItem))
+        sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
         sysInfo['isPseudoTV'] = '@%s'%(slugify(ADDON_NAME)) in sysInfo.get('chid','')
         sysInfo['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
         sysInfo['chfolder']   = BUILTIN.getInfoLabel('Folderpath','Player')
         sysInfo['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
+        
         if sysInfo['isPseudoTV']:
             if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
             if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
@@ -137,7 +136,7 @@ class Player(xbmc.Player):
         
         
     def getPlayerItem(self):
-        try:   return self.getPlayingItem()
+        try: return self.getPlayingItem()
         except:
             self.service.monitor.waitForAbort(0.1)
             if self.isPlaying(): return self.getPlayerItem()
@@ -346,7 +345,8 @@ class Monitor(xbmc.Monitor):
             remaining = floor(self.service.player.getRemainingTime())
             totalTime = int(self.service.player.getPlayerTime() * (self.service.player.maxProgress / 100))
             threshold = abs((totalTime - (totalTime * .75)) - FIFTEEN)
-            if self.isIdle and remaining <= threshold and self.service.player.background is None: 
+            intTime   = roundupDIV(threshold,3)
+            if self.isIdle and (remaining <= threshold and remaining >= intTime) and self.service.player.background is None: 
                 self.log('__chkOnNext, isIdle = %s, remaining = %s'%(self.isIdle, remaining))
                 self.service.player.toggleOnNext(self.service.player.enableOverlay)
                 
