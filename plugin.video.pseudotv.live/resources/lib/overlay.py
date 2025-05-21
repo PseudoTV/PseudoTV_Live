@@ -315,11 +315,11 @@ class OnNext(xbmcgui.WindowXMLDialog):
             
             if bool(self.enableOnNext) and not isFiller(self.fitem):
                 self.totalTime = int(self.player.getPlayerTime() * (self.player.maxProgress / 100))
-                self.threshold = abs((self.totalTime - (self.totalTime * .75)) - OSD_TIMER)
+                self.threshold = abs((self.totalTime - (self.totalTime * .75)) - (ONNEXT_TIMER*3))
                 self.remaining = floor(self.totalTime - self.player.getPlayedTime())
                 self.intTime   = roundupDIV(self.threshold,3)
                 self.log('__init__, totalTime = %s, threshold = %s, remaining = %s, intTime = %s'%(self.totalTime,self.threshold,self.remaining,self.intTime))
-                if self.remaining >= FIFTEEN: self.doModal()
+                if self.remaining >= self.intTime: self.doModal()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -355,7 +355,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                         self.onNext_Artwork.setVisible(True)
                         xbmc.playSFX(BING_WAV)
                         
-                        show = FIFTEEN*2
+                        show = ONNEXT_TIMER*2
                         while not self.monitor.abortRequested() and not self.closing:
                             self.log('onInit, showing (%s)'%(show))
                             if self.monitor.waitForAbort(0.5) or not self.player.isPlaying() or show < 1 or not __chkCitem(): break
@@ -366,13 +366,12 @@ class OnNext(xbmcgui.WindowXMLDialog):
                             
                     elif  self.onNextMode == 3: self.player.toggleInfo()
                     elif  self.onNextMode == 4: self._updateUpNext(fitem,nitem) 
-                    
-                    if self.remaining >= self.intTime:
-                        wait = self.intTime*2
-                        while not self.monitor.abortRequested() and not self.closing:
-                            self.log('onInit, waiting (%s)'%(wait))
-                            if self.monitor.waitForAbort(0.5) or not self.player.isPlaying() or wait < 1 or not __chkCitem(): break
-                            else: wait -= 1
+
+                    wait = self.intTime*2
+                    while not self.monitor.abortRequested() and not self.closing:
+                        self.log('onInit, waiting (%s)'%(wait))
+                        if self.monitor.waitForAbort(0.5) or not self.player.isPlaying() or wait < 1 or not __chkCitem(): break
+                        else: wait -= 1
                             
         except Exception as e: self.log("onInit, failed! %s"%(e), xbmc.LOGERROR)
         self.log("onInit, closing")
