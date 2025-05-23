@@ -120,7 +120,7 @@ class Tasks():
         
         self._chkEpochTimer('chkFiles'        , self.chkFiles        , 300)
         self._chkEpochTimer('chkURLQUE'       , self.chkURLQUE       , 300)
-        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 60)
+        self._chkEpochTimer('chkJSONQUE'      , self.chkJSONQUE      , 300)
         self._chkEpochTimer('chkLOGOQUE'      , self.chkLOGOQUE      , 600)
     
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh   , 1)
@@ -244,30 +244,12 @@ class Tasks():
                 if save: 
                     builder.channels.setChannels(channels)
                 if updated: PROPERTIES.setPropTimer('chkPVRRefresh')
-                if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,-1,channels)
+                if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,2,channels)
             else: self._que(self.chkChannels,3,channels)
         elif not hasAutotuned:  return SETTINGS.setAutotuned(Autotune()._runTune())
         elif hasEnabledServers: return PROPERTIES.setPropTimer('chkPVRRefresh')
         del builder
         if not hasFirstRun: PROPERTIES.setFirstRun(complete)
-
-
-    def chkJSONQUE(self):
-        if not PROPERTIES.isRunning('chkLOGOQUE') and PROPERTIES.hasFirstRun():
-            with PROPERTIES.chkRunning('chkJSONQUE'):
-                queuePool = (SETTINGS.getCacheSetting('queueJSON', json_data=True) or {})
-                params = queuePool.get('params',[])
-                for i in list(range(QUEUE_CHUNK)):
-                    if self.service._interrupt(): 
-                        self.log("chkJSONQUE, _interrupt")
-                        break
-                    elif len(params) > 0:
-                        param = params.pop(0)
-                        self.log("chkJSONQUE, queuing = %s\n%s"%(len(params),param))
-                        self._que(self.jsonRPC.sendJSON,-1, param)
-                queuePool['params'] = setDictLST(params)
-                self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
-                SETTINGS.setCacheSetting('queueJSON', queuePool, json_data=True)
 
 
     def chkLOGOQUE(self):
@@ -287,15 +269,33 @@ class Tasks():
                         updated = True
                         self.log("chkLOGOQUE, queuing = %s\n%s"%(len(params),param))
                         if param.get('name','').startswith('getLogoResources'):
-                            self._que(resources.getLogoResources, -1, *param.get('args',()), **param.get('kwargs',{}))
+                            self._que(resources.getLogoResources, 10+i, *param.get('args',()), **param.get('kwargs',{}))
                         elif param.get('name','').startswith('getTVShowLogo'):
-                            self._que(resources.getTVShowLogo, -1, *param.get('args',()), **param.get('kwargs',{}))
+                            self._que(resources.getTVShowLogo, 10+i, *param.get('args',()), **param.get('kwargs',{}))
                 queuePool['params'] = setDictLST(params)
                 if updated and len(queuePool['params']) == 0: PROPERTIES.setPropertyBool('ForceLibrary',True)
                 self.log('chkLOGOQUE, remaining = %s'%(len(queuePool['params'])))
                 SETTINGS.setCacheSetting('queueLOGO', queuePool, json_data=True)
                 del library
-                
+
+
+    def chkJSONQUE(self):
+        if not PROPERTIES.isRunning('chkJSONQUE') and PROPERTIES.hasFirstRun():
+            with PROPERTIES.chkRunning('chkJSONQUE'):
+                queuePool = (SETTINGS.getCacheSetting('queueJSON', json_data=True) or {})
+                params = queuePool.get('params',[])
+                for i in list(range(QUEUE_CHUNK)):
+                    if self.service._interrupt(): 
+                        self.log("chkJSONQUE, _interrupt")
+                        break
+                    elif len(params) > 0:
+                        param = params.pop(0)
+                        self.log("chkJSONQUE, queuing = %s\n%s"%(len(params),param))
+                        self._que(self.jsonRPC.sendJSON,5+1, param)
+                queuePool['params'] = setDictLST(params)
+                self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
+                SETTINGS.setCacheSetting('queueJSON', queuePool, json_data=True)
+
 
     def chkURLQUE(self):
         if not PROPERTIES.isRunning('chkURLQUE') and PROPERTIES.hasFirstRun():
@@ -309,7 +309,7 @@ class Tasks():
                     elif len(params) > 0:
                         param = params.pop(0)
                         self.log("chkURLQUE, queuing = %s\n%s"%(len(params),param))
-                        self._que(requestURL,-1, param)
+                        self._que(requestURL,1, param)
                 queuePool['params'] = setDictLST(params)
                 self.log('chkURLQUE, remaining = %s'%(len(queuePool['params'])))
                 SETTINGS.setCacheSetting('queueURL', queuePool, json_data=True)

@@ -38,8 +38,8 @@ class Service:
         return PROPERTIES.isPendingSuspend()
         
         
-class Resources:
-    LOGOLST = {}
+class Resources:    
+    queuePool = {}
     
     def __init__(self, service=None):
         if service is None: service = Service()
@@ -74,6 +74,14 @@ class Resources:
         return list([_f for _f in logos if _f])
 
 
+    def queueLOGO(self, param):
+        params = self.queuePool.setdefault('params',[])
+        params.append(param)
+        self.queuePool['params'] = setDictLST(params)
+        self.log("queueLOGO, saving = %s, param = %s"%(len(self.queuePool['params']),param))
+        timerit(SETTINGS.setCacheSetting)(5.0,['queueLOGO', self.queuePool, ADDON_VERSION, True])
+            
+            
     def getCachedLogo(self, citem, select=False):
         cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select), 'args':(citem,select)             ,'checksum':getMD5('|'.join([dict(SETTINGS.getEXTMeta(id)).get('version',ADDON_VERSION) for id in self.getResources(citem)]))},
                       {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   , 'args':(citem.get('name'), select),'checksum':ADDON_VERSION}]
@@ -83,15 +91,6 @@ class Resources:
                 self.log('getCachedLogo, chname = %s, type = %s, logo = %s'%(citem.get('name'), citem.get('type'), cacheResponse))
                 return cacheResponse
             else: self.queueLOGO(cacheItem)
-                
-
-    def queueLOGO(self, param):
-        queuePool = self.LOGOLST#(SETTINGS.getCacheSetting('queueLOGO', json_data=True) or {})
-        params = queuePool.setdefault('params',[])
-        params.append(param)
-        queuePool['params'] = setDictLST(params)
-        self.log("queueLOGO, saving = %s, param = %s"%(len(queuePool['params']),param))
-        SETTINGS.setCacheSetting('queueLOGO', queuePool, json_data=True)
 
 
     def getLocalLogo(self, chname: str, select: bool=False) -> list:

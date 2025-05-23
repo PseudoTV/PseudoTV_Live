@@ -6,6 +6,7 @@ v.0.6.2
 - Fixed Reoccurring welcome prompt.
 - Fixed Failed library parsing inadvertently clearing autotuned channels.
 - Improved background logo parsing.
+- Fixed Channel Manager not saving paths.
 
 v.0.6.1
 - Improved logo detection.

@@ -207,10 +207,12 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     @contextmanager
-    def toggleSpinner(self, state=True):
-        self.setVisibility(self.spinner,state)
-        try: yield
-        finally: self.setVisibility(self.spinner,False)
+    def toggleSpinner(self, state=True, allow=True):
+        if allow:
+            self.setVisibility(self.spinner,state)
+            try: yield
+            finally: self.setVisibility(self.spinner,False)
+        else: yield
 
 
     def togglechanList(self, state=True, focus=0, reset=False):
@@ -553,54 +555,55 @@ class Manager(xbmcgui.WindowXMLDialog):
             return value, citem
             
 
-    @cacheit(expiration=datetime.timedelta(minutes=5))
     def validatePaths(self, path, citem, spinner=True):
+        self.log('validatePaths, path = %s'%path)
         def __set(path, citem):
             citem = self.setName(path, citem)
-            self.log('validatePaths, path = %s'%path)
             return path, self.setLogo(citem.get('name'),citem)
             
-        def __seek(item, citem, cnt, dia):
-            player  = PLAYER()
-            file    = item.get('file')
-            dur     = item.get('duration')
+        def __seek(item, citem, cnt, dia, passed=False):
+            player = PLAYER()
             if player.isPlaying(): return DIALOG.notificationDialog(LANGUAGE(30136))
-            else:
-                # todo test seek for support disable via adv. rule if fails.
-                # todo set seeklock rule if seek == False
-                liz = xbmcgui.ListItem('Seek Test', path=file)
-                liz.setProperty('startoffset', str(int(dur//8)))
-                infoTag = ListItemInfoTag(liz, 'video')
-                infoTag.set_resume_point({'ResumeTime':int(dur/4),'TotalTime':int(dur/4)})
+            # todo test seek for support disable via adv. rule if fails.
+            # todo set seeklock rule if seek == False
+            liz = xbmcgui.ListItem('Seek Test', path=item.get('file'))
+            liz.setProperty('startoffset', str(int(item.get('duration')//8)))
+            infoTag = ListItemInfoTag(liz, 'video')
+            infoTag.set_resume_point({'ResumeTime':int(item.get('duration')/4),'TotalTime':int(item.get('duration')*60)})
+        
+            getTime  = 0
+            waitTime = FIFTEEN
+            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(item.get('file')))
+            while not self.monitor.abortRequested():
+                waitTime -= 1
+                self.log('validatePaths _seek, waiting (%s) to seek %s'%(waitTime, item.get('file')))
+                if self.monitor.waitForAbort(1.0) or waitTime < 1: break
+                elif not player.isPlaying(): continue
+                elif ((int(player.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
+                    self.log('validatePaths _seek, found playable and seek-able file %s'%(item.get('file')))
+                    passed = True
+                    break
+                    
+            player.stop()
+            del player
             
-                getTime  = 0
-                waitTime = FIFTEEN
-                threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(file))
-                while not self.monitor.abortRequested():
-                    waitTime -= 1
-                    self.log('validatePaths _seek, waiting (%s) to seek %s'%(waitTime, item.get('file')))
-                    if self.monitor.waitForAbort(1.0) or waitTime < 1: break
-                    elif not player.isPlaying(): continue
-                    elif ((int(player.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
-                        player.stop()
-                        return True
-                player.stop()
+            if not passed:
                 retval = DIALOG.yesnoDialog(LANGUAGE(30202),customlabel='Try Again (%s)'%(cnt))
-                if   retval == 1: return True
-                elif retval == 2: return
-                return False
+                if   retval == 1: passed = True
+                elif retval == 2: passed = None
+            self.log('validatePaths _seek, passed = %s'%(passed))
+            return passed
             
-        def __vfs(path, citem):
-            if isRadio({'path':[path]}) or isMixed_XSP({'path':[path]}): return True
-            else:
-                valid   = False
-                media   = 'music' if isRadio({'path':[path]}) else 'video'
-                cnt     = 3
-                msg     = '%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),'%s...'%(str(path)))
-                dia     = DIALOG.progressDialog(message=msg)
-                with BUILTIN.busy_dialog():
-                    items = self.jsonRPC.walkFileDirectory(path, media, depth=5, retItem=True)
-                
+            
+        def __vfs(path, citem, valid=False):
+            if isRadio({'path':[path]}) or isMixed_XSP({'path':[path]}): return True #todo check mixed xsp.
+            with BUILTIN.busy_dialog():
+                items = self.jsonRPC.walkFileDirectory(path, 'music' if isRadio({'path':[path]}) else 'video', depth=5, retItem=True)
+            
+            if len(items) > 0:
+                cnt = 3
+                msg = '%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),'%s...'%(str(path)))
+                dia = DIALOG.progressDialog(message=msg)
                 for idx, dir in enumerate(items):
                     if self.monitor.waitForAbort(0.0001): break
                     elif cnt <= 3 and cnt > 0:
@@ -611,25 +614,15 @@ class Manager(xbmcgui.WindowXMLDialog):
                         if item.get('duration',0) == 0: continue
                         msg = '%s %s...\n%s\n%s'%(LANGUAGE(32098),'Seeking','%s...'%(str(dir)),'%s...'%(str(item.get('file',''))))
                         dia = DIALOG.progressDialog(int((idx*100)//len(items)), control=dia, message=msg)
-                        retval = __seek(item, citem, cnt, dia)
-                        if retval:
-                            self.log('validatePaths _vfs, found playable and seek-able file %s'%(item.get('file')))
-                            valid = True
-                            break
-                        elif retval is None: cnt -= 1
+                        valid = __seek(item, citem, cnt, dia)
+                        if valid is None: cnt -=1
                         else: break
                 DIALOG.progressDialog(100,control=dia)
-                return valid
+            return valid
 
-        if path:
-            if spinner:
-                with self.toggleSpinner(): valid = __vfs(path, citem)
-            else:                          valid = __vfs(path, citem)
-            if valid:
-                if spinner:
-                    with self.toggleSpinner(): return __set(path, citem)
-                else:                          return __set(path, citem)
-                
+        with self.toggleSpinner(allow=spinner):
+            if __vfs(path, citem): return __set(path, citem)
+            
         DIALOG.notificationDialog(LANGUAGE(32030))
         return None, citem
 

@@ -196,8 +196,8 @@ class Player(xbmc.Player):
                 self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             else: #New Program/Same Channel
                 self.sysInfo = sysInfo
-                if self.sysInfo.get('radio',False): timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(visualisation)'])
-                else:                               timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(fullscreenvideo)'])
+                if   self.sysInfo.get('radio',False):      timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(visualisation)'])
+                elif self.sysInfo.get('isPlaylist',False): timerit(BUILTIN.executebuiltin)(0.5,['ReplaceWindow(fullscreenvideo)'])
                 self.toggleInfo(self.infoOnChange)
                 
             self.jsonRPC.quePlaycount(oldInfo.get('fitem',{}),self.rollbackPlaycount)
@@ -205,16 +205,18 @@ class Player(xbmc.Player):
             
             
     def _onChange(self):
-        self.toggleOverlay(False)
-        self.toggleRestart(False)
-        self.toggleOnNext(False)
-        self.toggleInfo(False)
         if self.sysInfo:
             if not self.sysInfo.get('isPlaylist',False):
                 self.log('_onChange, [%s], isPlaylist = %s, callback = %s'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo.get('isPlaylist',False),self.sysInfo.get('callback')))
                 self.toggleBackground(self.enableOverlay)
                 timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(self.sysInfo.get('callback'))])
             self.sysInfo = self._runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)
+        else:
+            self.toggleBackground(False)
+        self.toggleOverlay(False)
+        self.toggleRestart(False)
+        self.toggleOnNext(False)
+        self.toggleInfo(False)
         
         
     def _onStop(self):
@@ -228,8 +230,7 @@ class Player(xbmc.Player):
             PROPERTIES.setTrakt(False)
             self.jsonRPC.quePlaycount(self.sysInfo.get('fitem',{}),self.rollbackPlaycount)
             if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-            self.sysInfo = self._runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)
-        self.sysInfo = {}
+            self.sysInfo = self._runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), {}, inherited=self)
         
 
     def _onError(self): #todo evaluate potential for error handling.
@@ -335,7 +336,7 @@ class Monitor(xbmc.Monitor):
         
         def __chkBackground():
             remaining = floor(self.service.player.getRemainingTime())
-            if self.isIdle and remaining <= 30:
+            if self.isIdle and remaining <= 45:
                 self.log('__chkBackground, isIdle = %s, remaining = %s'%(self.isIdle, remaining))
                 self.service.player.toggleBackground(self.service.player.enableOverlay)
 
@@ -404,7 +405,8 @@ class Monitor(xbmc.Monitor):
         
 
 class Service():
-    lock = Lock()
+    tasks = None
+    lock  = Lock()
     currentSettings  = []
     pendingSuspend   = PROPERTIES.setPendingSuspend(False)
     pendingInterrupt = PROPERTIES.setPendingInterrupt(False)

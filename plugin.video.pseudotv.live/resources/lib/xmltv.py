@@ -143,7 +143,7 @@ def read_channels(fp=None, tree=None):
         except: 
             try: tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
             except Exception as e:
-                log("xmltv: read_channels: failed %s, retrying as string."%(e), xbmc.LOGERROR)
+                print_error('xmltv: read_programmes failed!', fp, e)
                 if hasattr(fp, 'read'): tree = fromstring(escape_xml_string(fp.read()), parser=XMLParser(encoding=locale))
         finally: fp.close()
         
@@ -273,6 +273,16 @@ def elem_to_programme(elem):
         d['review'].append(rd)
 
     return d
+    
+def print_error(msg, fp, e):
+    line   = int(e.args[0].split(':')[0].split('line ')[1])
+    column = int(e.args[0].split(':')[1].split('column ')[1])
+    log(f"{msg}, Error at line: {line}, column: {column}")
+    if   hasattr(fp, 'readlines'): lines = fp.readlines()
+    elif hasattr(fp, 'readlines'): lines = fp.read().split('\n')
+    else: lines = []
+    if len(lines) >= line:
+        log(f"{msg}, Line {line}: {lines[line-1].strip()}")
 
 def read_programmes(fp=None, tree=None):
     """
@@ -286,7 +296,7 @@ def read_programmes(fp=None, tree=None):
         except: 
             try: tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
             except Exception as e:
-                log("xmltv: read_programmes: failed %s, retrying as string."%(e), xbmc.LOGERROR)
+                print_error('xmltv: read_programmes failed!', fp, e)
                 if hasattr(fp, 'read'): tree = fromstring(escape_xml_string(fp.read()), parser=XMLParser(encoding=locale))
         finally: fp.close()
     return [elem_to_programme(elem) for elem in tree.findall('programme')]
@@ -304,7 +314,7 @@ def read_data(fp=None, tree=None):
         except: 
             try: tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
             except Exception as e:
-                log("xmltv: read_data: failed %s, retrying as string."%(e), xbmc.LOGERROR)
+                print_error('xmltv: read_data failed!', fp, e)
                 if hasattr(fp, 'read'): tree = fromstring(escape_xml_string(fp.read()), parser=XMLParser(encoding=locale))
         finally: fp.close()
     d = {}

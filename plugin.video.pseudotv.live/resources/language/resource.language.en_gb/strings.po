@@ -830,7 +830,7 @@ msgid "JSONRPC Timer"
 msgstr ""
 
 msgctxt "#30202"
-msgid "Failed to validate!, Force Approval?"
+msgid "Failed to validate Path!\nForce Approval?\n*Forced channels may fail to build or playback properly."
 msgstr ""
 
 msgctxt "#30203"

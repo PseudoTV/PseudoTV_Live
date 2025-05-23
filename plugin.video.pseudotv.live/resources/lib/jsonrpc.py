@@ -32,7 +32,7 @@ class Service:
 class JSONRPC:
     def __init__(self, service=None):
         if service is None: service = Service()
-        self.service = service        
+        self.service = service
         self.cache   = SETTINGS.cacheDB
         self.videoParser = VideoParser()
 
@@ -171,7 +171,7 @@ class JSONRPC:
     def setSettingValue(self, key, value, queue=False):
         param = {"method":"Settings.SetSettingValue","params":{"setting":key,"value":value}}
         if queue: self.queueJSON(param)
-        else:      self.sendJSON(param)
+        else:     self.sendJSON(param)
 
 
     def getSources(self, media='video', cache=True):
@@ -655,11 +655,12 @@ class JSONRPC:
         
         
     def getNextItem(self, citem={}, nitem={}): #return next broadcast ignoring fillers
+        if not nitem: nitem = decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))
         nextitems = sorted(self.matchChannel(citem.get('name',''), citem.get('id',''), citem.get('radio',False)).get('broadcastnext',[]), key=itemgetter('starttime'))
         for nextitem in nextitems:
             if not isFiller(nextitem): return decodePlot(nextitem.get('plot',''))
         return nitem
-
+        
 
     def toggleShowLog(self, state=False):
         self.log('toggleShowLog, state = %s'%(state))
