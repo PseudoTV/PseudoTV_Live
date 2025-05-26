@@ -22,6 +22,7 @@
 from globals   import *
 from jsonrpc   import JSONRPC
 
+WH, WIN = BUILTIN.getResolution()
 
 class OverlayTool(xbmcgui.WindowXMLDialog):
     focusControl   = None
@@ -38,7 +39,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             self.jsonRPC = JSONRPC()
             if BUILTIN.getInfoBool('Playing','Player'): self.window = xbmcgui.Window(12005) 
             else:                                       self.window = xbmcgui.Window(10000) 
-            self.window_h, self.window_w = 1080, 1920
+            self.window_w, self.window_h = WH
             self.advRule  = (kwargs.get("ADV_RULES") or False)
             self.focusIDX = (kwargs.get("Focus_IDX") or 1)
             

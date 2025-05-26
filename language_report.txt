@@ -196,6 +196,7 @@ Language IDS not found in py files, possibly only in xml: {
     "32129": "%s is missing guide data for this channel\\nPlease wait for Kodi and %s to finish updating.",
     "32130": "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled\\nIt's recommended you re-enable when finished debugging",
     "32133": "[COLOR=yellow][B]Notice!! [/B][/COLOR] Something went wrong, Please double check your PVR configurations and reboot Kodi.",
+    "32141": "Shutting down background service...",
     "32143": "Debugging Disabled!",
     "32146": "Resumed",
     "32147": "Media File Missing!",

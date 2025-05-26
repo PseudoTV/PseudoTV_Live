@@ -21,7 +21,8 @@
 from globals    import *
 from functools  import reduce
 from difflib    import SequenceMatcher
-        
+from seasonal   import Seasonal 
+
 LOCAL_FOLDERS   = [LOGO_LOC, IMAGE_LOC]
 MUSIC_RESOURCE  = ["resource.images.musicgenreicons.text"]
 GENRE_RESOURCE  = ["resource.images.moviegenreicons.transparent"]
@@ -55,12 +56,13 @@ class Resources:
 
 
     def getLogo(self, citem: dict, fallback=LOGO, auto=False) -> str:
-        logo = self.getLocalLogo(citem.get('name'))                        #local
-        if not logo:          logo = self.getCachedLogo(citem)             #cache
-        if not logo and auto: logo = self.getLogoResources(citem)          #resources
-        if not logo and auto: logo = self.getTVShowLogo(citem.get('name')) #tvshow
-        if not logo: logo = (fallback or LOGO)                             #fallback
-        self.log('getLogo,  = %s, logo = %s, auto = %s'%(citem.get('name'), logo, auto))
+        if citem.get('name') == LANGUAGE(32002): logo = Seasonal().getHoliday().get('logo')   #seasonal
+        else:                                    logo = self.getLocalLogo(citem.get('name'))  #local
+        if not logo:                             logo = self.getCachedLogo(citem)             #cache
+        if not logo and auto:                    logo = self.getLogoResources(citem)          #resources
+        if not logo and auto:                    logo = self.getTVShowLogo(citem.get('name')) #tvshow
+        if not logo:                             logo = (fallback or LOGO)                    #fallback
+        self.log('getLogo, name = %s, logo = %s, auto = %s'%(citem.get('name'), logo, auto))
         return logo
         
 
@@ -79,11 +81,11 @@ class Resources:
         params.append(param)
         self.queuePool['params'] = setDictLST(params)
         self.log("queueLOGO, saving = %s, param = %s"%(len(self.queuePool['params']),param))
-        timerit(SETTINGS.setCacheSetting)(5.0,['queueLOGO', self.queuePool, ADDON_VERSION, True])
+        timerit(SETTINGS.setCacheSetting)(FIFTEEN,['queueLOGO', self.queuePool, ADDON_VERSION, True])
             
             
     def getCachedLogo(self, citem, select=False):
-        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select), 'args':(citem,select)             ,'checksum':getMD5('|'.join([dict(SETTINGS.getEXTMeta(id)).get('version',ADDON_VERSION) for id in self.getResources(citem)]))},
+        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select), 'args':(citem,select)             ,'checksum':getMD5('|'.join([self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION) for id in self.getResources(citem)]))},
                       {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   , 'args':(citem.get('name'), select),'checksum':ADDON_VERSION}]
         for cacheItem in cacheFuncs:
             cacheResponse = self.cache.get(cacheItem.get('name',''),cacheItem.get('checksum',ADDON_VERSION))
@@ -106,7 +108,7 @@ class Resources:
         
     def fillLogoResource(self, id):
         results  = {}
-        response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=dict(SETTINGS.getEXTMeta(id)).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=28))
+        response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=28))
         for path, images in list(response.items()):
             for image in images:
                 name, ext = os.path.splitext(image)
@@ -129,7 +131,7 @@ class Resources:
         logos     = []
         resources = self.getResources(citem)
         cacheName = 'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select)
-        cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join([dict(SETTINGS.getEXTMeta(id)).get('version',ADDON_VERSION) for id in resources])))
+        cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join([self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources])))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
                 if not hasAddon(id):

@@ -405,7 +405,6 @@ class Monitor(xbmc.Monitor):
         
 
 class Service():
-    tasks = None
     lock  = Lock()
     currentSettings  = []
     pendingSuspend   = PROPERTIES.setPendingSuspend(False)
@@ -437,16 +436,16 @@ class Service():
     
     def __shutdown(self, wait=1.0) -> bool:
         pendingShutdown = (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
-        if pendingShutdown != self.pendingShutdown:
-            self.pendingShutdown = PROPERTIES.setPendingShutdown(pendingShutdown)
+        if self.pendingShutdown != pendingShutdown:
+            self.pendingShutdown = pendingShutdown
             self.log('__shutdown, pendingShutdown = %s, wait = %s'%(self.pendingShutdown,wait))
         return self.pendingShutdown
     
     
     def __restart(self) -> bool:
         pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart())
-        if pendingRestart != self.pendingRestart:
-            self.pendingRestart = PROPERTIES.setPendingRestart(pendingRestart)
+        if self.pendingRestart != pendingRestart:
+            self.pendingRestart = pendingRestart
             self.log('__restart, pendingRestart = %s'%(self.pendingRestart))
         return self.pendingRestart
          
@@ -482,7 +481,7 @@ class Service():
                 if    self.__shutdown(): break
                 elif  self.__restart():  break
                 else: self.__tasks()
-            self._stop(self.pendingRestart)
+            return self._stop(self.pendingRestart)
 
 
     def _stop(self, pendingRestart: bool=False):
@@ -494,10 +493,4 @@ class Service():
                     try: thread.join(1.0)
                     except: pass
                     self.log('_stop, closing %s...'%(thread.name))
-            
-        if pendingRestart: 
-            self.log('_stop, finished: restarting!')
-            Service()._start()
-        else: 
-            self.log('_stop, finished: exiting!')
-            sys.exit()
+            return pendingRestart

@@ -268,11 +268,12 @@ class Settings:
         else:      return value
         
         
-    def getEXTMeta(self, id):
-        addon = xbmcaddon.Addon(id)
-        properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
-        for property in properties: yield (property, addon.getAddonInfo(property))
-
+    def getADDONMeta(self, id):
+        if hasAddon(id):
+            addon = xbmcaddon.Addon(id)
+            for property in ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']: 
+                yield (property, addon.getAddonInfo(property))
+        
 
     def getEXTSetting(self, id, key):
         return xbmcaddon.Addon(id).getSetting(key)
@@ -773,7 +774,6 @@ class Properties:
         
         
     def setPendingShutdown(self, state=True):
-        if state: Dialog().notificationDialog(LANGUAGE(32141))
         return self.setEXTPropertyBool('%s.pendingShutdown'%(ADDON_ID),state)
         
 
@@ -784,7 +784,6 @@ class Properties:
         
                 
     def setPendingRestart(self, state=True):
-        if state: Dialog().notificationDialog(LANGUAGE(32124))
         return self.setEXTPropertyBool('%s.pendingRestart'%(ADDON_ID),state)
 
 
@@ -1261,6 +1260,11 @@ class Builtin:
         self.log('executeJSONRPC, command = %s'%(command))
         # with self.sendLocker():
         return xbmc.executeJSONRPC(command)
+
+
+    def getResolution(self):
+        WH, WIN = self.getInfoLabel('ScreenResolution','System').split(' - ')
+        return (1920,1080), WIN #tuple(int(x) for x in WH.split('x')), WIN
 
 
 class Dialog:

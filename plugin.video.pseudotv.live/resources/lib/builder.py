@@ -114,8 +114,7 @@ class Builder:
                 self.log('[%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem))
                 continue
             citem['name'] = validString(citem['name']) #todo temp. correct existing file names; drop by v.0.6
-            if   citem['name'] == LANGUAGE(32002): citem['logo'] = self.resources.getLogo(citem,fallback=Seasonal().getHoliday().get('logo',LOGO))
-            else:                                  citem['logo'] = self.resources.getLogo(citem,citem['logo'])
+            citem['logo'] = self.resources.getLogo(citem,citem.get('logo',LOGO))
             self.log('[%s] VERIFIED - channel %s: %s'%(citem['id'],citem['number'],citem['name']))
             yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self) #inject persistent citem changes here
 

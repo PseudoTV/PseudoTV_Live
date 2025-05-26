@@ -22,6 +22,8 @@
 from globals   import *
 from resources import Resources
 
+WH, WIN = BUILTIN.getResolution()
+
 class Busy(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
@@ -66,7 +68,7 @@ class Background(xbmcgui.WindowXMLDialog):
             onNow  = '%s on %s'%(nowTitle,chname) if chname not in validString(nowTitle) else nowTitle
             onNext = '@ %s: %s'%(nextTime,nextTitle)
         
-            window_h, window_w = 1080, 1920 # window_h, window_w = (self.getHeight(), self.getWidth())
+            window_w, window_h = WH # window_h, window_w = (self.getHeight(), self.getWidth())
             onNextX, onNextY = abs(int(window_w // 9)), abs(int(window_h // 16) - window_h) - 356 #auto
             
             self.getControl(40001).setPosition(onNextX, onNextY)
@@ -177,7 +179,7 @@ class Overlay():
         self.resources  = Resources(service=self.service)
         
         self.window     = xbmcgui.Window(12005) 
-        self.window_h, self.window_w = 1080, 1920
+        self.window_w, self.window_h = WH
         
         #vignette rules
         self.enableVignette = False
@@ -291,7 +293,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         self.nitem      = self.jsonRPC.getNextItem(self.citem,self.sysInfo.get('nitem'))
                 
         self.window     = xbmcgui.Window(12005) 
-        self.window_h, self.window_w = 1080, 1920 #self.window_h, self.window_w = (self.window.getHeight(), self.window.getWidth())
+        self.window_w, self.window_h = WH #self.window_h, self.window_w = (self.window.getHeight(), self.window.getWidth())
         
         #onNext rules
         self.enableOnNext = bool(SETTINGS.getSettingInt('OnNext_Enable'))
