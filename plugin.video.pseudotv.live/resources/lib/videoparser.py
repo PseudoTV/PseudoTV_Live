@@ -49,6 +49,7 @@ except: pass
 try:
     import moviepy
     from parsers import MoviePY
+    from numpy.core._multiarray_umath import *
     EXTERNAL_PARSER.append(MoviePY.MoviePY)
 except: pass
 

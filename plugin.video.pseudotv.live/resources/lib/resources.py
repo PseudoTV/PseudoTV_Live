@@ -81,7 +81,7 @@ class Resources:
         params.append(param)
         self.queuePool['params'] = setDictLST(params)
         self.log("queueLOGO, saving = %s, param = %s"%(len(self.queuePool['params']),param))
-        timerit(SETTINGS.setCacheSetting)(FIFTEEN,['queueLOGO', self.queuePool, ADDON_VERSION, True])
+        timerit(SETTINGS.setCacheSetting)(5.0,['queueLOGO', self.queuePool, ADDON_VERSION, True])
             
             
     def getCachedLogo(self, citem, select=False):

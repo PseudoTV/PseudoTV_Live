@@ -275,7 +275,7 @@ def elem_to_programme(elem):
     return d
     
 def print_error(msg, fp, e):
-    if 'line ' in e:
+    try:
         line   = int(e.args[0].split(':')[0].split('line ')[1])
         column = int(e.args[0].split(':')[1].split('column ')[1])
         log(f"{msg}, Error at line: {line}, column: {column}")
@@ -283,7 +283,7 @@ def print_error(msg, fp, e):
         elif hasattr(fp, 'readlines'): lines = fp.read().split('\n')
         else: lines = []
         if len(lines) >= line: log(f"{msg}, Line {line}: {lines[line-1].strip()}")
-    else: log(f"{msg}, {e}")
+    except: log(f"{msg}, {e}")
 
 def read_programmes(fp=None, tree=None):
     """

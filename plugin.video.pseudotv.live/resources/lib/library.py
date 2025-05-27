@@ -155,18 +155,17 @@ class Library:
             self.pHeader = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32028),LANGUAGE(32041))
             self.pDialog = DIALOG.progressBGDialog(header=self.pHeader)
             
-            if PROPERTIES.hasFirstRun():
-                if self.service._interrupt():
-                    self.log("updateLibrary, _interrupt")
-                    complete = False
-                    self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, '%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), self.pHeader)
-                    break
-                elif self.service._suspend():
-                    self.log("updateLibrary, _suspend")
-                    types.insert(idx, type)
-                    self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, '%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), self.pHeader)
-                    self.service.monitor.waitForAbort(SUSPEND_TIMER)
-                    continue
+            if self.service._interrupt() and PROPERTIES.hasFirstRun():
+                self.log("updateLibrary, _interrupt")
+                complete = False
+                self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, '%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), self.pHeader)
+                break
+            elif self.service._suspend():
+                self.log("updateLibrary, _suspend")
+                types.insert(idx, type)
+                self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, '%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), self.pHeader)
+                self.service.monitor.waitForAbort(SUSPEND_TIMER)
+                continue
 
             self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, self.pMSG, self.pHeader)
             cacheResponse = self.cache.get("%s.%s"%(self.__class__.__name__,__funcs()[type]['func'].__name__))
