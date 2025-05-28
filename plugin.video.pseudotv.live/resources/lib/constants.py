@@ -304,6 +304,8 @@ RULES_ACTION_OVERLAY_OPEN     = 30 #Overlay opened
 RULES_ACTION_OVERLAY_CLOSE    = 31 #Overlay closed
 RULES_ACTION_BACKGROUND_OPEN  = 32 #Background opened
 RULES_ACTION_BACKGROUND_CLOSE = 33 #Background closed
+RULES_ACTION_ONNEXT_OPEN      = 40 #OnNext opened
+RULES_ACTION_ONNEXT_CLOSE     = 41 #OnNext closed
 ##playback
 RULES_ACTION_PLAYBACK_RESUME = 40 #Prior to playback trigger resume to received a FileList
 

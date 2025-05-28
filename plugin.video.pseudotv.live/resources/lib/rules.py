@@ -418,7 +418,7 @@ class ShowOnNext(BaseRule):
         self.optionLabels       = [LANGUAGE(30045),LANGUAGE(32229),LANGUAGE(30044),LANGUAGE(30196)]
         self.optionValues       = [bool(SETTINGS.getSettingInt('OnNext_Enable')),SETTINGS.getSetting("OnNext_Position_XY"),SETTINGS.getSettingInt('OnNext_Enable')]
         self.optionDescriptions = [LANGUAGE(30045),LANGUAGE(33229),LANGUAGE(30196)]
-        self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
+        self.actions            = [RULES_ACTION_ONNEXT_OPEN,RULES_ACTION_ONNEXT_CLOSE]
         self.selectBoxOptions   = ["",[LANGUAGE(30022),LANGUAGE(32136)],"",{LANGUAGE(30021):0,LANGUAGE(30193):1,LANGUAGE(30194):2,LANGUAGE(30197):3,LANGUAGE(30195):4}]
         self.storedValues       = [[],[],[],[]]
 
@@ -458,7 +458,7 @@ class ShowOnNext(BaseRule):
 
 
     def runAction(self, actionid, citem, parameter, overlay):
-        if actionid == RULES_ACTION_OVERLAY_OPEN:
+        if actionid == RULES_ACTION_ONNEXT_OPEN:
             self.storedValues[0] = overlay.enableOnNext
             self.storedValues[1] = (overlay.onNextX, overlay.onNextY)
             self.storedValues[2] = overlay.onNextMode
@@ -467,7 +467,7 @@ class ShowOnNext(BaseRule):
             overlay.onNextX, overlay.onNextY = eval(self.optionValues[1])
             self.log("runAction, setting enableOnNext = %s, onNextX = %s, onNextY = %s, onNextMode = %s"%(overlay.enableOnNext, overlay.onNextX, overlay.onNextY, overlay.onNextMode))
             
-        elif actionid == RULES_ACTION_OVERLAY_CLOSE:
+        elif actionid == RULES_ACTION_ONNEXT_CLOSE:
             overlay.enableOnNext             = self.storedValues[0]
             overlay.onNextX, overlay.onNextY = self.storedValues[1]
             overlay.onNextMode               = self.storedValues[2]

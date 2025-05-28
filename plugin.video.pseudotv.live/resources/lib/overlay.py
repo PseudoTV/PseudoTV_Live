@@ -192,6 +192,9 @@ class Overlay():
         self.forceBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         
+        try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+        except: self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto        
+
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -249,9 +252,6 @@ class Overlay():
                 self.log('enableVignette, vinImage = %s, vinView = %s'%(self.vinImage,self.vinView))
             
             if self.enableChannelBug:
-                try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-                except: self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto        
-
                 self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
                 self._addControl(self.channelBug)
                 
@@ -270,6 +270,7 @@ class Overlay():
         self._delControl(self.vignette)
         self._delControl(self.channelBug)
         if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,[self.defaultView])
+        self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.sysInfo.get('citem',{}), inherited=self)
         
         
 class OnNext(xbmcgui.WindowXMLDialog):
@@ -302,7 +303,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         try:    self.onNextX, self.onNextY = eval(SETTINGS.getSetting("OnNext_Position_XY")) #user
         except: self.onNextX, self.onNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
     
-        self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
+        self.runActions(RULES_ACTION_ONNEXT_OPEN, self.sysInfo.get('citem',{}), inherited=self)
         self.log('__init__, enableOnNext = %s, onNextMode = %s, onNextX = %s, onNextY = %s'%(self.enableOnNext,self.onNextMode,self.onNextX,self.onNextY))
         
         if bool(self.enableOnNext) and not isFiller(self.fitem):
@@ -380,6 +381,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                         
         except Exception as e: self.log("onInit, failed! %s"%(e), xbmc.LOGERROR)
         self.log("onInit, closing")
+        self.runActions(RULES_ACTION_ONNEXT_CLOSE, self.sysInfo.get('citem',{}), inherited=self)
         self.close()
                 
                 
