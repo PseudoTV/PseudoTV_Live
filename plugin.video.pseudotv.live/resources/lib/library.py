@@ -148,25 +148,20 @@ class Library:
                 
         
         complete = True 
-        types    =  list(__funcs().keys())
+        types     =  list(__funcs().keys())
+
         for idx, type in enumerate(types):
             self.pMSG    = type
             self.pCount  = int(idx*100//len(types))
             self.pHeader = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32028),LANGUAGE(32041))
             self.pDialog = DIALOG.progressBGDialog(header=self.pHeader)
             
-            if self.service._interrupt() and PROPERTIES.hasFirstRun():
+            if (self.service._interrupt() or self.service._suspend()) and PROPERTIES.hasFirstRun():
                 self.log("updateLibrary, _interrupt")
                 complete = False
                 self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, '%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), self.pHeader)
                 break
-            elif self.service._suspend():
-                self.log("updateLibrary, _suspend")
-                types.insert(idx, type)
-                self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, '%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), self.pHeader)
-                self.service.monitor.waitForAbort(SUSPEND_TIMER)
-                continue
-
+                
             self.pDialog  = DIALOG.progressBGDialog(self.pCount, self.pDialog, self.pMSG, self.pHeader)
             cacheResponse = self.cache.get("%s.%s"%(self.__class__.__name__,__funcs()[type]['func'].__name__))
             if not cacheResponse:
@@ -177,7 +172,7 @@ class Library:
                 self.setLibrary(type, list(__update(type,cacheResponse,self.getEnabled(type))))
                 self.log("updateLibrary, type = %s, saved items = %s"%(type,len(cacheResponse)))
                 
-            self.pDialog  = DIALOG.progressBGDialog(100, self.pDialog, header='%s, %s %s'%(ADDON_NAME,LANGUAGE(32041),LANGUAGE(32025)))
+            self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, header='%s, %s %s'%(ADDON_NAME,LANGUAGE(32041),LANGUAGE(32025)))
             
         self.log('updateLibrary, force = %s, complete = %s'%(force,  complete))
         return complete

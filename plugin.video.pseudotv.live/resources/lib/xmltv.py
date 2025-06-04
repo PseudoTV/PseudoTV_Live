@@ -247,7 +247,7 @@ def escape_xml_string(text):
   """Escapes special characters in a string for use in XML."""
   return xml.sax.saxutils.escape(text)
 
-def print_error(msg, fp, e):
+def read_error(msg, fp, e):
     try:
         line   = int(e.args[0].split(':')[0].split('line ')[1])
         column = int(e.args[0].split(':')[1].split('column ')[1])
@@ -266,8 +266,10 @@ def read_data(fp=None, tree=None):
     'tree'
     """
     if fp:
-        if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-        else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+        try:
+            if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
+            else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+        except Exception as e: read_error('read_data', fp, e)
     d = {}
     set_attrs(d, tree, ('date', 'source-info-url', 'source-info-name', 'source-data-url', 'generator-info-name', 'generator-info-url'))
     return d
@@ -281,8 +283,10 @@ def read_channels(fp=None, tree=None):
     """
     channels = []
     if fp:
-        if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-        else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+        try:
+            if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
+            else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+        except Exception as e: read_error('read_channels', fp, e)
         
     for elem in tree.findall('channel'):
         channel = elem_to_channel(elem) 
@@ -301,8 +305,10 @@ def read_programmes(fp=None, tree=None):
     ElementTree 'tree'
     """
     if fp:
-        if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-        else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+        try:
+            if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
+            else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+        except Exception as e: read_error('read_programmes', fp, e)
     return [elem_to_programme(elem) for elem in tree.findall('programme')]
 
 def indent(elem, level=0):

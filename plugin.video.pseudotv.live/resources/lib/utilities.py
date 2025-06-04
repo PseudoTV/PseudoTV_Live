@@ -240,8 +240,9 @@ class Utilities:
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.isRunning('OVERLAY_MANAGER'):
-            with PROPERTIES.chkRunning('OVERLAY_MANAGER'), BUILTIN.busy_dialog():
-                from manager import Manager
+            with PROPERTIES.chkRunning('OVERLAY_MANAGER'), PROPERTIES.interruptActivity():
+                with BUILTIN.busy_dialog():
+                    from manager import Manager
                 chmanager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=chnum)
                 del chmanager
         else: DIALOG.notificationDialog(LANGUAGE(32057)%(ADDON_NAME))

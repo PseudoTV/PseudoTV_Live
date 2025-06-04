@@ -62,6 +62,8 @@ class Player(xbmc.Player):
         self.sleepTime         = SETTINGS.getSettingInt('Idle_Timer')
         self.runWhilePlaying   = SETTINGS.getSettingBool('Run_While_Playing')
         self.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
+        self.OnNextMode        = SETTINGS.getSettingInt('OnNext_Mode')
+        self.onNextPosition    = SETTINGS.getSetting("OnNext_Position_XY")
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -191,7 +193,7 @@ class Player(xbmc.Player):
             if newChan: #New channel
                 self.runActions = RulesList([sysInfo.get('citem',{})]).runActions
                 self.sysInfo    = self._runActions(RULES_ACTION_PLAYER_START, sysInfo.get('citem',{}), sysInfo, inherited=self)
-                self.toggleRestart(self.enableOverlay)
+                self.toggleRestart(bool(self.restartPercentage))
                 PROPERTIES.setTrakt(self.disableTrakt)
                 self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             else: #New Program/Same Channel
@@ -267,7 +269,7 @@ class Player(xbmc.Player):
         self.log("toggleOverlay, state = %s, overlay = %s"%(state, self.overlay))
 
 
-    def toggleRestart(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
+    def toggleRestart(self, state: bool=bool(SETTINGS.getSettingInt('Restart_Percentage'))):
         if state and self.restart is None and self.isPlaying():
             self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
         elif not state and hasattr(self.restart,'onClose'):
@@ -276,9 +278,9 @@ class Player(xbmc.Player):
         self.log("toggleRestart, state = %s, restart = %s"%(state,self.restart))
         
         
-    def toggleOnNext(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
+    def toggleOnNext(self, state: bool=bool(SETTINGS.getSettingInt('OnNext_Mode'))):
         if state and self.onnext is None and self.isPlaying():
-            self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", player=self)
+            self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", player=self, mode=self.OnNextMode, position=self.onNextPosition)
         elif hasattr(self.onnext,'onClose'):
             self.onnext = self.onnext.onClose()
         else: return
@@ -354,7 +356,7 @@ class Monitor(xbmc.Monitor):
             intTime   = roundupDIV(threshold,3)
             if self.isIdle and played > self.service.player.minDuration and (remaining <= threshold and remaining >= intTime) and self.service.player.background is None: 
                 self.log('__chkOnNext, isIdle = %s, played = %s, remaining = %s'%(self.isIdle, played, remaining))
-                self.service.player.toggleOnNext(self.service.player.enableOverlay)
+                self.service.player.toggleOnNext(bool(self.service.player.OnNextMode))
                 
         Thread(target=__chkIdle).start()
         if self.service.player.isPlaying() and self.service.player.isPseudoTV:

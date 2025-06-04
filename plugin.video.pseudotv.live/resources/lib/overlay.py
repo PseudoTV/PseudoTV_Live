@@ -260,7 +260,7 @@ class Overlay():
                 elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
                 self.channelBug.setImage(logo)
                 self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=Control.IsVisible(%i) reversible=false'%(self.channelBug.getId())),
-                                               ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=3000 condition=Control.IsVisible(%i) reversible=false'%(self.channelBug.getId()))])
+                                               ('Conditional', 'effect=fade start=100 end=50 time=1000 delay=3000 condition=Control.IsVisible(%i) reversible=false'%(self.channelBug.getId()))])
                 self.log('enableChannelBug, logo = %s, channelBugColor = %s, window = (%s,%s)'%(logo,self.channelBugColor,self.window_h, self.window_w))
         else: self.close()
         
@@ -282,12 +282,13 @@ class OnNext(xbmcgui.WindowXMLDialog):
     
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.player     = kwargs.get('player', None)
-        self.sysInfo    = kwargs.get('sysInfo', self.player.sysInfo)
+        self.player     = kwargs.get('player' , None)
+        self.sysInfo    = kwargs.get('sysInfo' , self.player.sysInfo)
+        self.onNextMode = kwargs.get('mode' , SETTINGS.getSettingInt('OnNext_Mode'))
+        self.onNextPosition = kwargs.get('position' , SETTINGS.getSetting("OnNext_Position_XY"))
         
         self.jsonRPC    = self.player.jsonRPC
         self.monitor    = self.player.service.monitor
-        self.runActions = self.player.runActions
         
         self.citem      = self.sysInfo.get('citem',{})
         self.fitem      = self.sysInfo.get('fitem',{})
@@ -295,18 +296,13 @@ class OnNext(xbmcgui.WindowXMLDialog):
                 
         self.window     = xbmcgui.Window(12005) 
         self.window_w, self.window_h = WH #self.window_h, self.window_w = (self.window.getHeight(), self.window.getWidth())
-        
-        #onNext rules
-        self.enableOnNext = bool(SETTINGS.getSettingInt('OnNext_Enable'))
-        self.onNextMode   = SETTINGS.getSettingInt('OnNext_Enable')
-        
-        try:    self.onNextX, self.onNextY = eval(SETTINGS.getSetting("OnNext_Position_XY")) #user
+                
+        try:    self.onNextX, self.onNextY = eval(self.onNextPosition) #user
         except: self.onNextX, self.onNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
     
-        self.runActions(RULES_ACTION_ONNEXT_OPEN, self.sysInfo.get('citem',{}), inherited=self)
-        self.log('__init__, enableOnNext = %s, onNextMode = %s, onNextX = %s, onNextY = %s'%(self.enableOnNext,self.onNextMode,self.onNextX,self.onNextY))
+        self.log('__init__, enableOnNext = %s, onNextMode = %s, onNextX = %s, onNextY = %s'%(bool(self.onNextMode),self.onNextMode,self.onNextX,self.onNextY))
         
-        if bool(self.enableOnNext) and not isFiller(self.fitem):
+        if not isFiller(self.fitem):
             self.totalTime = int(self.player.getPlayerTime() * (self.player.maxProgress / 100))
             self.threshold = abs((self.totalTime - (self.totalTime * .75)) - (ONNEXT_TIMER*3))
             self.remaining = floor(self.totalTime - self.player.getPlayedTime())
@@ -381,7 +377,6 @@ class OnNext(xbmcgui.WindowXMLDialog):
                         
         except Exception as e: self.log("onInit, failed! %s"%(e), xbmc.LOGERROR)
         self.log("onInit, closing")
-        self.runActions(RULES_ACTION_ONNEXT_CLOSE, self.sysInfo.get('citem',{}), inherited=self)
         self.close()
                 
                 

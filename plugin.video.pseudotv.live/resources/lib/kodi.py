@@ -803,9 +803,8 @@ class Properties:
 
     @contextmanager
     def interruptActivity(self): #quit background task
-        try:
-            self.setInterruptActivity(True)
-            yield
+        self.setInterruptActivity(True)
+        try: yield
         finally: self.setInterruptActivity(False)
          
         
@@ -827,9 +826,8 @@ class Properties:
         
     @contextmanager
     def suspendActivity(self): #pause background task.
-        try: 
-            self.setSuspendActivity(True)
-            yield
+        self.setSuspendActivity(True)
+        try: yield
         finally: self.setSuspendActivity(False)
 
 

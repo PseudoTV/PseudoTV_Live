@@ -9,6 +9,18 @@ v.0.6.2
 - Fixed Channel Manager not saving paths.
 - Fixed Utility Menu options not behaving properly.
 - Fixed Issue where missing resource packs crashed channel manger.
+- Added Page Limit Adv. Channel Rule.
+- Tweaked Channelbug transparency from 25% => 45%.
+- Tweaked Advanced Overlay Rules and removed redundant settings to limit confusion. Stack multiple rules to restore previous functionality. 
+  - This may required users to delete their existing rules; save, then re-add them.
+  - Affected Rules:
+    - All Overlay Rules
+    - Duration Options
+    - Include Options
+    - Interleaving
+    - Limits & Sort Methods
+    - Even Show Distribution
+    - Force Episode Ordering
 
 v.0.6.1
 - Improved logo detection.

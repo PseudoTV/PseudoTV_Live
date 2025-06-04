@@ -102,7 +102,6 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         try:
-            PROPERTIES.setInterruptActivity(True)
             self.focusItems    = dict()
             self.spinner       = self.getControl(4)
             self.chanList      = self.getControl(5)
@@ -647,7 +646,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             fileList   = []
             start_time = 0
             end_time   = 0
-            PROPERTIES.setInterruptActivity(False)
+            if PROPERTIES.isInterruptActivity(): PROPERTIES.setInterruptActivity(False)
             while not self.monitor.abortRequested() and PROPERTIES.isRunning('OVERLAY_MANAGER'):
                 if self.monitor.waitForAbort(1.0): break
                 elif not PROPERTIES.isRunning('builder.build') and not PROPERTIES.isInterruptActivity():
@@ -659,7 +658,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     end_time = time.time()
                     if not fileList or isinstance(fileList,list): break
             del builder
-            PROPERTIES.setInterruptActivity(True)
+            if not PROPERTIES.isInterruptActivity(): PROPERTIES.setInterruptActivity(True)
             return fileList, round(abs(end_time-start_time),2)
             
         if not PROPERTIES.isRunning('previewChannel'):
@@ -878,7 +877,6 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def closeManager(self):
         self.log('closeManager')
-        PROPERTIES.setInterruptActivity(False)
         if self.madeChanges: self.saveChanges() 
         else:                self.close()
 

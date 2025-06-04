@@ -530,7 +530,7 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
-                <setting id="OnNext_Enable" type="integer" label="30045" help="33045" parent="Overlay_Enable">
+                <setting id="OnNext_Mode" type="integer" label="30045" help="33045" parent="Overlay_Enable">
                     <level>2</level>
                     <default>2</default>
                     <constraints>
@@ -549,7 +549,7 @@
                     </dependencies>
                     <control type="spinner" format="string"/>
                 </setting>
-                <setting id="OnNext_Position_XY" type="string" label="32229" help="33229" parent="OnNext_Enable">
+                <setting id="OnNext_Position_XY" type="string" label="32229" help="33229" parent="OnNext_Mode">
                     <level>3</level>
                     <default>Auto</default>
                     <constraints>
@@ -559,8 +559,8 @@
                         <dependency type="visible">
                             <and>
                                 <condition operator="is" setting="Overlay_Enable">true</condition>
-                                <condition operator="gt" setting="OnNext_Enable">0</condition>
-                                <condition operator="lt" setting="OnNext_Enable">3</condition>
+                                <condition operator="gt" setting="OnNext_Mode">0</condition>
+                                <condition operator="lt" setting="OnNext_Mode">3</condition>
                             </and>
                         </dependency>
                     </dependencies>
@@ -737,7 +737,7 @@
                         <popup>false</popup>
                     </control>
                 </setting>
-                <setting id="Enable_Even_Force" type="boolean" label="30181" help="33230" parent="Enable_Even">
+                <setting id="Enable_Force_Episode" type="boolean" label="30181" help="33230" parent="Enable_Even">
                     <level>2</level>
                     <default>false</default>
                     <dependencies>

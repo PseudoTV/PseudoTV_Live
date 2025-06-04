@@ -790,7 +790,7 @@ msgid "Error posting snapshot."
 msgstr ""
 
 msgctxt "#30192"
-msgid "Interleave Paths"
+msgid "Interleaving"
 msgstr ""
 
 msgctxt "#30193"
