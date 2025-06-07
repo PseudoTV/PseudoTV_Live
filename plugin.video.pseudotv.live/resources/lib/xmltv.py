@@ -267,12 +267,14 @@ def read_data(fp=None, tree=None):
     """
     if fp:
         try:
+            d = {}
             if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
             else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
-        except Exception as e: read_error('read_data', fp, e)
-    d = {}
-    set_attrs(d, tree, ('date', 'source-info-url', 'source-info-name', 'source-data-url', 'generator-info-name', 'generator-info-url'))
-    return d
+            set_attrs(d, tree, ('date', 'source-info-url', 'source-info-name', 'source-data-url', 'generator-info-name', 'generator-info-url'))
+            return d
+        except Exception as e:
+            read_error('read_data', fp, e)
+            return {}
 
 def read_channels(fp=None, tree=None):
     """
@@ -281,22 +283,23 @@ def read_channels(fp=None, tree=None):
     Return a list of channel dictionaries from file object 'fp' or the
     ElementTree 'tree'
     """
-    channels = []
     if fp:
         try:
+            channels = []
             if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
             else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
-        except Exception as e: read_error('read_channels', fp, e)
-        
-    for elem in tree.findall('channel'):
-        channel = elem_to_channel(elem) 
-        try: channel['icon'] = [{'src': elem.findall('icon')[0].get('src')}]
-        except IndexError:
-            log("Icon element missing or malformed", xbmc.LOGERROR)
-            channel['icon'] = []
-        channels.append(channel)
-    return channels
-
+            for elem in tree.findall('channel'):
+                channel = elem_to_channel(elem) 
+                try: channel['icon'] = [{'src': elem.findall('icon')[0].get('src')}]
+                except IndexError:
+                    log("Icon element missing or malformed", xbmc.LOGERROR)
+                    channel['icon'] = []
+                channels.append(channel)
+            return channels
+        except Exception as e:
+            read_error('read_channels', fp, e)
+            return []
+            
 def read_programmes(fp=None, tree=None):
     """
     read_programmes(fp=None, tree=None) -> list
@@ -308,9 +311,11 @@ def read_programmes(fp=None, tree=None):
         try:
             if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
             else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
-        except Exception as e: read_error('read_programmes', fp, e)
-    return [elem_to_programme(elem) for elem in tree.findall('programme')]
-
+            return [elem_to_programme(elem) for elem in tree.findall('programme')]
+        except Exception as e:
+            read_error('read_programmes', fp, e)
+            return []
+            
 def indent(elem, level=0):
     """
     Indent XML for pretty printing

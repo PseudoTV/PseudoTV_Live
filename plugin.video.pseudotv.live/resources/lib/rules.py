@@ -51,6 +51,7 @@ class RulesList:
                           RollbackPlaycount(),
                           DisableRestart(),
                           DisableOnChange(),
+                          # QuotaOptions(),
                           PageLimit(),
                           DurationOptions(),
                           IncludeOptions(),
@@ -497,7 +498,7 @@ class SetScreenVingette(BaseRule):
 
 
     def getTitle(self):
-        return '%s (%s)'%(self.name,','.join(self.optionValues))
+        return '%s (%s)'%(self.name,self.optionValues)
             
             # todo set viewmode as dict() response from json.
     def getPosition(self, optionindex):#todo vin utility to adjust zoom,vshift,pratio and nls
@@ -886,6 +887,55 @@ class DisableOnChange(BaseRule):
         return parameter
 
 
+class QuotaOptions(BaseRule):
+    """
+    QuotaOptions
+    """
+    def __init__(self):
+        self.myId               = 498
+        self.ignore             = False
+        self.exclude            = False
+        self.name               = "Quota Options"
+        self.description        = "Quota Options"
+        self.optionLabels       = ["Pad FileList","Pad Programmes"]
+        self.optionValues       = [False,True]
+        self.optionDescriptions = ["Pad FileList with duplicates to meet page limit","Pad Programmes to meet Minimum duration"]
+        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
+        self.storedValues       = [[],[]]
+
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
+    def copy(self):
+        return QuotaOptions()
+
+
+    def getTitle(self):
+        return '%s (%s)'%(self.name,self.optionValues)
+
+
+    def onAction(self, optionindex):
+        self.onActionToggleBool(optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, citem, parameter, builder):
+        if actionid == RULES_ACTION_CHANNEL_START:
+            self.storedValues[0] = builder.filelistQuota
+            self.storedValues[1] = builder.schedulingQuota
+            builder.filelistQuota = self.optionValues[0]
+            builder.schedulingQuota  = self.optionValues[1]
+            self.log("runAction, setting filelistQuota = %s, schedulingQuota = %s"%(builder.filelistQuota,builder.schedulingQuota))
+            
+        elif actionid == RULES_ACTION_CHANNEL_STOP:
+            builder.filelistQuota = self.storedValues[0]
+            builder.schedulingQuota  = self.storedValues[1]
+            self.log("runAction, setting filelistQuota = %s, schedulingQuota = %s"%(builder.filelistQuota,builder.schedulingQuota))
+        return parameter
+
+
 class PageLimit(BaseRule):
     """
     PageLimit
@@ -960,7 +1010,7 @@ class DurationOptions(BaseRule): #CHANNEL RULES [500-599]
 
 
     def getTitle(self):
-        return '%s (%s)'%(self.name,','.join(self.optionValues))
+        return '%s (%s)'%(self.name,self.optionValues)
 
 
     def onAction(self, optionindex):
@@ -1016,7 +1066,7 @@ class IncludeOptions(BaseRule):
 
 
     def getTitle(self):
-        return '%s (%s)'%(self.name,','.join(self.optionValues))
+        return '%s (%s)'%(self.name,self.optionValues)
 
 
     def onAction(self, optionindex):
@@ -1296,7 +1346,7 @@ class HandleMethodOrder(BaseRule):
 
 
     def getTitle(self):
-        return '%s (%s)'%(self.name,','.join(self.optionValues))
+        return '%s (%s)'%(self.name,self.optionValues)
 
 
     def getSort(self):
@@ -1405,7 +1455,7 @@ class ForceEpisode(BaseRule):
             builder.sort = self.storedValues[0]
             self.log("runAction, restoring sort and forcing episode/year ordering (%s)"%(len(parameter)))
             fileList = list(sorted(parameter, key=lambda k: k.get('year',0)))
-            return interleave(list(self._sortShows(fileList)),builder.interleaveValue)
+            return interleave(list(self._sortShows(fileList)), builder.interleaveValue)
         return parameter
         
         

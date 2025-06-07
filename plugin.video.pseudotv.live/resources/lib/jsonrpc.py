@@ -477,7 +477,7 @@ class JSONRPC:
             param["properties"] = self.getEnums("List.Fields.Files", type='items')
         self.log("requestList, id: %s, getDirectory = %s, media = %s, limit = %s, sort = %s, query = %s, limits = %s\npath = %s"%(citem['id'],getDirectory,media,page,sort,query,limits,path))
         
-        if limits.get('end',-1) == -1: #global default, replace with autoPagination.
+        if limits.get('end',-1) == -1: #-1 unlimited pagination, replace with autoPagination.
             limits = self.autoPagination(citem['id'], path, query) #get
             self.log('[%s] requestList, autoPagination limits = %s'%(citem['id'],limits))
             if limits.get('total',0) > page and sort.get("method","") == "random":
@@ -498,27 +498,24 @@ class JSONRPC:
             results = self.getLibrary(query['method'],param, cache=False)
             key = query.get('key',list(results.keys())[0])
             
-        limits = results.get('limits', param["limits"])
+        items, limits, errors = results.get(key,[]), results.get('limits',param["limits"]), results.get('error',{})
         if (limits.get('end',0) >= limits.get('total',0) or limits.get('start',0) >= limits.get('total',0)):
             # restart page to 0, exceeding boundaries.
             self.log('[%s] requestList, resetting limits to 0'%(citem['id']))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-        self.autoPagination(citem['id'], path, query, limits) #set 
-        
-        errors = results.get('error',{})
-        items  = results.get(key, [])
-        
+          
         if len(items) == 0 and limits.get('total',0) > 0:
             # retry last request with fresh limits when no items are returned.
             self.log("[%s] requestList, trying again with start limits at 0"%(citem['id']))
             return self.requestList(citem, path, media, page, sort, {"end": 0, "start": 0, "total": limits.get('total',0)}, query)
-        else:
+        else:          
+            self.autoPagination(citem['id'], path, query, limits) #set 
             self.log("[%s] requestList, return items = %s" % (citem['id'], len(items)))
             return items, limits, errors
 
 
-    def resetPagination(self, id, path, query={}):
-        return self.autoPagination(id, path, query, limits={"end": 0, "start": 0, "total":0})
+    def resetPagination(self, id, path, query={}, limits={"end": 0, "start": 0, "total":0}):
+        return self.autoPagination(id, path, query, limits)
             
             
     def autoPagination(self, id, path, query={}, limits={}):

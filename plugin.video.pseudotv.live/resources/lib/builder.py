@@ -69,7 +69,8 @@ class Builder:
         self.enableGrouping   = SETTINGS.getSettingBool('Enable_Grouping')
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
-        self.padScheduling    = True #todo adv. rule and global opt. 
+        self.filelistQuota    = False
+        self.schedulingQuota  = True
         
         self.filters          = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
         self.sort             = {}#{"ignorearticle":True,"method":"random","order":"ascending","useartistsortname":True}
@@ -109,9 +110,10 @@ class Builder:
     def verify(self, channels=[]):
         if not channels: channels = self.channels.getChannels()
         for idx, citem in enumerate(channels):
-            if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
+            if not citem.get('name') or len(citem.get('path',[])) == 0 or not citem.get('number'):
                 self.log('[%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem))
                 continue
+            elif not citem.get('id'): citem['id'] = getChannelID(citem['name'],citem['path'],citem['number']) #generate new channelid
             citem['logo'] = self.resources.getLogo(citem,citem.get('logo',LOGO))
             self.log('[%s] VERIFIED - channel %s: %s'%(citem['id'],citem['number'],citem['name']))
             yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self) #inject persistent citem changes here
@@ -191,10 +193,10 @@ class Builder:
                             else:                                                                                    self.pMSG = '%s %s'%(LANGUAGE(32245),LANGUAGE(32023)) #Parsing  
                             
                             self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32248),self.pName), header='%s, %s'%(ADDON_NAME,self.pMSG))
-                            cacheResponse = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
-                            if preview: return cacheResponse
-                            elif cacheResponse:
-                                if __addStation(citem) and __hasFileList(cacheResponse): updated.add(__addProgrammes(citem, cacheResponse)) #added xmltv lineup entries.
+                            response = self.getFileList(citem, now, (stopTimes.get(citem['id']) or start))# {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
+                            if preview: return response
+                            elif response:
+                                if __addStation(citem) and __hasFileList(response): updated.add(__addProgrammes(citem, response)) #added xmltv lineup entries.
                             else: 
                                 if complete: self.pErrors.append(LANGUAGE(32026))
                                 chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
@@ -226,16 +228,16 @@ class Builder:
             media = 'music' if radio else 'video'
             self.log('[%s] getFileList, multipath = %s, radio = %s, media = %s, path = %s'%(citem['id'],multi,radio,media,citem.get('path')),xbmc.LOGINFO)
             
-            if radio: cacheResponse = self.buildRadio(citem)
-            else:     cacheResponse = self.buildChannel(citem)
+            if radio: response = self.buildRadio(citem)
+            else:     response = self.buildChannel(citem)
             
-            if isinstance(cacheResponse,list): return sorted(self.addScheduling(citem, cacheResponse, now, start, self.padScheduling), key=itemgetter('start'))
+            if isinstance(response,list): return sorted(self.addScheduling(citem, response, now, start), key=itemgetter('start'))
             elif self.service._interrupt():   
                 self.log("[%s] getFileList, _interrupt"%(citem['id']))
                 self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                 return True
             else:
-                return cacheResponse
+                return response
         except Exception as e: self.log("[%s] getFileList, failed! %s"%(citem['id'],e), xbmc.LOGERROR)
         return False
 
@@ -255,8 +257,8 @@ class Builder:
         return [info.copy() for idx in range(entries)]
 
 
-    def addScheduling(self, citem: dict, fileList: list, now: time, start: time, padScheduling=True) -> list:
-        self.log("[%s] addScheduling, IN fileList = %s, now = %s, start = %s, padScheduling = %s"%(citem['id'],len(fileList),now,start,padScheduling))
+    def addScheduling(self, citem: dict, fileList: list, now: time, start: time) -> list: #quota meet MIN_EPG_DURATION requirements. 
+        self.log("[%s] addScheduling, IN fileList = %s, now = %s, start = %s"%(citem['id'],len(fileList),now,start))
         totDur   = 0
         tmpList  = []
         fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)
@@ -267,7 +269,7 @@ class Builder:
             start = item['stop']
             tmpList.append(item)
 
-        if padScheduling and len(tmpList) > 0:
+        if len(tmpList) > 0:
             iters = cycle(fileList)
             while not self.service.monitor.abortRequested() and tmpList[-1].get('stop') <= (now + MIN_EPG_DURATION):
                 if   self.service.monitor.waitForAbort(0.0001): break
@@ -328,7 +330,9 @@ class Builder:
                     return []
                 else:
                     if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
-                    fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
+                    fileList = self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits)
+                    fileArray.append(fileList)
+                    self.log("[%s]  buildChannel, path = %s, fileList = %s"%(citem['id'],file,len(fileList)))
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self) #flatten fileArray here to pass as fileList below
         
         #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add adv. rule to setDictLST duplicates
@@ -346,29 +350,37 @@ class Builder:
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN, citem, fileList, inherited=self)
 
 
-    def buildFileList(self, citem: dict, path: str, media: str='video', limit: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}) -> list: #build channel via vfs path.
-        self.log("[%s] buildFileList, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
+    def buildFileList(self, citem: dict, path: str, media: str='video', page: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}) -> list: #build channel via vfs path.
+        self.log("[%s] buildFileList, media = %s, path = %s\nlimit = %s, sort = %s, page = %s"%(citem['id'],media,path,page,sort,limits))
+        self.loopback = {}
+        
+        def __padFileList(fileItems, page):
+            if page > len(fileItems):
+                tmpList = fileItems * (page // len(fileItems))
+                tmpList.extend(fileItems[:page % len(fileItems)])
+                return tmpList
+            return fileItems
+            
         fileArray = []
         if path.endswith('.xsp'): #smartplaylist - parse xsp for path, sort info
-            paths, media, sort, limit = self.xsp.parseXSP(citem.get('id',''), path, media, sort, limit)
+            paths, media, sort, page = self.xsp.parseXSP(citem.get('id',''), path, media, sort, page)
             if len(paths) > 0:
                 for idx, npath in enumerate(paths):
                     self.pName = '%s %s/%s'%(citem['name'],idx+1,len(paths))
-                    fileArray.append(self.buildFileList(citem, npath, media, limit, sort, limits))
+                    fileArray.append(self.buildFileList(citem, npath, media, page, sort, limits))
                 return interleave(fileArray, self.interleaveValue)
         
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
             path, media, sort, filter = self.xsp.parseDXSP(citem.get('id',''), path, sort, {}, self.incExtras) #todo filter adv. rules
             
         fileList = []
-        counter  = 0
-        nlimits  = limits
         dirList  = [{'file':path}]
-        self.loopback = {}
-        self.log("[%s] buildFileList, limit = %s, sort = %s, limits = %s\npath = %s"%(citem['id'],limit,sort,limits,path))
+        npath    = path
+        nlimits  = limits
+        self.log("[%s] buildFileList, page = %s, sort = %s, limits = %s\npath = %s"%(citem['id'],page,sort,limits,path))
         
-        while not self.service.monitor.abortRequested():
-            #Not all results are flat hierarchies; walk all paths until fileList limit is reached. ie. folders with pagination and/or directories
+        while not self.service.monitor.abortRequested() and len(fileList) < page:
+            #Not all results are flat hierarchies; walk all paths until fileList page is reached. ie. folders with pagination and/or directories
             if self.service._interrupt(): 
                 self.log("[%s] buildFileList, _interrupt"%(citem['id']))
                 self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
@@ -378,23 +390,21 @@ class Builder:
                 self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
                 self.service.monitor.waitForAbort(SUSPEND_TIMER)
                 continue
-            elif len(fileList) >= limit: break
             elif len(dirList) > 0:
-                dir = dirList.pop(0)
-                subfileList, subdirList, nlimits, errors = self.buildList(citem, dir.get('file'), media, limit, sort, limits, dir) #parse all directories under root. Flattened hierarchies required to stream line channel building.
+                dir   = dirList.pop(0)
+                npath = dir.get('file')
+                subfileList, subdirList, nlimits, errors = self.buildList(citem, npath, media, abs(page - len(fileList)), sort, limits, dir) #parse all directories under root. Flattened hierarchies required to stream line channel building.
                 fileList += subfileList
                 dirList = setDictLST(dirList + subdirList)
-                self.log('[%s] buildFileList, adding = %s/%s remaining dirs (%s)\npath = %s'%(citem['id'],len(subfileList),limit,len(dirList),dir.get('file')))
+                self.log('[%s] buildFileList, adding = %s/%s remaining dirs (%s)\npath = %s, limits = %s'%(citem['id'],len(fileList),page,len(dirList),npath,nlimits))
             elif len(dirList) == 0:
-                if not path.startswith(tuple(VFS_TYPES)) and len(fileList) < limit and nlimits.get('total') > limit and counter <= nlimits.get('total',0) and nlimits != limits: 
-                    self.log("[%s] buildFileList, retrying (%s/%s) with new autoPagination limits %s"%(citem['id'],counter,nlimits.get('total',0),nlimits))
-                    counter += limit
-                    limits = nlimits
-                    dirList.insert(0,{'file':path})
+                if len(fileList) > 0 and nlimits.get('total',0) > 0:
+                    dirList.insert(0,{'file':npath})
+                    self.log('[%s] buildFileList, reparse path %s'%(citem['id'],npath))
                 else:
                     self.log('[%s] buildFileList, no more folders to parse'%(citem['id']))
                     break
-        self.log("[%s] buildFileList, returning fileList %s/%s"%(citem['id'],len(fileList),limit))
+        self.log("[%s] buildFileList, returning fileList %s/%s"%(citem['id'],len(fileList),page))
         return fileList
 
 

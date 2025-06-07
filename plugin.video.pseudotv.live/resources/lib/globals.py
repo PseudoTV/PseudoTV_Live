@@ -445,13 +445,34 @@ def roundupDIV(p, q):
     except ZeroDivisionError: 
         return 1
        
-def interleave(seqs, sets=1): 
+def interleave(seqs, sets=1, repeats=False): 
     #evenly interleave multi-lists of different sizes, while preserving seq order and by sets of x
-    # In         [[1,2,3,4,5],['a','b','c','d'],['A','B','C','D','E']]
-    # Out sets=0 [1, 2, 3, 4, 5, 'a', 'b', 'c', 'd', 'A', 'B', 'C', 'D', 'E']
-    # Out sets=1 [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 5, 'E']
-    # Out sets=2 [1, 2, 'a', 'b', 'A', 'B', 3, 4, 'c', 'd', 'C', 'D', 5, 'E']
+    # In         [[1,2,3,4],['a','b','c'],['A','B','C','D','E']]
+    # repeats = False
+    # Out sets=0 [1, 2, 3, 4, 'a', 'b', 'c', 'A', 'B', 'C', 'D', 'E']
+    # Out sets=1 [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'D', 'E']
+    # Out sets=2 [1, 2, 'a', 'b', 'A', 'B', 3, 4, 'c', 'C', 'D', 'E']
+    # repeats = True
+    # Out sets=0 [1, 2, 3, 4, 'a', 'b', 'c', 'A', 'B', 'C', 'D', 'E']
+    # Out sets=1 [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'a', 'D', 1, 'b', 'E']
+    # Out sets=2 [1, 2, 'a', 'b', 'A', 'B', 3, 4, 'c', 'a', 'C', 'D', 1, 2, 'b', 'c', 'E', 'A']
     if sets > 0:
+        # if repeats:
+            # # Create cyclical iterators for each list
+            # cyclical_iterators = [cycle(lst) for lst in seqs]
+            # interleaved = []
+            # # Determine the length of the longest list
+            # max_len = max(len(lst) for lst in seqs)
+            # # Calculate the number of blocks needed
+            # num_blocks = (max_len + sets - 1) // sets
+            # # Interleave in blocks
+            # for i in range(num_blocks):
+                # for iterator in cyclical_iterators:
+                    # # Use islice to take a block of elements from the current iterator
+                    # block = list(islice(iterator, sets))
+                    # interleaved.extend(block)
+            # return interleaved
+        # else:
         seqs = [list(zip_longest(*[iter(seqs)] * sets, fillvalue=None)) for seqs in seqs]
         return list([_f for _f in sum([_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f], ()) if _f])
     else: return list(chain.from_iterable(seqs))

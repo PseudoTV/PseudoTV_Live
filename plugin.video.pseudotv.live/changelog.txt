@@ -9,7 +9,9 @@ v.0.6.2
 - Fixed Channel Manager not saving paths.
 - Fixed Utility Menu options not behaving properly.
 - Fixed Issue where missing resource packs crashed channel manger.
-- Added Page Limit Adv. Channel Rule.
+- Tweaked Channel building to assure equal content parsing between paths.
+- Added New Advanced Channel Rules:
+  - Page Limit
 - Tweaked Channelbug transparency from 25% => 45%.
 - Tweaked Advanced Overlay Rules and removed redundant settings to limit confusion. Stack multiple rules to restore previous functionality. 
   - This may required users to delete their existing rules; save, then re-add them.

@@ -268,12 +268,15 @@ class Settings:
         else:      return value
         
         
-    def getADDONMeta(self, id):
-        if hasAddon(id):
+    def getAddonDetails(self, id):
+        try:
             addon = xbmcaddon.Addon(id)
-            for property in ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']: 
-                yield (property, addon.getAddonInfo(property))
-        
+            properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
+            return dict([(property,addon.getAddonInfo(property)) for property in properties])    
+        except:
+            from jsonrpc import JSONRPC
+            return JSONRPC().getAddonDetails(id)
+
 
     def getEXTSetting(self, id, key):
         return xbmcaddon.Addon(id).getSetting(key)
@@ -1782,8 +1785,8 @@ class Dialog:
                         ruleLST = params.get('rules',{}).get(CONLKEY,[])
                         while not self.monitor.abortRequested() and not CONSEL is None:
                             andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),dumpJSON(value),icon=DUMMY_ICON.format(text=str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
-                            andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,props={'key':'add'}))
-                            if len(ruleLST) > 0 and eparams != params: andLST.insert(1,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,props={'key':'save'}))
+                            andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,props={'key':'add'}))
+                            if len(ruleLST) > 0 and eparams != params: andLST.insert(1,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save'}))
                             CONSEL = self.selectDialog(andLST,header="Edit Rules",multi=False)
                             if not CONSEL is None:
                                 if   andLST[CONSEL].getProperty('key') == 'add': ruleLST.append(getRule(params,{"field":"","operator":"","value":[]}))
@@ -1801,7 +1804,7 @@ class Dialog:
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
-                enumLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,props={'key':'save'}))
+                enumLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save'}))
                 enumSEL = self.selectDialog(enumLST,header="Edit Selection",preselect=-1,multi=False)
                 if not enumSEL is None:
                     if   enumLST[enumSEL].getLabel() == 'Direction': params['order'].update({'direction':order(params)})

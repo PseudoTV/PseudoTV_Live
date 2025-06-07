@@ -62,7 +62,7 @@ class Fillers:
     def buildSource(self, ftype, path=''):
         self.log('[%s] buildSource, type = %s, path = %s'%(self.citem.get('id'),ftype, path))
         def _parseResource(id):
-            if hasAddon(id, install=True): return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'),exts=VIDEO_EXTS,depth=CHANNEL_LIMIT,checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION),expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            if hasAddon(id, install=True): return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'),exts=VIDEO_EXTS,depth=CHANNEL_LIMIT,checksum=SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION),expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
 
         def _parseVFS(path):
             if path.startswith('plugin://'):

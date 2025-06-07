@@ -85,7 +85,7 @@ class Resources:
             
             
     def getCachedLogo(self, citem, select=False):
-        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select), 'args':(citem,select)             ,'checksum':getMD5('|'.join([self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION) for id in self.getResources(citem)]))},
+        cacheFuncs = [{'name':'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select), 'args':(citem,select)             ,'checksum':getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in self.getResources(citem)]))},
                       {'name':'getTVShowLogo.%s.%s'%(getMD5(citem.get('name')),select)   , 'args':(citem.get('name'), select),'checksum':ADDON_VERSION}]
         for cacheItem in cacheFuncs:
             cacheResponse = self.cache.get(cacheItem.get('name',''),cacheItem.get('checksum',ADDON_VERSION))
@@ -108,7 +108,7 @@ class Resources:
         
     def fillLogoResource(self, id):
         results  = {}
-        response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=28))
+        response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, checksum=SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=28))
         for path, images in list(response.items()):
             for image in images:
                 name, ext = os.path.splitext(image)
@@ -131,7 +131,7 @@ class Resources:
         logos     = []
         resources = self.getResources(citem)
         cacheName = 'getLogoResources.%s.%s'%(getMD5(citem.get('name')),select)
-        cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join([self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources])))
+        cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources])))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
                 if not hasAddon(id):

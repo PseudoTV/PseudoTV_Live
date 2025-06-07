@@ -432,8 +432,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                     crules = self.rule.loadRules([citem],append=True,incRez=False).get(citem['id'],{}) #all rule instances w/ channel rules
                     arules = [rule for key, rule in list(crules.items()) if not ruleLST.get(key)] #all unused rule instances
                     lizLST = [self.buildListItem(rule.name,rule.getTitle(),icon=DUMMY_ICON.format(text=str(rule.myId)),items={'myId':rule.myId,'citem':citem,'idx':list(ruleLST.keys()).index(key)+1}) for key, rule in list(ruleLST.items()) if rule.myId]
-                    lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,items={'key':'add' ,'citem':citem,'idx':0}))
-                    if len(ruleLST) > 0 and erules != ruleLST: lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,items={'key':'save','citem':citem}))
+                    lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,items={'key':'add' ,'citem':citem,'idx':0}))
+                    if len(ruleLST) > 0 and erules != ruleLST: lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,items={'key':'save','citem':citem}))
                             
                 select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32095), preselect=lastIDX, multi=False)
                 if not select is None:
@@ -471,7 +471,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             select = -1
             while not self.monitor.abortRequested() and not select is None:
                 with self.toggleSpinner():
-                    lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],icon=DUMMY_ICON.format(text=str(idx+1)),items={'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
+                    lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],icon=DUMMY_ICON.format(text=str(idx+1)),[rule.myId],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
                 select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
                 if not select is None:
                     try: rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
@@ -572,7 +572,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
             getTime  = 0
             waitTime = FIFTEEN
-            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(item.get('file')))
+            player.play(item.get('file'),liz)
             while not self.monitor.abortRequested():
                 waitTime -= 1
                 self.log('validatePaths _seek, waiting (%s) to seek %s'%(waitTime, item.get('file')))

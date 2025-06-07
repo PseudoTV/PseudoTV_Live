@@ -414,7 +414,7 @@ class Library:
         return {} #todo
         # def _search(addonid):
             # cacheName = 'searchRecommended.%s'%(getMD5(addonid))
-            # addonMeta = self.jsonRPC.getAddonDetails(addonid)
+            # addonMeta = SETTINGS.getAddonDetails(addonid)
             # payload   = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
             # if not payload: #startup services may not be broadcasting beacon; use last cached beacon instead.
                 # payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
