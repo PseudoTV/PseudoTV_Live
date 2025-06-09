@@ -471,7 +471,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             select = -1
             while not self.monitor.abortRequested() and not select is None:
                 with self.toggleSpinner():
-                    lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],icon=DUMMY_ICON.format(text=str(idx+1)),[rule.myId],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
+                    lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],DUMMY_ICON.format(text=str(idx+1)),[rule.myId],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
                 select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
                 if not select is None:
                     try: rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
