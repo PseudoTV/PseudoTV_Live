@@ -610,6 +610,26 @@
                     </dependencies>
                     <control type="toggle"/>
                 </setting>
+                <setting id="ChannelBug_Transparency" type="integer" label="30209" help="33209" parent="Enable_ChannelBug">
+                    <level>3</level>
+                    <default>25</default>
+                    <constraints>
+                        <minimum>15</minimum>
+                        <step>5</step>
+                        <maximum>50</maximum>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="Overlay_Enable">true</condition>
+                                <condition operator="is" setting="Enable_ChannelBug">true</condition>
+                            </and>
+                        </dependency>
+                    </dependencies>
+                    <control type="slider" format="percentage">
+                        <popup>false</popup>
+                    </control>
+                </setting>
                 <setting id="ChannelBug_Color" type="string" label="30044" help="33044" parent="Enable_ChannelBug">
                     <level>2</level>
                     <default>FFFFFFFF</default>

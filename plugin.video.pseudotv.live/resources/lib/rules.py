@@ -343,12 +343,12 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
         self.exclude            = False
         self.name               = LANGUAGE(30143)
         self.description        = LANGUAGE(30144)
-        self.optionLabels       = [LANGUAGE(30043),LANGUAGE(30086),LANGUAGE(30112),LANGUAGE(30044),LANGUAGE(30113)]
-        self.optionValues       = [SETTINGS.getSettingBool('Enable_ChannelBug'),SETTINGS.getSetting("Channel_Bug_Position_XY"),SETTINGS.getSetting('ChannelBug_Color'),SETTINGS.getSettingBool('Force_Diffuse')]
-        self.optionDescriptions = [LANGUAGE(33043),LANGUAGE(33112),LANGUAGE(33044),LANGUAGE(33111)]
+        self.optionLabels       = [LANGUAGE(30043),LANGUAGE(30112),LANGUAGE(30044),LANGUAGE(30208)]
+        self.optionValues       = [SETTINGS.getSettingBool('Enable_ChannelBug'),SETTINGS.getSetting("Channel_Bug_Position_XY"),SETTINGS.getSetting('ChannelBug_Color'),SETTINGS.getSettingBool('Force_Diffuse'),SETTINGS.getSettingInt('ChannelBug_Transparency')]
+        self.optionDescriptions = [LANGUAGE(33043),LANGUAGE(33112),LANGUAGE(33044),LANGUAGE(33209)]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
-        self.selectBoxOptions   = ["",list(range(-1,16)),[LANGUAGE(30022),LANGUAGE(32136)],"",""]
-        self.storedValues       = [[],[],[],[],[]]
+        self.selectBoxOptions   = [[True,False],[LANGUAGE(30022),LANGUAGE(32136)],"","",list(range(15,51,5))]
+        self.storedValues       = [[],[],[],[],[],[]]
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -380,32 +380,35 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
 
     def onAction(self, optionindex):
         if   optionindex == 0: self.onActionToggleBool(optionindex)
-        elif optionindex == 1: self.onActionSelect(optionindex, LANGUAGE(30148))
-        elif optionindex == 2: self.getPosition(optionindex)
-        elif optionindex == 3: self.onActionPickColor(optionindex)
-        elif optionindex == 4: self.onActionToggleBool(optionindex)
+        elif optionindex == 1: self.getPosition(optionindex)
+        elif optionindex == 2: self.onActionPickColor(optionindex)
+        elif optionindex == 3: self.onActionToggleBool(optionindex)
+        elif optionindex == 4: self.onActionSelect(optionindex, LANGUAGE(33209))
         return self.optionValues[optionindex]
 
 
     def runAction(self, actionid, citem, parameter, overlay):
         if actionid == RULES_ACTION_OVERLAY_OPEN:
             self.storedValues[0] = overlay.enableChannelBug
-            self.storedValues[2] = (overlay.channelBugX, overlay.channelBugY)
-            self.storedValues[3] = overlay.channelBugColor
-            self.storedValues[4] = overlay.channelBugDiffuse
+            self.storedValues[1] = (overlay.channelBugX, overlay.channelBugY)
+            self.storedValues[2] = overlay.channelBugColor
+            self.storedValues[3] = overlay.channelBugDiffuse
+            self.storedValues[4] = overlay.channelBugFade
             
             overlay.enableChannelBug   = self.optionValues[0]
-            overlay.channelBugX, overlay.channelBugY = eval(self.optionValues[2])
-            overlay.channelBugColor    = '0x%s'%(self.optionValues[3])
-            overlay.channelBugDiffuse  = self.optionValues[4]
-            self.log("runAction, setting enableChannelBug = %s, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.enableChannelBug,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse))
+            overlay.channelBugX, overlay.channelBugY = eval(self.optionValues[1])
+            overlay.channelBugColor    = '0x%s'%(self.optionValues[2])
+            overlay.channelBugDiffuse  = self.optionValues[3]
+            overlay.channelBugFade     = self.optionValues[4]
+            self.log("runAction, setting enableChannelBug = %s, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.enableChannelBug,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse,overlay.channelBugFade))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
             overlay.enableChannelBug   = self.storedValues[0]
-            overlay.channelBugX, overlay.channelBugY = self.storedValues[2]
-            overlay.channelBugColor   = self.storedValues[3]
-            overlay.channelBugDiffuse = self.storedValues[4]
-            self.log("runAction, restoring enableChannelBug = %s, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.enableChannelBug,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse))
+            overlay.channelBugX, overlay.channelBugY = self.storedValues[1]
+            overlay.channelBugColor   = self.storedValues[2]
+            overlay.channelBugDiffuse = self.storedValues[3]
+            overlay.channelBugFade    = self.storedValues[4]
+            self.log("runAction, restoring enableChannelBug = %s, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.enableChannelBug,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse,overlay.channelBugFade))
         return parameter
 
 

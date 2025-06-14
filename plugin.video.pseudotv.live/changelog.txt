@@ -12,7 +12,7 @@ v.0.6.2
 - Tweaked Channel building to assure equal content parsing between paths.
 - Added New Advanced Channel Rules:
   - Page Limit
-- Tweaked Channelbug transparency from 25% => 45%.
+- Added Channel bug transparency setting and Advanced Overlay Rule.
 - Tweaked Advanced Overlay Rules and removed redundant settings to limit confusion. Stack multiple rules to restore previous functionality. 
   - This may required users to delete their existing rules; save, then re-add them.
   - Affected Rules:

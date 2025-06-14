@@ -861,6 +861,10 @@ msgctxt "#30208"
 msgid "I/O Benchmark"
 msgstr ""
 
+msgctxt "#30209"
+msgid "Select Transparency"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -2293,6 +2297,10 @@ msgstr ""
 
 msgctxt "#33202"
 msgid "Minimum Debugging Level [LOGERROR - Default]\nIf submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error."
+msgstr ""
+
+msgctxt "#33209"
+msgid "Select Channel Bug Transparency. [25% = More Transparent, 50% = Less Transparent]"
 msgstr ""
 
 msgctxt "#33214"

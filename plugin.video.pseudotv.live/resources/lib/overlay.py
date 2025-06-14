@@ -191,6 +191,7 @@ class Overlay():
         self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.forceBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
+        self.channelBugFade   = SETTINGS.getSettingInt('ChannelBug_Transparency')
         
         try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
         except: self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto        
@@ -260,7 +261,7 @@ class Overlay():
                 elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
                 self.channelBug.setImage(logo)
                 self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=Control.IsVisible(%i) reversible=false'%(self.channelBug.getId())),
-                                               ('Conditional', 'effect=fade start=100 end=50 time=1000 delay=3000 condition=Control.IsVisible(%i) reversible=false'%(self.channelBug.getId()))])
+                                               ('Conditional', 'effect=fade start=100 end=%i time=1000 delay=3000 condition=Control.IsVisible(%i) reversible=false'%(self.channelBugFade,self.channelBug.getId()))])
                 self.log('enableChannelBug, logo = %s, channelBugColor = %s, window = (%s,%s)'%(logo,self.channelBugColor,self.window_h, self.window_w))
         else: self.close()
         
