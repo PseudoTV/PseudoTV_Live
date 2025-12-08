@@ -19,6 +19,7 @@
 from globals import *
 
 class VFSParser:
+    VFSPaths = VFS_TYPES
     def _normalizeDuration(self, value, source_hint=None) -> int and float:
         """Normalize duration to seconds, handling both millisecond and second inputs.
         
@@ -65,11 +66,11 @@ class VFSParser:
         prefer_seconds = source_hint in ('runtime', 'duration', 'resume', 'resume.total')
         
         if prefer_seconds:
-            # For sources that should be in seconds, ONLY convert if:
+            # For sources that should be in seconds, convert if:
             # - Value is near 1000-multiple AND
-            # - Seconds interpretation is genuinely implausible (> 72 hours) AND
-            # - Ms interpretation gives a plausible result
-            if near_multiple and ms_plausible and not seconds_plausible:
+            # - Ms interpretation gives a plausible result AND
+            # - Either seconds interpretation is implausible (> 72 hours) OR exceeds typical max (6 hours)
+            if near_multiple and ms_plausible and (not seconds_plausible or seconds_value > TYPICAL_MAX):
                 return max(MIN_SECONDS, ms_value)
         else:
             # For unknown sources, be more aggressive about detecting milliseconds
