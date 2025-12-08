@@ -23,6 +23,7 @@ v.0.6.2
     - Limits & Sort Methods
     - Even Show Distribution
     - Force Episode Ordering
+-  Fixed milliseconds to seconds conversion bug in duration handling.
 
 v.0.6.1
 - Improved logo detection.
