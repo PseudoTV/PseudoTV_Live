@@ -58,7 +58,7 @@ try:
     from parsers import OpenCV
     EXTERNAL_PARSER.append(OpenCV.OpenCV)
 except: pass
-    
+
 class VideoParser:
     def __init__(self):
         self.AVIExts   = ['.avi']
@@ -71,10 +71,78 @@ class VideoParser:
         self.YTPaths   = ['plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious']
 
 
-    def getVideoLength(self, filename: str, fileitem: dict={}, jsonRPC=None) -> int and float:
+    def _validateDuration(self, duration, filename=""):
+        """Validate duration - only reject None and negative values"""
+        if duration is None:
+            log("VideoParser: Duration is None for %s" % filename, xbmc.LOGWARNING)
+            return 0
+        
+        # Accept numeric types (int, float)
+        try:
+            duration = float(duration)
+        except (ValueError, TypeError):
+            log("VideoParser: Invalid duration type %s for %s" % (type(duration), filename), xbmc.LOGWARNING)
+            return 0
+        
+        if duration < 0:
+            log("VideoParser: Negative duration %s detected for %s" % (duration, filename), xbmc.LOGWARNING)
+            return 0
+        
+        # Log warnings for unusual durations but preserve the value
+        if duration > 86400 * 7:  # > 7 days
+            log("VideoParser: Very long duration %s for %s - verify file is valid" % (duration, filename), xbmc.LOGWARNING)
+        
+        # Return duration as-is to preserve fractional seconds
+        return duration
+
+
+    def _getKodiDuration(self, filename, fileitem, jsonRPC):
+        """Try to get duration from Kodi's database as a fallback"""
+        try:
+            # Try getting runtime from the file item's metadata
+            runtime = fileitem.get('runtime', 0)
+            if runtime and runtime > 0:
+                validated = self._validateDuration(runtime, filename)
+                if validated > 0:
+                    log("VideoParser: Using Kodi runtime from fileitem: %s for %s" % (validated, filename))
+                    return validated
+            
+            # Try streamdetails
+            streamdetails = fileitem.get('streamdetails', {})
+            video_details = streamdetails.get('video', [])
+            if video_details and len(video_details) > 0:
+                stream_duration = video_details[0].get('duration', 0)
+                if stream_duration and stream_duration > 0:
+                    # streamdetails.video.duration is often in seconds but can be milliseconds
+                    # If duration seems unreasonably large (>30 days), it's likely in milliseconds
+                    if stream_duration > 86400 * 30:
+                        stream_duration = stream_duration / 1000  # Convert from ms
+                    validated = self._validateDuration(stream_duration, filename)
+                    if validated > 0:
+                        log("VideoParser: Using Kodi streamdetails duration: %s for %s" % (validated, filename))
+                        return validated
+            
+            # Try resume total
+            resume = fileitem.get('resume', {})
+            total = resume.get('total', 0)
+            if total and total > 0:
+                validated = self._validateDuration(total, filename)
+                if validated > 0:
+                    log("VideoParser: Using Kodi resume total: %s for %s" % (validated, filename))
+                    return validated
+                    
+        except Exception as e:
+            log("VideoParser: _getKodiDuration exception: %s" % e, xbmc.LOGWARNING)
+        
+        return 0
+
+
+    def getVideoLength(self, filename: str, fileitem: dict={}, jsonRPC=None) -> int:
         duration = jsonRPC._getDuration(filename)
         if duration == 0:
-            if not filename: log("VideoParser: getVideoLength, no filename.")
+            if not filename: 
+                log("VideoParser: getVideoLength, no filename.")
+                return 0
             elif filename.lower().startswith(tuple(self.VFSPaths)):
                 if filename.lower().startswith(tuple(self.YTPaths)):
                     duration = YTParser.YTParser().determineLength(filename)
@@ -83,27 +151,57 @@ class VideoParser:
             else:
                 ext = os.path.splitext(filename)[1].lower()
                 if not FileAccess.exists(filename):
-                    log("VideoParser: getVideoLength, Unable to find the file")
+                    log("VideoParser: getVideoLength, Unable to find the file: %s" % filename)
                     duration = 0
-                elif ext in self.AVIExts:
-                    duration = AVIParser.AVIParser().determineLength(filename)
-                elif ext in self.MP4Exts:
-                    duration = MP4Parser.MP4Parser().determineLength(filename)
-                elif ext in self.MKVExts:
-                    duration = MKVParser.MKVParser().determineLength(filename)
-                elif ext in self.FLVExts:
-                    duration = FLVParser.FLVParser().determineLength(filename)
-                elif ext in self.TSExts:
-                    duration = TSParser.TSParser().determineLength(filename)
-                elif ext in self.STRMExts:
-                    duration = NFOParser.NFOParser().determineLength(filename)
-                else: 
-                    duration = 0
+                else:
+                    # Try built-in parsers first
+                    try:
+                        if ext in self.AVIExts:
+                            duration = AVIParser.AVIParser().determineLength(filename)
+                        elif ext in self.MP4Exts:
+                            duration = MP4Parser.MP4Parser().determineLength(filename)
+                        elif ext in self.MKVExts:
+                            duration = MKVParser.MKVParser().determineLength(filename)
+                        elif ext in self.FLVExts:
+                            duration = FLVParser.FLVParser().determineLength(filename)
+                        elif ext in self.TSExts:
+                            duration = TSParser.TSParser().determineLength(filename)
+                        elif ext in self.STRMExts:
+                            duration = NFOParser.NFOParser().determineLength(filename)
+                        else: 
+                            duration = 0
+                    except Exception as e:
+                        log("VideoParser: Parser exception for %s: %s" % (filename, e), xbmc.LOGERROR)
+                        duration = 0
 
-                if duration == 0:
-                    for parser in EXTERNAL_PARSER:
-                        if MONITOR().waitForAbort(0.0001) or duration > 0: break
-                        duration = parser().determineLength(filename)
-            if duration > 0: duration = jsonRPC._setDuration(filename, fileitem, int(duration))
-        log("VideoParser: getVideoLength duration = %s, filename = %s"%(duration,filename))
+                    # Validate the parsed duration
+                    duration = self._validateDuration(duration, filename)
+
+                    # If parsing failed, try external parsers
+                    if duration == 0:
+                        log("VideoParser: Primary parser returned 0 for %s, trying external parsers" % filename)
+                        for parser in EXTERNAL_PARSER:
+                            if MONITOR().waitForAbort(0.0001) or duration > 0: 
+                                break
+                            try:
+                                duration = parser().determineLength(filename)
+                                duration = self._validateDuration(duration, filename)
+                            except Exception as e:
+                                log("VideoParser: External parser %s failed: %s" % (parser.__name__, e), xbmc.LOGWARNING)
+                                duration = 0
+                    
+                    # If all parsers failed, try Kodi's database as final fallback
+                    if duration == 0 and fileitem:
+                        log("VideoParser: All parsers failed for %s, trying Kodi database fallback" % filename)
+                        duration = self._getKodiDuration(filename, fileitem, jsonRPC)
+            
+            # Final validation before caching
+            duration = self._validateDuration(duration, filename)
+            
+            if duration > 0: 
+                # Preserve fractional durations - round to 3 decimal places for storage
+                cache_duration = round(duration, 3)
+                duration = jsonRPC._setDuration(filename, fileitem, cache_duration)
+        
+        log("VideoParser: getVideoLength duration = %s, filename = %s" % (duration, filename))
         return duration

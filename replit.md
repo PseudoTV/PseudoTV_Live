@@ -46,7 +46,7 @@ This workflow:
 
 ## Development Setup
 
-**Language:** Python 3.11
+**Language:** Python 3.12
 **Environment:** Replit NixOS
 
 The project is ready to use. Simply run the "Build Addons" workflow to regenerate all addon packages.
@@ -58,13 +58,49 @@ The project is ready to use. Simply run the "Build Addons" workflow to regenerat
 - `language_report.txt` - Language string analysis
 
 ## Recent Changes
-- December 8, 2024: Project imported and configured for Replit environment
-  - Python 3.11 installed
-  - Build workflow verified and working
-  - Generated addon packages successfully
+
+### December 8, 2024: MP4 Parsing and Post-Roll Fixes
+
+**Problem:** Videos with post-roll content were playing indefinitely due to MP4 duration parsing failures.
+
+**Root Cause:** When MP4 duration couldn't be parsed (due to moov atom placement, corrupt files, or unusual formats), duration was returned as 0, causing post-roll filler loops to never terminate.
+
+**Fixes Applied:**
+
+1. **MP4Parser.py** - Enhanced MP4 duration parsing:
+   - Added handling for moov atom at end of file (after mdat block)
+   - Added support for extended size boxes (64-bit lengths)
+   - Improved error handling with detailed logging
+   - Added loop protection with max iterations
+   - Returns float durations to preserve precision
+
+2. **videoparser.py** - Added fallback mechanisms:
+   - New `_getKodiDuration()` method to retrieve duration from Kodi database
+   - Fallback chain: primary parser -> external parsers -> Kodi database
+   - Duration validation that only rejects clearly invalid values (None, negative)
+   - Preserves fractional durations
+
+3. **fillers.py** - Improved post-roll handling:
+   - Added `_validateFillerDuration()` method for consistent validation
+   - Loop protection with `maxIterations=1000` to prevent infinite loops
+   - Detailed logging for debugging filler injection
+   - Removed hard duration caps that blocked legitimate content
+
+### December 8, 2024: Project Import
+- Python 3.12 installed
+- Build workflow verified and working
+- Generated addon packages successfully
 
 ## User Preferences
 None recorded yet.
 
 ## Project Architecture
 This is a Kodi addon repository project that uses Python scripts to automate the packaging and distribution of Kodi addons. The build system follows Kodi addon repository conventions.
+
+### Key Files Modified for MP4/Post-roll Fixes:
+- `plugin.video.pseudotv.live/resources/lib/parsers/MP4Parser.py` - Enhanced MP4 duration parsing
+- `plugin.video.pseudotv.live/resources/lib/videoparser.py` - Added fallback duration mechanism
+- `plugin.video.pseudotv.live/resources/lib/fillers.py` - Improved post-roll handling with safeguards
+
+## Known Issues
+- **10-bit video (HDR) playback**: Not a plugin issue - devices without hardware 10-bit video decoding support will show codec errors. This is a device/Kodi limitation, not PseudoTV Live.
