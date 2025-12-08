@@ -54,10 +54,25 @@ class MP4Parser:
             # Sanity check that this really is a movie file.
             if (boxes.get(b"ftyp",[-1])[0] == 0):
                 try:
-                    moov_boxes = self.find_boxes(self.File, boxes[b"moov"][0] + 8, boxes[b"moov"][1])
-                    trak_boxes = self.find_boxes(self.File, moov_boxes[b"trak"][0] + 8, moov_boxes[b"trak"][1])
-                    udta_boxes = self.find_boxes(self.File, moov_boxes[b"udta"][0] + 8, moov_boxes[b"udta"][1])
-                    dur = self.scan_mvhd(self.File, moov_boxes[b"mvhd"][0])
+                    # Check if moov box exists - it may be at the end of file after mdat
+                    if b"moov" not in boxes:
+                        # moov might be after a large mdat block - scan from end of mdat
+                        if b"mdat" in boxes:
+                            mdat_end = boxes[b"mdat"][1]
+                            log("MP4Parser: moov not found at start, scanning after mdat at offset %s" % mdat_end)
+                            additional_boxes = self.find_boxes(self.File, mdat_end)
+                            boxes.update(additional_boxes)
+                    
+                    if b"moov" in boxes:
+                        moov_boxes = self.find_boxes(self.File, boxes[b"moov"][0] + 8, boxes[b"moov"][1])
+                        if b"mvhd" in moov_boxes:
+                            dur = self.scan_mvhd(self.File, moov_boxes[b"mvhd"][0])
+                        else:
+                            log("MP4Parser: mvhd box not found in moov", xbmc.LOGERROR)
+                            dur = 0
+                    else:
+                        log("MP4Parser: moov box not found in file", xbmc.LOGERROR)
+                        dur = 0
                 except Exception as e:
                     log("MP4Parser, failed! %s\nboxes = %s"%(e,boxes), xbmc.LOGERROR)
                     dur = 0
