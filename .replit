@@ -1,4 +1,4 @@
-modules = ["python-3.11"]
+modules = ["python-3.12"]
 [agent]
 expertMode = true
 
@@ -21,9 +21,9 @@ args = "Build Addons"
 name = "Build Addons"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python addon_generator.py"
-
-[workflows.workflow.metadata]
-outputType = "console"
