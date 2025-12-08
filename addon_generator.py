@@ -43,8 +43,8 @@ else:
     def u(x):
         return x
         
-project_path = 'Z:/GitHub/PseudoTV_Live/plugin.video.pseudotv.live/resources/lib/'
-lang_file    = 'Z:/GitHub/PseudoTV_Live/plugin.video.pseudotv.live/resources/language/resource.language.en_gb/strings.po'
+project_path = os.path.join(GITPATH, 'plugin.video.pseudotv.live/resources/lib/')
+lang_file    = os.path.join(GITPATH, 'plugin.video.pseudotv.live/resources/language/resource.language.en_gb/strings.po')
 
 lang_ids = {}
 lang_ref = {}
