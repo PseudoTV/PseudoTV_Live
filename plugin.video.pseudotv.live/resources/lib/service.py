@@ -209,7 +209,15 @@ class Player(xbmc.Player):
     def _onChange(self):
         if self.sysInfo:
             if not self.sysInfo.get('isPlaylist',False):
-                self.log('_onChange, [%s], isPlaylist = %s, callback = %s'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo.get('isPlaylist',False),self.sysInfo.get('callback')))
+                currentFitem = self.sysInfo.get('fitem',{})
+                currentIsFiller = isFiller(currentFitem)
+                self.log('_onChange, [%s], isPlaylist = %s, isFiller = %s, callback = %s'%(self.sysInfo.get('citem',{}).get('id'),self.sysInfo.get('isPlaylist',False),currentIsFiller,self.sysInfo.get('callback')))
+                
+                if currentIsFiller:
+                    self.log('_onChange, filler detected - refreshing callback to current channel')
+                    self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
+                    self.log('_onChange, refreshed callback = %s'%(self.sysInfo.get('callback')))
+                
                 self.toggleBackground(self.enableOverlay)
                 timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(self.sysInfo.get('callback'))])
             self.sysInfo = self._runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), self.sysInfo, inherited=self)

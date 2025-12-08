@@ -59,6 +59,24 @@ The project is ready to use. Simply run the "Build Addons" workflow to regenerat
 
 ## Recent Changes
 
+### December 8, 2024: Channel Switching and Filler Handling Fixes
+
+**Problem 1:** When bumpers/adverts were playing during a channel switch, the callback would return to the old channel instead of continuing on the new channel.
+
+**Fix:** Enhanced `_onChange()` in service.py to detect filler content and refresh the callback URL to the current channel before executing playback continuation.
+
+**Problem 2:** Post-roll adverts could loop infinitely when no items fit the remaining runtime.
+
+**Fix:** Improved loop termination in fillers.py with:
+- Track skipped items by file path to prevent infinite re-adding
+- Reset tracking when an item is successfully added (runtime changed)
+- Break early when all remaining items are too long for available runtime
+- Added additional logging for debugging
+
+**Problem 3:** MP4 duration parsing could fail for files where mvhd box doesn't have valid data.
+
+**Fix:** Added fallback to parse trak/mdhd boxes for duration when mvhd fails in MP4Parser.py.
+
 ### December 8, 2024: MP4 Parsing and Post-Roll Fixes
 
 **Problem:** Videos with post-roll content were playing indefinitely due to MP4 duration parsing failures.
@@ -104,3 +122,16 @@ This is a Kodi addon repository project that uses Python scripts to automate the
 
 ## Known Issues
 - **10-bit video (HDR) playback**: Not a plugin issue - devices without hardware 10-bit video decoding support will show codec errors. This is a device/Kodi limitation, not PseudoTV Live.
+
+## Future Enhancements
+
+### Show-Specific Bumpers (Planned)
+**Feature Request:** Add support for "You're watching X" and "Up next: X" bumpers that are specific to the currently playing show.
+
+**Implementation Notes:**
+- Would require extending the bumper system to support template-based bumpers
+- Bumpers could be dynamically generated or selected based on show metadata
+- Integration with the existing `isFiller()` detection in service.py
+- Special handling needed for show-specific content in the callback mechanism
+
+**Status:** Documented for future implementation. The filler infrastructure (pre-rolls, post-rolls, bumpers) is already in place and could be extended to support this feature.

@@ -75,14 +75,18 @@ class MP4Parser:
                         if moov_info is not None:
                             moov_start, moov_end = moov_info
                             log("MP4Parser: moov box found at offset %s-%s" % (moov_start, moov_end))
-                            # Use separate dict for moov sub-boxes - these have absolute offsets
                             moov_boxes = self.find_boxes(self.File, moov_start + 8, moov_end)
                             if b"mvhd" in moov_boxes:
                                 dur = self.scan_mvhd(self.File, moov_boxes[b"mvhd"][0])
                                 log("MP4Parser: mvhd parsed, raw duration = %s" % dur)
-                            else:
-                                log("MP4Parser: mvhd box not found in moov. Available: %s" % list(moov_boxes.keys()), xbmc.LOGERROR)
-                                dur = 0
+                            
+                            if dur == 0 and b"trak" in moov_boxes:
+                                log("MP4Parser: mvhd failed, trying trak/mdhd fallback")
+                                dur = self.scan_trak_duration(self.File, moov_boxes[b"trak"][0], moov_boxes[b"trak"][1])
+                                log("MP4Parser: trak parsed, duration = %s" % dur)
+                            
+                            if dur == 0:
+                                log("MP4Parser: mvhd box not found or failed in moov. Available: %s" % list(moov_boxes.keys()), xbmc.LOGERROR)
                         else:
                             log("MP4Parser: moov box not found in file after full scan", xbmc.LOGERROR)
                             dur = 0
@@ -237,6 +241,78 @@ class MP4Parser:
             return duration
         except Exception as e:
             log("MP4Parser: scan_mvhd exception: %s" % e, xbmc.LOGERROR)
+            return 0
+
+
+    def scan_trak_duration(self, f, trak_start, trak_end):
+        """Fallback: Parse track header (mdhd) to get duration when mvhd fails"""
+        try:
+            log("MP4Parser: scan_trak_duration, scanning trak at %s-%s" % (trak_start, trak_end))
+            trak_boxes = self.find_boxes(f, trak_start + 8, trak_end)
+            
+            if b"mdia" in trak_boxes:
+                mdia_start, mdia_end = trak_boxes[b"mdia"]
+                mdia_boxes = self.find_boxes(f, mdia_start + 8, mdia_end)
+                
+                if b"mdhd" in mdia_boxes:
+                    mdhd_offset = mdia_boxes[b"mdhd"][0]
+                    f.seek(mdhd_offset, 0)
+                    f.seek(8, 1)  # skip box header
+                    
+                    version_data = f.readBytes(1)
+                    if not version_data:
+                        return 0
+                    version = int.from_bytes(version_data, "big")
+                    word_size = 8 if version == 1 else 4
+                    
+                    f.seek(3, 1)  # skip flags
+                    f.seek(word_size * 2, 1)  # skip creation/modification dates
+                    
+                    timescale_data = f.readBytes(4)
+                    if len(timescale_data) < 4:
+                        return 0
+                    timescale = int.from_bytes(timescale_data, "big")
+                    
+                    if timescale == 0:
+                        timescale = 1000  # common default for media timescale
+                    
+                    duration_data = f.readBytes(word_size)
+                    if len(duration_data) < word_size:
+                        return 0
+                    raw_duration = int.from_bytes(duration_data, "big")
+                    
+                    duration = raw_duration / timescale
+                    log("MP4Parser: scan_trak_duration, mdhd parsed: timescale=%s, raw_duration=%s, duration=%s" % (timescale, raw_duration, duration))
+                    return duration
+            
+            if b"tkhd" in trak_boxes:
+                tkhd_offset = trak_boxes[b"tkhd"][0]
+                f.seek(tkhd_offset, 0)
+                f.seek(8, 1)  # skip box header
+                
+                version_data = f.readBytes(1)
+                if not version_data:
+                    return 0
+                version = int.from_bytes(version_data, "big")
+                word_size = 8 if version == 1 else 4
+                
+                f.seek(3, 1)  # skip flags
+                f.seek(word_size * 2, 1)  # skip creation/modification dates
+                f.seek(4, 1)  # skip track_id
+                f.seek(4, 1)  # skip reserved
+                
+                duration_data = f.readBytes(word_size)
+                if len(duration_data) < word_size:
+                    return 0
+                raw_duration = int.from_bytes(duration_data, "big")
+                
+                duration = raw_duration / 1000.0
+                log("MP4Parser: scan_trak_duration, tkhd parsed: raw_duration=%s, duration=%s (assuming 1000 timescale)" % (raw_duration, duration))
+                return duration
+                
+            return 0
+        except Exception as e:
+            log("MP4Parser: scan_trak_duration exception: %s" % e, xbmc.LOGERROR)
             return 0
 
 

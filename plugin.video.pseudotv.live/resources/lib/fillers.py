@@ -206,38 +206,49 @@ class Fillers:
                 postCounter = 0
                 maxIterations = 1000  # Prevent infinite loops
                 iterations = 0
+                skippedItems = set()  # Track items that don't fit current runtime window
                 
                 if len(postFileList) > 0:
                     i = 0
+                    initialListSize = len(postFileList)
                     postFileList = randomShuffle(postFileList)
                     self.log('[%s] injectBCTs, post-roll current runtime %s, available runtime %s, available content %s'%(self.citem.get('id'),runtime, postFillRuntime,len(postFileList)))
                     
                     while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and len(postFileList) > 0 and iterations < maxIterations:
                         iterations += 1
                         if self.builder.service.monitor.waitForAbort(0.0001): break
-                        else:
-                            i += 1
-                            item = postFileList.pop(0)
-                            itemDuration = self._validateFillerDuration(item.get('duration'), item.get('file',''))
-                            
-                            if itemDuration == 0: 
-                                self.log('[%s] injectBCTs, skipping post-roll with invalid duration: %s'%(self.citem.get('id'), item.get('file','')))
-                                continue
-                            elif postAuto and postCounter >= len(postFileList):
-                                self.log('[%s] injectBCTs, unused post roll runtime %s %s/%s'%(self.citem.get('id'),postFillRuntime,postCounter,len(postFileList)))
+                        
+                        i += 1
+                        item = postFileList.pop(0)
+                        itemFile = item.get('file','')
+                        itemDuration = self._validateFillerDuration(item.get('duration'), itemFile)
+                        
+                        if itemDuration == 0: 
+                            self.log('[%s] injectBCTs, skipping post-roll with invalid duration: %s'%(self.citem.get('id'), itemFile))
+                            continue
+                        elif itemFile in skippedItems:
+                            self.log('[%s] injectBCTs, item already too long for remaining runtime, discarding: %s'%(self.citem.get('id'), itemFile))
+                            continue
+                        elif postFillRuntime >= itemDuration:
+                            postFillRuntime -= itemDuration
+                            postCounter = 0  # Reset counter when we successfully add an item
+                            skippedItems.clear()  # Clear skipped items since runtime changed, they might fit now
+                            self.log('[%s] injectBCTs, adding post-roll %s - %s'%(self.citem.get('id'),itemDuration,itemFile))
+                            try:
+                                progressPct = int(i*100//max(len(postFileList),1))
+                            except: progressPct = 0
+                            self.builder.updateProgress(self.builder.pCount,message='Filling Post-Rolls %s%%'%(progressPct),header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
+                            item.update({'title':'Post-Roll','episodetitle':item.get('label'),'genre':['Post-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file'),'duration':itemDuration})
+                            nfileList.append(self.builder.buildCells(self.citem,itemDuration,entries=1,info=item)[0])
+                        elif postFillRuntime < itemDuration:
+                            skippedItems.add(itemFile)
+                            postCounter += 1
+                            if postAuto and postCounter >= initialListSize:
+                                self.log('[%s] injectBCTs, all unique items checked - unused post roll runtime %s, postCounter=%s/%s'%(self.citem.get('id'),postFillRuntime,postCounter,initialListSize))
                                 break
-                            elif postFillRuntime >= itemDuration:
-                                postFillRuntime -= itemDuration
-                                self.log('[%s] injectBCTs, adding post-roll %s - %s'%(self.citem.get('id'),itemDuration,item.get('file')))
-                                try:
-                                    progressPct = int(i*100//max(len(postFileList),1))
-                                except: progressPct = 0
-                                self.builder.updateProgress(self.builder.pCount,message='Filling Post-Rolls %s%%'%(progressPct),header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                                item.update({'title':'Post-Roll','episodetitle':item.get('label'),'genre':['Post-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file'),'duration':itemDuration})
-                                nfileList.append(self.builder.buildCells(self.citem,itemDuration,entries=1,info=item)[0])
-                            elif postFillRuntime < itemDuration:
-                                postFileList.append(item)
-                                postCounter += 1
+                            if len(skippedItems) >= initialListSize:
+                                self.log('[%s] injectBCTs, all items too long for remaining runtime %s, stopping post-roll'%(self.citem.get('id'),postFillRuntime))
+                                break
                     
                     if iterations >= maxIterations:
                         self.log('[%s] injectBCTs, max iterations reached in post-roll loop - possible issue'%(self.citem.get('id')), xbmc.LOGWARNING)
