@@ -47,9 +47,9 @@ class Service:
         
         
 class Resources:
+    seasonal = Seasonal()
     
     def __init__(self, service=None):
-        self.log('__init__')    
         if service is None:
             service = Service()
             
@@ -58,22 +58,24 @@ class Resources:
         self.cache      = service.jsonRPC.cache
         self.baseURL    = service.jsonRPC.buildWebBase()
         self.remoteHost = PROPERTIES.getRemoteHost()
+        self.season     = self.seasonal.getHoliday()
         self.openRouter = OpenRouter(cache=self.cache)
+        self.log('__init__, queueLOGO = %s'%(len(SETTINGS.queuePool.get('queueLOGO',[]))))
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getLogo(self, citem: dict, fallback=LOGO, auto=False) -> str:
+    def getLogo(self, citem: dict, fallback=LOGO, noWait=False) -> str:
         seasonal = citem.get('name') == LANGUAGE(32002)
         logo = self.getLocalLogo(citem.get('name'))                            #local
-        if not logo and seasonal: logo = Seasonal().getHoliday().get('logo')   #seasonal
+        if not logo and seasonal: logo = self.season.get('logo')               #seasonal
         if not logo:              logo = self.getCachedLogo(citem)             #cache
-        if not logo and auto:     logo = self.getLogoResources(citem)          #resources
-        if not logo and auto:     logo = self.getTVShowLogo(citem.get('name')) #tvshow
+        if not logo and noWait:   logo = self.getLogoResources(citem)          #resources
+        if not logo and noWait:   logo = self.getTVShowLogo(citem.get('name')) #tvshow
         if not logo:              logo = (fallback or LOGO)                    #fallback
-        self.log('getLogo, name = %s, logo = %s, auto = %s'%(citem.get('name'), logo, auto))
+        self.log('getLogo, name = %s, logo = %s, noWait = %s'%(citem.get('name'), logo, noWait))
         return self.buildWebImage(cleanImage(logo))
         
 
@@ -91,7 +93,7 @@ class Resources:
     def queueLOGO(self, param):
         params = SETTINGS.queuePool.setdefault('queueLOGO',[])
         params.append(param)
-        SETTINGS.queuePool['queueLOGO'] = setDictLST(params)
+        SETTINGS.queuePool['queueLOGO'] = randomShuffle(setDictLST(params))
         self.log("queueLOGO, queuing = %s, param = %s"%(len(SETTINGS.queuePool['queueLOGO']),param))
             
             

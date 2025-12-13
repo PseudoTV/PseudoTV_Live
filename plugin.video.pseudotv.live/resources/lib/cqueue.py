@@ -67,7 +67,8 @@ class LPickle: #todo lazy pickle no pickles / or / don't store obj's in heaps.
                 if not heap: continue
                 print('get',self.deserialize(heap))
                 yield self.deserialize(heap)
-        return list(filter(None,__deserialize((SETTINGS.getCacheSetting('min_heap',json_data=True) or []))))
+        results = __deserialize((SETTINGS.getCacheSetting('min_heap',json_data=True) or []))
+        return [r for r in results if r is not None]
            
     def set(self, min_heap=[]):
         def __serialize(min_heap):

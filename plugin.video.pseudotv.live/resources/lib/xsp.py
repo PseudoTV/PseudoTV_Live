@@ -25,7 +25,6 @@ class XSP:
     library = Library()
     
     def __init__(self):
-        self.log('__init__')
         self.jsonRPC    = self.library.jsonRPC
         self.predefined = self.library.predefined
 

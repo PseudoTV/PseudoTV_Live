@@ -75,15 +75,15 @@ class Cache:
 
 
     def __init__(self, mem_cache=False, is_json=False, disable_cache=False):
-        self.log('__init__, mem_cache = %s, is_json = %s, disable_cache = %s'%(mem_cache,is_json,disable_cache))
         self.cache = _Cache(service=self.service)
         self.cache.enable_mem_cache = mem_cache
         self.cache.data_is_json     = is_json  
         self.disable_cache          = (disable_cache | REAL_SETTINGS.getSettingBool('Disable_Cache'))
+        self.log('__init__, mem_cache = %s, is_json = %s, disable_cache = %s'%(mem_cache,is_json,disable_cache))
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        log('%s [%s]: %s'%(self.__class__.__name__,{True:'MEM',False:'DB'}[self.cache.enable_mem_cache],msg),level)
 
 
     def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
@@ -125,16 +125,15 @@ class _Cache(object):
 
 
     def __init__(self, service=None):
-        self.log("Initialized, global_checksum = %s, enable_mem_cache = %s, data_is_json = %s"%(self.global_checksum,self.enable_mem_cache,self.data_is_json))
         if service is None: service = Service()
         self.service = service
         self.check_cleanup()
-
+        
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-        
-        
+
+
     def close(self):
         '''tell any tasks to stop immediately (as we can be called multithreaded) and cleanup objects'''
         self._exit = True
@@ -182,7 +181,7 @@ class _Cache(object):
 
     
     def clear(self, name, wait=15):
-        dbfile = xbmcvfs.translatePath("%s/cache.db" % SETTINGS_LOC)
+        dbfile = xbmcvfs.translatePath(CACHEFLEPATH)
         if xbmcvfs.exists(dbfile):
             try:
                 connection = sqlite3.connect(dbfile, timeout=wait, isolation_level=None)
@@ -201,9 +200,7 @@ class _Cache(object):
         cur_time = datetime.datetime.now()
         lastexecuted = xbmcgui.Window(10000).getProperty("%s.cache.lastexecuted"%(ADDON_ID))
         if not lastexecuted: xbmcgui.Window(10000).setProperty("'%s.cache.lastexecuted"%(ADDON_ID), repr(cur_time))
-        elif (eval(lastexecuted) + self.clean_interval) < cur_time:
-            # cleanup needed...
-            self._do_cleanup()
+        elif (eval(lastexecuted) + self.clean_interval) < cur_time: self._do_cleanup()
 
 
     def _get_mem_cache(self, endpoint, checksum, cur_time, json_data):
@@ -299,8 +296,8 @@ class _Cache(object):
 
     def _get_database(self):
         '''get reference to our sqllite _database - performs basic integrity check'''
-        if not xbmcvfs.exists(SETTINGS_LOC): xbmcvfs.mkdirs(SETTINGS_LOC)
-        dbfile = xbmcvfs.translatePath("%s/cache.db" % SETTINGS_LOC)
+        if not xbmcvfs.exists(USER_LOC): xbmcvfs.mkdirs(USER_LOC)
+        dbfile = xbmcvfs.translatePath(CACHEFLEPATH)
         try:
             connection = sqlite3.connect(dbfile, timeout=30, isolation_level=None)
             connection.execute('SELECT * FROM cache LIMIT 1')

@@ -41,7 +41,6 @@ from channels   import Channels
   
 class RulesList:
     def __init__(self, channels=None):
-        self.log('__init__')
         self.ruleList = [BaseRule(),
                          ShowChannelBug(),
                          ShowOnNext(),

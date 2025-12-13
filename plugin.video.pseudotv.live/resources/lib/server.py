@@ -238,7 +238,6 @@ class HTTP:
     pendingRestart = False
     
     def __init__(self, service=None):
-        self.log('__init__')
         self.service = service
         self.monitor = service.monitor
         

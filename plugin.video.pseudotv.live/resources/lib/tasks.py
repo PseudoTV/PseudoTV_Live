@@ -32,7 +32,6 @@ class Tasks():
     cacheDB = SETTINGS.cacheDB
     
     def __init__(self, service):
-        self.log('__init__')    
         self.service = service       
         self.jsonRPC = service.jsonRPC
         self.player  = service.player
@@ -120,8 +119,8 @@ class Tasks():
             self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 3600)
             self._chkEpochTimer('chkChannels' , self.chkChannels      , 3600)
             self._chkEpochTimer('chkFiles'    , self.chkFiles         , 600)
-            self._chkEpochTimer('chkJSONQUE'  , self.chkJSONQUE       , 600)
-            self._chkEpochTimer('chkLOGOQUE'  , self.chkLOGOQUE       , 600)
+            self._chkEpochTimer('chkJSONQUE'  , self.chkJSONQUE       , 300)
+            self._chkEpochTimer('chkLOGOQUE'  , self.chkLOGOQUE       , 300)
             
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh    , 1)
         
@@ -188,16 +187,14 @@ class Tasks():
         # library.importPrompt() #todo refactor feature
         if types is None: types = list(library.AUTOTUNE.keys())
         for idx, type in enumerate(types):
+            items = library.getLibrary(type)
             if self.service._interrupt(): 
                 self.log("chkLibrary, _interrupt")
-                self.service._que(self.chkLibrary,2)
-                break
-            elif self.jsonRPC.cache.get("%s.%s"%(library.__class__.__name__,library.AUTOTUNE[type]['func'].__name__)) is None:
-                self.log("chkLibrary, %s cache unavailable queuing build."%(type))
-                self.service._que(library.queLibrary,-1,type)
-            else:
-                self.log("chkLibrary, %s cache found queuing update."%(type))
-                self.service._que(library.updateLibrary,-1,type)
+                return self.service._que(self.chkLibrary,2)
+            elif items:
+                self.log("chkLibrary, %s library found! Setting items, queuing update."%(type))
+                library.setLibrary(type, items)
+            self.service._que(library.updateLibrary,-1,type)
         del library
         
         
@@ -241,7 +238,7 @@ class Tasks():
 
         if not PROPERTIES.isRunning('Tasks.chkLOGOQUE') and self.monitor.isIdle:
             with PROPERTIES.chkRunning('Tasks.chkLOGOQUE'):
-                params = randomShuffle(SETTINGS.queuePool.get('queueLOGO',[]))
+                params = SETTINGS.queuePool.get('queueLOGO',[])
                 if len(params) == 0: return
                 resources = Library(service=self.service).resources
                 poolit(__run)(list(range(QUEUE_CHUNK)))

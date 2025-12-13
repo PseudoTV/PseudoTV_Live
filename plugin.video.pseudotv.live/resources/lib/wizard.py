@@ -40,7 +40,6 @@ class Wizard(xbmcgui.WindowXMLDialog):
     lastActionTime = time.time()
     
     def __init__(self, *args, **kwargs):
-        self.log('__init__')    
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)    
         with BUILTIN.busy_dialog():
             self.tasks   = kwargs.get('inherited')

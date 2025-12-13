@@ -21,11 +21,6 @@
 from globals    import *
 
 class Predefined:
-    
-    def __init__(self):
-        self.log('__init__')    
-        
-        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 

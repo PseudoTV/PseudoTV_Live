@@ -50,7 +50,6 @@ class Library:
     pool       = ExecutorPool()
     
     def __init__(self, service=None):
-        self.log('__init__')    
         if service is None: service = Service()
         self.service   = service
         self.jsonRPC   = service.jsonRPC
@@ -99,7 +98,11 @@ class Library:
     def getLibrary(self, type=None):
         self.log('getLibrary, type = %s'%(type))
         if type is None: return self.libraryDATA.get('library',{})
-        return self.libraryDATA.get('library',{}).get(type,[])
+        response = self.jsonRPC.cache.get("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__))
+        if response is None:
+            self.service._que(self.updateLibrary,-1,type)
+            return self.libraryDATA.get('library',{}).get(type,[])
+        return response
 
         
     def enableByName(self, type, names=[]):
@@ -128,14 +131,8 @@ class Library:
         item['enabled'] = state
         return item
 
-
-    def queLibrary(self, type):
-        self.log('queLibrary, type = %s'%(type))
-        if self.pool.executor(self.AUTOTUNE[type]['func']):
-            self.service._que(self.updateLibrary,2,type)
-        
     
-    def updateLibrary(self, type, silent=True):
+    def updateLibrary(self, type, silent=True, complete=False):
         def __update(type, items, existing=[]):
             if not existing: existing = self.channels.getType(type)
             self.log('__update, type = %s, items = %s, existing = %s'%(type,len(items),len(existing)))
@@ -152,13 +149,12 @@ class Library:
                 entry = self.libraryTEMP.copy()
                 entry.update(item)
                 yield entry
-                
+              
         self.pMSG    = type
         self.pHeader = '%s, %s %s %s'%(ADDON_NAME,LANGUAGE(32022),type,LANGUAGE(32041))
-        if not silent: self.pDialog = DIALOG.progressBGDialog()
-        
-        complete = False
+        if not silent: self.pDialog = DIALOG.progressBGDialog
         response = self.jsonRPC.cache.get("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__))
+        if response is None: response = self.pool.executor(self.AUTOTUNE[type]['func'])
         if response:
             complete = self.setLibrary(type, list(__update(type,response,self.getEnabled(type))))
             self.log("updateLibrary, type = %s, items = %s, complete = %s"%(type,len(response),complete))
@@ -226,7 +222,7 @@ class Library:
         return studios
         
          
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getMixedGenres(self):
         MixedGenreList = []
         tvGenres    = self.getTVGenres()
@@ -237,7 +233,7 @@ class Library:
         return sorted(MixedGenreList,key=itemgetter('name'))
     
 
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=5))
     def getMixed(self):
         MixedList = []
         MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed"})}) #"Recently Added"

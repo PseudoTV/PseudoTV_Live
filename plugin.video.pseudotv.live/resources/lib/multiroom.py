@@ -88,7 +88,7 @@ class Multiroom:
 
 
     def getDiscovery(self):
-        servers = getJSON(SERVER_LOC).get('servers',{})
+        servers = getJSON(SERVERFLEPATH).get('servers',{})
         if isinstance(servers,bool): servers = {} #temp fix remove after a by next build
         self.log('getDiscovery, servers = %s'%(len(servers)))
         return servers
@@ -96,7 +96,7 @@ class Multiroom:
 
     def setDiscovery(self, servers={}):
         self.log('setDiscovery, servers = %s'%(len(servers)))
-        return setJSON(SERVER_LOC,{"servers":servers})
+        return setJSON(SERVERFLEPATH,{"servers":servers})
             
             
     def getEnabled(self, servers={}):

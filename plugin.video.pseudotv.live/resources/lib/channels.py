@@ -24,7 +24,6 @@ from globals    import *
 class Channels:
              
     def __init__(self):
-        self.log('__init__')
         self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP = self.channelDATA.get('channels',[{}]).pop(0)
         self.channelRULE = self.channelTEMP.pop('rules')

@@ -402,7 +402,6 @@ class Monitor(xbmc.Monitor):
     isRunning = False
 
     def __init__(self, service=None):
-        self.log('__init__')
         xbmc.Monitor.__init__(self)
         self.service    = service
         self.jsonRPC    = service.jsonRPC
@@ -480,7 +479,6 @@ class Service():
     
 
     def __init__(self):
-        self.log('__init__')        
         self.jsonRPC     = JSONRPC(service=self)
         self.monitor     = Monitor(service=self)
         self.player      = self.monitor.player

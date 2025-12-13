@@ -152,7 +152,6 @@ class Settings:
     
     
     def __init__(self):
-        self.log('__init__')
         self.properties = Properties()
         self.queuePool  = (self.getCacheSetting('queuePool',json_data=True) or {})
 
@@ -242,7 +241,7 @@ class Settings:
         
     def getEXTSetting(self, id, key):
         value = xbmcaddon.Addon(id).getSetting(key)
-        self.log('getEXTSetting, id = %s, key = %s, value = %s'%(id,key,'%s...'%((str(value)[:128]))))
+        self.log('getEXTSetting [%s], key = %s, value = %s'%(id,key,'%s...'%((str(value)[:128]))))
         return value
         
         
@@ -310,7 +309,7 @@ class Settings:
             
 
     def setEXTSetting(self, id, key, value):
-        self.log('setEXTSetting, id = %s, key = %s, value = %s'%(id,key,'%s...'%((str(value)[:128]))))
+        self.log('setEXTSetting [%s], key = %s, value = %s'%(id,key,'%s...'%((str(value)[:128]))))
         return xbmcaddon.Addon(id).setSetting(key,value)
 
 
@@ -327,17 +326,17 @@ class Settings:
             if not self.builtin.getInfoBool('AddonIsEnabled(%s)'%(id),'System') and enable:
                 if not force:
                     if not self.dialog.yesnoDialog(message=LANGUAGE(32156)%(id)):
-                        self.log('hasAddon, id = %s (Not Enabled!)'%(id))
+                        self.log('hasAddon [%s], (Not Enabled!)'%(id))
                         return
                 if self.builtin.executebuiltin('EnableAddon(%s)'%(id),wait=True): self.monitor.waitForAbort(1.0)
-            self.log('hasAddon, id = %s (Installed)'%(id))
+            self.log('hasAddon [%s], (Installed)'%(id))
             try:    return xbmcaddon.Addon(id)
             except: return False
         elif install:
             if self.builtin.executebuiltin('InstallAddon(%s)'%(id),wait=True):
                 return self.hasAddon(id, False, enable, force, notify)
         elif notify: self.dialog.notificationDialog(LANGUAGE(32034)%(id))
-        self.log('hasAddon, id = %s (Not Installed!)'%(id))
+        self.log('hasAddon [%s], (Not Installed!)'%(id))
         
         
     def getAddonDetails(self, id=ADDON_ID):
@@ -611,7 +610,7 @@ class Settings:
         
     def chkPluginSettings(self, nsettings, instance=ADDON_NAME, prompt=None):
         if prompt is None: prompt = not bool(self.getSettingBool('Enable_Kodi_Access'))
-        self.log('chkPluginSettings, id = %s, instance = %s, prompt = %s'%(PVR_CLIENT_ID,instance,prompt))
+        self.log('chkPluginSettings [%s], instance = %s, prompt = %s'%(PVR_CLIENT_ID,instance,prompt))
         addon = self.hasAddon(PVR_CLIENT_ID,enable=True,notify=True)
         if addon:
             message   = []
@@ -773,7 +772,7 @@ class Properties:
     #SET
     def setProperty(self, key, value):
         key = self._getKey(key)
-        self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%((str(value)[:128]))))
+        self.log('setProperty [%s], key = %s, value = %s'%(self.winID,key,'%s...'%((str(value)[:128]))))
         self.window.setProperty(key, str(value))
         return value
         
@@ -801,8 +800,9 @@ class Properties:
         
                 
     def setEXTProperty(self, key, value):
-        if not '.TRASH' in key: self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((str(value)[:128]))))
-        return xbmcgui.Window(10000).setProperty(key,str(value))
+        if not '.TRASH' in key: self.log('setEXTProperty [%s], key = %s, value = %s'%(10000,key,'%s...'%((str(value)[:128]))))
+        xbmcgui.Window(10000).setProperty(key,str(value))
+        return value
         
         
     def setEXTPropertyBool(self, key, value):
@@ -818,11 +818,11 @@ class Properties:
 
 
     def setRemoteHost(self, value):
-        return self.setProperty('%s.Remote_Host'%(ADDON_ID),value)
+        return self.setEXTProperty('%s.Remote_Host'%(ADDON_ID),value)
         
         
     def getRemoteHost(self):
-        remote = self.getProperty('%s.Remote_Host'%(ADDON_ID))
+        remote = self.getEXTProperty('%s.Remote_Host'%(ADDON_ID))
         if not remote: remote = self.setRemoteHost('%s:%s'%(Settings().getIP(),Settings().getSettingInt('TCP_PORT')))
         return remote
 
@@ -937,11 +937,11 @@ class Properties:
 
 
     def setLockActivity(self, state=True): # context state
-        return self.setEXTPropertyBool('lockActivity',state)
+        return self.setEXTPropertyBool('%s.lockActivity'%(ADDON_ID),state)
 
 
     def isLockActivity(self):# context state
-        return self.getEXTPropertyBool('lockActivity')
+        return self.getEXTPropertyBool('%s.lockActivity'%(ADDON_ID))
 
 
     @contextmanager
@@ -954,19 +954,19 @@ class Properties:
         
            
     def setInterruptActivity(self, state=True): # context state
-        return self.setEXTPropertyBool('interruptActivity',state)
+        return self.setEXTPropertyBool('%s.interruptActivity'%(ADDON_ID),state)
         
 
     def isInterruptActivity(self): # context state
-        return self.getEXTPropertyBool('interruptActivity')
+        return self.getEXTPropertyBool('%s.interruptActivity'%(ADDON_ID))
 
 
     def setPendingInterrupt(self, state=True): # interrupt state
-        return self.setEXTPropertyBool('pendingInterrupt',state)
+        return self.setEXTPropertyBool('%s.pendingInterrupt'%(ADDON_ID),state)
 
 
     def isPendingInterrupt(self):  # interrupt state
-        return self.getEXTPropertyBool('pendingInterrupt')
+        return self.getEXTPropertyBool('%s.pendingInterrupt'%(ADDON_ID))
 
         
     @contextmanager
@@ -979,19 +979,19 @@ class Properties:
 
 
     def setSuspendActivity(self, state=True): # context state
-        return self.setEXTPropertyBool('suspendActivity',state)
+        return self.setEXTPropertyBool('%s.suspendActivity'%(ADDON_ID),state)
 
 
     def isSuspendActivity(self): # context state
-        return self.getEXTPropertyBool('suspendActivity')
+        return self.getEXTPropertyBool('%s.suspendActivity'%(ADDON_ID))
         
         
     def setPendingSuspend(self, state=True): # suspend state
-        return self.setEXTPropertyBool('pendingSuspend',state)
+        return self.setEXTPropertyBool('%s.pendingSuspend'%(ADDON_ID),state)
         
         
     def isPendingSuspend(self): # suspend state
-        return self.getEXTPropertyBool('pendingSuspend')
+        return self.getEXTPropertyBool('%s.pendingSuspend'%(ADDON_ID))
 
 
     def recessActivity(self, msg, func, *args, **kwargs):
@@ -1028,10 +1028,10 @@ class Properties:
 
 
     def getFriendlyName(self):
-        friendly = self.getProperty('INSTANCE_NAME')
+        friendly = self.getEXTProperty('Instance_Name')
         if not friendly or friendly == LANGUAGE(32105):
             from jsonrpc import JSONRPC
-            friendly = self.setProperty('INSTANCE_NAME', JSONRPC().inputFriendlyName())
+            friendly = self.setEXTProperty('Instance_Name', JSONRPC().inputFriendlyName())
         return friendly
         
         
@@ -1141,10 +1141,6 @@ class ListItems:
 class Builtin:
     busy = None
     
-    def __init__(self):
-        self.log('__init__')
-        
-
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
                   
@@ -1321,7 +1317,6 @@ class Dialog:
     dialog     = xbmcgui.Dialog()
     
     def __init__(self):
-        self.log('__init__')
         self.settings.monitor   = self.monitor
         self.settings.property  = self.properties
         self.settings.builtin   = self.builtin
@@ -1646,7 +1641,7 @@ class Dialog:
     def _resourcePath(self, id=[], content='videos', ftype=''):
         if not id: id = self.browseResources(id, content, ftype, multi=False)
         path = 'special://home/addons/%s/resources/'%(id)
-        self.log("_resourcePath, id = %s, content = %s, ftype = %s, path = %s"%(id, content, ftype,path))
+        self.log("_resourcePath [%s], content = %s, ftype = %s, path = %s"%(id, content, ftype,path))
         return path
         
 

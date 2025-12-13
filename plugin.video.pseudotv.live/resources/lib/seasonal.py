@@ -36,10 +36,6 @@ MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMov
 class Seasonal:
     cache = SETTINGS.cacheDB
     
-    def __init__(self):
-        self.log('__init__')
-
-
     def log(self, msg, level=xbmc.LOGDEBUG):
         """
         Logs a message to the system log with the specified logging level.

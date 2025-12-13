@@ -29,7 +29,6 @@ class XMLTVS:
     pool = ExecutorPool()
         
     def __init__(self):   
-        self.log('__init__')
         self.XMLTVDATA = self._load()
 
 

@@ -62,7 +62,6 @@ M3U_MIN  = {"id"                : "",
             
 class M3U:
     def __init__(self):
-        self.log('__init__')
         data = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE))
         stations, recordings = self.cleanSelf(list(self._load()))
         self.M3UDATA = {'data':data,'stations':stations,'recordings':recordings}

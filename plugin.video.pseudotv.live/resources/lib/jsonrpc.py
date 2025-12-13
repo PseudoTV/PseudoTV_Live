@@ -41,7 +41,6 @@ class JSONRPC:
     videoParser = VideoParser()
         
     def __init__(self, service=None):
-        self.log('__init__')    
         if service is None: service = Service()
         self.service = service
 

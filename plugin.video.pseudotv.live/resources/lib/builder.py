@@ -52,7 +52,6 @@ class Builder:
     channels  = Channels()
     
     def __init__(self, service=None):
-        self.log('__init__')    
         if service is None: service = Service()
         self.service    = service        
         self.jsonRPC    = service.jsonRPC
@@ -124,7 +123,7 @@ class Builder:
                 self.log('[%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem))
                 continue
             elif not citem.get('id'): citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'],SETTINGS.getMYUUID()) #generate new channelid
-            citem['logo'] = self.resources.getLogo(citem,citem.get('logo',LOGO))
+            citem['logo'] = self.resources.getLogo(citem,citem.get('logo',LOGO),noWait=True)
             self.log('[%s] VERIFIED - channel %s: %s changed = %s'%(citem['id'],citem['number'],citem['name'],citem.get('changed',False)))
             yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self) #inject persistent citem changes here
 

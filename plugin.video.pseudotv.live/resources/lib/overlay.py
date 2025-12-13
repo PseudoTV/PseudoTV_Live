@@ -172,7 +172,6 @@ class Overlay():
     controlManager = dict()
     
     def __init__(self, *args, **kwargs):
-        self.log("__init__")
         self.player     = kwargs.get('player', None)
         self.service    = self.player.service
         self.jsonRPC    = self.player.jsonRPC

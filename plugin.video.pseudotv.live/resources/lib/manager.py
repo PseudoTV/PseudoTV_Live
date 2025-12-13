@@ -559,7 +559,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             else:     logo = citem.get('logo')
             if not logo or logo in [LOGO,COLOR_LOGO,ICON]:
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                    citem['logo'] = self.resource.getLogo(citem,auto=True)
+                    citem['logo'] = self.resource.getLogo(citem, noWait=True)
         self.log('setLogo, id = %s, logo = %s, force = %s'%(citem.get('id'),citem.get('logo'),force))
         return citem
        
@@ -797,7 +797,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         def __match():
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                return self.resource.getLogo(channelData, auto=True)
+                return self.resource.getLogo(channelData, noWait=True)
 
         if not channelData.get('name'): return DIALOG.notificationDialog(LANGUAGE(32065))
         chlogo = None

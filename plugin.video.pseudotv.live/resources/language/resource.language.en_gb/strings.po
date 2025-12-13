@@ -1683,15 +1683,15 @@ msgid "Error posting snapshot[CR]%s"
 msgstr ""
 
 msgctxt "#32191"
-msgid "Video SmartPlaylists [Recommended]"
+msgid "Video SmartPlaylist [Recommended]"
 msgstr ""
 
 msgctxt "#32192"
-msgid "Music SmartPlaylists [Recommended]"
+msgid "Music SmartPlaylist"
 msgstr ""
 
 msgctxt "#32193"
-msgid "Mixed SmartPlaylists [Recommended]"
+msgid "Mixed SmartPlaylist"
 msgstr ""
 
 msgctxt "#32194"

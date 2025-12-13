@@ -62,14 +62,14 @@ def killit(method):
     
 def poolit(method):
     @wraps(method)
-    def wrapper(items=[], wait=90, *args, **kwargs):
+    def wrapper(items=[], wait=TIMEOUT_SECONDS, *args, **kwargs):
         class pooler(Thread):
             def __init__(self):
                 Thread.__init__(self)
                 self.result = None
                 self.error  = None
             def run(self):
-                try:    self.result = ExecutorPool().executors(method, items, *args, **kwargs)
+                try:    self.result = ExecutorPool().executors(method, items, wait, *args, **kwargs)
                 except: self.error  = traceback.format_exc()
         thread = pooler()
         thread.name   = '%s.%s'%('poolit',method.__qualname__.replace('.',': '))
@@ -136,7 +136,7 @@ class ExecutorPool:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def executor(self, func, timeout=None, *args, **kwargs):
+    def executor(self, func, timeout=TIMEOUT_SECONDS, *args, **kwargs):
         self.log("executor, func = %s, timeout = %s"%(func.__name__,timeout))
         with self.pool(THREAD_COUNT) as executor:
             try: return executor.submit(func, *args, **kwargs).result(timeout)
@@ -151,10 +151,12 @@ class ExecutorPool:
         except Exception as e: self.log("execute, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
 
-    def executors(self, func, items=[], *args, **kwargs):
-        self.log("executors, func = %s, items = %s"%(func.__name__,len(items)))
+    def executors(self, func, items=[], timeout=TIMEOUT_SECONDS, *args, **kwargs):
+        self.log("executors, func = %s, items = %s, timeout = %s"%(func.__name__,len(items),timeout))
         with self.pool(THREAD_COUNT) as executor:
-            try: return list(filter(lambda item: item is not None, executor.map(wrapped_partial(func, *args, **kwargs), items)))
+            try: 
+                results = executor.map(wrapped_partial(func, *args, **kwargs), items, timeout=timeout)
+                return [r for r in results if r is not None]
             except Exception as e:
                 self.log("executors, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
                 return self.generator(func, items, *args, **kwargs)
@@ -162,5 +164,7 @@ class ExecutorPool:
 
     def generator(self, func, items=[], *args, **kwargs):
         self.log("generator, items = %s"%(len(items)))
-        try: return list(filter(lambda item: item is not None, [wrapped_partial(func, *args, **kwargs)(i) for i in items]))
+        try:
+            results = [wrapped_partial(func, *args, **kwargs)(i) for i in items]
+            return [r for r in results if r is not None]
         except Exception as e: self.log("generator, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
