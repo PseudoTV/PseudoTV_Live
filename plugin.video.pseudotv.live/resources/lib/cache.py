@@ -323,7 +323,7 @@ class _Cache(object):
         result  = None
         # always use new db object because we need to be sure that data is available for other cache instances
         with self._get_database() as _database:
-            while not retries == 10 and not self.service.monitor.abortRequested():
+            while not retries == LOCK_MAX_FILE_TIMEOUT and not self.service.monitor.abortRequested():
                 if self._exit: return None
                 try:
                     if isinstance(data, list): result = _database.executemany(query, data)
@@ -334,7 +334,7 @@ class _Cache(object):
                     if "_database is locked" in e:
                         self.log("retrying DB commit...")
                         retries += 1
-                        self.service.monitor.waitForAbort(0.5)
+                        self.service.monitor.waitForAbort(LOCK_MAX_FILE_DELAY)
                     else: break
                 except Exception as e: break
                 self.log("_database ERROR ! -- %s" % str(e), xbmc.LOGWARNING)

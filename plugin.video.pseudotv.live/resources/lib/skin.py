@@ -25,7 +25,7 @@
     # jsonRPC = JSONRPC()
     # def _interrupt(self) -> bool:
         # return PROPERTIES.isPendingInterrupt()
-    # def _suspend(self, wait=SUSPEND_TIMER) -> bool:
+    # def _suspend(self, wait=1.0) -> bool:
         # self._wait(wait)
         # return PROPERTIES.isPendingSuspend()
     # def _wait(self, wait=1.0):

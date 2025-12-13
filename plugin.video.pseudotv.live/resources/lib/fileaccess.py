@@ -21,9 +21,8 @@
 from globals    import *
 
 #constants 
-DEFAULT_ENCODING           = "utf-8"
-FILE_LOCK_NAME             = "pseudotv"
-FILE_LOCK_MAX_FILE_TIMEOUT = 10
+DEFAULT_ENCODING = "utf-8"
+FILE_LOCK_NAME   = "pseudotv"
 
 class FileAccess:
     @staticmethod
@@ -316,7 +315,7 @@ class FileLock(object):
         compatible as it doesn't rely on msvcrt or fcntl for the locking.
     """
  
-    def __init__(self, file_name=FILE_LOCK_NAME, timeout=FILE_LOCK_MAX_FILE_TIMEOUT, delay: float=0.5):
+    def __init__(self, file_name=FILE_LOCK_NAME, timeout=LOCK_MAX_FILE_TIMEOUT, delay: float=LOCK_MAX_FILE_DELAY):
         """ Prepare the file locker. Specify the file to lock and optionally
             the maximum timeout and the delay between each attempt to lock.
         """

@@ -232,9 +232,9 @@ class Tasks():
                 param = params.pop(0)
                 self.log("chkLOGOQUE, remaining queue = %s\n%s"%(len(params),param))
                 if param.get('name','').startswith('getLogoResources'):
-                    self.service._que(resources.getLogoResources, 5+i, *param.get('args',()), **param.get('kwargs',{}))
+                    self.service._que(resources.getLogoResources, 5+idx, *param.get('args',()), **param.get('kwargs',{}))
                 elif param.get('name','').startswith('getTVShowLogo'):
-                    self.service._que(resources.getTVShowLogo, 5+i, *param.get('args',()), **param.get('kwargs',{}))
+                    self.service._que(resources.getTVShowLogo, 5+idx, *param.get('args',()), **param.get('kwargs',{}))
 
         if not PROPERTIES.isRunning('Tasks.chkLOGOQUE') and self.monitor.isIdle:
             with PROPERTIES.chkRunning('Tasks.chkLOGOQUE'):
@@ -252,7 +252,7 @@ class Tasks():
             if len(params) > 0:
                 param = params.pop(0)
                 self.log("chkJSONQUE, remaining queue = %s\n%s"%(len(params),param))
-                self.service._que(self.jsonRPC.sendJSON,5+i, param)
+                self.service._que(self.jsonRPC.sendJSON,5+idx, param)
 
         if not PROPERTIES.isRunning('Tasks.chkJSONQUE') and self.monitor.isIdle:
             with PROPERTIES.chkRunning('Tasks.chkJSONQUE'):
