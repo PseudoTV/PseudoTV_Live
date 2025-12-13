@@ -201,13 +201,11 @@ class Utilities:
         
         
         # SETTINGS.setAutotuned(False)
-        # PROPERTIES.setEpochTimer('chkChannels')#trigger channel building
-        # PROPERTIES.setPropTimer('chkChannels')#trigger channel building
          
     @staticmethod
     def _runUpdate(full=False):
         log('Utilities: _runUpdate, full = %s'%(full))
-        PROPERTIES.setPropTimer('chkChannels')
+        # PROPERTIES.setEpochTimer('chkChannels')#trigger channel building
               
     @staticmethod
     def buildMenu(select=None):

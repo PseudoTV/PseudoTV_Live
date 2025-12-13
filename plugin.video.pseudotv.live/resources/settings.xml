@@ -149,7 +149,219 @@
                     </control>
                 </setting>
             </group>
-        </category>
+		</category>
+		<!-- <category id="autotune" label="30038" help="33038"> -->
+            <!-- <group id="1" label="30038"> -->
+                <!-- <setting id="Select_Playlists" type="string" label="30104" help="33002"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Playlists),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Playlists)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_TV_Networks" type="string" label="32004" help="33004"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Networks),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, TV_Networks)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_TV_Shows" type="string" label="32005" help="33005"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Shows),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, TV_Shows)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_TV_Genres" type="string" label="32006" help="33006"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Genres),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, TV_Genres)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_Movie_Genres" type="string" label="32007" help="33007"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Genres),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Movie_Genres)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_Movie_Studios" type="string" label="32008" help="33008"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Studios),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Movie_Studios)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_Mixed_Genres" type="string" label="32009" help="33009"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed_Genres),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Mixed_Genres)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_Music_Genres" type="string" label="32011" help="33011"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Music_Genres)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_Mixed" type="string" label="32010" help="33010"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Mixed)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_Recommended" type="string" label="32012" help="33003"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Recommended),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Recommended)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Select_Services" type="string" label="32013" help="30246"> -->
+                    <!-- <level>0</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Services),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Services)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Clear_BlackList" type="string" label="30039" help="33039" parent="Select_Services"> -->
+                    <!-- <level>2</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="visible"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.BlackList),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Clear_BlackList)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+                <!-- <setting id="Clear_Autotune" type="action" label="30040" help="33040"> -->
+                    <!-- <level>2</level> -->
+                    <!-- <default/> -->
+                    <!-- <constraints> -->
+                        <!-- <allowempty>true</allowempty> -->
+                    <!-- </constraints> -->
+                    <!-- <dependencies> -->
+                        <!-- <dependency type="enable"> -->
+                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Predefined),true)</condition> -->
+                        <!-- </dependency> -->
+                    <!-- </dependencies> -->
+                    <!-- <control type="button" format="action"> -->
+                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Clear_Autotune)</data> -->
+                        <!-- <close>true</close> -->
+                    <!-- </control> -->
+                <!-- </setting> -->
+            <!-- </group> -->
+        <!-- </category> -->
         <category id="options" label="30010" help="">
             <group id="1" label="30011">
                 <setting id="User_Folder" type="path" label="30012" help="33012">
@@ -1140,7 +1352,7 @@
                 </setting>
                 <setting id="Enable_Executors" type="boolean" label="30198" help="33198">
                     <level>3</level>
-                    <default>false</default>
+                    <default>true</default>
                     <control type="toggle"/>
                 </setting>
                 <setting id="Playback_Timeout" type="integer" label="30222" help="33222">

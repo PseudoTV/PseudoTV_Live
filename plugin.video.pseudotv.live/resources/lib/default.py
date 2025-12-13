@@ -67,13 +67,16 @@ def _run(sysARG, fitem: dict={}, nitem: dict={}):
                 if   params['isPlaylist']:      threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
                 elif params['vid'] :            threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
             elif params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
-            elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
+            elif params['vid']:                 threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
             else:                               threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
-        elif mode == 'vod':                     threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
-        elif mode == 'dvr':                     threadit(Plugin(sysARG, sysInfo=params).playDVR)(params["title"],params["vid"])
-        elif mode == 'resume':                  threadit(Plugin(sysARG, sysInfo=params).playPaused)(params["name"],params["chid"])
-        elif mode == 'broadcast':               threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
-        elif mode == 'radio':                   threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
+        elif params['vid']:
+            if   mode == 'vod':                 threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
+            elif mode == 'dvr':                 threadit(Plugin(sysARG, sysInfo=params).playDVR)(params["title"],params["vid"])
+            elif params['chid']:
+                if   mode == 'broadcast':       threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
+                elif mode == 'radio':           threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
+        elif mode == 'resume' and params['chid']: 
+                                                threadit(Plugin(sysARG, sysInfo=params).playPaused)(params["name"],params["chid"])
         elif mode == 'guide'                and SETTINGS.hasAddon(PVR_CLIENT_ID,install=True,enable=True): return SETTINGS.openGuide()
         elif mode == 'settings'             and SETTINGS.hasAddon(PVR_CLIENT_ID,install=True,enable=True): return SETTINGS.openSettings()
         else:                                   DIALOG.notificationDialog(LANGUAGE(32000))

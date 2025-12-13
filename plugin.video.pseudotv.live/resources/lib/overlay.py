@@ -133,7 +133,7 @@ class Restart(xbmcgui.WindowXMLDialog):
                 else:
                     prog = int((abs(wait-tot)*100)//tot)
                     if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
-                    wait -= 1
+                    wait -= 0.5
             
             control.setAnimations([('Conditional', 'effect=fade start=%s end=0 time=240 delay=0.240 condition=True'%(prog))])
             control.setVisible(False)
@@ -363,7 +363,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                     while not self.monitor.abortRequested() and not self.closing:
                         self.log('onInit, showing (%s)'%(show))
                         if self.service._shutdown(0.5) or not self.player.isPlayingPseudoTV() or show < 1: break
-                        else: show -= 1
+                        else: show -= 0.5
                         
                     self.onNext_Text.setVisible(False)
                     self.onNext_Artwork.setVisible(False)
@@ -375,7 +375,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             while not self.monitor.abortRequested() and not self.closing:
                 self.log('onInit, waiting (%s)'%(wait))
                 if self.service._shutdown(0.5) or not self.player.isPlayingPseudoTV() or wait < 1: break
-                else: wait -= 1
+                else: wait -= 0.5
                         
         except Exception as e: self.log("onInit, failed! %s"%(e), xbmc.LOGERROR)
         self.log("onInit, closing")
@@ -417,7 +417,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             data.update(next_episode)
 
         except: pass
-        if data: timerit(self.jsonRPC.notifyAll)(0.5,['upnext_data', binascii.hexlify(json.dumps(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)])
+        if data: timerit(self.jsonRPC.notifyAll)(0.5,['upnext_data', binascii.hexlify(dumpJSON(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)])
         
         
     def onAction(self, act):

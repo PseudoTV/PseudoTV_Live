@@ -34,6 +34,9 @@ COMPRESSION_THRESHOLD = 1024  # 1 KB
 CHUNK_SIZE            = 4096 #4 KB
 
 class Discovery:
+    isRunning      = False
+    pendingRestart = False
+    
     class MyListener(object):
         def __init__(self, multiroom=None):
             self.zServers  = dict()
@@ -58,27 +61,42 @@ class Discovery:
             
     def __init__(self, service=None, multiroom=None):
         self.service   = service
+        self.monitor   = service.monitor
         self.multiroom = multiroom
-        self._run()
                    
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    @executeit
-    def _run(self):
-        if not PROPERTIES.isRunning('Discovery._run'):
-            with PROPERTIES.chkRunning('Discovery._run'):
-                zconf = Zeroconf()
-                zcons = self.multiroom._getStatus()
-                self.log("_run, Multicast DNS Service waiting for (%s)"%(ZEROCONF_SERVICE))
-                SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
-                ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
-                self.service._wait(DISCOVER_INTERVAL)
-                SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
-                self.log("_run, Multicast DNS Service stopping search for (%s)"%(ZEROCONF_SERVICE))
-                zconf.close()
+    def _restart(self):
+        self.pendingRestart = True
+
+
+    def _start(self):
+        def __stop(restart=False):
+            self.isRunning = False
+            self.log('__stop, Multicast DNS Service shutdown, restart = %s'%(restart), xbmc.LOGINFO)
+            if restart:
+                self.pendingRestart = False
+                self.service._que(self.service.tasks.chkDiscovery,1)
+            
+        while not self.monitor.abortRequested():
+            if not self.isRunning:
+                self.isRunning = True
+                try: 
+                    zconf = Zeroconf()
+                    zcons = self.multiroom._getStatus()
+                    self.log("_start, Multicast DNS Service waiting for (%s)"%(ZEROCONF_SERVICE))
+                    SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
+                    ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
+                    self.service._wait(DISCOVER_INTERVAL)
+                    SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
+                    self.log("_start, Multicast DNS Service stopping search for (%s)"%(ZEROCONF_SERVICE))
+                    zconf.close()
+                except Exception as e: self.log("_start, Multicast DNS Service startup failed! %s"%(e), xbmc.LOGERROR)
+            elif self.service._shutdown(300): break
+        return __stop(self.pendingRestart)
                         
             
 class MyHandler(BaseHTTPRequestHandler):
@@ -242,7 +260,7 @@ class HTTP:
 
         tmpPort = port
         while not self.monitor.abortRequested() and not __isAvailable(host, tmpPort):
-            if self.service._shutdown(CPU_CYCLE): break
+            if self.service._shutdown(0.5): break
             else:
                 self.log(f"_chkPort {tmpPort} is in use. Trying next port.")
                 tmpPort += 1
@@ -250,7 +268,7 @@ class HTTP:
         self.log("_chkPort, port available = %s"%(tmpPort))
         return tmpPort
         
-        
+
     def _restart(self):
         self.pendingRestart = True
        
@@ -273,7 +291,7 @@ class HTTP:
             try: self._server.shutdown()
             except: pass
             self.isRunning = False
-            self.log('__stop, shutting server down, restart = %s, isAlive = %s'%(restart,__cancel()), xbmc.LOGINFO)
+            self.log('__stop, http server shutdown, restart = %s, isAlive = %s'%(restart,__cancel()), xbmc.LOGINFO)
             if restart:
                 self.pendingRestart = False
                 self.service._que(self.service.tasks.chkHTTP,1)
@@ -287,7 +305,7 @@ class HTTP:
                     host   = SETTINGS.getIP()
                     port   = self._chkPort(host, SETTINGS.getSettingInt('TCP_PORT'))
                     server = PROPERTIES.setRemoteHost('%s:%s'%(host,port))
-                    self.log("_start, starting server @ %s"%(server),xbmc.LOGINFO)
+                    self.log("_start, http server @ %s"%(server),xbmc.LOGINFO)
                     SETTINGS.setSetting('Remote_NAME' ,PROPERTIES.getFriendlyName())
                     SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
                     SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
@@ -297,14 +315,14 @@ class HTTP:
                     self._server = ThreadedHTTPServer((host, port), partial(MyHandler,service=self.service))
                     try:
                         self._server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                        self.log("_start, set SO_REUSEADDR on server socket", xbmc.LOGDEBUG)
+                        self.log("_start, http server set SO_REUSEADDR on server socket", xbmc.LOGDEBUG)
                     except Exception as e:
-                        self.log("_start, failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
+                        self.log("_start, http server failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
 
                     self.httpd = Thread(target=self._server.serve_forever)
                     self.httpd.daemon=True
                     self.httpd.start()
                     __update(silent)
-                except Exception as e: self.log("_start, startup failed! %s"%(e), xbmc.LOGERROR)
+                except Exception as e: self.log("_start, http server startup failed! %s"%(e), xbmc.LOGERROR)
             elif self.service._shutdown(FIFTEEN): break
         return __stop(self.pendingRestart)

@@ -34,17 +34,16 @@ class Service:
     monitor = MONITOR()
     jsonRPC = JSONRPC()
     def _shutdown(self, wait=1.0) -> bool:
-        self._wait(wait)
-        return PROPERTIES.isPendingShutdown()
+        return (self._wait(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
         return PROPERTIES.isPendingInterrupt()
-    def _suspend(self, wait=SUSPEND_TIMER) -> bool:
-        self._wait(wait)
-        return PROPERTIES.isPendingSuspend()
+    def _suspend(self, wait=1.0) -> bool:
+        return (self._wait(wait) | PROPERTIES.isPendingSuspend())
     def _wait(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): break
+            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
             else: wait -= CPU_CYCLE
+        return False
 
 class Builder:
     xsp       = XSP()
@@ -196,7 +195,7 @@ class Builder:
                             self.pErrors = [LANGUAGE(32160)]
                             self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                             break
-                        elif self.service._suspend():
+                        elif self.service._suspend(SUSPEND_TIMER):
                             self.log("[%s] build, _suspend"%(citem['id']))
                             channels.insert(idx,citem)
                             self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
@@ -347,11 +346,6 @@ class Builder:
                     self.log("[%s] buildChannel, _interrupt"%(citem['id']))
                     self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                     return []
-                elif self.service._suspend():
-                    self.log("[%s] buildChannel, _suspend"%(citem['id']))
-                    paths.insert(idx,path)
-                    self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
-                    continue
                 else:
                     if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
                     fileList = self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, path, inherited=self), 'video', self.limit, self.sort, self.limits)
@@ -408,10 +402,6 @@ class Builder:
                 self.log("[%s] buildFileList, _interrupt"%(citem['id']))
                 self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                 return []
-            elif self.service._suspend():
-                self.log("[%s] buildFileList, _suspend"%(citem['id']))
-                self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
-                continue
             elif len(dirList) > 0:
                 dir   = dirList.pop(0)
                 npath = dir.get('file')
@@ -460,11 +450,6 @@ class Builder:
                     self.jsonRPC.autoPagination(citem['id'], path, query, limits) #rollback pagination limits
                     self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=ADDON_NAME)
                     return [], [], nlimits, errors
-                elif self.service._suspend():
-                    self.log("[%s] buildList, _suspend"%(citem['id']))
-                    items.insert(idx,item)
-                    self.updateProgress(self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=ADDON_NAME)
-                    continue
                 elif not item.get('type'): item['type'] = query.get('key','files')
                 elif fileType == 'directory':
                     dirList.append(item)

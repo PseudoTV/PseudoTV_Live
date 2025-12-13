@@ -30,8 +30,9 @@
         # return PROPERTIES.isPendingSuspend()
     # def _wait(self, wait=1.0):
         # while not self.monitor.abortRequested() and wait > 0:
-            # if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): break
+            # if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
             # else: wait -= CPU_CYCLE
+            # return False
         
 # class Skin:
     # def __init__(self, service=None):

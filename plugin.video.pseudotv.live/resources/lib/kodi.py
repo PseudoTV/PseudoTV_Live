@@ -22,6 +22,7 @@ import json, uuid, zlib, base64
 from globals     import *
 from six.moves   import urllib 
 from fileaccess  import FileAccess
+from pool        import ExecutorPool
 from json2html   import Json2Html
 from collections import Counter, OrderedDict
 from contextlib  import contextmanager, closing
@@ -142,14 +143,18 @@ def getIDbyPath(url):
     except: pass
     return url
 
+
 class Settings:
+    queuePool  = {}
     monitor    = MONITOR()
     cacheDB    = Cache()
     cache      = Cache(mem_cache=True)
     
+    
     def __init__(self):
         self.log('__init__')
         self.properties = Properties()
+        self.queuePool  = (self.getCacheSetting('queuePool',json_data=True) or {})
 
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -720,9 +725,7 @@ class Properties:
     #GET
     def getProperty(self, key):
         key   = self._getKey(key)
-        value = self.window.getProperty(key)
-        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%(str(value)[:128])))
-        return value
+        return self.window.getProperty(key)
         
         
     def getPropertyBool(self, key):
@@ -746,9 +749,7 @@ class Properties:
         
         
     def getEXTProperty(self, key):
-        value = xbmcgui.Window(10000).getProperty(key)
-        if not '.TRASH' in key: self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%(str(value)[:128])))
-        return value
+        return xbmcgui.Window(10000).getProperty(key)
         
         
     def getEXTPropertyBool(self, key):
@@ -762,13 +763,10 @@ class Properties:
         
         
     def clrProperty(self, key):
-        key = self._getKey(key)
-        self.log('clrProperty, id = %s, key = %s'%(self.winID,key))
-        return self.window.clearProperty(key)
+        return self.window.clearProperty(self._getKey(key))
 
 
     def clrEXTProperty(self, key):
-        self.log('clrEXTProperty, id = %s, key = %s'%(10000,key))
         return xbmcgui.Window(10000).clearProperty(key)
         
         
@@ -804,15 +802,11 @@ class Properties:
                 
     def setEXTProperty(self, key, value):
         if not '.TRASH' in key: self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((str(value)[:128]))))
-        if value: xbmcgui.Window(10000).setProperty(key,str(value))
-        else:     self.clrEXTProperty(key)
-        return value
+        return xbmcgui.Window(10000).setProperty(key,str(value))
         
         
     def setEXTPropertyBool(self, key, value):
-        if value: self.setEXTProperty(key,str(value).lower())
-        else:     self.clrEXTProperty(key)
-        return str(value).lower() == 'true'
+        return str(self.setEXTProperty(key,str(value).lower())).lower() == 'true'
 
 
     def setEpochTimer(self, key, time=0): #_chkEpochTimer trigger - Time = 0 == Run
@@ -958,7 +952,7 @@ class Properties:
             finally: self.setInterruptActivity(False)
         else: yield
         
-        
+           
     def setInterruptActivity(self, state=True): # context state
         return self.setEXTPropertyBool('interruptActivity',state)
         
@@ -1000,25 +994,24 @@ class Properties:
         return self.getEXTPropertyBool('pendingSuspend')
 
 
-    def recessActivity(self, func, *args, **kwargs):
-        results     = []
-        isSuspend   = self.isSuspendActivity()
-        isInterrupt = self.isInterruptActivity()
+    def recessActivity(self, msg, func, *args, **kwargs):
         while not self.monitor.abortRequested():
-            if   self.monitor.waitForAbort(0.1): break
-            elif self.isSuspendActivity():   self.setSuspendActivity(False)
-            elif self.isInterruptActivity(): self.setInterruptActivity(False)
-            else:
+            isInterrupt = self.isInterruptActivity()
+            isSuspend   = self.isSuspendActivity()
+            isBuilding  = self.isRunning('Builder.build')
+            if msg: Dialog().notificationDialog(msg)
+            self.log('recessActivity, isInterrupt = %s, isSuspend = %s, isBuilding = %s'%(isInterrupt,isSuspend,isBuilding))
+            if not isInterrupt and (isSuspend or isBuilding):
+                if   isSuspend:  self.setSuspendActivity(False)
+                elif isBuilding: self.setInterruptActivity(True)
+                if self.monitor.waitForAbort(SUSPEND_TIMER): return []
+            elif isInterrupt:
+                self.setInterruptActivity(False)
+                if self.monitor.waitForAbort(SUSPEND_TIMER): return []
+            elif not isInterrupt and not any(set([isSuspend, isBuilding])):
                 with self.lockActivity():
-                    try:
-                        results = func(*args, **kwargs)
-                        if results: break
-                    except Exception as e:
-                        self.log("recessActivity, failed! %s"%(e), xbmc.LOGERROR)
-                        break
-        if isSuspend:   self.setSuspendActivity(True)
-        if isInterrupt: self.setInterruptActivity(True)
-        return results
+                    try: return ExecutorPool().executor(func, None, *args, **kwargs)
+                    except Exception as e: return []
 
 
     @contextmanager
@@ -1561,7 +1554,7 @@ class Dialog:
             if   int(percent) == 100 or control.isFinished(): return control.close()
             elif hasattr(control,'update'): control.update(int(percent), header, message)
         return control
-        
+
 
     def infoDialog(self, listitem):
         self.dialog.info(listitem)
@@ -1631,6 +1624,10 @@ class Dialog:
         ## - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
         return self.dialog.input(message, default, key, opt, close)
         
+        
+    def selectPredefined(self, type=None):
+        self.log('selectPredefined, type = %s'%(type))
+        
 
     def importSTRM(self, strm):
         try:
@@ -1682,20 +1679,20 @@ class Dialog:
             return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=getAbbr(option['label'])))
 
         with self.builtin.busy_dialog():
-            optlabel = "%s"%({'0':'Folders','1':'Files'}[str(type)])  if multi else "%s"%({'0':'Folder','1':'File'}[str(type)])
+            optlabel = "%s"%({'0':'Folders [Recursive]','1':'Files'}[str(type)]) if multi else "%s"%({'0':'Folder [Recursive]','1':'File'}[str(type)])
             opts = [{"idx":10, "label":'%s %s'%(LANGUAGE(32196),optlabel) , "label2":"library://video/"                      , "default":"library://video/"                   , "shares":"video"   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":multi},
                     {"idx":11, "label":'%s %s'%(LANGUAGE(32207),optlabel) , "label2":"library://music/"                      , "default":"library://music/"                   , "shares":"music"   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
                     {"idx":12, "label":LANGUAGE(32191)                    , "label2":"special://profile/playlists/video/"    , "default":"special://profile/playlists/video/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
                     {"idx":13, "label":LANGUAGE(32192)                    , "label2":"special://profile/playlists/music/"    , "default":"special://profile/playlists/music/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
                     {"idx":14, "label":LANGUAGE(32193)                    , "label2":"special://profile/playlists/mixed/"    , "default":"special://profile/playlists/mixed/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
-                    {"idx":15, "label":LANGUAGE(32195)                    , "label2":"Create Dynamic Smartplaylist"          , "default":""                                   , "shares":""        , "mask":""                                , "type":1    , "multi":False},
-                    {"idx":16, "label":LANGUAGE(32194)                    , "label2":"Import directory paths from STRM"      , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
-                    {"idx":17, "label":LANGUAGE(32206)                    , "label2":"Media from basic playlists"            , "default":""                                   , "shares":""        , "mask":"|".join(BASIC_PLAYLISTS)           , "type":1    , "multi":False},
-                    {"idx":18, "label":'%s %s'%(LANGUAGE(32198),'Folders'), "label2":""                                      , "default":""                                   , "shares":"files"   , "mask":mask                              , "type":type , "multi":multi},
-                    {"idx":19, "label":'%s %s'%(LANGUAGE(32199),'Folders'), "label2":""                                      , "default":""                                   , "shares":"local"   , "mask":mask                              , "type":type , "multi":multi},
-                    {"idx":20, "label":'%s %s'%(LANGUAGE(32200),'Folders'), "label2":""                                      , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi},
+                    {"idx":15, "label":LANGUAGE(32195)                    , "label2":"Dynamic SmartPlaylists"                , "default":""                                   , "shares":""        , "mask":""                                , "type":1    , "multi":False},
+                    {"idx":16, "label":LANGUAGE(32194)                    , "label2":"Import paths from STRM file"           , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
+                    {"idx":17, "label":LANGUAGE(32206)                    , "label2":"Import files from Basic Playlist"      , "default":""                                   , "shares":""        , "mask":"|".join(BASIC_PLAYLISTS)         , "type":1    , "multi":False},
+                    {"idx":18, "label":'%s %s'%(LANGUAGE(32198),optlabel) , "label2":""                                      , "default":""                                   , "shares":"files"   , "mask":mask                              , "type":type , "multi":multi},
+                    {"idx":19, "label":'%s %s'%(LANGUAGE(32199),optlabel) , "label2":""                                      , "default":""                                   , "shares":"local"   , "mask":mask                              , "type":type , "multi":multi},
+                    {"idx":20, "label":'%s %s'%(LANGUAGE(32200),optlabel) , "label2":""                                      , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi},
                     {"idx":21, "label":LANGUAGE(32201)                    , "label2":""                                      , "default":""                                   , "shares":"pictures", "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
-                    {"idx":22, "label":LANGUAGE(32202)                    , "label2":"Resource Plugin"                       , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi}]
+                    {"idx":22, "label":LANGUAGE(32202)                    , "label2":"Image & Video Resources"               , "default":""                                   , "shares":shares    , "mask":mask                              , "type":type , "multi":multi}]
 
             options = include.copy()
             options.extend([opt for opt in opts if not opt.get('idx',-1) in exclude])
@@ -1711,12 +1708,14 @@ class Dialog:
         mask    = options[select]['mask']
         type    = options[select]['type']
         multi   = options[select]['multi']
+        idx     = options[select]['idx']
         if type == 0:
             if "resource."   in default or options[select]["idx"] == 22: return self._resourcePath(default, {xbmc.getSupportedMedia('video'):'videos',xbmc.getSupportedMedia('picture'):'images'}.get(mask,xbmc.getSupportedMedia('video')))
         elif type == 1:
             if   "?xsp="     in default or options[select]["idx"] == 15: return self.buildDXSP(default)
             elif ".strm"     in default or options[select]["idx"] == 16: return self.importSTRM(default)
             elif "resource." in default or options[select]["idx"] == 22: default = self._resourcePath(default, {xbmc.getSupportedMedia('video'):'videos',xbmc.getSupportedMedia('picture'):'images'}.get(mask,xbmc.getSupportedMedia('video')))
+        elif mask == '?xsp=':                                            return self.selectPredefined(default)
         return self.browseDialog(type, heading, default, shares, mask, useThumbs, treatAsFolder, multi, monitor)
             
     
@@ -1961,3 +1960,4 @@ class Dialog:
         enumKEY = {'Enter':{'func':__getInput},'Browse':{'func':__getBrowse},'Select':{'func':__getSelect}}
         enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
         if not enumSEL is None: return [quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
+        

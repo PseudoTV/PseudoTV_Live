@@ -21,20 +21,19 @@ from globals     import *
 from videoparser import VideoParser
 
 class Service:
-    player  = PLAYER()
-    monitor = MONITOR()
+    player    = PLAYER()
+    monitor   = MONITOR()
     def _shutdown(self, wait=1.0) -> bool:
-        self._wait(wait)
-        return PROPERTIES.isPendingShutdown()
+        return (self._wait(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
         return PROPERTIES.isPendingInterrupt()
-    def _suspend(self, wait=SUSPEND_TIMER) -> bool:
-        self._wait(wait)
-        return PROPERTIES.isPendingSuspend()
+    def _suspend(self, wait=1.0) -> bool:
+        return (self._wait(wait) | PROPERTIES.isPendingSuspend())
     def _wait(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): break
+            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
             else: wait -= CPU_CYCLE
+        return False
         
           
 class JSONRPC:
@@ -65,17 +64,17 @@ class JSONRPC:
         return response
 
 
+    @executeit
     def queueJSON(self, param):
-        queuePool = (SETTINGS.getCacheSetting('queueJSON', json_data=True) or {})
-        params = queuePool.setdefault('params',[])
+        params = SETTINGS.queuePool.setdefault('queueJSON',[])
         params.append(param)
-        queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('setting',''))
-        queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',0))
-        queuePool['params'].reverse() #prioritize setsetting,playcount rollback over duration amendments.
-        self.log("queueJSON, saving = %s\n%s"%(len(queuePool['params']),param))
-        SETTINGS.setCacheSetting('queueJSON', queuePool, json_data=True)
-
-        
+        params = sorted(setDictLST(params), key=lambda d: d.get('setting',''))
+        params = sorted(setDictLST(params), key=lambda d: d.get('playcount',0))
+        params.reverse() #prioritize setsetting,playcount rollback over duration amendments.
+        SETTINGS.queuePool['queueJSON'] = setDictLST(params)
+        self.log("queueJSON, queuing = %s, param = %s"%(len(SETTINGS.queuePool['queueJSON']),param))
+            
+           
     def cacheJSON(self, param, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, timeout=-1):
         cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
@@ -410,6 +409,17 @@ class JSONRPC:
         return runtime
 
 
+    def videoIDtoLabel(self, path):
+        match = re.search(r"(.*?)(\d+)/?$", path)
+        if match:
+            items = self.getDirectory({"directory":match.group(1),"media":"video"})[0]
+            for item in items:
+                if int(match.group(2)) == item.get('id'):
+                    self.log('videoIDtoLabel, path = %s, id = %s, label = %s'%(match.group(1),match.group(2),item['label']))
+                    return item['label']
+        return path
+        
+        
     def getTotRuntime(self, items=[]):
         total = sum([self._getRuntime(item) for item in items])
         self.log("getTotRuntime, items = %s, total = %s" % (len(items), total))
@@ -620,7 +630,6 @@ class JSONRPC:
         return friendly
            
            
-    @timeit
     def getCallback(self, sysInfo={}):
         self.log('[%s] getCallback, mode = %s, radio = %s, isPlaylist = %s'%(sysInfo.get('chid'),sysInfo.get('mode'),sysInfo.get('radio',False),sysInfo.get('isPlaylist',False)))
         def _matchJSON():#requires 'pvr://' json whitelisting

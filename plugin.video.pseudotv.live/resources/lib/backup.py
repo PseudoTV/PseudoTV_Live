@@ -88,6 +88,7 @@ class Backup:
                 PROPERTIES.setPendingRestart()
         
         
+    @threadit
     def run(self):  
         with BUILTIN.busy_dialog():
             ctl = (0,1) #settings return focus

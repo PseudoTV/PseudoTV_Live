@@ -109,7 +109,6 @@ class Player(xbmc.Player):
         self._onStop(self.playingItem)
 
 
-    @timeit
     @executeit
     def getplayingItem(self, playingItem={}):
         def __update(id, citem={}): #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
@@ -273,7 +272,7 @@ class Player(xbmc.Player):
         inc = int(100/FIFTEEN)
         xbmc.playSFX(NOTE_WAV)
         dia = DIALOG.progressDialog(message=LANGUAGE(30078))
-        while not self.abortRequested() and (sec < FIFTEEN):
+        while not self.monitor.abortRequested() and (sec < FIFTEEN):
             sec += 1
             msg = '%s\n%s'%(LANGUAGE(32039),LANGUAGE(32040)%(FIFTEEN-sec))
             dia = DIALOG.progressDialog((inc*sec),dia, msg)
@@ -408,7 +407,6 @@ class Monitor(xbmc.Monitor):
         self.service    = service
         self.jsonRPC    = service.jsonRPC
         self.player     = Player(service,self)
-        self.FIFOQUE    = CustomQueue(fifo=True, service=service)
         self.idleThread = Thread(target=self._start)
         self.idleThread.daemon = True
         
@@ -416,10 +414,6 @@ class Monitor(xbmc.Monitor):
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
-        
-    def _que(self, func, delay=0, timer=0, *args, **kwargs):
-        self.FIFOQUE._push((func, args, kwargs), 0, delay, timer)
-        
 
     def _start(self):
         self.log('_start') 
@@ -441,8 +435,8 @@ class Monitor(xbmc.Monitor):
             
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged') 
-        self._que(self._updatePlayerSettings)
-        self._que(self._updateServiceSettings)
+        self.service._que(self._updatePlayerSettings,1)
+        self.service._que(self._updateServiceSettings,1)
         
         
     def onNotification(self, sender, method, data):
@@ -538,20 +532,20 @@ class Service():
         return self.pendingInterrupt
     
 
-    def _suspend(self, wait=SUSPEND_TIMER) -> bool: #task que continue
-        pendingSuspend = (PROPERTIES.isSuspendActivity() | BUILTIN.isSettingsOpened())
+    def _suspend(self, wait=1.0) -> bool: #task que continue
+        pendingSuspend = (self._wait(wait) | PROPERTIES.isSuspendActivity() | BUILTIN.isSettingsOpened())
         if pendingSuspend != self.pendingSuspend:
             self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))
-        self._wait(wait)
         return self.pendingSuspend
         
 
     def _wait(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): break
+            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
             else: wait -= CPU_CYCLE
         if wait > 0: self.log('_wait, remaining = %s'%(wait))
+        return False
                     
 
     def _initialize(self):
@@ -581,4 +575,5 @@ class Service():
                     try: thread.join(1.0)
                     except: pass
                     self.log('_stop, closing %s...'%(thread.name))
+        SETTINGS.setCacheSetting('queuePool',SETTINGS.queuePool,json_data=True)
         return pendingRestart

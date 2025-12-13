@@ -17,11 +17,10 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-
 import os, sys, re, json, struct, errno, zlib
 import shutil, subprocess, io, platform, asyncio
-import codecs, random
-import uuid, base64, binascii, hashlib
+import codecs, random, inspect, importlib
+import uuid, base64, binascii, hashlib, pickle
 import time, datetime, calendar
 import heapq, requests, pyqrcode
 import xml.sax.saxutils
@@ -35,7 +34,7 @@ from threading             import enumerate as thread_enumerate
 from xml.dom.minidom       import parse, parseString, Document
 from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstringlist, fromstring, tostring
 from xml.etree.ElementTree import parse as ETparse
-from typing                import Dict, List, Union, Optional
+from typing                import Dict, List, Union, Optional, Any
 
 from variables           import *
 from kodi_six            import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
@@ -147,15 +146,8 @@ def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache
         return __getCache('.'.join([url,dumpJSON(params),dumpJSON(payload),dumpJSON(header)]), 
                           cache["cache"], cache.get("json_data",False), cache.get("checksum",ADDON_VERSION)) if cache else __error()
     finally: #retry failed post
-        if not results and payload: queueURL({"url":url, "params":params, "payload":payload, "header":header, "timeout":timeout, "cache":cache})
+        if not results and payload: timerit(requestURL)(FIFTEEN,[url, params, payload, header, timeout, cache, file])
 
-def queueURL(param):
-    queuePool = (SETTINGS.getCacheSetting('queueURL', json_data=True) or {})
-    params = queuePool.setdefault('params',[])
-    params.append(param)
-    queuePool['params'] = setDictLST(params)
-    log("Globals: queueURL, saving = %s\n%s"%(len(queuePool['params']),param))
-    SETTINGS.setCacheSetting('queueURL', queuePool, json_data=True)
 
 def setURL(url, file):
     try:
@@ -483,3 +475,4 @@ def parseSE(filename):
         elif match.group(5) is not None:
             return int(match.group(5)), int(match.group(6))
     return -1, -1
+  

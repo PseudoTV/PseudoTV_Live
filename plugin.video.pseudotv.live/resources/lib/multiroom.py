@@ -27,17 +27,16 @@ class Service:
     monitor = MONITOR()
     jsonRPC = JSONRPC()
     def _shutdown(self, wait=1.0) -> bool:
-        self._wait(wait)
-        return PROPERTIES.isPendingShutdown()
+        return (self._wait(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
         return PROPERTIES.isPendingInterrupt()
-    def _suspend(self, wait=SUSPEND_TIMER) -> bool:
-        self._wait(wait)
-        return PROPERTIES.isPendingSuspend()
+    def _suspend(self, wait=1.0) -> bool:
+        return (self._wait(wait) | PROPERTIES.isPendingSuspend())
     def _wait(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): break
+            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
             else: wait -= CPU_CYCLE
+        return False
         
             
 class Multiroom:
@@ -62,11 +61,6 @@ class Multiroom:
         self.log('_getStatus')
         return self.jsonRPC.getSettingValue("services.zeroconf",default=False)
 
-
-    def _chkDiscovery(self):
-        self.log('_chkDiscovery')
-        Discovery(self.service, self)
-                
 
     def _chkServers(self, servers={}):
         def __chkResources(settings):
@@ -193,7 +187,7 @@ class Multiroom:
                                         DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
                                     if not SETTINGS.hasPVRInstance(liz.getLabel()): 
                                         if SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel(),cache=True):
-                                            timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                                            timerit(PROPERTIES.setPropTimer)(1.0,['chkPVRRefresh'])
                                 else:
                                     if servers[liz.getLabel()].get('enabled',False):
                                         changed = True

@@ -1,8 +1,11 @@
 ### NOTICE: The wizard branch is in alpha; things will break! ####
 v.0.6.8-wizard
+- Added Channel Manager "Predefined" path option to path selection menu.
+- Tweaked Executors
 - Tweaked "Paused" Channel rule to include local cache for remote instances. 
 - "Playback Timeout" setting added to Miscellaneous.
 - Refactored suspend throttling.
+- SimpleCache replaced with local cache module.
 
 v.0.6.7-wizard
 - Introduced groundwork for Artificial Intelligence Integration (Currently Unavailable). 

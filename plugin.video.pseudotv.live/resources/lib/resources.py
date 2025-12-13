@@ -30,25 +30,23 @@ STUDIO_RESOURCE = ["resource.images.studios.white"]
 
 class Service:
     from jsonrpc import JSONRPC
-    player  = PLAYER()
-    monitor = MONITOR()
-    jsonRPC = JSONRPC()
+    player    = PLAYER()
+    monitor   = MONITOR()
+    jsonRPC   = JSONRPC()
     def _shutdown(self, wait=1.0) -> bool:
-        self._wait(wait)
-        return PROPERTIES.isPendingShutdown()
+        return (self._wait(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
         return PROPERTIES.isPendingInterrupt()
-    def _suspend(self, wait=SUSPEND_TIMER) -> bool:
-        self._wait(wait)
-        return PROPERTIES.isPendingSuspend()
+    def _suspend(self, wait=1.0) -> bool:
+        return (self._wait(wait) | PROPERTIES.isPendingSuspend())
     def _wait(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): break
+            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
             else: wait -= CPU_CYCLE
+        return False
         
         
-class Resources:    
-    queuePool = {}
+class Resources:
     
     def __init__(self, service=None):
         self.log('__init__')    
@@ -89,12 +87,12 @@ class Resources:
         return list([_f for _f in logos if _f])
 
 
+    @executeit
     def queueLOGO(self, param):
-        params = self.queuePool.setdefault('params',[])
+        params = SETTINGS.queuePool.setdefault('queueLOGO',[])
         params.append(param)
-        self.queuePool['params'] = setDictLST(params)
-        self.log("queueLOGO, queuing = %s, param = %s"%(len(self.queuePool['params']),param))
-        timerit(SETTINGS.setCacheSetting)(FIFTEEN,['queueLOGO', self.queuePool, ADDON_VERSION, True])
+        SETTINGS.queuePool['queueLOGO'] = setDictLST(params)
+        self.log("queueLOGO, queuing = %s, param = %s"%(len(SETTINGS.queuePool['queueLOGO']),param))
             
             
     def getCachedLogo(self, citem, select=False):

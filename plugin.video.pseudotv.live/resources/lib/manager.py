@@ -26,6 +26,7 @@ from resources  import Resources
 from multiroom  import Multiroom
 from xsp        import XSP
 from builder    import Builder
+from predefined import Predefined
 from infotagger.listitem import ListItemInfoTag
 
 # Actions
@@ -146,18 +147,16 @@ class Manager(xbmcgui.WindowXMLDialog):
         return 1
      
      
-    def buildPreview(self, citem={}):
+    def buildPreview(self, citem={}, msg=''):
         builder  = Builder()
-        fileList = PROPERTIES.recessActivity(builder.build, *([citem],True))
+        fileList = PROPERTIES.recessActivity(msg, builder.build, *([citem],True))
         del builder
         self.log('buildPreview, fileList = %s'%(len(fileList))) 
         return fileList
 
 
-    def buildFileList(self, citem={}, path='', limit=25):
-        builder  =  Builder()
-        fileList = PROPERTIES.recessActivity(builder.buildFileList, *(citem,path,'video',limit,{},{}))
-        del builder
+    def buildFileList(self, citem={}, path='', msg='', limit=25):
+        fileList = PROPERTIES.recessActivity(msg, Builder().buildFileList, *(citem,path,'video',limit,{},{}))
         self.log('buildFileList, fileList = %s'%(len(fileList))) 
         return fileList
 
@@ -449,7 +448,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                     try:    lastOPT = int(lizLST[select].getProperty('idx'))
                     except: lastOPT = None
                     if key == 'add': 
-                        retval = DIALOG.browseSources(heading=LANGUAGE(32080), exclude=excLST, monitor=True)
+                        predefined = {"idx":9, "label":'Predefined Channels', "label2":"Predefined Dynamic Playlists", "default":"", "shares":"", "mask":"?xsp=", "type":"", "multi":False}
+                        retval     = DIALOG.browseSources(heading=LANGUAGE(32080), exclude=excLST, monitor=True, include=[])#include=[predefined]
                         if not retval is None:
                             npath, citem = self.validatePaths(retval,citem)
                             if npath: pathLST.append(npath)
@@ -609,20 +609,26 @@ class Manager(xbmcgui.WindowXMLDialog):
             
             
     def validatePaths(self, path, citem):
+        # def __convert(path): #convert videodb:// paths to dynamic xsp.
+            # if path.lower().startswith(('videodb://','musicdb://')):
+                # if   'tvshows/titles'  in path: path = Predefined().createShowPlaylist(self.jsonRPC.videoIDtoLabel(path))
+                # elif 'tvshows/studios' in path: path = Predefined().createNetworkPlaylist(self.jsonRPC.videoIDtoLabel(path))
+                # elif 'tvshows/genres'  in path: path = Predefined().createTVGenrePlaylist(self.jsonRPC.videoIDtoLabel(path))
+                # elif 'movies/genres'   in path: path = Predefined().createStudioPlaylist(self.jsonRPC.videoIDtoLabel(path))
+                # elif 'movies/studios'  in path: path = Predefined().createStudioPlaylist(self.jsonRPC.videoIDtoLabel(path))
+            # return path[0] if isinstance(path,list) else path
+
         def __set(path, citem):
             citem = self.setName(path, citem)
             return path, self.setLogo(citem.get('name'),citem)
             
         def __fileList(tmpcitem, fileList=[]):
             tmpcitem['id'] = getChannelID(tmpcitem['name'], tmpcitem['path'], random.random())
-            DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32098),tmpcitem['name'],LANGUAGE(32140)))
-            return self.buildFileList(tmpcitem, path)
+            return self.buildFileList(tmpcitem, path, msg='%s Path: %s\n%s'%(LANGUAGE(32098),tmpcitem['name'],LANGUAGE(32140)))
             
-        def __seek(item, citem, passed=False):
-            try:    file = FileAccess._getFolderPath(item.get('file'))
-            except: file = FileAccess._getShortPath(item.get('file'))
+        def __seek(item, path, passed=False):
             player = PLAYER()
-            if player.isPlaying(): DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32098),file,'Seeking %s'%(LANGUAGE(30136))),time=1)
+            if player.isPlaying(): DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(30136)),time=1)
             else:
                 # todo test seek for support disable via adv. rule if fails.
                 # todo set seeklock rule if seek == False
@@ -632,28 +638,28 @@ class Manager(xbmcgui.WindowXMLDialog):
                 liz.setProperty('startoffset', str(resume))
                 infoTag = ListItemInfoTag(liz, 'video')
                 infoTag.set_resume_point({'ResumeTime':resume,'TotalTime':int(item.get('duration')*60)})
-                # DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32098),file,'Starting Playback'),time=1)
-                player.play(item.get('file'),liz)
                 
+                player.play(item.get('file'),liz)
                 while not self.monitor.abortRequested() and not player.isPlaying():
+                    DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,'Waiting for Playback (%s)'%(wait)),time=1)
                     if self.monitor.waitForAbort(1.0) or wait < 1: break
                     else: wait -= 1
                     
-                self.log('validatePaths, _seek: waiting (%s) to seek %s'%(wait, item.get('file')))
-                if player.isPlaying() and ((int(player.getTime()) > resume) or BUILTIN.getInfoBool('SeekEnabled','Player')):
-                    self.log('validatePaths, _seek: found playable and seekable file %s'%(item.get('file')))
-                    # DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32098),file,'Seekable Media Found!'),time=1)
-                    passed = True
-                player.stop()
-                
+                if player.isPlaying() and not  self.monitor.waitForAbort(1.0):
+                    self.log('validatePaths, _seek: playing %s seeking to %s'%(item.get('file'),resume))
+                    if ((int(player.getTime()) > resume) or BUILTIN.getInfoBool('SeekEnabled','Player')):
+                        DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'PASSED!'),time=1)
+                        passed = True
+                    player.stop()
+                    
             del player
-            self.log('validatePaths _seek, passed = %s'%(passed))
+            self.log('validatePaths, _seek: passed = %s'%(passed))
             return passed
             
         def __vfs(path, citem, cnt=3):
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 if    isRadio({'path':[path]}) or isMixed_XSP({'path':[path]}): return True
-                else: DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32098),path,LANGUAGE(32140)))
+                else: DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(32140)))
                 tmpcitem = citem.copy()
                 tmpcitem.update({'name':path,'path':[path]})
                 fileList = __fileList(tmpcitem)
@@ -662,16 +668,17 @@ class Manager(xbmcgui.WindowXMLDialog):
             while not self.monitor.abortRequested() and cnt > 0:
                 try:    file = FileAccess._getShortPath(path)
                 except: file = FileAccess._getFolderPath(path)
-                if not fileList: return not bool(DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32098),file,'No Media found %s'%(LANGUAGE(32030)))))
+                if not fileList: return not bool(DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(32030))))
                 else:
-                    if __seek(random.choice(fileList), citem): return DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32098),file,LANGUAGE(32025)))
+                    if __seek(random.choice(fileList), path): return DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'PASSED!'),time=1)
                     else:
                         retval = DIALOG.yesnoDialog(LANGUAGE(30202),customlabel='Try Again (%s)'%(cnt))
-                        if   retval == 1: return DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32098),file,'Forcing %s'%(LANGUAGE(32030))))
+                        if   retval == 1: return DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'FORCED!'),time=1)
                         elif retval == 2: cnt -=1
-                        else: return not bool(DIALOG.notificationDialog('%s: [B]%s[/B]\n%s'%(LANGUAGE(32098),file,'No Seekable Media %s'%(LANGUAGE(32030)))))
-
-        if __vfs(path, citem): return __set(path, citem)
+                        else: return not bool(DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'FAILED!'),time=1))
+        if path: 
+            # path = __convert(path)
+            if __vfs(path, citem): return __set(path, citem)
         return None, citem
 
 
@@ -900,7 +907,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                     else: #local save
                         self.channels.setChannels(channels) #save changes
                         PROPERTIES.setEpochTimer('chkChannels')#trigger channel building
-                        PROPERTIES.setPropTimer('chkChannels')#trigger channel building
         self.closeManager()
             
 
@@ -911,6 +917,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         else:                self.close()
         
         
+    @executeit
     def getFocusItems(self, controlId=None):
         if controlId in [5,6,7,9001,9002,9003,9004]:
             label, label2 = self.getLabels(controlId)
@@ -954,7 +961,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         if   xbmcgui.getCurrentWindowDialogId() == "13001": BUILTIN.executebuiltin('Action(Back)')
                         elif self.isVisible(self.chanList): self.closeManager()
                         else:
-                            focusItems = executeit(self.getFocusItems)
+                            focusItems = self.getFocusItems
                             if self.isVisible(self.itemList):
                                 self.closeChannel(focusItems.get('citem'),focusItems.get('position'))
             
@@ -970,7 +977,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.log('onClick: controlId = %s, locked = %s'%(controlId,self.isLocked()))
                 if controlId == 0: self.closeManager()
                 else:
-                    focusItems = executeit(self.getFocusItems)(controlId)
+                    focusItems = self.getFocusItems(controlId)
                     if   controlId == 5: self.buildChannelItem(focusItems.get('citem')) #item list
                     elif controlId == 6:
                         if    self.lockAutotune and focusItems.get('number',0) > CHANNEL_LIMIT: DIALOG.notificationDialog(LANGUAGE(32064))
