@@ -59,7 +59,7 @@ try:
     EXTERNAL_PARSER.append(OpenCV.OpenCV)
 except: pass
     
-class VideoParser:
+class VideoParser(object):
     def __init__(self):
         self.AVIExts   = ['.avi']
         self.MP4Exts   = ['.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov']

@@ -18,7 +18,7 @@
 
 from globals import *
 
-class VFSParser:
+class VFSParser(object):
     def determineLength(self, filename: str, fileitem: dict={}, jsonRPC=None)-> int and float:
         log("VFSParser: determineLength, file = %s\nitem = %s"%(filename,fileitem))
         duration = (fileitem.get('resume',{}).get('total') or fileitem.get('runtime') or fileitem.get('duration') or (fileitem.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)

@@ -21,25 +21,26 @@
 from globals    import *
 from server     import Discovery
 
-class Service:
+class Service(object):
     from jsonrpc import JSONRPC
+    jsonRPC = JSONRPC()
     player  = PLAYER()
     monitor = MONITOR()
-    jsonRPC = JSONRPC()
     def _shutdown(self, wait=1.0) -> bool:
-        return (self._wait(wait) | PROPERTIES.isPendingShutdown())
+        return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
-        return PROPERTIES.isPendingInterrupt()
+        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt() | PROPERTIES.isInterruptActivity())
     def _suspend(self, wait=1.0) -> bool:
-        return (self._wait(wait) | PROPERTIES.isPendingSuspend())
-    def _wait(self, wait=1.0):
+        pendingSuspend = PROPERTIES.isPendingSuspend()
+        return pendingSuspend
+    def _sleep(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
+            if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
             else: wait -= CPU_CYCLE
         return False
         
             
-class Multiroom:
+class Multiroom(object):
     def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = %s'%(sysARG))
         if service is None: service = Service()
@@ -56,10 +57,9 @@ class Multiroom:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    @cacheit(checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(minutes=FIFTEEN))
     def _getStatus(self):
         self.log('_getStatus')
-        return self.jsonRPC.getSettingValue("services.zeroconf",default=False)
+        return self.jsonRPC.getSettingValue("services.zeroconf",default=False,cache=True)
 
 
     def _chkServers(self, servers={}):
@@ -218,6 +218,10 @@ class Multiroom:
             self._chkZeroConf()
         elif param == 'Select_Server': 
             ctl = (5,11)
+            self._selServer()
+        elif param == 'Select_Server_Client': 
+            ctl = (5,11)
+            SETTINGS.setSettingBool('Enable_Client',True)
             self._selServer()
         elif param == 'Remove_server': 
             ctl = (5,12)

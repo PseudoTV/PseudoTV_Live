@@ -18,7 +18,7 @@
 
 from globals    import *
 
-class YTParser:
+class YTParser(object):
     def determineLength(self, filename: str) -> int and float:
         try:
             dur = 0

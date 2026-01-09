@@ -33,7 +33,7 @@ SORT        = {"method":"","order":"","ignorearticle":True,"useartistsortname":T
 TV_QUERY    = {"path":"videodb://tvshows/titles/", "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes","limits":LIMITS,"sort":SORT,"filter":FILTER}
 MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"  ,"limits":LIMITS,"sort":SORT,"filter":FILTER}
 
-class Seasonal:
+class Seasonal(object):
     cache = SETTINGS.cacheDB
     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -163,8 +163,9 @@ class Seasonal:
             past.reverse()
             days = days + past
             
+        season = self.getSeasons(month)
         for next in days:
-            holiday = self.getSeasons(month).get(str(next),{})
+            holiday = season.get(str(next),{})
             if holiday.get('keyword'): break
         self.log('getNearestHoliday, using fallback = %s, month = %s, day = %s, nearest day = %s, returning = %s' %(fallback, month, day, next, holiday))
         return holiday

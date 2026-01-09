@@ -21,7 +21,7 @@
 from globals    import *
 #todo create dataclasses for all jsons
 # https://pypi.org/project/dataclasses-json/
-class Channels:
+class Channels(object):
              
     def __init__(self):
         self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
@@ -56,11 +56,10 @@ class Channels:
                 
                 
     def _save(self, file=CHANNELFLEPATH) -> bool:
-        with PROPERTIES.interruptActivity():
-            self.channelDATA['uuid']     = SETTINGS.getMYUUID()
-            self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
-            self.log('_save, file = %s\nchannels = %s'%(file,len(self.channelDATA['channels'])))
-            return setJSON(file,self.channelDATA)
+        self.channelDATA['uuid']     = SETTINGS.getMYUUID()
+        self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
+        self.log('_save, file = %s\nchannels = %s'%(file,len(self.channelDATA['channels'])))
+        return setJSON(file,self.channelDATA)
 
         
     def getTemplate(self) -> dict: 
@@ -75,16 +74,6 @@ class Channels:
         return [self.channelDATA['channels'].pop(self.channelDATA['channels'].index(citem)) for citem in list([c for c in channels if c.get('type') == type])]
         
         
-    def getCustom(self) -> list:
-        channels = self.getChannels()
-        return list([citem for citem in channels if citem.get('number') <= CHANNEL_LIMIT])
-        
-        
-    def getAutotuned(self) -> list: 
-        channels = self.getChannels()
-        return list([citem for citem in channels if citem.get('number') > CHANNEL_LIMIT])
-        
-
     def getChannelbyID(self, id: str) -> list:
         channels = self.getChannels()
         return list([c for c in channels if c.get('id') == id])
@@ -163,15 +152,6 @@ class Channels:
     def findChannel(self, citem: dict={}, channels: list=[]) -> tuple:
         if len(channels) == 0: channels = self.getChannels()
         for idx, eitem in enumerate(channels):
-            if citem.get('id') == eitem.get('id',str(random.random())):
+            if citem.get('id') == (eitem.get('id') or str(random.random())):
                 return idx, eitem
         return None, {}
-            
-            
-    def findAutotuned(self, citem: dict={}, channels: list=[]) -> tuple:
-        if len(channels) == 0: channels = self.getAutotuned()
-        for idx, eitem in enumerate(channels):
-            if (citem.get('id') == eitem.get('id',str(random.random()))) or (citem.get('type') == eitem.get('type',str(random.random())) and citem.get('name','').lower() == eitem.get('name',str(random.random())).lower()):
-                return idx, eitem
-        return None, {}
-            

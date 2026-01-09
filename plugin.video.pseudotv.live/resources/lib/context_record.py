@@ -21,7 +21,7 @@ from globals    import *
 from m3u        import M3U
 from xmltvs     import XMLTVS
 
-class Record:
+class Record(object):
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         with BUILTIN.busy_dialog():
             log('Record: __init__, sysARG = %s, fitem = %s\npath = %s'%(sysARG,fitem,listitem.getPath()))

@@ -18,10 +18,29 @@
 #
 # -*- coding: utf-8 -*-
  
-from globals            import *
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from itertools          import repeat, count
-from functools          import partial, wraps, reduce, update_wrapper
+from globals             import *
+from concurrent.futures  import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+
+class Service(object):
+    monitor = MONITOR()
+    def _shutdown(self, wait=1.0) -> bool:
+        pendingShutdown = xbmcgui.Window(10000).getProperty('%s.pendingShutdown'%(ADDON_ID)) == "true"
+        return (self.monitor.waitForAbort(wait) | pendingShutdown)
+    def _interrupt(self) -> bool:
+        pendingShutdown   = xbmcgui.Window(10000).getProperty('%s.pendingShutdown'%(ADDON_ID)) == "true"
+        pendingInterrupt  = xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)) == "true"
+        pendingRestart    = xbmcgui.Window(10000).getProperty('%s.pendingRestart'%(ADDON_ID)) == "true"
+        interruptActivity = xbmcgui.Window(10000).getProperty('%s.interruptActivity'%(ADDON_ID)) == "true"
+        return (pendingShutdown | pendingRestart | pendingInterrupt | interruptActivity)
+    def _suspend(self, wait=1.0) -> bool:
+        pendingSuspend = xbmcgui.Window(10000).getProperty('%s.pendingSuspend'%(ADDON_ID)) == "true"
+        return pendingSuspend
+    def _sleep(self, wait=1.0):
+        while not self.monitor.abortRequested() and wait > 0:
+            if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
+            else: wait -= CPU_CYCLE
+        return False
+        
 
 def wrapped_partial(func, *args, **kwargs):
     partial_func = partial(func, *args, **kwargs)
@@ -30,13 +49,11 @@ def wrapped_partial(func, *args, **kwargs):
 
 @contextmanager
 def timeit(method):
-    if REAL_SETTINGS.getSetting('Debug_Enable').lower() == 'true':
-        start_time = time.time()
-        try: yield
-        finally:
-            end_time = time.time()
-            log('%s timeit => %.2f ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
-    else: yield
+    start_time = time.time()
+    try: yield
+    finally:
+        end_time = time.time()
+        log('%s timeit => %.2f ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
 
 def killit(method):
     @wraps(method)
@@ -62,7 +79,7 @@ def killit(method):
     
 def poolit(method):
     @wraps(method)
-    def wrapper(items=[], wait=TIMEOUT_SECONDS, *args, **kwargs):
+    def wrapper(items=[], wait=TIMEOUT_EXECUTORS, *args, **kwargs):
         class pooler(Thread):
             def __init__(self):
                 Thread.__init__(self)
@@ -86,19 +103,19 @@ def executeit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
         log('executeit => %s'%(method.__qualname__.replace('.',': ')))
-        return ExecutorPool().executor(method, None, *args, **kwargs)
+        return ExecutorPool().executor(method, TIMEOUT_EXECUTOR, *args, **kwargs)
     return wrapper
     
 def threadit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
         thread_name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
-        # for thread in thread_enumerate():
-            # if thread.name == thread_name and thread.is_alive():  
-                # try:
-                    # thread.join()    
-                    # log('%s, threadit joining existing thread %s'%(method.__qualname__.replace('.',': '),thread_name))          
-                # except: pass
+        for thread in thread_enumerate():
+            if thread.name == thread_name and thread.is_alive():  
+                try:
+                    thread.join(0.1)    
+                    log('%s, threadit joining existing Thread: %s'%(method.__qualname__.replace('.',': '),thread_name))          
+                except: pass
         thread = Thread(None, method, None, args, kwargs)
         thread.name   = thread_name
         thread.daemon = True
@@ -109,62 +126,73 @@ def threadit(method):
 
 def timerit(method):
     @wraps(method)
-    def wrapper(wait=0.1, *args, **kwargs):
+    def wrapper(timer_wait, *args, **kwargs):
         timer_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
         for timer in thread_enumerate():
             if timer.name == timer_name and timer.is_alive():
+                try:
+                    timer.join(CPU_CYCLE)
+                    log('%s, timerit joining existing Timer: %s'%(method.__qualname__.replace('.',': '),timer_name))       
+                except: pass
                 if hasattr(timer, 'cancel'): 
                     timer.cancel()
-                    log('%s, timerit canceling existing timer %s'%(method.__qualname__.replace('.',': '),timer_name))    
-                try:
-                    timer.join()
-                    log('%s, timerit joining existing thread %s'%(method.__qualname__.replace('.',': '),timer_name))       
-                except: pass
-        timer = Timer(float(wait), method, *args, **kwargs)
+                    log('%s, timerit canceling existing Timer: %s'%(method.__qualname__.replace('.',': '),timer_name))    
+        timer = Timer(float(timer_wait), method, *args, **kwargs)
         timer.name = timer_name
         timer.start()
-        log('%s, timerit starting %s wait = %s'%(method.__qualname__.replace('.',': '),timer_name,wait))
+        log('%s, timerit starting %s wait = %s'%(method.__qualname__.replace('.',': '),timer_name,timer_wait))
         return timer
     return wrapper  
 
 class ExecutorPool:
-    pool = ThreadPoolExecutor
-    log(f"ExecutorPool: __init__, CORES = {CPU_COUNT}, THREADS = {THREAD_COUNT}, CPU_CYCLE = {CPU_CYCLE}")
+    _executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)
     
+    def __init__(self):
+        self.useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
+
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def executor(self, func, timeout=TIMEOUT_SECONDS, *args, **kwargs):
+    def isShutdown(self):
+        return getattr(self._executor, "_shutdown", False)
+            
+            
+    def executor(self, func, timeout=None, *args, **kwargs):
         self.log("executor, func = %s, timeout = %s"%(func.__name__,timeout))
-        with self.pool(THREAD_COUNT) as executor:
-            try: return executor.submit(func, *args, **kwargs).result(timeout)
-            except Exception as e:
-                self.log("executor, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
-                return self.execute(func, *args, **kwargs)
+        if self.useExecutor:
+            if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)
+            with timeit(func), self._executor as executor:
+                try: return executor.submit(func, *args, **kwargs).result(timeout)
+                except Exception as e: self.log("executor, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
+        return self.execute(func, *args, **kwargs)
 
 
     def execute(self, func, *args, **kwargs):
         self.log("execute, func = %s"%(func.__name__))
-        try: return func(*args, **kwargs)
+        try:
+            with timeit(func):
+                return func(*args, **kwargs)
         except Exception as e: self.log("execute, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
 
-    def executors(self, func, items=[], timeout=TIMEOUT_SECONDS, *args, **kwargs):
+    def executors(self, func, items=[], timeout=None, *args, **kwargs):
         self.log("executors, func = %s, items = %s, timeout = %s"%(func.__name__,len(items),timeout))
-        with self.pool(THREAD_COUNT) as executor:
-            try: 
-                results = executor.map(wrapped_partial(func, *args, **kwargs), items, timeout=timeout)
-                return [r for r in results if r is not None]
-            except Exception as e:
-                self.log("executors, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
-                return self.generator(func, items, *args, **kwargs)
+        if self.useExecutor:
+            if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)
+            with timeit(func), self._executor as executor:
+                try: 
+                    results = executor.map(wrapped_partial(func, *args, **kwargs), items, timeout=timeout)
+                    return [r for r in results if r is not None]
+                except Exception as e: self.log("executors, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
+        return self.generator(func, items, *args, **kwargs)
 
 
     def generator(self, func, items=[], *args, **kwargs):
         self.log("generator, items = %s"%(len(items)))
         try:
-            results = [wrapped_partial(func, *args, **kwargs)(i) for i in items]
-            return [r for r in results if r is not None]
+            with timeit(func):
+                results = [wrapped_partial(func, *args, **kwargs)(i) for i in items]
+                return [r for r in results if r is not None]
         except Exception as e: self.log("generator, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)

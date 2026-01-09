@@ -19,22 +19,24 @@
 # -*- coding: utf-8 -*-
 # from globals import *
 
-# class Service:
+# class Service(object):
     # from jsonrpc import JSONRPC
     # monitor = MONITOR()
     # jsonRPC = JSONRPC()
+    # def _shutdown(self, wait=1.0) -> bool:
+        # return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     # def _interrupt(self) -> bool:
-        # return PROPERTIES.isPendingInterrupt()
+        # return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt() | PROPERTIES.isInterruptActivity())
     # def _suspend(self, wait=1.0) -> bool:
-        # self._wait(wait)
-        # return PROPERTIES.isPendingSuspend()
-    # def _wait(self, wait=1.0):
+        # pendingSuspend = PROPERTIES.isPendingSuspend()
+        # return pendingSuspend
+    # def _sleep(self, wait=1.0):
         # while not self.monitor.abortRequested() and wait > 0:
-            # if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
-            # else: wait -= CPU_CYCLE
-            # return False
+            # if (self.monitor.waitForAbort(0.5) | self._interrupt()): return True
+            # else: wait -= 0.5
+        # return False
         
-# class Skin:
+# class Skin(object):
     # def __init__(self, service=None):
         # if service is None: service = Service()
         # self.jsonRPC = service.jsonRPC

@@ -33,7 +33,6 @@ from globals   import *
 
 
 # if SETTINGS.hasWizardRun():
-# hasAutotuned = SETTINGS.hasAutotuned()
         # DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
 
 class Wizard(xbmcgui.WindowXMLDialog):
@@ -85,7 +84,6 @@ class Wizard(xbmcgui.WindowXMLDialog):
 
 
     def onClose(self):
-        # SETTINGS.hasAutotuned()
         self.close()
         
         

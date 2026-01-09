@@ -20,18 +20,13 @@
 
 from globals    import *
 
-class Predefined:
+class Predefined(object):
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
         
-    def getParams(self) -> dict:
-        params = {}
-        params["order"] = {"direction"        :"ascending",
-                           "method"           :"random",
-                           "ignorearticle"    :True,
-                           "useartistsortname":True}
-        return params.copy()
+    def getTemplete(self):
+        return {"type":"","rules":{"and":[],"or":[]},"order":{"direction":"ascending","method":"random","ignorearticle":True,"useartistsortname":True}}
 
 
     def createRECOMMENDED(self, type: str) -> list:
@@ -39,18 +34,19 @@ class Predefined:
         
 
     def createMixedRecent(self) -> list:
-        param = self.getParams()
-        param["order"]["method"] = "episode"
-        return ['videodb://recentlyaddedepisodes/?xsp=%s'%(dumpJSON(param)),
-                'videodb://recentlyaddedmovies/?xsp=%s'%(dumpJSON(self.getParams()))]
+        param = self.getTemplete()
+        tv = param.copy()
+        tv["order"]["method"] = "episode"
+        return ['videodb://recentlyaddedepisodes/?xsp=%s'%(dumpJSON(tv)),
+                'videodb://recentlyaddedmovies/?xsp=%s'%(dumpJSON(param))]
         
         
     def createMusicRecent(self) -> list:
-        return ['musicdb://recentlyaddedalbums/?xsp=%s'%(dumpJSON(self.getParams()))]
+        return ['musicdb://recentlyaddedalbums/?xsp=%s'%(dumpJSON(self.getTemplete()))]
         
         
     def createNetworkPlaylist(self, network: str, method: str='episode') -> list:
-        param = self.getParams()
+        param = self.getTemplete()
         param["type"] = "episodes"
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[quoteString(network)]})
@@ -58,7 +54,7 @@ class Predefined:
 
 
     def createShowPlaylist(self, show: str, method: str='episode') -> list:
-        param = self.getParams()
+        param = self.getTemplete()
         param["type"] = "episodes"
         param["order"]["method"] = method
         try:
@@ -71,7 +67,7 @@ class Predefined:
 
 
     def createTVGenrePlaylist(self, genre: str, method: str='episode') -> list:
-        param = self.getParams()
+        param = self.getTemplete()
         param["type"] = "episodes"
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
@@ -79,7 +75,7 @@ class Predefined:
 
 
     def createMovieGenrePlaylist(self, genre: str, method: str='year') -> list:
-        param = self.getParams()
+        param = self.getTemplete()
         param["type"] = "movies"
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
@@ -87,7 +83,7 @@ class Predefined:
 
 
     def createStudioPlaylist(self, studio: str, method: str='random') -> list:
-        param = self.getParams()
+        param = self.getTemplete()
         param["type"] = "movies"
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[quoteString(studio)]})
@@ -95,7 +91,7 @@ class Predefined:
 
 
     def createMusicGenrePlaylist(self, genre: str, method: str='random') -> list:
-        param = self.getParams()
+        param = self.getTemplete()
         param["type"] = "music"
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})

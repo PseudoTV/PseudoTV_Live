@@ -20,14 +20,22 @@
 from globals     import *
 from manager     import Manager
 
-class Create:
-    def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
-        log('Create: __init__, sysARG = %s, fitem = %s\npath = %s'%(sysARG,fitem,listitem.getPath()))
+class Create(object):
+    def __init__(self, sysARG={}, listitem=None, fitem=None):
         self.sysARG   = sysARG
-        self.fitem    = fitem
-        self.listitem = listitem
+        self.fitem    = (fitem or {})
+        self.listitem = (listitem or xbmcgui.ListItem())
         
-        
+               
+    def open(self):
+        log('Create: open')
+        if not PROPERTIES.isRunning('Create.open') and not PROPERTIES.isRunning('Library.updateLibrary'):
+            with PROPERTIES.chkRunning('Create.open'):
+                manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=self.fitem.get('citem',{}).get('number',1))
+            del manager
+        else: DIALOG.notificationDialog(LANGUAGE(32057)%(ADDON_NAME))
+            
+            
     def add(self):
         log('Create: add')
         if not self.listitem.getPath(): return DIALOG.notificationDialog(LANGUAGE(32030))
@@ -47,29 +55,29 @@ class Create:
                         citem['favorite'] = True
                         citem['changed']  = True
                         citem['radio']    = True if path.startswith('musicdb://') else False
-                        
                         manager.channels.addChannel(manager.setLogo(citem['name'], citem))
                         manager.channels.setChannels()
                         manager.closeManager()
-                        PROPERTIES.setEpochTimer('chkChannels')#trigger channel building
+                        PROPERTIES.setPropTimer('chkChannels')#trigger channel building
                         del manager
                         manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=citem['number'])
                     del manager
-                
-                
-    def open(self):
-        log('Create: open')
-        if not PROPERTIES.isRunning('Create.open'):
-            with PROPERTIES.chkRunning('Create.open'), BUILTIN.busy_dialog(lock=True):
-                manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=self.fitem.get('citem',{}).get('number',1))
-            del manager
-        
+
                 
 if __name__ == '__main__': 
     log('Create: __main__, param = %s'%(sys.argv))
     try:    mode = sys.argv[1]
     except: mode = ''
-    try:    listitem = sys.listitem
-    except: listitem = xbmcgui.ListItem()
-    if mode == 'manager': Create(sys.argv,listitem,decodePlot(BUILTIN.getInfoLabel('Plot'))).open()
-    else:                 Create(sys.argv,listitem,decodePlot(BUILTIN.getInfoLabel('Plot'))).add()
+    if   mode == 'manager': 
+        with BUILTIN.busy_dialog():
+            Create().open()
+    elif mode == 'select':  
+        with BUILTIN.busy_dialog():
+            values = SETTINGS.getSettingList('Select_server')
+            values = [cleanLabel(value) for value in values]
+            values.insert(0,LANGUAGE(30022)) #Auto
+            values.insert(1,LANGUAGE(32069)) #Ask
+        select = DIALOG.selectDialog(values, '%s for Channel Setup'%(LANGUAGE(30173)), findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
+        if not select is None: SETTINGS.setSetting('Default_Channels',values[select])
+        else:                  SETTINGS.setSetting('Default_Channels',LANGUAGE(30022))
+    else: Create(sys.argv,sys.listitem,decodePlot(BUILTIN.getInfoLabel('Plot'))).add()

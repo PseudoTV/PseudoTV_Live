@@ -39,8 +39,9 @@ from channels   import Channels
 # Resource_Bumpers
 # Resource_Adverts
   
-class RulesList:
+class RulesList(object):
     def __init__(self, channels=None):
+        self.channels = channels
         self.ruleList = [BaseRule(),
                          ShowChannelBug(),
                          ShowOnNext(),
@@ -59,7 +60,6 @@ class RulesList:
                          PreRoll(),
                          PostRoll(),
                          InterleaveValue(),
-                         ProvisionalRule(),
                          HandleMethodOrder(),
                          ForceEpisode(),
                          ForceRandom(),
@@ -78,7 +78,8 @@ class RulesList:
         return Channels().channelRULE.copy()
         
                   
-    def dumpRules(self, rules={}): #convert rule instances to channel format
+    def dumpRules(self, rules={}):
+        #convert rule instances to json
         nrules = dict()
         if not list(rules.items()): return None
         for myId, rule in list(rules.items()):
@@ -90,7 +91,8 @@ class RulesList:
         return nrules
             
 
-    def loadRules(self, channels=None, append=False, incRez=True): #load channel rules and their instances. append = full rule list, incRez= include reserved for auto-tuning rules.
+    def loadRules(self, channels=None, append=False, incRez=True):
+        #load channel rules and their instances. append = full rule list, incRez= include reserved for auto-tuning rules.
         if channels is None: channels = Channels().getChannels()
         def _load(ruleList, citem={}):
             tmpruleList = {}
@@ -100,7 +102,7 @@ class RulesList:
                 else:
                     ruleInstance = rule.copy()
                     tmpritem = {"values":{}}
-                    for idx, value in enumerate(ruleInstance.optionValues): #load default rule
+                    for idx, value in enumerate(ruleInstance.optionValues): #load default rule as template
                         tmpritem["values"][str(idx)] = value
 
                     if citem.get('rules',{}).get(str(rule.myId)):
@@ -143,13 +145,11 @@ class RulesList:
         return parameter
 
 
-class BaseRule:
+class BaseRule(object):
     dialog = Dialog()
     
     def __init__(self):
         self.myId               = 0
-        self.ignore             = False #ignore from manager options, reserved for auto-tuning
-        self.exclude            = False #applies only to db queries not smart-playlists
         self.name               = ""
         self.description        = ""
         self.optionLabels       = []
@@ -304,19 +304,12 @@ class BaseRule:
             if multi: header = '%s - %s'%(ADDON_NAME,LANGUAGE(32017)%(''))
             else:     header = '%s - %s'%(ADDON_NAME,LANGUAGE(32223)%(''))
         
-        if isinstance(self.selectBoxOptions[optionindex],dict):
-            selectBoxOptions = list(self.selectBoxOptions[optionindex].keys())
-            preselect = findItemsInLST(list(self.selectBoxOptions[optionindex].values()), self.optionValues[optionindex])
-        else:
-            selectBoxOptions = self.selectBoxOptions[optionindex]
-            preselect = findItemsInLST(self.selectBoxOptions[optionindex], self.optionValues[optionindex])
-        
-        select = self.dialog.selectDialog([str(v).title() for v in selectBoxOptions], header, preselect, useDetails, autoclose, multi)
+        if isinstance(self.selectBoxOptions[optionindex],dict): values, options = list(self.selectBoxOptions[optionindex].values()), list(self.selectBoxOptions[optionindex].keys())
+        else:                                                   values, options = self.selectBoxOptions[optionindex], self.optionValues[optionindex]
+        select = self.dialog.selectDialog([str(v).title() for v in selectBoxOptions], header, findItemsInLST(values, options), useDetails, autoclose, multi)
         if not select is None: 
-            if isinstance(self.selectBoxOptions[optionindex],dict):
-                self.optionValues[optionindex] = self.selectBoxOptions[optionindex].get(selectBoxOptions[select])
-            else:
-                self.optionValues[optionindex] = selectBoxOptions[select]
+            if isinstance(self.selectBoxOptions[optionindex],dict): self.optionValues[optionindex] = self.selectBoxOptions[optionindex].get(selectBoxOptions[select])
+            else:                                                   self.optionValues[optionindex] = selectBoxOptions[select]
                 
           
     def onActionBrowse(self, optionindex, type=0, heading=ADDON_NAME, shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, options=[], exclude=[]):
@@ -340,8 +333,6 @@ class BaseRule:
 class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
     def __init__(self):
         self.myId               = 1
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(30143)
         self.description        = LANGUAGE(30144)
         self.optionLabels       = [LANGUAGE(30043),LANGUAGE(30112),LANGUAGE(30044),LANGUAGE(30208)]
@@ -397,7 +388,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
             self.storedValues[4] = overlay.channelBugFade
             
             overlay.enableChannelBug   = self.optionValues[0]
-            overlay.channelBugX, overlay.channelBugY = eval(self.optionValues[1])
+            overlay.channelBugX, overlay.channelBugY = literal_eval(self.optionValues[1])
             overlay.channelBugColor    = '0x%s'%(self.optionValues[2])
             overlay.channelBugDiffuse  = self.optionValues[3]
             overlay.channelBugFade     = self.optionValues[4]
@@ -416,8 +407,6 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
 class ShowOnNext(BaseRule):
     def __init__(self):
         self.myId               = 2
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(30045)
         self.description        = LANGUAGE(33045)
         self.optionLabels       = [LANGUAGE(30045),LANGUAGE(32229),LANGUAGE(30044),LANGUAGE(30196)]
@@ -481,8 +470,6 @@ class ShowOnNext(BaseRule):
 class SetScreenVingette(BaseRule):
     def __init__(self):
         self.myId               = 3
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(30177)
         self.description        = LANGUAGE(33177)
         self.optionLabels       = [LANGUAGE(30174),LANGUAGE(30175),LANGUAGE(30176),LANGUAGE(30178),LANGUAGE(30185),LANGUAGE(30186)]
@@ -555,8 +542,6 @@ class SetScreenVingette(BaseRule):
 class MST3k(BaseRule):
     def __init__(self):
         self.myId               = 4
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Mystery Science Theater 3K Silhouette"
         self.description        = "Animated Silhouette of MST3K"
         self.optionLabels       = ['Enable MST3K Silhouette']
@@ -626,8 +611,6 @@ class MST3k(BaseRule):
 class DisableOverlay(BaseRule): #PLAYER RULES [50-99]
     def __init__(self):
         self.myId               = 50
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(30042)
         self.description        = LANGUAGE(33042)
         self.optionLabels       = [LANGUAGE(30042)]
@@ -669,8 +652,6 @@ class DisableOverlay(BaseRule): #PLAYER RULES [50-99]
 class ForceSubtitles(BaseRule):
     def __init__(self):
         self.myId               = 51
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Force Subtitles"
         self.description        = "Show Subtitles"
         self.optionLabels       = ['Force Subtitles?']
@@ -712,8 +693,6 @@ class ForceSubtitles(BaseRule):
 class DisableTrakt(BaseRule):
     def __init__(self):
         self.myId               = 52
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Trakt scrobbling"
         self.description        = "Disable Trakt scrobbling."
         self.optionLabels       = [LANGUAGE(30131)]
@@ -753,13 +732,8 @@ class DisableTrakt(BaseRule):
 
 
 class RollbackPlaycount(BaseRule):
-    """
-    RollbackPlaycount
-    """
     def __init__(self):
         self.myId               = 53
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Rollback Playcount"
         self.description        = "Passive Playback w/o playcount & progress tracking."
         self.optionLabels       = [LANGUAGE(30132)]
@@ -799,13 +773,8 @@ class RollbackPlaycount(BaseRule):
 
 
 class DisableRestart(BaseRule):
-    """
-    DisableRestart
-    """
     def __init__(self):
         self.myId               = 54
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Restart Button"
         self.description        = LANGUAGE(33153)
         self.optionLabels       = [LANGUAGE(30153)]
@@ -846,13 +815,8 @@ class DisableRestart(BaseRule):
 
         
 class DisableOnChange(BaseRule):
-    """
-    DisableOnChange
-    """
     def __init__(self):
         self.myId               = 55
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(30170)
         self.description        = LANGUAGE(33171)
         self.optionLabels       = [LANGUAGE(30170)]
@@ -892,13 +856,8 @@ class DisableOnChange(BaseRule):
 
 
 class ForceRebuild(BaseRule):
-    """
-    ForceRebuild
-    """
     def __init__(self):
         self.myId               = 497
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Force Rebuild"
         self.description        = "Force Rebuild All Channel Content."
         self.optionLabels       = ["Force Rebuild Channel"]
@@ -933,13 +892,8 @@ class ForceRebuild(BaseRule):
             
             
 class PageLimit(BaseRule):
-    """
-    PageLimit
-    """
     def __init__(self):
         self.myId               = 499
-        self.ignore             = False
-        self.exclude            = False
         self.name               = '%s & Padding'%(LANGUAGE(30015))
         self.description        = '%s & Padding'%(LANGUAGE(30015))
         self.optionLabels       = [LANGUAGE(30015),"Content Padding","Programme Padding"]
@@ -986,14 +940,9 @@ class PageLimit(BaseRule):
         return parameter
         
         
-class DurationOptions(BaseRule): #CHANNEL RULES [500-599]
-    """
-    DurationOptions
-    """
+class DurationOptions(BaseRule): #PRE-BUILD RULES [500-599]
     def __init__(self):
         self.myId               = 500
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Duration Options"
         self.description        = "Duration Options"
         self.optionLabels       = [LANGUAGE(30049),LANGUAGE(30052),LANGUAGE(32233)]
@@ -1044,13 +993,8 @@ class DurationOptions(BaseRule): #CHANNEL RULES [500-599]
 
 
 class IncludeOptions(BaseRule):
-    """
-    IncludeOptions
-    """
     def __init__(self):
         self.myId               = 501
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Include Options"
         self.description        = "Include Options"
         self.optionLabels       = [LANGUAGE(30053),LANGUAGE(30054),LANGUAGE(30055)]
@@ -1096,13 +1040,8 @@ class IncludeOptions(BaseRule):
 
 
 class PreRoll(BaseRule):
-    """
-    PreRoll
-    """
     def __init__(self):
         self.myId               = 502
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Pre-Roll"
         self.description        = "Pre-Roll Options"
         self.optionLabels       = [LANGUAGE(30017),LANGUAGE(30139),LANGUAGE(30028),LANGUAGE(30029),"Ratings Folder","Bumpers Folder"]
@@ -1148,13 +1087,8 @@ class PreRoll(BaseRule):
         
                             
 class PostRoll(BaseRule):
-    """
-    PostRoll
-    """
     def __init__(self):
         self.myId               = 503
-        self.ignore             = False
-        self.exclude            = False
         self.name               = "Post-Roll"
         self.description        = "Post-Roll Options"
         self.optionLabels       = [LANGUAGE(30019),LANGUAGE(30134),LANGUAGE(30030),"Adverts Folder",LANGUAGE(30031),"Trailers Folder",LANGUAGE(30126)]
@@ -1201,13 +1135,8 @@ class PostRoll(BaseRule):
         
 
 class InterleaveValue(BaseRule):
-    """
-    InterleaveValue
-    """
     def __init__(self):
         self.myId               = 504
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(30192)
         self.description        = LANGUAGE(33215)
         self.optionLabels       = [LANGUAGE(30179),LANGUAGE(30211)]
@@ -1250,85 +1179,9 @@ class InterleaveValue(BaseRule):
         return parameter
 
 
-class ProvisionalRule(BaseRule): #PARSING RULES [800-999]
-    """
-    ProvisionalRule
-    """
-    def __init__(self):
-        self.myId               = 800
-        self.ignore             = True
-        self.exclude            = True
-        self.name               = "Provisional Path"
-        self.description        = "Fill Provisional Path"
-        self.optionLabels       = ["Provisional Value"]
-        self.optionValues       = [""]
-        self.optionDescriptions = [""]
-        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE]
-        self.storedValues       = [[]]
-        
-
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
-                  
-
-    def copy(self): 
-        return ProvisionalRule()
-        
-        
-    def getTitle(self): 
-        return '%s (%s)'%(self.name,self.optionValues[0])
-            
-            
-    def _getProvisional(self, citem):
-        PROVISIONAL_TYPES = {"TV Shows"     : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
-                                                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                             "TV Networks"  : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"} ,"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
-                                                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                             "Movie Studios": [{"path":"videodb://movies/titles/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"} ,"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
-                                                "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
-                             "TV Genres"    : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                             "Movie Genres" : [{"path":"videodb://movies/titles/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
-                             "Mixed Genres" : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"},
-                                               {"path":"videodb://movies/titles/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}]}
-        return PROVISIONAL_TYPES.get(citem.get('type',''),[])
-            
-  
-    def runAction(self, actionid, citem, parameter, builder):
-        if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
-            if self.optionValues[0]:
-                try:
-                    if builder.pDialog: builder.pDialog = self.dialog.updateProgress(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
-                    if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
-                    else:                                  queries = self._getProvisional(citem)
-                    self.log("%s: runAction, id: %s, provisional value = %s\nqueries = %s"%(self.__class__.__name__,citem.get('id'),self.optionValues[0],queries))
-                    for provisional in queries:
-                        if not provisional: continue
-                        else:
-                            if self.optionValues[0] == "Seasonal": citem['logo'] = provisional.get('holiday',{}).get('logo',citem['logo'])
-                            else: provisional["filter"]["and"][0]['value'] = self.optionValues[0]
-                            if not builder.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
-                                provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
-                                                                                   {"field":"episode","operator":"greaterthan","value":"0"}])
-                            fileList, dirList, nlimits, errors = builder.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits=builder.limits, dirItem={}, query=provisional)
-                            if len(fileList) > 0: self.storedValues[0].append(fileList)
-                    return [fileList for fileList in self.storedValues[0] if fileList]
-                except Exception as e: self.log("runAction, failed! %s"%(e), xbmc.LOGERROR)
-                return []
-        return parameter
-
-
 class HandleMethodOrder(BaseRule):
-    """
-    HandleMethodOrder
-    """
     def __init__(self):
         self.myId               = 950
-        self.ignore             = False
-        self.exclude            = True
         self.name               = LANGUAGE(32232)
         self.description        = LANGUAGE(33232)
         self.optionLabels       = ['Method','Order','Ignore Articles','Ignore Artist Sort Name']
@@ -1378,13 +1231,8 @@ class HandleMethodOrder(BaseRule):
 
 
 class ForceEpisode(BaseRule):
-    """
-    ForceEpisode
-    """
     def __init__(self):
         self.myId               = 998
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(30181)
         self.description        = LANGUAGE(33230)
         self.optionLabels       = [LANGUAGE(30181)]
@@ -1460,13 +1308,8 @@ class ForceEpisode(BaseRule):
         
         
 class ForceRandom(BaseRule):
-    """
-    ForceRandom
-    """
     def __init__(self):
         self.myId               = 999
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(30182)
         self.description        = LANGUAGE(33231)
         self.optionLabels       = [LANGUAGE(30182)]
@@ -1507,14 +1350,9 @@ class ForceRandom(BaseRule):
         return fileList
         
 
-class EvenShowsRule(BaseRule): #BUILDING RULES [1000-2999]
-    """
-    EvenShowsRule
-    """
+class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
     def __init__(self):
         self.myId               = 1000
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(30121)
         self.description        = LANGUAGE(33121)
         self.optionLabels       = [LANGUAGE(30180)]
@@ -1594,7 +1432,7 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-2999]
             elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
                 if len(parameter) > 0:
                     forceEpisode = self._isForceOrder(builder)
-                    if builder.pDialog: builder.pDialog = self.dialog.updateProgress(builder.pCount, builder.pDialog, message='%s: %s'%(LANGUAGE(32209),self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    builder.pDialog = _updateProgress(builder.pDialog, builder.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,builder.pMSG))
                     if forceEpisode: 
                         fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0))) #force episode ordering
                         fileItems = list(sorted(fileItems, key=lambda k: k.get('season',0))) #force season ordering
@@ -1609,11 +1447,9 @@ class EvenShowsRule(BaseRule): #BUILDING RULES [1000-2999]
         return parameter
         
         
-class PauseRule(BaseRule): #Finial RULES [3000-~]
+class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
     def __init__(self):
         self.myId               = 3000
-        self.ignore             = False
-        self.exclude            = False
         self.name               = LANGUAGE(32230)
         self.description        = LANGUAGE(33228)
         self.optionLabels       = [LANGUAGE(32231),"FileList"]

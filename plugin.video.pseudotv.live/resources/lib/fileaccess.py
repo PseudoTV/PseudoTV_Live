@@ -19,12 +19,13 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
+from contextlib import ContextDecorator
 
 #constants 
 DEFAULT_ENCODING = "utf-8"
 FILE_LOCK_NAME   = "pseudotv"
 
-class FileAccess:
+class FileAccess(object):
     @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):
         fle = 0
@@ -39,10 +40,13 @@ class FileAccess:
         """
         A context manager/decorator that opens a file stream, 
         yields the file object, and ensures it's closed.
+        
+        with FileAccess.stream("special://profile/settings.xml") as f:
+            content = f.read()
         """
-        fle = FileAccess.open(filename, mode, encoding)
-        try: yield fle
-        finally: fle.close()
+        f = FileAccess.open(filename, mode, encoding)
+        try: yield f
+        finally: f.close()
 
 
     @staticmethod
@@ -63,6 +67,11 @@ class FileAccess:
     @staticmethod
     def listdir(path):
         return xbmcvfs.listdir(path)
+
+
+    @staticmethod
+    def mkdirs(path):
+        return xbmcvfs.mkdirs(path)
 
 
     @staticmethod
@@ -237,7 +246,7 @@ class FileAccess:
         return xbmcvfs.exists(path)
 
 
-class VFSFile:
+class VFSFile(object):
     monitor = MONITOR()
     
     def __init__(self, filename, mode):
@@ -358,12 +367,9 @@ class FileLock(object):
                     self.is_locked = True #moved to ensure tag only when locked
                     break;
                 except OSError as e:
-                    if e.errno != errno.EEXIST:
-                        raise
-                    if self.timeout is None:
-                        raise FileLockException("Could not acquire lock on {}".format(self.file_name))
-                    if (time.time() - start_time) >= self.timeout:
-                        raise FileLockException("Timeout occured.")
+                    if e.errno != errno.EEXIST:                    return
+                    if self.timeout is None:                       return log("FileLock: Could not acquire lock.\n%s"%(e), xbmc.LOGERROR)
+                    if (time.time() - start_time) >= self.timeout: return log("FileLock: Timeout occurred.\n%s"%(e), xbmc.LOGERROR)
  
  
     def release(self):
@@ -401,5 +407,23 @@ class FileLock(object):
         FileAccess.delete(self.lockfile)
         
 
-class FileLockException(Exception):
-    pass
+class FileOpener(ContextDecorator):
+    """
+    @FileOpener("special://home/data.bin")
+    def my_function():
+        # Note: ContextDecorator doesn't easily inject 'f' into args.
+        # It is best for side-effect setup/teardown.
+        pass
+    """
+    def __init__(self, filepath, mode='rb', encoding=DEFAULT_ENCODING):
+        self.filepath = filepath
+        self.file_obj = None
+
+    def __enter__(self):
+        self.file_obj = xbmcvfs.File(self.filepath, mode, encoding)
+        return self.file_obj
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.file_obj:
+            self.file_obj.close()
+

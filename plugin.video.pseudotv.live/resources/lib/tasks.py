@@ -27,7 +27,7 @@ from multiroom  import Discovery, Multiroom
 from wizard     import Wizard
 from server     import HTTP
 
-class Tasks():
+class Tasks(object):
     cache   = SETTINGS.cache
     cacheDB = SETTINGS.cacheDB
     
@@ -44,11 +44,12 @@ class Tasks():
 
 
     def _client(self):
-        self.service._que(self.chkHTTP,1)
-        self.service._que(self.chkInstanceID,1)
-        self.service._que(self.chkPVRBackend,1)
-        self.service._que(self.chkDebugging,1)
-        self.service._que(self.chkDiscovery,1)
+        self.service._que(self.monitor.chkIdle,1)
+        self.service._que(self.chkHTTP        ,1)
+        self.service._que(self.chkInstanceID  ,1)
+        self.service._que(self.chkPVRBackend  ,1)
+        self.service._que(self.chkDebugging   ,1)
+        self.service._que(self.chkDiscovery   ,1)
         self.log('_initialize, _client...')
         
         
@@ -56,13 +57,14 @@ class Tasks():
         self._client()
         self.service._que(self.chkDirs,1)
         self.service._que(self.chkBackup,1)
-        self.service._que(self.chkWizard,1)
         self.log('_initialize, _host...')
     
     
     def chkHTTP(self):
+        httpThread = Thread(target=self.http._start)
+        httpThread.daemon = True
+        httpThread.start()
         self.log('chkHTTP')
-        Thread(target=self.http._start).start()
         
         
     def chkInstanceID(self):
@@ -86,11 +88,13 @@ class Tasks():
         if SETTINGS.getSettingBool('Enable_Kodi_Access'):
             self.jsonRPC.toggleShowLog(SETTINGS.getSettingBool('Debug_Enable'))
                     
-                   
+               
     def chkDiscovery(self):
+        discoThread = Thread(target=Discovery(self.service, Multiroom(service=self.service))._start)
+        discoThread.daemon = True
+        discoThread.start()
         self.log('chkDiscovery')
-        Thread(target=Discovery(self.service, Multiroom(service=self.service))._start).start()
-        
+         
          
     def chkBackup(self):
         self.log('chkBackup')
@@ -99,7 +103,7 @@ class Tasks():
 
     def chkServers(self):
         self.log('chkServers')
-        self.service._que(Multiroom(service=self.service)._chkServers,1)
+        Multiroom(service=self.service)._chkServers()
 
 
     def chkPVRBackend(self): 
@@ -111,18 +115,17 @@ class Tasks():
 
     def chkQueTimer(self):
         self.log('chkQueTimer')
-        self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200)
-        self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 1800)
-        self._chkEpochTimer('chkServers'      , self.chkServers       , 900)
+        self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200, 1)#12HRS
+        self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800, 1)#3HRS
+        self._chkEpochTimer('chkServers'      , self.chkServers       , 1800 , 1)#1HR
+        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 300  , 1)#10MINS
         
         if not self.service.isClient:
-            self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 3600)
-            self._chkEpochTimer('chkChannels' , self.chkChannels      , 3600)
+            self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 3600 , 2)#1HR
             self._chkEpochTimer('chkFiles'    , self.chkFiles         , 600)
-            self._chkEpochTimer('chkJSONQUE'  , self.chkJSONQUE       , 300)
-            self._chkEpochTimer('chkLOGOQUE'  , self.chkLOGOQUE       , 300)
             
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh    , 1)
+        self._chkPropTimer('chkChannels'      , self.chkChannels      , 3)
         
         
     def _chkEpochTimer(self, key, func, runevery=900, priority=-1, nextrun=None, *args, **kwargs):
@@ -156,7 +159,7 @@ class Tasks():
         if ADDON_VERSION < ONLINE_VERSION: 
             update = True
             DIALOG.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
-        elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion', checksum=ADDON_VERSION) or '0.0.0'):
+        elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion', checksum=ADDON_VERSION, revive=True) or '0.0.0'):
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION, checksum=ADDON_VERSION)
             BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
         self.log('chkVersion, update = %s, installed version = %s, online version = %s'%(update,ADDON_VERSION,ONLINE_VERSION))
@@ -171,7 +174,7 @@ class Tasks():
          
 
     def chkDirs(self):
-        [(self.log('chkDirs, creating [%s]'%(folder)),FileAccess.makedirs(folder)) for folder in [LOGO_LOC,FILLER_LOC,TEMP_LOC] if not FileAccess.exists(os.path.join(folder,''))]
+        [(self.log('chkDirs, creating [%s]'%(folder)),FileAccess.makedirs(folder)) for folder in [LOGO_LOC,FILLER_LOC,TEMP_LOC,TEMP_IMAGE_LOC] if not FileAccess.exists(os.path.join(folder,''))]
 
 
     def chkFiles(self):
@@ -181,86 +184,40 @@ class Tasks():
                 return self.service._que(self.chkChannels,3)
 
 
-    def chkLibrary(self, types=None):
-        library = Library(service=self.service)
-        # library.searchRecommended()
-        # library.importPrompt() #todo refactor feature
-        if types is None: types = list(library.AUTOTUNE.keys())
+    def chkLibrary(self, types=None, silent=False):
+        self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
+        complete = set()
+        library  = Library(service=self.service)
+        library.searchRecommended()
+        if types is None: types = AUTOTUNE_TYPES
         for idx, type in enumerate(types):
             items = library.getLibrary(type)
-            if self.service._interrupt(): 
-                self.log("chkLibrary, _interrupt")
-                return self.service._que(self.chkLibrary,2)
+            if self.service._interrupt() or self.service._suspend():
+                self.log("chkLibrary, _interrupt/_suspend")
+                return self.service._que(self.chkLibrary,2,*(types[idx:],silent))
             elif items:
-                self.log("chkLibrary, %s library found! Setting items, queuing update."%(type))
-                library.setLibrary(type, items)
-            self.service._que(library.updateLibrary,-1,type)
+                self.log("chkLibrary, %s library found! Setting items (%s), queuing update."%(type,len(items)))
+                complete.add(library.setLibrary(type, items))
+                self.service._que(library.updateLibrary,-1,*([type],True))
+            else:
+                self.log("chkLibrary, %s library not found! starting update."%(type))
+                complete.add(library.updateLibrary([type],silent))
+        if any(list(complete)): self.service._que(self.chkChannels,3)
+        self.log("chkLibrary, complete = %s"%(any(list(complete))))
         del library
         
         
     def chkChannels(self, channels: list=[], save=False):
-        builder            = Builder(service=self.service)
-        hasAutotuned       = SETTINGS.hasAutotuned()
-        hasEnabledServers  = PROPERTIES.hasEnabledServers()
-        buildFillerFolders = SETTINGS.getSettingBool('Build_Filler_Folders')
-        
-        if not channels:
-            save = True #only save full channel list
-            channels = builder.getVerifiedChannels()
-        self.log('chkChannels, channels = %s, hasAutotuned = %s, hasEnabledServers = %s, buildFillerFolders = %s'%(len(channels),hasAutotuned,hasEnabledServers,buildFillerFolders))
-
+        builder = Builder(service=self.service)
+        if not channels: channels = builder.getVerifiedChannels()
         if len(channels) > 0:
-            complete, refresh = builder.build(channels)
-            self.log('chkChannels, complete = %s, save = %s, refresh = %s'%(complete,save,refresh))
-            if complete:
-                if save: builder.channels.setChannels(channels)
-                if refresh: PROPERTIES.setPropTimer('chkPVRRefresh')
-                # if buildFillerFolders: self.service._que(self.chkFillers,2,channels)#todo repair
-            else: self.service._que(self.chkChannels,3,channels)
+            self.log('chkChannels, channels = %s'%(len(channels)))
+            self.service._que(builder.buildChannels,3,channels)
         else:
             self.log('chkChannels, No Channels Configured!')
-            if not hasAutotuned:    pass#DIALOG.notificationDialog(LANGUAGE(32181))
-            elif hasEnabledServers: PROPERTIES.setPropTimer('chkPVRRefresh')
-            else:                   DIALOG.notificationDialog(LANGUAGE(32058))
-        PROPERTIES.setChannels(len(channels) > 0)
+            if not SETTINGS.hasAutotuned():      SETTINGS.setAutotuned(Autotune()._runTune())
+            elif PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
         del builder
-
-
-    def chkLOGOQUE(self):
-        def __run(idx):
-            if len(params) > 0:
-                param = params.pop(0)
-                self.log("chkLOGOQUE, remaining queue = %s\n%s"%(len(params),param))
-                if param.get('name','').startswith('getLogoResources'):
-                    self.service._que(resources.getLogoResources, 5+idx, *param.get('args',()), **param.get('kwargs',{}))
-                elif param.get('name','').startswith('getTVShowLogo'):
-                    self.service._que(resources.getTVShowLogo, 5+idx, *param.get('args',()), **param.get('kwargs',{}))
-
-        if not PROPERTIES.isRunning('Tasks.chkLOGOQUE') and self.monitor.isIdle:
-            with PROPERTIES.chkRunning('Tasks.chkLOGOQUE'):
-                params = SETTINGS.queuePool.get('queueLOGO',[])
-                if len(params) == 0: return
-                resources = Library(service=self.service).resources
-                poolit(__run)(list(range(QUEUE_CHUNK)))
-                SETTINGS.queuePool['queueLOGO'] = setDictLST(params)
-                self.log('chkLOGOQUE, remaining = %s'%(len(SETTINGS.queuePool['queueLOGO'])))
-                del resources
-                
-                
-    def chkJSONQUE(self):
-        def __run(idx):
-            if len(params) > 0:
-                param = params.pop(0)
-                self.log("chkJSONQUE, remaining queue = %s\n%s"%(len(params),param))
-                self.service._que(self.jsonRPC.sendJSON,5+idx, param)
-
-        if not PROPERTIES.isRunning('Tasks.chkJSONQUE') and self.monitor.isIdle:
-            with PROPERTIES.chkRunning('Tasks.chkJSONQUE'):
-                params = randomShuffle(SETTINGS.queuePool.get('queueJSON',[]))
-                if len(params) == 0: return
-                poolit(__run)(list(range(QUEUE_CHUNK)))
-                SETTINGS.queuePool['queueJSON'] = setDictLST(params)
-                self.log('chkJSONQUE, remaining = %s'%(len(SETTINGS.queuePool['queueJSON'])))
 
 
     def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):
@@ -269,15 +226,15 @@ class Tasks():
             self.log('chkPVRRefresh, __toggle = %s'%(state))
             self.service.jsonRPC.sendJSON({"method":"Addons.SetAddonEnabled","params":{"addonid":PVR_CLIENT_ID,"enabled":state}})
             
-        if not PROPERTIES.isRunning('Tasks.chkPVRRefresh'):
+        if not PROPERTIES.isRunning('Tasks.chkPVRRefresh') and not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
                 self.service._que(self.http._restart,1)
                 if brute:
-                    if not BUILTIN.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
+                    if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
                         with BUILTIN.busy_dialog(lock=True):
                             # BUILTIN.executebuiltin("Dialog.Close(all)")
                             DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
-                            __toggle(False), self.service._wait(M3U_REFRESH*2), __toggle(True)
+                            __toggle(False), self.service._sleep(M3U_REFRESH*2), __toggle(True)
                     else: self.service._que(self.chkPVRRefresh,1)
             
             
@@ -295,6 +252,29 @@ class Tasks():
         return nSettings
 
 
+    def chkQUES(self):
+        library = Library()
+        for i in list(range(QUEUE_CHUNK)):
+            if self.service._interrupt() or self.service._suspend():
+                self.log("chkQUES, _interrupt/_suspend")
+                self.service._que(self.chkQUES,-1)
+                break
+            else:
+                if len(self.service.postQue) > 0:
+                    param = self.service.postQue.pop()
+                    self.log("chkQUES, queuing = %s\npostQue: %s"%(len(self.service.postQue),param))
+                    self.service._que(requestURL,1,*param)
+                if len(self.service.jsonQue) > 0:
+                    param = self.service.jsonQue.pop()
+                    self.log("chkQUES, queuing = %s\njsonQue:%s"%(len(self.service.jsonQue),param))
+                    self.service._que(self.jsonRPC.sendJSON,-1,param)
+                if len(self.service.logoQue) > 0:
+                    param = loadJSON(self.service.logoQue.pop())
+                    self.log("chkQUES, queuing = %s\nlogoQue:%s"%(len(self.service.logoQue),param))
+                    self.service._que(library.resources.getLogo,-1,*(param,library.resources.getCache(param),True,None))
+        del library
+        
+                
     def setUserPath(self, old, new):
         with PROPERTIES.interruptActivity():
             self.log('setUserPath, old = %s, new = %s'%(old,new))
@@ -306,3 +286,4 @@ class Tasks():
             
     def getVerifiedChannels(self):
         return Builder(service=self.service).getVerifiedChannels()
+        

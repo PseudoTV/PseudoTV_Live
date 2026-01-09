@@ -109,7 +109,6 @@ class Player(xbmc.Player):
         self._onStop(self.playingItem)
 
 
-    @executeit
     def getplayingItem(self, playingItem={}):
         def __update(id, citem={}): #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
             for item in self.service.channels:
@@ -151,7 +150,7 @@ class Player(xbmc.Player):
        
     def getPlayedTime(self):
         if self.isPlaying(): return (self.getTimeLabel('Time') or self.getTime()) #getTime retrieves Guide times not actual media time.
-        else:                return -1
+        else:                 return -1
        
             
     def getRemainingTime(self):
@@ -400,42 +399,43 @@ class Monitor(xbmc.Monitor):
     idleTime  = 0
     isIdle    = False
     isRunning = False
-
+    
     def __init__(self, service=None):
         xbmc.Monitor.__init__(self)
         self.service    = service
         self.jsonRPC    = service.jsonRPC
         self.player     = Player(service,self)
-        self.idleThread = Thread(target=self._start)
-        self.idleThread.daemon = True
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _start(self):
-        self.log('_start') 
+    def chkIdle(self):
+        self.log("chkIdle")
+        self.idleThread = Thread(target=self._chkIdle)
+        self.idleThread.daemon = True
+        self.idleThread.start()
+            
+        
+    def _chkIdle(self):
         if not self.isRunning:
             self.isRunning = True
             while not self.abortRequested():
                 if   self.service._shutdown(0.5): break
-                elif self.player.isPlayingPseudoTV(): self._chkIdle()
+                elif self.player.isPlayingPseudoTV():
+                    self.idleTime = BUILTIN.getIdle()
+                    self.isIdle   = bool(self.idleTime) | self.idleTime > OSD_TIMER
+                    self.log('_chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
+                    if self.isIdle: self.player._onIdle()
             self.isRunning = False
-            
-        
-    @executeit
-    def _chkIdle(self):
-        self.idleTime = BUILTIN.getIdle()
-        self.isIdle   = bool(self.idleTime) | self.idleTime > OSD_TIMER
-        self.log('_chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
-        if self.isIdle: self.player._onIdle()
+            self.log("_chkIdle, shutting down...")
             
             
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged') 
-        self.service._que(self._updatePlayerSettings,1)
-        self.service._que(self._updateServiceSettings,1)
+        self.service._que(self._updatePlayerSettings)
+        self.service._que(self._updateServiceSettings)
         
         
     def onNotification(self, sender, method, data):
@@ -444,7 +444,7 @@ class Monitor(xbmc.Monitor):
 
     def onSettingsChanged(self):
         self.log('onSettingsChanged')
-        timerit(self._onSettingsChanged)(FIFTEEN)
+        timerit(self._onSettingsChanged)(30)
         
             
     def _updateServiceSettings(self):
@@ -469,7 +469,7 @@ class Monitor(xbmc.Monitor):
         self.player.onNextPosition    = SETTINGS.getSetting("OnNext_Position_XY")
         
         
-class Service():
+class Service(object):
     channels         = []
     isClient         = SETTINGS.getSettingBool('Enable_Client')
     pendingSuspend   = PROPERTIES.setPendingSuspend(False)
@@ -477,7 +477,6 @@ class Service():
     pendingShutdown  = PROPERTIES.setPendingShutdown(False)
     pendingRestart   = PROPERTIES.setPendingRestart(False)
     
-
     def __init__(self):
         self.jsonRPC     = JSONRPC(service=self)
         self.monitor     = Monitor(service=self)
@@ -486,8 +485,21 @@ class Service():
         self.settings    = SETTINGS.getCurrentSettings()
         self.isClient    = SETTINGS.getSettingBool('Enable_Client')
         self.priorityQUE = CustomQueue(priority=True, service=self)
-        
-        
+        self.jsonQue     = set(SETTINGS.getCacheSetting('jsonQue') or [])
+        self.postQue     = set(SETTINGS.getCacheSetting('postQue') or [])
+        self.logoQue     = set(SETTINGS.getCacheSetting('logoQue') or [])
+        self.isScanning  = BUILTIN.isScanning()
+        self.isPlaying   = self._isPlaying()
+        self.log(f'__init__, jsonQue = {len(self.jsonQue)}, postQue = {len(self.postQue)}, logoQue = {len(self.logoQue)}')
+    
+
+    def __del__(self):
+        SETTINGS.setCacheSetting('jsonQue', list(self.jsonQue))
+        SETTINGS.setCacheSetting('postQue', list(self.postQue))
+        SETTINGS.setCacheSetting('logoQue', list(self.logoQue))
+        self.log(f'__del__, jsonQue = {len(self.jsonQue)}, postQue = {len(self.postQue)}, logoQue = {len(self.logoQue)}')
+
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -496,17 +508,16 @@ class Service():
         self.priorityQUE._push((func, args, kwargs), priority)
 
 
-    def _playing(self) -> bool: #assert background service during playback
+    def _isPlaying(self) -> bool: #assert playback for background service throttling.
         if (self.player.isPlaying() or BUILTIN.isPaused()) and not self.player.runWhilePlaying: return True
         return False
     
         
     def _tasks(self):
-        if not self._playing():
-            self._que(self.tasks._chkEpochTimer,-1,*('chkQueTimer', self.tasks.chkQueTimer, FIFTEEN)) #keep que alive after interrupt.
-        
+        self._que(self.tasks._chkEpochTimer,-1,*('chkQueTimer', self.tasks.chkQueTimer, FIFTEEN)) #keep CustomQueue alive after interrupt.
     
-    def _shutdown(self, wait=1.0) -> bool: #service break
+    
+    def _shutdown(self, wait=5.0) -> bool: #service break
         pendingShutdown = (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
         if self.pendingShutdown != pendingShutdown:
             self.pendingShutdown = pendingShutdown
@@ -514,40 +525,39 @@ class Service():
         return self.pendingShutdown
     
     
-    def _restart(self) -> bool: #service resetart
-        pendingRestart = (self.pendingRestart | PROPERTIES.isPendingRestart())
+    def _restart(self) -> bool: #service restart
+        pendingRestart = PROPERTIES.isPendingRestart()
         if self.pendingRestart != pendingRestart:
             self.pendingRestart = pendingRestart
             self.log('_restart, pendingRestart = %s'%(self.pendingRestart))
         return self.pendingRestart
          
         
-    def _interrupt(self) -> bool: #task que break
-        pendingInterrupt = (self.pendingShutdown | self.pendingRestart | self._playing() | PROPERTIES.isInterruptActivity() | BUILTIN.isScanning())
+    def _interrupt(self) -> bool: #tasks break
+        pendingInterrupt = (self.pendingShutdown | self.pendingRestart | self.isScanning | self.isPlaying | PROPERTIES.isInterruptActivity())
         if pendingInterrupt != self.pendingInterrupt:
             self.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
             self.log('_interrupt, pendingInterrupt = %s'%(self.pendingInterrupt))
         return self.pendingInterrupt
     
 
-    def _suspend(self, wait=1.0) -> bool: #task que continue
-        pendingSuspend = (self._wait(wait) | PROPERTIES.isSuspendActivity() | BUILTIN.isSettingsOpened())
+    def _suspend(self, wait=0) -> bool: #tasks continue
+        pendingSuspend = (PROPERTIES.isSuspendActivity() | BUILTIN.isSettingsOpened())
         if pendingSuspend != self.pendingSuspend:
             self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
-            self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))
+            self.log('_suspend,   = %s'%(self.pendingSuspend))
         return self.pendingSuspend
         
 
-    def _wait(self, wait=1.0):
+    def _sleep(self, wait=1.0): #waitForAbort replacement for tasks
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
+            if (self.monitor.waitForAbort(CPU_CYCLE) | self.pendingInterrupt): return True
             else: wait -= CPU_CYCLE
         if wait > 0: self.log('_wait, remaining = %s'%(wait))
         return False
                     
 
     def _initialize(self):
-        self.monitor.idleThread.start()
         if self.isClient: self._que(self.tasks._client,1)
         else:             self._que(self.tasks._host,1)
 
@@ -555,11 +565,13 @@ class Service():
     def _start(self):
         self.log('_start')
         self._initialize()
-        if DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=OSD_TIMER):
+        if DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=FIFTEEN):
             if self.player.isPlayingPseudoTV(): self.player.onAVStarted()
             while not self.monitor.abortRequested():
-                if    self._shutdown(): break
-                elif  self._restart():  break
+                self.isScanning = BUILTIN.isScanning()
+                self.isPlaying  = self._isPlaying()
+                if    self._shutdown() and self._interrupt(): break
+                elif  self._restart()  and self._interrupt(): break
                 else: self._tasks()
             return self._stop(self.pendingRestart)
 
@@ -573,5 +585,4 @@ class Service():
                     try: thread.join(1.0)
                     except: pass
                     self.log('_stop, closing %s...'%(thread.name))
-        SETTINGS.setCacheSetting('queuePool',SETTINGS.queuePool,json_data=True)
         return pendingRestart

@@ -17,105 +17,56 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from globals     import *
-from pool        import ExecutorPool
-from collections import defaultdict
+import pickle
 
-class LPickle: #todo lazy pickle no pickles / or / don't store obj's in heaps.
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+from globals             import *
+from collections         import defaultdict
+from concurrent.futures  import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
-    def serialize(self, heap, unsup=False):
-        # heap is (priority, _, (obj, args, kwargs)) ex. [(1, 6, (<bound method Tasks.chkDiscovery of <tasks.Tasks object at 0x000002AD4A1B42F0>>, (), {}))]
-        priority, _, (obj, args, kwargs) = heap
-        if inspect.ismethod(obj) and getattr(obj, "__self__", None) is not None:
-            inst = obj.__self__
-            cls  = inst.__class__
-            method_name = obj.__func__.__name__
-            # get instance state
-            if hasattr(inst, "__getstate__"): state = inst.__getstate__()   # getstate can be arbitrary; we'll pickle it
-            else:                             state = getattr(inst, "__dict__", {})  # fall back to __dict__
-            try: return {"priority": priority, "_": _, "callable": {"kind": "bound_method", "module": cls.__module__, "class": cls.__name__, "method": method_name, "state_blob": base64.b64encode(pickle.dumps(state)).decode("ascii"), }, "args": args, "kwargs": kwargs, }
-            except:
-                if    inspect.isfunction(obj): return {"priority": priority, "_": _, "callable": {"kind": "function"    , "module": obj.__module__, "name": obj.__name__,}, "args": args, "kwargs": kwargs,}
-                else: self.log("serialize, Unsupported callable type: %s"%repr(obj))
-        elif inspect.isfunction(obj): return {"priority": priority, "_": _, "callable": {"kind": "function", "module": obj.__module__, "name": obj.__name__,}, "args": args, "kwargs": kwargs,}
-        else: self.log("serialize, Unsupported callable type: %s"%repr(obj))
-
-    def deserialize(self, obj):
-        priority = obj["priority"]; _ = obj["_"]
-        call   = obj["callable"]
-        args   = tuple(obj.get("args", ()))
-        kwargs = dict(obj.get("kwargs", {}))
-        if call["kind"] == "bound_method":
-            # create instance without running __init__
-            cls   = getattr(importlib.import_module(call["module"]), call["class"])
-            inst  = cls.__new__(cls)
-            state = pickle.loads(base64.b64decode(call["state_blob"].encode("ascii")))
-            # restore state
-            if hasattr(inst, "__setstate__"): inst.__setstate__(state)
-            else: # assume state is a dict (from __dict__ fallback)
-                if isinstance(state, dict): inst.__dict__.update(state)
-                else: return self.log("deserialize, Cannot restore state for instance of %s"%cls)# unexpected; you may want to implement custom restoration
-            return (priority, _, (getattr(inst, call["method"]), args, kwargs))
-        elif call["kind"] == "function": return (priority, _, (getattr(importlib.import_module(call["module"]), call["name"]), args, kwargs))
-        else: self.log("deserialize, Unknown callable kind: %s"%repr(call["kind"]))
-
-    def get(self):
-        def __deserialize(heaps=[]):
-            for heap in heaps:
-                if not heap: continue
-                print('get',self.deserialize(heap))
-                yield self.deserialize(heap)
-        results = __deserialize((SETTINGS.getCacheSetting('min_heap',json_data=True) or []))
-        return [r for r in results if r is not None]
-           
-    def set(self, min_heap=[]):
-        def __serialize(min_heap):
-            for heap in min_heap:
-                if not heap: continue
-                print('set',self.serialize(heap))
-                yield self.serialize(heap)
-        if min_heap: SETTINGS.setCacheSetting('min_heap', list(__serialize(min_heap)),json_data=True)
-
-
-class LlNode:
+class LlNode(object):
     def __init__(self, package: tuple, priority: int=0, timer: int=0):
         self.prev      = None
         self.next      = None
         self.package   = package
-        self.priority  = priority
+        self.priority  = priority 
         self.time      = timer
 
 
-class CustomQueue:
-    min_heap = []
-    executor = False
-    pool     = ExecutorPool()
-    
+class CustomQueue(object):
+    try:    min_heap = list(pickle.loads((SETTINGS.getCacheSetting('min_heap', revive=False) or b'')))
+    except: min_heap = []
+   
     def __init__(self, fifo: bool=False, lifo: bool=False, priority: bool=False, delay: bool=False, timer: bool=False, service=None):
-        self.isRunning = False
-        self.service   = service
-        self.fifo      = fifo
-        self.lifo      = lifo
-        self.priority  = priority
-        self.delay     = delay
-        self.timer     = timer
-        self.head      = None
-        self.tail      = None
-        self.lPickle   = LPickle()
-        self.min_heap  = self.lPickle.get()
-        self.qsize     = 0
-        self.nodes     = set()
-        self.itemCount = defaultdict(int)
-        self.popThread = Thread(target=self._start)
-        self.executor  = SETTINGS.getSettingBool('Enable_Executors')
-        self.log("__init__, fifo = %s, lifo = %s, priority = %s, delay = %s, timer = %s, min_heap = %s"%(fifo, lifo, priority, delay, timer,len(self.min_heap)))
- 
- 
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        self.isRunning   = False
+        self.service     = service
+        self.fifo        = fifo
+        self.lifo        = lifo
+        self.priority    = priority
+        self.delay       = delay
+        self.timer       = timer
+        self.head        = None
+        self.tail        = None
+        self.qsize       = 0
+        self.nodes       = set()
+        self.type        = self._getType()
+        self.itemCount   = defaultdict(int)
+        self.useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
+        self.executor    = ThreadPoolExecutor(max_workers=THREAD_COUNT)
+        self.popThread   = Thread(target=self._start)
+        self.log("__init__, type = %s, delay = %s, timer = %s, min_heap = %s"%(self.type, delay, timer, len(self.min_heap)))
+        self.log(f"__init_,: ENABLE_EXECUTORS = {self.useExecutor}, CORES = {CPU_COUNT}, THREADS = {THREAD_COUNT}, CPU_CYCLE = {CPU_CYCLE}")
 
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log('%s [%s]: %s'%(self.__class__.__name__,self.type,msg),level)
+
+
+    def _getType(self):
+        if   self.fifo:     return 'FIFO'
+        elif self.lifo:     return 'LIFO'
+        elif self.priority: return 'PRIORITY'
+        else:               return 'UNKNOWN'
+        
 
     def _clear(self):
         self.nodes     = set()
@@ -127,13 +78,17 @@ class CustomQueue:
         
     def _run(self):
         self.log("_run")
+        self.useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
         if self.popThread.is_alive():
-            if hasattr(self.popThread, 'cancel'): self.popThread.cancel()
-            try: self.popThread.join()
+            try:
+                self.popThread.join(0.1)  
+                self.log('_run, joining existing popThread')                          
             except: pass
-        self.popThread = Thread(target=self._start)
-        self.popThread.daemon = True
-        self.popThread.start()
+        
+        elif not self.service._interrupt() and not self.service._suspend():
+            self.popThread = Thread(target=self._start)
+            self.popThread.daemon = True
+            self.popThread.start()
 
 
     def _wait(self, package):
@@ -142,14 +97,18 @@ class CustomQueue:
            
 
     def _exe(self, func, *args, **kwargs):
-        self.log(f"_exe, func = {func.__name__}")
-        try:
-            if self.executor: self.pool.executor(func, None, *args, **kwargs)
-            else:             self.pool.execute(func, *args, **kwargs)
-        except Exception as e:
-            self.log(f"_exe, func = {func.__name__} failed! {e}\nargs = {args}, kwargs = {kwargs}", xbmc.LOGERROR)
-               
-               
+        self.log(f"_exe, func = {func.__name__}, useExecutor = {self.useExecutor}")
+        with timeit(func):
+            try:
+                if self.useExecutor: 
+                    try:
+                        future = self.executor.submit(func, *args, **kwargs)
+                        return future.result()                    
+                    except Exception as e: self.log("_exe, func = %s failed!\n%s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
+                return func(*args, **kwargs)
+            except Exception as e: self.log("_exe, func = %s failed!\n%s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
+          
+
     def _exists(self, package: tuple, priority: int = 0, timer: int = 0):
         if priority:
             for idx, item in enumerate(self.min_heap):
@@ -180,11 +139,11 @@ class CustomQueue:
                 try:
                     self.qsize += 1
                     self.itemCount[priority] += 1
-                    self.log(f"_push, func = {package[0].__name__}, priority = {priority}")
+                    self.log(f"_push, func = {package[0].__name__}, priority = {priority}, isRunning = {self.isRunning}")
                     heapq.heappush(self.min_heap, (priority, self.itemCount[priority], package))
-                    if not self.isRunning: self._run()
                 except Exception as e:
                     self.log(f"_push, func = {package[0].__name__} failed! {e}", xbmc.LOGFATAL)
+                    return
         else:
             if timer and self._exists(package, priority, timer): self.log(f"{package[0].__name__} exists")
             else:
@@ -196,8 +155,8 @@ class CustomQueue:
                 else:
                     self.head = node
                     self.tail = node
-                self.log(f"_push, func = {package[0].__name__}, timer = {timer}")
-                if not self.isRunning: self._run()
+                self.log(f"_push, func = {package[0].__name__}, timer = {timer}, isRunning = {self.isRunning}")
+        if not self.isRunning or not self.popThread.is_alive(): self._run()
                 
 
     def _process(self, node, fifo=True):
@@ -212,20 +171,13 @@ class CustomQueue:
         
     def _start(self):
         self.isRunning = True
-        self.executor  = SETTINGS.getSettingBool('Enable_Executors')
         while not self.service.monitor.abortRequested():
-            if not self.head and not self.priority:
+            if self.service._interrupt() or self.service._suspend():
+                self.log("_start, _interrupt/_suspend")
+                break
+            elif not self.head and not self.priority:
                 self.log("_start, The queue is empty!")
                 break
-            elif self.service._shutdown(CPU_CYCLE): 
-                self.log("_start, _shutdown")
-                break
-            elif self.service._interrupt(): 
-                self.log("_start, _interrupt")
-                break
-            elif self.service._suspend(SUSPEND_TIMER): 
-                self.log("_start, _suspend")
-                continue
             elif self.priority:
                 if not self.min_heap:
                     self.log("_start, The priority queue is empty!")
@@ -252,10 +204,20 @@ class CustomQueue:
             else:
                 self.log("_start, queue undefined!")
                 break
-                
+        
         self.isRunning = False
-        self.lPickle.set(self.min_heap)
-        self.log("_start, finished: shutting down...")
+        if self.service._shutdown(CPU_CYCLE):
+            self.log("_start, _shutdown")
+            return self._stop()
+                
+                
+    def _stop(self):
+        # self._clear()
+        self.executor.shutdown(wait=False, cancel_futures=True)
+        # for item in self.min_heap:
+            # print(item)
+        # SETTINGS.setCacheSetting('min_heap', pickle.dumps(self.min_heap), checksum=ADDON_VERSION)
+        self.log("_stop, finished: shutting down...")
                 
                 
 # def quePriority(package: tuple, priority: int=0):

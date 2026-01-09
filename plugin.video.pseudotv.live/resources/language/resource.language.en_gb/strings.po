@@ -74,7 +74,7 @@ msgid "Tweaks"
 msgstr ""
 
 msgctxt "#30014"
-msgid "Parsing"
+msgid "Building"
 msgstr ""
 
 msgctxt "#30015"
@@ -814,7 +814,7 @@ msgid "OSD"
 msgstr ""
 
 msgctxt "#30198"
-msgid "Enable Threaded Queue Executor"
+msgid "Enable Executors"
 msgstr ""
 
 msgctxt "#30199"
@@ -916,6 +916,15 @@ msgstr ""
 msgctxt "#30222"
 msgid "Playback Timeout"
 msgstr ""
+
+msgctxt "#30223"
+msgid "Channel"
+msgstr ""
+
+msgctxt "#30224"
+msgid "Folder Depth"
+msgstr ""
+
 
 # Skin - strings 31000 thru 31999 reserved for skins
 
@@ -1090,7 +1099,7 @@ msgid "Library"
 msgstr ""
 
 msgctxt "#32042"
-msgid "Welcome to %s!\nNo Channels found, Would you like to\nAutoTune sample channels"
+msgid "[B]Welcome to %s![/B]\n[B]No[/B] Channels found, Would you like to AutoTune sample channels"
 msgstr ""
 
 msgctxt "#32043"
@@ -1370,7 +1379,7 @@ msgid "Recover Channels from a backup?"
 msgstr ""
 
 msgctxt "#32112"
-msgid "Recover Backup"
+msgid "Recover"
 msgstr ""
 
 msgctxt "#32113"
@@ -1771,7 +1780,7 @@ msgid "Sort Method"
 msgstr ""
 
 msgctxt "#32215"
-msgid "Enable Multi-Room Instances?"
+msgid "Enable Multi-Room Instances (Client Only) ?"
 msgstr ""
 
 msgctxt "#32216"

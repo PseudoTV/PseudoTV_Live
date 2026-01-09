@@ -24,7 +24,7 @@ HEADER = {"Authorization": "",
           "X-Title"      : f"{ADDON_NAME}",
           "X-Reference"  : f"{ADDON_URL}",}
            
-class OpenRouter():
+class OpenRouter(object):
     def __init__(self, cache=SETTINGS.cacheDB):
         self.cache = cache
         
@@ -71,9 +71,10 @@ class OpenRouter():
                 match = re.match(r"data:image/(?P<ext>.*?);base64,(?P<data>.*)", image["image_url"]["url"])
                 if match:
                     try:
-                        with FileLock():
-                            file_name = '%s.%s'%(chname,match.group('ext'))# '%s_%s.%s'%(chname,idx,match.group('ext'))
-                            with xbmcvfs.File(os.path.join(TEMP_IMAGE_LOC,file_name), "wb") as f:
+                        file_name = '%s.%s'%(chname,match.group('ext'))# '%s_%s.%s'%(chname,idx,match.group('ext'))
+                        file_path = os.path.join(TEMP_IMAGE_LOC,file_name)
+                        with FileLock(file_path):
+                            with FileAccess.stream(file_path, "wb") as f:
                                 f.write(base64.b64decode(match.group('data')))
                         if SETTINGS.hasAddon('script.module.pil', install=True): __alpha(file_name)
                     except base64.binascii.Error as e: print(f"Error decoding base64 data: {e}")
@@ -101,7 +102,7 @@ class OpenRouter():
 
                 # new_img = Image.new('RGBA', img.size)
                 # new_img.putdata(pixels)
-                # new_img.save(os.path.join(xbmcvfs.translatePath(LOGO_LOC),file_name), "PNG")  # Save as PNG to preserve transparency
+                # new_img.save(os.path.join(FileAccess.translatePath(LOGO_LOC),file_name), "PNG")  # Save as PNG to preserve transparency
                 # self.log(f"_alphaImage, Image saved with transparency at: {os.path.join(LOGO_LOC,file_name)}")
             # except FileNotFoundError: self.log(f"_alphaImage, Error: Image not found at {os.path.join(TEMP_IMAGE_LOC,file_name)}")
             # except Exception as e: self.log(f"_alphaImage, An error occurred: {e}")

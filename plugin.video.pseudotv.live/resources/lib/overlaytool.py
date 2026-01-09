@@ -50,13 +50,13 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             
             try:
                 self.autoBugX, self.autoBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto
-                self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+                self.channelBugX, self.channelBugY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
             except:
                 self.channelBugX, self.channelBugY = self.autoBugX, self.autoBugY
 
             try:    
                 self.autoNextX, self.autoNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
-                self.onNextX, self.onNextY = eval(kwargs.get("OnNext_Position_XY",SETTINGS.getSetting("OnNext_Position_XY")))
+                self.onNextX, self.onNextY = literal_eval(kwargs.get("OnNext_Position_XY",SETTINGS.getSetting("OnNext_Position_XY")))
             except: self.onNextX, self.onNextY = self.autoNextX, self.autoNextY
             
         try: 

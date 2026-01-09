@@ -27,6 +27,7 @@ from multiroom  import Multiroom
 from xsp        import XSP
 from builder    import Builder
 from predefined import Predefined
+from backup     import Backup
 from infotagger.listitem import ListItemInfoTag
 
 # Actions
@@ -42,7 +43,7 @@ ACTION_PREVIOUS_MENU = [92, 10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61
 class Manager(xbmcgui.WindowXMLDialog):
     focusIndex     = -1
     newChannels    = []
-    lockAutotune   = True
+    oldChannels    = []
     spinner        = None
     monitor        = MONITOR()
     lastActionTime = time.time()
@@ -51,19 +52,19 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('__init__, running = %s'%(PROPERTIES.isRunning('Manager.__init__')))
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)    
 
-        def __findAutotuned(chnum, retitem=False, channels=[]):
-            for idx, channel in enumerate(channels):
-                if channel.get('number') == (chnum or 1): 
-                    if retitem: return channel
-                    else:       return idx
+        def __findAvailChannel(start):
+            if start == -1: 
+                for channel in self.channelList:
+                    if not channel.get('id'): return channel.get('number')
+            return start
 
         def __loadChannels(name=SETTINGS.getSetting('Default_Channels')): #load local or remote channel configurations
             self.log('__loadChannels, name = %s, local = %s'%(name, self.friendly))
-            if   name == self.friendly or not kwargs.get('start',False): return self.channels.getChannels() #Local
+            self.oldChannels = self.channels.getChannels()
+            if   name == self.friendly or not kwargs.get('start',False): return self.oldChannels #Local
             elif name == LANGUAGE(30022):#Auto
-                channels = self.channels.getChannels()
-                if len(channels) > 0: return channels
-                else:                 return __loadChannels(LANGUAGE(32069))
+                if len(self.oldChannels ) > 0: return self.oldChannels 
+                else:                          return __loadChannels(LANGUAGE(32069))
             elif name == LANGUAGE(32069):#Ask
                 def __buildItem(server):
                     return self.buildListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],
@@ -73,52 +74,49 @@ class Manager(xbmcgui.WindowXMLDialog):
                 serLST  = Multiroom().getDiscovery()
                 servers = [value for key, value in list(serLST.items()) if value.get('online',False)]
                 if servers: lizLST.extend(poolit(__buildItem)(servers))
-                lizLST.insert(0,self.buildListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(self.channels.getChannels())),icon=ICON))
+                lizLST.insert(0,self.buildListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(self.oldChannels)),icon=ICON))
                 select = DIALOG.selectDialog(lizLST, '%s for Channel Setup'%(LANGUAGE(30173)), None, True, SELECT_DELAY, False)
                 if not select is None: return __loadChannels(lizLST[select].getLabel())
                 else:                  return
             elif name:
                 self.server = Multiroom().getDiscovery().get(name,{})
                 return self.server.get('channels',[])
-            return self.channels.getChannels()
+            return self.oldChannels
 
-        if not PROPERTIES.isRunning('Manager.__init__'):
-            PROPERTIES.setRunning('Manager.__init__',True)
+        with BUILTIN.busy_dialog(lock=True), PROPERTIES.interruptActivity():
+            self.server         = {}
+            self.cntrlStates    = {}
+            
+            self.madeChanges    = False
+            self.madeItemchange = False
+            self.showingList    = True
+            
+            self.openChannel    = kwargs.get('open')
+            self.startChannel   = __findAvailChannel(kwargs.get('channel',-1))
+            self.focusIndex     = (self.startChannel - 1) #Covert from channel number to list index ie. channel 1 => index 0
+            
+            self.cache          = SETTINGS.cache
+            self.channels       = Channels()
+            self.rule           = RulesList()
+            self.jsonRPC        = JSONRPC()
+            self.resources      = Resources()
+
+            self.host           = PROPERTIES.getRemoteHost()
+            self.friendly       = PROPERTIES.getFriendlyName()
+            self.newChannel     = self.channels.getTemplate()
+            
+        try:
             with BUILTIN.busy_dialog(lock=True):
-                self.server         = {}
-                self.cntrlStates    = {}
-                
-                self.madeChanges    = False
-                self.madeItemchange = False
-                self.showingList    = True
-                
-                self.startChannel   = kwargs.get('channel',-1)
-                self.openChannel    = kwargs.get('open')
-                
-                self.cache          = SETTINGS.cache
-                self.channels       = Channels()
-                self.rule           = RulesList()
-                self.jsonRPC        = JSONRPC()
-                self.resource       = Resources()
-
-                self.host           = PROPERTIES.getRemoteHost()
-                self.friendly       = PROPERTIES.getFriendlyName()
-                self.newChannel     = self.channels.getTemplate()
-                
-            try:
-                with BUILTIN.busy_dialog(lock=True):
-                    self.channelList = self.channels.sortChannels(self.createChannelList(self.buildArray(), __loadChannels()))
-                    self.newChannels = self.channelList.copy()
-                    if self.startChannel == -1:            self.startChannel = self.getFirstChannel()
-                    if self.startChannel <= CHANNEL_LIMIT: self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index 1:0 when within CHANNEL_LIMIT
-                    else:                                  self.focusIndex   = __findAutotuned(self.startChannel,channels=self.channelList)
-                    if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
-                    self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
-                if kwargs.get('start',True): self.doModal()
-            except Exception as e: 
-                self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
-                self.closeManager()
-        else: DIALOG.notificationDialog(LANGUAGE(32057)%(ADDON_NAME))
+                self.channelList = self.channels.sortChannels(self.createChannelList(self.buildArray(), __loadChannels()))
+                self.newChannels = self.channelList.copy()
+                if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
+                self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
+                if kwargs.get('start',True) and not PROPERTIES.isRunning('Manager.__init__'):
+                    with PROPERTIES.chkRunning('Manager.__init__'):
+                        self.doModal()
+        except Exception as e: 
+            self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
+            self.closeManager()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -140,22 +138,16 @@ class Manager(xbmcgui.WindowXMLDialog):
             log("onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.closeManager()
 
-       
-    def getFirstChannel(self):
-        for channel in self.channelList:
-            if not channel.get('id'): return channel.get('number')
-        return 1
-     
      
     def buildPreview(self, citem={}, msg=''):
         builder  = Builder()
-        fileList = PROPERTIES.recessActivity(msg, builder.build, *([citem],True))
+        fileList = PROPERTIES.recessActivity(msg, builder.buildChannels, *([citem],True))
         del builder
         self.log('buildPreview, fileList = %s'%(len(fileList))) 
         return fileList
 
 
-    def buildFileList(self, citem={}, path='', msg='', limit=25):
+    def buildFileList(self, citem={}, path='', msg='', limit=SETTINGS.getSettingInt('Page_Limit')):
         fileList = PROPERTIES.recessActivity(msg, Builder().buildFileList, *(citem,path,'video',limit,{},{}))
         self.log('buildFileList, fileList = %s'%(len(fileList))) 
         return fileList
@@ -174,8 +166,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def createChannelList(self, channelArray, channelList):
         self.log('createChannelList') # Fill blank array with citems from channels.json
         def __update(item):
-            try:    channelArray[item["number"]-1].update(item) #CUSTOM
-            except: channelArray.append(item)                   #AUTOTUNE
+            channelArray[item["number"]-1].update(item) #CUSTOM
             
         checksum  = getMD5(dumpJSON(channelList))
         cacheName = 'createChannelList.%s'%(checksum)
@@ -195,21 +186,18 @@ class Manager(xbmcgui.WindowXMLDialog):
     def fillChanList(self, channelList, refresh=False, focus=None, channel=None):
         self.log('fillChanList, focus = %s, channel = %s'%(focus,channel))
         def __buildItem(citem):
-            isPredefined  = citem["number"] > CHANNEL_LIMIT
             isFavorite    = citem.get('favorite',False)
             isRadio       = citem.get('radio',False)
-            isLocked      = isPredefined #todo parse channel lock rule
+            isLocked      = False #todo parse channel lock rule
             channelColor  = COLOR_UNAVAILABLE_CHANNEL
             labelColor    = COLOR_UNAVAILABLE_CHANNEL
             
             if citem.get("path"):
-                if isPredefined: channelColor = COLOR_LOCKED_CHANNEL
-                else:
-                    labelColor = COLOR_AVAILABLE_CHANNEL
-                    if   isLocked:       channelColor = COLOR_LOCKED_CHANNEL
-                    elif isFavorite:     channelColor = COLOR_FAVORITE_CHANNEL
-                    elif isRadio:        channelColor = COLOR_RADIO_CHANNEL
-                    else:                channelColor = COLOR_AVAILABLE_CHANNEL
+                labelColor = COLOR_AVAILABLE_CHANNEL
+                if   isLocked:   channelColor = COLOR_LOCKED_CHANNEL
+                elif isFavorite: channelColor = COLOR_FAVORITE_CHANNEL
+                elif isRadio:    channelColor = COLOR_RADIO_CHANNEL
+                else:            channelColor = COLOR_AVAILABLE_CHANNEL
             return self.buildListItem('[COLOR=%s][B]%s|[/COLOR][/B]'%(channelColor,citem["number"]),'[COLOR=%s]%s[/COLOR]'%(labelColor,citem.get("name",'')),items={'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':LANGUAGE(32169)%(citem["number"],self.server.get('name',self.friendly))})
                 
         self.togglechanList(reset=refresh)
@@ -268,10 +256,17 @@ class Manager(xbmcgui.WindowXMLDialog):
                     self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
                     self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
                 else:
-                    self.setLabels(self.right_button1,LANGUAGE(32062))#Close
-                    self.setLabels(self.right_button2,LANGUAGE(32235))#Preview
-                    self.setLabels(self.right_button3,LANGUAGE(32136))#Move
-                    self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
+                    if len(self.oldChannels) == 0:
+                        self.setLabels(self.right_button1,LANGUAGE(32062))#Close
+                        if PROPERTIES.hasBackup():  self.setLabels(self.right_button2,LANGUAGE(32112))#Recover
+                        else:                       self.setLabels(self.right_button2,"")
+                        if SETTINGS.hasAutotuned(): self.setLabels(self.right_button3,LANGUAGE(30038))#AutoTune
+                        else:                       self.setLabels(self.right_button3,"")
+                    else:
+                        self.setLabels(self.right_button1,LANGUAGE(32062))#Close
+                        self.setLabels(self.right_button2,LANGUAGE(32235))#Preview
+                        self.setLabels(self.right_button3,LANGUAGE(32136))#Move
+                        self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
                     self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
                     self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) + String.IsEqual(Container(5).ListItem(Container(5).Position).Property(radio),False)]')
                     
@@ -327,7 +322,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getLogoColor, id = %s'%(citem.get('id',-1)))
         if  (citem.get('logo') and citem.get('name')) is None: return 'FFFFFFFF'
         elif citem.get('rules',{}).get("1"):
-            if (self.getRuleAbbr(citem,1,4) or self.resource.isMono(citem['logo'])):
+            if (self.getRuleAbbr(citem,1,4) or self.resources.isMono(citem['logo'])):
                 return self.getRuleAbbr(citem,1,3)
         return SETTINGS.getSetting('ChannelBug_Color')
         
@@ -520,20 +515,18 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def getRule(self, citem={}, rule={}):
         self.log('getRule, name = %s'%(rule.name))
-        if rule.exclude and True in list(set([True for p in citem.get('path',[]) if p.endswith('.xsp')])): return DIALOG.notificationDialog(LANGUAGE(32178))
-        else:
-            select = -1
-            while not self.monitor.abortRequested() and not select is None:
-                with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                    lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],DUMMY_ICON.format(text=str(idx+1)),[str(rule.myId)],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
-                select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
-                if not select is None:
-                    try: rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
-                    except Exception as e:
-                        self.log("getRule, onAction failed! %s"%(e), xbmc.LOGERROR)
-                        DIALOG.okDialog(LANGUAGE(32000))
-            return rule, citem
-        
+        select = -1
+        while not self.monitor.abortRequested() and not select is None:
+            with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+                lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],DUMMY_ICON.format(text=str(idx+1)),[str(rule.myId)],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
+            select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
+            if not select is None:
+                try: rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
+                except Exception as e:
+                    self.log("getRule, onAction failed! %s"%(e), xbmc.LOGERROR)
+                    DIALOG.okDialog(LANGUAGE(32000))
+        return rule, citem
+    
         
     def setID(self, citem: dict={}) -> dict:
         if not citem.get('id') and citem.get('name') and citem.get('path') and citem.get('number'): 
@@ -559,7 +552,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             else:     logo = citem.get('logo')
             if not logo or logo in [LOGO,COLOR_LOGO,ICON]:
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                    citem['logo'] = self.resource.getLogo(citem, noWait=True)
+                    citem['logo'] = self.resources.getLogo(citem, fallback=self.resources.getCache(citem['name']), lookup=True)
         self.log('setLogo, id = %s, logo = %s, force = %s'%(citem.get('id'),citem.get('logo'),force))
         return citem
        
@@ -767,10 +760,10 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def switchLogo(self, channelData, channelPOS):
         def __cleanLogo(chlogo):
-            #todo convert resource from vfs to fs
-            # return chlogo.replace('resource://','special://home/addons/')
-            # resource = path.replace('/resources','').replace(,)
-            # resource://resource.images.studios.white/Amazon.png
+            #todo convert resources from vfs to fs
+            # return chlogo.replace('resources://','special://home/addons/')
+            # resources = path.replace('/resources','').replace(,)
+            # resources://resources.images.studios.white/Amazon.png
             return chlogo
         
         def __select():
@@ -780,7 +773,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             DIALOG.notificationDialog(LANGUAGE(32140))
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 chname = channelData.get('name')
-                logos  = self.resource.selectLogo(channelData)
+                logos  = self.resources.selectLogo(channelData)
                 lizLST = list()
                 lizLST.extend(poolit(__buildItem)(logos))
             select = DIALOG.selectDialog(lizLST,'%s (%s)'%(LANGUAGE(32066).split('[CR]')[1],chname),useDetails=True,multi=False)
@@ -797,7 +790,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         def __match():
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                return self.resource.getLogo(channelData, noWait=True)
+                return self.resources.getLogo(channelData, fallback=self.resources.getCache(channelData['name']), lookup=True)
 
         if not channelData.get('name'): return DIALOG.notificationDialog(LANGUAGE(32065))
         chlogo = None
@@ -821,8 +814,8 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def isVisible(self, cntrl):
         try: 
-            if isinstance(cntrl, int): cntrl = self.getControl(cntrl)
-            state = cntrl.isVisible()
+            if isinstance(cntrl, int):      cntrl = self.getControl(cntrl)
+            if hasattr(cntrl, 'isVisible'): state = cntrl.isVisible()
         except: state = self.cntrlStates.get(cntrl.getId(),False)
         self.log('isVisible, cntrl = %s, state = %s'%(cntrl.getId(),state))
         return state
@@ -830,8 +823,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def setVisibility(self, cntrl, state):
         try: 
-            if isinstance(cntrl, int): cntrl = self.getControl(cntrl)
-            cntrl.setVisible(state)
+            if isinstance(cntrl, int):       cntrl = self.getControl(cntrl)
+            if hasattr(cntrl, 'setVisible'): cntrl.setVisible(state)
             self.cntrlStates[cntrl.getId()] = state
             self.log('setVisibility, cntrl = ' + str(cntrl.getId()) + ', state = ' + str(state))
         except Exception as e: self.log("setVisibility, failed! %s"%(e), xbmc.LOGERROR)
@@ -899,27 +892,26 @@ class Manager(xbmcgui.WindowXMLDialog):
         if self.madeChanges:
             if DIALOG.yesnoDialog(LANGUAGE(32076)):
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                    self.madeChanges = False
+                    self.log("saveChanges, backup = %s"%(Backup().backupChannels(CHANNELFLE_CHANGE,silent=True)))
                     channels = __validateChannels(self.newChannels)
                     self.log("saveChanges, channels = %s"%(len(channels)))
                     if self.server: #remote save
                         requestURL('http://%s/%s'%(self.server.get('host'), CHANNELFLE), payload={'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels})
                     else: #local save
                         self.channels.setChannels(channels) #save changes
-                        PROPERTIES.setEpochTimer('chkChannels')#trigger channel building
+                        PROPERTIES.setPropTimer('chkChannels')#trigger channel building
+                    self.madeChanges = False
         self.closeManager()
             
 
     def closeManager(self):
-        self.log('closeManager')
-        PROPERTIES.setRunning('Manager.__init__',False)
+        self.log('closeManager, madeChanges = %s'%(self.madeChanges))
         if self.madeChanges: self.saveChanges() 
         else:                self.close()
         
         
-    @executeit
     def getFocusItems(self, controlId=None):
-        if controlId in [5,6,7,9001,9002,9003,9004]:
+        if controlId in [5,6,7,9000,9001,9002,9003,9004]:
             label, label2 = self.getLabels(controlId)
             try:     snum = int(cleanLabel(label.replace("|",'')))
             except:  snum = 1
@@ -971,20 +963,16 @@ class Manager(xbmcgui.WindowXMLDialog):
 
         
     def onClick(self, controlId):
-        if (self.isLocked() or (time.time() - self.lastActionTime) < .5 and controlId not in [9001,9002,9003,9004]): DIALOG.notificationDialog(LANGUAGE(32260))
+        if (self.isLocked() or (time.time() - self.lastActionTime) < .5 and controlId not in [9000,9001,9002,9003,9004]): DIALOG.notificationDialog(LANGUAGE(32260))
         else:
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 self.log('onClick: controlId = %s, locked = %s'%(controlId,self.isLocked()))
                 if controlId == 0: self.closeManager()
                 else:
                     focusItems = self.getFocusItems(controlId)
-                    if   controlId == 5: self.buildChannelItem(focusItems.get('citem')) #item list
-                    elif controlId == 6:
-                        if    self.lockAutotune and focusItems.get('number',0) > CHANNEL_LIMIT: DIALOG.notificationDialog(LANGUAGE(32064))
-                        else: self.buildChannelItem(self.itemInput(focusItems.get('item')),focusItems.get('item').getProperty('key'))
-                    elif controlId == 10: #logo button
-                        if    self.lockAutotune and focusItems.get('number',0) > CHANNEL_LIMIT: DIALOG.notificationDialog(LANGUAGE(32064))
-                        else: self.switchLogo(focusItems.get('citem'), focusItems.get('chpos',0))
+                    if   controlId == 5:  self.buildChannelItem(focusItems.get('citem')) #item list
+                    elif controlId == 6:  self.buildChannelItem(self.itemInput(focusItems.get('item')),focusItems.get('item').getProperty('key'))
+                    elif controlId == 10: self.switchLogo(focusItems.get('citem'), focusItems.get('chpos',0))#logo button
                     elif controlId in [9001,9002,9003,9004]: #side buttons
                         if   focusItems.get('label') == LANGUAGE(32059): self.saveChanges()                                   #Save 
                         elif focusItems.get('label') == LANGUAGE(32061): self.clearChannel(focusItems.get('citem'))           #Delete
@@ -1002,4 +990,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         elif focusItems.get('label') == LANGUAGE(32235): #Preview
                             if self.isVisible(self.itemList) and self.madeItemchange: self.closeChannel(focusItems.get('citem'), open=True)
                             self.previewChannel(focusItems.get('citem'), focusItems.get('retCntrl'))
+                        elif focusItems.get('label') == LANGUAGE(32110): ...#Backup
+                        elif focusItems.get('label') == LANGUAGE(32112): ...#Recover
+                        elif focusItems.get('label') == LANGUAGE(30038): timerit(SETTINGS.autoTune)(0.1)#AutoTune
                     

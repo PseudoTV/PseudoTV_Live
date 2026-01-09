@@ -21,8 +21,7 @@ from globals     import *
 from jsonrpc     import JSONRPC
 from rules       import RulesList
 
-
-class Plugin:
+class Plugin(object):
     def __init__(self, sysARG=sys.argv, sysInfo={}):
         with BUILTIN.busy_dialog():
             self.sysARG  = sysARG
@@ -202,6 +201,7 @@ class Plugin:
         return [xbmcgui.ListItem()]
     
 
+    @threadit
     def playTV(self, name: str, chid: str):
         self.log('[%s] playTV'%(chid))
         with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
@@ -212,6 +212,7 @@ class Plugin:
             self._resolveURL(True, listitem)
         
 
+    @threadit
     def playLive(self, name: str, chid: str, vid: str):
         self.log('[%s] playLive, name = %s'%(chid, name))
         with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
@@ -239,6 +240,7 @@ class Plugin:
                 self.playTV(name, chid)
 
 
+    @threadit
     def playBroadcast(self, name: str, chid: str, vid: str): #-> catchup-source
         self.log('[%s] playBroadcast'%(chid))
         with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
@@ -251,18 +253,21 @@ class Plugin:
             self._resolveURL(True, listitem)
             
             
+    @threadit
     def playVOD(self, title: str, vid: str): #-> catchup-id
         self.log('[%s] playVOD, title = %s'%(vid,title))
         with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
             self._resolveURL(True, LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
 
 
+    @threadit
     def playDVR(self, title: str, vid: str): #-> catchup-id
         self.log('[%s] playDVR, title = %s'%(vid, title))
         with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
             self._resolveURL(True, self._setResume(vid, LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))))
 
 
+    @threadit
     def playRadio(self, name: str, chid: str, vid: str):
         self.log('[%s] playRadio'%(chid))
         def __buildfItem(item: dict={}):
@@ -279,6 +284,7 @@ class Plugin:
             self._resolveURL(False, xbmcgui.ListItem())
 
 
+    @threadit
     def playPlaylist(self, name: str, chid: str):
         self.log('[%s] playPlaylist'%(chid))
         with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
@@ -292,6 +298,7 @@ class Plugin:
             self._resolveURL(False, xbmcgui.ListItem())
 
 
+    @threadit
     def playPaused(self, name: str, chid: str):
         self.log('[%s] playPaused'%(chid))
         with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():

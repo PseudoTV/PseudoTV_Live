@@ -60,7 +60,7 @@ M3U_MIN  = {"id"                : "",
             "label"             : "",
             "url"               : ""}
             
-class M3U:
+class M3U(object):
     def __init__(self):
         data = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE))
         stations, recordings = self.cleanSelf(list(self._load()))
@@ -193,7 +193,7 @@ class M3U:
         
         
     def _save(self, file=M3UFLEPATH):
-        with FileLock():
+        with FileLock(file):
             fle = FileAccess.open(file, 'w')
             fle.write('%s\n'%(self.M3UDATA['data']))
             
@@ -321,6 +321,7 @@ class M3U:
                sitem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
         else:  sitem['url'] = TV_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']))
         return sitem
+    
     
     def getRecordItem(self, fitem, seek=0):
         if seek <= 0: group = LANGUAGE(30119)

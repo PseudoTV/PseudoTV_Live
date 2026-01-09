@@ -18,38 +18,15 @@
 
 # -*- coding: utf-8 -*-
 
-from globals   import *
-from plugin    import Plugin
+from globals    import *
+from plugin     import Plugin
+from autotune   import Autotune
 
 def _run(sysARG, fitem: dict={}, nitem: dict={}):
-    """
-    Main entry point for PseudoTV Live's functionality.
-
-    Processes system arguments from Kodi and determines the mode of operation,
-    including live TV, VOD, DVR, radio, guide, settings, etc. Calls the appropriate
-    Plugin functions based on mode and parameters.
-
-    Args:
-        sysARG (list): System arguments passed by Kodi.
-        fitem (dict, optional): Data about the current item (featured/program). Default empty dict.
-        nitem (dict, optional): Data about the next item (upcoming/program). Default empty dict.
-
-    Returns:
-        None
-
-    Side Effects:
-        - Initiates playback, guide, or settings depending on mode.
-        - Displays notifications for unsupported modes or errors.
-        - Uses threading for playback functions.
-        - Suspends/resumes Kodi activity appropriately.
-        - Delays to avoid thread crashes during fast channel changes.
-
-    """
     with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
-        params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-        mode = (params.get("mode") or 'guide')
-        params['mode']       = mode
-        params['radio']      = mode == "radio"
+        params = dict(urllib.parse.parse_qsl(sys.argv[2][1:].replace('.pvr','')))
+        params['mode']       = params.get("mode")
+        params['radio']      = params['mode'] == "radio"
         params['fitem']      = fitem
         params['nitem']      = nitem
         params['vid']        = decodeString(params.get("vid",''))
@@ -60,39 +37,29 @@ def _run(sysARG, fitem: dict={}, nitem: dict={}):
         log("Default: run, params = %s"%(params))
         
         if   PROPERTIES.isRunning('Tasks.chkPVRRefresh'): DIALOG.notificationDialog(LANGUAGE(32166))
-        elif mode == 'live':
+        elif params['mode'] == 'live':
             if params.get('start') == '{utc}' or str(BUILTIN.getInfoLabel('ChannelNumber')) == '0':
                 PROPERTIES.setPropTimer('chkPVRRefresh')
                 params.update({'start':0,'stop':0,'duration':0})
-                if   params['isPlaylist']:      threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
-                elif params['vid'] :            threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
-            elif params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
-            elif params['vid']:                 threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
-            else:                               threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
+                if   params['isPlaylist']:        threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
+                elif params['vid'] :              threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
+            elif params['isPlaylist']:            threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
+            elif params['vid']:                   threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
+            else:                                 threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
+            MONITOR().waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000)) #delay to avoid thread crashes when fast channel changing ie PVR channel surfing.
         elif params['vid']:
-            if   mode == 'vod':                 threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
-            elif mode == 'dvr':                 threadit(Plugin(sysARG, sysInfo=params).playDVR)(params["title"],params["vid"])
+            if   params['mode'] == 'vod':                   threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
+            elif params['mode'] == 'dvr':                   threadit(Plugin(sysARG, sysInfo=params).playDVR)(params["title"],params["vid"])
             elif params['chid']:
-                if   mode == 'broadcast':       threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
-                elif mode == 'radio':           threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
-        elif mode == 'resume' and params['chid']: 
-                                                threadit(Plugin(sysARG, sysInfo=params).playPaused)(params["name"],params["chid"])
-        elif mode == 'guide'                and SETTINGS.hasAddon(PVR_CLIENT_ID,install=True,enable=True): return SETTINGS.openGuide()
-        elif mode == 'settings'             and SETTINGS.hasAddon(PVR_CLIENT_ID,install=True,enable=True): return SETTINGS.openSettings()
-        else:                                   DIALOG.notificationDialog(LANGUAGE(32000))
-        MONITOR().waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000)) #delay to avoid thread crashes when fast channel changing ie PVR channel surfing.
+                if   mode == 'broadcast':         threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
+                elif mode == 'radio':             threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
+        elif params['mode'] == 'resume' and params['chid']: threadit(Plugin(sysARG, sysInfo=params).playPaused)(params["name"],params["chid"])
+        else: DIALOG.notificationDialog(LANGUAGE(32000))
         
 if __name__ == '__main__':
-    """
-    Script entry point when run as main.
-
-    Decodes plot information for current and next items, then initiates the main run
-    function with the decoded items and system arguments.
-
-    Side Effects:
-        - Calls _run() to start PseudoTV Live's main logic.
-
-    Returns:
-        None
-    """
-    _run(sys.argv, decodePlot(BUILTIN.getInfoLabel('Plot')), decodePlot(BUILTIN.getInfoLabel('NextPlot')))
+    mode = dict(urllib.parse.parse_qsl(sys.argv[2][1:].replace('.pvr',''))).get("mode")
+    if   mode == 'settings':                        SETTINGS.openSettings()
+    elif mode is None and PROPERTIES.hasChannels(): SETTINGS.openGuide()
+    elif mode is None and SETTINGS.hasAutotuned():  SETTINGS.autoTune()
+    else: _run(sys.argv, decodePlot(BUILTIN.getInfoLabel('Plot')), decodePlot(BUILTIN.getInfoLabel('NextPlot')))
+    # if SETTINGS.hasAddon(PVR_CLIENT_ID,install=True,enable=True,force=True):

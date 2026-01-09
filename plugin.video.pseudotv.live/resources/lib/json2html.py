@@ -32,7 +32,7 @@ else:
     text_types = (str,)
 
 
-class Json2Html:
+class Json2Html(object):
     def convert(self, json="", table_attributes='border="1"', clubbing=True, encode=False, escape=True):
         """
             Convert JSON to HTML Table format

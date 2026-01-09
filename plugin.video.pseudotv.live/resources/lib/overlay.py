@@ -164,7 +164,7 @@ class Restart(xbmcgui.WindowXMLDialog):
         self.closing = True
         
 
-class Overlay():
+class Overlay(object):
     channelBug     = None
     vignette       = None
     controlManager = dict()
@@ -192,7 +192,7 @@ class Overlay():
         self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'))
         self.channelBugFade   = SETTINGS.getSettingInt('ChannelBug_Transparency')
         
-        try:    self.channelBugX, self.channelBugY = eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+        try:    self.channelBugX, self.channelBugY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
         except: self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto        
 
         
@@ -298,7 +298,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         self.window     = xbmcgui.Window(12005) 
         self.window_w, self.window_h = WH #self.window_h, self.window_w = (self.window.getHeight(), self.window.getWidth())
                 
-        try:    self.onNextX, self.onNextY = eval(self.onNextPosition) #user
+        try:    self.onNextX, self.onNextY = literal_eval(self.onNextPosition) #user
         except: self.onNextX, self.onNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
     
         self.log('__init__, enableOnNext = %s, onNextMode = %s, onNextX = %s, onNextY = %s'%(bool(self.onNextMode),self.onNextMode,self.onNextX,self.onNextY))
@@ -419,9 +419,9 @@ class OnNext(xbmcgui.WindowXMLDialog):
         actionId = act.getId()
         self.log('onAction: actionId = %s'%(actionId))
         self.closing = True
-        if   actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),.5,true,false)')
-        elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
-        elif actionId in ACTION_PREVIOUS_MENU: BUILTIN.executebuiltin('AlarmClock(back,Action(back),.5,true,false)')
+        # if   actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),.5,true,false)')
+        # elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
+        # elif actionId in ACTION_PREVIOUS_MENU: BUILTIN.executebuiltin('AlarmClock(back,Action(back),.5,true,false)')
 
 
     def onClose(self):

@@ -25,7 +25,7 @@ from functools                 import partial
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
 from io                        import BytesIO
-
+from resources                 import Resources
 #todo proper REST API to handle server/client communication incl. sync/update triggers.
 #todo incorporate experimental webserver UI to master branch.
 
@@ -34,9 +34,6 @@ COMPRESSION_THRESHOLD = 1024  # 1 KB
 CHUNK_SIZE            = 4096 #4 KB
 
 class Discovery:
-    isRunning      = False
-    pendingRestart = False
-    
     class MyListener(object):
         def __init__(self, multiroom=None):
             self.zServers  = dict()
@@ -60,6 +57,7 @@ class Discovery:
                     self.multiroom.addServer(requestURL(self.zServers[server]['bonjour'],cache={'cache':SETTINGS.cache,'json_data':True, "life": datetime.timedelta(seconds=300)}))
             
     def __init__(self, service=None, multiroom=None):
+        self.log("__init__")
         self.service   = service
         self.monitor   = service.monitor
         self.multiroom = multiroom
@@ -69,41 +67,32 @@ class Discovery:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _restart(self):
-        self.pendingRestart = True
-
-
     def _start(self):
-        def __stop(restart=False):
-            self.isRunning = False
-            self.log('__stop, Multicast DNS Service shutdown, restart = %s'%(restart), xbmc.LOGINFO)
-            if restart:
-                self.pendingRestart = False
-                self.service._que(self.service.tasks.chkDiscovery,1)
-            
         while not self.monitor.abortRequested():
-            if not self.isRunning:
-                self.isRunning = True
+            if self.service._sleep(300): break
+            else:
                 try: 
-                    zconf = Zeroconf()
                     zcons = self.multiroom._getStatus()
-                    self.log("_start, Multicast DNS Service waiting for (%s)"%(ZEROCONF_SERVICE))
-                    SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
-                    ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
-                    self.service._wait(DISCOVER_INTERVAL)
-                    SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
-                    self.log("_start, Multicast DNS Service stopping search for (%s)"%(ZEROCONF_SERVICE))
-                    zconf.close()
-                except Exception as e: self.log("_start, Multicast DNS Service startup failed! %s"%(e), xbmc.LOGERROR)
-            elif self.service._shutdown(300): break
-        return __stop(self.pendingRestart)
-                        
+                    if zcons:
+                        zconf = Zeroconf()
+                        self.log("_start, Multicast DNS Service waiting for (%s)"%(ZEROCONF_SERVICE))
+                        SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
+                        ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
+                        self.service._sleep(DISCOVER_INTERVAL)
+                        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
+                        self.log("_start, Multicast DNS Service stopping search for (%s)"%(ZEROCONF_SERVICE))
+                        zconf.close()
+                except Exception as e:
+                    self.log("_start, Multicast DNS Service startup failed! %s"%(e), xbmc.LOGERROR)
+                    break
+            
             
 class MyHandler(BaseHTTPRequestHandler):
-    
     def __init__(self, request, client_address, server, service):
-        self.service = service
-        self.monitor = service.monitor
+        self.service   = service
+        self.monitor   = service.monitor
+        self.resources = Resources(service)
+        
         try: BaseHTTPRequestHandler.__init__(self, request, client_address, server)
         except: pass
 
@@ -145,7 +134,7 @@ class MyHandler(BaseHTTPRequestHandler):
                     if setJSON(os.path.join(RESUME_LOC,self.path.replace('/filelist/','')),incoming.get('payload')):
                         DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30060),incoming.get('name',ADDON_NAME)))
                     self.send_response(200, "OK")
-                elif file_path.startswith(('/manager','/wizard')) and file_path.endswith('form.html'):
+                elif self.path.startswith(('/manager','/wizard')) and self.path.lower().endswith('form.html'):
                     try:
                         # Prefer a hypothetical SETTINGS.setPayload if it exists
                         if hasattr(SETTINGS, 'setPayload'):
@@ -162,68 +151,71 @@ class MyHandler(BaseHTTPRequestHandler):
             else: self.send_error(401, "UUID Not verified!")
         else: return self.do_GET()
                     
-                
+    
     def do_GET(self):
         self.log('do_GET, incoming path = %s' % (self.path))
-        def __sendChunk(chunk, compress=False):
-            self.log('do_GET, __sendChunk, chunk = %s, compress = %s'%(len(chunk),compress))
+        def __sendChunk(path, chunk, compress=False):
             if compress:
                 chunk = gzip.compress(chunk, compresslevel=5)
                 self.send_header("Content-Encoding", "gzip")
             self.send_header("Content-Length", len(chunk))
+            
+            # Determine Content-Type - force content types to support IPTV-Simple, else guess.
+            if   path.endswith('.json'): content_type = "application/json"
+            elif path.endswith('.m3u'):  content_type = "application/vnd.apple.mpegurl"
+            elif path.endswith('.xml'):  content_type = "text/plain"
+            elif path.endswith('.html'): content_type = "text/html"
+            else:                        content_type = mimetypes.guess_type(path[1:])[0]
+            if content_type is None:     content_type = "application/octet-stream"
+            self.send_header("Content-type", content_type)
             self.end_headers() # Finalize headers before sending body
+            self.log('do_GET, __sendChunk [%s], path = %s, compress = %s'%(content_type, path, compress))
             self.wfile.write(chunk)
 
         def __sendFile(path, compress=False):
-            self.log('do_GET, __sendFile path = %s, compress = %s' % (path, compress))
-            with xbmcvfs.File(path) as fle:
-                chunk = fle.readBytes()
-            __sendChunk(chunk,compress)
+            with FileAccess.stream(path) as fle:
+                __sendChunk(path, fle.readBytes(), compress)
             
         try:
-            file_path       = self.path.lower()
             accept_encoding = self.headers.get("Accept-Encoding", "")
             use_compression = "gzip" in accept_encoding
             
-            # Determine Content-Type
-            if   file_path.endswith('.json'): content_type = "application/json"
-            elif file_path.endswith('.m3u'):  content_type = "application/vnd.apple.mpegurl"
-            elif file_path.endswith('.xml'):  content_type = "text/plain"
-            elif file_path.endswith('.html'): content_type = "text/html"
+            if self.path.lower() == '/favicon.ico':
+                self.send_response(204) # 204 No Content
+                self.end_headers()
+            elif self.path.startswith('/logos/'):
+                self.send_response(302) # 302 Temporary Redirect
+                chname = unquoteString(self.path.split('/logos/')[1])
+                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{quoteString(self.resources.getCache(chname))}')
+                self.log(f'do_GET, redirecting to http://{PROPERTIES.getRemoteHost()}/images/{quoteString(image)}')
+                self.end_headers()
             else:
-                guessed_type = mimetypes.guess_type(file_path[1:])[0]
-                content_type = guessed_type if guessed_type else "application/octet-stream"
-
-            self.send_response(200)
-            self.send_header("Content-type", content_type)
-            
-            if   file_path == '/favicon.ico':                   return self.send_response(204)  # 204 No Content
-            elif file_path == f'/{M3UFLE.lower()}':             __sendFile(M3UFLEPATH, use_compression)
-            elif file_path == f'/{GENREFLE.lower()}':           __sendFile(GENREFLEPATH, use_compression)
-            elif file_path == f'/{XMLTVFLE.lower()}':           __sendFile(XMLTVFLEPATH, use_compression)
-            elif file_path.startswith(('/images/', '/logos/')): __sendFile(os.path.join(LOGO_LOC,unquoteString(self.path.replace('/images/','').replace('/logos/',''))), False)
-            else:
-                chunk = b''
-                if   file_path == f'/{BONJOURFLE.lower()}': chunk = dumpJSON(SETTINGS.getBonjour(inclChannels=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
-                elif file_path.startswith('/filelist'):     chunk = dumpJSON(getJSON((os.path.join(RESUME_LOC, self.path.replace('/filelist/',''))))).encode(encoding=DEFAULT_ENCODING)
-                elif file_path.startswith('/remote'):
-                    if   file_path.endswith('.json'):       chunk = dumpJSON(SETTINGS.getPayload(),idnt=4).encode(encoding=DEFAULT_ENCODING)
-                    elif file_path.endswith('.html'): 
+                self.send_response(200)
+                if   self.path.lower() == f'/{M3UFLE.lower()}':   __sendFile(M3UFLEPATH, use_compression)
+                elif self.path.lower() == f'/{GENREFLE.lower()}': __sendFile(GENREFLEPATH, use_compression)
+                elif self.path.lower() == f'/{XMLTVFLE.lower()}': __sendFile(XMLTVFLEPATH, use_compression)
+                elif self.path.startswith('/images/'):            __sendFile(unquoteString(self.path.split('/images/')[1]), False)
+                else:
+                    chunk = b''
+                    if   self.path.lower() == f'/{BONJOURFLE.lower()}': chunk = dumpJSON(SETTINGS.getBonjour(inclChannels=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
+                    elif self.path.startswith('/filelist'):             chunk = dumpJSON(getJSON((os.path.join(RESUME_LOC, self.path.replace('/filelist/',''))))).encode(encoding=DEFAULT_ENCODING)
+                    elif self.path.startswith('/remote'):
+                        if   self.path.endswith('.json'):               chunk = dumpJSON(SETTINGS.getPayload(),idnt=4).encode(encoding=DEFAULT_ENCODING)
+                        elif self.path.endswith('.html'): 
+                            use_compression = False
+                            chunk = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
+                        else: return self.send_error(404, "File Not Found [%s]" % self.path)
+                    elif self.path.startswith(('/manager','/wizard')) and self.path.lower().endswith('form.html'):
+                        def _escape_html(s):
+                            return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")
                         use_compression = False
-                        chunk = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
+                        fle  = FileAccess.open(FORM_DEFAULT,'r')
+                        html = fle.read()
+                        fle.close()
+                        html.format(json=_escape_html(dumpJSON(SETTINGS.getPayload(), idnt=4)), uuid=SETTINGS.getMYUUID())
+                        chunk = html.encode(encoding=DEFAULT_ENCODING)
                     else: return self.send_error(404, "File Not Found [%s]" % self.path)
-                elif file_path.startswith(('/manager','/wizard')) and file_path.endswith('form.html'):
-                    def _escape_html(s):
-                        return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")
-                    use_compression = False
-                    fle  = FileAccess.open(FORM_DEFAULT,'r')
-                    html = fle.read()
-                    fle.close()
-                    html.format(json=_escape_html(dumpJSON(SETTINGS.getPayload(), idnt=4)), uuid=SETTINGS.getMYUUID())
-                    chunk = html.encode(encoding=DEFAULT_ENCODING)
-                else: return self.send_error(404, "File Not Found [%s]" % self.path)
-                self.log('do_GET, file_path = %s, use_compression = %s'%(file_path, use_compression))
-                __sendChunk(chunk, use_compression)
+                    __sendChunk(self.path, chunk, use_compression)
         except FileNotFoundError: self.send_error(404, "File Not Found [%s]" % self.path)
         except Exception as e: self.send_error(500, "Internal Server Error")
 
@@ -232,7 +224,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
     
     
-class HTTP:
+class HTTP(object):
     httpd          = None
     isRunning      = False
     pendingRestart = False

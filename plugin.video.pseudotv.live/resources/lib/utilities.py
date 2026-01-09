@@ -19,32 +19,27 @@
 # -*- coding: utf-8 -*-
 from globals import *
 
-class Utilities:
+class Utilities(object):
 
     @staticmethod
     def qrWiki():
-        with PROPERTIES.suspendActivity():
-            DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
+        DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
 
     @staticmethod
     def qrSupport():
-        with PROPERTIES.suspendActivity():
-            DIALOG.qrDialog(URL_SUPPORT, LANGUAGE(30033)%(ADDON_NAME))
+        DIALOG.qrDialog(URL_SUPPORT, LANGUAGE(30033)%(ADDON_NAME))
         
     @staticmethod
     def qrRemote():
-        with PROPERTIES.suspendActivity():
-            DIALOG.qrDialog('Utilities: http://%s/%s'%(PROPERTIES.getRemoteHost(),'remote.html'), LANGUAGE(30165))
+        DIALOG.qrDialog('Utilities: http://%s/%s'%(PROPERTIES.getRemoteHost(),'remote.html'), LANGUAGE(30165))
 
     @staticmethod
     def qrReadme():
-        with PROPERTIES.suspendActivity():
-            DIALOG.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
+        DIALOG.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
 
     @staticmethod
     def qrBonjourDL():
-        with PROPERTIES.suspendActivity():
-            DIALOG.qrDialog(URL_WIN_BONJOUR, LANGUAGE(32217))
+        DIALOG.qrDialog(URL_WIN_BONJOUR, LANGUAGE(32217))
         
     @staticmethod
     def showChangelog():
@@ -74,6 +69,7 @@ class Utilities:
                 text = text.replace('- Fixed'      ,'[COLOR=orange][B]- Fixed:[/B][/COLOR]')
                 text = text.replace('- Resolved'   ,'[COLOR=orange][B]- Resolved:[/B][/COLOR]')
                 text = text.replace('- Removed'    ,'[COLOR=red][B]- Removed:[/B][/COLOR]')
+                text = text.replace('- Replaced'   ,'[COLOR=red][B]- Replaced:[/B][/COLOR]')
                 text = text.replace('- Eliminated' ,'[COLOR=red][B]- Eliminated:[/B][/COLOR]')
                 text = text.replace('- Excluded'   ,'[COLOR=red][B]- Excluded:[/B][/COLOR]')
                 text = text.replace('- Deprecated' ,'[COLOR=red][B]- Deprecated:[/B][/COLOR]')
@@ -166,7 +162,7 @@ class Utilities:
         keys = list(files.keys())
         if not full: keys = keys[:2]
         if DIALOG.yesnoDialog('Utilities: %s ?'%(msg)): 
-            with PROPERTIES.interruptActivity(), BUILTIN.busy_dialog():
+            with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                 for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
                     else:                             DIALOG.notificationDialog('Utilities: %s %s'%((LANGUAGE(32127)%(key.replace(':',''))),LANGUAGE(32052)))
@@ -185,27 +181,9 @@ class Utilities:
         return PROPERTIES.setPropTimer('chkFillers')
 
     @staticmethod
-    def _runWizard():
-        log('Utilities: _runWizard')
-        try:
-            with BUILTIN.busy_dialog(lock=True):
-                from wizard import Wizard
-                wizard = Wizard(WIZARD_XML, ADDON_PATH, "default")
-                del wizard
-        except Exception as e: 
-            log('Utilities: _runWizard, failed! %s'%(e), xbmc.LOGERROR)
-            DIALOG.notificationDialog(LANGUAGE(30079))
-        
-        
-        
-        
-        
-        # SETTINGS.setAutotuned(False)
-         
-    @staticmethod
     def _runUpdate(full=False):
         log('Utilities: _runUpdate, full = %s'%(full))
-        # PROPERTIES.setEpochTimer('chkChannels')#trigger channel building
+        #PROPERTIES.setPropTimer('chkChannels')#trigger channel building
               
     @staticmethod
     def buildMenu(select=None):
@@ -216,7 +194,6 @@ class Utilities:
                  {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':_runRestart  , 'hide':False},#"Force PTVL reload"
                  {'label':LANGUAGE(32159)                  ,'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':_runLibrary  , 'hide':False},
                  {'label':LANGUAGE(32180)                  ,'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':_runFillers  , 'hide':False},
-                 {'label':LANGUAGE(32181)                  ,'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':_runAutotune , 'hide':False},
                  {'label':LANGUAGE(30205)                  ,'label2':LANGUAGE(30205),'icon':COLOR_LOGO,'func':_runCPUBench , 'hide':False},
                  {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':COLOR_LOGO,'func':_runIOBench  , 'hide':False},
                  ]
@@ -228,11 +205,10 @@ class Utilities:
             
         if not select is None:
             try: 
-                with PROPERTIES.suspendActivity():
-                    selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
-                    log('Utilities: buildMenu, selectItem = %s'%selectItem)
-                    if selectItem.get('args'): selectItem['func'](*selectItem['args'])
-                    else:                      selectItem['func']()
+                selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
+                log('Utilities: buildMenu, selectItem = %s'%selectItem)
+                if selectItem.get('args'): selectItem['func'](*selectItem['args'])
+                else:                      selectItem['func']()
             except Exception as e: 
                 log('Utilities: buildMenu, failed! %s'%(e), xbmc.LOGERROR)
                 return DIALOG.notificationDialog(LANGUAGE(32000))
@@ -247,19 +223,7 @@ class Utilities:
                     from overlaytool import OverlayTool
                 overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
                 del overlaytool
-
-    @staticmethod
-    def selectChannels():
-        log('Utilities: selectChannels')
-        with BUILTIN.busy_dialog():
-            values = SETTINGS.getSettingList('Select_server')
-            values = [cleanLabel(value) for value in values]
-            values.insert(0,LANGUAGE(30022)) #Auto
-            values.insert(1,LANGUAGE(32069)) #Ask
-        select = DIALOG.selectDialog(values, '%s for Channel Setup'%(LANGUAGE(30173)), findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
-        if not select is None: return SETTINGS.setSetting('Default_Channels',values[select])
-        else:                  return SETTINGS.setSetting('Default_Channels',LANGUAGE(30022))
-
+            
     @staticmethod
     def _run(sysARG):
         with BUILTIN.busy_dialog():
@@ -267,11 +231,7 @@ class Utilities:
             try:    param = sysARG[1]
             except: param = None
             log('Utilities: param = %s'%(param))
-            
-            if param.startswith('Default_Channels'):
-                ctl = (0,2)
-                Utilities().selectChannels()
-                
+
             #Globals
             elif param.startswith('Move_Channelbug'):
                 ctl = (3,15)
@@ -314,10 +274,6 @@ class Utilities:
             elif param == 'Debug_QR':
                 ctl = (6,1)
                 return Utilities().qrDebug()
-                
-            elif param == 'Run_Wizard':
-                return Utilities()._runWizard()
-                
             return SETTINGS.openSettings(ctl)
 
 if __name__ == '__main__': threadit(Utilities()._run)(sys.argv)

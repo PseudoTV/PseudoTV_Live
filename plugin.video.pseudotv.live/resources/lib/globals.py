@@ -25,6 +25,7 @@ import time, datetime, calendar
 import heapq, requests, pyqrcode
 import xml.sax.saxutils
 
+from ast                   import literal_eval
 from difflib               import SequenceMatcher
 from functools             import partial, wraps, reduce, update_wrapper
 from six.moves             import urllib 
@@ -40,7 +41,7 @@ from variables           import *
 from kodi_six            import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
 from contextlib          import contextmanager, closing
 from socket              import gethostbyname, gethostname
-from itertools           import cycle, chain, zip_longest, islice
+from itertools           import cycle, chain, zip_longest, islice, repeat, count
 from xml.sax.saxutils    import escape, unescape
 from operator            import itemgetter
 
@@ -107,7 +108,7 @@ def getJSON(file):
     return data
 
 def setJSON(file, data):
-    with FileLock():
+    with FileLock(file):
         fle = FileAccess.open(file, 'w')
         fle.write(dumpJSON(data, idnt=4, sortkey=False))
         fle.close()
@@ -135,7 +136,7 @@ def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache
         try:    results = response.json()
         except: results = response.content
         if isinstance(results,bytes): results = results.decode(DEFAULT_ENCODING)
-        log("Globals: requestURL, url = %s, status = %s\nparams = %s\npayload = %s\nreturn type = %s"%(url,response.status_code,params,payload,type(results)))
+        log("Globals: requestURL\nurl = %s, status = %s\nparams = %s\npayload = %s\nreturn type = %s"%(url,response.status_code,params,payload,type(results)))
         
         if results and not cache is None: 
             return __setCache('.'.join([url,dumpJSON(params),dumpJSON(payload),dumpJSON(header)]), 
@@ -146,12 +147,15 @@ def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache
         return __getCache('.'.join([url,dumpJSON(params),dumpJSON(payload),dumpJSON(header)]), 
                           cache["cache"], cache.get("json_data",False), cache.get("checksum",ADDON_VERSION)) if cache else __error()
     finally: #retry failed post
-        if not results and payload: timerit(requestURL)(FIFTEEN,[url, params, payload, header, timeout, cache, file])
-
+        ...
+        # if not results and payload:
+            # posts = set(SETTINGS.getCacheSetting('postQue', revive=True) or [])
+            # posts.add((url, params, payload, header, timeout, cache, file))
+            # SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)
 
 def setURL(url, file):
     try:
-        with FileLock():
+        with FileLock(file):
             contents = requestURL(url)
             fle = FileAccess.open(file, 'w')
             fle.write(contents)
@@ -304,15 +308,16 @@ def cleanLabel(text):
     text = text.replace("[I]",'').replace("[/I]",'')
     return text.replace(":",'')
   
-def cleanImage(image=LOGO):
-    if not image: image = LOGO
-    if not image.startswith(('image://','resource://','special://','smb://','nfs://','https://','http://')):
-        realPath = FileAccess.translatePath('special://home/addons/')
-        if image.startswith(realPath):# convert real path. to vfs
-            image = image.replace(realPath,'special://home/addons/').replace('\\','/')
-        elif image.startswith(realPath.replace('\\','/')):
-            image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
-    return image
+def cleanImage(image=''):
+    if image is None: image = ''
+    else:
+        if not image.startswith(('image://','resource://','special://','smb://','nfs://','https://','http://')):
+            realPath = FileAccess.translatePath('special://home/addons/')
+            if image.startswith(realPath):# convert real path. to vfs
+                image = image.replace(realPath,'special://home/addons/').replace('\\','/')
+            elif image.startswith(realPath.replace('\\','/')):
+                image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
+    return image.strip('/')
             
 def cleanGroups(citem, enableGrouping=SETTINGS.getSettingBool('Enable_Grouping')):
     if not enableGrouping:
@@ -476,3 +481,14 @@ def parseSE(filename):
             return int(match.group(5)), int(match.group(6))
     return -1, -1
   
+def randomSamples(items=[], x=5):
+    reservoir = []
+    for i, item in enumerate(items):
+        if len(reservoir) < x: reservoir.append(item)
+        else:
+            m = random.randint(0, i)
+            if m < x: reservoir[m] = item
+    return reservoir
+    
+def hasURLencoding(s):
+    return bool(re.search(r'%[0-9a-fA-F]{2}', s))

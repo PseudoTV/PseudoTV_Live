@@ -28,8 +28,8 @@ import xml.etree.ElementTree
 from zipfile import ZipFile
 from shutil import copyfile, rmtree
 
-CHKPATH    = 'Z:/GitHub/addon-check/'
-GITPATH    = 'Z:/GitHub/PseudoTV_Live/'
+CHKPATH    = 'D:/GitHub/addon-check/'
+GITPATH    = 'D:/GitHub/PseudoTV_Live/'
 ZIPPATH    = os.path.join(GITPATH,'zips','')
 DELETE_EXT = ('.pyc', '.pyo', '.db')
 DELETE_FOLDERS = ['__pycache__','.idea','Corel Auto-Preserve']

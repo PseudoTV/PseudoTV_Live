@@ -35,8 +35,14 @@ def _start():
         monitor = MONITOR()
         while not monitor.abortRequested():
             restart = Service()._start()
-            if    monitor.waitForAbort(FIFTEEN) or not restart: break
-            else: DIALOG.notificationWait(LANGUAGE(32124),wait=FIFTEEN)
+            if monitor.waitForAbort(CPU_CYCLE): 
+                log("Services: _start, shutting down...")
+                break
+            elif not restart:
+                DIALOG.notificationDialog(LANGUAGE(32141))
+                break
+            else:
+                DIALOG.notificationDialog(LANGUAGE(32124))
     except Exception as e:
          log("Services: _start, failed! %s"%(e), xbmc.LOGERROR)
          DIALOG.notificationDialog(LANGUAGE(30079))

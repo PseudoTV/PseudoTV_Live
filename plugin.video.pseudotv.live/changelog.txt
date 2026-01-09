@@ -1,11 +1,19 @@
 ### NOTICE: The wizard branch is in alpha; things will break! ####
 v.0.6.8-wizard
-- Added Channel Manager "Predefined" path option to path selection menu.
-- Tweaked Executors
+- Added Kodi trailers cache to improve trailer fillers.
+- Refactored Channel building, changes impact content aggregation; see wiki for details.
+- Added "Folder Depth" to global/Adv. rules. Sets the max recursive parsing depth during folder parsing.
+- Added New "AutoTune"/"Backup"/"Recovery" options to the channel manager (currently non functional).
+- Added Asynchronous Executors (Experimental; Enable under Miscellaneous settings "Enable Executors" (disable if you encounter system instabilities).
+- Optimized memory usage & Thread Pooling.
+- Removed Provisional Advanced Rules and all support for the now deprecated autotuning channels in settings..
+- Added "Predefined Paths" to Channel Manager path selection; for quick channel building options based on your locaal content.
 - Tweaked "Paused" Channel rule to include local cache for remote instances. 
-- "Playback Timeout" setting added to Miscellaneous.
-- Refactored suspend throttling.
-- SimpleCache replaced with local cache module.
+- Added "Playback Timeout" to miscellaneous settings.
+- Refactored suspension throttling.
+- Replaced Kodi SimpleCache module with local cache function.
+- Added Artwork hosting/caching for all local logos.
+- Refactored Channel logo parsing.
 
 v.0.6.7-wizard
 - Introduced groundwork for Artificial Intelligence Integration (Currently Unavailable). 

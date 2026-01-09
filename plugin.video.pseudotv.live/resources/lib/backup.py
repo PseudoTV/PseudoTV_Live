@@ -22,7 +22,7 @@ from globals    import *
 from library    import Library
 from channels   import Channels
 
-class Backup:
+class Backup(object):
     def __init__(self, sysARG=sys.argv):
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG = sysARG
@@ -59,9 +59,9 @@ class Backup:
         return citems
         
         
-    def backupChannels(self, file: str=CHANNELFLE_BACKUP) -> bool:
+    def backupChannels(self, file: str=CHANNELFLE_BACKUP, silent: bool=False) -> bool:
         self.log('backupChannels')
-        if FileAccess.exists(file):
+        if FileAccess.exists(file) and not silent:
             if not DIALOG.yesnoDialog('%s\n%s?'%(LANGUAGE(32108),SETTINGS.getSetting('Backup_Channels'))): 
                 return False
                 
@@ -71,8 +71,9 @@ class Backup:
                     PROPERTIES.setBackup(True)
                     SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
                     SETTINGS.setSetting('Recover_Backup','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
-                return DIALOG.notificationDialog('%s %s'%(LANGUAGE(32110),LANGUAGE(32025)))
-        self.hasBackup()
+                DIALOG.notificationDialog('%s %s'%(LANGUAGE(32110),LANGUAGE(32025)))
+        hasBackup = self.hasBackup(file)
+        if silent: return hasBackup
         SETTINGS.openSettings(ctl)
         
 
@@ -84,17 +85,15 @@ class Backup:
         with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
             FileAccess.move(CHANNELFLEPATH,CHANNELFLE_RESTORE)
             if FileAccess.copy(file,CHANNELFLEPATH):
-                Library().resetLibrary()
                 PROPERTIES.setPendingRestart()
         
         
-    @threadit
     def run(self):  
         with BUILTIN.busy_dialog():
             ctl = (0,1) #settings return focus
             try:    param = self.sysARG[1]
             except: param = None
-            if   param == 'Recover_Backup': self.recoverChannels()
-            elif param == 'Backup_Channels':  self.backupChannels()
+            if   param == 'Recover_Backup':  self.recoverChannels()
+            elif param == 'Backup_Channels': self.backupChannels()
         
 if __name__ == '__main__': threadit(Backup(sys.argv).run)

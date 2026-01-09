@@ -20,14 +20,14 @@
 from globals    import *
 from seasonal   import Seasonal 
 
-class Info:
+class Info(object):
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         with BUILTIN.busy_dialog():
             log('Info: __init__, sysARG = %s'%(sysARG))
             listitem = LISTITEMS.buildItemListItem(fitem,fitem.get('media','video'))
         DIALOG.infoDialog(listitem)
             
-class Browse:
+class Browse(object):
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         log('Browse: __init__, sysARG = %s'%(sysARG))
         with BUILTIN.busy_dialog():
@@ -40,7 +40,7 @@ class Browse:
             log('Browse: target = %s, path = %s'%(media,path))
         BUILTIN.executewindow('ReplaceWindow(%s,%s,return)'%(media,path))
 
-class Match:
+class Match(object):
     SEARCH_SCRIPT  = None
     GLOBAL_SCRIPT  = 'script.globalsearch'
     EMBUARY_HELPER = 'script.embuary.helper'

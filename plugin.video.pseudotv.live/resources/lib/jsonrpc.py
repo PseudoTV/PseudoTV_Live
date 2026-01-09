@@ -20,26 +20,27 @@
 from globals     import *
 from videoparser import VideoParser
 
-class Service:
-    player    = PLAYER()
-    monitor   = MONITOR()
+class Service(object):
+    player  = PLAYER()
+    monitor = MONITOR()
     def _shutdown(self, wait=1.0) -> bool:
-        return (self._wait(wait) | PROPERTIES.isPendingShutdown())
+        return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
-        return PROPERTIES.isPendingInterrupt()
+        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt() | PROPERTIES.isInterruptActivity())
     def _suspend(self, wait=1.0) -> bool:
-        return (self._wait(wait) | PROPERTIES.isPendingSuspend())
-    def _wait(self, wait=1.0):
+        pendingSuspend = PROPERTIES.isPendingSuspend()
+        return pendingSuspend
+    def _sleep(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingSuspend() | PROPERTIES.isPendingInterrupt()): return True
+            if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
             else: wait -= CPU_CYCLE
         return False
-        
-          
-class JSONRPC:
+    
+    
+class JSONRPC(object):
     cache       = SETTINGS.cacheDB
     videoParser = VideoParser()
-        
+    
     def __init__(self, service=None):
         if service is None: service = Service()
         self.service = service
@@ -53,9 +54,9 @@ class JSONRPC:
         self.log('sendJSON, timeout = %s'%(timeout))
         command  = param
         command["jsonrpc"] = "2.0"
-        command["id"] = ADDON_ID
-        if timeout > 0: response = loadJSON((killit(BUILTIN.executeJSONRPC)(timeout,dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
-        else:           response = loadJSON(BUILTIN.executeJSONRPC(dumpJSON(command)))
+        command["id"] = ADDON_ID #todo debug killit crashing Kodi
+        # if timeout > 0: response = loadJSON((killit(BUILTIN.executeJSONRPC)(timeout,dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
+        response = loadJSON(BUILTIN.executeJSONRPC(dumpJSON(command)))
         self.log('sendJSON, response received')
         if response.get('error'):
             self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
@@ -63,18 +64,11 @@ class JSONRPC:
         return response
 
 
-    @executeit
     def queueJSON(self, param):
-        params = SETTINGS.queuePool.setdefault('queueJSON',[])
-        params.append(param)
-        params = sorted(setDictLST(params), key=lambda d: d.get('setting',''))
-        params = sorted(setDictLST(params), key=lambda d: d.get('playcount',0))
-        params.reverse() #prioritize setsetting,playcount rollback over duration amendments.
-        SETTINGS.queuePool['queueJSON'] = setDictLST(params)
-        self.log("queueJSON, queuing = %s, param = %s"%(len(SETTINGS.queuePool['queueJSON']),param))
-            
-           
-    def cacheJSON(self, param, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, timeout=-1):
+        if hasattr(self.service,'jsonQue'): self.service.jsonQue.add(param)
+        
+        
+    def cacheJSON(self, param, life=datetime.timedelta(minutes=5), checksum=ADDON_VERSION, timeout=-1):
         cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
@@ -487,11 +481,11 @@ class JSONRPC:
             try:
                 params = param.get(item.get('type'))
                 self.log('quePlaycount, params = %s'%(params.get('params',{})))
-                self.queueJSON(params)
+                if hasattr(self.service,'_que'): self.service._que(self.sendJSON,1,params)
             except: pass
 
 
-    def requestList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, query={}):
+    def requestList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}, query={}):
          # {"method": "VideoLibrary.GetEpisodes",
          # "params": {
          # "properties": ["title"],
@@ -540,7 +534,7 @@ class JSONRPC:
         param["sort"] = sort
         self.log('[%s] requestList, page = %s\nparam = %s'%(citem['id'], page, param))
         
-        if getDirectory: items, limits, errors = self.getDirectory(param,timeout=float(SETTINGS.getSettingInt('RPC_Timer')*60))
+        if getDirectory: items, limits, errors = self.getDirectory(param)
         else:            items, limits, errors = self.getLibrary(query['method'],param,query.get('key'),cache=False)
 
         if (limits.get('end',0) >= limits.get('total',0) or limits.get('start',0) >= limits.get('total',0)):
@@ -551,7 +545,7 @@ class JSONRPC:
         if len(items) == 0 and limits.get('total',0) > 0:
             # retry last request with fresh limits when no items are returned.
             self.log("[%s] requestList, trying again with start limits at 0"%(citem['id']))
-            return self.requestList(citem, path, media, page, sort, {"end": 0, "start": 0, "total": limits.get('total',0)}, query)
+            return self.requestList(citem, path, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)}, query)
         else:          
             self.autoPagination(citem['id'], path, query, limits) #set 
             self.log("[%s] requestList, return items = %s" % (citem['id'], len(items)))
@@ -605,7 +599,7 @@ class JSONRPC:
             iters = cycle(files)
             while not self.service.monitor.abortRequested() and (len(files) < page and len(files) > 0):
                 item = next(iters).copy()
-                if   self.service._shutdown(CPU_CYCLE): break
+                if   self.service._interrupt(): break
                 elif self.getDuration(item.get('file'),item) == 0:
                     try: files.pop(files.index(item))
                     except: break

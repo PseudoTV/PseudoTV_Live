@@ -41,15 +41,17 @@ PLAYER              = xbmc.Player
 
 #constants
 CPU_COUNT           = os.cpu_count()
-CPU_CYCLE           = (1/CPU_COUNT)/CPU_COUNT
-THREAD_COUNT        = CPU_COUNT * 2
+CPU_CYCLE           = (1/CPU_COUNT)/CPU_COUNT*CPU_COUNT
+THREAD_COUNT        = CPU_COUNT
 
 FIFTEEN             = 15    #unit
 DISCOVERY_TIMER     = 60    #secs
-SUSPEND_TIMER       = 5     #secs
+SUSPEND_INTERVAL    = 5.0   #secs
+SERVICE_INTERVAL    = 2.5   #secs
 DISCOVER_INTERVAL   = 30    #secs
 MIN_EPG_DURATION    = 10800 #secs
-TIMEOUT_SECONDS     = 900
+TIMEOUT_EXECUTOR    = 1800
+TIMEOUT_EXECUTORS   = 10800
 ONNEXT_TIMER        = 15
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
@@ -66,7 +68,7 @@ AUTOCLOSE_DELAY     = 300  #secs
 SELECT_DELAY        = 900  #secs
 RADIO_ITEM_LIMIT    = 250
 CHANNEL_LIMIT       = 999
-AUTOTUNE_LIMIT      = 3
+AUTOTUNE_LIMIT      = 5
 FILLER_LIMIT        = 250
 QUEUE_CHUNK         = 5
 M3U_REFRESH         = 15
@@ -200,6 +202,7 @@ RADIOGROUPFLE       = 'radio_groups.xml'
 PROVIDERFLE         = 'providers.xml'
 CHANNELBACKUPFLE    = 'channels.backup'
 CHANNELRESTOREFLE   = 'channels.restore'
+CHANNELCHANGEFLE    = 'channels.change'
 
 #exts
 VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')[:-1]
@@ -222,6 +225,7 @@ RESUME_LOC          = os.path.join(TEMP_LOC,'resume')
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 CHANNELFLE_BACKUP   = os.path.join(BACKUP_LOC,CHANNELBACKUPFLE)
 CHANNELFLE_RESTORE  = os.path.join(BACKUP_LOC,CHANNELRESTOREFLE)
+CHANNELFLE_CHANGE   = os.path.join(BACKUP_LOC,CHANNELCHANGEFLE)
 
 #sfx
 BING_WAV            = os.path.join(SFX_LOC,'bing.wav')

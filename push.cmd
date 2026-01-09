@@ -1,29 +1,18 @@
-rd /s /q Z:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live\
-
 cd\
-C:
-cd\Program Files\TeraCopy
-
-TeraCopy.exe Copy "C:\portable_data\addons\plugin.video.pseudotv.live\" Z:\GitHub\PseudoTV_Live\ /OverwriteAll
-
-cd\
-Z:
+D:
 cd\GitHub\PseudoTV_Live
 
-addon_generator.py
+start "" /min cmd /c rd /s /q D:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live\
+start "" /wait RoboCopy.exe  "C:\portable_data\addons\plugin.video.pseudotv.live" "D:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live" *.* /E /IM /IS
+start "" /wait addon_generator.py
 
-cd\
-C:
-cd\Program Files\TeraCopy\
+start "" /wait /min cmd /c rd /s /q \\192.168.0.51\xbmc\portable_data\addons\plugin.video.pseudotv.live\
+start "" /wait robocopy  "D:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live" "\\192.168.0.51\xbmc\portable_data\addons\plugin.video.pseudotv.live\\" *.* /E /IM /IS
 
-rd /s /q \\192.168.0.51\xbmc\portable_data\addons\plugin.video.pseudotv.live\
+start "" /wait /min cmd /c rd /s /q \\192.168.0.123\internal\Android\data\org.xbmc.kodi\files\.kodi\addons\plugin.video.pseudotv.live\
+start "" /wait robocopy "D:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live" "\\192.168.0.123\internal\Android\data\org.xbmc.kodi\files\.kodi\addons\plugin.video.pseudotv.live\\" *.* /E /COPY:DT /NODCOPY
 
-TeraCopy.exe Copy "Z:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live" \\192.168.0.51\xbmc\portable_data\addons\ /OverwriteAll
+start "" /wait /min cmd /c rd /s /q \\192.168.0.124\internal\Android\data\org.xbmc.kodi\files\.kodi\addons\plugin.video.pseudotv.live\
+start "" /wait robocopy "D:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live" "\\192.168.0.124\internal\Android\data\org.xbmc.kodi\files\.kodi\addons\plugin.video.pseudotv.live\\" *.* /E /COPY:DT /NODCOPY
 
-rd /s /q \\192.168.0.123\internal\Android\data\org.xbmc.kodi\files\.kodi\addons\plugin.video.pseudotv.live\
 
-TeraCopy.exe Copy "Z:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live" \\192.168.0.123\internal\Android\data\org.xbmc.kodi\files\.kodi\addons\ /OverwriteAll
-
-rd /s /q \\192.168.0.124\internal\Android\data\org.xbmc.kodi\files\.kodi\addons\plugin.video.pseudotv.live\
-
-TeraCopy.exe Copy "Z:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live" \\192.168.0.124\internal\Android\data\org.xbmc.kodi\files\.kodi\addons\ /OverwriteAll

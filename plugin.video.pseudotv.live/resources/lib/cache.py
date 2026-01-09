@@ -21,10 +21,30 @@
 import sqlite3
 
 from globals     import *
-from functools   import wraps
-from fileaccess  import FileAccess
-from pool        import ExecutorPool
-        
+from functools   import wraps, reduce
+from fileaccess  import FileAccess, FileLock
+from kodi_six    import xbmc, xbmcgui
+
+class Service(object):
+    monitor = MONITOR()
+    def _shutdown(self, wait=1.0) -> bool:
+        pendingShutdown = xbmcgui.Window(10000).getProperty('%s.pendingShutdown'%(ADDON_ID)) == "true"
+        return (self.monitor.waitForAbort(wait) | pendingShutdown)
+    def _interrupt(self) -> bool:
+        pendingShutdown   = xbmcgui.Window(10000).getProperty('%s.pendingShutdown'%(ADDON_ID)) == "true"
+        pendingInterrupt  = xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)) == "true"
+        pendingRestart    = xbmcgui.Window(10000).getProperty('%s.pendingRestart'%(ADDON_ID)) == "true"
+        interruptActivity = xbmcgui.Window(10000).getProperty('%s.interruptActivity'%(ADDON_ID)) == "true"
+        return (pendingShutdown | pendingRestart | pendingInterrupt | interruptActivity)
+    def _suspend(self, wait=1.0) -> bool:
+        pendingSuspend = xbmcgui.Window(10000).getProperty('%s.pendingSuspend'%(ADDON_ID)) == "true"
+        return pendingSuspend
+    def _sleep(self, wait=1.0):
+        while not self.monitor.abortRequested() and wait > 0:
+            if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
+            else: wait -= CPU_CYCLE
+        return False
+
 def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, json_data=False):
     def internal(method):
         @wraps(method)
@@ -37,36 +57,18 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, j
             if results:
                 log('%s, cacheit returning cache'%(method.__qualname__.replace('.',': ')))
                 return results
-            # return method_class.cache.set(cacheName, method(*args, **kwargs), checksum, expiration, json_data)
             log('%s, cacheit saving results'%(method.__qualname__.replace('.',': ')))
-            return method_class.cache.set(cacheName, ExecutorPool().executor(method, None, *args, **kwargs), checksum, expiration, json_data)
+            return method_class.cache.set(cacheName, method(*args, **kwargs), checksum, expiration, json_data)
         return wrapper
     return internal
     
-class Service:
-    monitor = MONITOR()
-    def _is(self, text):
-        return text == "true"
-    def _shutdown(self, wait=1.0) -> bool:
-        return (self._wait(wait) | self._is(xbmcgui.Window(10000).getProperty('%s.pendingShutdown'%(ADDON_ID))))
-    def _interrupt(self) -> bool:
-        return self._is(xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)))
-    def _suspend(self, wait=1.0) -> bool:
-        return (self._wait(wait) | self._is(xbmcgui.Window(10000).getProperty('%s.pendingSuspend'%(ADDON_ID))))
-    def _wait(self, wait=1.0):
-        while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | self._is(xbmcgui.Window(10000).getProperty('%s.pendingShutdown'%(ADDON_ID))) | self._is(xbmcgui.Window(10000).getProperty('%s.pendingRestart'%(ADDON_ID))) | self._is(xbmcgui.Window(10000).getProperty('%s.pendingSuspend'%(ADDON_ID))) | self._is(xbmcgui.Window(10000).getProperty('%s.pendingInterrupt'%(ADDON_ID)))): return True
-            else: wait -= CPU_CYCLE
-        return False
-
-class Cache:
-    lock    = Lock()
+class Cache(object):
     service = Service()
 
     @contextmanager
-    def cacheLocker(self): #Hack/Lazy avoidance.
+    def cacheLocker(self): #Lazy collision avoidance.
         while not self.service.monitor.abortRequested():
-            if self.service._shutdown(CPU_CYCLE) or self.service._interrupt(): break
+            if   self.service._shutdown(CPU_CYCLE): break
             elif xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) != 'true': break
         xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
         try: yield
@@ -103,7 +105,7 @@ class Cache:
                     return value
                 except Exception as e:
                     self.log("get, name = %s failed! %s"%(name,e), xbmc.LOGERROR)
-                    self.cache.clear(name)
+                    self.cache.clr(name)
                     
                     
     def clear(self, name, wait=15):
@@ -113,242 +115,194 @@ class Cache:
             
             
 class _Cache(object):
-    '''simple stateless caching system for Kodi'''
-    _exit            = False
-    _busy_tasks      = []
-    _database        = None
-    monitor          = MONITOR()
-    global_checksum  = None
-    enable_mem_cache = True
-    data_is_json     = False
-    clean_interval   = datetime.timedelta(hours=4)
-
-
-    def __init__(self, service=None):
-        if service is None: service = Service()
+    enable_mem_cache     = False
+    data_is_json         = False
+    window               = None
+    global_checksum      = ADDON_VERSION
+    _auto_clean_interval = datetime.timedelta(hours=MAX_GUIDEDAYS)
+    _busy_tasks          = []
+    _database            = None
+    
+    def __init__(self, service=None, winID=10000):
         self.service = service
-        self.check_cleanup()
-        
+        self.window  = xbmcgui.Window(winID)
+        self.chkCleanup()
 
+
+    def __del__(self):
+        del self.window
+        
+        
+    def _getProperty(self, key):
+        return self.window.getProperty('%s.%s'%(ADDON_ID,key))
+        
+        
+    def _setProperty(self, key, value):
+        self.window.setProperty('%s.%s'%(ADDON_ID,key), value)
+        return value
+                
+                
+    def _clrProperty(self, key):
+        return self.window.clearProperty('%s.%s'%(ADDON_ID,key))
+
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def close(self):
-        '''tell any tasks to stop immediately (as we can be called multithreaded) and cleanup objects'''
-        self._exit = True
-        # wait for all tasks to complete
-        while self._busy_tasks and not self.service.monitor.abortRequested():
-            if self.service._wait(25): break
-        self.log("Closed")
-
-
-    def __del__(self):
-        '''make sure close is called'''
-        if not self._exit: self.close()
+    def chkCleanup(self):
+        cur_time     = datetime.datetime.now()
+        lastexecuted = self._getProperty("cache.lastexecuted")
+        if not lastexecuted: self._setProperty("cache.lastexecuted", repr(cur_time))
+        elif (eval(lastexecuted) + self._auto_clean_interval) < cur_time:
+            self._cleanUp()
 
 
     def get(self, endpoint, checksum="", json_data=False):
-        '''
-            get object from cache and return the results
-            endpoint: the (unique) name of the cache object as reference
-            checkum: optional argument to check if the checksum in the cacheobject matches the checkum provided
-        '''
-        checksum = self._get_checksum(checksum)
-        cur_time = self._get_timestamp(datetime.datetime.now())
-        result = None
-        # 1: try memory cache first
+        checksum = self.getChecksum(checksum)
+        cur_time = self.getTimestamp(datetime.datetime.now())
+        result   = None
         if self.enable_mem_cache: result = self._get_mem_cache(endpoint, checksum, cur_time, json_data)
-        # 2: fallback to _database cache
-        if result is None: result = self._get_db_cache(endpoint, checksum, cur_time, json_data)
+        if result is None:        result = self._get_db_cache(endpoint, checksum, cur_time, json_data)
         return result
 
 
     def set(self, endpoint, data, checksum="", expiration=datetime.timedelta(days=30), json_data=False):
-        '''
-            set data in cache
-        '''
         task_name = "set.%s" % endpoint
         self._busy_tasks.append(task_name)
-        checksum = self._get_checksum(checksum)
-        expires  = self._get_timestamp(datetime.datetime.now() + expiration)
-        # memory cache: write to window property
-        if self.enable_mem_cache and not self._exit: self._set_mem_cache(endpoint, checksum, expires, data, json_data)
-        # db cache
-        if not self._exit: self._set_db_cache(endpoint, checksum, expires, data, json_data)
-        # remove this task from list
+        checksum = self.getChecksum(checksum)
+        expires  = self.getTimestamp(datetime.datetime.now() + expiration)
+        if self.enable_mem_cache: self._set_mem_cache(endpoint, checksum, expires, data, json_data)
+        self._set_db_cache(endpoint, checksum, expires, data, json_data)
         self._busy_tasks.remove(task_name)
 
     
-    def clear(self, name, wait=15):
-        dbfile = xbmcvfs.translatePath(CACHEFLEPATH)
-        if xbmcvfs.exists(dbfile):
-            try:
-                connection = sqlite3.connect(dbfile, timeout=wait, isolation_level=None)
-                connection.execute('DELETE FROM cache WHERE id LIKE ?', (name + '%',))
-                connection.commit()
-            except sqlite3.Error as e: self.log('clear, failed! %s' % e, xbmc.LOGERROR)
-            finally:
-                if connection:
-                    connection.close()
-                    del connection
-                self.close()
+    def clr(self, endpoint, wait=15):
+        dbfile = FileAccess.translatePath(CACHEFLEPATH)
+        if FileAccess.exists(dbfile):
+            with FileAccess.FileLock(dbfile):
+                try:
+                    connection = sqlite3.connect(dbfile, timeout=wait, isolation_level=None)
+                    connection.execute('DELETE FROM cache WHERE id LIKE ?', (endpoint + '%',))
+                    connection.commit()
+                except sqlite3.Error as e: self.log('clr, failed! %s' % e, xbmc.LOGERROR)
+                finally:
+                    if connection:
+                        connection.close()
+                        del connection
                 
-            
-    def check_cleanup(self):
-        '''check if cleanup is needed - public method, may be called by calling addon'''
-        cur_time = datetime.datetime.now()
-        lastexecuted = xbmcgui.Window(10000).getProperty("%s.cache.lastexecuted"%(ADDON_ID))
-        if not lastexecuted: xbmcgui.Window(10000).setProperty("'%s.cache.lastexecuted"%(ADDON_ID), repr(cur_time))
-        elif (eval(lastexecuted) + self.clean_interval) < cur_time: self._do_cleanup()
-
-
+          
     def _get_mem_cache(self, endpoint, checksum, cur_time, json_data):
-        '''
-            get cache data from memory cache
-            we use window properties because we need to be stateless
-        '''
         result    = None
-        cachedata = xbmcgui.Window(10000).getProperty('%s.%s'%(ADDON_ID,endpoint))
+        cachedata = self._getProperty(endpoint)
         if cachedata:
-            if json_data or self.data_is_json: 
-                try:    cachedata = json.loads(cachedata)
-                except: cachedata = None
-            else:       cachedata = eval(cachedata)
+            if json_data or self.data_is_json: cachedata = json.loads(cachedata)
+            else:                              cachedata = literal_eval(cachedata)
             if cachedata[0] > cur_time:
                 if not checksum or checksum == cachedata[2]: result = cachedata[1]
         return result
 
 
     def _set_mem_cache(self, endpoint, checksum, expires, data, json_data):
-        '''
-            window property cache as alternative for memory cache
-            usefull for (stateless) plugins
-        '''
         cachedata = (expires, data, checksum)
-        if json_data or self.data_is_json:
-            try:    cachedata_str = json.dumps(cachedata)
-            except: cachedata_str = ""
-        else:       cachedata_str = repr(cachedata)
-        xbmcgui.Window(10000).setProperty('%s.%s'%(ADDON_ID,endpoint), cachedata_str)
+        if json_data or self.data_is_json: cachedata_str = json.dumps(cachedata)
+        else:                              cachedata_str = repr(cachedata)
+        self._setProperty(endpoint, cachedata_str)
 
 
     def _get_db_cache(self, endpoint, checksum, cur_time, json_data):
-        '''get cache data from sqllite _database'''
-        result = None
-        query  = "SELECT expires, data, checksum FROM cache WHERE id = ?"
+        result     = None
+        query      = "SELECT expires, data, checksum FROM cache WHERE id = ?"
         cache_data = self._execute_sql(query, (endpoint,))
         if cache_data:
             cache_data = cache_data.fetchone()
             if cache_data and cache_data[0] > cur_time:
                 if not checksum or cache_data[2] == checksum:
-                    if json_data or self.data_is_json:
-                        try:    result = json.loads(cache_data[1])
-                        except: result = None
-                    else:       result = eval(cache_data[1])
-                    # also set result in memory cache for further access
+                    if json_data or self.data_is_json: result = json.loads(cache_data[1])
+                    else:                              result = literal_eval(cache_data[1])
                     if self.enable_mem_cache: self._set_mem_cache(endpoint, checksum, cache_data[0], result, json_data)
         return result
 
 
     def _set_db_cache(self, endpoint, checksum, expires, data, json_data):
-        ''' store cache data in _database '''
         query = "INSERT OR REPLACE INTO cache( id, expires, data, checksum) VALUES (?, ?, ?, ?)"
-        if json_data or self.data_is_json:
-            try:    data = json.dumps(data)
-            except: data = None
-        else:       data = repr(data)
+        if json_data or self.data_is_json: data = json.dumps(data)
+        else:                              data = repr(data)
         self._execute_sql(query, (endpoint, expires, data, checksum))
 
 
-    def _do_cleanup(self):
-        '''perform cleanup task'''
-        if self._exit or self.service.monitor.abortRequested(): return
+    def _cleanUp(self):
         self._busy_tasks.append(__name__)
-        cur_time = datetime.datetime.now()
-        cur_timestamp = self._get_timestamp(cur_time)
-        self.log("Running cleanup...")
-        if xbmcgui.Window(10000).getProperty("%s.cache.cleanbusy"%(ADDON_ID)): return
-        xbmcgui.Window(10000).setProperty("%s.cache.cleanbusy"%(ADDON_ID), "busy")
+        cur_time      = datetime.datetime.now()
+        cur_timestamp = self.getTimestamp(cur_time)
+        self.log("_cleanUp, running _cleanUp...")
+        
+        if self._getProperty("cache.cleanbusy"): return
+        else:
+            self._setProperty("cache.cleanbusy", "busy")
+            query = "SELECT id, expires FROM cache"
+            for cache_data in self._execute_sql(query).fetchall():
+                if self.service._shutdown(CPU_CYCLE): return
+                cache_id      = cache_data[0]
+                cache_expires = cache_data[1]
+                self._clrProperty(cache_id)
+                if cache_expires < cur_timestamp:
+                    query = 'DELETE FROM cache WHERE id = ?'
+                    self._execute_sql(query, (cache_id,))
+                    self.log("_cleanUp, delete from db %s" % cache_id)
 
-        query = "SELECT id, expires FROM cache"
-        for cache_data in self._execute_sql(query).fetchall():
-            cache_id = cache_data[0]
-            cache_expires = cache_data[1]
-
-            if self._exit or self.service.monitor.abortRequested(): return
-            # always cleanup all memory objects on each interval
-            xbmcgui.Window(10000).clearProperty('%s.%s'%(ADDON_ID,cache_id))
-            # clean up db cache object only if expired
-            if cache_expires < cur_timestamp:
-                query = 'DELETE FROM cache WHERE id = ?'
-                self._execute_sql(query, (cache_id,))
-                self.log("delete from db %s" % cache_id)
-
-        # compact db
-        self._execute_sql("VACUUM")
-        # remove task from list
-        self._busy_tasks.remove(__name__)
-        xbmcgui.Window(10000).setProperty("%s.cache.lastexecuted"%(ADDON_ID), repr(cur_time))
-        xbmcgui.Window(10000).clearProperty("%s.cache.cleanbusy"%(ADDON_ID))
-        self.log("Auto cleanup done")
-
-
-    def _get_database(self):
-        '''get reference to our sqllite _database - performs basic integrity check'''
-        if not xbmcvfs.exists(USER_LOC): xbmcvfs.mkdirs(USER_LOC)
-        dbfile = xbmcvfs.translatePath(CACHEFLEPATH)
-        try:
-            connection = sqlite3.connect(dbfile, timeout=30, isolation_level=None)
-            connection.execute('SELECT * FROM cache LIMIT 1')
-            return connection
-        except Exception as error:
-            # our _database is corrupt or doesn't exist yet, we simply try to recreate it
-            if xbmcvfs.exists(dbfile): xbmcvfs.delete(dbfile)
-            try:
-                connection = sqlite3.connect(dbfile, timeout=30, isolation_level=None)
-                connection.execute(
-                    """CREATE TABLE IF NOT EXISTS cache(
-                    id TEXT UNIQUE, expires INTEGER, data TEXT, checksum INTEGER)""")
-                return connection
-            except Exception as error:
-                self.log("Exception while initializing _database: %s" % str(error), xbmc.LOGWARNING)
-                self.close()
-                return None
+            self._execute_sql("VACUUM")
+            self._busy_tasks.remove(__name__)
+            self._setProperty("cache.lastexecuted", repr(cur_time))
+            self._clrProperty("cache.cleanbusy")
+            self.log("_cleanUp, auto _cleanUp done")
 
 
     def _execute_sql(self, query, data=None):
-        '''little wrapper around execute and executemany to just retry a db command if db is locked'''
         retries = 0
         result  = None
-        # always use new db object because we need to be sure that data is available for other cache instances
-        with self._get_database() as _database:
-            while not retries == LOCK_MAX_FILE_TIMEOUT and not self.service.monitor.abortRequested():
-                if self._exit: return None
+        dbfile  = FileAccess.translatePath(CACHEFLEPATH)
+        if not FileAccess.exists(USER_LOC): FileAccess.mkdirs(USER_LOC)
+        try:
+            connection = sqlite3.connect(dbfile, timeout=30, isolation_level=None)
+            connection.execute('SELECT * FROM cache LIMIT 1')
+        except Exception as e:
+            if FileAccess.exists(dbfile): FileAccess.delete(dbfile)
+            try:
+                connection = sqlite3.connect(dbfile, timeout=30, isolation_level=None)
+                connection.execute( """CREATE TABLE IF NOT EXISTS cache(id TEXT UNIQUE, expires INTEGER, data TEXT, checksum INTEGER)""")
+            except Exception as e:
+                self.log("_execute_sql, Failed! while initializing connection: %s" % str(e), xbmc.LOGWARNING)
+                return
+
+        while not self.service.monitor.abortRequested() and not retries == LOCK_MAX_FILE_TIMEOUT:
+            if self.service._shutdown(CPU_CYCLE): break
+            else:
                 try:
-                    if isinstance(data, list): result = _database.executemany(query, data)
-                    elif data:                 result = _database.execute(query, data)
-                    else:                      result = _database.execute(query)
+                    if isinstance(data, list): result = connection.executemany(query, data)
+                    elif data:                 result = connection.execute(query, data)
+                    else:                      result = connection.execute(query)
                     return result
-                except sqlite3.OperationalError as e:
-                    if "_database is locked" in e:
-                        self.log("retrying DB commit...")
+                except Exception as e:
+                    if "connection is locked" in e:
+                        self.log("_execute_sql, retrying DB commit...")
                         retries += 1
-                        self.service.monitor.waitForAbort(LOCK_MAX_FILE_DELAY)
+                        self.service._sleep(LOCK_MAX_FILE_DELAY)
                     else: break
-                except Exception as e: break
-                self.log("_database ERROR ! -- %s" % str(e), xbmc.LOGWARNING)
+                self.log("_execute_sql, connection ERROR ! -- %s" % str(e), xbmc.LOGWARNING)
+                    
+        if connection:
+            connection.close()
+            del connection
         return None
 
 
     @staticmethod
-    def _get_timestamp(date_time):
-        '''Converts a datetime object to unix timestamp'''
+    def getTimestamp(date_time):
         return int(time.mktime(date_time.timetuple()))
 
 
-    def _get_checksum(self, stringinput):
-        '''get int checksum from string'''
+    def getChecksum(self, stringinput):
         if not stringinput and not self.global_checksum: return 0
         if self.global_checksum: stringinput = "%s-%s" %(self.global_checksum, stringinput)
         else:                    stringinput = str(stringinput)

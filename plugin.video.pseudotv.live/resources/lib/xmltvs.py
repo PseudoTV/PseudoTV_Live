@@ -21,16 +21,14 @@
 import xmltv
 from globals    import *
 from seasonal   import Seasonal
-from pool       import ExecutorPool
 
 #todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
 
-class XMLTVS:
-    pool = ExecutorPool()
-        
+class XMLTVS(object):
     def __init__(self):   
         self.XMLTVDATA = self._load()
-
+        self.stopTimes = dict(self.loadStopTimes())
+        
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -50,7 +48,7 @@ class XMLTVS:
         if reset: data = self.resetData()
         else:     data = self.XMLTVDATA['data']
             
-        with FileLock():
+        with FileLock(file):
             writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
                                   date                = data['date'],
                                   source_info_url     = self.cleanString(data['source-info-url']), 
@@ -214,7 +212,7 @@ class XMLTVS:
             elif (strpTime(program.get('stop',now).rstrip(),DTFORMAT) < now): return None  # remove expired content, ignore "recordings" ie. media=True
             return program
             
-        tmpProgrammes = [program for program in self.pool.executors(__filterProgrammes,  programmes) if program is not None]
+        tmpProgrammes = [program for program in [__filterProgrammes(program) for program in programmes] if program is not None]
         self.log('cleanProgrammes, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
         return tmpProgrammes
 
@@ -481,7 +479,7 @@ class XMLTVS:
             root.appendChild(name)
             
             genres = __getGenres()
-            self.pool.executors(__matchGenres, self.XMLTVDATA.get('programmes',[]))
+            [__matchGenres(program) for program in self.XMLTVDATA.get('programmes',[])]
             epggenres = __getGenres(GENREFLEPATH)
             epggenres.update(dict(sorted(sorted(list(genres.items()), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId'])))
             for key in list(set(epggenres)):
@@ -490,7 +488,7 @@ class XMLTVS:
                 gen.appendChild(doc.createTextNode(key.title()))
                 root.appendChild(gen)
             try:
-                with FileLock():
+                with FileLock(GENREFLEPATH):
                     xmlData = FileAccess.open(GENREFLEPATH, "w")
                     xmlData.write(doc.toprettyxml(indent='  ',encoding=DEFAULT_ENCODING))
                     xmlData.close()

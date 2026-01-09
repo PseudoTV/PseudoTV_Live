@@ -472,34 +472,36 @@ class DNSIncoming(object):
         packet"""
         n = self.numAnswers + self.numAuthorities + self.numAdditionals
         for i in range(n):
-            domain = self.readName()
-            type, clazz, ttl, length = self.unpack('!HHiH')
+            try:
+                domain = self.readName()
+                type, clazz, ttl, length = self.unpack('!HHiH')
 
-            rec = None
-            if type == _TYPE_A:
-                rec = DNSAddress(domain, type, clazz, ttl, self.readString(4))
-            elif type == _TYPE_CNAME or type == _TYPE_PTR:
-                rec = DNSPointer(domain, type, clazz, ttl, self.readName())
-            elif type == _TYPE_TXT:
-                rec = DNSText(domain, type, clazz, ttl, self.readString(length))
-            elif type == _TYPE_SRV:
-                rec = DNSService(domain, type, clazz, ttl,
-                    self.readUnsignedShort(), self.readUnsignedShort(),
-                    self.readUnsignedShort(), self.readName())
-            elif type == _TYPE_HINFO:
-                rec = DNSHinfo(domain, type, clazz, ttl,
-                    self.readCharacterString(), self.readCharacterString())
-            elif type == _TYPE_AAAA:
-                rec = DNSAddress(domain, type, clazz, ttl, self.readString(16))
-            else:
-                # Try to ignore types we don't know about
-                # Skip the payload for the resource record so the next
-                # records can be parsed correctly
-                self.offset += length
+                rec = None
+                if type == _TYPE_A:
+                    rec = DNSAddress(domain, type, clazz, ttl, self.readString(4))
+                elif type == _TYPE_CNAME or type == _TYPE_PTR:
+                    rec = DNSPointer(domain, type, clazz, ttl, self.readName())
+                elif type == _TYPE_TXT:
+                    rec = DNSText(domain, type, clazz, ttl, self.readString(length))
+                elif type == _TYPE_SRV:
+                    rec = DNSService(domain, type, clazz, ttl,
+                        self.readUnsignedShort(), self.readUnsignedShort(),
+                        self.readUnsignedShort(), self.readName())
+                elif type == _TYPE_HINFO:
+                    rec = DNSHinfo(domain, type, clazz, ttl,
+                        self.readCharacterString(), self.readCharacterString())
+                elif type == _TYPE_AAAA:
+                    rec = DNSAddress(domain, type, clazz, ttl, self.readString(16))
+                else:
+                    # Try to ignore types we don't know about
+                    # Skip the payload for the resource record so the next
+                    # records can be parsed correctly
+                    self.offset += length
 
-            if rec is not None:
-                self.answers.append(rec)
-
+                if rec is not None:
+                    self.answers.append(rec)
+            except: pass
+            
     def isQuery(self):
         """Returns true if this is a query"""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
