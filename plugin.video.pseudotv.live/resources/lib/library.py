@@ -192,23 +192,28 @@ class Library:
 
 
     def getNetworks(self):
-        return self.getTVInfo().get('studios',[])
+        mincount = SETTINGS.getSettingInt('Min_Shows_Movies_Count')
+        return self.getTVInfo(mincount=mincount).get('studios',[])
         
         
     def getTVGenres(self):
-        return self.getTVInfo().get('genres',[])
+        mincount = SETTINGS.getSettingInt('Min_Shows_Movies_Count')
+        return self.getTVInfo(mincount=mincount).get('genres',[])
  
  
     def getTVShows(self):
-        return self.getTVInfo().get('shows',[])
+        mincount = SETTINGS.getSettingInt('Min_Shows_Movies_Count')
+        return self.getTVInfo(mincount=mincount).get('shows',[])
         
         
     def getMovieStudios(self):
-        return self.getMovieInfo().get('studios',[])
+        mincount = SETTINGS.getSettingInt('Min_Shows_Movies_Count')
+        return self.getMovieInfo(mincount=mincount).get('studios',[])
         
         
     def getMovieGenres(self):
-        return self.getMovieInfo().get('genres',[])
+        mincount = SETTINGS.getSettingInt('Min_Shows_Movies_Count')
+        return self.getMovieInfo(mincount=mincount).get('genres',[])
               
  
     def getMusicGenres(self):
@@ -272,7 +277,7 @@ class Library:
 
 
     @cacheit()
-    def getTVInfo(self, sortbycount=True):
+    def getTVInfo(self, sortbycount=True, mincount=1):
         self.log('getTVInfo')
         if BUILTIN.hasTV():
             NetworkList   = Counter()
@@ -287,6 +292,18 @@ class Library:
                 TVShows.update({json.dumps({'name': info.get('label'), 'type':"TV Shows", 'path': self.predefined.createShowPlaylist(info.get('label')), 'logo': info.get('art', {}).get('clearlogo', ''),'rules':{"800":{"values":{"0":info.get('label')}}}}): info.get('episode', 0)})
                 NetworkList.update([studio for studio in info.get('studio', [])])
                 ShowGenreList.update([genre for genre in info.get('genre', [])])
+
+            filtered = {}
+            for network, count in NetworkList.items():
+                if count >= mincount:
+                    filtered[network] = count
+            NetworkList = Counter(filtered)
+
+            filtered = {}
+            for genre, count in ShowGenreList.items():
+                if count >= mincount:
+                    filtered[genre] = count
+            ShowGenreList = Counter(filtered)
 
             if sortbycount:
                 TVShows       = [json.loads(x[0]) for x in sorted(TVShows.most_common(250))]
@@ -318,7 +335,7 @@ class Library:
 
 
     @cacheit()
-    def getMovieInfo(self, sortbycount=True):
+    def getMovieInfo(self, sortbycount=True, mincount=1):
         self.log('getMovieInfo')
         if BUILTIN.hasMovie():     
             StudioList     = Counter()
@@ -329,7 +346,19 @@ class Library:
             for idx, info in enumerate(json_response):
                 StudioList.update([studio for studio in info.get('studio', [])])
                 MovieGenreList.update([genre for genre in info.get('genre', [])])
-                
+
+            filtered = {}
+            for studio, count in StudioList.items():
+                if count >= mincount:
+                    filtered[studio] = count
+            StudioList = Counter(filtered)
+
+            filtered = {}
+            for genre, count in MovieGenreList.items():
+                if count >= mincount:
+                    filtered[genre] = count
+            MovieGenreList = Counter(filtered)
+
             if sortbycount:
                 StudioList     = [x[0] for x in sorted(StudioList.most_common(25))]
                 MovieGenreList = [x[0] for x in sorted(MovieGenreList.most_common(25))]
