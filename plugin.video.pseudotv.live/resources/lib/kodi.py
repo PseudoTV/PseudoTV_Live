@@ -1063,6 +1063,17 @@ class ListItems:
         for key, pvalue in list(properties.items()): listitem.setProperty(key, self.cleanProp(pvalue))
         if playable: listitem.setProperty("IsPlayable","true")
         else:        listitem.setIsFolder(True)
+        if item.get('file'):
+            file_path = item.get('file','')
+            # log(f'buildItemListItem, Translating path "{file_path}"...')
+            file_path = xbmcvfs.translatePath(file_path)
+            # log(f'buildItemListItem, Translated path to "{file_path}".')
+            listitem.setPath(file_path)
+            if file_path.endswith('.strm'):
+                with io.open(file_path, mode='r', encoding="utf-8") as f:
+                    file_path = f.read()
+            listitem.setPath(file_path) # if info.get('file'):   listitem.setPath(item.get('file','')) # (item.get('file','') or item.get('url','') or item.get('path',''))
+        
         return listitem
              
                      
