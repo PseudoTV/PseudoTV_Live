@@ -472,6 +472,12 @@
                     <control type="toggle"/>
                 </setting>
             </group>
+            <group id="4" label="Shuffle Options">
+                <setting id="Smart_Shuffle" type="boolean" label="Enable Smart Shuffle" help="If enabled, channel lists will be intelligently shuffled based on episode and season metadata.">
+                    <default>false</default>
+                    <control type="toggle"/>
+                </setting>
+            </group>
         </category>
         <category id="globals" label="30041" help="33041">
             <group id="1" label="30133">

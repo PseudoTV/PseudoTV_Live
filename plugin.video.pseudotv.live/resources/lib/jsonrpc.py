@@ -441,7 +441,7 @@ class JSONRPC:
             except: pass
 
 
-    def requestList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, query={}):
+    def requestList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, query={}, smart_shuffle=False):
          # {"method": "VideoLibrary.GetEpisodes",
          # "params": {
          # "properties": ["title"],
@@ -485,8 +485,10 @@ class JSONRPC:
                 self.log('[%s] requestList, generating random limits = %s'%(citem['id'],limits))
 
         param["limits"]          = {}
-        param["limits"]["start"] = 0 if limits.get('end', 0) == -1 else limits.get('end', 0)
-        param["limits"]["end"]   = abs(limits.get('end', 0) + page)
+        # Removing limits for smart sort to get all episodes.
+        if not smart_shuffle:
+            param["limits"]["start"] = 0 if limits.get('end', 0) == -1 else limits.get('end', 0)
+            param["limits"]["end"]   = abs(limits.get('end', 0) + page)
         param["sort"] = sort
         self.log('[%s] requestList, page = %s\nparam = %s'%(citem['id'], page, param))
         
@@ -503,7 +505,9 @@ class JSONRPC:
             # restart page to 0, exceeding boundaries.
             self.log('[%s] requestList, resetting limits to 0'%(citem['id']))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-          
+        if smart_shuffle:
+            items = self.smart_random_request(citem['id'], path, items, page, key)
+
         if len(items) == 0 and limits.get('total',0) > 0:
             # retry last request with fresh limits when no items are returned.
             self.log("[%s] requestList, trying again with start limits at 0"%(citem['id']))
@@ -527,6 +531,237 @@ class JSONRPC:
         if limits.get('total',0) > page: start = random.randrange(0, (limits.get('total',0)-page), page)
         return {"end": start, "start": start, "total":limits.get('total',0)}
         
+    def smart_random_request(self, id, path, items, page, key=None):
+        """Returns a list of random media items from the channel.
+
+        The function takes a list of all media items of the channel and returns a subset of them in a random order.
+        Handles mixed content (movies and TV shows) in the same channel.
+
+        Args:
+            id (str): Channel identifier
+            path (str): Channel path
+            items (list): A list containing all media items of the channel
+            page (int): Number of items to return
+            key (str, optional): Key for grouping items. Defaults to None.
+        """
+        
+        start_time = time.time()
+        self.log(f'smart_random_request; {id}: key = {key}', xbmc.LOGINFO)
+
+        total_items = len(items)
+        self.log(f'smart_random_request; {id}: {total_items} items.', xbmc.LOGINFO)
+
+        if total_items <= 1:
+            return items
+
+        content_dict = self.group_items_by_id(items, key)
+
+        # Create separate lists for movies and TV shows
+        library_ids = []
+        content_types = {}  # Track content type (movie/tvshow) for each library_id
+
+        for library_id, content_list in content_dict.items():
+            # Identify content type based on the presence of 'season' and 'episode' keys
+            first_item = content_list[0]
+            if 'season' in first_item and 'episode' in first_item:
+                content_type = 'episode'
+            else:
+                content_type = 'movie'
+            content_types[library_id] = content_type
+            library_ids += [library_id] * len(content_list)
+            self.log(f'smart_random_request; Content type for {library_id}: {content_type}', xbmc.LOGDEBUG)
+            self.log(f'smart_random_request; Content size for {library_id}: {len(content_type)}', xbmc.LOGDEBUG)
+
+        unique_library_ids = set(library_ids)
+        self.log(f'smart_random_request; Unique library IDs: {len(unique_library_ids)}', xbmc.LOGDEBUG)
+
+        # Load next_indices from memory
+        channel_memory = self.channelMemory(id, path)
+        self.log(f'smart_random_request; Channel memory for {id}: {channel_memory}', xbmc.LOGDEBUG)
+        programs_memory = channel_memory.get('programs', {})
+
+        # Clean up old memory entries
+        for memory_id in list(programs_memory):
+            if memory_id not in library_ids:
+                del programs_memory[memory_id]
+
+        next_indices = {}
+        coming_next = []
+
+        while len(coming_next) < page:
+            next_library_id = random.choice(library_ids)
+            content_type = content_types.get(next_library_id, '')
+            self.log(f'smart_random_request; {id}, next program id: {next_library_id}, type: {content_type}', xbmc.LOGINFO)
+            
+            total_parts = len(content_dict[next_library_id])
+            last_program_id = channel_memory.get('last_program_id')
+
+            # Skip repeated content if we have other options
+            if last_program_id == next_library_id and len(library_ids) > 1:
+                # For TV shows, only skip if the show has only 1 episode
+                if content_type == 'episode' and len(content_dict[next_library_id]) > 1:
+                    # TV show has multiple episodes, so different episodes are allowed
+                    pass
+                else:
+                    self.log(f"smart_random_request, Skipping {next_library_id} as it's the same as the last one.", xbmc.LOGINFO)
+                    continue
+
+            if content_type == 'movie':
+                # Movie logic - no need for episode tracking
+                next_content = content_dict[next_library_id][0]
+                programs_memory[next_library_id] = {
+                    'type': 'movie',
+                    'title': next_content.get('title', ''),
+                    'movieid': next_content.get('movieid', -1)
+                }
+            else:
+                # TV Show logic
+                i = next_indices.get(next_library_id)
+                if i is None:
+                    last_remembered_episode = programs_memory.get(next_library_id)
+                    if last_remembered_episode is None:
+                        self.log(f'No memory for library ID {next_library_id}. Initializing...', xbmc.LOGDEBUG)
+                        programs_memory[next_library_id] = {}
+                        i = 0
+                    else:
+                        # Only try to match season/episode if it's actually a TV show
+                        if last_remembered_episode.get('type') != 'movie':
+                            for i in range(len(content_dict[next_library_id])):
+                                current_episode = content_dict[next_library_id][i]
+                                if (current_episode.get('seasonid') == last_remembered_episode.get('seasonid') and 
+                                    current_episode.get('episodeid') == last_remembered_episode.get('episodeid')):
+                                    i += 1
+                                    break
+                            else:
+                                self.log(f"smart_random_request, Resetting index for show {next_library_id}", level=xbmc.LOGINFO)
+                                i = 0
+                        else:
+                            i = 0
+                else:
+                    i += 1
+
+                if i >= total_parts:
+                    self.log(f'smart_random_request, Resetting index as it reached the end of the list (i = {i}/{total_parts})...', xbmc.LOGINFO)
+                    i = 0
+                
+                next_indices[next_library_id] = i
+                next_content = content_dict[next_library_id][i]
+                programs_memory[next_library_id] = next_content
+
+            # Add the next content to our result list
+            coming_next.append(dict(next_content))
+            channel_memory['last_program_id'] = next_library_id
+
+        # Update channel memory
+        channel_memory['programs'] = programs_memory
+        self.channelMemory(id, path, channel_index=channel_memory)
+
+        end_time = time.time()
+        self.log(f'smart_random_request; {id}: Time taken to return items: {end_time - start_time:.2f} seconds.', xbmc.LOGINFO)
+
+        return coming_next
+
+
+    def channelMemory(self, id, path, channel_index = {}, checksum='', life=datetime.timedelta(days=28)):
+        """
+        Manages the memory cache for a channel with the given ID and path.
+
+        Retrieves or sets the channel's memory index based on the provided parameters.
+        If `channel_index` is not provided, attempts to retrieve the existing index from cache.
+        Validates the format of the loaded index to ensure it matches the expected structure.
+        Logs the status and any exceptions encountered during cache operations.
+
+        Args:
+            id (str): Identifier for the channel.
+            path (str): Path associated with the channel.
+            channel_index (dict, optional): Index of programs for the channel. Defaults to an empty dictionary.
+            checksum (str, optional): Checksum for cache validation. Defaults to an empty string.
+            life (datetime.timedelta, optional): Expiration time for the cache entry. Defaults to 28 days.
+
+        Returns:
+            dict: The channel's memory index, either loaded from cache or newly set.
+        """
+        cacheName = 'channelMemory.%s.%s'%(id,getMD5(path))
+        if not checksum: checksum = id
+        if not channel_index:
+            msg = 'get'
+            channel_index = {'programs' : {}, 'last_program_id' : {}}
+            # This gets the starting index for the  request, that's how the program keeps track of episodes.
+            try:
+                loaded_index = (self.cache.get(cacheName, checksum=checksum, json_data=False) or channel_index)
+                # Validating format (in case there's been a cahnge to the format)
+                loaded_index_keys = set(loaded_index)
+                if loaded_index_keys == set(channel_index):
+                    self.log("channelMemory; loaded index keys matched expected format. loaded_index_keys = %s"%(loaded_index_keys))
+                    channel_index = loaded_index
+                else:
+                    self.log("channelMemory; loaded index keys did not match expected format. loaded_index_keys = %s"%(loaded_index_keys))
+            except Exception as e:
+                self.log(f'channelMemory; Failed loading cache: id = {id}, path = {path}, Error: {e}')
+        else:
+            msg = 'set'
+            self.cache.set(cacheName, channel_index, checksum=checksum, expiration=life, json_data=False)
+        self.log("%s channelMemory; id = %s, path = %s, channel_index = %s"%(msg,id,path,channel_index))
+        return channel_index
+
+
+    def group_items_by_id(self, items, key=None):
+        """
+        Creates a dictionary of programs where each key is a tvshowid
+        (or showtitle if tvshowid is -1) and the value is a list of episodes
+        sorted by firstaired, season, and episode.
+
+        Parameters:
+        items (list): a list of items to be processed into a programs dictionary
+        key (str): if key is "episodes", the function will use the tvshowid of each item
+            as the key in the programs dictionary, otherwise, it will use the id of the item
+
+        Returns:
+        dict: a dictionary of programs where each key is a tvshowid (or showtitle)
+            and the value is a list of episodes sorted by firstaired, season, and episode
+        """
+        # Initialize an empty dictionary to store the programs
+        programs = {}
+
+        # Iterate over each item in the provided list
+        for item in items:
+            # If the key is "episodes" or the type of the item is 'episode'
+            if key == "episodes" or item.get('type') == 'episode':
+                self.log(f'group_items_by_id; item is an episode: {item}')
+                # Set the id as the tvshowid of the item
+                id = item['tvshowid']
+
+                # If the tvshowid is -1, set the id as the showtitle of the item
+                if id == -1:
+                    self.log(f'group_items_by_id; episode tvshowid is -1: {item}!')
+                    id = item['showtitle']
+            else:
+                # If the item is not an episode, set the id as the id of the item
+                self.log(f'group_items_by_id; item is not an episode, using "id" for item: {item}')
+                id = item.get('id')
+                if not id:
+                    id = item.get('movieid')
+                
+            self.log(f'group_items_by_id; id = {id}')
+
+
+
+            # Check if there are already episodes for the id in the programs dictionary
+            episodes = programs.get(id)
+            if episodes == None:
+                # If not, add a new entry with the id as the key and a list containing the item as the value
+                programs[id] = [item]
+            else:
+                # If there are already episodes, append the item to the list of episodes
+                episodes.append(item)
+
+        # After all items have been processed, sort the items in each list in the programs dictionary
+        # by their firstaired, season, and episode values
+        for _, items in programs.items():
+            items.sort(key=lambda seep: (seep.get('firstaired'), seep.get('season', 0), seep.get('episode', 0)))
+
+        # Return the programs dictionary
+        return programs
 
     @cacheit(checksum=PROPERTIES.getInstanceID())
     def buildWebBase(self, local=False):
