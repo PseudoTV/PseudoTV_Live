@@ -283,8 +283,10 @@ class XMLTVS:
         
         item['thumb']         = cleanImage((getThumb(fItem,EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK])) #unify thumbnail by user preference 
         fItem.get('art',{})['thumb'] = cleanImage(getThumb(fItem,{0:1,1:0}[EPG_ARTWORK]) or {0:FANART,1:COLOR_LOGO}[{0:1,1:0}[EPG_ARTWORK]]) #unify thumbnail artwork, opposite of EPG_Artwork
-        
-        item['date']          = fItem.get('premiered','')
+        if item['type'] == 'movie':
+            item['date']        = fItem.get('premiered','')
+        else:
+            item['date']        = fItem.get('firstaired','')
         item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=quoteString(item['title']),chid=quoteString(citem['id']),vid=quoteString(encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=quoteString(citem['name']))
         fItem['catchup-id']   = item['catchup-id']
             
