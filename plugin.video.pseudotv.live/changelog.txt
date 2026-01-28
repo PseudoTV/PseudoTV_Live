@@ -1,4 +1,7 @@
 ### NOTICE: The wizard branch is in alpha; things will break! ####
+v.0.6.9-wizard
+- Improved Asynchronous Executors.
+
 v.0.6.8-wizard
 - Added Kodi trailers cache to improve trailer fillers.
 - Refactored Channel building, changes impact content aggregation; see wiki for details.

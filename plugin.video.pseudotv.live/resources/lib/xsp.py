@@ -75,12 +75,6 @@ class XSP(object):
       
 
     def parseXSP(self, id, file, sort={}):
-        def _root(id, file, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-            self.log("[%s] _root, file = %s"%(id,file))
-            try:
-                items = self.jsonRPC.getDirectory({"directory":file,"media":"video"},True,checksum,expiration)[0]
-                return next((self.predefined.createShowPlaylist(item.get('label')) for item in items if item.get('filetype') == 'directory' and item.get('label')),None)
-            except: return []
         try: 
             xml = FileAccess.open(file, "r")
             dom = parse(xml)
@@ -95,16 +89,10 @@ class XSP(object):
 
             paths = []
             type  = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
-            if type.lower() == "mixed":
-                for rule in dom.getElementsByTagName('rule'):
-                    if rule.getAttribute('operator').lower() == 'is':
-                        if   rule.getAttribute('field').lower() == 'path':     paths.append(rule.getElementsByTagName("value")[0].childNodes[0].data)
-                        elif rule.getAttribute('field').lower() == 'playlist': paths.extend(self.findXSP(rule.getElementsByTagName("value")[0].childNodes[0].data))
-                        # elif rule.getAttribute('field').lower() == 'virtualfolder': todo refactor for virtualfolder
-            elif type.lower() == "tvshows": paths.extend(_root(id,file)) #build dynamic xsp from tvshow, apply sort values.
-            else: paths = [file]
-                
-            if type.lower() in ['mixed','tvshows']:
+            if type.lower() == "tvshows":
+                items = self.jsonRPC.getDirectory({"directory":file,"media":"video"},True,ADDON_VERSION,datetime.timedelta(minutes=15))[0]
+                [paths.extend(self.predefined.createShowPlaylist(item.get('label'))) for item in items if item.get('filetype') == 'directory' and item.get('label')]
+
                 try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()})
                 except Exception as e:
                     if "method" in sort: sort.pop("method")
@@ -114,8 +102,8 @@ class XSP(object):
                 except Exception as e: 
                     if "order" in sort: sort.pop("order")
                     self.log("[%s] parseXSP, no sort direction, fallback to %s"%(id,sort.get('order')), xbmc.LOGDEBUG)
-            self.log("[%s] parseXSP, type = %s, sort = %s, paths = %s"%(id, type, sort, paths))
-            return paths, sort
+                self.log("[%s] parseXSP, type = %s, sort = %s, paths = %s"%(id, type, sort, paths))
+                return paths, sort
         except Exception as e: self.log("[%s] parseXSP, failed! %s"%(id,e), xbmc.LOGERROR)
         return [file], sort
             
@@ -141,7 +129,6 @@ class XSP(object):
                                                                  {"field":"episode","operator":"greaterthan","value":"0"}])
                 else:
                     params['rules']['and'] = [r for r in params['rules'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
-                    # next((r for r in params['rules'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")), None)
                 params['rules']['and'] = setDictLST(params['rules']['and'])
             file = '%s?xsp=%s'%(path,dumpJSON(params))
             self.log("[%s] parseDXSP, OUT = %s"%(id,file))

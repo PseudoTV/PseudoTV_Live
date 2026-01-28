@@ -645,7 +645,6 @@ class Settings(object):
                 self.log('[%s] setPVRInstanceSettings, creating %s'%(PVR_CLIENT_ID,instanceFile))
                 FileAccess.move(defaultFile, instanceFile)
                 return self.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
-        self.dialog.notificationDialog(LANGUAGE(32000))
         return True
         
         
@@ -1136,6 +1135,7 @@ class ListItems(object):
     
 class Builtin(object):
     busy = None
+    json_lock = Lock()
     
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -1292,19 +1292,8 @@ class Builtin(object):
         return True
 
 
-    @contextmanager
-    def jsonLocker(self): #Lazy collision avoidance.
-        while not self.monitor.abortRequested():
-            if   self.monitor.waitForAbort(CPU_CYCLE): break
-            elif xbmcgui.Window(10000).getProperty('%s.jsonLocker'%(ADDON_ID)) != 'true': break
-        xbmcgui.Window(10000).setProperty('%s.jsonLocker'%(ADDON_ID),'true')
-        try: yield
-        finally:
-            xbmcgui.Window(10000).setProperty('%s.jsonLocker'%(ADDON_ID),'false')
-
-
     def executeJSONRPC(self, request):
-        with self.jsonLocker():
+        with self.json_lock:
             response = xbmc.executeJSONRPC(request)
             self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')/1000))
             self.log('executeJSONRPC, request = %s\nresponse = %s'%(request,response))

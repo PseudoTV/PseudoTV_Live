@@ -28,6 +28,7 @@ from wizard     import Wizard
 from server     import HTTP
 
 class Tasks(object):
+    citems  = []
     cache   = SETTINGS.cache
     cacheDB = SETTINGS.cacheDB
     
@@ -209,10 +210,16 @@ class Tasks(object):
         
     def chkChannels(self, channels: list=[], save=False):
         builder = Builder(service=self.service)
-        if not channels: channels = builder.getVerifiedChannels()
+        if not channels:
+            channels = builder.getVerifiedChannels()
+            self.citems = channels
+            PROPERTIES.setChannels(len(channels)>0)
         if len(channels) > 0:
             self.log('chkChannels, channels = %s'%(len(channels)))
-            self.service._que(builder.buildChannels,3,channels)
+            if PROPERTIES.hasChannels():
+                [self.service._que(builder.buildChannels,3,[channel]) for channel in channels]
+            else:
+                self.service._que(builder.buildChannels,3,channels)
         else:
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():      SETTINGS.setAutotuned(Autotune()._runTune())
@@ -271,7 +278,7 @@ class Tasks(object):
                 if len(self.service.logoQue) > 0:
                     param = loadJSON(self.service.logoQue.pop())
                     self.log("chkQUES, queuing = %s\nlogoQue:%s"%(len(self.service.logoQue),param))
-                    self.service._que(library.resources.getLogo,-1,*(param,library.resources.getCache(param),True,None))
+                    self.service._que(library.resources.getLogo,-1,*(param,library.resources.getCache(param.get('name')),True,None))
         del library
         
                 
@@ -282,8 +289,3 @@ class Tasks(object):
             FileAccess.copyFolder(old, new, dia)
             PROPERTIES.setPendingRestart()
             DIALOG.progressDialog(100, dia)
-            
-            
-    def getVerifiedChannels(self):
-        return Builder(service=self.service).getVerifiedChannels()
-        

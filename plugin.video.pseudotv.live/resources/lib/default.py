@@ -61,5 +61,5 @@ if __name__ == '__main__':
     if   mode == 'settings':                        SETTINGS.openSettings()
     elif mode is None and PROPERTIES.hasChannels(): SETTINGS.openGuide()
     elif mode is None and SETTINGS.hasAutotuned():  SETTINGS.autoTune()
-    else: _run(sys.argv, decodePlot(BUILTIN.getInfoLabel('Plot')), decodePlot(BUILTIN.getInfoLabel('NextPlot')))
+    else: executeit(_run)(sys.argv, decodePlot(BUILTIN.getInfoLabel('Plot')), decodePlot(BUILTIN.getInfoLabel('NextPlot')))
     # if SETTINGS.hasAddon(PVR_CLIENT_ID,install=True,enable=True,force=True):

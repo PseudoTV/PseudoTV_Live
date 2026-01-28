@@ -33,11 +33,13 @@ class LlNode(object):
 
 
 class CustomQueue(object):
+    futures = set()
     try:    min_heap = list(pickle.loads((SETTINGS.getCacheSetting('min_heap', revive=False) or b'')))
     except: min_heap = []
    
     def __init__(self, fifo: bool=False, lifo: bool=False, priority: bool=False, delay: bool=False, timer: bool=False, service=None):
-        self.isRunning   = False
+        self.isWorking   = False
+        self.isPopping   = False
         self.service     = service
         self.fifo        = fifo
         self.lifo        = lifo
@@ -53,8 +55,9 @@ class CustomQueue(object):
         self.useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
         self.executor    = ThreadPoolExecutor(max_workers=THREAD_COUNT)
         self.popThread   = Thread(target=self._start)
+        self.wrkThread   = Thread(target=self._worker)
         self.log("__init__, type = %s, delay = %s, timer = %s, min_heap = %s"%(self.type, delay, timer, len(self.min_heap)))
-        self.log(f"__init_,: ENABLE_EXECUTORS = {self.useExecutor}, CORES = {CPU_COUNT}, THREADS = {THREAD_COUNT}, CPU_CYCLE = {CPU_CYCLE}")
+        self.log(f"__init_,: ENABLE_EXECUTORS = {self.useExecutor}, CORES = {CPU_COUNT}, THREADS = {THREAD_COUNT}, QUEUE_CHUNK = {QUEUE_CHUNK}, CPU_CYCLE = {CPU_CYCLE}")
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -79,36 +82,61 @@ class CustomQueue(object):
     def _run(self):
         self.log("_run")
         self.useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
+        if self.useExecutor:
+            if self.wrkThread.is_alive():
+                try:
+                    self.wrkThread.join(0.1)  
+                    self.log('_run, joining existing wrkThread')                          
+                except: pass
+            elif not self.service._interrupt() and not self.service._suspend():
+                self.wrkThread = Thread(target=self._worker)
+                self.wrkThread.daemon = True
+                self.wrkThread.start()
+          
         if self.popThread.is_alive():
             try:
                 self.popThread.join(0.1)  
                 self.log('_run, joining existing popThread')                          
             except: pass
-        
         elif not self.service._interrupt() and not self.service._suspend():
             self.popThread = Thread(target=self._start)
             self.popThread.daemon = True
             self.popThread.start()
+          
+          
+    def _worker(self):
+        self.isWorking = True
+        while not self.service.monitor.abortRequested():
+            if self.service._interrupt() or self.service._suspend() or self.useExecutor:
+                self.log("_worker, _interrupt/_suspend")
+                break
+            else:
+                with timeit(func):
+                    try:
+                        for i in range(QUEUE_CHUNK):
+                            if self.service._interrupt() or self.service._suspend():
+                                self.log("_worker, _interrupt/_suspend")
+                                break
+                            elif len(self.futures) > THREAD_COUNT:
+                                self.log(f"_worker [{i/QUEUE_CHUNK}] func = {func.__name__}")
+                                done, self.futures = wait(self.futures, return_when=FIRST_COMPLETED) 
+                                for future in done: yield future.result()
+                            self.futures.add(self.executor.submit(func(*args, **kwargs)))
+                        for future in as_completed(self.futures): yield future.result()
+                    except FuturesTimeoutError as e:
+                        self.log("_worker, func = %s failed!\n%s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
+                        yield func(*args, **kwargs)
 
-
-    def _wait(self, package):
-        self.log(f"_wait, func = {package[0].__name__}")
-        self._exe(package[0],*package[1],**package[2])
-           
 
     def _exe(self, func, *args, **kwargs):
-        self.log(f"_exe, func = {func.__name__}, useExecutor = {self.useExecutor}")
-        with timeit(func):
-            try:
-                if self.useExecutor: 
-                    try:
-                        future = self.executor.submit(func, *args, **kwargs)
-                        return future.result()                    
-                    except Exception as e: self.log("_exe, func = %s failed!\n%s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
+        if self.useExecutor: 
+            self.futures.add(self.executor.submit(func(*args, **kwargs)))
+            self.log(f"_exe, func = {func.__name__} isWorking = {self.isWorking}")
+        else:
+            with timeit(func):
                 return func(*args, **kwargs)
-            except Exception as e: self.log("_exe, func = %s failed!\n%s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
-          
-
+            
+            
     def _exists(self, package: tuple, priority: int = 0, timer: int = 0):
         if priority:
             for idx, item in enumerate(self.min_heap):
@@ -139,7 +167,7 @@ class CustomQueue(object):
                 try:
                     self.qsize += 1
                     self.itemCount[priority] += 1
-                    self.log(f"_push, func = {package[0].__name__}, priority = {priority}, isRunning = {self.isRunning}")
+                    self.log(f"_push, func = {package[0].__name__}, priority = {priority}, isPopping = {self.isPopping}")
                     heapq.heappush(self.min_heap, (priority, self.itemCount[priority], package))
                 except Exception as e:
                     self.log(f"_push, func = {package[0].__name__} failed! {e}", xbmc.LOGFATAL)
@@ -155,8 +183,8 @@ class CustomQueue(object):
                 else:
                     self.head = node
                     self.tail = node
-                self.log(f"_push, func = {package[0].__name__}, timer = {timer}, isRunning = {self.isRunning}")
-        if not self.isRunning or not self.popThread.is_alive(): self._run()
+                self.log(f"_push, func = {package[0].__name__}, timer = {timer}, isPopping = {self.isPopping}")
+        if not self.isPopping or not self.popThread.is_alive(): self._run()
                 
 
     def _process(self, node, fifo=True):
@@ -170,7 +198,7 @@ class CustomQueue(object):
         
         
     def _start(self):
-        self.isRunning = True
+        self.isPopping = True
         while not self.service.monitor.abortRequested():
             if self.service._interrupt() or self.service._suspend():
                 self.log("_start, _interrupt/_suspend")
@@ -205,7 +233,7 @@ class CustomQueue(object):
                 self.log("_start, queue undefined!")
                 break
         
-        self.isRunning = False
+        self.isPopping = False
         if self.service._shutdown(CPU_CYCLE):
             self.log("_start, _shutdown")
             return self._stop()

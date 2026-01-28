@@ -418,7 +418,7 @@ def interleave(seqs, sets=1, repeats=False):
             # cyclical_iterators = [cycle(lst) for lst in seqs]
             # interleaved = []
             # # Determine the length of the longest list
-            # max_len = max(len(lst) for lst in seqs)
+            # max_len = max((len(lst) for lst in seqs))
             # # Calculate the number of blocks needed
             # num_blocks = (max_len + sets - 1) // sets
             # # Interleave in blocks

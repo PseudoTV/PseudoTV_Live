@@ -71,6 +71,8 @@ class FileAccess(object):
 
     @staticmethod
     def mkdirs(path):
+        if not path.endswith(("/","\\")):
+            path = "%s/"%(path)
         return xbmcvfs.mkdirs(path)
 
 
@@ -128,6 +130,8 @@ class FileAccess(object):
             try: filename = (filename.split('stack://')[1].split(' , '))[0]
             except Exception as e: log('FileAccess: exists failed! %s'%(e), xbmc.LOGERROR)
         try:
+            if not filename.endswith(("/","\\")):
+                filename = "%s/"%(filename)
             exists = xbmcvfs.exists(filename)
         except UnicodeDecodeError:
             exists = os.path.exists(xbmcvfs.translatePath(filename))
@@ -238,9 +242,7 @@ class FileAccess(object):
 
         success = xbmcvfs.mkdir(path)
         if success == False:
-            if path == os.path.dirname(xbmcvfs.translatePath(path)):
-                return False
-
+            if path == os.path.dirname(xbmcvfs.translatePath(path)): return False
             if FileAccess._makedirs(os.path.dirname(xbmcvfs.translatePath(path))):
                 return xbmcvfs.mkdir(path)
         return xbmcvfs.exists(path)

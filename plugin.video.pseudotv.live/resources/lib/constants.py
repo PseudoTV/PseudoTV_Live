@@ -40,9 +40,10 @@ MONITOR             = xbmc.Monitor
 PLAYER              = xbmc.Player
 
 #constants
-CPU_COUNT           = os.cpu_count()
-CPU_CYCLE           = (1/CPU_COUNT)/CPU_COUNT*CPU_COUNT
-THREAD_COUNT        = CPU_COUNT
+CPU_COUNT           = (os.cpu_count() or 1)
+CPU_CYCLE           = (1/CPU_COUNT)/CPU_COUNT
+THREAD_COUNT        = min(50, max(2, CPU_COUNT * 2 + 2))
+QUEUE_CHUNK         = min(25, max(2, THREAD_COUNT // 2))
 
 FIFTEEN             = 15    #unit
 DISCOVERY_TIMER     = 60    #secs
@@ -70,7 +71,6 @@ RADIO_ITEM_LIMIT    = 250
 CHANNEL_LIMIT       = 999
 AUTOTUNE_LIMIT      = 5
 FILLER_LIMIT        = 250
-QUEUE_CHUNK         = 5
 M3U_REFRESH         = 15
 
 PRE_POST_ROLL_TYPES = ['Pre-Roll',

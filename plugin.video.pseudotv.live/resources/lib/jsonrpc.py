@@ -414,13 +414,13 @@ class JSONRPC(object):
         
         
     def getTotRuntime(self, items=[]):
-        total = sum([self._getRuntime(item) for item in items])
+        total = sum((self._getRuntime(item) for item in items))
         self.log("getTotRuntime, items = %s, total = %s" % (len(items), total))
         return total
 
 
     def getTotDuration(self, items=[]):
-        total = sum([self.getDuration(item.get('file'),item) for item in items])
+        total = sum((self.getDuration(item.get('file'),item) for item in items))
         self.log("getTotDuration, items = %s, total = %s" % (len(items), total))
         return total
 

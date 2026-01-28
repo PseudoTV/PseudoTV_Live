@@ -133,7 +133,7 @@ class Library(object):
 
     def getPlaylists(self):
         PlayList = []
-        types = ['video','mixed','music']
+        types = ['video','music']
         for i, type in enumerate(types):
             self.pCount  = int(i*100//len(types))
             self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)

@@ -150,8 +150,8 @@ class XMLTVS(object):
         
         for channel in channels:
             try: 
-                firstStart = min([program['start'] for program in programmes if program['channel'] == channel['id']], default=fallback)
-                lastStop   = max([program['stop']  for program in programmes if program['channel'] == channel['id']], default=fallback)
+                firstStart = min((program['start'] for program in programmes if program['channel'] == channel['id']), default=fallback)
+                lastStop   = max((program['stop']  for program in programmes if program['channel'] == channel['id']), default=fallback)
                 self.log('loadStopTimes, channel = %s, first-start = %s, last-stop = %s, fallback = %s'%(channel['id'],firstStart,lastStop,fallback))
                 if firstStart > fallback: raise Exception('First start-time in the future, rebuild channel with fallback')
                 yield channel['id'],datetime.datetime.timestamp(strpTime(lastStop, DTFORMAT))
@@ -168,7 +168,7 @@ class XMLTVS(object):
         for channel in channels:
             try: 
                 valid = False
-                lastStop  = max([program['stop']  for program in programmes if program['channel'] == channel['id']], default=now)
+                lastStop  = max((program['stop']  for program in programmes if program['channel'] == channel['id']), default=now)
                 if lastStop > now: valid = True
                 self.log('hasProgrammes, channel = %s, valid = %s'%(channel['id'],valid))
                 yield channel['id'],valid
@@ -415,18 +415,19 @@ class XMLTVS(object):
 
 
     def delBroadcast(self, citem: dict) -> bool:# remove single channel and all programmes from XMLTVDATA
-        channels   = self.XMLTVDATA['channels'].copy()
-        programmes = self.XMLTVDATA['programmes'].copy()
+        channels   = self.XMLTVDATA['channels']
+        programmes = self.XMLTVDATA['programmes']
         self.XMLTVDATA['channels']   = list([channel for channel in channels if channel.get('id') != citem.get('id')])
         self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != citem.get('id')])
+        if citem.get('id') in self.stopTimes: del self.stopTimes[citem['id']] 
         self.log('delBroadcast, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.XMLTVDATA['channels']),len(programmes),len(self.XMLTVDATA['programmes'])))
         return True
         
         
     def delRecording(self, ritem: dict):
         self.log('[%s] delRecording'%((ritem.get('id') or ritem.get('label'))))
-        recordings = self.XMLTVDATA['recordings'].copy()
-        programmes = self.XMLTVDATA['programmes'].copy()
+        recordings = self.XMLTVDATA['recordings']
+        programmes = self.XMLTVDATA['programmes']
         idx, recording = self.findRecording(ritem)
         if idx is not None:
             self.XMLTVDATA['recordings'].pop(idx)
