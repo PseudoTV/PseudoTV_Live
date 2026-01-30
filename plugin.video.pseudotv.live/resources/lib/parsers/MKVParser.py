@@ -25,8 +25,7 @@ class MKVParser:
         log("MKVParser: determineLength %s"%filename)
         try: self.File = FileAccess.open(filename, "rb", None)
         except:
-            log("MKVParser: Unable to open the file")
-            log(traceback.format_exc(), xbmc.LOGERROR)
+            log("MKVParser: Unable to open the file", xbmc.LOGERROR)
             return
 
         size = self.findHeader()

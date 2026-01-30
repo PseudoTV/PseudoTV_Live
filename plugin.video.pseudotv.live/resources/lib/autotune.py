@@ -90,10 +90,10 @@ class Autotune(object):
                 with BUILTIN.busy_dialog(), DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
                     for idx, type in enumerate(AUTOTUNE_TYPES):
                         self.pMSG    = type
-                        self.pCount  = int(idx*100//len(AUTOTUNE_TYPES))
+                        self.pCount  = int(idx+1*100//len(AUTOTUNE_TYPES))
                         self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, self.pMSG, header=self.pHeader)
                         __buildAutotune(type,count)
-                timerit(PROPERTIES.setPropTimer)(FIFTEEN,'chkChannels')
+                timerit(PROPERTIES.setPropTimer)(FIFTEEN,*('chkChannels',True))
                 del channels
         return True
         

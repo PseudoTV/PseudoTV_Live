@@ -20,7 +20,6 @@
 import pickle
 
 from globals             import *
-from collections         import defaultdict
 from concurrent.futures  import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 class LlNode(object):
@@ -31,15 +30,12 @@ class LlNode(object):
         self.priority  = priority 
         self.time      = timer
 
-
 class CustomQueue(object):
-    futures = set()
+    futures = set() #todo refactor heap to workaround pickle callable
     try:    min_heap = list(pickle.loads((SETTINGS.getCacheSetting('min_heap', revive=False) or b'')))
     except: min_heap = []
    
     def __init__(self, fifo: bool=False, lifo: bool=False, priority: bool=False, delay: bool=False, timer: bool=False, service=None):
-        self.isWorking   = False
-        self.isRunning   = False
         self.service     = service
         self.fifo        = fifo
         self.lifo        = lifo
@@ -48,7 +44,6 @@ class CustomQueue(object):
         self.timer       = timer
         self.head        = None
         self.tail        = None
-        self.qsize       = 0
         self.nodes       = set()
         self.type        = self._getType()
         self.itemCount   = defaultdict(int)
@@ -105,34 +100,29 @@ class CustomQueue(object):
           
           
     def _worker(self, timeout=TIMEOUT_EXECUTOR):
-        self.isWorking = True
         while not self.service.monitor.abortRequested():
             if self.service._interrupt() or self.service._suspend() or self.useExecutor:
                 self.log("_worker, _interrupt/_suspend")
                 break
             else:
-                try:
-                    for i in range(QUEUE_CHUNK):
-                        if self.service._interrupt() or self.service._suspend():
-                            self.log("_worker, _interrupt/_suspend")
-                            break
-                        elif len(self.futures) > THREAD_COUNT:
-                            self.log(f"_worker, waiting for jobs to complete. Max thread count reached!")
-                            done, self.futures = wait(self.futures, return_when=FIRST_COMPLETED) 
-                            for future in done: yield future.result(timeout)
-                        self.futures.add(self.executor.submit(func(*args, **kwargs)))
-                        self.log(f"_worker [{i/QUEUE_CHUNK}] func = {func.__name__}")
-                    for future in as_completed(self.futures): yield future.result(timeout)
-                except Exception as e:
-                    self.log("_worker, func = %s failed!\n%s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
-                    yield func(*args, **kwargs)
-
+                for i in range(QUEUE_CHUNK):
+                    self.log(f"_worker [{i/QUEUE_CHUNK}]")
+                    if self.service._interrupt() or self.service._suspend():
+                        self.log("_worker, _interrupt/_suspend")
+                        break
+                    elif len(self.futures) > THREAD_COUNT:
+                        self.log(f"_worker, waiting for jobs to complete. Max thread count reached!")
+                        done, self.futures = wait(self.futures, return_when=FIRST_COMPLETED) 
+                        for future in done:
+                            yield future.result(timeout)
+                for future in as_completed(self.futures):
+                    yield future.result(timeout)
+                    
 
     def _exe(self, func, *args, **kwargs):
-        if self.useExecutor: 
-            self.futures.add(self.executor.submit(func(*args, **kwargs)))
-            self.log(f"_exe, func = {func.__name__} isWorking = {self.isWorking}")
-        else: return func(*args, **kwargs)
+        self.log(f"_exe, func = {func.__name__}, useExecutor = {self.useExecutor}")
+        if self.useExecutor: self.futures.add(self.executor.submit(func(*args, **kwargs)))
+        else: func(*args, **kwargs)
             
             
     def _exists(self, package: tuple, priority: int = 0, timer: int = 0):
@@ -155,7 +145,7 @@ class CustomQueue(object):
         
              
     def _push(self, package: tuple, priority: int = 0, delay: int = 0, timer: int = 0):
-        if   priority == -1: priority = self.qsize + 1 #lazy FIFO
+        if   priority == -1: priority = len(self.min_heap) + 1 #lazy FIFO
         elif delay: #lazy timer
             if not timer: timer = time.time()
             timer += delay
@@ -163,9 +153,8 @@ class CustomQueue(object):
         if self.priority:
             if not self._exists(package, priority, timer):
                 try:
-                    self.qsize += 1
                     self.itemCount[priority] += 1
-                    self.log(f"_push, func = {package[0].__name__}, priority = {priority}, isRunning = {self.isRunning}")
+                    self.log(f"_push, func = {package[0].__name__}, priority = {priority}")
                     heapq.heappush(self.min_heap, (priority, self.itemCount[priority], package))
                 except Exception as e:
                     self.log(f"_push, func = {package[0].__name__} failed! {e}", xbmc.LOGFATAL)
@@ -181,8 +170,8 @@ class CustomQueue(object):
                 else:
                     self.head = node
                     self.tail = node
-                self.log(f"_push, func = {package[0].__name__}, timer = {timer}, isRunning = {self.isRunning}")
-        if not self.isRunning or not self.popThread.is_alive(): self._run()
+                self.log(f"_push, func = {package[0].__name__}, timer = {timer}")
+        if not self.popThread.is_alive(): self._run()
                 
 
     def _process(self, node, fifo=True):
@@ -196,7 +185,6 @@ class CustomQueue(object):
         
         
     def _start(self):
-        self.isRunning = True
         while not self.service.monitor.abortRequested():
             if self.service._interrupt() or self.service._suspend():
                 self.log("_start, _interrupt/_suspend")
@@ -211,7 +199,6 @@ class CustomQueue(object):
                 else:
                     try:
                         priority, _, package = heapq.heappop(self.min_heap)
-                        self.qsize -= 1
                         self._exe(package[0],*package[1],**package[2])
                     except Exception as e: self.log("_start, failed! %s"%(e), xbmc.LOGERROR)
             elif self.fifo or self.lifo:
@@ -231,7 +218,6 @@ class CustomQueue(object):
                 self.log("_start, queue undefined!")
                 break
         
-        self.isRunning = False
         if self.service._shutdown(CPU_CYCLE):
             self.log("_start, _shutdown")
             return self._stop()

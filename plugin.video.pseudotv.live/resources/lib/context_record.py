@@ -77,6 +77,6 @@ if __name__ == '__main__':
     try:    param = sys.argv[1]
     except: param = None
     log('Record: __main__, param = %s'%(param))
-    if   param == 'add': Record(sys.argv,sys.listitem,decodePlot(BUILTIN.getInfoLabel('Plot'))).add()
-    elif param == 'del': Record(sys.argv,sys.listitem,decodePlot(BUILTIN.getInfoLabel('Plot'))).remove()
+    if   param == 'add': Record(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot'))).add()
+    elif param == 'del': Record(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot'))).remove()
     

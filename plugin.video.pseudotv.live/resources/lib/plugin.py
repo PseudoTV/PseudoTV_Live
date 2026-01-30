@@ -17,13 +17,14 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals     import *
-from jsonrpc     import JSONRPC
-from rules       import RulesList
+from globals             import *
+from jsonrpc             import JSONRPC
+from rules               import RulesList
+from infotagger.listitem import ListItemInfoTag
 
 class Plugin(object):
     def __init__(self, sysARG=sys.argv, sysInfo={}):
-        with BUILTIN.busy_dialog():
+        with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
             self.sysARG  = sysARG
             self.sysInfo = sysInfo
             self.jsonRPC = JSONRPC()
@@ -108,7 +109,7 @@ class Plugin(object):
                 
             sysInfo.update({'fitem':item,'resume':{"idx":nextitems.index(item)}})
             listitem.setProperty("IsPlayable","true")
-            listitem.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
+            listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(sysInfo)))
             return listitem
         
         nextitems = RulesList([self.sysInfo.get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('citem',{'name':name,'id':chid}))
@@ -125,13 +126,13 @@ class Plugin(object):
         self.log('[%s] getPVRItems, chname = %s'%(chid,name))
         def __buildfItem(item):
             sysInfo = self.sysInfo.copy()
-            nowitem = decodePlot(item.get('plot',''))
+            nowitem = Globals._decodePlot(item.get('plot',''))
             if 'citem' in nowitem: nowitem.pop('citem')
             nowitem['pvritem'] = item
             sysInfo.update({'fitem':nowitem,'position':nextitems.index(item)})
             
             try: #next broadcast
-                nextitem = decodePlot(nextitems[idx+1][1].get('plot',''))
+                nextitem = Globals._decodePlot(nextitems[idx+1][1].get('plot',''))
                 if 'citem' in nextitem: nextitem.pop('citem')
                 nextitem.get('customproperties',{})['pvritem'] = nextitems[idx + 1]
                 sysInfo.update({'nitem':nextitem})
@@ -144,7 +145,7 @@ class Plugin(object):
                 infoTag = ListItemInfoTag(listitem, 'video')
                 infoTag.set_resume_point({'ResumeTime':item['progress'],'TotalTime':(item['runtime'] * 60)})
             listitem.setProperty("IsPlayable","true")
-            listitem.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
+            listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(sysInfo)))
             return listitem
             
         found   = False
@@ -158,7 +159,7 @@ class Plugin(object):
        
             if (self.sysInfo.get('fitem') or self.sysInfo.get('vid')):
                 for pos, nextitem in enumerate(nextitems):
-                    fitem = decodePlot(nextitem.get('plot',{}))
+                    fitem = Globals._decodePlot(nextitem.get('plot',{}))
                     file  = self.sysInfo.get('fitem',{}).get('file') if self.sysInfo.get('fitem') else self.sysInfo.get('vid')
                     if file == fitem.get('file') and self.sysInfo.get('citem',{}).get('id') == fitem.get('citem',{}).get('id',str(random.random())):
                         found = True
@@ -168,7 +169,7 @@ class Plugin(object):
                         
             elif self.sysInfo.get('now') and self.sysInfo.get('vid'):
                 for pos, nextitem in enumerate(nextitems):
-                    fitem = decodePlot(nextitem.get('plot',{}))
+                    fitem = Globals._decodePlot(nextitem.get('plot',{}))
                     ntime = epochTime(float(self.sysInfo.get('now')),tz=False)
                     if ntime >= strpTime(nextitem.get('starttime')) and ntime < strpTime(nextitem.get('endtime')) and chid == fitem.get('citem',{}).get('id',str(random.random())):
                         found = True
@@ -189,7 +190,7 @@ class Plugin(object):
                     nowitem['progress']           = 0
                     nowitem['progresspercentage'] = 0
                         
-                self.sysInfo.update({'citem':decodePlot(nowitem.get('plot','')).get('citem',self.sysInfo.get('citem'))})
+                self.sysInfo.update({'citem':Globals._decodePlot(nowitem.get('plot','')).get('citem',self.sysInfo.get('citem'))})
                 self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
                 nextitems = nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
                 nextitems.insert(0,nowitem)
@@ -229,7 +230,7 @@ class Plugin(object):
                 DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['name']))
                 listitem = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
                 listitem.setProperty("IsPlayable","true")
-                listitem.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+                listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
                 timerit(PLAYER().play)(1.0,[self.sysInfo['vid'],listitem,True])
                 self._resolveURL(False, listitem)
             elif vid:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
@@ -369,7 +370,7 @@ class Plugin(object):
             elif not FileAccess.exists(file):       return __findMissing(file)
             return FileAccess.exists(self.sysInfo.get('vid',file))
             
-        oldInfo = loadJSON(decodeString(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID))))
+        oldInfo = FileAccess.loadJSON(Globals._decodeString(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID))))
         self.sysInfo['playcount'] = 1
         if self.sysInfo.get('chid') == oldInfo.get('chid',random.random()):
             if self.sysInfo.get('start') == oldInfo.get('start',random.random()):
@@ -384,14 +385,14 @@ class Plugin(object):
                 if not found: return self.playError()
             listitem.setProperty("IsPlayable","true")
             listitem.setPath(self.sysInfo['vid'])
-            listitem.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
+            listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
+        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
         return found, listitem
         
         
     def playError(self):
         self.log('[%s] playError, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo.get('playcount',1),self.sysInfo))
-        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
+        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
         DIALOG.notificationWait(LANGUAGE(32167))
         if self.sysInfo.get('playcount',1) <= 1:
             DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',1)))

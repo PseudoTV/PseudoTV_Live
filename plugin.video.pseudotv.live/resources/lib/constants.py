@@ -18,9 +18,33 @@
 #
 # -*- coding: utf-8 -*-
 
-import os
+import os, sys, re, struct
+import json, pickle
+import random, base64, binascii, hashlib, heapq, zlib
+import time, datetime, calendar
+import requests
 
-from kodi_six      import xbmc, xbmcaddon
+from functools             import partial, reduce, update_wrapper, wraps, lru_cache
+from difflib               import SequenceMatcher
+from six.moves             import urllib 
+from contextlib            import ContextDecorator, contextmanager, closing
+from collections           import Counter, OrderedDict, defaultdict, deque
+from ast                   import literal_eval
+from six.moves             import urllib 
+from io                    import StringIO, BytesIO
+from threading             import Lock, Thread, Event, Timer, BoundedSemaphore, enumerate as thread_enumerate
+from xml.dom.minidom       import parse, parseString, Document
+from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstringlist, fromstring, tostring, parse as ETparse
+from typing                import Dict, List, Union, Optional, Any
+from kodi_six              import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
+from contextlib            import contextmanager, closing
+from socket                import gethostbyname, gethostname
+from itertools             import cycle, chain, zip_longest, islice, repeat, count
+from xml.sax.saxutils      import escape, unescape
+from operator              import itemgetter
+from six.moves             import urllib 
+from math                  import ceil, floor, sqrt
+from requests.adapters     import HTTPAdapter, Retry
 
 #info
 ADDON_ID            = 'plugin.video.pseudotv.live'
@@ -41,9 +65,9 @@ PLAYER              = xbmc.Player
 
 #constants
 CPU_COUNT           = (os.cpu_count() or 1)
-CPU_CYCLE           = (1/CPU_COUNT)/CPU_COUNT
-THREAD_COUNT        = min(50, max(2, CPU_COUNT * 2 + 2))
-QUEUE_CHUNK         = min(25, max(2, THREAD_COUNT // 2))
+CPU_CYCLE           = (1/CPU_COUNT)/CPU_COUNT #safe none taxing cycle time.
+THREAD_COUNT        = min(32, CPU_COUNT + 4)
+QUEUE_CHUNK         = min(16, THREAD_COUNT // 2)
 
 FIFTEEN             = 15    #unit
 DISCOVERY_TIMER     = 60    #secs
@@ -69,7 +93,7 @@ AUTOCLOSE_DELAY     = 300  #secs
 SELECT_DELAY        = 900  #secs
 RADIO_ITEM_LIMIT    = 250
 CHANNEL_LIMIT       = 999
-AUTOTUNE_LIMIT      = 5
+AUTOTUNE_LIMIT      = 2
 FILLER_LIMIT        = 250
 M3U_REFRESH         = 15
 

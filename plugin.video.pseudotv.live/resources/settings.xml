@@ -519,7 +519,7 @@
                 </setting>
                 <setting id="Enable_3D" type="boolean" label="30055" help="33055">
                     <level>1</level>
-                    <default>false</default>
+                    <default>true</default>
                     <control type="toggle"/>
                 </setting>
                 <setting id="Interleave_Set" type="integer" label="30179" help="33215">

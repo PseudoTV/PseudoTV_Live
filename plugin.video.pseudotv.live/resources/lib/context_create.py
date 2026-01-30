@@ -46,7 +46,7 @@ class Create(object):
                     citem           = manager.newChannel
                     citem['number'] = manager.getFirstChannel()
                     citem['type']   = 'Custom'
-                    path, citem = manager.validatePaths(unquoteString(self.listitem.getPath()),citem)
+                    path, citem = manager.validatePaths(Globals._unquoteString(self.listitem.getPath()),citem)
                     name, citem = manager.validateInputs('name',cleanLabel(self.listitem.getLabel()),citem)
                     if not path is None:
                         citem['path']     = [path.strip('/')] 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
             values = [cleanLabel(value) for value in values]
             values.insert(0,LANGUAGE(30022)) #Auto
             values.insert(1,LANGUAGE(32069)) #Ask
-        select = DIALOG.selectDialog(values, '%s for Channel Setup'%(LANGUAGE(30173)), findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
+        select = DIALOG.selectDialog(values, '%s for Channel Setup'%(LANGUAGE(30173)), Globals._findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
         if not select is None: SETTINGS.setSetting('Default_Channels',values[select])
         else:                  SETTINGS.setSetting('Default_Channels',LANGUAGE(30022))
-    else: Create(sys.argv,sys.listitem,decodePlot(BUILTIN.getInfoLabel('Plot'))).add()
+    else: Create(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot'))).add()

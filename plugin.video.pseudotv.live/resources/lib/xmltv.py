@@ -248,7 +248,7 @@ def elem_to_programme(elem):
          
 def escape_xml_string(text):
   """Escapes special characters in a string for use in XML."""
-  return xml.sax.saxutils.escape(text)
+  return escape(text)
 
 def read_error(msg, fp, e):
     try:

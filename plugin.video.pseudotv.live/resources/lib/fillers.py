@@ -17,12 +17,6 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
-from collections import deque
-import os
-import re
-import random
-import datetime
-
 from globals    import *
 from resources  import Resources
 
@@ -36,8 +30,10 @@ class Fillers(object):
         self.resources  = Resources(service=builder.service)
         self.fillSources(builder.bctTypes)
 
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
+
 
     def fillSources(self, bctTypes=None):
         if bctTypes is None:
@@ -73,7 +69,7 @@ class Fillers(object):
                 values['items'] = mergeDictLST(values.get('items', {}), self.buildSource(ftype, path))
 
             # canonicalize items
-            values['items'] = lstSetDictLst(values['items'])
+            values['items'] = Globals._setDictLST(values['items'])
             self.log('fillSources, type = %s, items = %s' % (ftype, len(values['items'])))
 
     @cacheit(expiration=datetime.timedelta(minutes=30), json_data=False)
@@ -202,7 +198,7 @@ class Fillers(object):
 
         self.log('getSingle, type = %s, keys = %s, chance = %s, returning = %s' %
                  (type_, keys, chance, len(candidates)))
-        return setDictLST(candidates)
+        return Globals._setDictLST(candidates)
 
     def getMulti(self, type_, keys=None, count=1, chance=False):
         if keys is None:
@@ -218,7 +214,7 @@ class Fillers(object):
             if len(tmpLST) >= count:
                 items = random.sample(tmpLST, count)
             else:
-                items = setDictLST(random.choices(tmpLST, k=count))
+                items = Globals._setDictLST(random.choices(tmpLST, k=count))
 
         if len(items) < count and chance:
             needed = count - len(items)
@@ -226,7 +222,7 @@ class Fillers(object):
 
         self.log('getMulti, type = %s, keys = %s, count = %s, chance = %s, returning = %s' %
                  (type_, keys, count, chance, len(items)))
-        return setDictLST(items)
+        return Globals._setDictLST(items)
 
     def injectBCTs(self, citem, fileList):
         # Optimize hot-path by localizing attributes and using deque for post-rolls
@@ -277,7 +273,7 @@ class Fillers(object):
                     preFileList = self.getSingle(ftype, preKeys, chanceBool(bct.get('chance', 0)))
 
                 # iterate and add pre-rolls
-                for i, item in enumerate(setDictLST(preFileList)):
+                for i, item in enumerate(Globals._setDictLST(preFileList)):
                     if service._interrupt() or service._suspend():
                         self.log("[%s] injectBCTs, _interrupt/_suspend" % citem_id)
                         builder.pDialog = DIALOG._updateProgress(builder.pDialog, builder.pCount,

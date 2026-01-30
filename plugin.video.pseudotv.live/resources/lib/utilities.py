@@ -99,9 +99,9 @@ class Utilities(object):
                 # [debug.pop(key) for key in list(debug.keys()) if key in ['LOGDEBUG','LOGINFO']]
                 return debug
                     
-            payload['debug']    = loadJSON(__cleanLog(dumpJSON(__getDebug(payload),idnt=4)))
-            payload['channels'] = loadJSON(__cleanLog(dumpJSON(payload.get('channels',[]),idnt=4)))
-            payload['m3u']      = loadJSON(__cleanLog(dumpJSON(payload.get('m3u',[]),idnt=4)))
+            payload['debug']    = FileAccess.loadJSON(__cleanLog(FileAccess.dumpJSON(__getDebug(payload),idnt=4)))
+            payload['channels'] = FileAccess.loadJSON(__cleanLog(FileAccess.dumpJSON(payload.get('channels',[]),idnt=4)))
+            payload['m3u']      = FileAccess.loadJSON(__cleanLog(FileAccess.dumpJSON(payload.get('m3u',[]),idnt=4)))
             [payload.pop(key) for key in ['host','remotes','bonjour','library','servers'] if key in payload]
             return payload
         
@@ -127,7 +127,7 @@ class Utilities(object):
         elif not DIALOG.yesnoDialog(message=LANGUAGE(32188)): return
         
         with BUILTIN.busy_dialog():
-            succes, data = __postLog(dumpJSON(__cleanPayload(payload),idnt=4))
+            succes, data = __postLog(FileAccess.dumpJSON(__cleanPayload(payload),idnt=4))
             
         if succes: DIALOG.qrDialog(data,LANGUAGE(32189)%(data))
         else:      DIALOG.okDialog(LANGUAGE(32190)%(data))
@@ -142,7 +142,7 @@ class Utilities(object):
     def _runIOBench():
         with BUILTIN.busy_dialog():
             if SETTINGS.hasAddon('script.io.benchmark',install=True, enable=True, notify=True):
-                return BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(escapeString(f'path={USER_LOC}')))
+                return BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(Gloabls._escapeString(f'path={USER_LOC}')))
         
     @staticmethod
     def _runLogger():

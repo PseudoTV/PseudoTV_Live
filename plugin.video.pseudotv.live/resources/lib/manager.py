@@ -70,7 +70,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     return self.buildListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],
                     {True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)]),server.get('host'),len(server.get('channels',[]))),icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
                 
-                lizLST  = list()
+                lizLST  = []
                 serLST  = Multiroom().getDiscovery()
                 servers = [value for key, value in list(serLST.items()) if value.get('online',False)]
                 if servers: lizLST.extend(poolit(__buildItem)(servers))
@@ -125,7 +125,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         try:
-            self.focusItems    = dict()
+            self.focusItems    = {}
             self.spinner       = self.getControl(4)
             self.chanList      = self.getControl(5)
             self.itemList      = self.getControl(6)
@@ -168,7 +168,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __update(item):
             channelArray[item["number"]-1].update(item) #CUSTOM
             
-        checksum  = getMD5(dumpJSON(channelList))
+        checksum  = Globals._getMD5(FileAccess.dumpJSON(channelList))
         cacheName = 'createChannelList.%s'%(checksum)
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
@@ -202,7 +202,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 
         self.togglechanList(reset=refresh)
         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-            lizLST = list()
+            lizLST = []
             lizLST.extend(poolit(__buildItem)(channelList))
             self.chanList.addItems(lizLST)
             if focus is None: self.selItem(self.chanList, self.setFocusPOS(lizLST))
@@ -358,7 +358,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 'favorite': LANGUAGE(32083),
                 'changed' : LANGUAGE(33259)}
 
-        lizLST = list()
+        lizLST = []
         lizLST.extend(poolit(__buildItem)(list(self.newChannel.keys())))
         self.itemList.addItems(lizLST)
         self.itemList.selectItem([idx for idx, liz in enumerate(lizLST) if liz.getProperty('key')== focuskey][0])
@@ -382,7 +382,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             groups  = list([_f for _f in groups if _f])
             ngroups = sorted([_f for _f in set(SETTINGS.getSetting('User_Groups').split('|') + GROUP_TYPES + groups) if _f])
             ngroups.insert(0, '-%s'%(LANGUAGE(30064)))
-            selects = DIALOG.selectDialog(ngroups,header=LANGUAGE(32081),preselect=findItemsInLST(ngroups,groups),useDetails=False)
+            selects = DIALOG.selectDialog(ngroups,header=LANGUAGE(32081),preselect=Globals._findItemsInLST(ngroups,groups),useDetails=False)
             if not selects is None:
                 if 0 in selects:
                     SETTINGS.setSetting('User_Groups',DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups')))
@@ -393,13 +393,13 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         key   = channelListItem.getProperty('key')
         value = channelListItem.getProperty('value')
-        citem = loadJSON(channelListItem.getProperty('citem'))
+        citem = FileAccess.loadJSON(channelListItem.getProperty('citem'))
         self.log('itemInput, In value = %s, key = %s\ncitem = %s'%(value,key,citem))
         
         KEY_INPUT = {"name"     : {'func':__getName  , 'kwargs':{'citem':citem, 'name'  :citem.get('name','')}},
                      "path"     : {'func':__getPath  , 'kwargs':{'citem':citem, 'paths' :citem.get('path',[])}},
                      "group"    : {'func':__getGroups, 'kwargs':{'citem':citem, 'groups':citem.get('group',[])}},
-                     "rules"    : {'func':__getRule  , 'kwargs':{'citem':citem, 'rules' :self.rule.loadRules([citem],incRez=False).get(citem['id'],{})}},
+                     "rules"    : {'func':__getRule  , 'kwargs':{'citem':citem, 'rules' :self.rule.loadRules([citem]).get(citem['id'],{})}},
                      "radio"    : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('radio',False)}},
                      "favorite" : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('favorite',False)}},
                      "changed"  : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('changed',False)}}}
@@ -431,7 +431,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         while not self.monitor.abortRequested() and not select is None:
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 npath  = None
-                lizLST = list()
+                lizLST = []
                 if pathLST: lizLST.extend(poolit(__buildItem)(pathLST))
                 lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,items={'key':'add','citem':citem,'idx':0}))
                 if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32101)),LANGUAGE(33114),icon=ICON,items={'key':'save','citem':citem}))
@@ -475,9 +475,9 @@ class Manager(xbmcgui.WindowXMLDialog):
             while not self.monitor.abortRequested() and not select is None:
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                     nrule  = None
-                    crules = self.rule.loadRules([citem],append=True,incRez=False).get(citem['id'],{}) #all rule instances w/ channel rules
+                    crules = self.rule.loadRules([citem],append=True).get(citem['id'],{}) #all rule instances w/ channel rules
                     arules = [rule for key, rule in list(crules.items()) if not ruleLST.get(key)] #all unused rule instances
-                    lizLST = list()
+                    lizLST = []
                     lizLST.extend(poolit(__buildItem)([(key, rule) for key, rule in list(ruleLST.items()) if rule.myId]))
                     lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,items={'key':'add' ,'citem':citem,'idx':0}))
                     if len(ruleLST) > 0 and erules != ruleLST: lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,items={'key':'save','citem':citem}))
@@ -687,7 +687,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def previewChannel(self, citem, retCntrl=None):
         def __buildItem(fitem):
-            return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
+            return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
             
         def __fileList(citem):
             fileList = []
@@ -706,7 +706,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         if not PROPERTIES.isRunning('Manager.previewChannel'):
             with PROPERTIES.chkRunning('Manager.previewChannel'), self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                lizLST = list()
+                lizLST = []
                 fileList, run_time = __fileList(citem)
                 if not isinstance(fileList,list) and not fileList: DIALOG.notificationDialog('%s or\n%s'%(LANGUAGE(32030),LANGUAGE(32000)))
                 elif fileList:
@@ -768,13 +768,13 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         def __select():
             def __buildItem(logo):
-                return self.buildListItem('%s| %s'%(logos.index(logo)+1, os.path.splitext(os.path.basename(logo))[0].upper() if len(os.path.splitext(os.path.basename(logo))[0]) <= 4 else os.path.splitext(os.path.basename(logo))[0].title()), unquoteString(logo), logo, [logo])
+                return self.buildListItem('%s| %s'%(logos.index(logo)+1, os.path.splitext(os.path.basename(logo))[0].upper() if len(os.path.splitext(os.path.basename(logo))[0]) <= 4 else os.path.splitext(os.path.basename(logo))[0].title()), Globals._unquoteString(logo), logo, [logo])
                 
             DIALOG.notificationDialog(LANGUAGE(32140))
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 chname = channelData.get('name')
                 logos  = self.resources.selectLogo(channelData)
-                lizLST = list()
+                lizLST = []
                 lizLST.extend(poolit(__buildItem)(logos))
             select = DIALOG.selectDialog(lizLST,'%s (%s)'%(LANGUAGE(32066).split('[CR]')[1],chname),useDetails=True,multi=False)
             if select is not None: return lizLST[select].getPath()
@@ -885,7 +885,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if citem.get('name') and citem.get('path'):
                     if citem['number'] <= CHANNEL_LIMIT: citem['type'] = LANGUAGE(30127) #"Custom"
                     return self.setID(citem)
-            channelList = setDictLST(self.channels.sortChannels([_f for _f in [__validate(channel) for channel in channelList] if _f]))
+            channelList = Globals._setDictLST(self.channels.sortChannels([_f for _f in [__validate(channel) for channel in channelList] if _f]))
             self.log('__validateChannels, channelList = %s'%(len(channelList)))
             return channelList
         
@@ -918,14 +918,14 @@ class Manager(xbmcgui.WindowXMLDialog):
             if self.isVisible(self.chanList):
                 cntrl = controlId
                 sitem = (self.chanList.getSelectedItem() or xbmcgui.ListItem())
-                citem = loadJSON(sitem.getProperty('citem'))
+                citem = FileAccess.loadJSON(sitem.getProperty('citem'))
                 chnum = (citem.get('number') or snum)
                 chpos = self.chanList.getSelectedPosition()
                 itpos = -1
             elif self.isVisible(self.itemList):
                 cntrl = controlId
                 sitem = (self.itemList.getSelectedItem() or xbmcgui.ListItem())
-                citem = loadJSON(sitem.getProperty('citem'))
+                citem = FileAccess.loadJSON(sitem.getProperty('citem'))
                 chnum = (citem.get('number') or snum)
                 chpos = chnum - 1
                 itpos = self.itemList.getSelectedPosition()

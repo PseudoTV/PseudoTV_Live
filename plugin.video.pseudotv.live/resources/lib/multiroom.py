@@ -88,7 +88,7 @@ class Multiroom(object):
 
 
     def getDiscovery(self):
-        servers = getJSON(SERVERFLEPATH).get('servers',{})
+        servers = FileAccess.getJSON(SERVERFLEPATH).get('servers',{})
         if isinstance(servers,bool): servers = {} #temp fix remove after a by next build
         self.log('getDiscovery, servers = %s'%(len(servers)))
         return servers
@@ -96,7 +96,7 @@ class Multiroom(object):
 
     def setDiscovery(self, servers={}):
         self.log('setDiscovery, servers = %s'%(len(servers)))
-        return setJSON(SERVERFLEPATH,{"servers":servers})
+        return FileAccess.setJSON(SERVERFLEPATH,{"servers":servers})
             
             
     def getEnabled(self, servers={}):
@@ -143,11 +143,11 @@ class Multiroom(object):
         self.log('_delServer')
         def __buildMenuItem(payload):
             idx = list(servers.values()).index(payload)
-            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=FileAccess.dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             if not servers: servers = self.getDiscovery()
-            lizLST = list()
+            lizLST = []
             lizLST.extend(poolit(__buildMenuItem)(list(servers.values())))
 
         selects = DIALOG.selectDialog(lizLST,LANGUAGE(32183))
@@ -161,18 +161,18 @@ class Multiroom(object):
         self.log('_selServer')
         def __buildMenuItem(payload): #build menu item
             idx = list(servers.values()).index(payload)
-            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=FileAccess.dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
-            lizLST  = list()
+            lizLST  = []
             lizLST.extend(poolit(__buildMenuItem)(list(servers.values())))
             if len(lizLST) > 0: lizLST.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]- %s[/B][/COLOR]'%(LANGUAGE(30046)),LANGUAGE(33046))) #remove server menu item
             else: return
             
         if not PROPERTIES.isRunning('Multiroom._selServer'):
             with PROPERTIES.chkRunning('Multiroom._selServer'):
-                selects = DIALOG.selectDialog(lizLST,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizLST) if loadJSON(listitem.getPath()).get('enabled',False)])
+                selects = DIALOG.selectDialog(lizLST,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizLST) if FileAccess.loadJSON(listitem.getPath()).get('enabled',False)])
                 if not selects is None:
                     if 0 in selects: return self._delServer(servers)
                     else:

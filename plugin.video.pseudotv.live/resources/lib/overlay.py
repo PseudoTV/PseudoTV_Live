@@ -56,7 +56,7 @@ class Background(xbmcgui.WindowXMLDialog):
         try:
             self.log('onInit, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
             logo      = (self.citem.get('logo')      or BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
-            land      = (getThumb(self.nitem)        or COLOR_FANART)
+            land      = (Globals._getThumb(self.nitem)        or COLOR_FANART)
             chname    = (self.citem.get('name')      or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
             nowTitle  = (self.fitem.get('label')     or BUILTIN.getInfoLabel('Title','VideoPlayer'))
             nextTitle = (self.nitem.get('showlabel') or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or chname)
@@ -150,7 +150,7 @@ class Restart(xbmcgui.WindowXMLDialog):
             elif self.fitem: 
                 with BUILTIN.busy_dialog():
                     liz = LISTITEMS.buildItemListItem(self.fitem)
-                    liz.setProperty('sysInfo',encodeString(dumpJSON(self.player.playingItem)))
+                    liz.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.player.playingItem)))
                     self.player.stop()
                 timerit(self.player.play)(1.0,[self.fitem.get('catchup-id'),liz])
             else: DIALOG.notificationDialog(LANGUAGE(30154))
@@ -167,7 +167,7 @@ class Restart(xbmcgui.WindowXMLDialog):
 class Overlay(object):
     channelBug     = None
     vignette       = None
-    controlManager = dict()
+    controlManager = {}
     
     def __init__(self, *args, **kwargs):
         self.player     = kwargs.get('player', None)
@@ -321,7 +321,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             self.log('onInit, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
             if self.onNextMode in [1,2]: 
                 logo      = (self.citem.get('logo')      or BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
-                land      = (getThumb(self.nitem)        or COLOR_FANART)
+                land      = (Globals._getThumb(self.nitem)        or COLOR_FANART)
                 chname    = (self.citem.get('name')      or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
                 nowTitle  = (self.fitem.get('label')     or BUILTIN.getInfoLabel('Title','VideoPlayer'))
                 nextTitle = (self.nitem.get('showlabel') or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or chname)
@@ -379,7 +379,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                 
     def _updateUpNext(self, nowItem: dict={}, nextItem: dict={}):
         self.log('_updateUpNext')
-        data = dict()
+        data = {}
         try:# https://github.com/im85288/service.upnext/wiki/Example-source-code
             data.update({"notification_offset":int(floor(self.player.getRemainingTime())) + OSD_TIMER})
             current_episode = {"current_episode":{"episodeid" :(nowItem.get("id")            or ""),
@@ -412,7 +412,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             data.update(next_episode)
 
         except: pass
-        if data: timerit(self.jsonRPC.notifyAll)(0.5,['upnext_data', binascii.hexlify(dumpJSON(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)])
+        if data: timerit(self.jsonRPC.notifyAll)(0.5,['upnext_data', binascii.hexlify(FileAccess.dumpJSON(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)])
         
         
     def onAction(self, act):

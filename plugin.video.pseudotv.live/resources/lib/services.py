@@ -116,17 +116,17 @@ class Player(xbmc.Player):
                     return combineDicts(citem,item)
             return citem
             
-        playingItem = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
-        playingItem['isPseudoTV'] = '@%s'%(slugify(ADDON_NAME)) in playingItem.get('chid','')
+        playingItem = FileAccess.loadJSON(Globals._decodeString(self.getPlayerItem().getProperty('sysInfo')))
+        playingItem['isPseudoTV'] = '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid','')
         
         if playingItem['isPseudoTV']:
             playingItem['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
             playingItem['chfolder']   = BUILTIN.getInfoLabel('Folderpath','Player')
             playingItem['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
             playingItem.update({'citem':combineDicts(playingItem.get('citem',{}),__update(playingItem.get('citem',{}).get('id'))),'runtime':int(self.getPlayerTime())}) #still needed for adv. rules?
-            if not playingItem.get('fitem'):    playingItem.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
-            if not playingItem.get('nitem'):    playingItem.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
-            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(playingItem)))
+            if not playingItem.get('fitem'):    playingItem.update({'fitem':Globals._decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
+            if not playingItem.get('nitem'):    playingItem.update({'nitem':Globals._decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
+            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),Globals._encodeString(FileAccess.dumpJSON(playingItem)))
         return playingItem
       
         
@@ -299,7 +299,7 @@ class Player(xbmc.Player):
             if not self.playingItem.get('callback'):
                 self.playingItem['callback'] = self.jsonRPC.getCallback(self.playingItem)
                 self.log('__chkCallback, callback = %s'%(self.playingItem['callback']))
-                PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.playingItem)))
+                PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),Globals._encodeString(FileAccess.dumpJSON(self.playingItem)))
 
         def __chkResumeTime():
             if not self.isPlayingFiller() and self.playingItem.get('isPlaylist',False):
@@ -332,16 +332,14 @@ class Player(xbmc.Player):
                 if not PROPERTIES.isRunning('Player.__chkSleep'):
                     with PROPERTIES.chkRunning('Player.__chkSleep'):
                         if self._onSleep(): self.stop()
-                        
-        if not PROPERTIES.isRunning('Player._onIdle'):
-            with PROPERTIES.chkRunning('Player._onIdle'):
-                __chkPlayback()
-                __chkBackground()
-                __chkResumeTime()
-                __chkCallback()
-                __chkOverlay()
-                __chkOnNext()
-                __chkSleep()
+        
+        __chkPlayback()
+        __chkBackground()
+        __chkResumeTime()
+        __chkCallback()
+        __chkOverlay()
+        __chkOnNext()
+        __chkSleep()
             
                 
     def toggleBackground(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
@@ -515,7 +513,7 @@ class Service(object):
     
         
     def _tasks(self):
-        self._que(self.tasks._chkEpochTimer,-1,*('chkQueTimer', self.tasks.chkQueTimer, 5)) #keep CustomQueue alive after interrupt.
+        self._que(self.tasks._chkEpochTimer,-1,*('chkQueTimer', self.tasks.chkQueTimer, FIFTEEN)) #keep CustomQueue alive after interrupt.
     
     
     def _shutdown(self, wait=5.0) -> bool: #service break
@@ -550,7 +548,7 @@ class Service(object):
         return self.pendingSuspend
         
 
-    def _sleep(self, wait=5.0): #waitForAbort replacement for tasks
+    def _sleep(self, wait=1.0): #waitForAbort replacement for tasks
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self.pendingInterrupt): return True
             else: wait -= CPU_CYCLE

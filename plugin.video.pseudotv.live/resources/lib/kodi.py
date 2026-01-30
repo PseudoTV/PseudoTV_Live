@@ -17,128 +17,16 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import json, uuid, zlib, base64
+import platform, pyqrcode
 
-from globals     import *
-from six.moves   import urllib 
-from fileaccess  import FileAccess
-from json2html   import Json2Html
-from collections import Counter, OrderedDict
-from contextlib  import contextmanager, closing
+from uuid                import uuid1, uuid4, UUID
+from variables           import *
+from logger              import log
+from cache               import Cache, cacheit
+from fileaccess          import FileAccess, FileLock
 from infotagger.listitem import ListItemInfoTag
-
-def slugify(s, lowercase=False):
-  if lowercase: s = s.lower()
-  s = s.strip()
-  s = re.sub(r'[^\w\s-]', '', s)
-  s = re.sub(r'[\s_-]+', '_', s)
-  s = re.sub(r'^-+|-+$', '', s)
-  return s
-
-def encodeString(text):
-    base64_bytes = base64.b64encode(zlib.compress(text.encode(DEFAULT_ENCODING)))
-    return base64_bytes.decode(DEFAULT_ENCODING)
-
-def decodeString(base64_bytes):
-    try:
-        message_bytes = zlib.decompress(base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING)))
-        return message_bytes.decode(DEFAULT_ENCODING)
-    except Exception as e: return ''
-        
-def getAbbr(text):
-    words = text.split(' ')
-    if len(words) > 1: return '%s.%s.'%(words[0][0].upper(),words[1][0].upper())
-    else: return words[0][0].upper()
-   
-def getThumb(item={},opt=0): #unify thumbnail artwork
-    keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
-            1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
-    for key in keys:
-        art = (item.get('art',{}).get('album.%s'%(key))       or 
-               item.get('art',{}).get('albumartist.%s'%(key)) or 
-               item.get('art',{}).get('artist.%s'%(key))      or 
-               item.get('art',{}).get('season.%s'%(key))      or 
-               item.get('art',{}).get('tvshow.%s'%(key))      or 
-               item.get('art',{}).get(key)                    or
-               item.get(key) or '')
-        if art: return art
-
-def setDictLST(lst=[]): #set lst of dicts then return
-    return [loadJSON(s) for s in list(OrderedDict.fromkeys([dumpJSON(d) for d in lst]))]
-
-def dumpJSON(item={}, idnt=None, sortkey=False, separators=(',', ':')):
-    try:
-        if item:
-            if   isinstance(item,str):  return item
-            elif hasattr(item,'read'):  return json.dump(item)
-            elif isinstance(item,dict): return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
-    except Exception as e: log("dumpJSON, failed! %s\ntype = %s, item = %s"%(e,type(item),item), xbmc.LOGERROR)
-    return ''
-    
-def loadJSON(item=""):
-    try:
-        if item:
-            if   isinstance(item,dict): return item
-            elif hasattr(item,'read'):  return json.load(item)
-            elif isinstance(item,str):  return json.loads(item)
-    except Exception as e: log("loadJSON, failed! %s\ntype = %s, item = %s"%(e,type(item),item), xbmc.LOGERROR)
-    return {}
-    
-def unquoteString(text):
-    return urllib.parse.unquote(text)
-    
-def quoteString(text):
-    return urllib.parse.quote(text)
-
-def genUUID(seed=None):
-    if seed:
-        m = hashlib.md5()
-        m.update(seed.encode(DEFAULT_ENCODING))
-        return str(uuid.UUID(m.hexdigest()))
-    return str(uuid.uuid1(clock_seq=70420))
-    
-def getMD5(text,hash=0,hexit=True):
-    if isinstance(text,dict):     text = dumpJSON(text)
-    elif not isinstance(text,str):text = str(text)
-    for ch in text: hash = (hash*281 ^ ord(ch)*997) & 0xFFFFFFFF
-    if hexit: return hex(hash)[2:].upper().zfill(8)
-    else:     return hash
-
-def getCRC32(text):
-    return binascii.crc32(text.encode('utf8'))
-     
-def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
-    if not values: return [-1]
-    if not isinstance(values,list): values = [values]
-    matches = []
-    def _match(fkey,fvalue):
-        if str(fkey).lower() == str(fvalue).lower():
-            matches.append(idx if index else item)
-                    
-    for value in values:
-        if isinstance(value,dict): 
-            value = value.get(val_key,'')
-            
-        for idx, item in enumerate(items): 
-            if isinstance(item,xbmcgui.ListItem): 
-                if item_key == 'getLabel':  
-                    _match(item.getLabel() ,value)
-                elif item_key == 'getLabel2': 
-                    _match(item.getLabel2(),value)
-                elif item_key == 'getPath': 
-                    _match(item.getPath(),value)
-            elif isinstance(item,dict):       
-                _match(item.get(item_key,''),value)
-            else: _match(item,value)
-    return matches
-    
-def getIDbyPath(url):
-    try:
-        if   url.startswith('special://profile/addon_data/'):      return re.compile('special://profile/addon_data/(.*?)', re.IGNORECASE).search(url).group(1)
-        elif url.startswith('special://home/addons/'):             return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(url).group(1)
-        elif url.startswith(('plugin://','resource://','pvr://')): return re.compile('(.*)://(.*?)/', re.IGNORECASE).search(url).group(2)
-    except: pass
-    return url
+from json2html           import Json2Html
+from pool                import poolit, timerit, threadit
 
 class Settings(object):
     monitor    = MONITOR()
@@ -158,22 +46,13 @@ class Settings(object):
         except: return REAL_SETTINGS
 
 
-    def openSettings(self, ctl=(0,1), id=ADDON_ID):
-        self.builtin.closeBusyDialog()
-        with self.builtin.busy_dialog():
-            self.builtin.executebuiltin(f'Addon.OpenSettings({id})')
-            xbmc.sleep(100)
-            self.builtin.executebuiltin('SetFocus(%i)'%(ctl[0]-200))
-            xbmc.sleep(50)
-            self.builtin.executebuiltin('SetFocus(%i)'%(ctl[1]-180))
-
     #GET
     def _getSetting(self, func, key):
         try: 
             value = func(key)
             self.log('[%s] %s, key = %s, value = %s'%(ADDON_ID,func.__name__,key,'%s...'%((str(value)[:128]))))
+            return value
         except Exception as e: self.log("_getSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
-        return value
       
       
     def getSetting(self, key):
@@ -221,7 +100,7 @@ class Settings(object):
         
 
     def getSettingDict(self, key):
-        return loadJSON(decodeString(self.getSetting(key)))
+        return FileAccess.loadJSON(Globals._decodeString(self.getSetting(key)))
     
     
     def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False, revive=False):
@@ -292,7 +171,7 @@ class Settings(object):
         
         
     def setSettingDict(self, key, values):
-        return self.setSetting(key,encodeString(dumpJSON(values)))
+        return self.setSetting(key,Globals._encodeString(FileAccess.dumpJSON(values)))
             
             
     def setCacheSetting(self, key, value, checksum=ADDON_VERSION, json_data=False, life=datetime.timedelta(days=84)):
@@ -312,7 +191,15 @@ class Settings(object):
     
     
     def hasAddon(self, id, install=False, enable=False, force=False, notify=False):
-        if '://' in id: id = getIDbyPath(id)
+        def __getIDbyPath(url):
+            try:
+                if   url.startswith('special://profile/addon_data/'):      return re.compile('special://profile/addon_data/(.*?)', re.IGNORECASE).search(url).group(1)
+                elif url.startswith('special://home/addons/'):             return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(url).group(1)
+                elif url.startswith(('plugin://','resource://','pvr://')): return re.compile('(.*)://(.*?)/', re.IGNORECASE).search(url).group(2)
+            except: pass
+            return url
+            
+        if '://' in id: id = __getIDbyPath(id)
         hasAddon  = self.builtin.getInfoBool('HasAddon(%s)'%(id),'System')
         isEnabled = self.builtin.getInfoBool('AddonIsEnabled(%s)'%(id),'System')
         self.log(f'[{id}] hasAddon = {hasAddon}, isEnabled = {isEnabled}')
@@ -343,32 +230,18 @@ class Settings(object):
 
 
     def getMYUUID(self):
+        def __genUUID(seed=None):
+            if seed:
+                m = hashlib.md5()
+                m.update(seed.encode(DEFAULT_ENCODING))
+                return str(UUID(m.hexdigest()))
+            return str(uuid1(clock_seq=70420))
+            
         friendly = self.properties.getFriendlyName()
         uuid = self.getCacheSetting('MY_UUID', checksum=friendly, revive=True)
-        if not uuid: uuid = self.setCacheSetting('MY_UUID', genUUID(seed=self.properties.getFriendlyName()), checksum=friendly)
+        if not uuid: uuid = self.setCacheSetting('MY_UUID', __genUUID(seed=self.properties.getFriendlyName()), checksum=friendly)
         return uuid
 
-
-    def autoTune(self):
-        self.setAutotuned(False)
-
-
-    def openGuide(self, instance=ADDON_NAME):
-        def __match(match):
-            with self.builtin.busy_dialog():
-                for name in FileAccess.listdir('pvr://channels/tv/')[0]:
-                    if name.lower().startswith(quoteString(match.lower())):
-                        return match, 'pvr://channels/tv/%s'%(name)
-                return match, __match('All channels')
-            
-        if self.builtin.hasPVR():
-            try:
-                instance, path = __match(instance)
-                self.log('openGuide, instance = %s, path = %s'%(instance,path))
-                self.builtin.executewindow("ReplaceWindow(TVGuide,%s)"%(path),condition=partial(self.builtin.executebuiltin,key="Dialog.Close(all,true)"))
-            except: self.builtin.executewindow("ReplaceWindow(TVGuide)")
-        else: self.builtin.executewindow("ReplaceWindow(Home)")
-        
 
     def _getResumeURLs(self):
         for file in FileAccess.listdir(RESUME_LOC)[1]:
@@ -405,7 +278,7 @@ class Settings(object):
             from channels    import Channels
             payload['channels'] = Channels().getChannels()
         payload['updated'] = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
-        payload['md5']     = getMD5(dumpJSON(payload))
+        payload['md5']     = Globals._getMD5(FileAccess.dumpJSON(payload))
         return payload
     
     
@@ -432,9 +305,9 @@ class Settings(object):
             return payload
 
         payload = __getMeta(self.getBonjour(inclChannels=True))
-        if inclDebug: payload['debug'] = loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_ID))).get('DEBUG',{})
+        if inclDebug: payload['debug'] = FileAccess.loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_ID))).get('DEBUG',{})
         payload['updated']   = epochTime(time.time(),tz=False).strftime(DTFORMAT)
-        payload['md5']       = getMD5(dumpJSON(payload))
+        payload['md5']       = Globals._getMD5(FileAccess.dumpJSON(payload))
         return payload
 
             
@@ -444,11 +317,11 @@ class Settings(object):
 
 
     def hasAutotuned(self):
-        return self.getCacheSetting('has.Autotuned')
+        return self.properties.setEXTPropertyBool('has.Autotuned',self.getCacheSetting('has.Autotuned'))
         
         
     def setAutotuned(self, state=True):
-        return self.setCacheSetting('has.Autotuned',state)
+        return self.properties.setEXTPropertyBool('has.Autotuned',self.setCacheSetting('has.Autotuned',state))
 
 
     def setWizardRun(self, state=True):
@@ -549,7 +422,7 @@ class Settings(object):
         
         
     def gePVRInstance(self, instance=ADDON_NAME):
-        return int(re.sub("[^0-9]", "", getMD5(instance))) * 2
+        return int(re.sub("[^0-9]", "", Globals._getMD5(instance))) * 2
         
         
     def findPVRInstance(self, instance=ADDON_NAME):
@@ -582,7 +455,7 @@ class Settings(object):
 
 
     def getPVRInstanceSettings(self, instance):
-        instanceConf = dict()
+        instanceConf = {}
         instancePath = self.hasPVRInstance(instance)
         self.log('[%s] getPVRInstanceSettings, instance = %s, path = %s'%(PVR_CLIENT_ID,instance,instancePath))
         if instancePath:
@@ -654,11 +527,13 @@ class Settings(object):
                
 
     def getFileCRC(self, file):
+        def __getCRC32(text):
+            return binascii.crc32(text.encode(DEFAULT_ENCODING))
         try:
             fle = FileAccess.open(file,'r')
-            crc = getCRC32(fle.read())
+            crc = __getCRC32(fle.read())
             fle.close()
-            name  = 'getFileCRC.%s'%(getMD5(file))
+            name  = 'getFileCRC.%s'%(Globals._getMD5(file))
             cache = self.getCacheSetting(name, checksum=crc, revive=True)
             if not cache or cache != crc:
                 self.setCacheSetting(name, crc, checksum=crc)
@@ -687,12 +562,12 @@ class Properties(object):
 
     def setInstanceID(self):
         self._clearTrash(self.getEXTProperty('%s.InstanceID'%(ADDON_ID)))
-        return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4()))
+        return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),Globals._getMD5(uuid4()))
 
 
     def _clearTrash(self, instanceID=None): #clear abandoned properties after instanceID change
         if instanceID is None: instanceID = self.getInstanceID()
-        tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
+        tmpDCT = FileAccess.loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
         if instanceID in tmpDCT:
             self.log('_clearTrash, instanceID = %s'%(instanceID))
             tmpLST = tmpDCT.pop(instanceID)
@@ -703,9 +578,9 @@ class Properties(object):
 
     def _setTrash(self, key): #catalog instance properties that are abandoned
         instanceID = self.getInstanceID()
-        tmpDCT     = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
+        tmpDCT     = FileAccess.loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
         if key not in tmpDCT.setdefault(instanceID,[]): tmpDCT.setdefault(instanceID,[]).append(key)
-        self.setEXTProperty('%s.TRASH'%(ADDON_ID),dumpJSON(tmpDCT))
+        self.setEXTProperty('%s.TRASH'%(ADDON_ID),FileAccess.dumpJSON(tmpDCT))
         return key
 
         
@@ -739,7 +614,7 @@ class Properties(object):
 
         
     def getPropertyDict(self, key=''):
-        return loadJSON(decodeString(self.getProperty(key)))
+        return FileAccess.loadJSON(Globals._decodeString(self.getProperty(key)))
         
         
     def getEXTProperty(self, key):
@@ -791,7 +666,7 @@ class Properties(object):
         
         
     def setPropertyDict(self, key, value={}):
-        return self.setProperty(key, encodeString(dumpJSON(value)))
+        return self.setProperty(key, Globals._encodeString(FileAccess.dumpJSON(value)))
         
                 
     def setEXTProperty(self, key, value):
@@ -1010,7 +885,7 @@ class Properties(object):
 
 
     @contextmanager
-    def legacy(self):
+    def legacy(self): #toggle legacy property from older pseudotv project that may still be used by third-party plugins.
         if not self.isPseudoTVRunning():
             self.setEXTPropertyBool('PseudoTVRunning',True)
             try: yield
@@ -1068,8 +943,8 @@ class ListItems(object):
             if 'pvritem' in info: properties.update({'pvritem':info.pop('pvritem')}) # write dump to single key
             
             if media != 'video': #unify default artwork for music.
-                art['poster'] = (getThumb(info,opt=1) or COLOR_LOGO)
-                art['fanart'] = (getThumb(info)       or FANART)
+                art['poster'] = (Globals._getThumb(info,opt=1) or COLOR_LOGO)
+                art['fanart'] = (Globals._getThumb(info)       or FANART)
                 
             listitem = self.getListItem(info.pop('label',''), info.pop('label2',''), info.pop('file',''), offscreen=offscreen)
             listitem.setArt(art)
@@ -1127,7 +1002,7 @@ class ListItems(object):
 
 
     def cleanProp(self, pvalue):
-        if       isinstance(pvalue,dict): return dumpJSON(pvalue)
+        if       isinstance(pvalue,dict): return FileAccess.dumpJSON(pvalue)
         elif     isinstance(pvalue,list): return '|'.join(map(str, pvalue))
         elif not isinstance(pvalue,str):  return str(pvalue)
         else:                             return pvalue
@@ -1378,7 +1253,7 @@ class Dialog(object):
     
     
     def setInfoMonitor(self, items):
-        return self.properties.setPropertyDict('monitor.montiorList',{'info':list(setDictLST(items))})
+        return self.properties.setPropertyDict('monitor.montiorList',{'info':list(Globals._setDictLST(items))})
 
 
     def colorDialog(self, colorlist=[], preselect="", colorfile="", heading=ADDON_NAME):
@@ -1390,7 +1265,7 @@ class Dialog(object):
             self.builtin.executebuiltin('Dialog.Close(okdialog)')
         
         
-    def _okDialog(self, msg, heading, autoclose, url):
+    def _okDialog(self, msg, heading, autoclose):
         return timerit(self.okDialog)(0.1,[msg, heading, autoclose])
 
 
@@ -1433,7 +1308,7 @@ class Dialog(object):
         if not self.properties.isRunning('Dialog.qrDialog'):
             with self.properties.chkRunning('Dialog.qrDialog'):
                 with self.builtin.busy_dialog():
-                    imagefile = os.path.join(FileAccess.translatePath(TEMP_IMAGE_LOC),'%s.png'%(getMD5(str(url.split('/')[-1]))))
+                    imagefile = os.path.join(FileAccess.translatePath(TEMP_IMAGE_LOC),'%s.png'%(Globals._getMD5(str(url.split('/')[-1]))))
                     if not FileAccess.exists(imagefile):
                         qrIMG = pyqrcode.create(url)
                         qrIMG.png(imagefile, scale=10)
@@ -1680,13 +1555,13 @@ class Dialog(object):
             return jsonRPC.getAddons({"enabled":True})
         
         from jsonrpc import JSONRPC
-        lizLST  = list()
+        lizLST  = []
         jsonRPC = JSONRPC()
         with self.builtin.busy_dialog():
             lizLST.extend(poolit(__buildMenuItem)([result for result in __getResources() if result.get('addonid').startswith('resource.%s.%s'%(content,ftype))]))
             del jsonRPC
             
-        selects = self.selectDialog(lizLST, 'Select one or more resources', preselect=findItemsInLST(lizLST,ids,'getPath'), multi=multi)
+        selects = self.selectDialog(lizLST, 'Select one or more resources', preselect=Globals._findItemsInLST(lizLST,ids,'getPath'), multi=multi)
         if selects is None:                return
         elif not isinstance(selects,list): return lizLST[selects].getPath()
         else:                              return [lizLST[select].getPath() for select in selects]
@@ -1695,7 +1570,7 @@ class Dialog(object):
     def browseSources(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, include=[], exclude=[]):
         self.log('browseSources, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s, mask= %s, include= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,len(include),exclude))
         def __buildMenuItem(option):
-            return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=getAbbr(option['label'])))
+            return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=Globals._getAbbr(option['label'])))
 
         with self.builtin.busy_dialog():
             optlabel = "%s"%({'0':'Folders [Recursive]','1':'Files'}[str(type)]) if multi else "%s"%({'0':'Folder [Recursive]','1':'File'}[str(type)])
@@ -1715,10 +1590,10 @@ class Dialog(object):
 
             options = include.copy()
             options.extend([opt for opt in opts if not opt.get('idx',-1) in exclude])
-            options = setDictLST(options)
+            options = Globals._setDictLST(options)
             if default: options.insert(0,{"idx":0, "label":LANGUAGE(32203), "label2":default, "default":default, "shares":shares, "mask":mask, "type":type, "multi":multi})
             
-            lizLST = list()
+            lizLST = []
             lizLST.extend(poolit(__buildMenuItem)(sorted(options, key=itemgetter('idx'))))
         select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
         if select is None: return
@@ -1763,7 +1638,7 @@ class Dialog(object):
         while not self.monitor.abortRequested() and not select is None:
             with self.builtin.busy_dialog():
                 npath  = None
-                lizLST = list()
+                lizLST = []
                 lizLST.extend(poolit(__buildListItem)(pathLST))
                 lizLST.insert(0,__buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,items={'key':'add','idx':0}))
                 if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,__buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32101)),LANGUAGE(33114),icon=ICON,items={'key':'save'}))
@@ -1854,7 +1729,7 @@ class Dialog(object):
         def __getRule(params={}, rule={"field":"","operator":"","value":[]}):
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=DUMMY_ICON.format(text=Globals._getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
                 enumSEL = self.selectDialog(enumLST,header="Select method",preselect=-1, multi=False)
                 if not enumSEL is None: rule.update({enumLST[enumSEL].getProperty('key'):({"field":field,"operator":operator,"value":value}[enumLST[enumSEL].getProperty('key')])(params,rule)})
             return rule
@@ -1863,7 +1738,7 @@ class Dialog(object):
             enumSEL = -1
             eparams = params.copy()
             while not self.monitor.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),dumpJSON(params.get('rules',{}).get(key,[])),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key}) for key in ["and","or"]]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),FileAccess.dumpJSON(params.get('rules',{}).get(key,[])),icon=DUMMY_ICON.format(text=Globals._getAbbr(key.title())),props={'key':key}) for key in ["and","or"]]
                 enumSEL = self.selectDialog(enumLST,header="Edit Rules",multi=False)
                 if not enumSEL is None:
                     if enumLST[enumSEL].getLabel() in ['And','Or']:
@@ -1871,7 +1746,7 @@ class Dialog(object):
                         CONLKEY = enumLST[enumSEL].getProperty('key')
                         ruleLST = params.get('rules',{}).get(CONLKEY,[])
                         while not self.monitor.abortRequested() and not CONSEL is None:
-                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),dumpJSON(value),icon=DUMMY_ICON.format(text=str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
+                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),FileAccess.dumpJSON(value),icon=DUMMY_ICON.format(text=str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
                             andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,props={'key':'add'}))
                             if len(ruleLST) > 0 and eparams != params: andLST.insert(1,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save'}))
                             CONSEL = self.selectDialog(andLST,header="Edit Rules",multi=False)
@@ -1880,17 +1755,17 @@ class Dialog(object):
                                 elif andLST[CONSEL].getProperty('key') == 'save': 
                                     params.setdefault('rules',{})[CONLKEY] = ruleLST
                                     break
-                                elif sorted(loadJSON(andLST[CONSEL].getLabel2())) in [sorted(andd) for andd in ruleLST]:
+                                elif sorted(FileAccess.loadJSON(andLST[CONSEL].getLabel2())) in [sorted(andd) for andd in ruleLST]:
                                     retval = self.yesnoDialog(LANGUAGE(32175), customlabel=LANGUAGE(32176))
                                     if retval in [1,2]: ruleLST.pop(int(andLST[CONSEL].getProperty('idx')))
-                                    if retval == 2:     ruleLST.append(__getRule(params,loadJSON(andLST[CONSEL].getLabel2())))
-                                else:                   ruleLST.append(__getRule(params,loadJSON(andLST[CONSEL].getLabel2())))
+                                    if retval == 2:     ruleLST.append(__getRule(params,FileAccess.loadJSON(andLST[CONSEL].getLabel2())))
+                                else:                   ruleLST.append(__getRule(params,FileAccess.loadJSON(andLST[CONSEL].getLabel2())))
             return params
 
         def __getOrder(params={}):
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=Globals._getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
                 enumLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save'}))
                 enumSEL = self.selectDialog(enumLST,header="Edit Selection",preselect=-1,multi=False)
                 if not enumSEL is None:
@@ -1904,14 +1779,14 @@ class Dialog(object):
         jsonRPC = JSONRPC()
         try:
             path, params = path.split('?xsp=')
-            params = loadJSON(params)
+            params = FileAccess.loadJSON(params)
         except:
             path, params = __mtype()
         self.log('buildDXSP, path = %s, params = %s'%(path,params))
         
         enumSEL = -1
         while not self.monitor.abortRequested() and not enumSEL is None:
-            enumLST = [self.listitems.buildMenuListItem('Path',path,icon=ICON),self.listitems.buildMenuListItem('Order',dumpJSON(params.get('order',{})),icon=ICON),self.listitems.buildMenuListItem('Rules',dumpJSON(params.get('rules',{})),icon=ICON)]
+            enumLST = [self.listitems.buildMenuListItem('Path',path,icon=ICON),self.listitems.buildMenuListItem('Order',FileAccess.dumpJSON(params.get('order',{})),icon=ICON),self.listitems.buildMenuListItem('Rules',FileAccess.dumpJSON(params.get('rules',{})),icon=ICON)]
             enumSEL = self.selectDialog(enumLST,header="Edit Dynamic Path", multi=False)
             if not enumSEL is None:
                 if   enumLST[enumSEL].getLabel() == 'Path':  path, params = __mtype(params)
@@ -1920,7 +1795,7 @@ class Dialog(object):
         del jsonRPC
         
         if len(params.get('rules',{}).get('and',[]) or params.get('rules',{}).get('and',[])) > 0:
-            url = '%s?xsp=%s'%(path,dumpJSON(params))
+            url = '%s?xsp=%s'%(path,FileAccess.dumpJSON(params))
             self.log('buildDXSP, returning %s'%(url))
             return url
 
@@ -1928,7 +1803,7 @@ class Dialog(object):
     def getValue(self, params={}, rule={}):
         # etype  = params.get("type")
         # efield = str(rule.get("field")).lower()
-        # evalue = ','.join([unquoteString(value) for value in rule.get('value',[])])
+        # evalue = ','.join([Globals._unquoteString(value) for value in rule.get('value',[])])
         # LIST_SORT_ACTIONS = {"none"           : (),
                              # "label"          : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
                              # "albumtype"      : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
@@ -1972,11 +1847,11 @@ class Dialog(object):
                              # "album"          : (self.selectDialog,jsonRPC.getAlbums),
                              # "studio"         : (self.selectDialog,(jsonRPC.getMovieStudios,jsonRPC.getNetworks))}
 
-        def __getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([unquoteString(value) for value in rule.get('value',[])]))
-        def __getBrowse(): return self.browseSources(default='|'.join([unquoteString(value) for value in rule.get('value',[])]))
+        def __getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([Globals._unquoteString(value) for value in rule.get('value',[])]))
+        def __getBrowse(): return self.browseSources(default='|'.join([Globals._unquoteString(value) for value in rule.get('value',[])]))
         def __getSelect(): return self.notificationDialog(LANGUAGE(32020))
         enumLST = sorted(['Enter', 'Browse', 'Select'])
         enumKEY = {'Enter':{'func':__getInput},'Browse':{'func':__getBrowse},'Select':{'func':__getSelect}}
         enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
-        if not enumSEL is None: return [quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
+        if not enumSEL is None: return [Globals._quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
         

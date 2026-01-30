@@ -50,7 +50,6 @@ class Tasks(object):
         self.service._que(self.chkInstanceID  ,1)
         self.service._que(self.chkPVRBackend  ,1)
         self.service._que(self.chkDebugging   ,1)
-        self.service._que(self.chkDiscovery   ,1)
         self.log('_initialize, _client...')
         
         
@@ -58,6 +57,7 @@ class Tasks(object):
         self._client()
         self.service._que(self.chkDirs,1)
         self.service._que(self.chkBackup,1)
+        self.service._que(self.chkCrash,1)
         self.log('_initialize, _host...')
     
     
@@ -91,9 +91,7 @@ class Tasks(object):
                     
                
     def chkDiscovery(self):
-        discoThread = Thread(target=Discovery(self.service, Multiroom(service=self.service))._start)
-        discoThread.daemon = True
-        discoThread.start()
+        Discovery(self.service, Multiroom(service=self.service))
         self.log('chkDiscovery')
          
          
@@ -102,6 +100,14 @@ class Tasks(object):
         Backup().hasBackup()
 
 
+    def chkCrash(self):
+        self.log('chkCrash')
+        # failed_citem = (SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM',json_data=True) or {})
+        # if failed_citem:
+            # SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None,json_data=False)
+            # DIALOG.okDialog(f'Kodi encountered a fatal error while parsing a {ADDON_NAME} channel.\n{failed_citem.get('name')} was temporarily disabled!', usethread=True)
+        
+        
     def chkServers(self):
         self.log('chkServers')
         Multiroom(service=self.service)._chkServers()
@@ -118,6 +124,7 @@ class Tasks(object):
         self.log('chkQueTimer')
         self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200, 1)#12HRS
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800, 1)#3HRS
+        self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300  , 1)#10MINS
         self._chkEpochTimer('chkServers'      , self.chkServers       , 1800 , 1)#1HR
         self._chkEpochTimer('chkQUES'         , self.chkQUES          , 300  , 1)#10MINS
         
@@ -215,10 +222,7 @@ class Tasks(object):
             self.citems = channels
         if len(channels) > 0:
             self.log('chkChannels, channels = %s'%(len(channels)))
-            # if PROPERTIES.hasChannels():
-                # [self.service._que(builder.buildChannels,3,[channel]) for channel in channels]
-            # else:
-            self.service._que(builder.buildChannels,3,channels)
+            [self.service._que(builder.buildChannels,3,[channel]) for channel in channels]
         else:
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():      SETTINGS.setAutotuned(Autotune()._runTune())
@@ -275,7 +279,7 @@ class Tasks(object):
                     self.log("chkQUES, queuing = %s\njsonQue:%s"%(len(self.service.jsonQue),param))
                     self.service._que(self.jsonRPC.sendJSON,-1,param)
                 if len(self.service.logoQue) > 0:
-                    param = loadJSON(self.service.logoQue.pop())
+                    param = FileAccess.loadJSON(self.service.logoQue.pop())
                     self.log("chkQUES, queuing = %s\nlogoQue:%s"%(len(self.service.logoQue),param))
                     self.service._que(library.resources.getLogo,-1,*(param,library.resources.getCache(param.get('name')),True,None))
         del library

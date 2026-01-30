@@ -81,6 +81,7 @@ Language IDS not found in py files, possibly only in xml: {
     "30011": "[COLOR=red][B]Warning!! [/B]It's Recommend Flash/SSD users change path to a HDD or PMem.[/COLOR]",
     "30012": "Centralized file location",
     "30013": "Tweaks",
+    "30015": "Pagination Size",
     "30016": "Fillers",
     "30023": "Unable to reload %s",
     "30027": "Logo Resource",

@@ -55,11 +55,11 @@ class JSONRPC(object):
         command  = param
         command["jsonrpc"] = "2.0"
         command["id"] = ADDON_ID #todo debug killit crashing Kodi
-        # if timeout > 0: response = loadJSON((killit(BUILTIN.executeJSONRPC)(timeout,dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
-        response = loadJSON(BUILTIN.executeJSONRPC(dumpJSON(command)))
+        # if timeout > 0: response = FileAccess.loadJSON((killit(BUILTIN.executeJSONRPC)(timeout,FileAccess.dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
+        response = FileAccess.loadJSON(BUILTIN.executeJSONRPC(FileAccess.dumpJSON(command)))
         self.log('sendJSON, response received')
         if response.get('error'):
-            self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
+            self.log('sendJSON, failed! error = %s\n%s'%(FileAccess.dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
             response.setdefault('result',{})['error'] = response.pop('error')
         return response
 
@@ -69,7 +69,7 @@ class JSONRPC(object):
         
         
     def cacheJSON(self, param, life=datetime.timedelta(minutes=5), checksum=ADDON_VERSION, timeout=-1):
-        cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(param)))
+        cacheName = 'cacheJSON.%s'%(Globals._getMD5(FileAccess.dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
             cacheResponse = self.sendJSON(param, timeout)
@@ -78,7 +78,7 @@ class JSONRPC(object):
 
 
     def walkFileDirectory(self, path, media='video', depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        walk = dict()
+        walk = {}
         self.log('walkFileDirectory, walking %s, depth = %s'%(path,depth))
         items, limits, errors = self.getDirectory({"directory":path,"media":media},True,checksum,expiration)
         for idx, item in enumerate(items):
@@ -106,7 +106,7 @@ class JSONRPC(object):
             walk.setdefault(resource,[]).extend(self.getListDirectory(resource,checksum,expiration)[1])
             return walk
 
-        walk = dict()
+        walk = {}
         path = path.replace('\\','/')
         subs, files = self.getListDirectory(path,checksum,expiration)
         if len(files) > 0 and TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
@@ -122,7 +122,7 @@ class JSONRPC(object):
                 
         
     def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        cacheName = 'getListDirectory.%s'%(getMD5(path))
+        cacheName = 'getListDirectory.%s'%(Globals._getMD5(path))
         results   = self.cache.get(cacheName, checksum)
         if not results:
             try:    
@@ -273,7 +273,7 @@ class JSONRPC(object):
     def getStreamDetails(self, path, media='video'):
         if isStack(path): path = splitStacks(path)[0]
         param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}
-        return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
+        return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=Globals._getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
 
     def getFileDetails(self, file, media='video', properties=["duration","runtime"]):
@@ -370,28 +370,28 @@ class JSONRPC(object):
     
     
     def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected by player, accurate meta.
-        self.cache.set('getRuntime.%s'%(getMD5(item.get('file'))), runtime, checksum=getMD5(item.get('file')), expiration=datetime.timedelta(days=28), json_data=False)
+        self.cache.set('getRuntime.%s'%(Globals._getMD5(item.get('file'))), runtime, checksum=Globals._getMD5(item.get('file')), expiration=datetime.timedelta(days=28), json_data=False)
         if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)) and save and runtime > 0: self.queDuration(item, runtime=runtime)
     
         
     def _getRuntime(self, item={}): #get runtime collected by player, else less accurate provider meta
-        runtime = self.cache.get('getRuntime.%s'%(getMD5(item.get('file'))), checksum=getMD5(item.get('file')), json_data=False)
+        runtime = self.cache.get('getRuntime.%s'%(Globals._getMD5(item.get('file'))), checksum=Globals._getMD5(item.get('file')), json_data=False)
         return (runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         
 
     def _setDuration(self, path, item={}, duration=0, save=SETTINGS.getSettingBool('Store_Duration')):#set VideoParser cache
-        self.cache.set('getDuration.%s'%(getMD5(path)), duration, checksum=getMD5(path), expiration=datetime.timedelta(days=28), json_data=False)
+        self.cache.set('getDuration.%s'%(Globals._getMD5(path)), duration, checksum=Globals._getMD5(path), expiration=datetime.timedelta(days=28), json_data=False)
         if save and item: self.queDuration(item, duration)
         return duration
 
     
     def _getDuration(self, path): #get VideoParser cache
-        return (self.cache.get('getDuration.%s'%(getMD5(path)), checksum=getMD5(path), json_data=False) or 0)
+        return (self.cache.get('getDuration.%s'%(Globals._getMD5(path)), checksum=Globals._getMD5(path), json_data=False) or 0)
 
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
         if not item: item = {'file':path}
-        runtime = self._getRuntime(item)
+        runtime = self._getRuntime(item) #player runtime, fallback meta provider runtime
         if runtime == 0 or accurate:
             duration = 0
             if isStack(path):# handle "stacked" videos
@@ -437,7 +437,7 @@ class JSONRPC(object):
             ## save parsed duration to Kodi database, if enabled.
             if runsafe:
                 runtime = duration
-                if save and not path.startswith(tuple(VFS_TYPES)): self.queDuration(item, duration)
+                if save: self.queDuration(item, duration)
         else: runtime = duration
         self.log("__parseDuration, returning runtime = %s" % (runtime))
         return runtime
@@ -558,8 +558,8 @@ class JSONRPC(object):
             
             
     def autoPagination(self, id, path, query={}, limits={}):
-        if not limits: return (self.cache.get('autoPagination.%s.%s.%s'%(id,getMD5(path),getMD5(dumpJSON(query))), checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
-        else:          return  self.cache.set('autoPagination.%s.%s.%s'%(id,getMD5(path),getMD5(dumpJSON(query))), limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
+        if not limits: return (self.cache.get('autoPagination.%s.%s.%s'%(id,Globals._getMD5(path),Globals._getMD5(FileAccess.dumpJSON(query))), checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
+        else:          return  self.cache.set('autoPagination.%s.%s.%s'%(id,Globals._getMD5(path),Globals._getMD5(FileAccess.dumpJSON(query))), limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
             
              
     def randomPagination(self, page=SETTINGS.getSettingInt('Page_Limit'), limits={}, start=0):
@@ -643,7 +643,7 @@ class JSONRPC(object):
                         self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
                         channels, limits, errors = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=15))
                         for item in channels:
-                            if item.get('label','').lower() == sysInfo.get('name','').lower() and decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
+                            if item.get('label','').lower() == sysInfo.get('name','').lower() and Globals._decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
                                 self.log('[%s] getCallback: _matchJSON, found file = %s'%(sysInfo.get('chid'),item.get('file')))
                                 return item.get('file')
                   
@@ -657,7 +657,7 @@ class JSONRPC(object):
             callback = sysInfo.get('callback','')
         if not callback: callback = _matchJSON()
         self.log('getCallback: returning callback = %s'%(callback))
-        return callback# or (('%s%s'%(self.sysARG[0],self.sysARG[2])).split('%s&'%(slugify(ADDON_NAME))))[0])
+        return callback# or (('%s%s'%(self.sysARG[0],self.sysARG[2])).split('%s&'%(Globals._slugify(ADDON_NAME))))[0])
         
         
     def matchChannel(self, chname: str, id: str, radio: bool=False, extend=True):
@@ -667,7 +667,7 @@ class JSONRPC(object):
             for channel in channels:
                 if channel.get('label','').lower() == chname.lower():
                     for key in ['broadcastnow', 'broadcastnext']:
-                        if decodePlot(channel.get(key,{}).get('plot','')).get('citem',{}).get('id') == id:
+                        if Globals._decodePlot(channel.get(key,{}).get('plot','')).get('citem',{}).get('id') == id:
                             channel['broadcastnext'] = [channel.get('broadcastnext',{})]
                             self.log('[%s] matchChannel: __match, found pvritem = %s'%(id,channel))
                             return channel
@@ -691,7 +691,7 @@ class JSONRPC(object):
             self.log('matchChannel: __extend, broadcastnext = %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
             
-        cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,extend)))
+        cacheName     = 'matchChannel.%s'%(Globals._getMD5('%s.%s.%s.%s'%(chname,id,radio,extend)))
         cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
         if not cacheResponse:
             pvrItem = __match()
@@ -704,10 +704,10 @@ class JSONRPC(object):
         if (citem.get('name','') and citem.get('id','')):
             nextitems = self.matchChannel(citem.get('name',''), citem.get('id',''), citem.get('radio',False)).get('broadcastnext',[])
             for idx, nextitem in enumerate(nextitems):
-                item = decodePlot(nextitem.get('plot',''))
+                item = Globals._decodePlot(nextitem.get('plot',''))
                 if item.get('start') == nitem.get('start',str(random.random())) and item.get('id') == nitem.get('id',random.random()):
                     for next in nextitems[idx:]:
-                        if not isFiller(next): return decodePlot(next.get('plot',''))
+                        if not isFiller(next): return Globals._decodePlot(next.get('plot',''))
         return nitem
         
 

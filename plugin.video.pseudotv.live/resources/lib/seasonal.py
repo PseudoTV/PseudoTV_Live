@@ -110,12 +110,12 @@ class Seasonal(object):
 
     def getSeason(self, key):
         self.log('getSeason, key = %s' % (key))
-        return getJSON(HOLIDAYS).get(key,{})
+        return FileAccess.getJSON(HOLIDAYS).get(key,{})
 
 
     def getSeasons(self, month):
         self.log('getSeasons, month = %s' % (month))
-        return getJSON(SEASONS).get(month,{})
+        return FileAccess.getJSON(SEASONS).get(month,{})
 
 
     @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())

@@ -58,7 +58,7 @@ class XSP(object):
             string = xml.read()
             xml.close()
             match = re.compile(r'<%s>(.*?)\</%s>'%(key,key), re.IGNORECASE).search(string)
-            if match: name = unescapeString(match.group(1))
+            if match: name = Globals._unescapeString(match.group(1))
             self.log("getName, fle = %s, name = %s"%(fle,name))
         except: self.log("getName, return unable to parse %s"%(fle), xbmc.LOGERROR)
         return name
@@ -118,8 +118,8 @@ class XSP(object):
         
             if isinstance(params,str):
                 if hasURLencoding(params):
-                    params = unquoteString(params)
-                params = loadJSON(params)
+                    params = Globals._unquoteString(params)
+                params = FileAccess.loadJSON(params)
                 
             params['rules'].update(filters)
             if path.startswith('videodb://tvshows/'):
@@ -129,8 +129,8 @@ class XSP(object):
                                                                  {"field":"episode","operator":"greaterthan","value":"0"}])
                 else:
                     params['rules']['and'] = [r for r in params['rules'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
-                params['rules']['and'] = setDictLST(params['rules']['and'])
-            file = '%s?xsp=%s'%(path,dumpJSON(params))
+                params['rules']['and'] = Globals._setDictLST(params['rules']['and'])
+            file = '%s?xsp=%s'%(path,FileAccess.dumpJSON(params))
             self.log("[%s] parseDXSP, OUT = %s"%(id,file))
         except Exception as e: self.log("[%s] parseDXSP, failed! %s"%(id,e), xbmc.LOGERROR)
         return file

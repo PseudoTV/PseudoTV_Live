@@ -59,7 +59,7 @@ class Library(object):
         self.pMSG    = ''
         self.pHeader = ''
         
-        self.libraryDATA = getJSON(LIBRARYFLE_DEFAULT)
+        self.libraryDATA = FileAccess.getJSON(LIBRARYFLE_DEFAULT)
         self.libraryTEMP = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
 
@@ -81,12 +81,12 @@ class Library(object):
         
 
     def _load(self, file=LIBRARYFLEPATH):
-        return getJSON(file)
+        return FileAccess.getJSON(file)
     
     
     def _save(self, file=LIBRARYFLEPATH):
         self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
-        return setJSON(file, self.libraryDATA)
+        return FileAccess.setJSON(file, self.libraryDATA)
         
   
     def getLibrary(self, type=None):
@@ -279,12 +279,12 @@ class Library(object):
                     self.log("getTVInfo, _interrupt")
                     return
                 elif info.get('label'):
-                    TVShowList.update({dumpJSON(info):info.get('episode',0)})
+                    TVShowList.update({FileAccess.dumpJSON(info):info.get('episode',0)})
                     NetworkList.update([studio for studio in info.get('studio',[])])
                     ShowGenreList.update([genre for genre in info.get('genre',[])])
                     
             if sortbycount:
-                TVShowList    = [loadJSON(x[0]) for x in sorted(TVShowList.most_common(25))]
+                TVShowList    = [FileAccess.loadJSON(x[0]) for x in sorted(TVShowList.most_common(25))]
                 NetworkList   = [x[0] for x in sorted(NetworkList.most_common(25))]
                 ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
             else:
@@ -429,13 +429,13 @@ class Library(object):
         ...#todo refactor feature
         # library.importPrompt() 
         # def _search(addonid):
-            # cacheName = 'searchRecommended.%s'%(getMD5(addonid))
+            # cacheName = 'searchRecommended.%s'%(Globals._getMD5(addonid))
             # addonMeta = SETTINGS.getAddonDetails(addonid)
             # payload   = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
             # if not payload: #startup services may not be broadcasting beacon; use last cached beacon instead.
                 # payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
             # else:
-                # payload = loadJSON(payload)
+                # payload = FileAccess.loadJSON(payload)
                 # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
             
             # if payload:

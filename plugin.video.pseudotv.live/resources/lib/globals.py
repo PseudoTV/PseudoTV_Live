@@ -17,59 +17,16 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import os, sys, re, json, struct, errno, zlib
-import shutil, subprocess, io, platform, asyncio
-import codecs, random, inspect, importlib
-import uuid, base64, binascii, hashlib, pickle
-import time, datetime, calendar
-import heapq, requests, pyqrcode
-import xml.sax.saxutils
+from variables   import *
+from kodi        import *
+from pool        import killit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
 
-from ast                   import literal_eval
-from difflib               import SequenceMatcher
-from functools             import partial, wraps, reduce, update_wrapper
-from six.moves             import urllib 
-from io                    import StringIO, BytesIO
-from threading             import Lock, Thread, Event, Timer, BoundedSemaphore
-from threading             import enumerate as thread_enumerate
-from xml.dom.minidom       import parse, parseString, Document
-from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstringlist, fromstring, tostring
-from xml.etree.ElementTree import parse as ETparse
-from typing                import Dict, List, Union, Optional, Any
+DIALOG     = Dialog()
+PROPERTIES = DIALOG.properties
+SETTINGS   = DIALOG.settings
+LISTITEMS  = DIALOG.listitems
+BUILTIN    = DIALOG.builtin
 
-from variables           import *
-from kodi_six            import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
-from contextlib          import contextmanager, closing
-from socket              import gethostbyname, gethostname
-from itertools           import cycle, chain, zip_longest, islice, repeat, count
-from xml.sax.saxutils    import escape, unescape
-from operator            import itemgetter
-
-from logger              import *
-from cache               import Cache, cacheit
-from pool                import killit, timeit, poolit, executeit, timerit, threadit, CPU_CYCLE
-from kodi                import *
-from fileaccess          import FileAccess, FileLock
-from collections         import defaultdict, Counter, OrderedDict
-from six.moves           import urllib 
-from math                import ceil, floor, sqrt
-from infotagger.listitem import ListItemInfoTag
-from requests.adapters   import HTTPAdapter, Retry
-
-DIALOG              = Dialog()
-PROPERTIES          = DIALOG.properties
-SETTINGS            = DIALOG.settings
-LISTITEMS           = DIALOG.listitems
-BUILTIN             = DIALOG.builtin
-
-def slugify(s, lowercase=False):
-  if lowercase: s = s.lower()
-  s = s.strip()
-  s = re.sub(r'[^\w\s-]', '', s)
-  s = re.sub(r'[\s_-]+', '_', s)
-  s = re.sub(r'^-+|-+$', '', s)
-  return s
-        
 def validString(s):
     return "".join(x for x in s if (x.isalnum() or x not in '\\/:*?"<>|'))
         
@@ -84,41 +41,11 @@ def stripRegion(s):
 def chanceBool(percent=25):
     return random.randrange(100) <= percent
 
-def decodePlot(text: str = '') -> dict:
-    plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
-    if plot: return loadJSON(decodeString(plot.group(1)))
-    return {}
-    
-def encodePlot(plot, text):
-    return '%s [COLOR item="%s"][/COLOR]'%(plot,encodeString(dumpJSON(text)))
-    
-def escapeString(text, table=HTML_ESCAPE):
-    return escape(text,table)
-    
-def unescapeString(text, table=HTML_ESCAPE):
-    return unescape(text,{v:k for k, v in list(table.items())})
-
-def getJSON(file):
-    data = {}
-    try: 
-        fle  = FileAccess.open(file,'r')
-        data = loadJSON(fle.read())
-    except Exception as e: log('Globals: getJSON failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
-    fle.close()
-    return data
-
-def setJSON(file, data):
-    with FileLock(file):
-        fle = FileAccess.open(file, 'w')
-        fle.write(dumpJSON(data, idnt=4, sortkey=False))
-        fle.close()
-    return True
-
 def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache=None, file=None):
     #cache = {"cache":None, "json_data": False, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}
     def __error(result={}):                                         return result
-    def __getCache(key, cache, json_data, checksum):                return (cache.get('requestURL.%s'%(getMD5(key)), checksum, json_data) or __error())
-    def __setCache(key, results, cache, json_data, checksum, life): return cache.set('requestURL.%s'%(getMD5(key)), results, checksum, life, json_data)
+    def __getCache(key, cache, json_data, checksum):                return (cache.get('requestURL.%s'%(Globals._getMD5(key)), checksum, json_data) or __error())
+    def __setCache(key, results, cache, json_data, checksum, life): return cache.set('requestURL.%s'%(Globals._getMD5(key)), results, checksum, life, json_data)
         
     results  = None
     session  = requests.Session()
@@ -139,12 +66,12 @@ def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache
         log("Globals: requestURL\nurl = %s, status = %s\nparams = %s\npayload = %s\nreturn type = %s"%(url,response.status_code,params,payload,type(results)))
         
         if results and not cache is None: 
-            return __setCache('.'.join([url,dumpJSON(params),dumpJSON(payload),dumpJSON(header)]), 
+            return __setCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
                               results, cache["cache"], cache.get("json_data",False), cache.get("checksum",ADDON_VERSION), cache.get("life",datetime.timedelta(minutes=15)))
         else: return results 
     except Exception as e: 
         log("Globals: requestURL, failed! %s, An error occurred: %s"%('Returning cache' if cache else 'No Response', e))
-        return __getCache('.'.join([url,dumpJSON(params),dumpJSON(payload),dumpJSON(header)]), 
+        return __getCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
                           cache["cache"], cache.get("json_data",False), cache.get("checksum",ADDON_VERSION)) if cache else __error()
     finally: #retry failed post
         ...
@@ -153,32 +80,22 @@ def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache
             # posts.add((url, params, payload, header, timeout, cache, file))
             # SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)
 
-def setURL(url, file):
-    try:
-        with FileLock(file):
-            contents = requestURL(url)
-            fle = FileAccess.open(file, 'w')
-            fle.write(contents)
-            fle.close()
-            return FileAccess.exists(file)
-    except Exception as e: log('Globals: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
-
 def diffLSTDICT(old, new):
-    set1 = {dumpJSON(d, sortkey=True) for d in old}
-    set2 = {dumpJSON(d, sortkey=True) for d in new}
-    return {"added": [loadJSON(s) for s in set2 - set1], "removed": [loadJSON(s) for s in set1 - set2]}
+    set1 = {FileAccess.dumpJSON(d, sortkey=True) for d in old}
+    set2 = {FileAccess.dumpJSON(d, sortkey=True) for d in new}
+    return {"added": [FileAccess.loadJSON(s) for s in set2 - set1], "removed": [FileAccess.loadJSON(s) for s in set1 - set2]}
 
 def getChannelID(name, path, number, uuid=None):
     if uuid is None: uuid = SETTINGS.getMYUUID()
     if isinstance(path, list): path = '|'.join(path)
     tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
-    return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),slugify(ADDON_NAME))
+    return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
     
 def getRecordID(name, path, number, uuid=None):
     if uuid is None: uuid = SETTINGS.getMYUUID()
     if isinstance(path, list): path = '|'.join(path)
     tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
-    return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:16]).decode(DEFAULT_ENCODING),slugify(ADDON_NAME))
+    return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:16]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
 
 def splitYear(label):
     try:
@@ -356,13 +273,13 @@ def combineDicts(dict1={}, dict2={}):
 def mergeDictLST(dict1={},dict2={}):
     for k, v in list(dict2.items()):
         dict1.setdefault(k,[]).extend(v)
-        setDictLST()
+        Globals._setDictLST()
     return dict1
     
-def lstSetDictLst(lst=[]):
-    items = dict()
+def _setDictLST(lst=[]):
+    items = {}
     for key, dictlst in list(lst.items()):
-        if isinstance(dictlst, list): dictlst = setDictLST(dictlst)
+        if isinstance(dictlst, list): dictlst = Globals._setDictLST(dictlst)
         items[key] = dictlst
     return items
     

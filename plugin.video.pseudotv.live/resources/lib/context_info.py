@@ -36,7 +36,7 @@ class Browse(object):
             if isinstance(path,list): path = path[0]
             if '?xsp=' in path:
                 path, params = path.split('?xsp=')
-                path = '%s?xsp=%s'%(path,quoteString(unquoteString(params)))
+                path = '%s?xsp=%s'%(path,Globals._quoteString(Globals._unquoteString(params)))
             log('Browse: target = %s, path = %s'%(media,path))
         BUILTIN.executewindow('ReplaceWindow(%s,%s,return)'%(media,path))
 
@@ -73,15 +73,15 @@ class Match(object):
             # RunScript(script.globalsearch,movies=true)
             # RunScript(script.globalsearch,tvshows=true&amp;musicvideos=true&amp;songs=true)
             # availableeoptions: movies, tvshows, episodes, musicvideos, artists, albums, songs, livetv, actors, directors
-            BUILTIN.executebuiltin('RunScript(%s)'%('%s,searchstring=%s'%(self.SEARCH_SCRIPT,escapeString('%s,movies=True,episodes=True,tvshows=True,livetv=True'%(quoteString(title))))))
+            BUILTIN.executebuiltin('RunScript(%s)'%('%s,searchstring=%s'%(self.SEARCH_SCRIPT,Gloabls._escapeString('%s,movies=True,episodes=True,tvshows=True,livetv=True'%(Globals._quoteString(title))))))
  
 
 if __name__ == '__main__': 
     param = sys.argv[1]
     log('Info: __main__, param = %s'%(param))
-    if   param == 'info':   threadit(Info)(sys.argv ,sys.listitem,decodePlot(BUILTIN.getInfoLabel('Plot')))
-    elif param == 'browse': threadit(Browse)(sys.argv,sys.listitem,decodePlot(BUILTIN.getInfoLabel('Plot')))
-    elif param == 'match':  threadit(Match)(sys.argv ,sys.listitem,decodePlot(BUILTIN.getInfoLabel('Plot')))
+    if   param == 'info':   threadit(Info)(sys.argv ,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
+    elif param == 'browse': threadit(Browse)(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
+    elif param == 'match':  threadit(Match)(sys.argv ,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
         
    
    

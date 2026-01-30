@@ -17,7 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
-from globals    import *
+from globals     import *
+from fileaccess  import FileAccess, FileLock
 
 HEADER = {"Authorization": "",
           "Content-Type" : "application/json",
@@ -91,7 +92,7 @@ class OpenRouter(object):
             # try:
                 # from PIL import Image
                 # fle = FileAccess.open(os.path.join(TEMP_IMAGE_LOC,file_name), "rb")
-                # img = Image.open(io.BytesIO(fle.readBytes())).convert("RGBA")# Ensure image has an alpha channel
+                # img = Image.open(BytesIO(fle.readBytes())).convert("RGBA")# Ensure image has an alpha channel
                 # fle.close()
 
                 # data   = list(img.getdata())

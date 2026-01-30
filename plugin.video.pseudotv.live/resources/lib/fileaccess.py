@@ -17,15 +17,69 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
+import codecs, shutil, errno
 
-from globals    import *
-from contextlib import ContextDecorator
+from variables   import *
+from logger      import log
 
 #constants 
 DEFAULT_ENCODING = "utf-8"
 FILE_LOCK_NAME   = "pseudotv"
 
 class FileAccess(object):
+    @staticmethod
+    def dumpJSON(item={}, idnt=None, sortkey=False, separators=(',', ':')):
+        try:
+            if item:
+                if   isinstance(item,str):  return item
+                elif hasattr(item,'read'):  return json.dump(item)
+                elif isinstance(item,dict): return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
+        except Exception as e: pass
+        return ''
+        
+        
+    @staticmethod
+    def loadJSON(item=""):
+        try:
+            if item:
+                if   isinstance(item,dict): return item
+                elif hasattr(item,'read'):  return json.load(item)
+                elif isinstance(item,str):  return json.loads(item)
+        except Exception as e: pass
+        return {}
+        
+    @staticmethod
+    def getJSON(file):
+        data = {}
+        try: 
+            fle  = FileAccess.open(file,'r')
+            data = FileAccess.loadJSON(fle.read())
+        except Exception as e: log('FileAccess: getJSON failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
+        fle.close()
+        return data
+
+
+    @staticmethod
+    def setJSON(file, data):
+        with FileLock(file):
+            fle = FileAccess.open(file, 'w')
+            fle.write(FileAccess.dumpJSON(data, idnt=4, sortkey=False))
+            fle.close()
+        return True
+
+
+    @staticmethod
+    def setURL(url, file):
+        try:
+            with FileLock(file):
+                contents = requestURL(url)
+                fle = FileAccess.open(file, 'w')
+                fle.write(contents)
+                fle.close()
+                return FileAccess.exists(file)
+        except Exception as e: log('FileAccess: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
+
+
     @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):
         fle = 0
@@ -130,8 +184,8 @@ class FileAccess(object):
             try: filename = (filename.split('stack://')[1].split(' , '))[0]
             except Exception as e: log('FileAccess: exists failed! %s'%(e), xbmc.LOGERROR)
         try:
-            if not filename.endswith(("/","\\")):
-                filename = "%s/"%(filename)
+            if os.path.isdir(filename) and not filename.endswith(("/","\\")):
+                filename = os.path.join(filename,'')
             exists = xbmcvfs.exists(filename)
         except UnicodeDecodeError:
             exists = os.path.exists(xbmcvfs.translatePath(filename))

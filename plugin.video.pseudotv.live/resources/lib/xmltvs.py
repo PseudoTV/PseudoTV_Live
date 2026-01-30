@@ -17,10 +17,11 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-
 import xmltv
-from globals    import *
-from seasonal   import Seasonal
+
+from globals     import *
+from seasonal    import Seasonal
+from fileaccess  import FileAccess, FileLock
 
 #todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
 
@@ -188,13 +189,13 @@ class XMLTVS(object):
         return bytes(text,DEFAULT_ENCODING).decode(DEFAULT_ENCODING,'ignore')
 
              
-    def cleanSelf(self, items: list, key: str='id', slug: str='@%s'%(slugify(ADDON_NAME))) -> list: # remove (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
+    def cleanSelf(self, items: list, key: str='id', slug: str='@%s'%(Globals._slugify(ADDON_NAME))) -> list: # remove (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
         if not slug: return items
         channels   = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 32])
         recordings = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 16])
         if key == 'id': #stations
             self.log('cleanSelf, slug = %s, key = %s: returning channels = %s, recordings = %s'%(slug,key,len(channels),len(recordings)))
-            return self.sortChannels(setDictLST(channels)), self.sortChannels(setDictLST(recordings))
+            return self.sortChannels(Globals._setDictLST(channels)), self.sortChannels(Globals._setDictLST(recordings))
         else: #programmes
             programmes = self.cleanProgrammes(channels) + recordings
             self.log('cleanSelf, slug = %s, key = %s: returning programmes = %s'%(slug,key,len(programmes)))
@@ -213,7 +214,7 @@ class XMLTVS(object):
         holiday = Seasonal().getHoliday()
         
         def __filterProgrammes(program):
-            citem = decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
+            citem = Globals._decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
             if citem.get('holiday') and citem.get('holiday',{}).get('name',str(random.random())) != holiday.get('name',str(random.random())): return None
             elif (strpTime(program.get('stop',now).rstrip(),DTFORMAT) < now): return None  # remove expired content, ignore "recordings" ie. media=True
             return program
@@ -281,11 +282,11 @@ class XMLTVS(object):
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
         
-        item['thumb']         = cleanImage((getThumb(fItem,EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK])) #unify thumbnail by user preference 
-        fItem.get('art',{})['thumb'] = cleanImage(getThumb(fItem,{0:1,1:0}[EPG_ARTWORK]) or {0:FANART,1:COLOR_LOGO}[{0:1,1:0}[EPG_ARTWORK]]) #unify thumbnail artwork, opposite of EPG_Artwork
+        item['thumb']         = cleanImage((Globals._getThumb(fItem,EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK])) #unify thumbnail by user preference 
+        fItem.get('art',{})['thumb'] = cleanImage(Globals._getThumb(fItem,{0:1,1:0}[EPG_ARTWORK]) or {0:FANART,1:COLOR_LOGO}[{0:1,1:0}[EPG_ARTWORK]]) #unify thumbnail artwork, opposite of EPG_Artwork
         
         item['date']          = fItem.get('premiered','')
-        item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=quoteString(item['title']),chid=quoteString(citem['id']),vid=quoteString(encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=quoteString(citem['name']))
+        item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=Globals._quoteString(item['title']),chid=Globals._quoteString(citem['id']),vid=Globals._quoteString(Globals._encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=Globals._quoteString(citem['name']))
         fItem['catchup-id']   = item['catchup-id']
             
         if (item['type'] != 'movie' and ((fItem.get("season",0) > 0) and (fItem.get("episode",0) > 0))):
@@ -345,7 +346,7 @@ class XMLTVS(object):
         pitem = {'channel'     : id,
                  'category'    : [(self.cleanString(genre.replace(LANGUAGE(32105),'Undefined')),LANG) for genre in item['categories']],
                  'title'       : [(self.cleanString(item['title']), LANG)],
-                 'desc'        : [(encodePlot(self.cleanString(item['desc']),item['fitem']), LANG) if encodeDESC else (self.cleanString(item['desc']), LANG)],
+                 'desc'        : [(Globals._encodePlot(self.cleanString(item['desc']),item['fitem']), LANG) if encodeDESC else (self.cleanString(item['desc']), LANG)],
                  'stop'        : (epochTime(float(item['stop']),tz=False).strftime(DTFORMAT)),
                  'start'       : (epochTime(float(item['start']),tz=False).strftime(DTFORMAT)),
                  'icon'        : [{'src': item['thumb']}],

@@ -19,8 +19,9 @@
 
 # -*- coding: utf-8 -*-
 
-from globals    import *
-from channels   import Channels
+from globals     import *
+from channels    import Channels
+from fileaccess  import FileAccess, FileLock
 
 M3U_TEMP = {"id"                : "",
             "number"            : 0,
@@ -250,14 +251,14 @@ class M3U(object):
             self.log('_verify, stations = %s'%(len(stations)))
             return stations
         elif recordings:#remove recordings that no longer exists on disk
-            if chkPath: recordings = [recording for recording in recordings if hasFile(decodeString(dict(urllib.parse.parse_qsl(recording.get('url',''))).get('vid').replace('.pvr','')))]
+            if chkPath: recordings = [recording for recording in recordings if hasFile(Globals._decodeString(dict(urllib.parse.parse_qsl(recording.get('url',''))).get('vid').replace('.pvr','')))]
             else:       recordings = [recording for recording in recordings if recording.get('media',False)]
             self.log('_verify, recordings = %s, chkPath = %s'%(len(recordings),chkPath))
             return recordings
         return []
         
 
-    def cleanSelf(self, items, key='id', slug='@%s'%(slugify(ADDON_NAME))): # remove m3u imports (Non PseudoTV Live)
+    def cleanSelf(self, items, key='id', slug='@%s'%(Globals._slugify(ADDON_NAME))): # remove m3u imports (Non PseudoTV Live)
         if not slug: return items
         stations   = self.sortStations(self._verify(stations=[station for station in items if station.get(key,'').endswith(slug) and not station.get('media',False)]))
         recordings = self.sortStations(self._verify(recordings=[recording for recording in items if recording.get(key,'').endswith(slug) and recording.get('media',False)]), key='name')
@@ -311,12 +312,12 @@ class M3U(object):
         
     def getStationItem(self, sitem):
         if '3000' in list(sitem.get('rules',{}).keys()): #PauseRule
-               sitem['url'] = RESUME_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']))
-        elif   sitem['radio']: sitem['url'] = RADIO_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']),radio=str(sitem['radio']),vid='{catchup-id}')
+               sitem['url'] = RESUME_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']))
+        elif   sitem['radio']: sitem['url'] = RADIO_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']),radio=str(sitem['radio']),vid='{catchup-id}')
         elif   sitem['catchup']:
-               sitem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']),vid='{catchup-id}')
-               sitem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
-        else:  sitem['url'] = TV_URL.format(addon=ADDON_ID,name=quoteString(sitem['name']),chid=quoteString(sitem['id']))
+               sitem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']),vid='{catchup-id}')
+               sitem['url'] = LIVE_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
+        else:  sitem['url'] = TV_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']))
         return sitem
     
     
@@ -330,13 +331,13 @@ class M3U(object):
         ritem['label']         = (fitem.get('showlabel') or '%s%s'%(fitem.get('label',''),' - %s'%(fitem.get('episodelabel','')) if fitem.get('episodelabel','') else ''))
         ritem['name']          = ritem['label']
         ritem['number']        = random.Random(str(fitem.get('id',1))).random()
-        ritem['logo']          = cleanImage((getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
+        ritem['logo']          = cleanImage((Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
         ritem['media']         = True
         ritem['media-size']    = str(fitem.get('size',0))
         ritem['media-dir']     = ''#todo optional add parent directory via user prompt?
         ritem['group']         = ['%s (%s)'%(group,ADDON_NAME)]
         ritem['id']            = getRecordID(ritem['name'], (fitem.get('originalfile') or fitem.get('file','')), ritem['number'], SETTINGS.getMYUUID())
-        ritem['url']           = DVR_URL.format(addon=ADDON_ID,title=quoteString(ritem['label']),chid=quoteString(ritem['id']),vid=quoteString(encodeString((fitem.get('originalfile') or fitem.get('file','')))),seek=seek,duration=fitem.get('duration',0))#fitem.get('catchup-id','')
+        ritem['url']           = DVR_URL.format(addon=ADDON_ID,title=Globals._quoteString(ritem['label']),chid=Globals._quoteString(ritem['id']),vid=Globals._quoteString(Globals._encodeString((fitem.get('originalfile') or fitem.get('file','')))),seek=seek,duration=fitem.get('duration',0))#fitem.get('catchup-id','')
         return ritem
         
         

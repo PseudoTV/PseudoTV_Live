@@ -19,16 +19,8 @@
 # -*- coding: utf-8 -*-
 
 from globals      import *
-from functools    import reduce
 from seasonal     import Seasonal
 from intergration import OpenRouter
-
-from collections import OrderedDict
-from difflib     import SequenceMatcher
-import datetime
-import io
-import os
-import re
 
 # Tunable: maximum number of entries to keep in the in-memory image cache.
 IMAGE_CACHE_MAX = 500
@@ -44,7 +36,6 @@ _PAREN_RE       = re.compile(r'[\(\[\{].*?[\)\]\}]')
 _NON_ALNUM_RE   = re.compile(r'[^0-9a-z\s]+', re.IGNORECASE)
 _MULTI_WS_RE    = re.compile(r'\s+')
 _TOKEN_SPLIT_RE = re.compile(r'\s+')
-
 
 class Service(object):
     from jsonrpc import JSONRPC
@@ -65,9 +56,7 @@ class Service(object):
             else: wait -= CPU_CYCLE
         return False
 
-
 class Resources(object):
-
     def __init__(self, service=None):
         if service is None: service = Service()
         self.service     = service
@@ -79,6 +68,7 @@ class Resources(object):
         self.season      = self.seasonal.getHoliday()
         self._openRouter = OpenRouter(cache=self.cache)
         self.imageCache  = OrderedDict(SETTINGS.getCacheSetting('imageCache'  , json_data=True) or {})
+        
         # trim if oversized
         while len(self.imageCache) > IMAGE_CACHE_MAX:
             self.imageCache.popitem(last=False)
@@ -110,7 +100,7 @@ class Resources(object):
 
     def queueLogo(self, citem):
         if hasattr(self.service,'logoQue'):
-            try: self.service.logoQue.add(dumpJSON({'name': citem.get('name')}))
+            try: self.service.logoQue.add(FileAccess.dumpJSON({'name': citem.get('name')}))
             except Exception as e: self.log(f'queueLogo failed: {e}', xbmc.LOGWARNING)
 
 
@@ -183,12 +173,12 @@ class Resources(object):
                     'smb://' in lower_image or 'nfs://' in lower_image):
                 # convert to web served image URL
                 if image.startswith('image://'):
-                    image = '%s/image/%s'%(self.baseURL,quoteString(image))
+                    image = '%s/image/%s'%(self.baseURL,Globals._quoteString(image))
                 elif not image.startswith('http://%s/logos/'%(self.remoteHost)):
-                    image = 'http://%s/images/%s'%(self.remoteHost,quoteString(image))
+                    image = 'http://%s/images/%s'%(self.remoteHost,Globals._quoteString(image))
                 # Cache the resolved image path and return the hosted logo URL
                 self.setCache(chname, image)
-                return 'http://%s/logos/%s'%(self.remoteHost,quoteString(chname)) # host channel logos
+                return 'http://%s/logos/%s'%(self.remoteHost,Globals._quoteString(chname)) # host channel logos
         return self.setCache(chname, image)
 
 
@@ -241,8 +231,8 @@ class Resources(object):
             return results
 
         resources = __getResources(citem.get('type','Custom'))
-        checksum  = getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if SETTINGS.hasAddon(id)]))
-        cacheName = 'getLogoResources.%s.%s' % (getMD5(citem.get('name')), select)
+        checksum  = Globals._getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if SETTINGS.hasAddon(id)]))
+        cacheName = 'getLogoResources.%s.%s' % (Globals._getMD5(citem.get('name')), select)
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
             logos = []
@@ -274,7 +264,7 @@ class Resources(object):
 
     def getTVShowLogo(self, chname: str, select: bool=False):
         self.log('getTVShowLogo, chname = %s, select = %s'%(chname,select))
-        cacheName     = 'getTVShowLogo.%s.%s'%(getMD5(chname),select)
+        cacheName     = 'getTVShowLogo.%s.%s'%(Globals._getMD5(chname),select)
         cacheResponse = self.cache.get(cacheName)
         if not cacheResponse:
             logos = []
@@ -336,10 +326,8 @@ class Resources(object):
         # fallback to SequenceMatcher only when token overlap suggests potential match
         try:
             ratio = SequenceMatcher(None, a, b).ratio()
-            if ratio >= threshold:
-                return True
-        except Exception:
-            pass
+            if ratio >= threshold: return True
+        except Exception: pass
         return False
 
 
@@ -353,10 +341,10 @@ class Resources(object):
             try:
                 from PIL import Image, ImageStat
                 # translate Kodi resource/image path to filesystem path
-                file_path = unquoteString(file.replace('resource://','special://home/addons/').replace('image://','')).replace('\\','/')
+                file_path = Globals._unquoteString(file.replace('resource://','special://home/addons/').replace('image://','')).replace('\\','/')
                 # open via FileAccess.stream to avoid loading multiple copies
                 with FileAccess.stream(file_path, "rb") as f:
-                    img = Image.open(io.BytesIO(f.read()))
+                    img = Image.open(BytesIO(f.read()))
                     stat = ImageStat.Stat(img)
                     # consider mono if all channel variances are very low
                     mono = all(v < 0.005 for v in stat.var)
@@ -396,7 +384,7 @@ class Resources(object):
                 except Exception:
                     pass
 
-            img = Image.open(io.BytesIO(bg_bytes)).convert("RGBA")
+            img = Image.open(BytesIO(bg_bytes)).convert("RGBA")
             draw = ImageDraw.Draw(img)
             font = ImageFont.truetype(font_path, font_size)
             # Use textbbox for accurate measurement including font offsets
@@ -413,7 +401,7 @@ class Resources(object):
             image_path = os.path.join(FileAccess.translatePath(TEMP_IMAGE_LOC), image_filename)
 
             # Save to a BytesIO then write using FileAccess to avoid PIL writing to paths that may not be writable directly
-            buf = io.BytesIO()
+            buf = BytesIO()
             img.save(buf, format="PNG")
             buf.seek(0)
             out = FileAccess.open(image_path, "wb")

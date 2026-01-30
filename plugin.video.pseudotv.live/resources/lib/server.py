@@ -17,15 +17,13 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import gzip, mimetypes, socket, time, threading, os, errno
+import gzip, mimetypes, socket, errno
 
 from zeroconf                  import *
 from globals                   import *
-from functools                 import partial
+from resources                 import Resources
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
-from io                        import BytesIO
-from resources                 import Resources
 #todo proper REST API to handle server/client communication incl. sync/update triggers.
 #todo incorporate experimental webserver UI to master branch.
 
@@ -33,10 +31,10 @@ ZEROCONF_SERVICE      = "_xbmc-jsonrpc-h._tcp.local."
 COMPRESSION_THRESHOLD = 1024  # 1 KB
 CHUNK_SIZE            = 4096 #4 KB
 
-class Discovery:
+class Discovery(Thread):
     class MyListener(object):
         def __init__(self, multiroom=None):
-            self.zServers  = dict()
+            self.zServers  = {}
             self.zeroconf  = Zeroconf()
             self.multiroom = multiroom
 
@@ -57,36 +55,32 @@ class Discovery:
                     self.multiroom.addServer(requestURL(self.zServers[server]['bonjour'],cache={'cache':SETTINGS.cache,'json_data':True, "life": datetime.timedelta(seconds=300)}))
             
     def __init__(self, service=None, multiroom=None):
-        self.log("__init__")
+        Thread.__init__(self)
         self.service   = service
         self.monitor   = service.monitor
         self.multiroom = multiroom
-                   
+        self.start()
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
+    def run(self):
+        try: 
+            zcons = self.multiroom._getStatus()
+            self.log("run, starting ZEROCONF ENABLED (%s)"%(zcons))
+            if zcons:
+                zconf = Zeroconf()
+                self.log("run, Multicast DNS Service waiting for (%s)"%(ZEROCONF_SERVICE))
+                SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
+                ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
+                self.service._shutdown(DISCOVER_INTERVAL)
+                self.log("run, Multicast DNS Service stopping search for (%s)"%(ZEROCONF_SERVICE))
+                zconf.close()
+            SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
+            self.log("run, shutting down...")
+        except Exception as e: self.log("run, Multicast DNS Service startup failed! %s"%(e), xbmc.LOGERROR)
+                   
 
-    def _start(self):
-        while not self.monitor.abortRequested():
-            if self.service._sleep(300): break
-            else:
-                try: 
-                    zcons = self.multiroom._getStatus()
-                    if zcons:
-                        zconf = Zeroconf()
-                        self.log("_start, Multicast DNS Service waiting for (%s)"%(ZEROCONF_SERVICE))
-                        SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
-                        ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
-                        self.service._sleep(DISCOVER_INTERVAL)
-                        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
-                        self.log("_start, Multicast DNS Service stopping search for (%s)"%(ZEROCONF_SERVICE))
-                        zconf.close()
-                except Exception as e:
-                    self.log("_start, Multicast DNS Service startup failed! %s"%(e), xbmc.LOGERROR)
-                    break
-            
-            
 class MyHandler(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server, service):
         self.service   = service
@@ -118,7 +112,7 @@ class MyHandler(BaseHTTPRequestHandler):
                     if server.get('uuid') == uuid: return True
 
         if self.path.lower().endswith('.json'):
-            try:    incoming = loadJSON(self.rfile.read(int(self.headers['content-length'])).decode())
+            try:    incoming = FileAccess.loadJSON(self.rfile.read(int(self.headers['content-length'])).decode())
             except: incoming = {}
             
             if __verifyUUID(incoming.get('uuid')):
@@ -131,7 +125,7 @@ class MyHandler(BaseHTTPRequestHandler):
                     self.send_response(200, "OK")
                 #filelist w/resume - paused channel rule
                 elif self.path.lower().startswith('/filelist') and incoming.get('payload'):
-                    if setJSON(os.path.join(RESUME_LOC,self.path.replace('/filelist/','')),incoming.get('payload')):
+                    if FileAccess.setJSON(os.path.join(RESUME_LOC,self.path.replace('/filelist/','')),incoming.get('payload')):
                         DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30060),incoming.get('name',ADDON_NAME)))
                     self.send_response(200, "OK")
                 elif self.path.startswith(('/manager','/wizard')) and self.path.lower().endswith('form.html'):
@@ -141,7 +135,7 @@ class MyHandler(BaseHTTPRequestHandler):
                             SETTINGS.setPayload(incoming.get('payload'))
                         else:
                             # Fallback: write to resume location as remote_payload.json
-                            setJSON(os.path.join(RESUME_LOC, 'remote_payload.json'), incoming.get('payload'))
+                            FileAccess.setJSON(os.path.join(RESUME_LOC, 'remote_payload.json'), incoming.get('payload'))
                         DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30108),incoming.get('name',ADDON_NAME)))
                         self.send_response(200, "OK")
                     except Exception as e:
@@ -185,22 +179,22 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.end_headers()
             elif self.path.startswith('/logos/'):
                 self.send_response(302) # 302 Temporary Redirect
-                chname = unquoteString(self.path.split('/logos/')[1])
-                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{quoteString(self.resources.getCache(chname))}')
-                self.log(f'do_GET, redirecting to http://{PROPERTIES.getRemoteHost()}/images/{quoteString(image)}')
+                chname = Globals._unquoteString(self.path.split('/logos/')[1])
+                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getCache(chname))}')
+                self.log(f'do_GET, redirecting to http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(image)}')
                 self.end_headers()
             else:
                 self.send_response(200)
                 if   self.path.lower() == f'/{M3UFLE.lower()}':   __sendFile(M3UFLEPATH, use_compression)
                 elif self.path.lower() == f'/{GENREFLE.lower()}': __sendFile(GENREFLEPATH, use_compression)
                 elif self.path.lower() == f'/{XMLTVFLE.lower()}': __sendFile(XMLTVFLEPATH, use_compression)
-                elif self.path.startswith('/images/'):            __sendFile(unquoteString(self.path.split('/images/')[1]), False)
+                elif self.path.startswith('/images/'):            __sendFile(Globals._unquoteString(self.path.split('/images/')[1]), False)
                 else:
                     chunk = b''
-                    if   self.path.lower() == f'/{BONJOURFLE.lower()}': chunk = dumpJSON(SETTINGS.getBonjour(inclChannels=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
-                    elif self.path.startswith('/filelist'):             chunk = dumpJSON(getJSON((os.path.join(RESUME_LOC, self.path.replace('/filelist/',''))))).encode(encoding=DEFAULT_ENCODING)
+                    if   self.path.lower() == f'/{BONJOURFLE.lower()}': chunk = FileAccess.dumpJSON(SETTINGS.getBonjour(inclChannels=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
+                    elif self.path.startswith('/filelist'):             chunk = FileAccess.dumpJSON(FileAccess.getJSON((os.path.join(RESUME_LOC, self.path.replace('/filelist/',''))))).encode(encoding=DEFAULT_ENCODING)
                     elif self.path.startswith('/remote'):
-                        if   self.path.endswith('.json'):               chunk = dumpJSON(SETTINGS.getPayload(),idnt=4).encode(encoding=DEFAULT_ENCODING)
+                        if   self.path.endswith('.json'):               chunk = FileAccess.dumpJSON(SETTINGS.getPayload(),idnt=4).encode(encoding=DEFAULT_ENCODING)
                         elif self.path.endswith('.html'): 
                             use_compression = False
                             chunk = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
@@ -212,7 +206,7 @@ class MyHandler(BaseHTTPRequestHandler):
                         fle  = FileAccess.open(FORM_DEFAULT,'r')
                         html = fle.read()
                         fle.close()
-                        html.format(json=_escape_html(dumpJSON(SETTINGS.getPayload(), idnt=4)), uuid=SETTINGS.getMYUUID())
+                        html.format(json=_escape_html(FileAccess.dumpJSON(SETTINGS.getPayload(), idnt=4)), uuid=SETTINGS.getMYUUID())
                         chunk = html.encode(encoding=DEFAULT_ENCODING)
                     else: return self.send_error(404, "File Not Found [%s]" % self.path)
                     __sendChunk(self.path, chunk, use_compression)

@@ -17,9 +17,9 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
+import traceback
 
-import json,traceback
-from globals import *
+from constants   import *
 
 def log(event, level=xbmc.LOGDEBUG):
     """
@@ -68,13 +68,5 @@ def log(event, level=xbmc.LOGDEBUG):
         # Log the event if the level is above the configured debug level
         if level >= DEBUG_LEVEL:
             xbmc.log(event, level)
-            try:    entries = json.loads(xbmcgui.Window(10000).getProperty('%s.debug.log' % (ADDON_ID))).get('DEBUG', {})
-            except: entries = {}
-            # Add the event to the debug entries
-            entries.setdefault(DEBUG_NAMES[DEBUG_LEVEL], []).append('%s - %s: %s' % (datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT), DEBUG_NAMES[level], event))
-            # Store the debug entries in the window property
-            try: xbmcgui.Window(10000).setProperty('%s.debug.log' % (ADDON_ID), json.dumps({'DEBUG': entries}, indent=4))
-            except: pass
-            # Mark the debug property as active
             if not xbmcgui.Window(10000).getProperty('%s.has.debug' % (ADDON_ID)) == 'true':
                 xbmcgui.Window(10000).setProperty('%s.has.debug' % (ADDON_ID), 'true')

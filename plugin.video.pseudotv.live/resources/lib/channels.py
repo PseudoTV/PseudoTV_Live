@@ -26,10 +26,10 @@ class Channels(object):
     def __init__(self, file=CHANNELFLEPATH, writable=False):
         self.writable   = writable
         self.channelFile = file
-        self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
+        self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP = self.channelDATA.get('channels',[{}]).pop(0)
         self.channelRULE = self.channelTEMP.pop('rules')
-        self.channelTEMP['rules'] = dict()
+        self.channelTEMP['rules'] = {}
         self.channelDATA.update(self._load())
         self.channelDATA_OLD = self.channelDATA.copy()
         
@@ -43,7 +43,7 @@ class Channels(object):
 
 
     def _load(self) -> dict:
-        channelDATA = getJSON(self.channelFile)
+        channelDATA = FileAccess.getJSON(self.channelFile)
         SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
         self.log('_load, file = %s\nchannels = %s'%(self.channelFile,len(channelDATA.get('channels',[]))))
         return channelDATA
@@ -67,7 +67,7 @@ class Channels(object):
         self.channelDATA['uuid']     = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
         self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
-        if self.writable: return setJSON(self.channelFile,self.channelDATA)
+        if self.writable: return FileAccess.setJSON(self.channelFile,self.channelDATA)
         
         
     def getTemplate(self) -> dict: 

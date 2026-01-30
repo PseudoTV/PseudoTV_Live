@@ -54,7 +54,6 @@ class RulesList(object):
                          DisableRestart(),
                          DisableOnChange(),
                          ForceRebuild(),
-                         PageLimit(),
                          DurationOptions(),
                          IncludeOptions(),
                          PreRoll(),
@@ -64,7 +63,8 @@ class RulesList(object):
                          ForceEpisode(),
                          ForceRandom(),
                          EvenShowsRule(),
-                         PauseRule()]
+                         PauseRule(),
+                         PadScheduling()]
                           
         if channels: self.ruleItems = self.loadRules(channels)
         else:        self.ruleItems = []
@@ -80,10 +80,10 @@ class RulesList(object):
                   
     def dumpRules(self, rules={}):
         #convert rule instances to json
-        nrules = dict()
+        nrules = {}
         if not list(rules.items()): return None
         for myId, rule in list(rules.items()):
-            ritem = dict()
+            ritem = {}
             ritem[str(myId)] = {"values":dict()}
             for idx, value in enumerate(rule.optionValues):
                 ritem[str(myId)]["values"][str(idx)] = value
@@ -91,35 +91,33 @@ class RulesList(object):
         return nrules
             
 
-    def loadRules(self, channels=None, append=False, incRez=True):
-        #load channel rules and their instances. append = full rule list, incRez= include reserved for auto-tuning rules.
+    def loadRules(self, channels=None, append=False):
+        #load channel rules and their instances. append = full rule list.
         if channels is None: channels = Channels().getChannels()
         def _load(ruleList, citem={}):
             tmpruleList = {}
             if not append and len(citem.get('rules',{})) == 0: return None
             for rule in ruleList:
-                if not incRez and rule.ignore: continue
-                else:
-                    ruleInstance = rule.copy()
-                    tmpritem = {"values":{}}
-                    for idx, value in enumerate(ruleInstance.optionValues): #load default rule as template
-                        tmpritem["values"][str(idx)] = value
+                ruleInstance = rule.copy()
+                tmpritem = {"values":{}}
+                for idx, value in enumerate(ruleInstance.optionValues): #load default rule as template
+                    tmpritem["values"][str(idx)] = value
 
-                    if citem.get('rules',{}).get(str(rule.myId)):
-                        for key, value in list(citem['rules'][str(rule.myId)].get('values',{}).items()): #load channel rule
-                            try:
-                                tmpritem["values"].update({str(key):value}) #update default rule value with channel value.
-                                ruleInstance.optionValues[int(key)] = tmpritem["values"][str(key)] #load values to rule instance
-                            except Exception as e: log('[%s] loadRules, failed! %s\nrule = %s'%(citem['id'],e,citem['rules'][str(rule.myId)]), xbmc.LOGERROR)
-                        tmpruleList[str(rule.myId)] = ruleInstance
-                        
-                    elif append: #append missing default rule values
-                        tmpruleList[str(rule.myId)] = ruleInstance
+                if citem.get('rules',{}).get(str(rule.myId)):
+                    for key, value in list(citem['rules'][str(rule.myId)].get('values',{}).items()): #load channel rule
+                        try:
+                            tmpritem["values"].update({str(key):value}) #update default rule value with channel value.
+                            ruleInstance.optionValues[int(key)] = tmpritem["values"][str(key)] #load values to rule instance
+                        except Exception as e: log('[%s] loadRules, failed! %s\nrule = %s'%(citem['id'],e,citem['rules'][str(rule.myId)]), xbmc.LOGERROR)
+                    tmpruleList[str(rule.myId)] = ruleInstance
+                    
+                elif append: #append missing default rule values
+                    tmpruleList[str(rule.myId)] = ruleInstance
 
-            self.log('[%s] loadRules: append = %s, incRez = %s, rule myIds = %s'%(citem.get('id'), append, incRez,list(tmpruleList.keys())))
+            self.log('[%s] loadRules: append = %s, rule myIds = %s'%(citem.get('id'), append,list(tmpruleList.keys())))
             rules[citem['id']] = tmpruleList
             
-        rules    = dict()
+        rules    = {}
         ruleList = self.ruleList.copy()
         ruleList.pop(0) #remove boilerplate baseRule()
         [_load(ruleList,channel) for channel in channels]
@@ -306,7 +304,7 @@ class BaseRule(object):
         
         if isinstance(self.selectBoxOptions[optionindex],dict): values, options = list(self.selectBoxOptions[optionindex].values()), list(self.selectBoxOptions[optionindex].keys())
         else:                                                   values, options = self.selectBoxOptions[optionindex], self.optionValues[optionindex]
-        select = self.dialog.selectDialog([str(v).title() for v in selectBoxOptions], header, findItemsInLST(values, options), useDetails, autoclose, multi)
+        select = self.dialog.selectDialog([str(v).title() for v in selectBoxOptions], header, Globals._findItemsInLST(values, options), useDetails, autoclose, multi)
         if not select is None: 
             if isinstance(self.selectBoxOptions[optionindex],dict): self.optionValues[optionindex] = self.selectBoxOptions[optionindex].get(selectBoxOptions[select])
             else:                                                   self.optionValues[optionindex] = selectBoxOptions[select]
@@ -491,7 +489,7 @@ class SetScreenVingette(BaseRule):
     def getTitle(self):
         return '%s (%s)'%(self.name,self.optionValues)
             
-            # todo set viewmode as dict() response from json.
+            # todo set viewmode as {} response from json.
     def getPosition(self, optionindex):#todo vin utility to adjust zoom,vshift,pratio and nls
         self.dialog.notificationDialog(LANGUAGE(32020))
 
@@ -891,55 +889,6 @@ class ForceRebuild(BaseRule):
         return parameter
             
             
-class PageLimit(BaseRule):
-    def __init__(self):
-        self.myId               = 499
-        self.name               = '%s & Padding'%(LANGUAGE(30015))
-        self.description        = '%s & Padding'%(LANGUAGE(30015))
-        self.optionLabels       = [LANGUAGE(30015),"Content Padding","Programme Padding"]
-        self.optionValues       = [SETTINGS.getSettingInt('Page_Limit'),False,True]
-        self.optionDescriptions = [LANGUAGE(33015),"Pad Content with duplicates to meet page limit quota","Pad Programmes with duplicates to meet Minimum guide requirements"]
-        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions   = [list(range(25,501,25))]
-        self.storedValues       = [[],[],[]]
-
-
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
-                  
-
-    def copy(self):
-        return PageLimit()
-
-
-    def getTitle(self):
-        return self.name
-
-
-    def onAction(self, optionindex):
-        if optionindex == 0: self.onActionSelect(optionindex)
-        else:                self.onActionToggleBool(optionindex)
-        return self.optionValues[optionindex]
-
-
-    def runAction(self, actionid, citem, parameter, builder):
-        if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedValues[0] = builder.limit
-            self.storedValues[1] = builder.filelistQuota
-            self.storedValues[2] = builder.schedulingQuota
-            builder.limit           = self.optionValues[0]
-            builder.filelistQuota   = self.optionValues[1]
-            builder.schedulingQuota = self.optionValues[2]
-            self.log("runAction, setting limit = %s, filelistQuota = %s, schedulingQuota = %s"%(builder.limit,builder.filelistQuota,builder.schedulingQuota))
-            
-        elif actionid == RULES_ACTION_CHANNEL_STOP:
-            builder.limit           = self.storedValues[0]
-            builder.filelistQuota   = self.storedValues[1]
-            builder.schedulingQuota = self.storedValues[2]
-            self.log("runAction, restoring limit = %s, filelistQuota = %s, schedulingQuota = %s"%(builder.limit,builder.filelistQuota,builder.schedulingQuota))
-        return parameter
-        
-        
 class DurationOptions(BaseRule): #PRE-BUILD RULES [500-599]
     def __init__(self):
         self.myId               = 500
@@ -1477,11 +1426,11 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         
         
     def _getURL(self, id):
-        return 'http://%s/filelist/%s.json'%(PROPERTIES.getRemoteHost(),getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id)))
+        return 'http://%s/filelist/%s.json'%(PROPERTIES.getRemoteHost(),Globals._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id)))
         
         
     def _getPath(self, id):
-        return os.path.join(RESUME_LOC,'%s.json'%(getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id))))
+        return os.path.join(RESUME_LOC,'%s.json'%(Globals._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id))))
         
         
     def _getTotRuntime(self, id, filelist=[]):
@@ -1504,7 +1453,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         self.log("[%s] runAction, _set: filelist = %s, resume = %s, url = %s"%(id,len(filelist),resume,self.optionValues[1]))
         friendly = PROPERTIES.getFriendlyName()
         if resume.get('updated',{}).get('instance') == friendly: #local
-            return setJSON(self._getPath(id),{'resume':resume,'filelist':filelist})
+            return FileAccess.setJSON(self._getPath(id),{'resume':resume,'filelist':filelist})
         elif self.optionValues[1]:#remote
             return requestURL(self.optionValues[1],payload={'uuid':SETTINGS.getMYUUID(),'name':friendly,'payload':{'resume':resume,'filelist':filelist}},
                               cache={"cache":SETTINGS.cacheDB, "json_data": True, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
@@ -1513,7 +1462,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
     def _get(self, id):
         self.log("[%s] runAction, _get: url = %s"%(id,self.optionValues[1]))
         if self.optionValues[1]: return requestURL(self.optionValues[1], cache={"cache":SETTINGS.cacheDB, "json_data": True, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
-        else:                    return getJSON(self._getPath(id))
+        else:                    return FileAccess.getJSON(self._getPath(id))
 
 
     def _getResume(self, id):
@@ -1597,4 +1546,62 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
                 self._set(citem.get('id'),self.storedValues[1],parameter.get('resume'))
         return parameter
        
-               
+       
+class PadScheduling(BaseRule):
+    def __init__(self):
+        self.myId               = 3001
+        self.name               = "Pad Scheduling"
+        self.description        = f"Pad EPG with duplicates to met minimum EPG requirement [{MIN_EPG_DURATION//60//60} Hrs.]"
+        self.optionLabels       = ["Pad Scheduling"]
+        self.optionValues       = [False]#SETTINGS.getSettingBool('Enable_Guide_Padding')
+        self.optionDescriptions = [""]
+        self.actions            = [RULES_ACTION_CHANNEL_START, RULES_ACTION_CHANNEL_BUILD_TIME_POST,RULES_ACTION_CHANNEL_STOP]
+        self.storedValues       = [[],[]]
+        
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
+    def copy(self): 
+        return PadScheduling()
+        
+        
+    def getTitle(self): 
+        return '%s (%s)'%(self.name,{True:LANGUAGE(30184),False:LANGUAGE(30021)}[self.optionValues[0]])
+            
+            
+    def onAction(self, optionindex):
+        if optionindex == 0: self.onActionToggleBool(optionindex)
+        return self.optionValues[optionindex]
+        
+
+    def runAction(self, actionid, citem, parameter, inherited):
+        self.log('[%s] runAction, actionid = %s,'%(citem.get('id'),actionid))
+        if actionid == RULES_ACTION_CHANNEL_START:
+            self.storedValues[0]    = inherited.padScheduling
+            inherited.padScheduling = self.optionValues[0]
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_POST:
+            # pad scheduling with duplicates to met minimum guide requirements (MIN_EPG_DURATION).
+            if self.padScheduling and len(parameter) > 0:
+                iters  = cycle(parameter)
+                totDur = 0
+                start  = parameter[-1]['stop']
+                idx    = len(parameter)
+                now    = getUTCstamp()
+                while not inherited.monitor.abortRequested() and start <= (now + MIN_EPG_DURATION):
+                    if start >= (now + MIN_EPG_DURATION): break
+                    else: 
+                        idx += 1
+                        item = next(iters).copy()
+                        item["idx"]   = idx
+                        item['start'] = start
+                        item['stop']  = start + item['duration']
+                        start = item['stop']
+                        totDur += item['duration']
+                        parameter.append(item)
+                        inherited.pDialog = DIALOG._updateProgress(inherited.pDialog, inherited.pCount, message=f"{inherited.pName}: {LANGUAGE(33085)} {totDur}/{MIN_EPG_DURATION}",header=inherited.pHeader)
+                        self.log("[%s] addScheduling, ADD fileList = %s, totDur = %s/%s, stop = %s"%(citem['id'],len(parameter),totDur,MIN_EPG_DURATION,parameter[-1].get('stop')))
+        elif actionid == RULES_ACTION_CHANNEL_STOP:
+            inherited.padScheduling = self.storedValues[0]
+        return parameter

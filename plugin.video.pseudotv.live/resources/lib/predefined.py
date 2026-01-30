@@ -37,20 +37,20 @@ class Predefined(object):
         param = self.getTemplete()
         tv = param.copy()
         tv["order"]["method"] = "episode"
-        return ['videodb://recentlyaddedepisodes/?xsp=%s'%(dumpJSON(tv)),
-                'videodb://recentlyaddedmovies/?xsp=%s'%(dumpJSON(param))]
+        return ['videodb://recentlyaddedepisodes/?xsp=%s'%(FileAccess.dumpJSON(tv)),
+                'videodb://recentlyaddedmovies/?xsp=%s'%(FileAccess.dumpJSON(param))]
         
         
     def createMusicRecent(self) -> list:
-        return ['musicdb://recentlyaddedalbums/?xsp=%s'%(dumpJSON(self.getTemplete()))]
+        return ['musicdb://recentlyaddedalbums/?xsp=%s'%(FileAccess.dumpJSON(self.getTemplete()))]
         
         
     def createNetworkPlaylist(self, network: str, method: str='episode') -> list:
         param = self.getTemplete()
         param["type"] = "episodes"
         param["order"]["method"] = method
-        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[quoteString(network)]})
-        return ['videodb://tvshows/studios/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[Globals._quoteString(network)]})
+        return ['videodb://tvshows/studios/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(param))]
 
 
     def createShowPlaylist(self, show: str, method: str='episode') -> list:
@@ -60,42 +60,42 @@ class Predefined(object):
         try:
             match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(show)
             year, title = int(match.group(2)), match.group(1)
-            param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":"is","value":[year]},{"field":"tvshow","operator":"is","value":[quoteString(title)]}])
+            param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":"is","value":[year]},{"field":"tvshow","operator":"is","value":[Globals._quoteString(title)]}])
         except:
-            param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":"is","value":[quoteString(show)]})
-        return ['videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
+            param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":"is","value":[Globals._quoteString(show)]})
+        return ['videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(param))]
 
 
     def createTVGenrePlaylist(self, genre: str, method: str='episode') -> list:
         param = self.getTemplete()
         param["type"] = "episodes"
         param["order"]["method"] = method
-        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
-        return ['videodb://tvshows/genres/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[Globals._quoteString(genre)]})
+        return ['videodb://tvshows/genres/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(param))]
 
 
     def createMovieGenrePlaylist(self, genre: str, method: str='year') -> list:
         param = self.getTemplete()
         param["type"] = "movies"
         param["order"]["method"] = method
-        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
-        return ['videodb://movies/genres/?xsp=%s'%(dumpJSON(param))]
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[Globals._quoteString(genre)]})
+        return ['videodb://movies/genres/?xsp=%s'%(FileAccess.dumpJSON(param))]
 
 
     def createStudioPlaylist(self, studio: str, method: str='random') -> list:
         param = self.getTemplete()
         param["type"] = "movies"
         param["order"]["method"] = method
-        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[quoteString(studio)]})
-        return ['videodb://movies/studios/?xsp=%s'%(dumpJSON(param))]
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[Globals._quoteString(studio)]})
+        return ['videodb://movies/studios/?xsp=%s'%(FileAccess.dumpJSON(param))]
 
 
     def createMusicGenrePlaylist(self, genre: str, method: str='random') -> list:
         param = self.getTemplete()
         param["type"] = "music"
         param["order"]["method"] = method
-        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
-        return ['musicdb://songs/?xsp=%s'%(dumpJSON(param))]
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[Globals._quoteString(genre)]})
+        return ['musicdb://songs/?xsp=%s'%(FileAccess.dumpJSON(param))]
 
 
     def createGenreMixedPlaylist(self, genre: str) -> list:
