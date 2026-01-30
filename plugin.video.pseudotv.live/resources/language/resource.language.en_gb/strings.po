@@ -929,7 +929,7 @@ msgstr ""
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
-# Labels - strings 32000 thru 32999 reserved for scripts
+# Labels - strings 32000 thru 32999 reserved buildChannelsfor scripts
 msgctxt "#32000"
 msgid "Something went wrong, Try again later..."
 msgstr ""

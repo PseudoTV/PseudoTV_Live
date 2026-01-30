@@ -198,9 +198,7 @@ class ExecutorPool:
 
     def execute(self, func, *args, **kwargs):
         self.log("execute, func = %s"%(getattr(func, "__name__", str(func))))
-        try:
-            with timeit(func):
-                return func(*args, **kwargs)
+        try: return func(*args, **kwargs)
         except Exception as e: self.log("execute, func = %s failed! %s\nargs = %s, kwargs = %s"%(getattr(func, "__name__", str(func)), e, args, kwargs), xbmc.LOGERROR)
 
     def executors(self, func, items=None, timeout=None, *args, **kwargs):
@@ -263,14 +261,12 @@ class ExecutorPool:
             items = []
         self.log("generator, items = %s"%(len(items)))
         try:
-            with timeit(func):
-                results = []
-                for i in items:
-                    try:
-                        r = func(i, *args, **kwargs)
-                        if r is not None:
-                            results.append(r)
-                    except Exception as e:
-                        self.log("generator, func = %s item failed! %s\nargs = %s, kwargs = %s"%(getattr(func, "__name__", str(func)), e, args, kwargs), xbmc.LOGERROR)
-                return results
+            results = []
+            for i in items:
+                try:
+                    r = func(i, *args, **kwargs)
+                    if r is not None: results.append(r)
+                except Exception as e:
+                    self.log("generator, func = %s item failed! %s\nargs = %s, kwargs = %s"%(getattr(func, "__name__", str(func)), e, args, kwargs), xbmc.LOGERROR)
+            return results
         except Exception as e: self.log("generator, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(getattr(func, "__name__", str(func)), len(items), e, args, kwargs), xbmc.LOGERROR)

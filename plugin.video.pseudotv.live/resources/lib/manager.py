@@ -96,7 +96,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.focusIndex     = (self.startChannel - 1) #Covert from channel number to list index ie. channel 1 => index 0
             
             self.cache          = SETTINGS.cache
-            self.channels       = Channels()
+            self.channels       = Channels(writable=True)
             self.rule           = RulesList()
             self.jsonRPC        = JSONRPC()
             self.resources      = Resources()
@@ -899,7 +899,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         requestURL('http://%s/%s'%(self.server.get('host'), CHANNELFLE), payload={'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels})
                     else: #local save
                         self.channels.setChannels(channels) #save changes
-                        PROPERTIES.setPropTimer('chkChannels')#trigger channel building
+                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,'chkChannels')#trigger channel building
                     self.madeChanges = False
         self.closeManager()
             

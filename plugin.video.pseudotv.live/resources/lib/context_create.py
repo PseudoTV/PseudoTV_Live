@@ -58,7 +58,7 @@ class Create(object):
                         manager.channels.addChannel(manager.setLogo(citem['name'], citem))
                         manager.channels.setChannels()
                         manager.closeManager()
-                        PROPERTIES.setPropTimer('chkChannels')#trigger channel building
+                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,'chkChannels')#trigger channel building
                         del manager
                         manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=citem['number'])
                     del manager

@@ -58,8 +58,8 @@ def _run(sysARG, fitem: dict={}, nitem: dict={}):
         
 if __name__ == '__main__':
     mode = dict(urllib.parse.parse_qsl(sys.argv[2][1:].replace('.pvr',''))).get("mode")
-    if   mode == 'settings':                        SETTINGS.openSettings()
-    elif mode is None and PROPERTIES.hasChannels(): SETTINGS.openGuide()
-    elif mode is None and SETTINGS.hasAutotuned():  SETTINGS.autoTune()
-    else: executeit(_run)(sys.argv, decodePlot(BUILTIN.getInfoLabel('Plot')), decodePlot(BUILTIN.getInfoLabel('NextPlot')))
+    if   mode == 'settings':                        threadit(SETTINGS.openSettings)
+    elif mode is None and PROPERTIES.hasChannels(): threadit(SETTINGS.openGuide)
+    elif mode is None and SETTINGS.hasAutotuned():  threadit(SETTINGS.autoTune)
+    else: threadit(_run)(sys.argv, decodePlot(BUILTIN.getInfoLabel('Plot')), decodePlot(BUILTIN.getInfoLabel('NextPlot')))
     # if SETTINGS.hasAddon(PVR_CLIENT_ID,install=True,enable=True,force=True):

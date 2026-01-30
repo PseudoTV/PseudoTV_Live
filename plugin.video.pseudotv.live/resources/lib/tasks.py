@@ -213,13 +213,12 @@ class Tasks(object):
         if not channels:
             channels = builder.getVerifiedChannels()
             self.citems = channels
-            PROPERTIES.setChannels(len(channels)>0)
         if len(channels) > 0:
             self.log('chkChannels, channels = %s'%(len(channels)))
-            if PROPERTIES.hasChannels():
-                [self.service._que(builder.buildChannels,3,[channel]) for channel in channels]
-            else:
-                self.service._que(builder.buildChannels,3,channels)
+            # if PROPERTIES.hasChannels():
+                # [self.service._que(builder.buildChannels,3,[channel]) for channel in channels]
+            # else:
+            self.service._que(builder.buildChannels,3,channels)
         else:
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():      SETTINGS.setAutotuned(Autotune()._runTune())

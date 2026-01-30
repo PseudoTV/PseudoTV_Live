@@ -550,7 +550,7 @@ class Service(object):
         return self.pendingSuspend
         
 
-    def _sleep(self, wait=1.0): #waitForAbort replacement for tasks
+    def _sleep(self, wait=5.0): #waitForAbort replacement for tasks
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self.pendingInterrupt): return True
             else: wait -= CPU_CYCLE
@@ -572,8 +572,8 @@ class Service(object):
                 self.isScanning = BUILTIN.isScanning()
                 self.isPaused   = BUILTIN.isPaused()
                 self.isPlaying  = self._isPlaying()
-                if    self._shutdown() and self._interrupt(): break
-                elif  self._restart()  and self._interrupt(): break
+                if    self._shutdown() and self._interrupt() and self._sleep(): break
+                elif  self._restart()  and self._interrupt() and self._sleep(): break
                 else: self._tasks()
             return self._stop(self.pendingRestart)
 

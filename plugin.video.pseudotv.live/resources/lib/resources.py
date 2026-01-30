@@ -67,27 +67,18 @@ class Service(object):
 
 
 class Resources(object):
-    # Keep a shared Seasonal instance; create lazily to avoid startup cost in some environments
-    seasonal = None
 
     def __init__(self, service=None):
         if service is None: service = Service()
-        self.service    = service
-        self.jsonRPC    = service.jsonRPC
-        self.cache      = service.jsonRPC.cache
-        self.baseURL    = service.jsonRPC.buildWebBase()
-        self.remoteHost = PROPERTIES.getRemoteHost()
-        # Lazy create a Seasonal instance if needed
-        if Resources.seasonal is None:
-            Resources.seasonal = Seasonal()
-        self.seasonal = Resources.seasonal
-        self.season   = self.seasonal.getHoliday()
-        # lazy openRouter to avoid memory/initialization unless used
-        self._openRouter = None
-        # Load image cache and wrap in an LRU OrderedDict to limit memory
-        raw_cache = SETTINGS.getCacheSetting('imageCache'  , json_data=True) or {}
-        # Ensure OrderedDict respects recent usage (we'll treat stored dict insertion order as recency)
-        self.imageCache = OrderedDict(raw_cache)
+        self.service     = service
+        self.jsonRPC     = service.jsonRPC
+        self.cache       = service.jsonRPC.cache
+        self.baseURL     = service.jsonRPC.buildWebBase()
+        self.remoteHost  = PROPERTIES.getRemoteHost()
+        self.seasonal    = Seasonal()
+        self.season      = self.seasonal.getHoliday()
+        self._openRouter = OpenRouter(cache=self.cache)
+        self.imageCache  = OrderedDict(SETTINGS.getCacheSetting('imageCache'  , json_data=True) or {})
         # trim if oversized
         while len(self.imageCache) > IMAGE_CACHE_MAX:
             self.imageCache.popitem(last=False)
@@ -104,18 +95,6 @@ class Resources(object):
             pass
 
 
-    @property
-    def openRouter(self):
-        # lazy instantiation to reduce memory footprint until needed
-        if self._openRouter is None:
-            try:
-                self._openRouter = OpenRouter(cache=self.cache)
-            except Exception as e:
-                self.log(f'openRouter init failed: {e}', xbmc.LOGWARNING)
-                self._openRouter = None
-        return self._openRouter
-
-
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -126,49 +105,34 @@ class Resources(object):
         logos.extend(self.getLogoResources(citem, select=True) or [])
         logos.extend(self.getTVShowLogo(citem.get('name'), select=True) or [])
         self.log('selectLogo, chname = %s, logos = %s'%(citem.get('name'), len(logos)))
-        # filter falsy values and return
         return [f for f in logos if f]
 
 
     def queueLogo(self, citem):
         if hasattr(self.service,'logoQue'):
-            try:
-                # keep the queued object small (only required keys)
-                minimal = {'name': citem.get('name')}
-                self.service.logoQue.add(dumpJSON(minimal))
-            except Exception as e:
-                self.log(f'queueLogo failed: {e}', xbmc.LOGWARNING)
+            try: self.service.logoQue.add(dumpJSON({'name': citem.get('name')}))
+            except Exception as e: self.log(f'queueLogo failed: {e}', xbmc.LOGWARNING)
 
 
     def getCache(self, chname):
         # Use OrderedDict LRU behavior: move to end on access
         image = self.imageCache.get(chname)
         if image is not None:
-            try:
-                self.imageCache.move_to_end(chname)
-            except Exception:
-                pass
-        else:
-            # Defer expensive lookup to queue; do not eagerly allocate heavy objects here
-            self.queueLogo({'name':chname})
+            try: self.imageCache.move_to_end(chname)
+            except Exception: pass
+        else: self.queueLogo({'name':chname})
         self.log('getCache, name = %s, image = %s'%(chname,image))
         return image
 
 
     def setCache(self, chname, image=None):
         # avoid caching sentinel logo values
-        if image in [LOGO,COLOR_LOGO]:
-            return image
+        if image in [LOGO,COLOR_LOGO]: return image
         try:
-            # If image is falsy, ensure we don't store it
-            if not image:
-                return None
-            # update LRU cache; evict oldest when exceeding limit
+            if not image: return None
             self.imageCache[chname] = image
-            try:
-                self.imageCache.move_to_end(chname)
-            except Exception:
-                pass
+            try: self.imageCache.move_to_end(chname)
+            except Exception: pass
             while len(self.imageCache) > IMAGE_CACHE_MAX:
                 self.imageCache.popitem(last=False)
             self.log('setCache, name = %s, image = %s'%(chname,image))
@@ -231,7 +195,6 @@ class Resources(object):
     @cacheit(expiration=datetime.timedelta(minutes=5))
     def getLocalLogo(self, chname: str, select: bool=False) -> list:
         logos = []
-        # single os.path.join per attempt, reduce string churn
         for path in LOCAL_FOLDERS:
             for ext in IMG_EXTS:
                 fn = os.path.join(path, f'{chname}{ext}')
@@ -264,7 +227,6 @@ class Resources(object):
 
         def __fillResource(id):
             results  = {}
-            # Walk the addon's resources directory for image files; use checksum/version to expire cache
             try:
                 addon_version = SETTINGS.getAddonDetails(id).get('version', ADDON_VERSION)
                 response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources' % id),
@@ -273,15 +235,13 @@ class Resources(object):
                                                          expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
                 for path, images in list(response.items()):
                     for image in images:
-                        # store key without extension to match lookups
                         results[os.path.splitext(image)[0]] = '%s/%s' % (path, image)
             except Exception as e:
                 self.log('__fillResource failed for %s: %s' % (id, e), xbmc.LOGWARNING)
             return results
 
         resources = __getResources(citem.get('type','Custom'))
-        # Use a stable checksum based on addon versions to reduce unnecessary rescans
-        checksum = getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if SETTINGS.hasAddon(id)]))
+        checksum  = getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if SETTINGS.hasAddon(id)]))
         cacheName = 'getLogoResources.%s.%s' % (getMD5(citem.get('name')), select)
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
@@ -330,7 +290,6 @@ class Resources(object):
                         logo = art.get(key,'')
                         if not logo:
                             continue
-                        # Normalize common kodi image:// pattern
                         logo = logo.replace('image://DefaultFolder.png/','').rstrip('/')
                         if logo:
                             self.log('getTVShowLogo, found %s'%(logo))
@@ -361,15 +320,12 @@ class Resources(object):
 
         a = __normalize(chname)
         b = __normalize(title)
-        if not a and not b:
-            return False
-        if a == b:
-            return True
+        if not a and not b: return False
+        if a == b:          return True
         # quick token checks to avoid heavy SequenceMatcher when unlikely to match
         a_tokens = set(_TOKEN_SPLIT_RE.split(a))
         b_tokens = set(_TOKEN_SPLIT_RE.split(b))
-        if not a_tokens or not b_tokens:
-            return False
+        if not a_tokens or not b_tokens: return False
         # if there's very low token intersection, skip expensive ratio
         inter = a_tokens.intersection(b_tokens)
         if len(inter) / max(1, min(len(a_tokens), len(b_tokens))) < 0.25:

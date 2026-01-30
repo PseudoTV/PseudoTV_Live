@@ -107,20 +107,20 @@ class Library(object):
         
         
     def updateLibrary(self, types, silent=False, complete=False):
-        if not PROPERTIES.isRunning('Library.updateLibrary'):
-            with PROPERTIES.chkRunning('Library.updateLibrary'):
-                for type in types:
-                    items = self.jsonRPC.cache.get("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__))
-                    if items is None: 
-                        self.pCount  = 0
-                        self.pMSG    = type
-                        self.pHeader = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(32041))
-                        with DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
-                            items = self.AUTOTUNE[type]['func']()
-                    if items is None: self.service._que(self.service.tasks.chkLibrary,2,*(type,silent))
-                    else:
-                        complete = self.setLibrary(type,items)
-                        self.log("updateLibrary, type = %s, items = %s, complete = %s"%(type,len(items),complete))
+        # if not PROPERTIES.isRunning('Library.updateLibrary'):
+        with PROPERTIES.chkRunning('Library.updateLibrary'):
+            for type in types:
+                items = self.jsonRPC.cache.get("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__))
+                if items is None: 
+                    self.pCount  = 0
+                    self.pMSG    = type
+                    self.pHeader = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(32041))
+                    with DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
+                        items = self.AUTOTUNE[type]['func']()
+                if items is None: self.service._que(self.service.tasks.chkLibrary,2,*(type,silent))
+                else:
+                    complete = self.setLibrary(type,items)
+                    self.log("updateLibrary, type = %s, items = %s, complete = %s"%(type,len(items),complete))
         return complete
 
 

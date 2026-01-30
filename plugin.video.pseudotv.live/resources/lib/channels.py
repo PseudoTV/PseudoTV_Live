@@ -23,21 +23,29 @@ from globals    import *
 # https://pypi.org/project/dataclasses-json/
 class Channels(object):
              
-    def __init__(self):
+    def __init__(self, file=CHANNELFLEPATH, writable=False):
+        self.writable   = writable
+        self.channelFile = file
         self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP = self.channelDATA.get('channels',[{}]).pop(0)
         self.channelRULE = self.channelTEMP.pop('rules')
         self.channelTEMP['rules'] = dict()
-        self.channelDATA.update(self.loadChannels())
+        self.channelDATA.update(self._load())
+        self.channelDATA_OLD = self.channelDATA.copy()
+        
+        
+    def __del__(self):
+        self._save()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _load(self, file=CHANNELFLEPATH) -> dict:
-        channelDATA = getJSON(file)
-        self.log('_load, file = %s\nchannels = %s'%(file,len(channelDATA.get('channels',[]))))
+    def _load(self) -> dict:
+        channelDATA = getJSON(self.channelFile)
+        SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
+        self.log('_load, file = %s\nchannels = %s'%(self.channelFile,len(channelDATA.get('channels',[]))))
         return channelDATA
     
     
@@ -55,12 +63,12 @@ class Channels(object):
             else: yield citem
                 
                 
-    def _save(self, file=CHANNELFLEPATH) -> bool:
+    def _save(self) -> bool:
         self.channelDATA['uuid']     = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
-        self.log('_save, file = %s\nchannels = %s'%(file,len(self.channelDATA['channels'])))
-        return setJSON(file,self.channelDATA)
-
+        self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
+        if self.writable: return setJSON(self.channelFile,self.channelDATA)
+        
         
     def getTemplate(self) -> dict: 
         return self.channelTEMP.copy()
@@ -96,13 +104,7 @@ class Channels(object):
         PROPERTIES.setChannels(len(channels)>0)
         return self._save()
 
-    
-    def loadChannels(self):
-        channelDATA = self._load()
-        SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
-        return channelDATA
-        
-    
+
     def getImports(self) -> list:
         return self.channelDATA.get('imports',[])
         
@@ -117,41 +119,28 @@ class Channels(object):
          
 
     def delChannel(self, citem: dict={}) -> bool:
+        if isinstance(citem,list): return any([self.delChannel(channel) for channel in channels])
         self.log('delChannel,[%s]'%(citem['id']), xbmc.LOGINFO)
         idx, channel = self.findChannel(citem)
         if idx is not None: self.channelDATA['channels'].pop(idx)
         return True
     
     
-    def delChannels(self, channels: list=[]) -> bool:
-        return [self.delChannel(channel) for channel in channels]
-        
-    
     def addChannel(self, citem: dict={}) -> bool:
-        idx, channel = self.findChannel(citem)
+        if isinstance(citem,list): return any([self.addChannel(channel) for channel in channels])
+        channels = self.getChannels()
+        idx, channel = self.findChannel(citem, channels)
         if idx is not None:
-            for key in ['id','rules','number','favorite','logo']: 
-                if channel.get(key): citem[key] = channel[key] # existing id found, reuse channel meta.
-                
-            if citem.get('favorite',False):
-                citem['group'].append(LANGUAGE(32019))
-                citem['group'] = sorted(set(citem['group']))
-                
+            channels[idx].update(citem)
             self.log('addChannel, [%s] updating channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
-            self.channelDATA['channels'][idx] = citem
+            self.channelDATA['channels'] = channels
         else:
             self.log('addChannel, [%s] adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
             self.channelDATA.setdefault('channels',[]).append(citem)
         return True
         
         
-    def addChannels(self, channels: list=[]) -> bool:
-        return [self.addChannel(channel) for channel in channels]
-        
-        
     def findChannel(self, citem: dict={}, channels: list=[]) -> tuple:
         if len(channels) == 0: channels = self.getChannels()
-        for idx, eitem in enumerate(channels):
-            if citem.get('id') == (eitem.get('id') or str(random.random())):
-                return idx, eitem
-        return None, {}
+        return tuple(next(((idx, eitem) for idx, eitem in enumerate(channels) if citem.get('id') == (eitem.get('id') or str(random.random()))), (None,{})))
+        

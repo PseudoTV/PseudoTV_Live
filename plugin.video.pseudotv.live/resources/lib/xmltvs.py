@@ -25,30 +25,40 @@ from seasonal   import Seasonal
 #todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
 
 class XMLTVS(object):
-    def __init__(self):   
+    def __init__(self, file=XMLTVFLEPATH, writable=False):
+        self.writable = writable
+        self.XMLTVFile = file
         self.XMLTVDATA = self._load()
         self.stopTimes = dict(self.loadStopTimes())
+        
+        
+    def __del__(self):
+        self._save()
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _load(self, file: str=XMLTVFLEPATH) -> dict:
+    def _load(self) -> dict:
         self.log('_load')
-        channels, recordings = self.cleanSelf(self.loadChannels(file),'id')
-        return {'data'       : self.loadData(file),
+        channels, recordings = self.cleanSelf(self.loadChannels(),'id')
+        return {'data'       : self.loadData(),
                 'channels'   : channels,
                 'recordings' : recordings,
-                'programmes' : self.cleanSelf(self.loadProgrammes(file),'channel')}
+                'programmes' : self.cleanSelf(self.loadProgrammes(),'channel')}
 
 
-    def _save(self, file: str=XMLTVFLEPATH, reset: bool=True) -> bool:
-        self.log('_save, file = %s'%(file))
+    def _save(self, reset: bool=True) -> bool:
         if reset: data = self.resetData()
         else:     data = self.XMLTVDATA['data']
             
-        with FileLock(file):
+        self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
+        self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'])
+        self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'])
+        self.log('_save, writable = %s, file = %s, reset = %s\nchannels = %s, programmes = %s, recordings = %s'%(self.writable,self.XMLTVFile,reset,len(self.XMLTVDATA['channels']),len(self.XMLTVDATA['programmes']),len(self.XMLTVDATA['recordings'])))
+        
+        if self.writable:
             writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
                                   date                = data['date'],
                                   source_info_url     = self.cleanString(data['source-info-url']), 
@@ -56,10 +66,6 @@ class XMLTVS(object):
                                   generator_info_url  = self.cleanString(data['generator-info-url']), 
                                   generator_info_name = self.cleanString(data['generator-info-name']))
 
-            self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
-            self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'])
-            self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'])
-            
             for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
                 writer.addChannel(channel)
                 
@@ -67,15 +73,15 @@ class XMLTVS(object):
                 writer.addProgramme(program)
             
             try:
-                self.log('_save, saving to %s'%(file))
-                fle = FileAccess.open(file, "w")
-                writer.write(fle, pretty_print=True)
-                fle.close()
+                with FileLock(self.XMLTVFile):
+                    fle = FileAccess.open(self.XMLTVFile, "w")
+                    writer.write(fle, pretty_print=True)
+                    fle.close()
             except Exception as e:
                 self.log("_save, failed!", xbmc.LOGERROR)
                 DIALOG.notificationDialog(LANGUAGE(32000))
-        self.buildGenres()
-        return self._reload()
+            self.buildGenres()
+            return True
         
         
     def _reload(self) -> bool:
@@ -84,13 +90,13 @@ class XMLTVS(object):
         return True
     
     
-    def _error(self, name, file, e):
+    def _error(self, name, e):
         #hacky; try to log malformed xml's by printing error position..
         if not 'no element found: line 1, column 0' in str(e):
             try:
                 match = re.compile(r'line\ (.*?),\ column\ (.*)', re.IGNORECASE).search(str(e))
                 if match: 
-                    fle   = FileAccess.open(file,'r')
+                    fle   = FileAccess.open(self.XMLTVFile,'r')
                     lines = fle.readlines()
                     fle.close()
                     self.log('%s, failed! parser error %s\nLine: %s\n Error: %s'%(name,e,lines[int(match.group(1))],lines[int(match.group(1))][int(match.group(2))-5:]), xbmc.LOGERROR)
@@ -107,39 +113,39 @@ class XMLTVS(object):
                 'source-info-url'     : self.cleanString(ADDON_ID)}
 
 
-    def loadData(self, file: str=XMLTVFLEPATH) -> dict:
-        self.log('loadData, file = %s'%file)
+    def loadData(self) -> dict:
+        self.log('loadData, file = %s'%self.XMLTVFile)
         try: 
-            fle  = FileAccess.open(file, 'r')
+            fle  = FileAccess.open(self.XMLTVFile, 'r')
             data = (xmltv.read_data(fle) or self.resetData())
             fle.close()
             return data
         except Exception as e:
-            self._error('loadData',file,e)
+            self._error('loadData',self.XMLTVFile,e)
             return self.resetData()
 
 
-    def loadChannels(self, file: str=XMLTVFLEPATH) -> list:
-        self.log('loadChannels, file = %s'%file)
+    def loadChannels(self) -> list:
+        self.log('loadChannels, file = %s'%self.XMLTVFile)
         try:
-            fle  = FileAccess.open(file, 'r')
+            fle  = FileAccess.open(self.XMLTVFile, 'r')
             data = (xmltv.read_channels(fle) or [])
             fle.close()
             return data
         except Exception as e:
-            self._error('loadChannels',file,e)
+            self._error('loadChannels',self.XMLTVFile,e)
             return []
         
         
-    def loadProgrammes(self, file: str=XMLTVFLEPATH) -> list:
-        self.log('loadProgrammes, file = %s'%file)
+    def loadProgrammes(self) -> list:
+        self.log('loadProgrammes, file = %s'%self.XMLTVFile)
         try: 
-            fle  = FileAccess.open(file, 'r')
+            fle  = FileAccess.open(self.XMLTVFile, 'r')
             data = (xmltv.read_programmes(fle) or [])
             fle.close()
             return data
         except Exception as e: 
-            self._error('loadProgrammes',file,e)
+            self._error('loadProgrammes',self.XMLTVFile,e)
             return []
 
             
@@ -250,20 +256,14 @@ class XMLTVS(object):
 
     def findChannel(self, citem: dict, channels: list=[]) -> tuple:
         if not channels: channels = self.getChannels()
-        for idx, eitem in enumerate(channels):
-            if citem.get('id') == eitem.get('id',str(random.random())):
-                self.log('findChannel, found citem = %s'%(eitem))
-                return idx, eitem
-        return None, {}
+        return tuple(next(((idx, eitem) for idx, eitem in enumerate(channels) if citem.get('id') == eitem.get('id',str(random.random()))),(None, {})))
         
         
     def findRecording(self, ritem: dict, recordings: list=[]) -> tuple:
         if not recordings: recordings = self.getRecordings()
-        for idx, eitem in enumerate(recordings):
-            if (ritem.get('id') == eitem.get('id',str(random.random()))) or (ritem.get('name','').lower() == eitem.get('display-name')[0][0].lower()):
-                self.log('findRecording, found ritem = %s'%(eitem))
-                return idx, eitem
-        return None, {}
+        def __match(eitem):
+            return ritem.get('id') == eitem.get('id',str(random.random())) or (ritem.get('name','').lower() == eitem.get('display-name')[0][0].lower())
+        return tuple(next(((idx, eitem) for idx, eitem in enumerate(recordings) if __match(eitem)),(None, {})))
 
 
     def getProgramItem(self, citem: dict, fItem: dict) -> dict:

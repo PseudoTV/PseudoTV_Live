@@ -32,14 +32,13 @@ class Autotune(object):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _runTune(self, silent=False):
-        def __buildAutotune(type: str, count: int=AUTOTUNE_LIMIT):
+    def _runTune(self, silent=False, count=AUTOTUNE_LIMIT):
+        def __buildAutotune(type: str, count):
             items   = randomSamples(Library().getLibrary(type),count)
             isRadio = True if type == "Music Genres" else False
             self.log(f'_runTune: __buildAutotune, type = {type}, items = {len(items)}, isRadio = {isRadio}')
-             
             for idx, item in enumerate(items):
-                chnum = (idx + 1) + (AUTOTUNE_TYPES.index(type) * 10)
+                chnum = numbers.pop(0)
                 citem = channels.getTemplate()
                 citem.update({"id"      : getChannelID(item['name'],item['path'],chnum),
                               "type"    : type,
@@ -84,17 +83,18 @@ class Autotune(object):
                             if not select is None: return BUILTIN.executescript(menu[select].getPath())
                         else: return False #Cancel
 
-                channels     = Channels()
                 self.pMSG    = ""
                 self.pHeader = '%s, %s'%(ADDON_NAME,LANGUAGE(32021))
+                channels     = Channels(writable=True)
+                numbers      = list(range(1,CHANNEL_LIMIT))
                 with BUILTIN.busy_dialog(), DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
                     for idx, type in enumerate(AUTOTUNE_TYPES):
                         self.pMSG    = type
                         self.pCount  = int(idx*100//len(AUTOTUNE_TYPES))
                         self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, self.pMSG, header=self.pHeader)
-                        __buildAutotune(type)
+                        __buildAutotune(type,count)
+                timerit(PROPERTIES.setPropTimer)(FIFTEEN,'chkChannels')
                 del channels
-                PROPERTIES.setPropTimer('chkChannels')
         return True
         
  

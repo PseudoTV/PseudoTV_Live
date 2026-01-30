@@ -77,7 +77,7 @@ class JSONRPC(object):
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, media='video', depth=5, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkFileDirectory(self, path, media='video', depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         walk = dict()
         self.log('walkFileDirectory, walking %s, depth = %s'%(path,depth))
         items, limits, errors = self.getDirectory({"directory":path,"media":media},True,checksum,expiration)
@@ -93,7 +93,7 @@ class JSONRPC(object):
         return walk
                 
 
-    def walkListDirectory(self, path, exts='', depth=5, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkListDirectory(self, path, exts='', depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         def _chkfile(path, f):
             if exts and not f.lower().endswith(tuple(exts)): return
             if chkDuration:
@@ -534,8 +534,9 @@ class JSONRPC(object):
         param["sort"] = sort
         self.log('[%s] requestList, page = %s\nparam = %s'%(citem['id'], page, param))
         
-        if getDirectory: items, limits, errors = self.getDirectory(param)
-        else:            items, limits, errors = self.getLibrary(query['method'],param,query.get('key'),cache=False)
+        with self.detectRPCCrash(citem):
+            if getDirectory: items, limits, errors = self.getDirectory(param)
+            else:            items, limits, errors = self.getLibrary(query['method'],param,query.get('key'),cache=False)
 
         if (limits.get('end',0) >= limits.get('total',0) or limits.get('start',0) >= limits.get('total',0)):
             # restart page to 0, exceeding boundaries.
@@ -565,6 +566,15 @@ class JSONRPC(object):
         if limits.get('total',0) > page: start = random.randrange(0, (limits.get('total',0)-page), page)
         return {"end": start, "start": start, "total":limits.get('total',0)}
         
+
+    @contextmanager
+    def detectRPCCrash(self, citem):
+        SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',citem,json_data=True)
+        try: yield
+        except:pass
+        finally:
+            SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None,json_data=False)
+
 
     @cacheit(checksum=PROPERTIES.getInstanceID())
     def buildWebBase(self, local=False):

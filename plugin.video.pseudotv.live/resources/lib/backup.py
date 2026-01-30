@@ -53,7 +53,7 @@ class Backup(object):
             
     def getChannels(self, file: str=CHANNELFLE_BACKUP) -> list:
         self.log('getChannels')
-        channels = Channels()
+        channels = Channels(file, writable=True)
         citems   = channels._load(file).get('channels',[])
         del channels
         return citems
