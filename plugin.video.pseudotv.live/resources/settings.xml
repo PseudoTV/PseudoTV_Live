@@ -375,6 +375,11 @@
                         <close>true</close>
                     </control>
                 </setting>
+                <setting id="Min_Shows_Movies_Count" type="integer" label="40001" help="40002">
+                    <default>2</default>
+                    <control type="slider" format="integer"/>
+                    <range min="0" max="10"/>
+                </setting>
             </group>
         </category>
         <category id="options" label="30010" help="">

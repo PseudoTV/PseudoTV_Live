@@ -2342,3 +2342,11 @@ msgstr ""
 msgctxt "#33310"
 msgid "Open Channel Manager"
 msgstr ""
+
+msgctxt "#40001"
+msgid "Minimum number of shows/movies in a channel"
+msgstr ""
+
+msgctxt "#40002"
+msgid "Set the minimum number of shows/movies in a channel to show up in the AutoTune tab."
+msgstr ""
