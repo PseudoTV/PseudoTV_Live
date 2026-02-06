@@ -411,7 +411,10 @@ class Builder:
     def buildList(self, citem: dict, path: str, media: str='video', page: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}, dirItem: dict={}, query: dict={}):
         self.log("[%s] buildList, media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
         dirList, fileList, seasoneplist, trailersdict = [], [], [], {}
-        items, nlimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
+        
+        smart_shuffle=SETTINGS.getSettingBool('Smart_Shuffle')
+
+        items, nlimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query, smart_shuffle=smart_shuffle)
         
         if errors.get('message'):
             self.pErrors.append(errors['message'])
@@ -534,7 +537,11 @@ class Builder:
                         self.pErrors.append(LANGUAGE(32032))
                         self.log("[%s] buildList, IDX = %s skipping content no duration meta found! or runtime below minDuration (%s/%s) file = %s"%(citem['id'],idx,dur,self.minDuration,file),xbmc.LOGINFO)
 
-            if sort.get("method","").startswith('episode'):
+            if smart_shuffle:
+                self.log("buildList, id: %s, sorting by episode"%(citem['id']))
+                for seepitem in seasoneplist: 
+                    fileList.append(seepitem[2])
+            elif sort.get("method","").startswith('episode'):
                 self.log("[%s] buildList, sorting by episode"%(citem['id']))
                 seasoneplist.sort(key=lambda seep: seep[1])
                 seasoneplist.sort(key=lambda seep: seep[0])

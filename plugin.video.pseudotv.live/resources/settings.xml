@@ -472,6 +472,12 @@
                     <control type="toggle"/>
                 </setting>
             </group>
+            <group id="4" label="33232">
+                <setting id="Smart_Shuffle" type="boolean" label="33233" help="33234">
+                    <default>false</default>
+                    <control type="toggle"/>
+                </setting>
+            </group>
         </category>
         <category id="globals" label="30041" help="33041">
             <group id="1" label="30133">

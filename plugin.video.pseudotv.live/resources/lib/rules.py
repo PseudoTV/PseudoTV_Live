@@ -1462,6 +1462,7 @@ class ForceEpisode(BaseRule):
         return parameter
         
         
+# Force random shuffle of channel items, optionally with smart shuffle to maintain episode order
 class ForceRandom(BaseRule):
     """
     ForceRandom
@@ -1472,9 +1473,9 @@ class ForceRandom(BaseRule):
         self.exclude            = False
         self.name               = LANGUAGE(30182)
         self.description        = LANGUAGE(33231)
-        self.optionLabels       = [LANGUAGE(30182)]
-        self.optionValues       = [False]
-        self.optionDescriptions = [LANGUAGE(33231)]
+        self.optionLabels       = [LANGUAGE(30182), LANGUAGE(60000)]
+        self.optionValues       = [False, False]
+        self.optionDescriptions = [LANGUAGE(33231), LANGUAGE(60001)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
         self.storedValues       = [{}]
 

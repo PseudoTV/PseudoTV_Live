@@ -2347,6 +2347,20 @@ msgctxt "#40001"
 msgid "Minimum number of shows/movies in a channel"
 msgstr ""
 
-msgctxt "#40002"
+msgctxt "#40002" 
 msgid "Set the minimum number of shows/movies in a channel to show up in the AutoTune tab."
+msgstr ""
+
+msgctxt "#33232"
+msgid "Shuffle Options"
+msgstr ""
+
+# Smart Shuffle label – enables intelligent shuffling of channel lists
+msgctxt "#60000"
+msgid "Smart Shuffle"
+msgstr ""
+
+# Smart Shuffle description – explains the feature to users
+msgctxt "#60001"
+msgid "If enabled, channel lists will be intelligently shuffled based on episode and season metadata."
 msgstr ""
