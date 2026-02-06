@@ -37,7 +37,6 @@ class Tasks(object):
         self.jsonRPC = service.jsonRPC
         self.player  = service.player
         self.monitor = service.monitor
-        self.http    = HTTP(service=self.service)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -62,9 +61,7 @@ class Tasks(object):
     
     
     def chkHTTP(self):
-        httpThread = Thread(target=self.http._start)
-        httpThread.daemon = True
-        httpThread.start()
+        timerit(HTTP)(0.1,[self.service])
         self.log('chkHTTP')
         
         
@@ -89,9 +86,9 @@ class Tasks(object):
         if SETTINGS.getSettingBool('Enable_Kodi_Access'):
             self.jsonRPC.toggleShowLog(SETTINGS.getSettingBool('Debug_Enable'))
                     
-               
+             
     def chkDiscovery(self):
-        Discovery(self.service, Multiroom(service=self.service))
+        timerit(Discovery)(0.1,[self.service, Multiroom(service=self.service)])
         self.log('chkDiscovery')
          
          
@@ -122,17 +119,18 @@ class Tasks(object):
 
     def chkQueTimer(self):
         self.log('chkQueTimer')
-        self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200, 1)#12HRS
-        self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800, 1)#3HRS
-        self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300  , 1)#10MINS
-        self._chkEpochTimer('chkServers'      , self.chkServers       , 1800 , 1)#1HR
-        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 300  , 1)#10MINS
+        self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200 , 1)#12HRS
+        self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800 , 1)#3HRS
+        self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300   , 1)#10MINS
+        self._chkEpochTimer('chkServers'      , self.chkServers       , 1800  , 1)#30MINS
+        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 300   , 1)#10MINS
         
         if not self.service.isClient:
-            self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 3600 , 2)#1HR
-            self._chkEpochTimer('chkFiles'    , self.chkFiles         , 600)
+            self._chkEpochTimer('chkFiles'    , self.chkFiles         , 600   , 1)
+            self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 10800 , 2)#3HRS
             
-        self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh    , 1)
+        #immediate run, bypass schedule
+        self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh    , 1) 
         self._chkPropTimer('chkChannels'      , self.chkChannels      , 3)
         
         
@@ -226,7 +224,7 @@ class Tasks(object):
         else:
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():      SETTINGS.setAutotuned(Autotune()._runTune())
-            elif PROPERTIES.hasEnabledServers(): PROPERTIES.setPropTimer('chkPVRRefresh')
+            elif PROPERTIES.hasEnabledServers(): timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
         del builder
 
 

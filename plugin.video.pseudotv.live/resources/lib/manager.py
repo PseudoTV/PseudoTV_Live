@@ -28,6 +28,7 @@ from xsp        import XSP
 from builder    import Builder
 from predefined import Predefined
 from backup     import Backup
+from autotune   import Autotune
 from infotagger.listitem import ListItemInfoTag
 
 # Actions
@@ -107,7 +108,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         try:
             with BUILTIN.busy_dialog(lock=True):
-                self.channelList = self.channels.sortChannels(self.createChannelList(self.buildArray(), __loadChannels()))
+                self.channelList = self.channels.sortChannels(self.createChannelList(list(self.buildArray()), __loadChannels()))
                 self.newChannels = self.channelList.copy()
                 if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
                 self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
@@ -138,14 +139,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             log("onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.closeManager()
 
-     
-    def buildPreview(self, citem={}, msg=''):
-        builder  = Builder()
-        fileList = PROPERTIES.recessActivity(msg, builder.buildChannels, *([citem],True))
-        del builder
-        self.log('buildPreview, fileList = %s'%(len(fileList))) 
-        return fileList
-
 
     def buildFileList(self, citem={}, path='', msg='', limit=SETTINGS.getSettingInt('Page_Limit')):
         fileList = PROPERTIES.recessActivity(msg, Builder().buildFileList, *(citem,path,'video',limit,{},{}))
@@ -153,7 +146,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         return fileList
 
 
-    @cacheit(json_data=True)
+    @cacheit(checksum=PROPERTIES.getInstanceID())
     def buildArray(self):
         self.log('buildArray') # Create blank array of citem templates. 
         def __create(idx):
@@ -166,11 +159,13 @@ class Manager(xbmcgui.WindowXMLDialog):
     def createChannelList(self, channelArray, channelList):
         self.log('createChannelList') # Fill blank array with citems from channels.json
         def __update(item):
-            channelArray[item["number"]-1].update(item) #CUSTOM
+            if item.get("number",0) > 0:
+                channelArray[item["number"]-1].update(item) #CUSTOM
             
-        checksum  = Globals._getMD5(FileAccess.dumpJSON(channelList))
+        checksum  = PROPERTIES.getInstanceID()
         cacheName = 'createChannelList.%s'%(checksum)
-        cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
+        try:   cacheResponse = list(self.cache.get(cacheName, checksum=checksum, json_data=True))
+        except:cacheResponse = []
         if not cacheResponse:
             poolit(__update)(channelList)
             cacheResponse = self.cache.set(cacheName, channelArray, checksum=checksum, json_data=True)
@@ -262,6 +257,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         else:                       self.setLabels(self.right_button2,"")
                         if SETTINGS.hasAutotuned(): self.setLabels(self.right_button3,LANGUAGE(30038))#AutoTune
                         else:                       self.setLabels(self.right_button3,"")
+                            
                     else:
                         self.setLabels(self.right_button1,LANGUAGE(32062))#Close
                         self.setLabels(self.right_button2,LANGUAGE(32235))#Preview
@@ -271,7 +267,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) + String.IsEqual(Container(5).ListItem(Container(5).Position).Property(radio),False)]')
                     
                 self.setFocus(self.right_button1)
-                self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path)]')# + Integer.IsLessOrEqual(Container(5).ListItem(Container(5).Position).Property(chnum),CHANNEL_LIMIT)]')
+                self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) | !String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')# + Integer.IsLessOrEqual(Container(5).ListItem(Container(5).Position).Property(chnum),CHANNEL_LIMIT)]')
                 self.setEnableCondition(self.right_button4,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path)]')# + Integer.IsLessOrEqual(Container(5).ListItem(Container(5).Position).Property(chnum),CHANNEL_LIMIT)]')
             else: # channelitems
                 self.itemList.reset()
@@ -332,7 +328,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __buildItem(key):
             key   = key.lower()
             value = citem.get(key,' ')
-            if   key in ["number","type","logo","id","catchup"]: return # keys to ignore, internal use only.
+            if   key in ["number","type","logo","id","catchup","enabled"]: return # keys to ignore, internal use only.
             elif isinstance(value,(list,dict)): 
                 if   key == "group" : value = ('|'.join(sorted(set(value))) or LANGUAGE(30127))
                 elif key == "path"  : value = '|'.join(value)
@@ -675,6 +671,19 @@ class Manager(xbmcgui.WindowXMLDialog):
         return None, citem
 
 
+    def autoTune(self, start=1):
+        self.log('autoTune')
+        if DIALOG.yesnoDialog("Would you like to AutoTune sample channels?"):
+            with BUILTIN.busy_dialog():
+                items = Autotune()._runTune(True,start,int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT)))
+                if items:
+                    for item in items:
+                        chnum = item.get('number',0)
+                        if chnum > 0: self.newChannels.insert(chnum-1,item)
+                    self.madeChanges = True
+                    self.fillChanList(self.newChannels,True,focus=(chnum-1))
+
+
     def openEditor(self, path):
         self.log('openEditor, path = %s'%(path))
         if '|' in path: 
@@ -689,6 +698,12 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __buildItem(fitem):
             return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
             
+        def __buildPreview(citem={}, msg=''):
+            builder  = Builder()
+            fileList = PROPERTIES.recessActivity(msg, builder.buildChannels, *([citem],getUTCstamp(),True))
+            del builder
+            return fileList
+
         def __fileList(citem):
             fileList = []
             try:
@@ -696,9 +711,10 @@ class Manager(xbmcgui.WindowXMLDialog):
                 tmpcitem = citem.copy()
                 tmpcitem['id'] = getChannelID(citem['name'], citem['path'], random.random())
                 start_time = time.time()
-                fileList   = self.buildPreview(tmpcitem)
+                fileList   = __buildPreview(tmpcitem)
                 end_time   = time.time()
-                self.log('previewChannel: __fileList, id = %s, fileList = %s'%(citem['id'],len(fileList)))
+                print('previewChannel',fileList)
+                # self.log('previewChannel: __fileList, id = %s, fileList = %s'%(citem['id'],len(fileList)))
                 return fileList, round(abs(end_time-start_time),2)
             except Exception as e:
                 self.log("previewChannel, __fileList: failed! %s"%(e), xbmc.LOGERROR)
@@ -992,5 +1008,5 @@ class Manager(xbmcgui.WindowXMLDialog):
                             self.previewChannel(focusItems.get('citem'), focusItems.get('retCntrl'))
                         elif focusItems.get('label') == LANGUAGE(32110): ...#Backup
                         elif focusItems.get('label') == LANGUAGE(32112): ...#Recover
-                        elif focusItems.get('label') == LANGUAGE(30038): timerit(SETTINGS.autoTune)(0.1)#AutoTune
-                    
+                        elif focusItems.get('label') == LANGUAGE(30038): self.autoTune(focusItems.get('number',1)) #AutoTune
+                            

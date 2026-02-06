@@ -133,34 +133,17 @@ class Resources(object):
 
     def getLogo(self, citem: dict, fallback=None, lookup=False, logo=None) -> str:
         self.log('[%s] getLogo, name = %s, lookup = %s'%(citem.get('id'),citem.get('name'),lookup))
-        if not logo and citem.get('name') == LANGUAGE(32002):
-            logo = self.season.get('logo')               # seasonal
-        if not logo and not lookup:
-            logo = self.getCache(citem.get('name'))      # cache
-        if not logo and not lookup:
-            self.queueLogo(citem)                        # queue lookup
-        if not logo and not lookup and fallback:
-            logo = fallback                              # fallback
-        if not logo and lookup:
-            # perform progressively heavier lookups only when lookup=True
+        if not logo and citem.get('name') == LANGUAGE(32002): logo = self.season.get('logo')               # seasonal
+        if not logo and not lookup:                           logo = self.getCache(citem.get('name'))      # cache
+        if not logo and not lookup:                           logo = self.queueLogo(citem)                 # queue lookup
+        if not logo and not lookup and fallback:              logo = fallback                              # fallback
+        if not logo and lookup: # perform progressively heavier lookups only when lookup=True
             logo = self.getLocalLogo(citem.get('name'))  # local
-            if not logo:
-                logo = self.getLogoResources(citem)      # resources
-            if not logo:
-                logo = self.getTVShowLogo(citem.get('name')) # tvshow
-            if not logo:
-                # online/generative resources are expensive and optional; only try if configured
-                try:
-                    logo = self.generateOnline(citem.get('name'))
-                except Exception:
-                    logo = None
-            if not logo:
-                try:
-                    logo = self.generateLocal(citem.get('name'))
-                except Exception:
-                    logo = None
-        if not logo:
-            logo = LOGO  # default
+            if not logo: logo = self.getLogoResources(citem)           # resources
+            if not logo: logo = self.getTVShowLogo(citem.get('name'))  # tvshow
+            if not logo: logo = self.generateOnline(citem.get('name')) # generative (online)
+            if not logo: logo = self.generateLocal(citem.get('name'))  # generative (local)
+        if not logo: logo = LOGO  # default
         return self.buildWebImage(citem.get('name'), cleanImage(logo))
 
 
@@ -318,10 +301,9 @@ class Resources(object):
         if not a_tokens or not b_tokens: return False
         # if there's very low token intersection, skip expensive ratio
         inter = a_tokens.intersection(b_tokens)
-        if len(inter) / max(1, min(len(a_tokens), len(b_tokens))) < 0.25:
+        if len(inter) / max(1, min(len(a_tokens), len(b_tokens))) < (1.00 - threshold):
             # fallback to startswith/contains checks which are cheap
-            if a.startswith(b) or b.startswith(a) or (a in b) or (b in a):
-                return True
+            if a.startswith(b) or b.startswith(a) or (a in b) or (b in a): return True
             return False
         # fallback to SequenceMatcher only when token overlap suggests potential match
         try:
@@ -355,8 +337,8 @@ class Resources(object):
 
 
     def generateLocal(self, text, background=os.path.join(MEDIA_LOC,'blank.png'),
-                      font_path=FileAccess.translatePath(os.path.join('special://skin','fonts','NotoSans-Regular.ttf')),
-                      font_size=60, text_color=(255,255,255,255)):
+                      font_path=FileAccess.translatePath(os.path.join('special://skin','fonts','arial.ttf')),
+                      font_size=120, text_color=(255,255,255,255)):
         """
         Generates a placeholder image with text on a background image.
 
@@ -374,15 +356,11 @@ class Resources(object):
 
         try:
             from PIL import Image, ImageDraw, ImageFont
-            # Read background bytes via FileAccess to avoid holding a file handle open
             fle = FileAccess.open(background, "rb")
-            try:
-                bg_bytes = fle.readBytes()
+            try: bg_bytes = fle.readBytes()
             finally:
-                try:
-                    fle.close()
-                except Exception:
-                    pass
+                try: fle.close()
+                except Exception: pass
 
             img = Image.open(BytesIO(bg_bytes)).convert("RGBA")
             draw = ImageDraw.Draw(img)
@@ -399,19 +377,15 @@ class Resources(object):
             safe_name = re.sub(r'[^A-Za-z0-9_.-]', '_', text)[:200] or "image"
             image_filename = f"{safe_name}.png"
             image_path = os.path.join(FileAccess.translatePath(TEMP_IMAGE_LOC), image_filename)
-
             # Save to a BytesIO then write using FileAccess to avoid PIL writing to paths that may not be writable directly
             buf = BytesIO()
             img.save(buf, format="PNG")
             buf.seek(0)
             out = FileAccess.open(image_path, "wb")
-            try:
-                out.writeBytes(buf.read())
+            try: out.writeBytes(buf.read())
             finally:
-                try:
-                    out.close()
-                except Exception:
-                    pass
+                try: out.close()
+                except Exception: pass
             return image_path
         except Exception as e:
             self.log(f'generateLocal failed: {e}', xbmc.LOGWARNING)

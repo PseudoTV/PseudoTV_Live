@@ -31,6 +31,7 @@ def __getPVRRefresh():
 def __setPVRRefresh():
     return Globals._setProperty('%s.%s'%(ADDON_ID,'chkPVRRefresh'),"true")
     
+@threadit
 def _run(sysARG, fitem: dict={}, nitem: dict={}):
     params = dict(urllib.parse.parse_qsl(sys.argv[2][1:].replace('.pvr','')))
     params['mode']       = params.get("mode")
@@ -70,6 +71,6 @@ if __name__ == '__main__':
     if mode is None:
         if __hasChannels(): Globals._openGuide()
         else:               Globals._openSettings()
-        xbmcplugin.setResolvedUrl(int(sys.argv[1]), false, xbmcgui.ListItem())
+        xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
     else: _run(sys.argv, Globals._decodePlot(Globals._getInfoLabel('Plot')), Globals._decodePlot(Globals._getInfoLabel('NextPlot')))
     

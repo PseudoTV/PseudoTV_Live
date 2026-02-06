@@ -170,7 +170,7 @@ class Utilities(object):
 
     @staticmethod
     def _runReload():
-        if DIALOG.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): PROPERTIES.setPropTimer('chkPVRRefresh')
+        if DIALOG.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
             
     @staticmethod
     def _runRestart():

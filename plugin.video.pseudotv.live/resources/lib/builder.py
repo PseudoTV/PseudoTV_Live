@@ -137,7 +137,7 @@ class Builder(object):
                 self.log('[%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem),xbmc.LOGINFO)
                 continue
             elif not citem.get('enabled',True):
-                self.log('[%s] SKIPPING - malformed channel meta\n%s'%(citem.get('id'),citem),xbmc.LOGINFO)
+                self.log('[%s] SKIPPING - disabled channel\n%s'%(citem.get('id'),citem),xbmc.LOGINFO)
                 continue
             else:
                 if not citem.get('id'): citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'],SETTINGS.getMYUUID()) #generate new channelid
@@ -147,8 +147,7 @@ class Builder(object):
 
              
     def buildCells(self, citem: dict, duration: int=10800, type: str='video', entries: int=3, info=None) -> list:
-        if info is None:
-            info = {}
+        if info is None: info = {}
         tmpItem  = {'label'       : (info.get('title')        or citem['name']),
                     'episodetitle': (info.get('episodetitle') or '|'.join(citem.get('group',[]))),
                     'plot'        : (info.get('plot')         or LANGUAGE(32020)),
@@ -228,7 +227,6 @@ class Builder(object):
             self.log('[%s] buildChannels, __setProgrammes = %s'%(citem['id'],state))
             return state
         
-        # if not PROPERTIES.isRunning('Builder.buildChannels'):
         with PROPERTIES.legacy(), PROPERTIES.chkRunning('Builder.buildChannels'):
             channels = self.getVerifiedChannels(channels)
             if len(channels) > 0:
@@ -278,8 +276,8 @@ class Builder(object):
                                 if isinstance(response,list):
                                     response = sorted(self.addScheduling(citem, response, now, start), key=itemgetter('start'))
                                     if not preview and __hasFileList(response): updated.add(__addProgrammes(citem, response))#add xmltv lineup entries.
-                                response = __hasProgrammes(citem) #check for current programmes
-                                if not response: 
+                                elif not response and not __hasProgrammes(citem): #check for current programmes
+                                    response = False
                                     __clrChannel(citem) #remove m3u/xmltv references when no valid programmes found.
                                     if len(self.pErrors) > 0:
                                         self.pErrors.append(LANGUAGE(32026))
@@ -295,7 +293,7 @@ class Builder(object):
                 if any(completed) or any(updated): #save changes
                     self.log('[%s] buildChannels, saved programmes = %s, saved channels = %s'%(citem['id'],__setProgrammes(),__setChannels()))
                     if self.buildFolders: self.service._que(self.service.tasks.chkFillers,4,channels)
-                if any(updated): PROPERTIES.setPropTimer('chkPVRRefresh')
+                if any(updated): timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
                 self.log('[%s] buildChannels, completed = %s, updated = %s'%(citem['id'],any(completed),any(updated)))
             else:
                 self.log('[%s] buildChannels, no verified channels found!'%(citem['id']))
@@ -317,7 +315,7 @@ class Builder(object):
             
         def _injectFillers(citem, fileList, enable=False):#todo refactor
             self.log("[%s] buildVideo: _injectFillers, fileList = %s, enable = %s"%(citem['id'],len(fileList),enable))
-            if enable: return  Fillers(self).injectBCTs(citem,fileList)
+            if enable: return  Fillers(citem,self).injectBCTs(fileList)
             return fileList
           
         def _injectRules(citem):#todo refactor

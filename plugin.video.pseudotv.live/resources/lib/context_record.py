@@ -55,7 +55,7 @@ class Record(object):
                     if added:
                         log('Record: add, ritem = %s'%(ritem))
                         DIALOG.notificationDialog('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
-                        PROPERTIES.setPropTimer('chkPVRRefresh')
+                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
         else: DIALOG.notificationDialog(LANGUAGE(32000))
         
  
@@ -69,7 +69,7 @@ class Record(object):
                     if removed:
                         log('Record: remove, ritem = %s'%(ritem))
                         DIALOG.notificationDialog('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
-                        PROPERTIES.setPropTimer('chkPVRRefresh')
+                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
         else: DIALOG.notificationDialog(LANGUAGE(32000))
                 
             

@@ -270,12 +270,6 @@ def combineDicts(dict1={}, dict2={}):
     dict1.update(dict2)
     return dict1
     
-def mergeDictLST(dict1={},dict2={}):
-    for k, v in list(dict2.items()):
-        dict1.setdefault(k,[]).extend(v)
-        Globals._setDictLST()
-    return dict1
-    
 def _setDictLST(lst=[]):
     items = {}
     for key, dictlst in list(lst.items()):

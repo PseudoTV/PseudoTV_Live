@@ -116,11 +116,7 @@ class XSP(object):
                 self.log("[%s] parseDXSP, found invalid music path! %s"%(id), xbmc.LOGINFO)
                 return ''
         
-            if isinstance(params,str):
-                if hasURLencoding(params):
-                    params = Globals._unquoteString(params)
-                params = FileAccess.loadJSON(params)
-                
+            params = FileAccess.loadJSON(params)
             params['rules'].update(filters)
             if path.startswith('videodb://tvshows/'):
                 if '-1/-1/-1/' not in path: path = '%s/-1/-1/-1/'%(path) #flatten tvshows for episodes

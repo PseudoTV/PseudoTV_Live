@@ -134,7 +134,7 @@ class Player(xbmc.Player):
         try: return self.getPlayingItem()
         except:
             if not self.isPlaying(): return xbmcgui.ListItem()
-            self.monitor.waitForAbort(0.5) 
+            self.monitor.waitForAbort(1.0) 
             return self.getPlayerItem()
         
         

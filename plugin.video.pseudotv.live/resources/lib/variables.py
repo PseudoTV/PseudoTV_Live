@@ -165,10 +165,6 @@ class Globals:
             if art: return art
 
     @staticmethod  
-    def _setDictLST(lst=[]): #set lst of dicts then return
-        return [FileAccess.loadJSON(s) for s in list(OrderedDict.fromkeys([FileAccess.dumpJSON(d) for d in lst]))]
-
-    @staticmethod  
     def _findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
         if not values: return [-1]
         if not isinstance(values,list): values = [values]
@@ -194,3 +190,22 @@ class Globals:
                 else: _match(item,value)
         return matches
         
+    @staticmethod  
+    def _setDictLST(lst=[]): #set lst of dicts then return
+        return [FileAccess.loadJSON(s) for s in list(OrderedDict.fromkeys([FileAccess.dumpJSON(d) for d in lst]))]
+
+    @staticmethod  
+    def _mergeDictLST(dict1={},dict2={}):
+        for k, v in list(dict2.items()):
+            dict1.setdefault(k,[]).extend(v)
+            Globals._setDictLST()
+        return dict1
+        
+    @staticmethod  
+    def _lstSetDictLst(lst=[]):
+        items = dict()
+        for key, dictlst in list(lst.items()):
+            if isinstance(dictlst, list): dictlst = Globals._setDictLST(dictlst)
+            items[key] = dictlst
+        return items
+    

@@ -872,8 +872,8 @@ class Properties(object):
             if msg: Dialog().notificationDialog(msg)
             self.log('recessActivity, isInterrupt = %s, isSuspend = %s, isBuilding = %s'%(isInterrupt,isSuspend,isBuilding))
             if not isInterrupt and (isSuspend or isBuilding):
-                if   isSuspend:  self.setSuspendActivity(False)
-                elif isBuilding: self.setInterruptActivity(True)
+                if isSuspend: self.setSuspendActivity(False)
+                # elif isBuilding: self.setInterruptActivity(True)
                 if self.monitor.waitForAbort(SUSPEND_INTERVAL): return []
             elif isInterrupt:
                 self.setInterruptActivity(False)
@@ -1095,7 +1095,7 @@ class Builtin(object):
 
 
     def isPlaying(self):
-        return (self.getInfoBool('Playing','Player') | self.getInfoBool('IsInternetStream','Player'))
+        return self.getInfoBool('Playing','Player')
 
 
     def isPVRPlaying(self) -> bool:

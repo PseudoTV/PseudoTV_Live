@@ -86,16 +86,11 @@ def executeit(method):
 def threadit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
-        thread_name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
-        for thread in thread_enumerate():
-            if thread.name == thread_name and thread.is_alive():  
-                try:
-                    thread.join(0.1)    
-                    log('%s, threadit joining existing Thread: %s'%(method.__qualname__.replace('.',': '),thread_name))          
-                except: pass
         thread = Thread(None, method, None, args, kwargs)
-        thread.name   = thread_name
-        thread.daemon = True
+        if thread.is_alive():
+            try: thread.join()
+            except: pass
+        thread.name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
         thread.start()
         log('%s, threadit starting %s'%(method.__qualname__.replace('.',': '),thread.name))
         return thread
@@ -128,6 +123,10 @@ class ExecutorPool:
         self.useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
 
 
+    def __del__(self):
+        self._executor.shutdown(wait=False, cancel_futures=True)
+
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -154,13 +153,19 @@ class ExecutorPool:
         except Exception as e: self.log("execute, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
 
 
+    def _wrapped_partial(self, func, *args, **kwargs):
+        partial_func = partial(func, *args, **kwargs)
+        update_wrapper(partial_func, func)
+        return partial_func
+        
+        
     def executors(self, func, items=[], timeout=None, *args, **kwargs):
         self.log("executors, func = %s, items = %s, timeout = %s"%(func.__name__,len(items),timeout))
         if self.useExecutor:
             if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)
             with timeit(func), self._executor as executor:
                 try: 
-                    results = executor.map(wrapped_partial(func, *args, **kwargs), items, timeout=timeout)
+                    results = executor.map(self._wrapped_partial(func, *args, **kwargs), items, timeout=timeout)
                     return [r for r in results if r is not None]
                 except Exception as e: self.log("executors, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
         return self.generator(func, items, *args, **kwargs)
@@ -170,6 +175,6 @@ class ExecutorPool:
         self.log("generator, items = %s"%(len(items)))
         try:
             with timeit(func):
-                results = [wrapped_partial(func, *args, **kwargs)(i) for i in items]
+                results = [self._wrapped_partial(func, *args, **kwargs)(i) for i in items]
                 return [r for r in results if r is not None]
         except Exception as e: self.log("generator, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)

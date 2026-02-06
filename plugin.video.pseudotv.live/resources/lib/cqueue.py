@@ -224,10 +224,7 @@ class CustomQueue(object):
                 
                 
     def _stop(self):
-        # self._clear()
         self.executor.shutdown(wait=False, cancel_futures=True)
-        # for item in self.min_heap:
-            # print(item)
         # SETTINGS.setCacheSetting('min_heap', pickle.dumps(self.min_heap), checksum=ADDON_VERSION)
         self.log("_stop, finished: shutting down...")
                 

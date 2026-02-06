@@ -135,7 +135,7 @@ class Multiroom(object):
                     if       payload.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(payload.get('host'),payload.get('name'),cache=True)
                     elif not payload.get('enabled',False) and instancePath:     changed = FileAccess.delete(instancePath)
                     else:                                                       changed = False
-                    if changed: PROPERTIES.setPropTimer('chkPVRRefresh')
+                    if changed: timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
                     self.log('addServer, payload changed = %s'%(changed))
 
 
@@ -187,7 +187,7 @@ class Multiroom(object):
                                         DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
                                     if not SETTINGS.hasPVRInstance(liz.getLabel()): 
                                         if SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel(),cache=True):
-                                            timerit(PROPERTIES.setPropTimer)(1.0,['chkPVRRefresh'])
+                                            timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
                                 else:
                                     if servers[liz.getLabel()].get('enabled',False):
                                         changed = True

@@ -32,14 +32,14 @@ class Autotune(object):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _runTune(self, silent=False, count=AUTOTUNE_LIMIT):
+    def _runTune(self, silent=False, start=1, count=AUTOTUNE_CHANNEL_DEFAULT):
         def __buildAutotune(type: str, count):
             items   = randomSamples(Library().getLibrary(type),count)
             isRadio = True if type == "Music Genres" else False
             self.log(f'_runTune: __buildAutotune, type = {type}, items = {len(items)}, isRadio = {isRadio}')
             for idx, item in enumerate(items):
                 chnum = numbers.pop(0)
-                citem = channels.getTemplate()
+                citem = template.copy()
                 citem.update({"id"      : getChannelID(item['name'],item['path'],chnum),
                               "type"    : type,
                               "number"  : chnum,
@@ -52,12 +52,12 @@ class Autotune(object):
                               "radio"   : isRadio,
                               "favorite": False})
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(items))), header=self.pHeader)
-                channels.addChannel(citem)
-            return channels.setChannels()
+                yield citem
             
         hasChannels = PROPERTIES.hasChannels()
         hasLibrary  = any([PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES])
-        self.log(f'_runTune, hasChannels = {hasChannels}, hasLibrary = {hasLibrary}')
+        if count > AUTOTUNE_CHANNEL_LIMIT: count = AUTOTUNE_CHANNEL_DEFAULT
+        self.log(f'_runTune [{count}], hasChannels = {hasChannels}, hasLibrary = {hasLibrary}')
         if not hasChannels and hasLibrary:
             with PROPERTIES.interruptActivity():
                 if not silent:
@@ -85,18 +85,33 @@ class Autotune(object):
 
                 self.pMSG    = ""
                 self.pHeader = '%s, %s'%(ADDON_NAME,LANGUAGE(32021))
-                channels     = Channels(writable=True)
-                numbers      = list(range(1,CHANNEL_LIMIT))
+                
+                channels     = Channels()
+                template     = channels.getTemplate()
+                xchannels    = channels.getChannels() 
+                del channels
+                
+                xnumbers     = [ch.get('number',0) for ch in xchannels]
+                xrange       = list(range(1, CHANNEL_LIMIT))
+                numbers      = [num for num in xrange if num+1 not in xnumbers]
+                numbers      = numbers[start-1:] + numbers[:start-1]
+                print(numbers)
+                citems       = []
                 with BUILTIN.busy_dialog(), DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
                     for idx, type in enumerate(AUTOTUNE_TYPES):
                         self.pMSG    = type
                         self.pCount  = int(idx+1*100//len(AUTOTUNE_TYPES))
                         self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, self.pMSG, header=self.pHeader)
-                        __buildAutotune(type,count)
-                timerit(PROPERTIES.setPropTimer)(FIFTEEN,*('chkChannels',True))
-                del channels
-        return True
-        
+                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChannels',True])
+                        citems.extend(list(__buildAutotune(type,count)))
+                if not silent and len(citems) > 0:
+                    channels = Channels(writable=True)
+                    channels.addChannel(citems)
+                    state = channels.setChannels()
+                    del channels
+                    return state
+                return citems
+ 
  
     def clrLibrary(self):
         Library().clrLibraryCache()

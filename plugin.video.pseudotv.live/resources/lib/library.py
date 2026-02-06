@@ -264,7 +264,7 @@ class Library(object):
                 
 
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
-    def getTVInfo(self, sortbycount=True):
+    def getTVInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getTVInfo')
         NetworkList = ShowGenreList = TVShowList = []
         if BUILTIN.hasTV():
@@ -284,9 +284,9 @@ class Library(object):
                     ShowGenreList.update([genre for genre in info.get('genre',[])])
                     
             if sortbycount:
-                TVShowList    = [FileAccess.loadJSON(x[0]) for x in sorted(TVShowList.most_common(25))]
-                NetworkList   = [x[0] for x in sorted(NetworkList.most_common(25))]
-                ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
+                TVShowList    = [FileAccess.loadJSON(x[0]) for x in sorted(TVShowList.most_common(limit))]
+                NetworkList   = [x[0] for x in sorted(NetworkList.most_common(limit))]
+                ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(limit))]
             else:
                 TVShowList    = (sorted(map(loadJSON, list(TVShowList.keys())), key=itemgetter('name')))
                 NetworkList   = (sorted(set(list(NetworkList.keys()))))
@@ -333,7 +333,7 @@ class Library(object):
 
 
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
-    def getMovieInfo(self, sortbycount=True):
+    def getMovieInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getMovieInfo')
         StudioList = MovieGenreList = []
         if BUILTIN.hasMovie(): 
@@ -351,8 +351,8 @@ class Library(object):
                     MovieGenreList.update([genre for genre in info.get('genre', [])])
                 
             if sortbycount:
-                StudioList     = [x[0] for x in sorted(StudioList.most_common(25))]
-                MovieGenreList = [x[0] for x in sorted(MovieGenreList.most_common(25))]
+                StudioList     = [x[0] for x in sorted(StudioList.most_common(limit))]
+                MovieGenreList = [x[0] for x in sorted(MovieGenreList.most_common(limit))]
             else:
                 StudioList     = (sorted(set(list(StudioList.keys()))))
                 MovieGenreList = (sorted(set(list(MovieGenreList.keys()))))
@@ -386,7 +386,7 @@ class Library(object):
         
         
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
-    def getMusicInfo(self, sortbycount=True):
+    def getMusicInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getMusicInfo')
         MusicGenreList = []
         if BUILTIN.hasMusic(): 
@@ -401,7 +401,7 @@ class Library(object):
                 else:
                     MusicGenreList.update([genre.strip() for genre in info.get('label','').split(';')])
             
-            if sortbycount: MusicGenreList = [x[0] for x in sorted(MusicGenreList.most_common(25))]
+            if sortbycount: MusicGenreList = [x[0] for x in sorted(MusicGenreList.most_common(limit))]
             else:           MusicGenreList = (sorted(set(list(MusicGenreList.keys()))))
 
             #search resources for studio/genre logos

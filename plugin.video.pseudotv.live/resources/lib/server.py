@@ -56,6 +56,7 @@ class Discovery(Thread):
             
     def __init__(self, service=None, multiroom=None):
         Thread.__init__(self)
+        self.daemon    = True
         self.service   = service
         self.monitor   = service.monitor
         self.multiroom = multiroom
@@ -220,12 +221,14 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     
 class HTTP(object):
     httpd          = None
-    isRunning      = False
     pendingRestart = False
     
     def __init__(self, service=None):
         self.service = service
         self.monitor = service.monitor
+        self.httpThread = Thread(target=self.run())
+        self.httpThread.daemon = True
+        self.httpThread.start()
         
                     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -236,6 +239,7 @@ class HTTP(object):
         def __isAvailable(host, tmpPort):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 try:
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     s.bind((host, tmpPort))
                     s.close()
                     return True
@@ -258,10 +262,11 @@ class HTTP(object):
         self.pendingRestart = True
        
 
-    def _start(self, silent=False):  
+    def run(self, silent=False):  
         def __update(silent=True):
-            if not silent: DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[self.isRunning])))
-            SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[self.isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[self.isRunning]))
+            isRunning = PROPERTIES.isRunning('HTTP.run')
+            if not silent: DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
+            SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
 
         def __cancel(wait=FIFTEEN):
             try:
@@ -275,8 +280,8 @@ class HTTP(object):
         def __stop(restart=False):
             try: self._server.shutdown()
             except: pass
-            self.isRunning = False
-            self.log('__stop, http server shutdown, restart = %s, isAlive = %s'%(restart,__cancel()), xbmc.LOGINFO)
+            PROPERTIES.setRunning('HTTP.run',False)
+            self.log('run, http server shutdown, restart = %s, isAlive = %s'%(restart,__cancel()), xbmc.LOGINFO)
             if restart:
                 self.pendingRestart = False
                 self.service._que(self.service.tasks.chkHTTP,1)
@@ -284,13 +289,13 @@ class HTTP(object):
             
         """Starts the threaded HTTP server with GZIP support."""
         while not self.monitor.abortRequested():
-            if not self.isRunning:
-                self.isRunning = True
+            if not PROPERTIES.isRunning('HTTP.run'):
                 try: 
+                    PROPERTIES.setRunning('HTTP.run',True)
                     host   = SETTINGS.getIP()
                     port   = self._chkPort(host, SETTINGS.getSettingInt('TCP_PORT'))
                     server = PROPERTIES.setRemoteHost('%s:%s'%(host,port))
-                    self.log("_start, http server @ %s"%(server),xbmc.LOGINFO)
+                    self.log("run, http server @ %s"%(server),xbmc.LOGINFO)
                     SETTINGS.setSetting('Remote_NAME' ,PROPERTIES.getFriendlyName())
                     SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
                     SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
@@ -298,16 +303,17 @@ class HTTP(object):
                     
                     ThreadedHTTPServer.allow_reuse_address = True
                     self._server = ThreadedHTTPServer((host, port), partial(MyHandler,service=self.service))
-                    try:
-                        self._server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                        self.log("_start, http server set SO_REUSEADDR on server socket", xbmc.LOGDEBUG)
-                    except Exception as e:
-                        self.log("_start, http server failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
+                    try: self._server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    except Exception as e: self.log("run, http server failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
 
                     self.httpd = Thread(target=self._server.serve_forever)
                     self.httpd.daemon=True
                     self.httpd.start()
                     __update(silent)
-                except Exception as e: self.log("_start, http server startup failed! %s"%(e), xbmc.LOGERROR)
-            elif self.service._shutdown(FIFTEEN): break
+                except Exception as e:
+                    self.log("run, http server startup failed! %s"%(e), xbmc.LOGERROR)
+                    break
+            elif self.service._shutdown(FIFTEEN): 
+                self.log("run, _shutdown", xbmc.LOGERROR)
+                break
         return __stop(self.pendingRestart)
