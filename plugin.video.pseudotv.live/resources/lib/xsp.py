@@ -74,38 +74,46 @@ class XSP(object):
         return ""
       
 
-    def parseXSP(self, id, file, sort={}):
+    def parseXSP(self, id, file):
         try: 
             xml = FileAccess.open(file, "r")
             dom = parse(xml)
             xml.close()
-            try:
-                if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES: return [], {}
-            except Exception as e: self.log("[%s] parseXSP, music/no media found"%(id), xbmc.LOGDEBUG)
             
-            try: 
-                if int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue) != 0: self.log("[%s] parseXSP, invalid configuration set playlist [%s] limit to '0'"%(id,file), xbmc.LOGINFO)
-            except Exception as e: self.log("[%s] parseXSP, no limit set"%(id), xbmc.LOGDEBUG)
+            try:    type = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
+            except: type = MUSIC_TYPES[0]
+            if type.lower() in map(str.lower,MUSIC_TYPES): return []
+            else:
+                try:    limit = int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue)
+                except: limit = 0
+                    
+                if type.lower() == "tvshows":
+                    sort  = {}
+                    order = dom.getElementsByTagName("order")
+                    if order: 
+                        try: sort.update({'order':order[0].getAttribute("direction")})
+                        except: pass
+                        try: sort.update({'method':order[0].firstChild.data})
+                        except: pass
 
-            paths = []
-            type  = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
-            if type.lower() == "tvshows":
-                items = self.jsonRPC.getDirectory({"directory":file,"media":"video"},True,ADDON_VERSION,datetime.timedelta(minutes=15))[0]
-                [paths.extend(self.predefined.createShowPlaylist(item.get('label'))) for item in items if item.get('filetype') == 'directory' and item.get('label')]
-
-                try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()})
-                except Exception as e:
-                    if "method" in sort: sort.pop("method")
-                    self.log("[%s] parseXSP, no sort method, fallback to %s"%(id,sort.get('method')), xbmc.LOGDEBUG)
-                
-                try: sort.update({"order":dom.getElementsByTagName('order')[0].getAttribute('direction').lower()})
-                except Exception as e: 
-                    if "order" in sort: sort.pop("order")
-                    self.log("[%s] parseXSP, no sort direction, fallback to %s"%(id,sort.get('order')), xbmc.LOGDEBUG)
-                self.log("[%s] parseXSP, type = %s, sort = %s, paths = %s"%(id, type, sort, paths))
-                return paths, sort
-        except Exception as e: self.log("[%s] parseXSP, failed! %s"%(id,e), xbmc.LOGERROR)
-        return [file], sort
+                    paths = []
+                    for rule in dom.getElementsByTagName("rule"):
+                        if rule.getAttribute("field").lower() == "title" and rule.getAttribute("operator").lower() in ["is", "contains"]:
+                            for value in rule.getElementsByTagName("value"):
+                                if value.firstChild:
+                                    tvshow = value.firstChild.data
+                                    param  = {"type":"episodes","rules":{"and":[],"or":[]},"order":{"direction":sort.get('order','ascending'),"method":sort.get('method','episode'),"ignorearticle":True,"useartistsortname":True}}
+                                    try:
+                                        match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(tvshow)
+                                        year, title = int(match.group(2)), match.group(1)
+                                        param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":"is","value":[year]},{"field":"tvshow","operator":"is","value":[Globals._quoteString(title)]}])
+                                    except:
+                                        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":"is","value":[Globals._quoteString(tvshow)]})
+                                    paths.extend(['videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(param))])
+                    self.log("[%s] parseXSP [%s], type = %s, sort = %s, paths = %s"%(id,file, type, sort, '\n'.join(paths)))
+                    if len(paths) > 0: return paths
+        except Exception as e: self.log("[%s] parseXSP [%s], failed! %s"%(id,file,e), xbmc.LOGERROR)
+        return [file]
             
 
     def parseDXSP(self, id, file, filters={}, incExtras: bool=SETTINGS.getSettingBool('Enable_Extras')):
@@ -118,13 +126,12 @@ class XSP(object):
         
             params = FileAccess.loadJSON(params)
             params['rules'].update(filters)
-            if path.startswith('videodb://tvshows/'):
-                if '-1/-1/-1/' not in path: path = '%s/-1/-1/-1/'%(path) #flatten tvshows for episodes
-                if not incExtras: #hide seasons and extras
-                    params['rules'].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"}, 
-                                                                 {"field":"episode","operator":"greaterthan","value":"0"}])
-                else:
-                    params['rules']['and'] = [r for r in params['rules'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
+            if '-1/-1/-1/' not in path: path = '%s/-1/-1/-1/'%(path) #flatten xsp
+            if not incExtras: #hide seasons and extras
+                params['rules'].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"}, 
+                                                             {"field":"episode","operator":"greaterthan","value":"0"}])
+            else:
+                params['rules']['and'] = [r for r in params['rules'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
                 params['rules']['and'] = Globals._setDictLST(params['rules']['and'])
             file = '%s?xsp=%s'%(path,FileAccess.dumpJSON(params))
             self.log("[%s] parseDXSP, OUT = %s"%(id,file))

@@ -55,8 +55,8 @@ class XMLTVS(object):
         else:     data = self.XMLTVDATA['data']
             
         self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
-        self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'])
-        self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'])
+        self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'], opt='PROGRAMMES')
+        self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'], opt='RECORDINGS')
         self.log('_save, writable = %s, file = %s, reset = %s\nchannels = %s, programmes = %s, recordings = %s'%(self.writable,self.XMLTVFile,reset,len(self.XMLTVDATA['channels']),len(self.XMLTVDATA['programmes']),len(self.XMLTVDATA['recordings'])))
         
         if self.writable:
@@ -159,11 +159,11 @@ class XMLTVS(object):
             try: 
                 firstStart = min((program['start'] for program in programmes if program['channel'] == channel['id']), default=fallback)
                 lastStop   = max((program['stop']  for program in programmes if program['channel'] == channel['id']), default=fallback)
-                self.log('loadStopTimes, channel = %s, first-start = %s, last-stop = %s, fallback = %s'%(channel['id'],firstStart,lastStop,fallback))
+                self.log('loadStopTimes [%s] first-start = %s, last-stop = %s, fallback = %s'%(channel['id'],firstStart,lastStop,fallback))
                 if firstStart > fallback: raise Exception('First start-time in the future, rebuild channel with fallback')
                 yield channel['id'],datetime.datetime.timestamp(strpTime(lastStop, DTFORMAT))
             except Exception as e:
-                self.log("loadStopTimes, channel = %s failed!\nMalformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s"%(channel.get('id'),e,fallback), xbmc.LOGWARNING)
+                self.log("loadStopTimes [%s] failed!\nMalformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s"%(channel.get('id'),e,fallback), xbmc.LOGWARNING)
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
 
 
@@ -202,10 +202,10 @@ class XMLTVS(object):
             return self.sortProgrammes(programmes)
         
         
-    def cleanChannels(self, channels: list, programmes: list) -> list: # remove stations with no guidedata
+    def cleanChannels(self, channels: list, programmes: list, opt='PROGRAMMES') -> list: # remove stations with no guidedata
         stations    = list(set([program.get('channel') for program in programmes]))
         tmpChannels = [channel for station in stations for channel in channels if channel.get('id') == station]
-        self.log('cleanChannels, before = %s, after = %s'%(len(channels),len(tmpChannels)))
+        self.log('cleanChannels [%s], before = %s, after = %s'%(opt,len(channels),len(tmpChannels)))
         return tmpChannels
 
 
@@ -284,8 +284,10 @@ class XMLTVS(object):
         
         item['thumb']         = cleanImage((Globals._getThumb(fItem,EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK])) #unify thumbnail by user preference 
         fItem.get('art',{})['thumb'] = cleanImage(Globals._getThumb(fItem,{0:1,1:0}[EPG_ARTWORK]) or {0:FANART,1:COLOR_LOGO}[{0:1,1:0}[EPG_ARTWORK]]) #unify thumbnail artwork, opposite of EPG_Artwork
+         
+        if item['type'] == 'movie': item['date'] = (fItem.get('premiered')  or fItem.get('releasedate') or fItem.get('firstaired'))
+        else:                       item['date'] = (fItem.get('firstaired') or fItem.get('releasedate') or fItem.get('premiered'))
         
-        item['date']          = fItem.get('premiered','')
         item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=Globals._quoteString(item['title']),chid=Globals._quoteString(citem['id']),vid=Globals._quoteString(Globals._encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=Globals._quoteString(citem['name']))
         fItem['catchup-id']   = item['catchup-id']
             

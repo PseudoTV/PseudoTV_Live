@@ -23,13 +23,13 @@ from plugin     import Plugin
 from pool       import threadit
 
 def __hasChannels():
-    return Globals._getProperty('%s.has.Channels'%(ADDON_ID)) == "true"
+    return Globals._getProperty('has.Channels') == "true"
     
 def __getPVRRefresh():
-    return Globals._getProperty('%s.%s.Running'%(ADDON_ID,'Tasks.chkPVRRefresh')) == "true"
+    return Globals._getProperty('Tasks.chkPVRRefresh.Running') == "true"
     
 def __setPVRRefresh():
-    return Globals._setProperty('%s.%s'%(ADDON_ID,'chkPVRRefresh'),"true")
+    return Globals._setProperty('chkPVRRefresh',"true")
     
 @threadit
 def _run(sysARG, fitem: dict={}, nitem: dict={}):

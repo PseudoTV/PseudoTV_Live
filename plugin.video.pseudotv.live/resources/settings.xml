@@ -213,6 +213,11 @@
                         </dependency>
                     </dependencies>
                 </setting>
+                <setting id="Enable_Grouping" type="boolean" label="30063" help="33063">
+                    <level>2</level>
+                    <default>true</default>
+                    <control type="toggle"/>
+                </setting>
                 <setting id="Enable_Changed" type="boolean" label="30214" help="33214">
                     <level>2</level>
                     <default>true</default>
@@ -220,11 +225,6 @@
                 </setting>
                 <setting id="Clean_Recordings" type="boolean" label="30149" help="33148">
                     <level>3</level>
-                    <default>true</default>
-                    <control type="toggle"/>
-                </setting>
-                <setting id="Enable_Grouping" type="boolean" label="30063" help="33063">
-                    <level>2</level>
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
@@ -264,7 +264,7 @@
                     <constraints>
                         <minimum>0</minimum>
                         <step>5</step>
-                        <maximum>600</maximum>
+                        <maximum>900</maximum>
                     </constraints>
                     <control type="slider" format="integer">
                         <popup>false</popup>
@@ -522,6 +522,11 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
+                <setting id="Enable_Details" type="boolean" label="30225" help="33225">
+                    <level>1</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                </setting>
                 <setting id="Interleave_Set" type="integer" label="30179" help="33215">
                     <level>3</level>
                     <default>1</default>
@@ -539,6 +544,11 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
+                <!-- <setting id="Enable_Shuffle" type="boolean" label="30225" help="33226"> -->
+                    <!-- <level>1</level> -->
+                    <!-- <default>false</default> -->
+                    <!-- <control type="toggle"/> -->
+                <!-- </setting> -->
                 <setting id="Enable_Even" type="integer" label="30121" help="33121">
                     <level>2</level>
                     <default>0</default>
@@ -551,7 +561,7 @@
                         <popup>false</popup>
                     </control>
                 </setting>
-                <setting id="Enable_Force_Episode" type="boolean" label="30181" help="33230" parent="Enable_Even">
+                <setting id="Enable_Force_Episode_Order" type="boolean" label="30181" help="33230" parent="Enable_Even">
                     <level>2</level>
                     <default>false</default>
                     <dependencies>

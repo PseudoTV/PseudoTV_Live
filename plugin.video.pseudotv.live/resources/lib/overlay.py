@@ -356,7 +356,6 @@ class OnNext(xbmcgui.WindowXMLDialog):
                     
                     show = ONNEXT_TIMER*2
                     while not self.monitor.abortRequested() and not self.closing:
-                        self.log('onInit, showing (%s)'%(show))
                         if self.service._shutdown(CPU_CYCLE) or not self.player.isPlayingPseudoTV() or show < 1: break
                         else: show -= CPU_CYCLE
                         
@@ -368,7 +367,6 @@ class OnNext(xbmcgui.WindowXMLDialog):
 
             wait = self.intTime*2
             while not self.monitor.abortRequested() and not self.closing:
-                self.log('onInit, waiting (%s)'%(wait))
                 if self.service._shutdown(CPU_CYCLE) or not self.player.isPlayingPseudoTV() or wait < 1: break
                 else: wait -= CPU_CYCLE
                         

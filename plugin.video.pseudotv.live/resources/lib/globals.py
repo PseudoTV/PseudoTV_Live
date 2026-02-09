@@ -43,7 +43,7 @@ def chanceBool(percent=25):
 
 def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache=None, file=None):
     #cache = {"cache":None, "json_data": False, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}
-    def __error(result={}):                                         return result
+    def __error(result={}):                                                         return result
     def __getCache(key, cache, json_data, checksum):                return (cache.get('requestURL.%s'%(Globals._getMD5(key)), checksum, json_data) or __error())
     def __setCache(key, results, cache, json_data, checksum, life): return cache.set('requestURL.%s'%(Globals._getMD5(key)), results, checksum, life, json_data)
         
@@ -68,17 +68,16 @@ def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache
         if results and not cache is None: 
             return __setCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
                               results, cache["cache"], cache.get("json_data",False), cache.get("checksum",ADDON_VERSION), cache.get("life",datetime.timedelta(minutes=15)))
-        else: return results 
+        return results 
     except Exception as e: 
         log("Globals: requestURL, failed! %s, An error occurred: %s"%('Returning cache' if cache else 'No Response', e))
         return __getCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
                           cache["cache"], cache.get("json_data",False), cache.get("checksum",ADDON_VERSION)) if cache else __error()
     finally: #retry failed post
-        ...
-        # if not results and payload:
-            # posts = set(SETTINGS.getCacheSetting('postQue', revive=True) or [])
-            # posts.add((url, params, payload, header, timeout, cache, file))
-            # SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)
+        if results is None and payload:
+            posts = set(SETTINGS.getCacheSetting('postQue', revive=True) or [])
+            posts.add((url, params, payload, header, timeout, None, file))
+            SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)
 
 def diffLSTDICT(old, new):
     set1 = {FileAccess.dumpJSON(d, sortkey=True) for d in old}
@@ -175,13 +174,6 @@ def getUTCstamp():
 def getGMTstamp():
     return time.time()
 
-def randomShuffle(items=[]):
-    if len(items) > 0:
-        #reseed random for a "greater sudo random"
-        random.seed(random.randint(0,999999999999))
-        random.shuffle(items)
-    return items
-    
 def isStack(path): #is path a stack
     return path.startswith('stack://')
 
@@ -211,11 +203,6 @@ def isRadio(item):
     if item.get('radio',False) or item.get('type') == "Music Genres": return True
     for path in item.get('path',[item.get('file','')]):
         if path.lower().startswith(('musicdb://','special://profile/playlists/music/','special://musicplaylists/')): return True
-    return False
-    
-def isMixed_XSP(item):
-    for path in item.get('path',[item.get('file','')]):
-        if path.lower().startswith('special://profile/playlists/mixed/'): return True
     return False
 
 def cleanLabel(text):
@@ -265,9 +252,10 @@ def cleanMPAA(mpaa):
     return mpaa
 
 def combineDicts(dict1={}, dict2={}):
-    for k,v in list(dict1.items()):
-        if dict2.get(k): k = dict2.pop(k)
-    dict1.update(dict2)
+    if dict1 and dict2:
+        for k,v in list(dict1.items()):
+            if dict2.get(k): k = dict2.pop(k)
+        dict1.update(dict2)
     return dict1
     
 def _setDictLST(lst=[]):
@@ -359,9 +347,7 @@ def isCenterlized():
     return True
                 
 def isFiller(item={}):
-    for genre in item.get('genre',[]):
-        if genre.lower() in PRE_POST_ROLL_TYPES: return True
-    return False
+    return any(genre.lower() in map(str.lower, PRE_POST_ROLL_TYPES) for genre in item.get('genre', []))
 
 def isShort(item={}, minDuration=SETTINGS.getSettingInt('Seek_Tolerance')):
     if item.get('duration', minDuration) < minDuration: return True
@@ -392,14 +378,16 @@ def parseSE(filename):
             return int(match.group(5)), int(match.group(6))
     return -1, -1
   
-def randomSamples(items=[], x=5):
-    reservoir = []
-    for i, item in enumerate(items):
-        if len(reservoir) < x: reservoir.append(item)
-        else:
-            m = random.randint(0, i)
-            if m < x: reservoir[m] = item
-    return reservoir
+def randomShuffle(items=[]):
+    if len(items) > 0:
+        #reseed random for a "greater sudo random"
+        random.seed(random.randint(0,999999999999))
+        random.shuffle(items)
+    return items
     
+def randomSamples(items=[], x=5):
+    if len(items) >= x: items = random.sample(items, x)
+    return randomShuffle(items)
+  
 def hasURLencoding(s):
     return bool(re.search(r'%[0-9a-fA-F]{2}', s))

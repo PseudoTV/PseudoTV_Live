@@ -107,21 +107,21 @@ class Library(object):
         
         
     def updateLibrary(self, types, silent=False, complete=False):
-        # if not PROPERTIES.isRunning('Library.updateLibrary'):
-        with PROPERTIES.chkRunning('Library.updateLibrary'):
-            for type in types:
-                items = self.jsonRPC.cache.get("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__))
-                if items is None: 
-                    self.pCount  = 0
-                    self.pMSG    = type
-                    self.pHeader = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(32041))
-                    with DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
-                        items = self.AUTOTUNE[type]['func']()
-                if items is None: self.service._que(self.service.tasks.chkLibrary,2,*(type,silent))
-                else:
-                    complete = self.setLibrary(type,items)
-                    self.log("updateLibrary, type = %s, items = %s, complete = %s"%(type,len(items),complete))
-        return complete
+        if not PROPERTIES.isRunning('Library.updateLibrary'):
+            with PROPERTIES.chkRunning('Library.updateLibrary'):
+                for type in types:
+                    items = self.jsonRPC.cache.get("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__))
+                    if items is None: 
+                        self.pCount  = 0
+                        self.pMSG    = type
+                        self.pHeader = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(32041))
+                        with DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
+                            items = self.AUTOTUNE[type]['func']()
+                    if items is None: self.service._que(self.service.tasks.chkLibrary,2,*(type,silent))
+                    else:
+                        complete = self.setLibrary(type,items)
+                        self.log("updateLibrary, type = %s, items = %s, complete = %s"%(type,len(items),complete))
+                return complete
 
 
     def clrLibraryCache(self, type):
@@ -133,7 +133,7 @@ class Library(object):
 
     def getPlaylists(self):
         PlayList = []
-        types = ['video','music']
+        types = ['video','music']#,'mixed'
         for i, type in enumerate(types):
             self.pCount  = int(i*100//len(types))
             self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
@@ -144,9 +144,9 @@ class Library(object):
                 if self.service._interrupt():
                     self.log("getPlaylists, _interrupt")
                     return
+                elif not result.get('label'): continue
                 else:
                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s (%s): %s%%'%(self.pMSG,type.title(),int((idx)*100//len(results))), header=self.pHeader)
-                    if not result.get('label') or (type == 'mixed' and not 'pseudotv' in result.get('label','').lower()): continue
                     nPlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':self.resources.getLogo({'name':result.get('label'),'type':"Custom"},fallback=result.get('thumbnail'))})
             self.log('getPlaylists, type = %s, PlayList = %s'%(type,len(nPlayList)))
             PlayList.extend(nPlayList)
@@ -280,8 +280,8 @@ class Library(object):
                     return
                 elif info.get('label'):
                     TVShowList.update({FileAccess.dumpJSON(info):info.get('episode',0)})
-                    NetworkList.update([studio for studio in info.get('studio',[])])
-                    ShowGenreList.update([genre for genre in info.get('genre',[])])
+                    NetworkList.update({studio: info.get('episode', 0) for studio in info.get('studio', [])})
+                    ShowGenreList.update({genre: info.get('episode', 0) for genre in info.get('genre', [])})
                     
             if sortbycount:
                 TVShowList    = [FileAccess.loadJSON(x[0]) for x in sorted(TVShowList.most_common(limit))]

@@ -227,7 +227,8 @@ RADIOGROUPFLE       = 'radio_groups.xml'
 PROVIDERFLE         = 'providers.xml'
 CHANNELBACKUPFLE    = 'channels.backup'
 CHANNELRESTOREFLE   = 'channels.restore'
-CHANNELCHANGEFLE    = 'channels.change'
+CHANNELCHANGEDFLE   = 'channels.changed'
+CHANNELLATESTFLE    = 'channels.latest'
 
 #exts
 VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')[:-1]
@@ -250,7 +251,8 @@ RESUME_LOC          = os.path.join(TEMP_LOC,'resume')
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 CHANNELFLE_BACKUP   = os.path.join(BACKUP_LOC,CHANNELBACKUPFLE)
 CHANNELFLE_RESTORE  = os.path.join(BACKUP_LOC,CHANNELRESTOREFLE)
-CHANNELFLE_CHANGE   = os.path.join(BACKUP_LOC,CHANNELCHANGEFLE)
+CHANNELFLE_CHANGED  = os.path.join(BACKUP_LOC,CHANNELCHANGEDFLE)
+CHANNELFLE_LATEST   = os.path.join(BACKUP_LOC,CHANNELLATESTFLE)
 
 #sfx
 BING_WAV            = os.path.join(SFX_LOC,'bing.wav')
@@ -326,6 +328,7 @@ ACTION_PREVIOUS_MENU = [92,10,110,521,ACTION_SELECT_ITEM]
 
 #rules
 ##builder
+RULES_VERSION                              = 0.1
 RULES_ACTION_CHANNEL_CITEM                 = 1 #Persistent citem changes
 RULES_ACTION_CHANNEL_START                 = 2 #Set channel global
 RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE   = 3 #Initial FileArray (build bypass)
@@ -338,6 +341,8 @@ RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST  = 9 #FileArray prior to interleaving 
 RULES_ACTION_CHANNEL_STOP                  = 10#restore channel global
 RULES_ACTION_CHANNEL_TEMP_CITEM            = 11 #Temporary citem changes, rule injection
 RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN = 12
+RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE  = 13
+RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST = 14
 ##player
 RULES_ACTION_PLAYER_START  = 20 #Playback started
 RULES_ACTION_PLAYER_CHANGE = 21 #Playback changed/ended

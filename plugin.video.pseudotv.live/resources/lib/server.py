@@ -66,21 +66,29 @@ class Discovery(Thread):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
     def run(self):
-        try: 
-            zcons = self.multiroom._getStatus()
-            self.log("run, starting ZEROCONF ENABLED (%s)"%(zcons))
-            if zcons:
-                zconf = Zeroconf()
-                self.log("run, Multicast DNS Service waiting for (%s)"%(ZEROCONF_SERVICE))
-                SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
-                ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
-                self.service._shutdown(DISCOVER_INTERVAL)
-                self.log("run, Multicast DNS Service stopping search for (%s)"%(ZEROCONF_SERVICE))
-                zconf.close()
-            SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
-            self.log("run, shutting down...")
-        except Exception as e: self.log("run, Multicast DNS Service startup failed! %s"%(e), xbmc.LOGERROR)
-                   
+        if not PROPERTIES.isRunning('Discovery.run'):
+            with PROPERTIES.chkRunning('Discovery.run'):
+                while not self.monitor.abortRequested():
+                    try: 
+                        zcons = self.multiroom._getStatus()
+                        self.log("run, starting ZEROCONF ENABLED (%s)"%(zcons))
+                        if zcons:
+                            zconf = Zeroconf()
+                            self.log("run, Multicast DNS Service waiting for (%s)"%(ZEROCONF_SERVICE))
+                            ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
+                            SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
+                            if self.service._sleep(DISCOVER_INTERVAL): break
+                            self.log("run, Multicast DNS Service stopping search for (%s)"%(ZEROCONF_SERVICE))
+                            zconf.close()
+                        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
+                    except Exception as e:
+                        self.log("run, Multicast DNS Service failed! %s"%(e), xbmc.LOGERROR)
+                        break
+                    if self.service._sleep(600):
+                        self.log("run, _sleep", xbmc.LOGERROR)
+                        break
+                self.log("run, shutting down...")
+
 
 class MyHandler(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server, service):
@@ -220,8 +228,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     
     
 class HTTP(object):
-    httpd          = None
-    pendingRestart = False
+    httpd = None
     
     def __init__(self, service=None):
         self.service = service
@@ -258,8 +265,8 @@ class HTTP(object):
         return tmpPort
         
 
-    def _restart(self):
-        self.pendingRestart = True
+    def _pendingRestart(self):
+        return PROPERTIES.getEXTPropertyBool('HTTP.pendingRestart')
        
 
     def run(self, silent=False):  
@@ -283,37 +290,39 @@ class HTTP(object):
             PROPERTIES.setRunning('HTTP.run',False)
             self.log('run, http server shutdown, restart = %s, isAlive = %s'%(restart,__cancel()), xbmc.LOGINFO)
             if restart:
-                self.pendingRestart = False
+                PROPERTIES.setEXTPropertyBool('HTTP.pendingRestart',False)
                 self.service._que(self.service.tasks.chkHTTP,1)
             else: __update(restart)
             
         """Starts the threaded HTTP server with GZIP support."""
-        while not self.monitor.abortRequested():
-            if not PROPERTIES.isRunning('HTTP.run'):
-                try: 
-                    PROPERTIES.setRunning('HTTP.run',True)
-                    host   = SETTINGS.getIP()
-                    port   = self._chkPort(host, SETTINGS.getSettingInt('TCP_PORT'))
-                    server = PROPERTIES.setRemoteHost('%s:%s'%(host,port))
-                    self.log("run, http server @ %s"%(server),xbmc.LOGINFO)
-                    SETTINGS.setSetting('Remote_NAME' ,PROPERTIES.getFriendlyName())
-                    SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
-                    SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
-                    SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
-                    
-                    ThreadedHTTPServer.allow_reuse_address = True
-                    self._server = ThreadedHTTPServer((host, port), partial(MyHandler,service=self.service))
-                    try: self._server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    except Exception as e: self.log("run, http server failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
+        if not PROPERTIES.isRunning('HTTP.start'):
+            with PROPERTIES.chkRunning('HTTP.start'):
+                while not self.monitor.abortRequested():
+                    if not PROPERTIES.isRunning('HTTP.run'):
+                        PROPERTIES.setRunning('HTTP.run',True)
+                        try: 
+                            host   = SETTINGS.getIP()
+                            port   = self._chkPort(host, SETTINGS.getSettingInt('TCP_PORT'))
+                            server = PROPERTIES.setRemoteHost('%s:%s'%(host,port))
+                            self.log("run, http server @ %s"%(server),xbmc.LOGINFO)
+                            SETTINGS.setSetting('Remote_NAME' ,PROPERTIES.getFriendlyName())
+                            SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
+                            SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
+                            SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
+                            
+                            ThreadedHTTPServer.allow_reuse_address = True
+                            self._server = ThreadedHTTPServer((host, port), partial(MyHandler,service=self.service))
+                            try: self._server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                            except Exception as e: self.log("run, http server failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
 
-                    self.httpd = Thread(target=self._server.serve_forever)
-                    self.httpd.daemon=True
-                    self.httpd.start()
-                    __update(silent)
-                except Exception as e:
-                    self.log("run, http server startup failed! %s"%(e), xbmc.LOGERROR)
-                    break
-            elif self.service._shutdown(FIFTEEN): 
-                self.log("run, _shutdown", xbmc.LOGERROR)
-                break
-        return __stop(self.pendingRestart)
+                            self.httpd = Thread(target=self._server.serve_forever)
+                            self.httpd.daemon=True
+                            self.httpd.start()
+                            __update(silent)
+                        except Exception as e:
+                            self.log("run, http server startup failed! %s"%(e), xbmc.LOGERROR)
+                            break
+                    elif self.service._shutdown(FIFTEEN) or self._pendingRestart(): 
+                        self.log("run, _shutdown/pendingRestart", xbmc.LOGERROR)
+                        break
+            __stop(self._pendingRestart())

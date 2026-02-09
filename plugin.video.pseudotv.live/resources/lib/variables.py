@@ -43,16 +43,16 @@ SERVERFLEPATH       = os.path.join(USER_LOC,SERVERFLE)
 class Globals:
     @staticmethod
     def _getProperty(key):
-        return xbmcgui.Window(10000).getProperty('%s.%s' % (ADDON_ID, key))
+        return xbmcgui.Window(10000).getProperty('%s.%s'%(ADDON_ID, key))
 
     @staticmethod
     def _setProperty(key, value):
-        xbmcgui.Window(10000).setProperty('%s.%s' % (ADDON_ID, key), value)
+        xbmcgui.Window(10000).setProperty('%s.%s'%(ADDON_ID, key), value)
         return value
 
     @staticmethod
     def _clrProperty(key):
-        return xbmcgui.Window(10000).clearProperty('%s.%s' % (ADDON_ID, key))
+        return xbmcgui.Window(10000).clearProperty('%s.%s'%(ADDON_ID, key))
 
     @staticmethod
     def _getMD5(text,hash=0,hexit=True):
@@ -137,7 +137,7 @@ class Globals:
         xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]-180))
 
     @staticmethod
-    def _openGuide(self, instance=ADDON_NAME):
+    def _openGuide(instance=ADDON_NAME):
         def __match(match):
             for name in FileAccess.listdir('pvr://channels/tv/')[0]:
                 if name.lower().startswith(Globals._quoteString(match.lower())):
@@ -146,9 +146,9 @@ class Globals:
         if Globals._getInfoBool('HasTVChannels','Pvr'):
             try:
                 instance, path = __match(instance)
-                xbmc.executebuiltin("ReplaceWindow(TVGuide,%s)"%(path),condition=partial(xbmc.executebuiltin,key="Dialog.Close(all,true)"))
+                xbmc.executebuiltin("ReplaceWindow(TVGuide,%s)"%(path))
             except: xbmc.executebuiltin("ReplaceWindow(TVGuide)")
-        else: xbmc.executebuiltin("ReplaceWindow(Home)")
+        else: Globals._openSettings()
           
     @staticmethod  
     def _getThumb(item={},opt=0): #unify thumbnail artwork

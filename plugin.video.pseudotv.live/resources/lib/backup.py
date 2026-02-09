@@ -37,26 +37,26 @@ class Backup(object):
         except: return LANGUAGE(32105) #Unknown
         
         
-    def hasBackup(self, file: str=CHANNELFLE_BACKUP) -> bool:
-        self.log('hasBackup')
-        if PROPERTIES.setBackup(FileAccess.exists(file)):
+    def hasBackup(self, file=CHANNELFLE_BACKUP) -> bool:
+        if file is None:
+            files   = [CHANNELFLE_BACKUP, CHANNELFLE_LATEST, CHANNELFLE_CHANGED]
+            backups = [file for file in files if FileAccess.exists(file)]
+            try:    file = max(backups, key=os.path.getmtime)
+            except: return
+            self.log('hasBackup, file = %s'%(file))
+            
+        if FileAccess.exists(file):
             if file == CHANNELFLE_BACKUP:#main backup file, set meta.
-                if (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown') == 'Last Backup: Unknown':
-                    SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),self.getFileDate(file)))
-                if not SETTINGS.getSetting('Recover_Backup'):
-                    SETTINGS.setSetting('Recover_Backup','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
-            return True
-        SETTINGS.setSetting('Backup_Channels' ,'')
-        SETTINGS.setSetting('Recover_Backup','')
-        return False
+                PROPERTIES.setBackup(True)
+                if not SETTINGS.getSetting('Backup_Channels'): SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),self.getFileDate(file)))
+                if not SETTINGS.getSetting('Recover_Backup'):  SETTINGS.setSetting('Recover_Backup','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels(file))))
+            return file
             
             
     def getChannels(self, file: str=CHANNELFLE_BACKUP) -> list:
-        self.log('getChannels')
-        channels = Channels(file, writable=True)
-        citems   = channels._load(file).get('channels',[])
-        del channels
-        return citems
+        channels = Channels(file).getChannels()
+        self.log('getChannels, file = %s, channels = %s'%(file, len(channels)))
+        return channels
         
         
     def backupChannels(self, file: str=CHANNELFLE_BACKUP, silent: bool=False) -> bool:
@@ -67,27 +67,25 @@ class Backup(object):
                 
         with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
             if FileAccess.copy(CHANNELFLEPATH,file):
-                if file == CHANNELFLE_BACKUP: #main backup file, set meta.
+                if file == CHANNELFLE_BACKUP:#main backup file, set meta.
                     PROPERTIES.setBackup(True)
                     SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
-                    SETTINGS.setSetting('Recover_Backup','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
-                DIALOG.notificationDialog('%s %s'%(LANGUAGE(32110),LANGUAGE(32025)))
-        hasBackup = self.hasBackup(file)
-        if silent: return hasBackup
-        SETTINGS.openSettings(ctl)
+                    SETTINGS.setSetting('Recover_Backup','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels(file))))
+                DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32110),LANGUAGE(32025), os.path.basename(file)))
+        if silent: return self.hasBackup(file)
+        Globals._openSettings(ctl)
         
 
     def recoverChannels(self, file: str=CHANNELFLE_BACKUP) -> bool:
         self.log('recoverChannels, file = %s'%(file))
         if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(SETTINGS.getSetting('Recover_Backup').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
-            
         with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
             FileAccess.move(CHANNELFLEPATH,CHANNELFLE_RESTORE)
             if FileAccess.copy(file,CHANNELFLEPATH):
                 PROPERTIES.setPendingRestart()
         
-        
+    @threadit
     def run(self):  
         with BUILTIN.busy_dialog():
             ctl = (0,1) #settings return focus
@@ -96,4 +94,4 @@ class Backup(object):
             if   param == 'Recover_Backup':  self.recoverChannels()
             elif param == 'Backup_Channels': self.backupChannels()
         
-if __name__ == '__main__': threadit(Backup(sys.argv).run)
+if __name__ == '__main__': Backup(sys.argv).run()

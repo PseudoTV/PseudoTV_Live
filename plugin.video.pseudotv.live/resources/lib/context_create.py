@@ -31,8 +31,11 @@ class Create(object):
         log('Create: open')
         if not PROPERTIES.isRunning('Create.open') and not PROPERTIES.isRunning('Library.updateLibrary'):
             with PROPERTIES.chkRunning('Create.open'):
-                manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=self.fitem.get('citem',{}).get('number',1))
-            del manager
+                try: manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=self.fitem.get('citem',{}).get('number',1))
+                except Exception as e:
+                    log("Create: open, failed! %s"%(e), xbmc.LOGERROR)
+                    PROPERTIES.setRunning('Create.open',False)
+                finally:del manager
         else: DIALOG.notificationDialog(LANGUAGE(32057)%(ADDON_NAME))
             
             
@@ -58,7 +61,7 @@ class Create(object):
                         manager.channels.addChannel(manager.setLogo(citem['name'], citem))
                         manager.channels.setChannels()
                         manager.closeManager()
-                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,'chkChannels')#trigger channel building
+                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChannels'])#trigger channel building
                         del manager
                         manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=citem['number'])
                     del manager

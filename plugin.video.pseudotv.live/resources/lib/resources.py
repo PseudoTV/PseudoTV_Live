@@ -66,7 +66,7 @@ class Resources(object):
         self.remoteHost  = PROPERTIES.getRemoteHost()
         self.seasonal    = Seasonal()
         self.season      = self.seasonal.getHoliday()
-        self._openRouter = OpenRouter(cache=self.cache)
+        self.openRouter  = OpenRouter(cache=self.cache)
         self.imageCache  = OrderedDict(SETTINGS.getCacheSetting('imageCache'  , json_data=True) or {})
         
         # trim if oversized
@@ -224,8 +224,8 @@ class Resources(object):
                     continue
                 results = __fillResource(id)
                 self.log('getLogoResources, checking %s, results = %s'%(id,len(results)))
-                for name, logo in list(results.items()):
-                    if self.matchName(citem.get('name'), name):
+                for title, logo in list(results.items()):
+                    if self.matchName(citem.get('name'), title):
                         self.log('getLogoResources, found %s'%(logo))
                         # append full resource path
                         logos.append(logo)
@@ -261,8 +261,7 @@ class Resources(object):
                     art = item.get('art', {})
                     for key in ['clearlogo','logo','logos','clearart','icon']:
                         logo = art.get(key,'')
-                        if not logo:
-                            continue
+                        if not logo: continue
                         logo = logo.replace('image://DefaultFolder.png/','').rstrip('/')
                         if logo:
                             self.log('getTVShowLogo, found %s'%(logo))
@@ -293,21 +292,26 @@ class Resources(object):
 
         a = __normalize(chname)
         b = __normalize(title)
+        print('matchName',chname,title)
+        print('matchName',a,b)
         if not a and not b: return False
         if a == b:          return True
-        # quick token checks to avoid heavy SequenceMatcher when unlikely to match
+       
+       # quick token checks to avoid heavy SequenceMatcher when unlikely to match
         a_tokens = set(_TOKEN_SPLIT_RE.split(a))
         b_tokens = set(_TOKEN_SPLIT_RE.split(b))
+        print('matchName',a_tokens,b_tokens)
         if not a_tokens or not b_tokens: return False
         # if there's very low token intersection, skip expensive ratio
         inter = a_tokens.intersection(b_tokens)
+        print('matchName inter',inter)
         if len(inter) / max(1, min(len(a_tokens), len(b_tokens))) < (1.00 - threshold):
             # fallback to startswith/contains checks which are cheap
             if a.startswith(b) or b.startswith(a) or (a in b) or (b in a): return True
-            return False
         # fallback to SequenceMatcher only when token overlap suggests potential match
         try:
             ratio = SequenceMatcher(None, a, b).ratio()
+            print('matchName ratio',ratio)
             if ratio >= threshold: return True
         except Exception: pass
         return False

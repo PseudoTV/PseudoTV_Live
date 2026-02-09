@@ -119,7 +119,7 @@ class Channels(object):
          
 
     def delChannel(self, citem: dict={}) -> bool:
-        if isinstance(citem,list): return any([self.delChannel(channel) for channel in channels])
+        if isinstance(citem,list): return any([self.delChannel(channel) for channel in citem])
         self.log('delChannel,[%s]'%(citem['id']), xbmc.LOGINFO)
         idx, channel = self.findChannel(citem)
         if idx is not None: self.channelDATA['channels'].pop(idx)
@@ -127,7 +127,7 @@ class Channels(object):
     
     
     def addChannel(self, citem: dict={}) -> bool:
-        if isinstance(citem,list): return any([self.addChannel(channel) for channel in channels])
+        if isinstance(citem,list): return any([self.addChannel(channel) for channel in citem])
         channels = self.getChannels()
         idx, channel = self.findChannel(citem, channels)
         if idx is not None:

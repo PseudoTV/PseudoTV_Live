@@ -872,8 +872,8 @@ class Properties(object):
             if msg: Dialog().notificationDialog(msg)
             self.log('recessActivity, isInterrupt = %s, isSuspend = %s, isBuilding = %s'%(isInterrupt,isSuspend,isBuilding))
             if not isInterrupt and (isSuspend or isBuilding):
-                if isSuspend: self.setSuspendActivity(False)
-                # elif isBuilding: self.setInterruptActivity(True)
+                if isSuspend:  self.setSuspendActivity(False)
+                if isBuilding: self.setInterruptActivity(True)
                 if self.monitor.waitForAbort(SUSPEND_INTERVAL): return []
             elif isInterrupt:
                 self.setInterruptActivity(False)
@@ -1121,8 +1121,9 @@ class Builtin(object):
             try: 
                 if self.busy is None:
                     from overlay import Busy 
-                    self.busy = Busy(BUSY_XML, ADDON_PATH, "default", lock=lock)
-                    self.busy.show()
+                    try:     self.busy = Busy(BUSY_XML, ADDON_PATH, "default", lock=lock)
+                    except:  self.busy = None
+                    finally: self.busy.show()
                 yield
             finally:
                 if hasattr(self.busy, 'close'):
@@ -1578,7 +1579,6 @@ class Dialog(object):
                     {"idx":11, "label":'%s %s'%(LANGUAGE(32207),optlabel) , "label2":"library://music/"                      , "default":"library://music/"                   , "shares":"music"   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
                     {"idx":12, "label":LANGUAGE(32191)                    , "label2":"special://profile/playlists/video/"    , "default":"special://profile/playlists/video/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
                     {"idx":13, "label":LANGUAGE(32192)                    , "label2":"special://profile/playlists/music/"    , "default":"special://profile/playlists/music/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
-                    {"idx":14, "label":LANGUAGE(32193)                    , "label2":"special://profile/playlists/mixed/"    , "default":"special://profile/playlists/mixed/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
                     {"idx":15, "label":LANGUAGE(32195)                    , "label2":"Dynamic SmartPlaylists"                , "default":""                                   , "shares":""        , "mask":""                                , "type":1    , "multi":False},
                     {"idx":16, "label":LANGUAGE(32194)                    , "label2":"Import paths from STRM file"           , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
                     {"idx":17, "label":LANGUAGE(32206)                    , "label2":"Import files from Basic Playlist"      , "default":""                                   , "shares":""        , "mask":"|".join(BASIC_PLAYLISTS)         , "type":1    , "multi":False},
@@ -1709,7 +1709,6 @@ class Dialog(object):
             elif params.get('type') == 'episodes':    enums = jsonRPC.getEnums("List.Filter.Fields.Episodes", type='items')
             elif params.get('type') == 'movies':      enums = jsonRPC.getEnums("List.Filter.Fields.Movies"  , type='items')
             elif params.get('type') == 'musicvideos': enums = jsonRPC.getEnums("List.Filter.Fields.MusicVideos")
-            elif params.get('type') == 'mixed':       enums = ["playlist", "virtualfolder"]
             else: return
             enumLST = list(sorted([_f for _f in enums if _f]))
             enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Filter",preselect=(enumLST.index(rule.get('field')) if rule.get('field') else -1),useDetails=False, multi=False)

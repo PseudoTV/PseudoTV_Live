@@ -26,16 +26,16 @@ from fileaccess  import FileAccess, FileLock
 class Service(object):
     monitor = MONITOR()
     def _shutdown(self, wait=1.0) -> bool:
-        pendingShutdown = Globals._getProperty('%s.pendingShutdown'%(ADDON_ID)) == "true"
+        pendingShutdown = Globals._getProperty('pendingShutdown') == "true"
         return (self.monitor.waitForAbort(wait) | pendingShutdown)
     def _interrupt(self) -> bool:
-        pendingShutdown   = Globals._getProperty('%s.pendingShutdown'%(ADDON_ID)) == "true"
-        pendingInterrupt  = Globals._getProperty('%s.pendingInterrupt'%(ADDON_ID)) == "true"
-        pendingRestart    = Globals._getProperty('%s.pendingRestart'%(ADDON_ID)) == "true"
-        interruptActivity = Globals._getProperty('%s.interruptActivity'%(ADDON_ID)) == "true"
+        pendingShutdown   = Globals._getProperty('pendingShutdown') == "true"
+        pendingInterrupt  = Globals._getProperty('pendingInterrupt') == "true"
+        pendingRestart    = Globals._getProperty('pendingRestart') == "true"
+        interruptActivity = Globals._getProperty('interruptActivity') == "true"
         return (pendingShutdown | pendingRestart | pendingInterrupt | interruptActivity)
     def _suspend(self, wait=1.0) -> bool:
-        pendingSuspend = Globals._getProperty('%s.pendingSuspend'%(ADDON_ID)) == "true"
+        pendingSuspend = Globals._getProperty('pendingSuspend') == "true"
         return pendingSuspend
     def _sleep(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:

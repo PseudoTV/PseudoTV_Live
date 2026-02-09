@@ -22,6 +22,7 @@ from globals    import *
 from library    import Library
 from autotune   import Autotune
 from builder    import Builder
+from channels   import Channels
 from backup     import Backup
 from multiroom  import Discovery, Multiroom
 from wizard     import Wizard
@@ -98,11 +99,18 @@ class Tasks(object):
 
 
     def chkCrash(self):
-        self.log('chkCrash')
-        # failed_citem = (SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM',json_data=True) or {})
-        # if failed_citem:
-            # SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None,json_data=False)
-            # DIALOG.okDialog(f'Kodi encountered a fatal error while parsing a {ADDON_NAME} channel.\n{failed_citem.get('name')} was temporarily disabled!', usethread=True)
+        citem = (SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM',json_data=True) or {})
+        SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None,json_data=False)
+        if citem:
+            self.log('chkCrash\n%s'%(citem))
+            # with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+                # channels = Channels(writable=True)
+                # chanLST  = channels.getChannels()
+                # idx, channel = channels.findChannel(citem, chanLST)
+                # chanLST[idx].update({'enabled':False})
+                # if channels.setChannels(chanLST):
+                    # DIALOG.okDialog(f'Kodi encountered a fatal crash while parsing a [B]{ADDON_NAME}[\B] channel.\nPlease check the channel configuration for [B]{citem.get('name')}[\B]\n Channel [B]{citem.get('number')}[\B] temporarily disabled!', usethread=False)
+                # del channels
         
         
     def chkServers(self):
@@ -121,13 +129,13 @@ class Tasks(object):
         self.log('chkQueTimer')
         self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200 , 1)#12HRS
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800 , 1)#3HRS
-        self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300   , 1)#10MINS
+        self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300   , 1)#5MINS
         self._chkEpochTimer('chkServers'      , self.chkServers       , 1800  , 1)#30MINS
-        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 300   , 1)#10MINS
+        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 600   , 1)#10MINS
         
         if not self.service.isClient:
-            self._chkEpochTimer('chkFiles'    , self.chkFiles         , 600   , 1)
-            self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 10800 , 2)#3HRS
+            self._chkEpochTimer('chkFiles'    , self.chkFiles         , 600   , 1)#10MINS
+            self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 3600  , 2)#1HR
             
         #immediate run, bypass schedule
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh    , 1) 
@@ -190,7 +198,7 @@ class Tasks(object):
                 return self.service._que(self.chkChannels,3)
 
 
-    def chkLibrary(self, types=None, silent=False):
+    def chkLibrary(self, types=None, silent=BUILTIN.isPlaying()):
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
         complete = set()
         library  = Library(service=self.service)
@@ -216,7 +224,7 @@ class Tasks(object):
     def chkChannels(self, channels: list=[], save=False):
         builder = Builder(service=self.service)
         if not channels:
-            channels = builder.getVerifiedChannels()
+            channels = Channels().getChannels()
             self.citems = channels
         if len(channels) > 0:
             self.log('chkChannels, channels = %s'%(len(channels)))
@@ -236,14 +244,14 @@ class Tasks(object):
             
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh') and not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
-                self.service._que(self.http._restart,1)
                 if brute:
                     if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
                         with BUILTIN.busy_dialog(lock=True):
-                            # BUILTIN.executebuiltin("Dialog.Close(all)")
+                            BUILTIN.executebuiltin("Dialog.Close(all)")
                             DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
-                            __toggle(False), self.service._sleep(M3U_REFRESH*2), __toggle(True)
-                    else: self.service._que(self.chkPVRRefresh,1)
+                            __toggle(False), self.monitor.waitForAbort(M3U_REFRESH*2), __toggle(True)
+                    else: timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                else: timerit(PROPERTIES.setEXTPropertyBool)(FIFTEEN,['HTTP.pendingRestart',True])
             
             
     def chkSettingsChange(self, settings={}):

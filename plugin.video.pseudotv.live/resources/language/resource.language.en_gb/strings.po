@@ -870,7 +870,7 @@ msgid "Auto tuning"
 msgstr ""
 
 msgctxt "#30211"
-msgid "Interleave repeating"
+msgid "Interleave repeating content"
 msgstr ""
 
 msgctxt "#30212"
@@ -923,6 +923,14 @@ msgstr ""
 
 msgctxt "#30224"
 msgid "Folder Depth"
+msgstr ""
+
+msgctxt "#30225"
+msgid "Enable Additional Details"
+msgstr ""
+
+msgctxt "#30226"
+msgid "Enable Smart Shuffling"
 msgstr ""
 
 
@@ -2354,6 +2362,10 @@ msgctxt "#33182"
 msgid "Enabled in discovered servers in the list below."
 msgstr ""
 
+msgctxt "#33184"
+msgid "Enabled Channel Building"
+msgstr ""
+
 msgctxt "#33185"
 msgid "Vignette Pixel Ratio"
 msgstr ""
@@ -2408,6 +2420,14 @@ msgstr ""
 
 msgctxt "#33222"
 msgid "How long to wait in seconds before PseudoTV attempts to correct failed playback. [90 Default]"
+msgstr ""
+
+msgctxt "#33225"
+msgid "Enable parsing additional media details, Enabling will impact channel building performance. [False Default]"
+msgstr ""
+
+msgctxt "#33226"
+msgid "Enable Smart Shuffling *see wiki for details. [False Default]"
 msgstr ""
 
 msgctxt "#33228"

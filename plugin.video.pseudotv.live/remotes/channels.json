@@ -11,7 +11,9 @@
             ],
             "group": [
             ],
-            "rules": {
+            "rules": 
+                {
+                "version": 0.0,
                 "0": {
                     "values": {
                         "0": 1,

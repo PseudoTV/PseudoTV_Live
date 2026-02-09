@@ -194,6 +194,7 @@ Language IDS not found in py files, possibly only in xml: {
     "30221": "remove.bg API-Key",
     "30222": "Playback Timeout",
     "30224": "Folder Depth",
+    "30226": "Enable Smart Shuffling",
     "32009": "Mixed Genres",
     "32012": "Recommended",
     "32013": "Services",
@@ -241,6 +242,7 @@ Language IDS not found in py files, possibly only in xml: {
     "32182": "ZeroConf Status:",
     "32184": "Restart Percentage (%s)",
     "32186": "Unable to automatically configure IPTV-Simple, Please check user configurations.",
+    "32193": "Mixed SmartPlaylist",
     "32197": "Currently Supported!",
     "32208": "Parsing Trailer",
     "32210": "Parsing Details",
@@ -343,6 +345,7 @@ Language IDS not found in py files, possibly only in xml: {
     "33219": "[COLOR=red][B]Warning!! [/B][/COLOR]PseudoTV is not responsible for excessive API usage or any charges incurred from A.I. services.\\nUsers are advised to configure their platforms carefully to manage usage.",
     "33220": "",
     "33222": "How long to wait in seconds before PseudoTV attempts to correct failed playback. [90 Default]",
+    "33226": "Enable Smart Shuffling *see wiki for details. [False Default]",
     "33308": "Install Log Uploader.",
     "33309": "Submit debugging log for review to http://paste.kodi.tv."
 }

@@ -183,7 +183,7 @@ class Utilities(object):
     @staticmethod
     def _runUpdate(full=False):
         log('Utilities: _runUpdate, full = %s'%(full))
-        #PROPERTIES.setPropTimer('chkChannels')#trigger channel building
+        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChannels'])#trigger channel building
               
     @staticmethod
     def buildMenu(select=None):
@@ -212,7 +212,7 @@ class Utilities(object):
             except Exception as e: 
                 log('Utilities: buildMenu, failed! %s'%(e), xbmc.LOGERROR)
                 return DIALOG.notificationDialog(LANGUAGE(32000))
-        else: SETTINGS.openSettings((6,1))
+        else: Globals._openSettings((6,1))
         
     @staticmethod
     def openPositionUtil(idx):
@@ -221,9 +221,11 @@ class Utilities(object):
             with PROPERTIES.chkRunning('Utilities.openPositionUtil'):
                 with BUILTIN.busy_dialog():
                     from overlaytool import OverlayTool
-                overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
-                del overlaytool
+                try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
+                except Exception as e: log("Utilities: openPositionUtil, failed! %s"%(e), xbmc.LOGERROR)
+                finally: del overlaytool
             
+    @threadit
     @staticmethod
     def _run(sysARG):
         with BUILTIN.busy_dialog():
@@ -274,6 +276,6 @@ class Utilities(object):
             elif param == 'Debug_QR':
                 ctl = (6,1)
                 return Utilities().qrDebug()
-            return SETTINGS.openSettings(ctl)
+            return Globals._openSettings(ctl)
 
-if __name__ == '__main__': threadit(Utilities()._run)(sys.argv)
+if __name__ == '__main__': Utilities()._run(sys.argv)

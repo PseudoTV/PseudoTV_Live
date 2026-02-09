@@ -44,13 +44,10 @@ class Multiroom(object):
     def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = %s'%(sysARG))
         if service is None: service = Service()
+        self.sysARG     = sysARG
         self.service    = service
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.jsonRPC.cache
-        self.sysARG     = sysARG
-        self.uuid       = SETTINGS.getMYUUID()
-        self.friendly   = PROPERTIES.getFriendlyName()
-        self.remoteHost = PROPERTIES.getRemoteHost()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -109,7 +106,7 @@ class Multiroom(object):
 
     def getRemote(self, remote):
         self.log("getRemote, remote = %s"%(remote))
-        return requestURL(remote, header={'Accept':'application/json'}, cache={"cache":self.cache, "json_data": False, "checksum":self.uuid, "life": datetime.timedelta(days=MAX_GUIDEDAYS)})
+        return requestURL(remote, header={'Accept':'application/json'}, cache={"cache":self.cache, "json_data": False, "checksum":SETTINGS.getMYUUID(), "life": datetime.timedelta(days=MAX_GUIDEDAYS)})
         
          
     def addServer(self, payload={}):
@@ -160,12 +157,11 @@ class Multiroom(object):
     def _selServer(self):
         self.log('_selServer')
         def __buildMenuItem(payload): #build menu item
-            idx = list(servers.values()).index(payload)
-            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=FileAccess.dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(list(servers.values()).index(payload)+1)),url=FileAccess.dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
-            lizLST  = []
+            lizLST = []
             lizLST.extend(poolit(__buildMenuItem)(list(servers.values())))
             if len(lizLST) > 0: lizLST.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]- %s[/B][/COLOR]'%(LANGUAGE(30046)),LANGUAGE(33046))) #remove server menu item
             else: return
@@ -206,10 +202,11 @@ class Multiroom(object):
             if DIALOG.yesnoDialog(message=LANGUAGE(30129)):
                 if self.jsonRPC.setSettingValue("services.zeroconf",True,queue=False):
                     DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30035)))
-                    self._chkDiscovery()
+                    self.service._que(self.service.tasks.chkDiscovery, 1)
         else: DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30034)))
                     
             
+    @threadit
     def _run(self):
         try:    param = self.sysARG[1]
         except: param = None
@@ -225,8 +222,8 @@ class Multiroom(object):
             self._selServer()
         elif param == 'Remove_server': 
             ctl = (5,12)
-        return SETTINGS.openSettings(ctl)
+        return Globals._openSettings(ctl)
 
 
-if __name__ == '__main__': threadit(Multiroom(sys.argv)._run)
+if __name__ == '__main__': Multiroom(sys.argv)._run()
     

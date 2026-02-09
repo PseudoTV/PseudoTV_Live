@@ -184,7 +184,8 @@ class FileAccess(object):
             try: filename = (filename.split('stack://')[1].split(' , '))[0]
             except Exception as e: log('FileAccess: exists failed! %s'%(e), xbmc.LOGERROR)
         try:
-            if os.path.isdir(filename) and not filename.endswith(("/","\\")):
+            root, ext = os.path.splitext(filename)
+            if not ext and not filename.endswith(("/","\\")): 
                 filename = os.path.join(filename,'')
             exists = xbmcvfs.exists(filename)
         except UnicodeDecodeError:

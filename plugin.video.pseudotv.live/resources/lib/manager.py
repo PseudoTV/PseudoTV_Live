@@ -101,10 +101,12 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.rule           = RulesList()
             self.jsonRPC        = JSONRPC()
             self.resources      = Resources()
+            self.backup         = Backup()
 
             self.host           = PROPERTIES.getRemoteHost()
             self.friendly       = PROPERTIES.getFriendlyName()
             self.newChannel     = self.channels.getTemplate()
+            self.recoveryFile   = self.backup.hasBackup(file=None)
             
         try:
             with BUILTIN.busy_dialog(lock=True):
@@ -253,18 +255,17 @@ class Manager(xbmcgui.WindowXMLDialog):
                 else:
                     if len(self.oldChannels) == 0:
                         self.setLabels(self.right_button1,LANGUAGE(32062))#Close
-                        if PROPERTIES.hasBackup():  self.setLabels(self.right_button2,LANGUAGE(32112))#Recover
+                        if self.recoveryFile:       self.setLabels(self.right_button2,LANGUAGE(32112))#Recover
                         else:                       self.setLabels(self.right_button2,"")
                         if SETTINGS.hasAutotuned(): self.setLabels(self.right_button3,LANGUAGE(30038))#AutoTune
                         else:                       self.setLabels(self.right_button3,"")
-                            
                     else:
                         self.setLabels(self.right_button1,LANGUAGE(32062))#Close
                         self.setLabels(self.right_button2,LANGUAGE(32235))#Preview
                         self.setLabels(self.right_button3,LANGUAGE(32136))#Move
                         self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
                     self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
-                    self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) + String.IsEqual(Container(5).ListItem(Container(5).Position).Property(radio),False)]')
+                    self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) + String.IsEqual(Container(5).ListItem(Container(5).Position).Property(radio),False) | !String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
                     
                 self.setFocus(self.right_button1)
                 self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) | !String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')# + Integer.IsLessOrEqual(Container(5).ListItem(Container(5).Position).Property(chnum),CHANNEL_LIMIT)]')
@@ -328,7 +329,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __buildItem(key):
             key   = key.lower()
             value = citem.get(key,' ')
-            if   key in ["number","type","logo","id","catchup","enabled"]: return # keys to ignore, internal use only.
+            if   key in ["number","type","logo","id","catchup"]: return # keys to ignore, internal use only.
             elif isinstance(value,(list,dict)): 
                 if   key == "group" : value = ('|'.join(sorted(set(value))) or LANGUAGE(30127))
                 elif key == "path"  : value = '|'.join(value)
@@ -344,6 +345,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                  'rules'   : LANGUAGE(32095),
                  'radio'   : LANGUAGE(32091),
                  'favorite': LANGUAGE(32090),
+                 'enabled' : LANGUAGE(30184),
                  'changed' : LANGUAGE(32259)}
                  
         DESC = {'name'    : LANGUAGE(32085),
@@ -352,6 +354,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 'rules'   : LANGUAGE(32088),
                 'radio'   : LANGUAGE(32084),
                 'favorite': LANGUAGE(32083),
+                'enabled' : LANGUAGE(33184),
                 'changed' : LANGUAGE(33259)}
 
         lizLST = []
@@ -398,6 +401,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                      "rules"    : {'func':__getRule  , 'kwargs':{'citem':citem, 'rules' :self.rule.loadRules([citem]).get(citem['id'],{})}},
                      "radio"    : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('radio',False)}},
                      "favorite" : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('favorite',False)}},
+                     "enabled"  : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('enabled',False)}},
                      "changed"  : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('changed',False)}}}
               
         action = KEY_INPUT.get(key) 
@@ -598,14 +602,15 @@ class Manager(xbmcgui.WindowXMLDialog):
             
             
     def validatePaths(self, path, citem):
-        # def __convert(path): #convert videodb:// paths to dynamic xsp.
-            # if path.lower().startswith(('videodb://','musicdb://')):
-                # if   'tvshows/titles'  in path: path = Predefined().createShowPlaylist(self.jsonRPC.videoIDtoLabel(path))
-                # elif 'tvshows/studios' in path: path = Predefined().createNetworkPlaylist(self.jsonRPC.videoIDtoLabel(path))
-                # elif 'tvshows/genres'  in path: path = Predefined().createTVGenrePlaylist(self.jsonRPC.videoIDtoLabel(path))
-                # elif 'movies/genres'   in path: path = Predefined().createStudioPlaylist(self.jsonRPC.videoIDtoLabel(path))
-                # elif 'movies/studios'  in path: path = Predefined().createStudioPlaylist(self.jsonRPC.videoIDtoLabel(path))
-            # return path[0] if isinstance(path,list) else path
+        def __convert(path): #convert videodb:// paths to dynamic xsp thru predefined
+            paths = []
+            if path.lower().startswith(('videodb://','musicdb://')):
+                if   'tvshows/titles'  in path: paths = Predefined.createShowPlaylist(self.jsonRPC.DBIDtoLabel(path))
+                elif 'tvshows/studios' in path: paths = Predefined.createNetworkPlaylist(self.jsonRPC.DBIDtoLabel(path))
+                elif 'tvshows/genres'  in path: paths = Predefined.createTVGenrePlaylist(self.jsonRPC.DBIDtoLabel(path))
+                elif 'movies/genres'   in path: paths = Predefined.createStudioPlaylist(self.jsonRPC.DBIDtoLabel(path))
+                elif 'movies/studios'  in path: paths = Predefined.createStudioPlaylist(self.jsonRPC.DBIDtoLabel(path))
+            return paths[0] if isinstance(paths,list) and len(paths) > 0 else path
 
         def __set(path, citem):
             citem = self.setName(path, citem)
@@ -647,7 +652,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         def __vfs(path, citem, cnt=3):
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                if    isRadio({'path':[path]}) or isMixed_XSP({'path':[path]}): return True
+                if    isRadio({'path':[path]}): return True
                 else: DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(32140)))
                 tmpcitem = citem.copy()
                 tmpcitem.update({'name':path,'path':[path]})
@@ -666,22 +671,36 @@ class Manager(xbmcgui.WindowXMLDialog):
                         elif retval == 2: cnt -=1
                         else: return not bool(DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'FAILED!'),time=1))
         if path: 
-            # path = __convert(path)
+            path = __convert(path)
             if __vfs(path, citem): return __set(path, citem)
         return None, citem
+
+
+    def autoRecovery(self):
+        self.log('autoRecovery')
+        if DIALOG.yesnoDialog("Would you like to Recover from the latest backup?"):
+            with BUILTIN.busy_dialog():
+                channels = self.backup.getChannels(self.recoveryFile)
+                self.log('autoRecovery, file = %s, channels = %s'%(self.recoveryFile, len(channels)))
+                number = 1
+                for channel in channels:
+                    number = channel.get('number',0)
+                    if number > 0: self.newChannels.insert(number-1,channel)
+                    self.madeChanges = True
+                if self.madeChanges: self.fillChanList(self.newChannels,True,focus=(number-1))
 
 
     def autoTune(self, start=1):
         self.log('autoTune')
         if DIALOG.yesnoDialog("Would you like to AutoTune sample channels?"):
             with BUILTIN.busy_dialog():
-                items = Autotune()._runTune(True,start,int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT)))
-                if items:
-                    for item in items:
-                        chnum = item.get('number',0)
-                        if chnum > 0: self.newChannels.insert(chnum-1,item)
+                number   = 1
+                channels = (Autotune()._runTune(True,start,int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT))) or [])
+                for channel in channels:
+                    number = channel.get('number',0)
+                    if number > 0: self.newChannels.insert(number-1,channel)
                     self.madeChanges = True
-                    self.fillChanList(self.newChannels,True,focus=(chnum-1))
+                if self.madeChanges: self.fillChanList(self.newChannels,True,focus=(number-1))
 
 
     def openEditor(self, path):
@@ -713,7 +732,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                 start_time = time.time()
                 fileList   = __buildPreview(tmpcitem)
                 end_time   = time.time()
-                print('previewChannel',fileList)
                 # self.log('previewChannel: __fileList, id = %s, fileList = %s'%(citem['id'],len(fileList)))
                 return fileList, round(abs(end_time-start_time),2)
             except Exception as e:
@@ -908,14 +926,15 @@ class Manager(xbmcgui.WindowXMLDialog):
         if self.madeChanges:
             if DIALOG.yesnoDialog(LANGUAGE(32076)):
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                    self.log("saveChanges, backup = %s"%(Backup().backupChannels(CHANNELFLE_CHANGE,silent=True)))
                     channels = __validateChannels(self.newChannels)
                     self.log("saveChanges, channels = %s"%(len(channels)))
                     if self.server: #remote save
                         requestURL('http://%s/%s'%(self.server.get('host'), CHANNELFLE), payload={'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels})
                     else: #local save
+                        self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELFLE_CHANGED,silent=True)))
                         self.channels.setChannels(channels) #save changes
-                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,'chkChannels')#trigger channel building
+                        self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
+                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChannels'])#trigger channel building
                     self.madeChanges = False
         self.closeManager()
             
@@ -1007,6 +1026,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                             if self.isVisible(self.itemList) and self.madeItemchange: self.closeChannel(focusItems.get('citem'), open=True)
                             self.previewChannel(focusItems.get('citem'), focusItems.get('retCntrl'))
                         elif focusItems.get('label') == LANGUAGE(32110): ...#Backup
-                        elif focusItems.get('label') == LANGUAGE(32112): ...#Recover
+                        elif focusItems.get('label') == LANGUAGE(32112): self.autoRecovery() #Recover
                         elif focusItems.get('label') == LANGUAGE(30038): self.autoTune(focusItems.get('number',1)) #AutoTune
                             

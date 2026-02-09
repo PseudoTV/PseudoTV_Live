@@ -1,6 +1,12 @@
 ### NOTICE: The wizard branch is in alpha; things will break! ####
+v.0.7.0+nightly
+- Removed Support for "Mixed" Smartplaylists as "TV/Movie" Playlists.
+
 v.0.6.9-wizard
 - Improved Asynchronous Executors.
+- Auto-tuning available in the channel manager, when no channels are configured. 
+- Channel Recovery available in the channel manager, when no channels are configured.
+- Automatic Channel backup after channel manager changes.
 
 v.0.6.8-wizard
 - Added Kodi trailers cache to improve trailer fillers.

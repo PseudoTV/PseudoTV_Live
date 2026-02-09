@@ -402,13 +402,13 @@ class JSONRPC(object):
         return runtime
 
 
-    def videoIDtoLabel(self, path):
+    def DBIDtoLabel(self, path):
         match = re.search(r"(.*?)(\d+)/?$", path)
         if match:
             items = self.getDirectory({"directory":match.group(1),"media":"video"})[0]
             for item in items:
                 if int(match.group(2)) == item.get('id'):
-                    self.log('videoIDtoLabel, path = %s, id = %s, label = %s'%(match.group(1),match.group(2),item['label']))
+                    self.log('DBIDtoLabel, path = %s, id = %s, label = %s'%(match.group(1),match.group(2),item['label']))
                     return item['label']
         return path
         
