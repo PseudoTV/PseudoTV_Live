@@ -290,8 +290,9 @@ class HTTP(object):
             PROPERTIES.setRunning('HTTP.run',False)
             self.log('run, http server shutdown, restart = %s, isAlive = %s'%(restart,__cancel()), xbmc.LOGINFO)
             if restart:
-                PROPERTIES.setEXTPropertyBool('HTTP.pendingRestart',False)
+                self.monitor.waitForAbort(M3U_REFRESH)
                 self.service._que(self.service.tasks.chkHTTP,1)
+                PROPERTIES.setEXTPropertyBool('HTTP.pendingRestart',False)
             else: __update(restart)
             
         """Starts the threaded HTTP server with GZIP support."""

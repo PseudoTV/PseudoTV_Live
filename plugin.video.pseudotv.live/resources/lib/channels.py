@@ -60,13 +60,13 @@ class Channels(object):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
                 self.log('_verify, in-valid citem [%s]\n%s'%(citem.get('id'),citem))
                 continue
-            else: yield citem
+            else: 
+                yield citem
                 
                 
     def _save(self) -> bool:
         self.channelDATA['uuid']     = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
-        print(self.channelDATA['channels'])
         self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
         if self.writable: return FileAccess.setJSON(self.channelFile,self.channelDATA)
         
@@ -99,7 +99,6 @@ class Channels(object):
 
 
     def setChannels(self, channels: list=[]) -> bool:
-        print(channels)
         self.channelDATA['channels'] = channels
         SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channels)))
         PROPERTIES.setChannels(len(channels)>0)

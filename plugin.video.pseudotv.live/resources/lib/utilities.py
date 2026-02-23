@@ -183,7 +183,7 @@ class Utilities(object):
     @staticmethod
     def _runUpdate(full=False):
         log('Utilities: _runUpdate, full = %s'%(full))
-        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChannels'])#trigger channel building
+        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
               
     @staticmethod
     def buildMenu(select=None):

@@ -139,7 +139,7 @@ class Tasks(object):
             
         #immediate run, bypass schedule
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh    , 1) 
-        self._chkPropTimer('chkChannels'      , self.chkChannels      , 3)
+        self._chkPropTimer('chkChanged'       , self.chkChanged       , 3)
         
         
     def _chkEpochTimer(self, key, func, runevery=900, priority=-1, nextrun=None, *args, **kwargs):
@@ -221,7 +221,17 @@ class Tasks(object):
         del library
         
         
-    def chkChannels(self, channels: list=[], save=False):
+    def chkChanged(self):
+        channels = Channels().getChannels()
+        channels = [citem for citem in channels if citem.get('changed',False)]
+        self.log('chkChanged, channels = %s'%(len(channels)))
+        if channels:
+            builder = Builder(service=self.service)
+            [self.service._que(builder.buildChannels,3,[channel]) for citem in channels]
+            del builder
+        
+        
+    def chkChannels(self, channels: list=[]):
         builder = Builder(service=self.service)
         if not channels:
             channels = Channels().getChannels()
@@ -244,14 +254,13 @@ class Tasks(object):
             
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh') and not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
+                timerit(PROPERTIES.setEXTPropertyBool)(M3U_REFRESH,['HTTP.pendingRestart',True])
                 if brute:
                     if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
-                        with BUILTIN.busy_dialog(lock=True):
-                            # BUILTIN.executebuiltin("Dialog.Close(all)")
-                            DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
-                            __toggle(False), self.monitor.waitForAbort(M3U_REFRESH*2), __toggle(True)
+                        BUILTIN.executewindow('ActivateWindow(home)')
+                        DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
+                        __toggle(False), self.monitor.waitForAbort(M3U_REFRESH), __toggle(True)
                     else: timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
-                else: timerit(PROPERTIES.setEXTPropertyBool)(FIFTEEN,['HTTP.pendingRestart',True])
             
             
     def chkSettingsChange(self, settings={}):

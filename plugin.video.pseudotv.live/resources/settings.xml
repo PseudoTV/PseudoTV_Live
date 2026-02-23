@@ -581,7 +581,23 @@
                     <default>true</default>
                     <dependencies>
                         <dependency type="visible">
-                            <condition operator="gt" setting="Enable_Even">0</condition>
+                            <and>
+                                <condition operator="gt" setting="Enable_Even">0</condition>
+                                <condition operator="is" setting="Enable_Even_Force_Random">false</condition>
+                            </and>
+                        </dependency>
+                    </dependencies>
+                    <control type="toggle"/>
+                </setting>
+                <setting id="Enable_Even_Force_Random" type="boolean" label="30182" help="33231" parent="Enable_Even">
+                    <level>2</level>
+                    <default>false</default>
+                    <dependencies>
+                        <dependency type="visible">
+                            <and>
+                                <condition operator="gt" setting="Enable_Even">0</condition>
+                                <condition operator="is" setting="Enable_Even_Force_Episode">false</condition>
+                            </and>
                         </dependency>
                     </dependencies>
                     <control type="toggle"/>

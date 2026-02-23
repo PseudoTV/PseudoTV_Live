@@ -924,7 +924,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         print(channels)
                         if self.channels.setChannels(channels): self.madeChanges = False #save changes
                         self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
-                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChannels'])#trigger channel building
+                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
             else: self.madeChanges = False
         self.closeManager()
             

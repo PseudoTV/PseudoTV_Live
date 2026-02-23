@@ -217,19 +217,7 @@ def cleanImage(image=''):
             elif image.startswith(realPath.replace('\\','/')):
                 image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
     return image.strip('/')
-            
-def cleanGroups(citem, enableGrouping=SETTINGS.getSettingBool('Enable_Grouping')):
-    if not enableGrouping:
-        citem['group'] = [ADDON_NAME]
-    else:
-        citem['group'].append(ADDON_NAME)
-        if citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']:
-            citem['group'].append(LANGUAGE(32019))
-        elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']:
-             citem['group'].remove(LANGUAGE(32019))
-    citem['group'] = sorted(set(citem['group']))
-    return citem
-        
+
 def cleanMPAA(mpaa):
     orgMPA = mpaa
     mpaa = mpaa.lower()
@@ -372,17 +360,6 @@ def parseSE(filename):
         elif match.group(5) is not None:
             return int(match.group(5)), int(match.group(6))
     return -1, -1
-  
-def randomShuffle(items=[]):
-    if isinstance(items,list) and len(items) > 0:
-        #reseed random for a "greater sudo random"
-        random.seed(random.randint(0,999999999999))
-        random.shuffle(items)
-    return items
-    
-def randomSamples(items=[], x=5):
-    if len(items) >= x: items = random.sample(items, x)
-    return randomShuffle(items)
-  
+
 def hasURLencoding(s):
     return bool(re.search(r'%[0-9a-fA-F]{2}', s))

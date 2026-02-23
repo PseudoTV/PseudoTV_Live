@@ -36,7 +36,7 @@ class Autotune(object):
         def __buildAutotune(type: str, count):
             citems  = []
             items   = library.getLibrary(type)
-            items   = randomSamples(items,count)
+            items   = Globals._randomSamples(items,count)
             isRadio = True if type == "Music Genres" else False
             self.log(f'_runTune: __buildAutotune, type = {type}, items = {len(items)}, isRadio = {isRadio}')
             for idx, item in enumerate(items):
@@ -114,7 +114,7 @@ class Autotune(object):
                     channels.addChannel(citems)
                     state = channels.setChannels(channels.getChannels())
                     del channels
-                    timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChannels'])#trigger channel building
+                    timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
                     return state
                 
  

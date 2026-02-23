@@ -214,3 +214,34 @@ class Globals:
         set1 = {FileAccess.dumpJSON(d, sortkey=True) for d in old}
         set2 = {FileAccess.dumpJSON(d, sortkey=True) for d in new}
         return {"added": [FileAccess.loadJSON(s) for s in set2 - set1], "removed": [FileAccess.loadJSON(s) for s in set1 - set2]}
+            
+    @staticmethod  
+    def _cleanGroups(citem):
+        if REAL_SETTINGS.getSetting('Enable_Grouping') == "true":
+            if   ADDON_NAME not in citem['group']:                      citem['group'].append(ADDON_NAME)
+            if   citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']: citem['group'].append(LANGUAGE(32019))
+            elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']: citem['group'].remove(LANGUAGE(32019))
+        else:                                                           citem['group'] = [ADDON_NAME]
+        citem['group'] = sorted(set(citem['group']))
+        return citem
+             
+    @staticmethod  
+    def _randomShuffle(items, values=None):
+        if isinstance(items,dict):
+            items  = Globals._randomSamples(list(items.keys()), len(items))
+            titems = {}
+            for key in items:
+                val = copy.list(items[key]) if values else items[key]
+                if values: val = Globals._randomShuffle(val)
+                titems.setdefault(key,[]).append(val)
+            if titems: items = titems
+        elif isinstance(items,list) and len(items) > 0:
+            #reseed random for a "greater sudo random"
+            random.seed(random.randint(0,999999999999))
+            random.shuffle(random.sample(items, len(items)))
+        return items
+
+        
+    def _randomSamples(items=[], x=5):
+        if len(items) >= x: return random.sample(items, x)
+        else:               return random.sample(items, len(items))

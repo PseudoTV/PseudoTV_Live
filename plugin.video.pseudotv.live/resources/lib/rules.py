@@ -60,6 +60,7 @@ class RulesList(object):
                          PostRoll(),
                          InterleaveValue(),
                          HandleMethodOrder(),
+                         HandleLimits(),
                          ForceEpisodeOrder(),
                          ForceRandom(),
                          EvenShowsRule(),
@@ -308,7 +309,6 @@ class BaseRule(object):
         items  = [str(v).title() for v in self.selectBoxOptions[optionindex]]
         select = self.dialog.selectDialog(items, header, Globals._findItemsInLST(values, options), useDetails, autoclose, multi)
         if not select is None: 
-            print(select,self.selectBoxOptions[optionindex])
             if   isinstance(self.selectBoxOptions[optionindex],dict): self.optionValues[optionindex] = self.selectBoxOptions[optionindex].get(self.selectBoxOptions[optionindex][select])
             elif isinstance(select,list):                             self.optionValues[optionindex] = [self.selectBoxOptions[optionindex][idx] for idx in select]
             elif select < len(self.selectBoxOptions[optionindex]):    self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
@@ -1192,6 +1192,55 @@ class HandleMethodOrder(BaseRule):
         return citem
 
 
+class HandleLimits(BaseRule):
+    def __init__(self):
+        self.myId               = 951
+        self.name               = LANGUAGE(32263)
+        self.description        = LANGUAGE(33015)
+        self.optionLabels       = ['Limit','Limits End','Limits Start']
+        self.optionValues       = [SETTINGS.getSettingInt('Page_Limit'),-1,0]
+        self.optionDescriptions = [f"Force Limit [{SETTINGS.getSettingInt('Page_Limit')}:Default]","Force End [-1:Auto, 0:Unlimited]","Force Start [-1:Unlimited, 0:Auto]"]
+        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
+        self.selectBoxOptions   = [list(range(0,1001,25))]
+        self.storedValues       = [[],{}]
+        
+        
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
+    def copy(self):
+        return HandleLimits()
+
+
+    def getTitle(self):
+        return '%s (%s)'%(self.name,self.optionValues)
+
+
+    def onAction(self, optionindex):
+        if optionindex == 0: self.onActionSelect(optionindex)
+        else:
+            self.onActionDigitBox(optionindex)
+            self.validateDigitBox(optionindex,-1,self.selectBoxOptions[0][-1] if self.storedValues[1].get('total',0) == 0 else self.storedValues[1].get('total'),25)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, citem, parameter, builder):
+        if actionid == RULES_ACTION_CHANNEL_START:
+            self.storedValues[0] = builder.limit
+            self.storedValues[1] = builder.limits
+            builder.limit = self.optionValues[0]
+            builder.limits.update({"end":self.optionValues[1],"start":self.optionValues[2]})
+            self.log("runAction, setting limit to %s, limits to %s"%(builder.limit,builder.limits))
+            
+        elif actionid == RULES_ACTION_CHANNEL_STOP:
+            builder.limit = self.storedValues[0]
+            builder.limits.update(self.storedValues[1])
+            self.log("runAction, restoring limit to %s, limits to %s"%(builder.limit,builder.limits))
+            
+        return citem
+
+
 class ForceEpisodeOrder(BaseRule):
     def __init__(self):
         self.myId               = 998
@@ -1304,7 +1353,7 @@ class ForceRandom(BaseRule):
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
             builder.sort = self.storedValues[0]
             self.log("runAction, restoring sort and forcing random shuffle of %s items"%(len(fileList)))
-            return randomShuffle(fileList)
+            return Globals._randomShuffle(fileList)
         return fileList
         
 
@@ -1313,10 +1362,10 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
         self.myId               = 1000
         self.name               = LANGUAGE(30121)
         self.description        = LANGUAGE(33121)
-        self.optionLabels       = [LANGUAGE(30180),LANGUAGE(30181)]
-        self.optionValues       = [SETTINGS.getSettingInt('Enable_Even'),SETTINGS.getSettingBool('Enable_Even_Force_Episode')]
-        self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33230)]
-        self.actions            = [RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST]
+        self.optionLabels       = [LANGUAGE(30180),LANGUAGE(30181),LANGUAGE(30182)]
+        self.optionValues       = [SETTINGS.getSettingInt('Enable_Even'),SETTINGS.getSettingBool('Enable_Even_Force_Episode'),SETTINGS.getSettingBool('Enable_Even_Force_Random')]
+        self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33230),LANGUAGE(30182)]
+        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
         self.selectBoxOptions   = [list(range(0,26,1))]
         self.storedValues       = [[],SETTINGS.getSettingInt('Page_Limit'),[],{},[],[],[]]
         
@@ -1339,13 +1388,17 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
         return self.optionValues[optionindex]
 
 
-    def _chunkEpisodes(self, showArray: dict={}):
+    def _chunkEpisodes(self, showArray: dict={}, random_order: bool=False):
+        print(showArray)
         chunkSize = self.optionValues[0]
+        if random_order: showArray = Globals._randomShuffle(showArray.keys(), showArray)
+        print(showArray)
         for show, episodes in showArray.items():
+            print(show, episodes)
             yield show, [episodes[i : i + chunkSize] for i in range(0, len(episodes), chunkSize)]
 
 
-    def _sortShows(self, fileItems, forceEpisode):
+    def _sortShows(self, fileItems, episode_order=False, random_order=False):
         try:
             seen_movies = {item.get('id') or item.get('file') for item in self.storedValues[4]}
             for item in fileItems:
@@ -1359,8 +1412,9 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
                     if item_id not in seen_movies:
                         self.storedValues[4].append(item)
                         seen_movies.add(item_id)
-            if forceEpisode: self.storedValues[4].sort(key=lambda k: k.get('year', 0))
-            return dict(self._chunkEpisodes(self.storedValues[3])), self.storedValues[4]
+            if episode_order: self.storedValues[4].sort(key=lambda k: k.get('year', 0))
+            if random_order:  self.storedValues[4] = Globals._randomShuffle(self.storedValues[4])
+            return dict(self._chunkEpisodes(self.storedValues[3],random_order)), self.storedValues[4]
         except Exception as e: self.log("runAction, _sortShows failed! %s"%(e), xbmc.LOGERROR)
         return {}, []
 
@@ -1374,7 +1428,6 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
             all_chunks  = []
             for show, chunks in shows.items():
                 for chunk in chunks:
-                    print(show, len(chunk), len(chunks))
                     all_chunks.append(chunk)
                     
             total_slots = len(all_chunks)
@@ -1408,29 +1461,22 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
 
     def runAction(self, actionid, citem, parameter, builder):
         if bool(self.optionValues[0]):
-            if actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
-                self.storedValues[1] = builder.limit
-                if parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])):
-                    builder.limit = builder.limit * self.optionValues[0] #Multiply parser limit for tv content in-order to aid even distribution. 
-                    self.log('runAction, setting limit %s'%(builder.limit))
-                
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
+            if actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
                 if len(parameter) > 0:
                     builder.pDialog = DIALOG._updateProgress(builder.pDialog, builder.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,builder.pMSG))
-                    forceEpisode = self.optionValues[1]
-                    if forceEpisode: 
+                    episode_order = False if self.optionValues[2] else self.optionValues[1]
+                    random_order  = False if self.optionValues[1] else self.optionValues[2]
+                    if episode_order: 
                         fileItems = list(sorted(parameter, key=lambda k: k.get('year',0)))    #force year ordering
                         fileItems = list(sorted(fileItems, key=lambda k: k.get('episode',0))) #force episode ordering
                         fileItems = list(sorted(fileItems, key=lambda k: k.get('season',0)))  #force season ordering
+                    elif random_order: 
+                        fileItems = Globals._randomShuffle(parameter)
                     else:
                         fileItems = parameter
-                    sortShows, sortMovies = self._sortShows(fileItems, forceEpisode)
-                    self.log('runAction, group by episode %s, tvshows = %s, movies = %s'%(forceEpisode, len(list(sortShows.keys())), len(sortMovies)))
+                    sortShows, sortMovies = self._sortShows(fileItems, episode_order, random_order)
+                    self.log('runAction, episode_order %s, random_order %s, tvshows = %s, movies = %s'%(episode_order, random_order, len(list(sortShows.keys())), len(sortMovies)))
                     return self._mergeShows(sortShows,sortMovies,builder)
-                
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
-                builder.limit = self.storedValues[1]
-                self.log('runAction, restoring limit = %s'%(builder.limit))
                 
         return parameter
         
@@ -1651,7 +1697,9 @@ class SmartShuffle(BaseRule):#Developer:Spider-netizen
                 self.storedValues[0]  = builder.enableShuffle
                 self.storedValues[1]  = builder.limits
                 builder.enableShuffle = self.optionValues[0]
-                builder.limits        = {"end":0,"start":-1,"total":0}
+                builder.limits        = {"end":0 if (val := self.storedValues[1].get('end', 0)) == -1 else val,
+                                         "start":-1,
+                                         "total":0}
                 self.log("runAction, setting enableShuffle = %s, limits = %s"%(builder.enableShuffle,builder.limits))
                 
             elif actionid == RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST:

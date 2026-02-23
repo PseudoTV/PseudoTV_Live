@@ -138,8 +138,7 @@ class Builder(object):
                 continue
             else:
                 if not citem.get('id'): citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'],SETTINGS.getMYUUID()) #generate new channelid
-                citem['group'] = list(set(citem.get('group',[])))
-                citem['logo']  = self.resources.getLogo(citem,fallback=self.resources.getCache(citem['name']))
+                citem['logo'] = self.resources.getLogo(citem,fallback=self.resources.getCache(citem['name']))
                 self.log('[%s] VERIFIED - channel %s: %s changed = %s'%(citem['id'],citem['number'],citem['name'],citem.get('changed',False)),xbmc.LOGINFO)
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self) #inject persistent citem changes here
 
@@ -200,10 +199,15 @@ class Builder(object):
             if self.resetPagination(citem) and self.m3u.delStation(citem) and self.xmltv.delBroadcast(citem):
                 stop = -1
                 citem['changed'] = False
-                return self.channels.addChannel(citem)
+                return __addChannel(citem)
                 
+        def __addChannel(citem: dict) -> bool:
+            citem = Globals._cleanGroups(citem)
+            return self.channels.addChannel(citem)
+        
         def __addStation(citem: dict) -> bool:
-            sitem = self.m3u.getStationItem(cleanGroups(citem, SETTINGS.getSettingBool('Enable_Grouping')))
+            citem = Globals._cleanGroups(citem)
+            sitem = self.m3u.getStationItem(citem)
             state = self.m3u.addStation(sitem) and self.xmltv.addChannel(sitem)
             self.log('[%s] buildChannels, __addStation = %s'%(citem['id'],state))
             return state
@@ -348,7 +352,7 @@ class Builder(object):
                     
                     if self.sort.get("method","") == 'random':
                         self.log("[%s] buildVideo, random shuffling [%s/%s]"%(citem['id'],idx,len(paths)))
-                        paths = randomShuffle(paths)               
+                        paths = Globals._randomShuffle(paths)               
 
                     for cnt, path in enumerate(paths):
                         if len(paths) > 1: self.pName = '%s %s/%s'%(citem['name'],cnt+1,len(paths))
@@ -422,8 +426,8 @@ class Builder(object):
 
                 if sort.get("method","") == 'random':
                     self.log("[%s] buildFileList, depth [%s/%s], random shuffling "%(citem['id'],dirCount,self.recursiveLimit))
-                    subdirList  = randomShuffle(subdirList)
-                    subfileList = randomShuffle(subfileList)
+                    subdirList  = Globals._randomShuffle(subdirList)
+                    subfileList = Globals._randomShuffle(subfileList)
                     
                 if isinstance(subfileList,list): fileList.extend(subfileList)
                 if isinstance(subdirList,list):  dirList = Globals._setDictLST(dirList + subdirList)#recursive paths
@@ -570,8 +574,8 @@ class Builder(object):
                 
         elif sort.get("method","") == 'random':
             self.log("[%s] buildFiles, random shuffling"%(citem['id']))
-            dirList  = randomShuffle(dirList)
-            fileList = randomShuffle(fileList)
+            dirList  = Globals._randomShuffle(dirList)
+            fileList = Globals._randomShuffle(fileList)
             
         self.log("[%s] buildFiles, returning (%s) files, (%s) dirs"%(citem['id'],len(fileList),len(dirList)))
         return fileList, dirList

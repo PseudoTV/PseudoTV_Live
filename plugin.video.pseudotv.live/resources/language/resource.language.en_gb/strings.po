@@ -1856,7 +1856,7 @@ msgid "Enable Pause"
 msgstr ""
 
 msgctxt "#32232"
-msgid "Limits & Sort Methods"
+msgid "Sort Methods"
 msgstr ""
 
 msgctxt "#32233"
@@ -1977,6 +1977,10 @@ msgstr ""
 
 msgctxt "#32262"
 msgid "No Content Found\nTry increasing channels recursive limit."
+msgstr ""
+
+msgctxt "#32263"
+msgid "Set Limits"
 msgstr ""
 
 
@@ -2452,11 +2456,11 @@ msgid "Force TV in Episode order, Movies in Year order\nBased on available conte
 msgstr ""
 
 msgctxt "#33231"
-msgid "Random sort & shuffle channel content\nSupersedes SmartPlaylist rules"
+msgid "Random sort & shuffle channel content."
 msgstr ""
 
 msgctxt "#33232"
-msgid "Change content limits and sorting methods."
+msgid "Change sorting methods like episode order, random order."
 msgstr ""
 
 msgctxt "#33259"

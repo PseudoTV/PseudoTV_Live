@@ -274,7 +274,7 @@ class Plugin(object):
         def __buildfItem(item: dict={}):
             return LISTITEMS.buildItemListItem(item, 'music')
         with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
-            items = randomShuffle(self.getRadioItems(name, chid, vid))
+            items = Globals._randomShuffle(self.getRadioItems(name, chid, vid))
             with PROPERTIES.setBackgroundLabel('Building Playlist...') as setLabel:
                 listitems = poolit(__buildfItem)(items) #[__buildfItem(idx, item) for idx, item in enumerate(items)]
             if len(listitems) > 0: 
