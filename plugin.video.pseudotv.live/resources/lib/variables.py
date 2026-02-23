@@ -208,4 +208,9 @@ class Globals:
             if isinstance(dictlst, list): dictlst = Globals._setDictLST(dictlst)
             items[key] = dictlst
         return items
-    
+        
+    @staticmethod  
+    def diffLSTDICT(old, new):
+        set1 = {FileAccess.dumpJSON(d, sortkey=True) for d in old}
+        set2 = {FileAccess.dumpJSON(d, sortkey=True) for d in new}
+        return {"added": [FileAccess.loadJSON(s) for s in set2 - set1], "removed": [FileAccess.loadJSON(s) for s in set1 - set2]}

@@ -433,10 +433,10 @@ class Library(object):
             # addonMeta = SETTINGS.getAddonDetails(addonid)
             # payload   = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
             # if not payload: #startup services may not be broadcasting beacon; use last cached beacon instead.
-                # payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
+                # payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION))
             # else:
                 # payload = FileAccess.loadJSON(payload)
-                # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
+                # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
             
             # if payload:
                 # self.log('searchRecommended, found addonid = %s, payload = %s'%(addonid,payload))

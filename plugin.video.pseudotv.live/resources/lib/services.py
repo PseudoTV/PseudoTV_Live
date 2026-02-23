@@ -341,7 +341,7 @@ class Player(xbmc.Player):
                 
     def toggleBackground(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
         if state and self.background is None and self.monitor.isIdle:
-            BUILTIN.executebuiltin('Dialog.Close(all)')
+            # BUILTIN.executebuiltin('Dialog.Close(all)')
             try:
                 self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self)
                 self.background.show()

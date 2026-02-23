@@ -66,6 +66,7 @@ class Channels(object):
     def _save(self) -> bool:
         self.channelDATA['uuid']     = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
+        print(self.channelDATA['channels'])
         self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
         if self.writable: return FileAccess.setJSON(self.channelFile,self.channelDATA)
         
@@ -98,7 +99,7 @@ class Channels(object):
 
 
     def setChannels(self, channels: list=[]) -> bool:
-        if len(channels) == 0: channels = self.channelDATA['channels']
+        print(channels)
         self.channelDATA['channels'] = channels
         SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channels)))
         PROPERTIES.setChannels(len(channels)>0)
@@ -111,7 +112,7 @@ class Channels(object):
         
     def setImports(self, data: list=[]) -> bool:
         self.channelDATA['imports'] = data
-        return self.setChannels()
+        return self.setChannels(self.getChannels())
 
          
     def clearChannels(self):

@@ -305,10 +305,14 @@ class BaseRule(object):
         
         if isinstance(self.selectBoxOptions[optionindex],dict): values, options = list(self.selectBoxOptions[optionindex].values()), list(self.selectBoxOptions[optionindex].keys())
         else:                                                   values, options = self.selectBoxOptions[optionindex], self.optionValues[optionindex]
-        select = self.dialog.selectDialog([str(v).title() for v in selectBoxOptions], header, Globals._findItemsInLST(values, options), useDetails, autoclose, multi)
+        items  = [str(v).title() for v in self.selectBoxOptions[optionindex]]
+        select = self.dialog.selectDialog(items, header, Globals._findItemsInLST(values, options), useDetails, autoclose, multi)
         if not select is None: 
-            if isinstance(self.selectBoxOptions[optionindex],dict): self.optionValues[optionindex] = self.selectBoxOptions[optionindex].get(selectBoxOptions[select])
-            else:                                                   self.optionValues[optionindex] = selectBoxOptions[select]
+            print(select,self.selectBoxOptions[optionindex])
+            if   isinstance(self.selectBoxOptions[optionindex],dict): self.optionValues[optionindex] = self.selectBoxOptions[optionindex].get(self.selectBoxOptions[optionindex][select])
+            elif isinstance(select,list):                             self.optionValues[optionindex] = [self.selectBoxOptions[optionindex][idx] for idx in select]
+            elif select < len(self.selectBoxOptions[optionindex]):    self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
+            elif select:                                              self.optionValues[optionindex] = select
                 
           
     def onActionBrowse(self, optionindex, type=0, heading=ADDON_NAME, shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, options=[], exclude=[]):
@@ -1113,6 +1117,7 @@ class InterleaveValue(BaseRule):
     def getTitle(self):
         return '%s (%s)'%(self.name,self.optionValues[0])
 
+
     def onAction(self, optionindex):
         if optionindex == 0: self.onActionSelect(optionindex)
         else:                self.onActionToggleBool(optionindex)
@@ -1130,7 +1135,8 @@ class InterleaveValue(BaseRule):
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             builder.interleaveSet    = self.storedValues[0]
             builder.interleaveRepeat = self.storedValues[1]
-            self.log("runAction, setting interleaveSet = %s, interleaveRepeat = %s"%(builder.interleaveSet, builder.interleaveRepeat))
+            self.log("runAction, restoring interleaveSet = %s, interleaveRepeat = %s"%(builder.interleaveSet, builder.interleaveRepeat))
+        
         return parameter
 
 
@@ -1181,7 +1187,8 @@ class HandleMethodOrder(BaseRule):
             
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             builder.sort = self.storedValues[0]
-            self.log("runAction, setting sort to %s"%(builder.sort))
+            self.log("runAction, restoring sort to %s"%(builder.sort))
+            
         return citem
 
 
@@ -1191,10 +1198,10 @@ class ForceEpisodeOrder(BaseRule):
         self.name               = LANGUAGE(30181)
         self.description        = LANGUAGE(33230)
         self.optionLabels       = [LANGUAGE(30181)]
-        self.optionValues       = [SETTINGS.getSettingBool('Enable_Force_Episode_Order')]
+        self.optionValues       = [True]
         self.optionDescriptions = [LANGUAGE(33230)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
-        self.storedValues       = [{},{},{},[],[],[]]
+        self.storedValues       = [[],[],{},[],[],[]]
         self.selectBoxOptions   = []
 
 
@@ -1211,7 +1218,6 @@ class ForceEpisodeOrder(BaseRule):
 
 
     def onAction(self, optionindex):
-        self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
 
 
@@ -1250,15 +1256,14 @@ class ForceEpisodeOrder(BaseRule):
             self.storedValues[0] = builder.sort
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
-            if self.optionValues[0]: 
-                if   parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])): builder.sort.update({"method":"episode"})
-                elif parameter:                                                           builder.sort.update({"method":"year"})
-                self.log("runAction, setting sort to %s"%(builder.sort))
+            if   parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])): builder.sort.update({"method":"episode"})
+            elif parameter:                                                           builder.sort.update({"method":"year"})
+            self.log("runAction, setting sort to %s"%(builder.sort))
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
             builder.sort = self.storedValues[0]
             self.log("runAction, restoring sort and forcing episode/year ordering (%s)"%(len(parameter)))
-            return interleave(list(self._sortShows(fileList)), builder.interleaveSet, builder.interleaveRepeat)
+            return interleave(list(self._sortShows(parameter)), builder.interleaveSet, builder.interleaveRepeat)
         return parameter
         
         
@@ -1268,10 +1273,10 @@ class ForceRandom(BaseRule):
         self.name               = LANGUAGE(30182)
         self.description        = LANGUAGE(33231)
         self.optionLabels       = [LANGUAGE(30182)]
-        self.optionValues       = [False]
+        self.optionValues       = [True]
         self.optionDescriptions = [LANGUAGE(33231)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
-        self.storedValues       = [{}]
+        self.storedValues       = [[]]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -1287,21 +1292,19 @@ class ForceRandom(BaseRule):
 
 
     def onAction(self, optionindex):
-        self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
 
 
     def runAction(self, actionid, citem,  fileList, builder):
-        if self.optionValues[0]: 
-            if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
-                self.storedValues[0] = builder.sort
-                builder.sort.update({"method":"random"})
-                self.log("runAction, setting sort to %s"%(builder.sort))
-                
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
-                builder.sort = self.storedValues[0]
-                self.log("runAction, restoring sort and forcing random shuffle of %s items"%(len(fileList)))
-                return randomShuffle(fileList)
+        if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
+            self.storedValues[0] = builder.sort
+            builder.sort.update({"method":"random"})
+            self.log("runAction, setting sort to %s"%(builder.sort))
+            
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
+            builder.sort = self.storedValues[0]
+            self.log("runAction, restoring sort and forcing random shuffle of %s items"%(len(fileList)))
+            return randomShuffle(fileList)
         return fileList
         
 
@@ -1310,12 +1313,12 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
         self.myId               = 1000
         self.name               = LANGUAGE(30121)
         self.description        = LANGUAGE(33121)
-        self.optionLabels       = [LANGUAGE(30180)]
-        self.optionValues       = [SETTINGS.getSettingInt('Enable_Even')]
-        self.optionDescriptions = [LANGUAGE(33121)]
-        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST]
-        self.selectBoxOptions   = [list(range(0,6))]
-        self.storedValues       = [[],[],[],{},[],[],[]]
+        self.optionLabels       = [LANGUAGE(30180),LANGUAGE(30181)]
+        self.optionValues       = [SETTINGS.getSettingInt('Enable_Even'),SETTINGS.getSettingBool('Enable_Even_Force_Episode')]
+        self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33230)]
+        self.actions            = [RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST]
+        self.selectBoxOptions   = [list(range(0,26,1))]
+        self.storedValues       = [[],SETTINGS.getSettingInt('Page_Limit'),[],{},[],[],[]]
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -1327,85 +1330,112 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
       
       
     def getTitle(self):
-        return '%s (%s)'%(self.name,self.optionValues[0])
+        return self.name
 
 
     def onAction(self, optionindex):
-        self.onActionSelect(optionindex,self.optionLabels[optionindex])
+        if optionindex == 0: self.onActionSelect(optionindex,self.optionLabels[optionindex])
+        else:                self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
 
 
     def _chunkEpisodes(self, showArray: dict={}):
-        for show, episodes in list(showArray.items()):
-            yield show,[episodes[i:i+self.optionValues[0]] for i in range(0,len(episodes),self.optionValues[0])]
+        chunkSize = self.optionValues[0]
+        for show, episodes in showArray.items():
+            yield show, [episodes[i : i + chunkSize] for i in range(0, len(episodes), chunkSize)]
 
 
-    def _isForceOrder(self, builder):
-        return builder.sort.get("method","") in ["episode","year"]
-
-
-    def _sortShows(self, fileItems, forceEpisode): #group by type & show; no duplicates. 
+    def _sortShows(self, fileItems, forceEpisode):
         try:
-            for fileItem in fileItems:
-                if fileItem.get('type').startswith(tuple(TV_TYPES)) and fileItem.get('showtitle'): #TV Shows
-                    if fileItem not in self.storedValues[3].get(fileItem['showtitle'],[]): self.storedValues[3].setdefault(fileItem['showtitle'],[]).append(fileItem)
-                elif fileItem not in self.storedValues[4]: self.storedValues[4].append(fileItem) #Movies/Other no duplicates allowed
-            if forceEpisode: self.storedValues[4] = list(sorted(self.storedValues[4], key=lambda k: k.get('year',0))) #force year ordering
+            seen_movies = {item.get('id') or item.get('file') for item in self.storedValues[4]}
+            for item in fileItems:
+                type  = item.get('type', '')
+                title = item.get('showtitle')
+                if title and type.startswith(tuple(TV_TYPES)):
+                    seen_episodes = self.storedValues[3].setdefault(title, [])
+                    if item not in seen_episodes: seen_episodes.append(item)
+                else:
+                    item_id = item.get('id') or item.get('file')
+                    if item_id not in seen_movies:
+                        self.storedValues[4].append(item)
+                        seen_movies.add(item_id)
+            if forceEpisode: self.storedValues[4].sort(key=lambda k: k.get('year', 0))
             return dict(self._chunkEpisodes(self.storedValues[3])), self.storedValues[4]
         except Exception as e: self.log("runAction, _sortShows failed! %s"%(e), xbmc.LOGERROR)
-        return {}
+        return {}, []
 
 
-    def _mergeShows(self, shows, movies, inherited=None):
-        nfileList = []
+    def _mergeShows(self, shows={}, movies=[], inherited=None):
         try:
-            movieCNT = int(abs(len(movies) // list(shows.keys())))
-            while not inherited.monitor.abortRequested() and shows:
-                for show, chunks in list(shows.items()):
-                    if len(movies) > 0:
-                        try:    nfileList.extend([movies.pop(0) for idx in movieCNT])
-                        except: nfileList.append(movie.pop(0))
-                    if   len(chunks) == 0: del shows[show]
-                    elif len(chunks) > 0:  nfileList.extend(shows[show].pop(0))
+            movie_queue = deque(movies or [])
+            movie_cnt   = (len(movie_queue) // len(shows)) if len(shows) > 0 else 0
+            show_keys   = list(shows.keys())
+            
+            all_chunks  = []
+            for show, chunks in shows.items():
+                for chunk in chunks:
+                    print(show, len(chunk), len(chunks))
+                    all_chunks.append(chunk)
                     
-            if len(movies) > 0:
-                self.log('runAction, _mergeShows appending remaining movies, movie count = %s'%(len(movies)))
-                nfileList.extend(movies) #add any remaining movies to the end of sets.
-            self.log('runAction, _mergeShows returning items = %s'%(len(nfileList)))
-            return [_f for _f in nfileList if _f]
+            total_slots = len(all_chunks)
+            if total_slots == 0: return list(movie_queue)
+            movies_per_slot = len(movie_queue) / total_slots
+            accumulator = 0.0
+
+            nfileList   = []
+            while not inherited.monitor.abortRequested() and shows:
+                for show in show_keys[:]:  # Iterate over a copy of keys
+                    if show not in shows: continue
+                    chunks = shows[show]
+                    if chunks:
+                        accumulator += movies_per_slot
+                        try: nfileList.extend(chunks.pop(0) if isinstance(chunks, list) else next(chunks))# If it's a list, pop(0) is still slow; if it's a generator, use next()
+                        except (IndexError, StopIteration):
+                            del shows[show]
+                            show_keys.remove(show)
+                            
+                        while not inherited.monitor.abortRequested() and accumulator >= 1.0 and movie_queue:
+                            nfileList.append(movie_queue.popleft())
+                            accumulator -= 1.0
+                    else:
+                        del shows[show]
+                        show_keys.remove(show)
+            nfileList.extend(movie_queue)
+            return nfileList
         except Exception as e: self.log("runAction, _mergeShows failed! %s"%(e), xbmc.LOGERROR)
         return []
 
 
     def runAction(self, actionid, citem, parameter, builder):
         if bool(self.optionValues[0]):
-            if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
+            if actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
                 self.storedValues[1] = builder.limit
-                
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
                 if parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])):
                     builder.limit = builder.limit * self.optionValues[0] #Multiply parser limit for tv content in-order to aid even distribution. 
                     self.log('runAction, setting limit %s'%(builder.limit))
                 
             elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
                 if len(parameter) > 0:
-                    forceEpisode    = self._isForceOrder(builder)
-                    builder.pDialog = _updateProgress(builder.pDialog, builder.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    builder.pDialog = DIALOG._updateProgress(builder.pDialog, builder.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    forceEpisode = self.optionValues[1]
                     if forceEpisode: 
-                        fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0)))#force episode ordering
-                        fileItems = list(sorted(fileItems, key=lambda k: k.get('season',0))) #force season ordering
+                        fileItems = list(sorted(parameter, key=lambda k: k.get('year',0)))    #force year ordering
+                        fileItems = list(sorted(fileItems, key=lambda k: k.get('episode',0))) #force episode ordering
+                        fileItems = list(sorted(fileItems, key=lambda k: k.get('season',0)))  #force season ordering
                     else:
                         fileItems = parameter
-                    self.log('runAction, group by episode %s'%(forceEpisode))
-                    return self._mergeShows(*(self._sortShows(fileItems, forceEpisode)),builder)
+                    sortShows, sortMovies = self._sortShows(fileItems, forceEpisode)
+                    self.log('runAction, group by episode %s, tvshows = %s, movies = %s'%(forceEpisode, len(list(sortShows.keys())), len(sortMovies)))
+                    return self._mergeShows(sortShows,sortMovies,builder)
                 
             elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
-                builder.limit = (self.storedValues[1] or SETTINGS.getSettingInt('Page_Limit'))
+                builder.limit = self.storedValues[1]
                 self.log('runAction, restoring limit = %s'%(builder.limit))
+                
         return parameter
         
         
-class SmartShuffle(BaseRule):#Author:Spider-netizen
+class SmartShuffle(BaseRule):#Developer:Spider-netizen
     def __init__(self):
         self.myId               = 1001
         self.name               = LANGUAGE(30121)
@@ -1413,7 +1443,7 @@ class SmartShuffle(BaseRule):#Author:Spider-netizen
         self.optionLabels       = [LANGUAGE(30180)]
         self.optionValues       = [SETTINGS.getSettingInt('Enable_Shuffle')]
         self.optionDescriptions = [LANGUAGE(33121)]
-        self.actions            = [RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE,RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST]
+        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE,RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = []
         self.storedValues       = [[],[],[],{},[],[],[]]
         
@@ -1431,11 +1461,11 @@ class SmartShuffle(BaseRule):#Author:Spider-netizen
 
 
     def onAction(self, optionindex):
-        self.onActionSelect(optionindex,self.optionLabels[optionindex])
+        self.onActionToggleBool(optionindex,self.optionLabels[optionindex])
         return self.optionValues[optionindex]
 
 
-    def _smart_random_request(self, id, path, items, page, key=None, inherited=None):
+    def _smart_random_request(self, id, path, items, page, inherited=None):
         """Returns a list of random media items from the channel.
 
         The function takes a list of all media items of the channel and returns a subset of them in a random order.
@@ -1446,12 +1476,10 @@ class SmartShuffle(BaseRule):#Author:Spider-netizen
             path (str): Channel path
             items (list): A list containing all media items of the channel
             page (int): Number of items to return
-            key (str, optional): Key for grouping items. Defaults to None.
         """
-        # start_time = time.time()
-        self.log(f'_smart_random_request; {id}: key = {key}, {len(items)} items.', xbmc.LOGDEBUG)
+        self.log(f'_smart_random_request; {id}, {len(items)} items.', xbmc.LOGDEBUG)
         if len(items) <= 1: return items
-        content_dict = self.group_items_by_id(items, key)
+        content_dict = self.group_items_by_id(items)
         # Create separate lists for movies and TV shows
         library_ids  = []
         content_types = {}  # Track content type (movie/tvshow) for each library_id
@@ -1536,6 +1564,7 @@ class SmartShuffle(BaseRule):#Author:Spider-netizen
                 if i >= total_parts:
                     self.log(f'_smart_random_request, Resetting index as it reached the end of the list (i = {i}/{total_parts})...', xbmc.LOGINFO)
                     i = 0
+                    
                 next_indices[next_library_id] = i
                 next_content = content_dict[next_library_id][i]
                 programs_memory[next_library_id] = next_content
@@ -1556,7 +1585,7 @@ class SmartShuffle(BaseRule):#Author:Spider-netizen
             msg = 'get'
             channel_index = {'programs' : {}, 'last_program_id' : {}}
             try:# This gets the starting index for the  request, that's how the program keeps track of episodes.
-                loaded_index = SETTINGS.getCacheSetting(cacheName, checksum=id, json_data=False, revive=False)
+                loaded_index = SETTINGS.getCacheSetting(cacheName, checksum=id, revive=False)
                 loaded_index_keys = set(loaded_index) # Validating format (in case there's been a cahnge to the format)
                 if loaded_index_keys == set(channel_index):
                     self.log("_channelMemory; loaded index keys matched expected format. loaded_index_keys = %s"%(loaded_index_keys))
@@ -1565,7 +1594,7 @@ class SmartShuffle(BaseRule):#Author:Spider-netizen
             except Exception as e: self.log(f'_channelMemory; Failed loading cache: id = {id}, path = {path}, Error: {e}')
         else:
             msg = 'set'
-            SETTINGS.setCacheSetting(cacheName, channel_index, checksum=id, json_data=False, life=datetime.timedelta(days=84))
+            SETTINGS.setCacheSetting(cacheName, channel_index, checksum=id, life=datetime.timedelta(days=84))
         self.log("%s _channelMemory; id = %s, path = %s, channel_index = %s"%(msg,id,path,channel_index))
         return channel_index
 
@@ -1618,29 +1647,85 @@ class SmartShuffle(BaseRule):#Author:Spider-netizen
 
     def runAction(self, actionid, citem, parameter, builder):
         if bool(self.optionValues[0]):
-            if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
-                self.storedValues[1] = builder.limit
+            if actionid == RULES_ACTION_CHANNEL_START:
+                self.storedValues[0]  = builder.enableShuffle
+                self.storedValues[1]  = builder.limits
+                builder.enableShuffle = self.optionValues[0]
+                builder.limits        = {"end":0,"start":-1,"total":0}
+                self.log("runAction, setting enableShuffle = %s, limits = %s"%(builder.enableShuffle,builder.limits))
                 
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
-                if parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])):
-                    builder.limit = builder.limit * self.optionValues[0] #Multiply parser limit for tv content in-order to aid even distribution. 
-                self.log('runAction, setting limit %s'%(builder.limit))
+            elif actionid == RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST:
+                items = self._smart_random_request(citem['id'], path, parameter, builder.limit, key)
                 
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
-                if len(parameter) > 0:
-                    forceEpisode = self._isForceOrder(builder)
-                    builder.pDialog = _updateProgress(builder.pDialog, builder.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,builder.pMSG))
-                    if forceEpisode: 
-                        fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0))) #force episode ordering
-                        fileItems = list(sorted(fileItems, key=lambda k: k.get('season',0))) #force season ordering
-                    else:
-                        fileItems = parameter
-                    self.log('runAction, group by episode %s'%(forceEpisode))
-                    return self._mergeShows(*(self._sortShows(fileItems, forceEpisode)),builder)
-                
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
-                builder.limit = (self.storedValues[1] or SETTINGS.getSettingInt('Page_Limit'))
-                self.log('runAction, restoring limit = %s'%(builder.limit))
+            elif actionid == RULES_ACTION_CHANNEL_STOP:
+                builder.enableShuffle = self.storedValues[0]
+                builder.limits        = self.storedValues[1]
+                self.log("runAction, restoring enableShuffle = %s, limits = %s"%(builder.enableShuffle,builder.limits))
+    
+        return parameter
+        
+        
+class PadScheduling(BaseRule):
+    def __init__(self):
+        self.myId               = 2999
+        self.name               = "Pad Scheduling"
+        self.description        = f"Pad EPG with duplicates to met minimum EPG requirement [{MIN_EPG_DURATION//60//60} Hrs.]"
+        self.optionLabels       = ["Pad Scheduling"]
+        self.optionValues       = [True]
+        self.optionDescriptions = [""]
+        self.actions            = [RULES_ACTION_CHANNEL_START, RULES_ACTION_CHANNEL_BUILD_TIME_POST,RULES_ACTION_CHANNEL_STOP]
+        self.storedValues       = [[],[]]
+        
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
+    def copy(self): 
+        return PadScheduling()
+        
+        
+    def getTitle(self): 
+        return '%s (%s)'%(self.name,{True:LANGUAGE(30184),False:LANGUAGE(30021)}[self.optionValues[0]])
+            
+            
+    def onAction(self, optionindex):
+        return self.optionValues[optionindex]
+        
+
+    def runAction(self, actionid, citem, parameter, inherited):
+        self.log('[%s] runAction, actionid = %s,'%(citem.get('id'),actionid))
+        if actionid == RULES_ACTION_CHANNEL_START:
+            self.storedValues[0]    = inherited.padScheduling
+            inherited.padScheduling = self.optionValues[0]
+            self.log("runAction, setting padScheduling to %s"%(inherited.padScheduling))
+            
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_POST:
+            # pad scheduling with duplicates to met minimum guide requirements (MIN_EPG_DURATION).
+            if self.padScheduling and len(parameter) > 0:
+                iters  = cycle(parameter)
+                totDur = 0
+                start  = parameter[-1]['stop']
+                idx    = len(parameter)
+                now    = getUTCstamp()
+                while not inherited.monitor.abortRequested() and start <= (now + MIN_EPG_DURATION):
+                    if start >= (now + MIN_EPG_DURATION): break
+                    else: 
+                        idx += 1
+                        item = next(iters).copy()
+                        item["idx"]   = idx
+                        item['start'] = start
+                        item['stop']  = start + item['duration']
+                        start = item['stop']
+                        totDur += item['duration']
+                        parameter.append(item)
+                        inherited.pDialog = DIALOG._updateProgress(inherited.pDialog, inherited.pCount, message=f"{inherited.pName}: {LANGUAGE(33085)} {totDur}/{MIN_EPG_DURATION}",header=inherited.pHeader)
+                        self.log("[%s] addScheduling, ADD fileList = %s, totDur = %s/%s, stop = %s"%(citem['id'],len(parameter),totDur,MIN_EPG_DURATION,parameter[-1].get('stop')))
+        
+        elif actionid == RULES_ACTION_CHANNEL_STOP:
+            inherited.padScheduling = self.storedValues[0]
+            self.log("runAction, restoring padScheduling to %s"%(inherited.padScheduling))
+            
         return parameter
         
         
@@ -1669,7 +1754,6 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
             
             
     def onAction(self, optionindex):
-        if optionindex == 0: self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
         
         
@@ -1704,12 +1788,12 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
             return FileAccess.setJSON(self._getPath(id),{'resume':resume,'filelist':filelist})
         elif self.optionValues[1]:#remote
             return requestURL(self.optionValues[1],payload={'uuid':SETTINGS.getMYUUID(),'name':friendly,'payload':{'resume':resume,'filelist':filelist}},
-                              cache={"cache":SETTINGS.cacheDB, "json_data": True, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
+                              cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
             
         
     def _get(self, id):
         self.log("[%s] runAction, _get: url = %s"%(id,self.optionValues[1]))
-        if self.optionValues[1]: return requestURL(self.optionValues[1], cache={"cache":SETTINGS.cacheDB, "json_data": True, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
+        if self.optionValues[1]: return requestURL(self.optionValues[1], cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
         else:                    return FileAccess.getJSON(self._getPath(id))
 
 
@@ -1792,64 +1876,6 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
             if parameter.get('resume').get('updated'):
                 self.log("[%s] runAction, updating resume = %s"%(citem.get('id'),parameter.get('resume')))
                 self._set(citem.get('id'),self.storedValues[1],parameter.get('resume'))
+                
         return parameter
        
-       
-class PadScheduling(BaseRule):
-    def __init__(self):
-        self.myId               = 3001
-        self.name               = "Pad Scheduling"
-        self.description        = f"Pad EPG with duplicates to met minimum EPG requirement [{MIN_EPG_DURATION//60//60} Hrs.]"
-        self.optionLabels       = ["Pad Scheduling"]
-        self.optionValues       = [False]#SETTINGS.getSettingBool('Enable_Guide_Padding')
-        self.optionDescriptions = [""]
-        self.actions            = [RULES_ACTION_CHANNEL_START, RULES_ACTION_CHANNEL_BUILD_TIME_POST,RULES_ACTION_CHANNEL_STOP]
-        self.storedValues       = [[],[]]
-        
-
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
-                  
-
-    def copy(self): 
-        return PadScheduling()
-        
-        
-    def getTitle(self): 
-        return '%s (%s)'%(self.name,{True:LANGUAGE(30184),False:LANGUAGE(30021)}[self.optionValues[0]])
-            
-            
-    def onAction(self, optionindex):
-        if optionindex == 0: self.onActionToggleBool(optionindex)
-        return self.optionValues[optionindex]
-        
-
-    def runAction(self, actionid, citem, parameter, inherited):
-        self.log('[%s] runAction, actionid = %s,'%(citem.get('id'),actionid))
-        if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedValues[0]    = inherited.padScheduling
-            inherited.padScheduling = self.optionValues[0]
-        elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_POST:
-            # pad scheduling with duplicates to met minimum guide requirements (MIN_EPG_DURATION).
-            if self.padScheduling and len(parameter) > 0:
-                iters  = cycle(parameter)
-                totDur = 0
-                start  = parameter[-1]['stop']
-                idx    = len(parameter)
-                now    = getUTCstamp()
-                while not inherited.monitor.abortRequested() and start <= (now + MIN_EPG_DURATION):
-                    if start >= (now + MIN_EPG_DURATION): break
-                    else: 
-                        idx += 1
-                        item = next(iters).copy()
-                        item["idx"]   = idx
-                        item['start'] = start
-                        item['stop']  = start + item['duration']
-                        start = item['stop']
-                        totDur += item['duration']
-                        parameter.append(item)
-                        inherited.pDialog = DIALOG._updateProgress(inherited.pDialog, inherited.pCount, message=f"{inherited.pName}: {LANGUAGE(33085)} {totDur}/{MIN_EPG_DURATION}",header=inherited.pHeader)
-                        self.log("[%s] addScheduling, ADD fileList = %s, totDur = %s/%s, stop = %s"%(citem['id'],len(parameter),totDur,MIN_EPG_DURATION,parameter[-1].get('stop')))
-        elif actionid == RULES_ACTION_CHANNEL_STOP:
-            inherited.padScheduling = self.storedValues[0]
-        return parameter

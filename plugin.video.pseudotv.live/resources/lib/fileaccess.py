@@ -31,9 +31,9 @@ class FileAccess(object):
     def dumpJSON(item={}, idnt=None, sortkey=False, separators=(',', ':')):
         try:
             if item:
-                if   isinstance(item,str):  return item
-                elif hasattr(item,'read'):  return json.dump(item)
-                elif isinstance(item,dict): return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
+                if   isinstance(item,(str, bytes)): return item
+                elif hasattr(item,'read'):          return json.dump(item)
+                elif isinstance(item,dict):         return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
         except Exception as e: pass
         return ''
         
@@ -42,11 +42,12 @@ class FileAccess(object):
     def loadJSON(item=""):
         try:
             if item:
-                if   isinstance(item,dict): return item
-                elif hasattr(item,'read'):  return json.load(item)
-                elif isinstance(item,str):  return json.loads(item)
+                if   isinstance(item,dict):          return item
+                elif hasattr(item,'read'):           return json.load(item)
+                elif isinstance(item,(str, bytes)):  return json.loads(item)
         except Exception as e: pass
         return {}
+        
         
     @staticmethod
     def getJSON(file):
@@ -55,17 +56,19 @@ class FileAccess(object):
             fle  = FileAccess.open(file,'r')
             data = FileAccess.loadJSON(fle.read())
         except Exception as e: log('FileAccess: getJSON failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
-        fle.close()
+        finally: fle.close()
         return data
 
 
     @staticmethod
     def setJSON(file, data):
         with FileLock(file):
-            fle = FileAccess.open(file, 'w')
-            fle.write(FileAccess.dumpJSON(data, idnt=4, sortkey=False))
-            fle.close()
-        return True
+            try:
+                fle = FileAccess.open(file, 'w')
+                fle.write(FileAccess.dumpJSON(data, idnt=4, sortkey=False))
+            except Exception as e: log('FileAccess: setJSON failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
+            finally: fle.close()
+            return True
 
 
     @staticmethod

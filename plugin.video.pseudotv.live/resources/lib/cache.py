@@ -43,7 +43,7 @@ class Service(object):
             else: wait -= CPU_CYCLE
         return False
 
-def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, json_data=False):
+def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
     def internal(method):
         @wraps(method)
         def wrapper(*args, **kwargs):
@@ -54,13 +54,13 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, j
                 cacheName += u".%s"%(Globals._getMD5(item))
             for k, v in list(kwargs.items()):
                 cacheName += u".%s=%s"%(k,Globals._getMD5(v))
-            results = instance.cache.get(cacheName, checksum, json_data)
+            results = instance.cache.get(cacheName, checksum,)
             if results is not None:
                 log('%s, cacheit returning cache' % (method.__qualname__.replace('.', ': ')))
                 return results
             log('%s, cacheit saving results' % (method.__qualname__.replace('.', ': ')))
             value = method(*args, **kwargs)
-            instance.cache.set(cacheName, value, checksum, expiration, json_data)
+            instance.cache.set(cacheName, value, checksum, expiration,)
             return value
         return wrapper
     return internal
@@ -70,33 +70,32 @@ class Cache(object):
     monitor = service.monitor
     cache_lock = Lock()
 
-    def __init__(self, mem_cache=False, is_json=False, disable_cache=False):
+    def __init__(self, mem_cache=False, disable_cache=False):
         self.cache = _Cache(service=self.service)
         self.cache.enable_mem_cache = mem_cache
-        self.cache.data_is_json     = is_json
         # disable_cache is True if explicitly passed OR addon settings say so
         self.disable_cache          = (disable_cache or REAL_SETTINGS.getSettingBool('Disable_Cache'))
-        self.log('__init__, mem_cache = %s, is_json = %s, disable_cache = %s' % (mem_cache, is_json, disable_cache))
+        self.log('__init__, mem_cache = %s, disable_cache = %s' % (mem_cache, disable_cache))
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s [%s]: %s' % (self.__class__.__name__, {True:'MEM',False:'DB'}[self.cache.enable_mem_cache], msg), level)
 
 
-    def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
+    def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         # don't store empty values when cache disabled unless explicitly allowed
         if not self.disable_cache or (not isinstance(value,(bool,list,dict)) and not value):
             with self.cache_lock:
                 self.log('set, name = %s, value = %s' % (name, '%s...'%(str(value)[:128])))
-                self.cache.set(name, value, checksum, expiration, json_data)
+                self.cache.set(name, value, checksum, expiration)
         return value
 
 
-    def get(self, name, checksum=ADDON_VERSION, json_data=False):
+    def get(self, name, checksum=ADDON_VERSION):
         if not self.disable_cache:
             with self.cache_lock:
                 try:
-                    value = self.cache.get(name, checksum, json_data)
+                    value = self.cache.get(name, checksum)
                     self.log('get, name = %s, value = %s' % (name, '%s...'%(str(value)[:128])))
                     return value
                 except Exception as e:
@@ -112,7 +111,6 @@ class Cache(object):
 
 class _Cache(object):
     enable_mem_cache     = False
-    data_is_json         = False
     window               = None
     global_checksum      = ADDON_VERSION
     _auto_clean_interval = datetime.timedelta(hours=MAX_GUIDEDAYS)
@@ -143,22 +141,22 @@ class _Cache(object):
             self._cleanUp()
 
 
-    def get(self, endpoint, checksum="", json_data=False):
+    def get(self, endpoint, checksum=""):
         checksum = self.getChecksum(checksum)
         cur_time = self.getTimestamp(datetime.datetime.now())
         result   = None
-        if self.enable_mem_cache: result = self._get_mem_cache(endpoint, checksum, cur_time, json_data)
-        if result is None:        result = self._get_db_cache(endpoint, checksum, cur_time, json_data)
+        if self.enable_mem_cache: result = self._get_mem_cache(endpoint, checksum, cur_time)
+        if result is None:        result = self._get_db_cache(endpoint, checksum, cur_time)
         return result
 
 
-    def set(self, endpoint, data, checksum="", expiration=datetime.timedelta(days=30), json_data=False):
+    def set(self, endpoint, data, checksum="", expiration=datetime.timedelta(days=30)):
         task_name = "set.%s" % endpoint
         self._busy_tasks.append(task_name)
         checksum = self.getChecksum(checksum)
         expires  = self.getTimestamp(datetime.datetime.now() + expiration)
-        if self.enable_mem_cache: self._set_mem_cache(endpoint, checksum, expires, data, json_data)
-        self._set_db_cache(endpoint, checksum, expires, data, json_data)
+        if self.enable_mem_cache: self._set_mem_cache(endpoint, checksum, expires, data)
+        self._set_db_cache(endpoint, checksum, expires, data)
         self._busy_tasks.remove(task_name)
 
 
@@ -176,25 +174,21 @@ class _Cache(object):
                         del connection
 
 
-    def _get_mem_cache(self, endpoint, checksum, cur_time, json_data):
+    def _get_mem_cache(self, endpoint, checksum, cur_time):
         result    = None
         cachedata = Globals._decodeString(Globals._getProperty(endpoint))
         if cachedata:
-            if json_data or self.data_is_json: cachedata = FileAccess.loadJSON(cachedata)
-            else:                              cachedata = literal_eval(cachedata)
+            cachedata = literal_eval(cachedata)
             if cachedata[0] > cur_time:
                 if not checksum or checksum == cachedata[2]: result = cachedata[1]
         return result
 
 
-    def _set_mem_cache(self, endpoint, checksum, expires, data, json_data):
-        cachedata = (expires, data, checksum)
-        if json_data or self.data_is_json: cachedata_str = FileAccess.dumpJSON(cachedata)
-        else:                              cachedata_str = repr(cachedata)
-        Globals._setProperty(endpoint, Globals._encodeString(cachedata_str))
+    def _set_mem_cache(self, endpoint, checksum, expires, data):
+        Globals._setProperty(endpoint, Globals._encodeString(repr((expires, data, checksum))))
 
 
-    def _get_db_cache(self, endpoint, checksum, cur_time, json_data):
+    def _get_db_cache(self, endpoint, checksum, cur_time):
         result     = None
         query      = "SELECT expires, data, checksum FROM cache WHERE id = ?"
         cache_data = self._execute_sql(query, (endpoint,))
@@ -202,17 +196,14 @@ class _Cache(object):
             cache_data = cache_data.fetchone()
             if cache_data and cache_data[0] > cur_time:
                 if not checksum or cache_data[2] == checksum:
-                    if json_data or self.data_is_json: result = FileAccess.loadJSON(cache_data[1])
-                    else:                              result = literal_eval(cache_data[1])
-                    if self.enable_mem_cache: self._set_mem_cache(endpoint, checksum, cache_data[0], result, json_data)
+                    result = literal_eval(cache_data[1])
+                    if self.enable_mem_cache: self._set_mem_cache(endpoint, checksum, cache_data[0], result)
         return result
 
 
-    def _set_db_cache(self, endpoint, checksum, expires, data, json_data):
+    def _set_db_cache(self, endpoint, checksum, expires, data):
         query = "INSERT OR REPLACE INTO cache( id, expires, data, checksum) VALUES (?, ?, ?, ?)"
-        if json_data or self.data_is_json: data = FileAccess.dumpJSON(data)
-        else:                              data = repr(data)
-        self._execute_sql(query, (endpoint, expires, data, checksum))
+        self._execute_sql(query, (endpoint, expires, repr(data), checksum))
 
 
     def _cleanUp(self):

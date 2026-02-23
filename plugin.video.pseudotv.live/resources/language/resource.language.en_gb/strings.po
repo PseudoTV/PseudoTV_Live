@@ -1975,6 +1975,11 @@ msgctxt "#32261"
 msgid "Edit Channel"
 msgstr ""
 
+msgctxt "#32262"
+msgid "No Content Found\nTry increasing channels recursive limit."
+msgstr ""
+
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"
@@ -2030,7 +2035,7 @@ msgid "AutoTune from Recommended (Supported) services installed on Kodi and supp
 msgstr ""
 
 msgctxt "#33015"
-msgid "Pagination Limit, How many entries are requested and parsed per call. [25 Default]\n[Lower == Better Performance]"
+msgid "Pagination Limit, How many items are requested and parsed per call. [0:Unlimited, 25:Default]"
 msgstr ""
 
 msgctxt "#33016"
@@ -2219,7 +2224,7 @@ msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33121"
-msgid "Group channel TV shows in blocks. [0 Disabled, 0 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
+msgid "Group channel TV shows in blocks. [0 Disabled, 0 Default] (Pagination size influences grouping).\nChanges may propagate slowly over time and may not be instantaneous. [0 Default] *see wiki for details"
 msgstr ""
 
 msgctxt "#33125"
@@ -2422,12 +2427,16 @@ msgctxt "#33222"
 msgid "How long to wait in seconds before PseudoTV attempts to correct failed playback. [90 Default]"
 msgstr ""
 
+msgctxt "#33224"
+msgid "How many sub-folders to recursively search, 0 == Root Folder Only. [0 Default]"
+msgstr ""
+
 msgctxt "#33225"
 msgid "Enable parsing additional media details, Enabling will impact channel building performance. [False Default]"
 msgstr ""
 
 msgctxt "#33226"
-msgid "Enable Smart Shuffling *see wiki for details. [False Default]"
+msgid "Enable Smart Shuffling\nChanges may propagate slowly over time and may not be instantaneous. [False Default] *see wiki for details"
 msgstr ""
 
 msgctxt "#33228"

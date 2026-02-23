@@ -112,7 +112,7 @@ class Autotune(object):
                 elif len(citems) > 0:
                     channels = Channels(writable=True)
                     channels.addChannel(citems)
-                    state = channels.setChannels()
+                    state = channels.setChannels(channels.getChannels())
                     del channels
                     timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChannels'])#trigger channel building
                     return state

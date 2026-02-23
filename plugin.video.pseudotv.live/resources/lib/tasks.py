@@ -99,8 +99,8 @@ class Tasks(object):
 
 
     def chkCrash(self):
-        citem = (SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM',json_data=True) or {})
-        SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None,json_data=False)
+        citem = (SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM') or {})
+        SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
         if citem:
             self.log('chkCrash\n%s'%(citem))
             # with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
@@ -247,7 +247,7 @@ class Tasks(object):
                 if brute:
                     if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
                         with BUILTIN.busy_dialog(lock=True):
-                            BUILTIN.executebuiltin("Dialog.Close(all)")
+                            # BUILTIN.executebuiltin("Dialog.Close(all)")
                             DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
                             __toggle(False), self.monitor.waitForAbort(M3U_REFRESH*2), __toggle(True)
                     else: timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])

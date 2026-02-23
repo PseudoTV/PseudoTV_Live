@@ -72,8 +72,6 @@ class Builder(object):
         
         #global rules
         self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
-        self.enableEven       = bool(SETTINGS.getSettingInt('Enable_Even'))
-        # self.forceEpisodes    = SETTINGS.getSettingBool('Enable_Force_Episode_Order')
         self.interleaveSet    = SETTINGS.getSettingInt('Interleave_Set')
         self.interleaveRepeat = SETTINGS.getSettingBool('Interleave_Repeat')
         self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
@@ -84,12 +82,12 @@ class Builder(object):
         self.saveDuration     = SETTINGS.getSettingBool('Store_Duration')
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
-        self.recursiveDepth   = SETTINGS.getSettingInt('Recursive_Depth') #todo adv. channel rule. set recursive depth.
+        self.recursiveLimit   = SETTINGS.getSettingInt('Recursive_Limit') #todo adv. channel rule. set recursive depth.
         self.padScheduling    = False #todo Adv. Channel Rule, No Global: Default False
         self.padFilelist      = False #todo Adv. Channel Rule, No Global: Default False
-        self.enableShuffle    = False# SETTINGS.getSettingBool('Enable_Shuffle')
-        
-        
+        self.enableEven       = False if SETTINGS.getSettingBool('Enable_Shuffle') else bool(SETTINGS.getSettingInt('Enable_Even'))
+        self.enableShuffle    = False if bool(SETTINGS.getSettingInt('Enable_Even')) else SETTINGS.getSettingBool('Enable_Shuffle')
+
         self.filter           = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
         self.sort             = {}#{"ignorearticle":True,"method":"random","order":"ascending","useartistsortname":True}
         self.limits           = {"end":-1,"start":0,"total":0}
@@ -108,12 +106,12 @@ class Builder(object):
 
         self.resources        = Resources(service=self.service)
         self.runActions       = RulesList(self.channels.getChannels()).runActions
-        self.trailerCache     = (SETTINGS.getCacheSetting('trailerCache', json_data=True) or {})
+        self.trailerCache     = (SETTINGS.getCacheSetting('trailerCache') or {})
         self.log(f'__init__, trailerCache = {len(self.trailerCache)}')
 
 
     def __del__(self):
-        SETTINGS.setCacheSetting('trailerCache', self.trailerCache, json_data=True)
+        SETTINGS.setCacheSetting('trailerCache', self.trailerCache)
         self.log(f'__del__, trailerCache = {len(self.trailerCache)}')
 
 
@@ -140,7 +138,8 @@ class Builder(object):
                 continue
             else:
                 if not citem.get('id'): citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'],SETTINGS.getMYUUID()) #generate new channelid
-                citem['logo'] = self.resources.getLogo(citem,fallback=self.resources.getCache(citem['name']))
+                citem['group'] = list(set(citem.get('group',[])))
+                citem['logo']  = self.resources.getLogo(citem,fallback=self.resources.getCache(citem['name']))
                 self.log('[%s] VERIFIED - channel %s: %s changed = %s'%(citem['id'],citem['number'],citem['name'],citem.get('changed',False)),xbmc.LOGINFO)
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self) #inject persistent citem changes here
 
@@ -217,7 +216,7 @@ class Builder(object):
             return state
         
         def __setChannels():
-            state = self.channels.setChannels()
+            state = self.channels.setChannels(self.channels.getChannels())
             self.log('[%s] buildChannels, __setChannels = %s'%(citem['id'],state))
             return state
             
@@ -309,26 +308,24 @@ class Builder(object):
         return self.buildCells(citem, MIN_EPG_DURATION, 'music', ((MAX_GUIDEDAYS * 8)), info={'genre':["Music"],'art':{'thumb':citem['logo'],'icon':citem['logo'],'fanart':citem['logo']},'plot':LANGUAGE(32029)%(citem['name'])})
         
 
-    def buildVideo(self, citem: dict):
+    def buildVideo(self, citem: dict, validate: bool=False):
         def _validFileList(fileArray):
-            for fileList in fileArray:
-                if len(fileList) > 0: return True
-            return False
+            return any(len(fileList) > 0 for fileList in fileArray)
             
         def _injectFillers(citem, fileList, enable=False):#todo refactor
-            self.log("[%s] buildVideo: _injectFillers, fileList = %s, enable = %s"%(citem['id'],len(fileList),enable))
+            self.log("[%s] buildVideo: _injectFillers, enable = %s, fileList = %s"%(citem['id'],enable,len(fileList)))
             if enable: return  Fillers(citem,self).injectBCTs(fileList)
             return fileList
           
-        def _injectRules(citem):#todo refactor. 
+        def _injectRules(citem):#todo refactor.
             tmpCitem = citem.copy()
             #"Even Show Distribution"
             if self.enableEven and not citem.get('rules',{}).get("1000"):
-                nrules = {"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even')}}}
+                nrules = {"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingBool('Enable_Even_Force_Episode')}}}
                 self.log(" [%s] buildVideo: _injectRules, __chkEvenDistro, new rules = %s"%(citem['id'],nrules))
                 tmpCitem.setdefault('rules',{}).update(nrules)
             #"Smart Shuffle"
-            if self.enableShuffle and not citem.get('rules',{}).get("1001"): #todo update with spec.
+            elif self.enableShuffle and not citem.get('rules',{}).get("1001"):
                 nrules = {"1001":{"values":{"0":SETTINGS.getSettingInt('Enable_Shuffle')}}}
                 self.log(" [%s] buildVideo: _injectRules, __chkEvenDistro, new rules = %s"%(citem['id'],nrules))
                 tmpCitem.setdefault('rules',{}).update(nrules)
@@ -346,14 +343,21 @@ class Builder(object):
                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)),header=self.pHeader)
                     return []
                 else:
-                    if self.xsp.isXSP(paths):   paths = self.xsp.parseXSP(citem['id'], paths)# smartplaylist - convert tvshows types to multi-path, apply sort methods
-                    elif isinstance(paths,str): paths=[paths]
-                    for path in paths:
-                        if len(paths) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(paths))
+                    if self.xsp.isXSP(paths):           paths = self.xsp.parseXSP(citem['id'], paths)# smartplaylist - convert tvshows types to multi-path, apply sort methods
+                    elif isinstance(paths,(str,bytes)): paths = [paths]
+                    
+                    if self.sort.get("method","") == 'random':
+                        self.log("[%s] buildVideo, random shuffling [%s/%s]"%(citem['id'],idx,len(paths)))
+                        paths = randomShuffle(paths)               
+
+                    for cnt, path in enumerate(paths):
+                        if len(paths) > 1: self.pName = '%s %s/%s'%(citem['name'],cnt+1,len(paths))
                         self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}',header=self.pHeader)
                         fileList = self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, path, inherited=self), 'video', self.limit, self.sort, self.limits)
-                        fileArray.append(fileList)
-                        self.log("[%s]  buildVideo, path = %s, fileList = %s"%(citem['id'],path,len(fileList)))
+                        if isinstance(fileList,list): fileArray.append(fileList)
+                        if validate and len(fileList) > 0: break
+                        self.log("[%s]  buildVideo, validate = %s, fileList [%s/%s], path [%s/%s]\n%s, "%(citem['id'],validate,len(fileList),(sum(len(sublist) for sublist in fileArray)),cnt,self.limit,path))
+        
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self) #flatten fileArray here to pass as fileList below
         #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add adv. rule to setDictLST duplicates
         if isinstance(fileArray, list):
@@ -364,7 +368,8 @@ class Builder(object):
             # self.log("[%s] buildVideo, fileArray = %s"%(citem['id'],','.join(['[%s]'%(len(fileList)) for fileList in fileArray])))
             fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, interleave(fileArray, self.interleaveSet, self.interleaveRepeat), inherited=self)
             self.log('[%s] buildVideo, pre fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
-            fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, _injectFillers(citem, fileList, self.enableBCTs), inherited=self)
+            fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, fileList, inherited=self)
+            fileList = _injectFillers(citem, fileList, self.enableBCTs)
             self.log('[%s] buildVideo, post fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
         else:
             fileList = fileArray
@@ -392,36 +397,47 @@ class Builder(object):
         dirCount = -1
         dirList  = [{'file':path}]
         self.log("[%s] buildFileList, page = %s, sort = %s, limits = %s\npath = %s"%(citem['id'],page, sort, limits, path))
-        while not self.monitor.abortRequested() and dirCount < self.recursiveDepth:
+        while not self.monitor.abortRequested():
             if self.service._interrupt():
-                self.log("[%s] buildList, _interrupt"%(citem['id']))
+                self.log("[%s] buildFileList, _interrupt"%(citem['id']))
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)), header=self.pHeader)
                 return []
             elif self.service._suspend():
-                self.log("[%s] buildList, _suspend"%(citem['id']))
+                self.log("[%s] buildFileList, _suspend"%(citem['id']))
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=self.pHeader)
                 self.service._sleep(FIFTEEN)
                 continue
+            elif len(dirList) == 0 or dirCount >= self.recursiveLimit:
+                if self.padFilelist and len(fileList) > 0 and len(fileList) < page: fileList = __padFileList(fileList,page)
+                elif len(fileList) < page and len(dirList) > dirCount: self.pErrors.append(LANGUAGE(32262))
+                self.log('[%s] buildFileList, no more folders to parse or recursive limit met.'%(citem['id']))
+                break
             elif len(dirList) > 0:
                 dirCount += 1
                 dir  = dirList.pop(0)
                 path = dir.get('file')
+                
                 if dir.get("label"): self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'parsing folder: {dir.get("label")}',header=self.pHeader)
-                subfileList, subdirList, limits, errors = self.buildList(citem, path, media, abs(page - len(fileList)), sort, limits, dir) #parse all directories under root. Flattened hierarchies required to stream line channel building.
-                if subfileList: fileList.extend(subfileList)
-                if subdirList:  dirList = Globals._setDictLST(dirList + subdirList)#recursive path, fill to limit.
-                self.log('[%s] buildFileList, adding = %s/%s remaining dirs (%s)\npath = %s, limits = %s'%(citem['id'],len(fileList),page,len(dirList),path,limits))
-            elif len(dirList) == 0:
-                if self.padFilelist and len(fileList) > 0 and len(fileList) < page: fileList = __padFileList(fileList,page)
-                self.log('[%s] buildFileList, no more folders to parse'%(citem['id']))
-                break
-        self.log("[%s] buildFileList, returning fileList %s/%s"%(citem['id'],len(fileList),page))
+                subfileList, subdirList, limits, errors = self.buildList(citem, path, media, abs(page - len(fileList)), sort, limits, dir) #parse all directories under root. Flattened hierarchies recommended to stream line channel building.
+
+                if sort.get("method","") == 'random':
+                    self.log("[%s] buildFileList, depth [%s/%s], random shuffling "%(citem['id'],dirCount,self.recursiveLimit))
+                    subdirList  = randomShuffle(subdirList)
+                    subfileList = randomShuffle(subfileList)
+                    
+                if isinstance(subfileList,list): fileList.extend(subfileList)
+                if isinstance(subdirList,list):  dirList = Globals._setDictLST(dirList + subdirList)#recursive paths
+                self.log('[%s] buildFileList, depth [%s/%s], adding fileList [%s/%s] remaining sub-directories [%s]\npath = %s, limits = %s'%(citem['id'],dirCount,self.recursiveLimit,len(fileList),page,len(dirList),path,limits))
+
+        self.log("[%s] buildFileList, depth [%s/%s], returning fileList [%s/%s]"%(citem['id'],dirCount,self.recursiveLimit,len(fileList),page))
         return fileList
 
 
     def buildList(self, citem: dict, path: str, media: str='video', page: int=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={"end":-1,"start":0,"total":0}, dirItem={}, query={}):
         self.log("[%s] buildList, media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
-        items = self.runActions(RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE, citem, [], inherited=self)
+        nlimits = limits
+        errors  = {}
+        items   = self.runActions(RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE, citem, [], inherited=self)
         items, nlimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, self.filter, limits, query)
         items = self.runActions(RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST, citem, items, inherited=self)
         
@@ -430,19 +446,20 @@ class Builder(object):
             return [], [], nlimits, errors
 
         elif not items:
-            self.log("[%s] buildList, no request items found using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
+            self.log("[%s] buildList, no request items found using path = %s"%(citem['id'],path))
             self.pErrors.append(LANGUAGE(32026))
             return [], [], nlimits, errors
                         
         elif items == self.loopback and limits != nlimits:# malformed jsonrpc queries will return root response, catch a re-parse and return.
-            self.log("[%s] buildList, loopback detected using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
+            self.log("[%s] buildList, loopback detected using path = %s"%(citem['id'],path))
             self.pErrors.append(LANGUAGE(32030))
             return [], [], nlimits, errors
             
         elif items:
             self.loopback = items
             fileList, dirList = self.buildFiles(citem, path, items, media, page, sort, limits, dirItem, query)
-            if len(fileList) == 0 and path in dirList: self.jsonRPC.autoPagination(citem['id'], path, query, limits) #rollback pagination limits
+            if len(fileList) == 0 and path in dirList: self.jsonRPC.autoPagination(citem['id'], path, query, limits) #rollback pagination limits due to _interrupt
+            self.log("[%s] buildList, returning fileList [%s], dirList [%s]"%(citem['id'],len(fileList),len(dirList)))
             return fileList, dirList, nlimits, errors
 
 
@@ -544,7 +561,7 @@ class Builder(object):
                     self.pErrors.append(LANGUAGE(32032))
                     self.log("[%s] buildFiles, IDX = %s skipping content no duration meta found! or runtime below minDuration (%s/%s) file = %s"%(citem['id'],idx,dur,self.minDuration,file),xbmc.LOGINFO)
         
-        if sort.get("method","").startswith('episode'):
+        if sort.get("method","") == 'episode':
             self.log("[%s] buildFiles, sorting by episode"%(citem['id']))
             seasoneplist.sort(key=lambda seep: seep[1])
             seasoneplist.sort(key=lambda seep: seep[0])

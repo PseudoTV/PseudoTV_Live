@@ -461,15 +461,15 @@
                     <level>3</level>
                     <default>25</default>
                     <constraints>
-                        <minimum>25</minimum>
+                        <minimum>0</minimum>
                         <step>25</step>
-                        <maximum>500</maximum>
+                        <maximum>1000</maximum>
                     </constraints>
                     <control type="slider" format="integer">
                         <popup>false</popup>
                     </control>
                 </setting>
-                <setting id="Recursive_Depth" type="integer" label="30224" help="30224">
+                <setting id="Recursive_Limit" type="integer" label="30224" help="33224">
                     <level>3</level>
                     <default>0</default>
                     <constraints>
@@ -539,31 +539,46 @@
                         <popup>false</popup>
                     </control>
                 </setting>
-                <setting id="Interleave_Repeat" type="boolean" label="30211" help="33211">
+                <setting id="Interleave_Repeat" type="boolean" label="30211" help="33211" parent="Interleave_Set">
                     <level>1</level>
                     <default>true</default>
                     <control type="toggle"/>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition operator="gt" setting="Interleave_Set">0</condition>
+                        </dependency>
+                    </dependencies>
                 </setting>
-                <!-- <setting id="Enable_Shuffle" type="boolean" label="30225" help="33226"> -->
-                    <!-- <level>1</level> -->
-                    <!-- <default>false</default> -->
-                    <!-- <control type="toggle"/> -->
-                <!-- </setting> -->
+                <setting id="Enable_Shuffle" type="boolean" label="30226" help="33226">
+                    <level>2</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Enable_Even">0</condition>
+                        </dependency>
+                    </dependencies>
+                </setting>
                 <setting id="Enable_Even" type="integer" label="30121" help="33121">
                     <level>2</level>
                     <default>0</default>
                     <constraints>
                         <minimum>0</minimum>
                         <step>1</step>
-                        <maximum>5</maximum>
+                        <maximum>25</maximum>
                     </constraints>
                     <control type="slider" format="integer">
                         <popup>false</popup>
                     </control>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Enable_Shuffle">false</condition>
+                        </dependency>
+                    </dependencies>
                 </setting>
-                <setting id="Enable_Force_Episode_Order" type="boolean" label="30181" help="33230" parent="Enable_Even">
+                <setting id="Enable_Even_Force_Episode" type="boolean" label="30181" help="33230" parent="Enable_Even">
                     <level>2</level>
-                    <default>false</default>
+                    <default>true</default>
                     <dependencies>
                         <dependency type="visible">
                             <condition operator="gt" setting="Enable_Even">0</condition>

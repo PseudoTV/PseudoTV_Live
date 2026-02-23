@@ -42,10 +42,10 @@ def chanceBool(percent=25):
     return random.randrange(100) <= percent
 
 def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache=None, file=None):
-    #cache = {"cache":None, "json_data": False, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}
+    #cache = {"cache":None, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}
     def __error(result={}):                                                         return result
-    def __getCache(key, cache, json_data, checksum):                return (cache.get('requestURL.%s'%(Globals._getMD5(key)), checksum, json_data) or __error())
-    def __setCache(key, results, cache, json_data, checksum, life): return cache.set('requestURL.%s'%(Globals._getMD5(key)), results, checksum, life, json_data)
+    def __getCache(key, cache, checksum):                return (cache.get('requestURL.%s'%(Globals._getMD5(key)), checksum) or __error())
+    def __setCache(key, results, cache, checksum, life): return cache.set('requestURL.%s'%(Globals._getMD5(key)), results, checksum, life)
         
     results  = None
     session  = requests.Session()
@@ -67,22 +67,17 @@ def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache
         
         if results and not cache is None: 
             return __setCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
-                              results, cache["cache"], cache.get("json_data",False), cache.get("checksum",ADDON_VERSION), cache.get("life",datetime.timedelta(minutes=15)))
+                              results, cache["cache"], cache.get("checksum",ADDON_VERSION), cache.get("life",datetime.timedelta(minutes=15)))
         return results 
     except Exception as e: 
         log("Globals: requestURL, failed! %s, An error occurred: %s"%('Returning cache' if cache else 'No Response', e))
         return __getCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
-                          cache["cache"], cache.get("json_data",False), cache.get("checksum",ADDON_VERSION)) if cache else __error()
+                          cache["cache"], cache.get("checksum",ADDON_VERSION)) if cache else __error()
     finally: #retry failed post
         if results is None and payload:
             posts = set(SETTINGS.getCacheSetting('postQue', revive=True) or [])
             posts.add((url, params, payload, header, timeout, None, file))
             SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)
-
-def diffLSTDICT(old, new):
-    set1 = {FileAccess.dumpJSON(d, sortkey=True) for d in old}
-    set2 = {FileAccess.dumpJSON(d, sortkey=True) for d in new}
-    return {"added": [FileAccess.loadJSON(s) for s in set2 - set1], "removed": [FileAccess.loadJSON(s) for s in set1 - set2]}
 
 def getChannelID(name, path, number, uuid=None):
     if uuid is None: uuid = SETTINGS.getMYUUID()
@@ -379,7 +374,7 @@ def parseSE(filename):
     return -1, -1
   
 def randomShuffle(items=[]):
-    if len(items) > 0:
+    if isinstance(items,list) and len(items) > 0:
         #reseed random for a "greater sudo random"
         random.seed(random.randint(0,999999999999))
         random.shuffle(items)

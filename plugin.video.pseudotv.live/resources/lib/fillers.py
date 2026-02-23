@@ -67,7 +67,7 @@ class Fillers(object):
             self.log('fillSources, type = %s, items = %s' % (ftype, len(values['items'])))
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=30), checksum=PROPERTIES.getInstanceID(), json_data=True)
+    @cacheit(expiration=datetime.timedelta(minutes=30), checksum=PROPERTIES.getInstanceID())
     def buildSource(self, ftype, path=''):
         self.log('[%s] buildSource, type = %s, path = %s'%(self.citem.get('id'),ftype, path))
         def _parseResource(id):

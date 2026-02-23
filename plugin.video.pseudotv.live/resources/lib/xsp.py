@@ -75,6 +75,15 @@ class XSP(object):
       
 
     def parseXSP(self, id, file):
+        def _createDXSP(tvshow, sort={'order':'ascending','method':'episode'}, operator='is'):
+            param = {"type":"episodes","rules":{"and":[],"or":[]},"order":{"direction":sort.get('order','ascending'),"method":sort.get('method','episode'),"ignorearticle":True,"useartistsortname":True}}
+            try:
+                match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(tvshow)
+                year, title = int(match.group(2)), match.group(1)
+                param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":f"{operator}","value":[year]},{"field":"tvshow","operator":"is","value":[Globals._quoteString(title)]}])
+            except:
+                param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":f"{operator}","value":[Globals._quoteString(tvshow)]})
+            return param
         try: 
             xml = FileAccess.open(file, "r")
             dom = parse(xml)
@@ -101,15 +110,14 @@ class XSP(object):
                         if rule.getAttribute("field").lower() == "title" and rule.getAttribute("operator").lower() in ["is", "contains"]:
                             for value in rule.getElementsByTagName("value"):
                                 if value.firstChild:
-                                    tvshow = value.firstChild.data
-                                    param  = {"type":"episodes","rules":{"and":[],"or":[]},"order":{"direction":sort.get('order','ascending'),"method":sort.get('method','episode'),"ignorearticle":True,"useartistsortname":True}}
-                                    try:
-                                        match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(tvshow)
-                                        year, title = int(match.group(2)), match.group(1)
-                                        param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":"is","value":[year]},{"field":"tvshow","operator":"is","value":[Globals._quoteString(title)]}])
-                                    except:
-                                        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":"is","value":[Globals._quoteString(tvshow)]})
-                                    paths.extend(['videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(param))])
+                                    paths.append('videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(_createDXSP(value.firstChild.data, sort, rule.getAttribute("operator")))))
+                    
+                    if len(paths) == 0:   
+                        items = self.jsonRPC.getDirectory({"directory":file,"media":"video"},True,ADDON_VERSION,datetime.timedelta(minutes=15))[0]
+                        for item in items:
+                            if item.get('filetype') == 'directory' and item.get('label'):
+                                paths.append('videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(_createDXSP(item.get('label'), sort))))
+                    
                     self.log("[%s] parseXSP [%s], type = %s, sort = %s, paths = %s"%(id,file, type, sort, '\n'.join(paths)))
                     if len(paths) > 0: return paths
         except Exception as e: self.log("[%s] parseXSP [%s], failed! %s"%(id,file,e), xbmc.LOGERROR)

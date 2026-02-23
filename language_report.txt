@@ -258,6 +258,7 @@ Language IDS not found in py files, possibly only in xml: {
     "32228": "Hide Screen Vignette",
     "32234": "Changes Detected, Do you want to save?",
     "32237": "Waiting for Background Service to idle...",
+    "32238": "Autotuned Channels must be\\n disabled in settings.",
     "32242": "PVR Search",
     "32244": "Removing",
     "32245": "Parsing",
@@ -345,7 +346,8 @@ Language IDS not found in py files, possibly only in xml: {
     "33219": "[COLOR=red][B]Warning!! [/B][/COLOR]PseudoTV is not responsible for excessive API usage or any charges incurred from A.I. services.\\nUsers are advised to configure their platforms carefully to manage usage.",
     "33220": "",
     "33222": "How long to wait in seconds before PseudoTV attempts to correct failed playback. [90 Default]",
-    "33226": "Enable Smart Shuffling *see wiki for details. [False Default]",
+    "33224": "How many sub-folders to recursively search, 0 == Root Folder Only. [0 Default]",
+    "33226": "Enable Smart Shuffling\\nChanges may propagate slowly over time and may not be instantaneous. [False Default] *see wiki for details",
     "33308": "Install Log Uploader.",
     "33309": "Submit debugging log for review to http://paste.kodi.tv."
 }

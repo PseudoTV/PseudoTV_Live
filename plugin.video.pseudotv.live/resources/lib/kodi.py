@@ -103,9 +103,9 @@ class Settings(object):
         return FileAccess.loadJSON(Globals._decodeString(self.getSetting(key)))
     
     
-    def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False, revive=False):
-        value = self.cacheDB.get(key, checksum, json_data)
-        if value and revive: self.setCacheSetting(key, value, checksum, json_data)
+    def getCacheSetting(self, key, checksum=ADDON_VERSION, revive=False):
+        value = self.cacheDB.get(key, checksum)
+        if value and revive: self.setCacheSetting(key, value, checksum)
         return value
         
         
@@ -174,8 +174,8 @@ class Settings(object):
         return self.setSetting(key,Globals._encodeString(FileAccess.dumpJSON(values)))
             
             
-    def setCacheSetting(self, key, value, checksum=ADDON_VERSION, json_data=False, life=datetime.timedelta(days=84)):
-        return self.cacheDB.set(key, value, checksum, life, json_data)
+    def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=datetime.timedelta(days=84)):
+        return self.cacheDB.set(key, value, checksum, life)
             
 
     def setEXTSetting(self, id, key, value):
@@ -248,7 +248,7 @@ class Settings(object):
             yield 'http://%s/filelist/%s'%(self.properties.getRemoteHost(),file)
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
+    @cacheit(expiration=datetime.timedelta(minutes=5))
     def getBonjour(self, inclChannels=False):
         self.log("getBonjour, inclChannels = %s"%(inclChannels))
         payload = {'id'      :ADDON_ID,
@@ -282,7 +282,7 @@ class Settings(object):
         return payload
     
     
-    @cacheit(expiration=datetime.timedelta(minutes=5), json_data=True)
+    @cacheit(expiration=datetime.timedelta(minutes=5))
     def getPayload(self, inclDebug: bool=False):
         self.log("getPayload, inclDebug! %s"%(inclDebug))
         def __getMeta(payload):
@@ -701,9 +701,9 @@ class Properties(object):
     def chkRunning(self, key):
         if not self.isRunning(key):
             self.setRunning(key,True)
-            try: yield
+            try: yield True
             finally: self.setRunning(key,False)
-        else: yield
+        else: yield False
         
         
     def setTrakt(self, state=False):
@@ -865,23 +865,29 @@ class Properties(object):
 
 
     def recessActivity(self, msg, func, *args, **kwargs):
+        orgSuspend   = self.isSuspendActivity()
+        orgInterrupt = self.isInterruptActivity()
         while not self.monitor.abortRequested():
-            isInterrupt = self.isInterruptActivity()
             isSuspend   = self.isSuspendActivity()
+            isInterrupt = self.isInterruptActivity()
             isBuilding  = self.isRunning('Builder.buildChannels')
             if msg: Dialog().notificationDialog(msg)
             self.log('recessActivity, isInterrupt = %s, isSuspend = %s, isBuilding = %s'%(isInterrupt,isSuspend,isBuilding))
             if not isInterrupt and (isSuspend or isBuilding):
                 if isSuspend:  self.setSuspendActivity(False)
                 if isBuilding: self.setInterruptActivity(True)
-                if self.monitor.waitForAbort(SUSPEND_INTERVAL): return []
-            elif isInterrupt:
-                self.setInterruptActivity(False)
-                if self.monitor.waitForAbort(SUSPEND_INTERVAL): return []
+            elif isInterrupt: self.setInterruptActivity(False)
             elif not isInterrupt and not any(set([isSuspend, isBuilding])):
                 with self.lockActivity():
-                    try:    return func(*args, **kwargs)
-                    except: return []
+                    try: 
+                        results = func(*args, **kwargs)
+                        self.setSuspendActivity(orgSuspend)
+                        self.setInterruptActivity(orgInterrupt)
+                        return results
+                    except Exception as e: 
+                        self.log("recessActivity, failed! %s"%(e), xbmc.LOGERROR)
+                        return
+            if self.monitor.waitForAbort(SUSPEND_INTERVAL): return
 
 
     @contextmanager
@@ -1170,7 +1176,7 @@ class Builtin(object):
 
     def executeJSONRPC(self, request):
         with self.json_lock:
-            response = xbmc.executeJSONRPC(request)
+            response = xbmc.executeJSONRPC(FileAccess.dumpJSON(request))
             self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')/1000))
             self.log('executeJSONRPC, request = %s\nresponse = %s'%(request,response))
             return response

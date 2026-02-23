@@ -55,8 +55,8 @@ class JSONRPC(object):
         command  = param
         command["jsonrpc"] = "2.0"
         command["id"] = ADDON_ID #todo debug killit crashing Kodi
-        # if timeout > 0: response = FileAccess.loadJSON((killit(BUILTIN.executeJSONRPC)(timeout,FileAccess.dumpJSON(command))) or {'error':{'message':'JSONRPC timed out!'}})
-        response = FileAccess.loadJSON(BUILTIN.executeJSONRPC(FileAccess.dumpJSON(command)))
+        # if timeout > 0: response = FileAccess.loadJSON((killit(BUILTIN.executeJSONRPC)(timeout,command)) or {'error':{'message':'JSONRPC timed out!'}})
+        response = FileAccess.loadJSON(BUILTIN.executeJSONRPC(command))
         self.log('sendJSON, response received')
         if response.get('error'):
             self.log('sendJSON, failed! error = %s\n%s'%(FileAccess.dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
@@ -70,14 +70,14 @@ class JSONRPC(object):
         
     def cacheJSON(self, param, life=datetime.timedelta(minutes=5), checksum=ADDON_VERSION, timeout=-1):
         cacheName = 'cacheJSON.%s'%(Globals._getMD5(FileAccess.dumpJSON(param)))
-        cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
+        cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
             cacheResponse = self.sendJSON(param, timeout)
-            if cacheResponse.get('result',{}): self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
+            if cacheResponse.get('result',{}): self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life)
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, media='video', depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkFileDirectory(self, path, media='video', depth=SETTINGS.getSettingInt('Recursive_Limit'), chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         walk = {}
         self.log('walkFileDirectory, walking %s, depth = %s'%(path,depth))
         items, limits, errors = self.getDirectory({"directory":path,"media":media},True,checksum,expiration)
@@ -93,12 +93,11 @@ class JSONRPC(object):
         return walk
                 
 
-    def walkListDirectory(self, path, exts='', depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkListDirectory(self, path, exts=[], depth=SETTINGS.getSettingInt('Recursive_Limit'), chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         def _chkfile(path, f):
             if exts and not f.lower().endswith(tuple(exts)): return
             if chkDuration:
-                dur = self.getDuration(os.path.join(path,f), accurate=bool(SETTINGS.getSettingInt('Duration_Type')))
-                if dur == 0: return
+                if self.getDuration(os.path.join(path,f), accurate=bool(SETTINGS.getSettingInt('Duration_Type'))) == 0: return
             return {True:os.path.join(path,f).replace('\\','/'),False:f}[appendPath]
             
         def _parseXBT(resource):
@@ -109,7 +108,7 @@ class JSONRPC(object):
         walk = {}
         path = path.replace('\\','/')
         subs, files = self.getListDirectory(path,checksum,expiration)
-        if len(files) > 0 and TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
+        if TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
         nfiles = [_f for _f in [_chkfile(path, file) for file in files] if _f]
         self.log('walkListDirectory, walking %s, found = %s, appended = %s, depth = %s, ext = %s'%(path,len(files),len(nfiles),depth,exts))
         walk.setdefault(path,[]).extend(nfiles)
@@ -131,7 +130,7 @@ class JSONRPC(object):
             except Exception as e:
                 self.log("getListDirectory, failed! %s\npath = %s"%(e,path), xbmc.LOGERROR)
                 results = [],[]
-        self.log('getListDirectory return dirs = %s, files = %s\n%s'%(len(results[0]), len(results[1]),path))
+        self.log('getListDirectory return dirs = %s, files = %s\n%s'%(len(results[0]),len(results[1]),path))
         return results
 
 
@@ -370,23 +369,23 @@ class JSONRPC(object):
     
     
     def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected by player, accurate meta.
-        self.cache.set('getRuntime.%s'%(Globals._getMD5(item.get('file'))), runtime, checksum=Globals._getMD5(item.get('file')), expiration=datetime.timedelta(days=28), json_data=False)
+        self.cache.set('getRuntime.%s'%(Globals._getMD5(item.get('file'))), runtime, checksum=Globals._getMD5(item.get('file')), expiration=datetime.timedelta(days=28))
         if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)) and save and runtime > 0: self.queDuration(item, runtime=runtime)
     
         
     def _getRuntime(self, item={}): #get runtime collected by player, else less accurate provider meta
-        runtime = self.cache.get('getRuntime.%s'%(Globals._getMD5(item.get('file'))), checksum=Globals._getMD5(item.get('file')), json_data=False)
+        runtime = self.cache.get('getRuntime.%s'%(Globals._getMD5(item.get('file'))), checksum=Globals._getMD5(item.get('file')))
         return (runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         
 
     def _setDuration(self, path, item={}, duration=0, save=SETTINGS.getSettingBool('Store_Duration')):#set VideoParser cache
-        self.cache.set('getDuration.%s'%(Globals._getMD5(path)), duration, checksum=Globals._getMD5(path), expiration=datetime.timedelta(days=28), json_data=False)
+        self.cache.set('getDuration.%s'%(Globals._getMD5(path)), duration, checksum=Globals._getMD5(path), expiration=datetime.timedelta(days=28))
         if save and item: self.queDuration(item, duration)
         return duration
 
     
     def _getDuration(self, path): #get VideoParser cache
-        return (self.cache.get('getDuration.%s'%(Globals._getMD5(path)), checksum=Globals._getMD5(path), json_data=False) or 0)
+        return (self.cache.get('getDuration.%s'%(Globals._getMD5(path)), checksum=Globals._getMD5(path)) or 0)
 
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
@@ -521,16 +520,18 @@ class JSONRPC(object):
             param["properties"] = self.getEnums("List.Fields.Files", type='items')
         self.log("requestList, id: %s, getDirectory = %s, media = %s, limit = %s, sort = %s, query = %s, limits = %s\npath = %s"%(citem['id'],getDirectory,media,page,sort,query,limits,path))
         
-        if limits.get('end',-1) == -1: #-1 unlimited pagination, replace with autoPagination.
+        if limits.get('end',-1) == -1: #-1 unlimited, replace with autoPagination.
             limits = self.autoPagination(citem['id'], path, query) #get
             self.log('[%s] requestList, autoPagination limits = %s'%(citem['id'],limits))
             if limits.get('total',0) > page and sort.get("method","") == "random":
                 limits = self.randomPagination(page,limits)
                 self.log('[%s] requestList, generating random limits = %s'%(citem['id'],limits))
 
-        param["limits"]          = {}
-        param["limits"]["start"] = 0 if limits.get('end', 0) == -1 else limits.get('end', 0)
-        param["limits"]["end"]   = abs(limits.get('end', 0) + page)
+        if limits.get('start',0) >= 0: #-1 unlimited, ignore autoPagination.
+            param["limits"] = {}
+            param["limits"]["start"] = 0 if limits.get('end', 0) == -1 else limits.get('end', 0)
+            param["limits"]["end"]   = abs(limits.get('end', 0) + page)
+        
         param["sort"] = sort
         self.log('[%s] requestList, page = %s\nparam = %s'%(citem['id'], page, param))
         
@@ -558,8 +559,8 @@ class JSONRPC(object):
             
             
     def autoPagination(self, id, path, query={}, limits={}):
-        if not limits: return (self.cache.get('autoPagination.%s.%s.%s'%(id,Globals._getMD5(path),Globals._getMD5(FileAccess.dumpJSON(query))), checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
-        else:          return  self.cache.set('autoPagination.%s.%s.%s'%(id,Globals._getMD5(path),Globals._getMD5(FileAccess.dumpJSON(query))), limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
+        if not limits: return (self.cache.get('autoPagination.%s.%s.%s'%(id,Globals._getMD5(path),Globals._getMD5(FileAccess.dumpJSON(query))), checksum=id) or {"end": 0, "start": 0, "total":0})
+        else:          return  self.cache.set('autoPagination.%s.%s.%s'%(id,Globals._getMD5(path),Globals._getMD5(FileAccess.dumpJSON(query))), limits, checksum=id, expiration=datetime.timedelta(days=28))
             
              
     def randomPagination(self, page=SETTINGS.getSettingInt('Page_Limit'), limits={}, start=0):
@@ -569,11 +570,11 @@ class JSONRPC(object):
 
     @contextmanager
     def detectRPCCrash(self, citem):
-        SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',citem,json_data=True)
+        SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',citem)
         try: yield
         except:pass
         finally:
-            SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None,json_data=False)
+            SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
 
 
     @cacheit(checksum=PROPERTIES.getInstanceID())
@@ -692,11 +693,11 @@ class JSONRPC(object):
             return pvritem
             
         cacheName     = 'matchChannel.%s'%(Globals._getMD5('%s.%s.%s.%s'%(chname,id,radio,extend)))
-        cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
+        cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID()) or {})
         if not cacheResponse:
             pvrItem = __match()
             if pvrItem and extend: pvrItem = __extend(pvrItem)
-            cacheResponse = self.cache.set(cacheName, pvrItem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=15), json_data=True)
+            cacheResponse = self.cache.set(cacheName, pvrItem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=15))
         return cacheResponse
         
         

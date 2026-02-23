@@ -67,7 +67,7 @@ class Resources(object):
         self.seasonal    = Seasonal()
         self.season      = self.seasonal.getHoliday()
         self.openRouter  = OpenRouter(cache=self.cache)
-        self.imageCache  = OrderedDict(SETTINGS.getCacheSetting('imageCache'  , json_data=True) or {})
+        self.imageCache  = OrderedDict(SETTINGS.getCacheSetting('imageCache'  ) or {})
         
         # trim if oversized
         while len(self.imageCache) > IMAGE_CACHE_MAX:
@@ -78,7 +78,7 @@ class Resources(object):
     def __del__(self):
         try:
             # persist as a plain dict (smaller on disk than OrderedDict)
-            SETTINGS.setCacheSetting('imageCache'  , dict(self.imageCache)  , json_data=True)
+            SETTINGS.setCacheSetting('imageCache'  , dict(self.imageCache)  )
             self.log(f'__del__, imageCache = {len(self.imageCache)}')
         except Exception:
             # avoid raising in destructor

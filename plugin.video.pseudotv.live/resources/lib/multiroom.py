@@ -65,7 +65,7 @@ class Multiroom(object):
             
         def __chkResumeURLs(urls=[]):
             log('_chkResumeURLs, urls = %s'%(len(urls)))
-            [requestURL(url, cache={"cache":SETTINGS.cacheDB, "json_data": True, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}) for url in urls]
+            [requestURL(url, cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}) for url in urls]
 
         if not servers: servers = self.getDiscovery()
         PROPERTIES.setServers(len(servers) > 0)
@@ -106,7 +106,7 @@ class Multiroom(object):
 
     def getRemote(self, remote):
         self.log("getRemote, remote = %s"%(remote))
-        return requestURL(remote, header={'Accept':'application/json'}, cache={"cache":self.cache, "json_data": False, "checksum":SETTINGS.getMYUUID(), "life": datetime.timedelta(days=MAX_GUIDEDAYS)})
+        return requestURL(remote, header={'Accept':'application/json'}, cache={"cache":self.cache, "checksum":SETTINGS.getMYUUID(), "life": datetime.timedelta(days=MAX_GUIDEDAYS)})
         
          
     def addServer(self, payload={}):

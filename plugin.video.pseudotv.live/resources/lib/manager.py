@@ -84,7 +84,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 return self.server.get('channels',[])
             return self.oldChannels
 
-        with BUILTIN.busy_dialog(lock=True), PROPERTIES.interruptActivity():
+        with BUILTIN.busy_dialog(lock=True):
             self.server         = {}
             self.cntrlStates    = {}
             
@@ -115,7 +115,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
                 self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
                 if kwargs.get('start',True) and not PROPERTIES.isRunning('Manager.__init__'):
-                    with PROPERTIES.chkRunning('Manager.__init__'):
+                    with PROPERTIES.chkRunning('Manager.__init__'), PROPERTIES.interruptActivity():
                         self.doModal()
         except Exception as e: 
             self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
@@ -142,12 +142,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.closeManager()
 
 
-    def buildFileList(self, citem={}, path='', msg='', limit=SETTINGS.getSettingInt('Page_Limit')):
-        fileList = PROPERTIES.recessActivity(msg, Builder().buildFileList, *(citem,path,'video',limit,{},{}))
-        self.log('buildFileList, fileList = %s'%(len(fileList))) 
-        return fileList
-
-
     @cacheit(checksum=PROPERTIES.getInstanceID())
     def buildArray(self):
         self.log('buildArray') # Create blank array of citem templates. 
@@ -166,11 +160,11 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         checksum  = PROPERTIES.getInstanceID()
         cacheName = 'createChannelList.%s'%(checksum)
-        try:   cacheResponse = list(self.cache.get(cacheName, checksum=checksum, json_data=True))
+        try:   cacheResponse = list(self.cache.get(cacheName, checksum=checksum))
         except:cacheResponse = []
         if not cacheResponse:
             poolit(__update)(channelList)
-            cacheResponse = self.cache.set(cacheName, channelArray, checksum=checksum, json_data=True)
+            cacheResponse = self.cache.set(cacheName, channelArray, checksum=checksum)
         return cacheResponse
 
 
@@ -265,7 +259,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         self.setLabels(self.right_button3,LANGUAGE(32136))#Move
                         self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
                     self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
-                    self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) + String.IsEqual(Container(5).ListItem(Container(5).Position).Property(radio),False) | !String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
+                    self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) + String.IsEqual(Container(5).ListItem(Container(5).Position).Property(radio),False) | !String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                     
                 self.setFocus(self.right_button1)
                 self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) | !String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')# + Integer.IsLessOrEqual(Container(5).ListItem(Container(5).Position).Property(chnum),CHANNEL_LIMIT)]')
@@ -604,7 +598,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def validatePaths(self, path, citem):
         def __convert(path): #convert videodb:// paths to dynamic xsp thru predefined
             paths = []
-            if path.lower().startswith(('videodb://','musicdb://')):
+            if path.lower().startswith('videodb://'):
                 if   'tvshows/titles'  in path: paths = Predefined.createShowPlaylist(self.jsonRPC.DBIDtoLabel(path))
                 elif 'tvshows/studios' in path: paths = Predefined.createNetworkPlaylist(self.jsonRPC.DBIDtoLabel(path))
                 elif 'tvshows/genres'  in path: paths = Predefined.createTVGenrePlaylist(self.jsonRPC.DBIDtoLabel(path))
@@ -616,22 +610,19 @@ class Manager(xbmcgui.WindowXMLDialog):
             citem = self.setName(path, citem)
             return path, self.setLogo(citem.get('name'),citem)
             
-        def __fileList(tmpcitem, fileList=[]):
-            tmpcitem['id'] = getChannelID(tmpcitem['name'], tmpcitem['path'], random.random())
-            return self.buildFileList(tmpcitem, path, msg='%s Path: %s\n%s'%(LANGUAGE(32098),tmpcitem['name'],LANGUAGE(32140)))
-            
         def __seek(item, path, passed=False):
             player = PLAYER()
             if player.isPlaying(): DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(30136)),time=1)
             else:
                 # todo test seek for support disable via adv. rule if fails.
                 # todo set seeklock rule if seek == False
-                wait   = FIFTEEN
-                resume = int(item.get('duration')/8)
+                wait     = FIFTEEN
+                duration = item.get('duration',item.get('realtime',0))
+                resume   = abs(int(duration/8))
                 liz = xbmcgui.ListItem('Seek Test', path=item.get('file'))
                 liz.setProperty('startoffset', str(resume))
                 infoTag = ListItemInfoTag(liz, 'video')
-                infoTag.set_resume_point({'ResumeTime':resume,'TotalTime':int(item.get('duration')*60)})
+                infoTag.set_resume_point({'ResumeTime':resume,'TotalTime':int(duration*60)})
                 
                 player.play(item.get('file'),liz)
                 while not self.monitor.abortRequested() and not player.isPlaying():
@@ -651,6 +642,10 @@ class Manager(xbmcgui.WindowXMLDialog):
             return passed
             
         def __vfs(path, citem, cnt=3):
+            def __fileList(citem, fileList=[]):
+                citem['id'] = getChannelID(citem['name'], citem['path'], random.random())
+                return PROPERTIES.recessActivity('%s Path: %s\n%s'%(LANGUAGE(32098), citem['name'],LANGUAGE(32140)), Builder().buildVideo, *(citem,True))
+
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 if    isRadio({'path':[path]}): return True
                 else: DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(32140)))
@@ -718,10 +713,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
             
         def __buildPreview(citem={}, msg=''):
-            builder  = Builder()
-            fileList = PROPERTIES.recessActivity(msg, builder.buildChannels, *([citem],getUTCstamp(),True))
-            del builder
-            return fileList
+            return PROPERTIES.recessActivity(msg, Builder().buildChannels, *([citem],getUTCstamp(),True))
 
         def __fileList(citem):
             fileList = []
@@ -743,8 +735,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 lizLST = []
                 fileList, run_time = __fileList(citem)
                 if not isinstance(fileList,list) and not fileList: DIALOG.notificationDialog('%s or\n%s'%(LANGUAGE(32030),LANGUAGE(32000)))
-                elif fileList:
-                    lizLST.extend(poolit(__buildItem)(fileList))
+                elif fileList: lizLST.extend(poolit(__buildItem)(fileList))
             if len(lizLST) > 0: return DIALOG.selectDialog(lizLST, header='%s: [B]%s[/B] - Build Time: [B]%ss[/B]'%(LANGUAGE(32235),citem.get('name','Untitled'),f"{run_time:.2f}"))
             if retCntrl: self.setFocusId(retCntrl)
 
@@ -762,15 +753,14 @@ class Manager(xbmcgui.WindowXMLDialog):
         except: return xbmcgui.ListItem(LANGUAGE(32079))
 
 
-    def clearChannel(self, item, prompt=True, open=False):
-        self.log('clearChannel, channelPOS = %s'%(item['number'] - 1))
+    def clearChannel(self, citem, prompt=True, open=False):
+        self.log('clearChannel, channelPOS = %s'%(citem['number'] - 1))
         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-            if item['number'] > CHANNEL_LIMIT: return DIALOG.notificationDialog(LANGUAGE(32238))
-            elif prompt and not DIALOG.yesnoDialog(LANGUAGE(32073)): return item
+            if prompt and not DIALOG.yesnoDialog('%s %s\n%s'%(LANGUAGE(30223),citem.get('number',-1),LANGUAGE(32073))): return citem
             self.madeItemchange = True
-            nitem = self.newChannel.copy()
-            nitem['number'] = item['number'] #preserve channel number
-            self.saveChannelItems(nitem, open)
+            tmpItem = self.newChannel.copy()
+            tmpItem['number'] = citem['number'] #preserve channel number
+            self.saveChannelItems(tmpItem, open)
             
 
     def moveChannel(self, citem, channelPOS):
@@ -914,14 +904,13 @@ class Manager(xbmcgui.WindowXMLDialog):
             
     def saveChanges(self):
         self.log("saveChanges")
-        def __validateChannels(channelList):
+        def __validateChannels(newChannels):
             def __validate(citem):
                 if citem.get('name') and citem.get('path'):
-                    if citem['number'] <= CHANNEL_LIMIT: citem['type'] = LANGUAGE(30127) #"Custom"
                     return self.setID(citem)
-            channelList = Globals._setDictLST(self.channels.sortChannels([_f for _f in [__validate(channel) for channel in channelList] if _f]))
-            self.log('__validateChannels, channelList = %s'%(len(channelList)))
-            return channelList
+            newChannels = self.channels.sortChannels([_f for _f in [__validate(channel) for channel in newChannels] if _f])
+            self.log('__validateChannels, newChannels = %s'%(len(newChannels)))
+            return newChannels
         
         if self.madeChanges:
             if DIALOG.yesnoDialog(LANGUAGE(32076)):
@@ -932,10 +921,11 @@ class Manager(xbmcgui.WindowXMLDialog):
                         requestURL('http://%s/%s'%(self.server.get('host'), CHANNELFLE), payload={'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels})
                     else: #local save
                         self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELFLE_CHANGED,silent=True)))
-                        self.channels.setChannels(channels) #save changes
+                        print(channels)
+                        if self.channels.setChannels(channels): self.madeChanges = False #save changes
                         self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
                         timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChannels'])#trigger channel building
-                    self.madeChanges = False
+            else: self.madeChanges = False
         self.closeManager()
             
 
