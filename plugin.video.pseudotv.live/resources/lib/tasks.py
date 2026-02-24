@@ -162,7 +162,7 @@ class Tasks(object):
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
     def getOnlineVersion(self):
         try:    ONLINE_VERSION = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(requestURL(ADDON_URL)))[0]
-        except: ONLINE_VERSION = ADDON_VERSION
+        except Exception: ONLINE_VERSION = ADDON_VERSION
         self.log('getOnlineVersion, version = %s'%(ONLINE_VERSION))
         return ONLINE_VERSION
         
@@ -223,11 +223,11 @@ class Tasks(object):
         
     def chkChanged(self):
         channels = Channels().getChannels()
-        channels = [citem for citem in channels if citem.get('changed',False)]
+        channels = [channel for channel in channels if channel.get('changed',False)]
         self.log('chkChanged, channels = %s'%(len(channels)))
         if channels:
             builder = Builder(service=self.service)
-            [self.service._que(builder.buildChannels,3,[channel]) for citem in channels]
+            [self.service._que(builder.buildChannels,3,[channel]) for channel in channels]
             del builder
         
         

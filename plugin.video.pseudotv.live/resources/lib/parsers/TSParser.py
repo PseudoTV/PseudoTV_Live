@@ -40,7 +40,7 @@ class TSParser:
         self.pid = -1
 
         try: self.File = FileAccess.open(filename, "rb", None)
-        except:
+        except Exception:
             log("TSParser: Unable to open the file")
             return 0
 
@@ -87,7 +87,7 @@ class TSParser:
                         start = self.File.tell()
                         # A minimum of 188, so skip the rest
                         self.File.seek(187, 1)
-            except:
+            except Exception:
                 log('TSParser: Exception in findPacketLength')
                 return
 
@@ -105,7 +105,7 @@ class TSParser:
             self.File.seek(0, 2)
             size = self.File.tell()
             self.File.seek(pos, 0)
-        except:
+        except Exception:
             pass
 
         return size
@@ -119,7 +119,7 @@ class TSParser:
 
         try:
             self.File.seek(0, 0)
-        except:
+        except Exception:
             return 0
 
         while not self.monitor.abortRequested() and maxpackets > 0:
@@ -146,7 +146,7 @@ class TSParser:
 
         try:
             self.File.seek((packetcount * self.packetLength)- self.packetLength, 0)
-        except:
+        except Exception:
             return 0
 
         maxpackets = 12000
@@ -168,7 +168,7 @@ class TSParser:
             else:
                 try:
                     self.File.seek(-1 * (self.packetLength * 2), 1)
-                except:
+                except Exception:
                     log('TSParser: exception')
                     return 0
 
@@ -199,7 +199,7 @@ class TSParser:
                     timestamp = timestamp | (data[12 + offset] << 7)
                     timestamp = timestamp | (data[13 + offset] >> 1)
                     return timestamp
-        except:
+        except Exception:
             log('TSParser: exception in getPTS')
             pass
 
@@ -242,7 +242,7 @@ class TSParser:
                     if pos < 188:
                         # read the PES data
                         packet.pesdata = self.File.readBytes(self.packetLength - pos)
-        except:
+        except Exception:
             log('TSParser: readTSPacket exception')
             return None
 

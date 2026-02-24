@@ -32,32 +32,32 @@ try:
     import pymediainfo
     from parsers import MediaInfo
     EXTERNAL_PARSER.append(MediaInfo.MediaInfo)
-except: pass
+except Exception: pass
     
 try:
     import ffmpeg
     from parsers import FFProbe
     EXTERNAL_PARSER.append(FFProbe.FFProbe)
-except: pass
+except Exception: pass
     
 try:
     import hachoir
     from parsers import Hachoir
     EXTERNAL_PARSER.append(Hachoir.Hachoir)
-except: pass
+except Exception: pass
 
 try:
     import moviepy
     from parsers import MoviePY
     from numpy.core._multiarray_umath import *
     EXTERNAL_PARSER.append(MoviePY.MoviePY)
-except: pass
+except Exception: pass
 
 try:
     import cv2
     from parsers import OpenCV
     EXTERNAL_PARSER.append(OpenCV.OpenCV)
-except: pass
+except Exception: pass
     
 class VideoParser(object):
     def __init__(self):

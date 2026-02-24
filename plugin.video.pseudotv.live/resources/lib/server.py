@@ -97,7 +97,7 @@ class MyHandler(BaseHTTPRequestHandler):
         self.resources = Resources(service)
         
         try: BaseHTTPRequestHandler.__init__(self, request, client_address, server)
-        except: pass
+        except Exception: pass
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -122,7 +122,7 @@ class MyHandler(BaseHTTPRequestHandler):
 
         if self.path.lower().endswith('.json'):
             try:    incoming = FileAccess.loadJSON(self.rfile.read(int(self.headers['content-length'])).decode())
-            except: incoming = {}
+            except Exception: incoming = {}
             
             if __verifyUUID(incoming.get('uuid')):
                 self.log('do_POST incoming uuid [%s] verified!'%(incoming.get('uuid')))
@@ -280,13 +280,13 @@ class HTTP(object):
                 if self.httpd.is_alive():
                     if hasattr(self.httpd, 'cancel'): self.httpd.cancel()
                     try: self.httpd.join(wait)
-                    except: pass
+                    except Exception: pass
                 return self.httpd.is_alive()
-            except: pass
+            except Exception: pass
             
         def __stop(restart=False):
             try: self._server.shutdown()
-            except: pass
+            except Exception: pass
             PROPERTIES.setRunning('HTTP.run',False)
             self.log('run, http server shutdown, restart = %s, isAlive = %s'%(restart,__cancel()), xbmc.LOGINFO)
             if restart:

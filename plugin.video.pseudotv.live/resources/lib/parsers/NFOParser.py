@@ -45,7 +45,7 @@ class NFOParser:
             File = FileAccess.open(fleName, "rb")
             dom = parse(File)
             File.close()
-        except:
+        except Exception:
             log("NFOParser: Unable to open the file %s"%(fleName), xbmc.LOGERROR)
             return duration
             

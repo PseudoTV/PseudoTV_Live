@@ -24,7 +24,7 @@ class MKVParser:
     def determineLength(self, filename: str) -> int and float:
         log("MKVParser: determineLength %s"%filename)
         try: self.File = FileAccess.open(filename, "rb", None)
-        except:
+        except Exception:
             log("MKVParser: Unable to open the file", xbmc.LOGERROR)
             return
 
@@ -57,7 +57,7 @@ class MKVParser:
                 try:
                     for x in range(datasize):
                         timecode = (timecode << 8) + struct.unpack('B', self.getData(1))[0]
-                except:
+                except Exception:
                     timecode = 0
 
                 if duration != 0 and timecode != 0:
@@ -69,7 +69,7 @@ class MKVParser:
                         duration = int(struct.unpack('>f', self.getData(datasize))[0])
                     else:
                         duration = int(struct.unpack('>d', self.getData(datasize))[0])
-                except:
+                except Exception:
                     log("MKVParser: Error getting duration in header, size is " + str(datasize))
                     duration = 0
 
@@ -78,7 +78,7 @@ class MKVParser:
             else:
                 try:    
                     self.File.seek(datasize, 1)
-                except:
+                except Exception:
                     log('MKVParser: Error while seeking')
                     return 0
 
@@ -107,7 +107,7 @@ class MKVParser:
         
         try:
             self.File.seek(datasize, 1)
-        except:
+        except Exception:
             log('MKVParser: Error while seeking')
             return 0
 
@@ -119,7 +119,7 @@ class MKVParser:
 
             try:
                 self.File.seek(datasize, 1)
-            except:
+            except Exception:
                 log('MKVParser: Error while seeking')
                 return 0
 
@@ -134,7 +134,7 @@ class MKVParser:
 
             try:
                 self.File.seek(datasize, 1)
-            except:
+            except Exception:
                 log('MKVParser: Error while seeking')
                 return 0
 
@@ -155,7 +155,7 @@ class MKVParser:
             self.File.seek(0, 2)
             size = self.File.tell()
             self.File.seek(pos, 0)
-        except:
+        except Exception:
             pass
         return size
 
@@ -186,7 +186,7 @@ class MKVParser:
 
                     if firstbyte >> (7 - i) == 1:
                         break
-        except:
+        except Exception:
             datasize = 0
 
         return datasize
@@ -204,6 +204,6 @@ class MKVParser:
 
                     if firstbyte >> (7 - i) == 1:
                         break
-        except:
+        except Exception:
             ID = 0
         return ID

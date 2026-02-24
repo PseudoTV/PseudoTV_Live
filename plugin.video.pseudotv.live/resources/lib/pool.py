@@ -41,14 +41,14 @@ def killit(method):
                 self.error  = None
             def run(self):
                 try:    self.result = ExecutorPool().executor(method, wait, *args, **kwargs)
-                except: self.error  = sys.exc_info()[0]
+                except Exception: self.error  = sys.exc_info()[0]
         timer = waiter()
         timer.name = '%s.%s'%('killit',method.__qualname__.replace('.',': '))
         timer.daemon=True
         timer.start()
         log('%s, killit starting %s waiting (%s)'%(method.__qualname__.replace('.',': => -:'),timer.name,wait))
         try: timer.join(wait)
-        except: pass
+        except Exception: pass
         if (timer.is_alive() or timer.error): log('%s, killit Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),timer.error), xbmc.LOGERROR)
         return timer.result
     return wrapper
@@ -64,14 +64,14 @@ def poolit(method):
                 self.error  = None
             def run(self):
                 try:    self.result = ExecutorPool().executors(method, items, wait, *args, **kwargs)
-                except: self.error  = traceback.format_exc()
+                except Exception: self.error  = traceback.format_exc()
         thread = pooler()
         thread.name   = '%s.%s'%('poolit',method.__qualname__.replace('.',': '))
         thread.daemon =True
         thread.start()
         log('%s, poolit starting %s waiting (%s)'%(method.__qualname__.replace('.',': => -:'),thread.name,wait))
         try:    thread.join(wait)
-        except: pass
+        except Exception: pass
         if (thread.is_alive() or thread.error): log('%s, poolit Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),thread.error), xbmc.LOGERROR)
         return thread.result
     return wrapper
@@ -89,7 +89,7 @@ def threadit(method):
         thread = Thread(None, method, None, args, kwargs)
         if thread.is_alive():
             try: thread.join()
-            except: pass
+            except Exception: pass
         thread.name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
         thread.start()
         log('%s, threadit starting %s'%(method.__qualname__.replace('.',': '),thread.name))
@@ -105,7 +105,7 @@ def timerit(method):
                 try:
                     timer.join(CPU_CYCLE)
                     log('%s, timerit joining existing Timer: %s'%(method.__qualname__.replace('.',': '),timer_name))       
-                except: pass
+                except Exception: pass
                 if hasattr(timer, 'cancel'): 
                     timer.cancel()
                     log('%s, timerit canceling existing Timer: %s'%(method.__qualname__.replace('.',': '),timer_name))    

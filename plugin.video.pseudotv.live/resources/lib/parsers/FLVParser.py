@@ -37,7 +37,7 @@ class FLVTagHeader:
             data = struct.unpack('>B', thefile.readBytes(1))[0]
             self.timestamp = (self.timestamp << 8) | data
             self.timestampext = struct.unpack('>B', thefile.readBytes(1))[0]
-        except:
+        except Exception:
             self.tagtype = 0
             self.datasize = 0
             self.timestamp = 0
@@ -56,7 +56,7 @@ class FLVParser:
         log("FLVParser: determineLength %s"%filename)
 
         try: self.File = FileAccess.open(filename, "rb", None)
-        except:
+        except Exception:
             log("FLVParser: Unable to open the file")
             return 0
 
@@ -91,7 +91,7 @@ class FLVParser:
         try:
             self.File.seek(0, 2)
             curloc = self.File.tell()
-        except:
+        except Exception:
             log("FLVParser: Exception seeking in findLastVideoTag")
             return None
 
@@ -133,7 +133,7 @@ class FLVParser:
 
                 if tag.tagtype == 9:
                     return tag
-            except:
+            except Exception:
                 log('FLVParser: Exception in findLastVideoTag')
                 return None
 

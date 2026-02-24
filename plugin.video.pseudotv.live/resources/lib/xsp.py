@@ -60,7 +60,7 @@ class XSP(object):
             match = re.compile(r'<%s>(.*?)\</%s>'%(key,key), re.IGNORECASE).search(string)
             if match: name = Globals._unescapeString(match.group(1))
             self.log("getName, fle = %s, name = %s"%(fle,name))
-        except: self.log("getName, return unable to parse %s"%(fle), xbmc.LOGERROR)
+        except Exception: self.log("getName, return unable to parse %s"%(fle), xbmc.LOGERROR)
         return name
 
 
@@ -81,7 +81,7 @@ class XSP(object):
                 match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(tvshow)
                 year, title = int(match.group(2)), match.group(1)
                 param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":f"{operator}","value":[year]},{"field":"tvshow","operator":"is","value":[Globals._quoteString(title)]}])
-            except:
+            except Exception:
                 param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":f"{operator}","value":[Globals._quoteString(tvshow)]})
             return param
         try: 
@@ -90,20 +90,20 @@ class XSP(object):
             xml.close()
             
             try:    type = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
-            except: type = MUSIC_TYPES[0]
+            except Exception: type = MUSIC_TYPES[0]
             if type.lower() in map(str.lower,MUSIC_TYPES): return []
             else:
                 try:    limit = int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue)
-                except: limit = 0
+                except Exception: limit = 0
                     
                 if type.lower() == "tvshows":
                     sort  = {}
                     order = dom.getElementsByTagName("order")
                     if order: 
                         try: sort.update({'order':order[0].getAttribute("direction")})
-                        except: pass
+                        except Exception: pass
                         try: sort.update({'method':order[0].firstChild.data})
-                        except: pass
+                        except Exception: pass
 
                     paths = []
                     for rule in dom.getElementsByTagName("rule"):
@@ -134,13 +134,14 @@ class XSP(object):
         
             params = FileAccess.loadJSON(params)
             params['rules'].update(filters)
-            if '-1/-1/-1/' not in path: path = '%s/-1/-1/-1/'%(path) #flatten xsp
-            if not incExtras: #hide seasons and extras
-                params['rules'].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"}, 
-                                                             {"field":"episode","operator":"greaterthan","value":"0"}])
-            else:
-                params['rules']['and'] = [r for r in params['rules'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
-                params['rules']['and'] = Globals._setDictLST(params['rules']['and'])
+            if '-1/-1/-1/' not in path: path = '%s/-1/-1/-1/'%(path.strip('/')) #flatten xsp
+            if 'tvshows' in path:
+                if not incExtras: #hide seasons and extras
+                    params['rules'].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"}, 
+                                                                 {"field":"episode","operator":"greaterthan","value":"0"}])
+                else:
+                    params['rules']['and'] = [r for r in params['rules'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
+                    params['rules']['and'] = Globals._setDictLST(params['rules']['and'])
             file = '%s?xsp=%s'%(path,FileAccess.dumpJSON(params))
             self.log("[%s] parseDXSP, OUT = %s"%(id,file))
         except Exception as e: self.log("[%s] parseDXSP, failed! %s"%(id,e), xbmc.LOGERROR)

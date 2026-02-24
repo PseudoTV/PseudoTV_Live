@@ -110,7 +110,7 @@ class Restart(xbmcgui.WindowXMLDialog):
     
     def _isVisible(self, control):
         try:    return control.isVisible()
-        except: return (BUILTIN.getInfoBool('Playing','Player') and not bool(BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window')) | BUILTIN.getInfoBool('IsVisible(fullscreenvideo)','Window'))
+        except Exception: return (BUILTIN.getInfoBool('Playing','Player') and not bool(BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window')) | BUILTIN.getInfoBool('IsVisible(fullscreenvideo)','Window'))
     
     
     def onInit(self):
@@ -193,7 +193,7 @@ class Overlay(object):
         self.channelBugFade   = SETTINGS.getSettingInt('ChannelBug_Transparency')
         
         try:    self.channelBugX, self.channelBugY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
-        except: self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto        
+        except Exception: self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto        
 
         
         
@@ -299,7 +299,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         self.window_w, self.window_h = WH #self.window_h, self.window_w = (self.window.getHeight(), self.window.getWidth())
                 
         try:    self.onNextX, self.onNextY = literal_eval(self.onNextPosition) #user
-        except: self.onNextX, self.onNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
+        except Exception: self.onNextX, self.onNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
     
         self.log('__init__, enableOnNext = %s, onNextMode = %s, onNextX = %s, onNextY = %s'%(bool(self.onNextMode),self.onNextMode,self.onNextX,self.onNextY))
         
@@ -393,7 +393,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                                                   "firstaired":(nowItem.get("firstaired")    or ""),
                                                   "runtime"   :(nowItem.get("runtime")       or "")}}
             data.update(current_episode)
-        except: pass
+        except Exception: pass
         try:
             next_episode    = {"next_episode"   :{"episodeid" :(nextItem.get("id")           or ""),
                                                   "tvshowid"  :(nextItem.get("tvshowid")     or ""),
@@ -409,7 +409,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                                                   "runtime"   :(nextItem.get("runtime")      or "")}}
             data.update(next_episode)
 
-        except: pass
+        except Exception: pass
         if data: timerit(self.jsonRPC.notifyAll)(0.5,['upnext_data', binascii.hexlify(FileAccess.dumpJSON(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)])
         
         

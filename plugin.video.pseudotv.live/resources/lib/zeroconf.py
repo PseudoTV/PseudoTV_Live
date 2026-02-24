@@ -311,7 +311,7 @@ class DNSAddress(DNSRecord):
         """String representation"""
         try:
             return socket.inet_ntoa(self.address)
-        except:
+        except Exception:
             return self.address
 
 class DNSHinfo(DNSRecord):
@@ -500,7 +500,7 @@ class DNSIncoming(object):
 
                 if rec is not None:
                     self.answers.append(rec)
-            except: pass
+            except Exception: pass
             
     def isQuery(self):
         """Returns true if this is a query"""
@@ -718,7 +718,7 @@ class DNSCache(object):
         """Adds an entry"""
         try:
             list = self.cache[entry.key]
-        except:
+        except Exception:
             list = self.cache[entry.key] = []
         list.append(entry)
 
@@ -727,7 +727,7 @@ class DNSCache(object):
         try:
             list = self.cache[entry.key]
             list.remove(entry)
-        except:
+        except Exception:
             pass
 
     def get(self, entry):
@@ -736,7 +736,7 @@ class DNSCache(object):
         try:
             list = self.cache[entry.key]
             return list[list.index(entry)]
-        except:
+        except Exception:
             return None
 
     def getByDetails(self, name, type, clazz):
@@ -749,7 +749,7 @@ class DNSCache(object):
         """Returns a list of entries whose key matches the name."""
         try:
             return self.cache[name]
-        except:
+        except Exception:
             return []
 
     def entries(self):
@@ -757,7 +757,7 @@ class DNSCache(object):
         def add(x, y): return x + y
         try:
             return reduce(add, list(self.cache.values()))
-        except:
+        except Exception:
             return []
 
 
@@ -797,9 +797,9 @@ class Engine(threading.Thread):
                     for socket in rr:
                         try:
                             self.readers[socket].handle_read()
-                        except:
+                        except Exception:
                             traceback.print_exc()
-                except:
+                except Exception:
                     pass
 
     def getReaders(self):
@@ -925,7 +925,7 @@ class ServiceBrowser(threading.Thread):
                         self.type, record.alias)
                     self.list.append(callback)
                     return
-            except:
+            except Exception:
                 if not expired:
                     self.services[record.alias.lower()] = record
                     callback = lambda x: self.listener.addService(x, self.type, record.alias)
@@ -1050,7 +1050,7 @@ class ServiceInfo(object):
                         value = True
                     elif value == 'false' or not value:
                         value = False
-                except:
+                except Exception:
                     # No equals sign at all
                     key = s
                     value = False
@@ -1060,7 +1060,7 @@ class ServiceInfo(object):
                     result[key] = value
 
             self.properties = result
-        except:
+        except Exception:
             traceback.print_exc()
             self.properties = None
 
@@ -1204,7 +1204,7 @@ class Zeroconf(object):
                 s.connect(('4.2.2.1', 123))
                 self.intf = s.getsockname()[0]
                 s.close()
-            except:
+            except Exception:
                 self.intf = socket.gethostbyname(socket.gethostname())
         else:
             self.intf = bindaddress
@@ -1213,7 +1213,7 @@ class Zeroconf(object):
         try:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        except:
+        except Exception:
             # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
             # multicast UDP sockets (p 731, "TCP/IP Illustrated,
             # Volume 2"), but some BSD-derived systems require
@@ -1225,7 +1225,7 @@ class Zeroconf(object):
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
         try:
             self.socket.bind(self.group)
-        except:
+        except Exception:
             # Some versions of linux raise an exception even though
             # the SO_REUSE* options have been set, so ignore it
             #
@@ -1234,7 +1234,7 @@ class Zeroconf(object):
         try: 
             self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
                 socket.inet_aton(_MDNS_ADDR) + socket.inet_aton('0.0.0.0'))
-        except:
+        except Exception:
             self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF,
                 socket.inet_aton(self.intf) + socket.inet_aton('0.0.0.0'))
             
@@ -1335,7 +1335,7 @@ class Zeroconf(object):
                 self.servicetypes[info.type] -= 1
             else:
                 del self.servicetypes[info.type]
-        except:
+        except Exception:
             pass
         now = currentTimeMillis()
         nextTime = now
@@ -1435,7 +1435,7 @@ class Zeroconf(object):
         try:
             self.listeners.remove(listener)
             self.notifyAll()
-        except:
+        except Exception:
             pass
 
     def updateRecord(self, now, rec):
@@ -1521,7 +1521,7 @@ class Zeroconf(object):
                         out.addAdditionalAnswer(DNSAddress(service.server,
                             _TYPE_A, _CLASS_IN | _CLASS_UNIQUE,
                             _DNS_TTL, service.address))
-                except:
+                except Exception:
                     traceback.print_exc()
 
         if out is not None and out.answers:
@@ -1537,7 +1537,7 @@ class Zeroconf(object):
                 if bytes_sent < 0:
                     break
                 packet = packet[bytes_sent:]
-        except:
+        except Exception:
             # Ignore this, it may be a temporary loss of network connection
             pass
 

@@ -95,7 +95,7 @@ class Channels(object):
 
     def sortChannels(self, channels: list) -> list:
         try:    return sorted(channels, key=itemgetter('number'))
-        except: return channels
+        except Exception: return channels
 
 
     def setChannels(self, channels: list=[]) -> bool:

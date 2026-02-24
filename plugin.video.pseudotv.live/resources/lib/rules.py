@@ -64,7 +64,6 @@ class RulesList(object):
                          ForceEpisodeOrder(),
                          ForceRandom(),
                          EvenShowsRule(),
-                         # SmartShuffle(),
                          PauseRule(),
                          PadScheduling()]
                           
@@ -206,7 +205,7 @@ class BaseRule(object):
             values.append(int(self.optionValues[optionindex][1]))
             values.append(int(self.optionValues[optionindex][3]))
             values.append(int(self.optionValues[optionindex][4]))
-        except:
+        except Exception:
             self.optionValues[optionindex] = "00:00"
             return
 
@@ -255,7 +254,7 @@ class BaseRule(object):
             if val >= minimum and val <= maximum:
                 self.optionValues[optionindex] = val
             return
-        except: pass
+        except Exception: pass
         self.dialog.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
         self.optionValues[optionindex] = default
 
@@ -609,7 +608,7 @@ class MST3k(BaseRule):
             if self.threadTimer.is_alive():
                 if hasattr(self.threadTimer, 'cancel'): self.threadTimer.cancel()
                 try: self.threadTimer.join()
-                except: pass
+                except Exception: pass
         return parameter
         
 
@@ -1201,7 +1200,7 @@ class HandleLimits(BaseRule):
         self.optionValues       = [SETTINGS.getSettingInt('Page_Limit'),-1,0]
         self.optionDescriptions = [f"Force Limit [{SETTINGS.getSettingInt('Page_Limit')}:Default]","Force End [-1:Auto, 0:Unlimited]","Force Start [-1:Unlimited, 0:Auto]"]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions   = [list(range(0,1001,25))]
+        self.selectBoxOptions   = [[0,10,25,50,100,250,500,1000]]
         self.storedValues       = [[],{}]
         
         
@@ -1382,39 +1381,44 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
         return self.name
 
 
+    def toggle(self, optionindex):
+        if optionindex == 1: 
+            if self.optionValues[2]: self.optionValues[2] = not self.optionValues[optionindex]
+        elif optionindex == 2: 
+            if self.optionValues[1]: self.optionValues[1] = not self.optionValues[optionindex]
+
+
     def onAction(self, optionindex):
         if optionindex == 0: self.onActionSelect(optionindex,self.optionLabels[optionindex])
-        else:                self.onActionToggleBool(optionindex)
+        else:
+            self.onActionToggleBool(optionindex)
+            self.toggle(optionindex)
         return self.optionValues[optionindex]
 
 
-    def _chunkEpisodes(self, showArray: dict={}, random_order: bool=False):
-        print(showArray)
-        chunkSize = self.optionValues[0]
-        if random_order: showArray = Globals._randomShuffle(showArray.keys(), showArray)
-        print(showArray)
+    def _chunkEpisodes(self, showArray: dict={}):
         for show, episodes in showArray.items():
-            print(show, episodes)
-            yield show, [episodes[i : i + chunkSize] for i in range(0, len(episodes), chunkSize)]
+            yield show, [episodes[i : i + self.optionValues[0]] for i in range(0, len(episodes), self.optionValues[0])]
 
 
     def _sortShows(self, fileItems, episode_order=False, random_order=False):
         try:
-            seen_movies = {item.get('id') or item.get('file') for item in self.storedValues[4]}
             for item in fileItems:
                 type  = item.get('type', '')
                 title = item.get('showtitle')
                 if title and type.startswith(tuple(TV_TYPES)):
-                    seen_episodes = self.storedValues[3].setdefault(title, [])
-                    if item not in seen_episodes: seen_episodes.append(item)
+                    if episode_order and item not in self.storedValues[3].get('title',[]): 
+                        self.storedValues[3].setdefault(title, []).append(item)
+                    elif not episode_order:
+                        self.storedValues[3].setdefault(title, []).append(item)
                 else:
                     item_id = item.get('id') or item.get('file')
-                    if item_id not in seen_movies:
-                        self.storedValues[4].append(item)
-                        seen_movies.add(item_id)
-            if episode_order: self.storedValues[4].sort(key=lambda k: k.get('year', 0))
-            if random_order:  self.storedValues[4] = Globals._randomShuffle(self.storedValues[4])
-            return dict(self._chunkEpisodes(self.storedValues[3],random_order)), self.storedValues[4]
+                    if episode_order and item_id in self.storedValues[4]: continue
+                    self.storedValues[4].append(item)
+            if random_order:
+                self.storedValues[3] = Globals._randomShuffle(self.storedValues[3])
+                self.storedValues[4] = Globals._randomShuffle(self.storedValues[4])
+            return dict(self._chunkEpisodes(self.storedValues[3])), self.storedValues[4]
         except Exception as e: self.log("runAction, _sortShows failed! %s"%(e), xbmc.LOGERROR)
         return {}, []
 
@@ -1467,249 +1471,15 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
                     episode_order = False if self.optionValues[2] else self.optionValues[1]
                     random_order  = False if self.optionValues[1] else self.optionValues[2]
                     if episode_order: 
-                        fileItems = list(sorted(parameter, key=lambda k: k.get('year',0)))    #force year ordering
-                        fileItems = list(sorted(fileItems, key=lambda k: k.get('episode',0))) #force episode ordering
-                        fileItems = list(sorted(fileItems, key=lambda k: k.get('season',0)))  #force season ordering
-                    elif random_order: 
-                        fileItems = Globals._randomShuffle(parameter)
-                    else:
-                        fileItems = parameter
+                                       fileItems = list(sorted(parameter, key=lambda k: k.get('year',0)))    #force year ordering
+                                       fileItems = list(sorted(fileItems, key=lambda k: k.get('episode',0))) #force episode ordering
+                                       fileItems = list(sorted(fileItems, key=lambda k: k.get('season',0)))  #force season ordering
+                    elif random_order: fileItems = Globals._randomShuffle(parameter)
+                    else:              fileItems = parameter
                     sortShows, sortMovies = self._sortShows(fileItems, episode_order, random_order)
                     self.log('runAction, episode_order %s, random_order %s, tvshows = %s, movies = %s'%(episode_order, random_order, len(list(sortShows.keys())), len(sortMovies)))
                     return self._mergeShows(sortShows,sortMovies,builder)
                 
-        return parameter
-        
-        
-class SmartShuffle(BaseRule):#Developer:Spider-netizen
-    def __init__(self):
-        self.myId               = 1001
-        self.name               = LANGUAGE(30121)
-        self.description        = LANGUAGE(33121)
-        self.optionLabels       = [LANGUAGE(30180)]
-        self.optionValues       = [SETTINGS.getSettingInt('Enable_Shuffle')]
-        self.optionDescriptions = [LANGUAGE(33121)]
-        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE,RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions   = []
-        self.storedValues       = [[],[],[],{},[],[],[]]
-        
-
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
-                  
-
-    def copy(self): 
-        return SmartShuffle()
-      
-      
-    def getTitle(self):
-        return '%s (%s)'%(self.name,self.optionValues[0])
-
-
-    def onAction(self, optionindex):
-        self.onActionToggleBool(optionindex,self.optionLabels[optionindex])
-        return self.optionValues[optionindex]
-
-
-    def _smart_random_request(self, id, path, items, page, inherited=None):
-        """Returns a list of random media items from the channel.
-
-        The function takes a list of all media items of the channel and returns a subset of them in a random order.
-        Handles mixed content (movies and TV shows) in the same channel.
-
-        Args:
-            id (str): Channel identifier
-            path (str): Channel path
-            items (list): A list containing all media items of the channel
-            page (int): Number of items to return
-        """
-        self.log(f'_smart_random_request; {id}, {len(items)} items.', xbmc.LOGDEBUG)
-        if len(items) <= 1: return items
-        content_dict = self.group_items_by_id(items)
-        # Create separate lists for movies and TV shows
-        library_ids  = []
-        content_types = {}  # Track content type (movie/tvshow) for each library_id
-
-        for library_id, content_list in content_dict.items():
-            # Identify content type based on the presence of 'season' and 'episode' keys
-            first_item = content_list[0]
-            if 'season' in first_item and 'episode' in first_item:
-                content_type = 'episode'
-            else:
-                content_type = 'movie'
-            content_types[library_id] = content_type
-            library_ids += [library_id] * len(content_list)
-            self.log(f'_smart_random_request; Content type for {library_id}: {content_type}', xbmc.LOGDEBUG)
-
-        unique_library_ids = set(library_ids)
-        self.log(f'_smart_random_request; Unique library IDs: {len(unique_library_ids)}', xbmc.LOGDEBUG)
-
-        # Load next_indices from memory
-        channel_memory = self._channelMemory(id, path)
-        self.log(f'_smart_random_request; Channel memory for {id}: {channel_memory}', xbmc.LOGDEBUG)
-        programs_memory = channel_memory.get('programs', {})
-
-        # Clean up old memory entries
-        for memory_id in list(programs_memory):
-            if memory_id not in library_ids:
-                del programs_memory[memory_id]
-
-        next_indices = {}
-        coming_next  = []
-
-        while not inherited.monitor.abortRequested() and len(coming_next) < page:
-            next_library_id = random.choice(library_ids)
-            content_type = content_types.get(next_library_id, '')
-            self.log(f'_smart_random_request; {id}, next program id: {next_library_id}, type: {content_type}', xbmc.LOGINFO)
-            
-            total_parts = len(content_dict[next_library_id])
-            last_program_id = channel_memory.get('last_program_id')
-
-            # Skip repeated content if we have other options
-            if last_program_id == next_library_id and len(library_ids) > 1:
-                # For TV shows, only skip if the show has only 1 episode
-                if content_type == 'episode' and len(content_dict[next_library_id]) > 1:
-                    # TV show has multiple episodes, so different episodes are allowed
-                    pass
-                else:
-                    self.log(f"_smart_random_request, Skipping {next_library_id} as it's the same as the last one.", xbmc.LOGINFO)
-                    continue
-
-            if content_type == 'movie':
-                # Movie logic - no need for episode tracking
-                next_content = content_dict[next_library_id][0]
-                programs_memory[next_library_id] = {
-                    'type': 'movie',
-                    'title': next_content.get('title', ''),
-                    'movieid': next_content.get('movieid', -1)
-                }
-            else:
-                # TV Show logic
-                i = next_indices.get(next_library_id)
-                if i is None:
-                    last_remembered_episode = programs_memory.get(next_library_id)
-                    if last_remembered_episode is None:
-                        self.log(f'No memory for library ID {next_library_id}. Initializing...', xbmc.LOGDEBUG)
-                        programs_memory[next_library_id] = {}
-                        i = 0
-                    else:
-                        # Only try to match season/episode if it's actually a TV show
-                        if last_remembered_episode.get('type') != 'movie':
-                            for i in range(len(content_dict[next_library_id])):
-                                current_episode = content_dict[next_library_id][i]
-                                if (current_episode.get('seasonid') == last_remembered_episode.get('seasonid') and 
-                                    current_episode.get('episodeid') == last_remembered_episode.get('episodeid')):
-                                    i += 1
-                                    break
-                            else:
-                                self.log(f"_smart_random_request, Resetting index for show {next_library_id}", level=xbmc.LOGINFO)
-                                i = 0
-                        else: i = 0
-                else: i += 1
-
-                if i >= total_parts:
-                    self.log(f'_smart_random_request, Resetting index as it reached the end of the list (i = {i}/{total_parts})...', xbmc.LOGINFO)
-                    i = 0
-                    
-                next_indices[next_library_id] = i
-                next_content = content_dict[next_library_id][i]
-                programs_memory[next_library_id] = next_content
-
-            # Add the next content to our result list
-            coming_next.append(dict(next_content))
-            channel_memory['last_program_id'] = next_library_id
-
-        # Update channel memory
-        channel_memory['programs'] = programs_memory
-        self._channelMemory(id, path, channel_index=channel_memory)
-        return coming_next
-
-
-    def _channelMemory(self, id, path, channel_index={}):
-        cacheName = '_channelMemory.%s.%s'%(id,getMD5(path))
-        if not channel_index:
-            msg = 'get'
-            channel_index = {'programs' : {}, 'last_program_id' : {}}
-            try:# This gets the starting index for the  request, that's how the program keeps track of episodes.
-                loaded_index = SETTINGS.getCacheSetting(cacheName, checksum=id, revive=False)
-                loaded_index_keys = set(loaded_index) # Validating format (in case there's been a cahnge to the format)
-                if loaded_index_keys == set(channel_index):
-                    self.log("_channelMemory; loaded index keys matched expected format. loaded_index_keys = %s"%(loaded_index_keys))
-                    channel_index = loaded_index
-                else: self.log("_channelMemory; loaded index keys did not match expected format. loaded_index_keys = %s"%(loaded_index_keys))
-            except Exception as e: self.log(f'_channelMemory; Failed loading cache: id = {id}, path = {path}, Error: {e}')
-        else:
-            msg = 'set'
-            SETTINGS.setCacheSetting(cacheName, channel_index, checksum=id, life=datetime.timedelta(days=84))
-        self.log("%s _channelMemory; id = %s, path = %s, channel_index = %s"%(msg,id,path,channel_index))
-        return channel_index
-
-
-    def group_items_by_id(self, items, key=None):
-        """
-        Creates a dictionary of programs where each key is a tvshowid
-        (or showtitle if tvshowid is -1) and the value is a list of episodes
-        sorted by firstaired, season, and episode.
-
-        Parameters:
-        items (list): a list of items to be processed into a programs dictionary
-        key (str): if key is "episodes", the function will use the tvshowid of each item
-            as the key in the programs dictionary, otherwise, it will use the id of the item
-
-        Returns:
-        dict: a dictionary of programs where each key is a tvshowid (or showtitle)
-            and the value is a list of episodes sorted by firstaired, season, and episode
-        """
-        # Initialize an empty dictionary to store the programs
-        programs = {}
-        # Iterate over each item in the provided list
-        for item in items:
-            # If the key is "episodes" or the type of the item is 'episode'
-            if key == "episodes" or item.get('type') == 'episode':
-                self.log(f'group_items_by_id; item is an episode: {item}')
-                # Set the id as the tvshowid of the item
-                id = item['tvshowid']
-                # If the tvshowid is -1, set the id as the showtitle of the item
-                if id == -1:
-                    self.log(f'group_items_by_id; episode tvshowid is -1: {item}!')
-                    id = item['showtitle']
-            else:
-                # If the item is not an episode, set the id as the id of the item
-                self.log(f'group_items_by_id; item is not an episode, using "id" for item: {item}')
-                id = item.get('id')
-                if not id: id = item.get('movieid')
-            self.log(f'group_items_by_id; id = {id}')
-            # Check if there are already episodes for the id in the programs dictionary
-            episodes = programs.get(id)
-            if episodes == None: programs[id] = [item] # If not, add a new entry with the id as the key and a list containing the item as the value
-            else: episodes.append(item) # If there are already episodes, append the item to the list of episodes
-        # After all items have been processed, sort the items in each list in the programs dictionary
-        # by their firstaired, season, and episode values
-        for _, items in programs.items():
-            items.sort(key=lambda seep: (seep.get('firstaired'), seep.get('season', 0), seep.get('episode', 0)))
-        # Return the programs dictionary
-        return programs	
-
-
-    def runAction(self, actionid, citem, parameter, builder):
-        if bool(self.optionValues[0]):
-            if actionid == RULES_ACTION_CHANNEL_START:
-                self.storedValues[0]  = builder.enableShuffle
-                self.storedValues[1]  = builder.limits
-                builder.enableShuffle = self.optionValues[0]
-                builder.limits        = {"end":0 if (val := self.storedValues[1].get('end', 0)) == -1 else val,
-                                         "start":-1,
-                                         "total":0}
-                self.log("runAction, setting enableShuffle = %s, limits = %s"%(builder.enableShuffle,builder.limits))
-                
-            elif actionid == RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST:
-                items = self._smart_random_request(citem['id'], path, parameter, builder.limit, key)
-                
-            elif actionid == RULES_ACTION_CHANNEL_STOP:
-                builder.enableShuffle = self.storedValues[0]
-                builder.limits        = self.storedValues[1]
-                self.log("runAction, restoring enableShuffle = %s, limits = %s"%(builder.enableShuffle,builder.limits))
-    
         return parameter
         
         
@@ -1821,7 +1591,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         self.log('[%s] _buildSchedule, filelist = %s'%(citem.get('id'),len(filelist)))
         updated = self._getResume(citem.get('id')).get('updated',{})
         try:    viewed = '%s: %s (%s)'%(LANGUAGE(32250),epochTime(updated.get('time')).strftime(BACKUP_TIME_FORMAT),updated.get('instance'))
-        except: viewed = LANGUAGE(32251)
+        except Exception: viewed = LANGUAGE(32251)
         return builder.buildCells(citem, duration=self._getTotRuntime(citem.get('id'), filelist), entries=1, 
                                   info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
                                         "episodetitle":viewed,

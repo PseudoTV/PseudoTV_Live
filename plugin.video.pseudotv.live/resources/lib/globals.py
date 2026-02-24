@@ -36,7 +36,7 @@ def stripNumber(s):
 def stripRegion(s):
     match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(s)
     try:    return match.group(1)
-    except: return s
+    except Exception: return s
     
 def chanceBool(percent=25):
     return random.randrange(100) <= percent
@@ -61,7 +61,7 @@ def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache
         else:       response = session.get(url, params=params, headers=headers, timeout=timeout)
         response.raise_for_status()  # Raise an exception for HTTP errors
         try:    results = response.json()
-        except: results = response.content
+        except Exception: results = response.content
         if isinstance(results,bytes): results = results.decode(DEFAULT_ENCODING)
         log("Globals: requestURL\nurl = %s, status = %s\nparams = %s\npayload = %s\nreturn type = %s"%(url,response.status_code,params,payload,type(results)))
         
@@ -98,7 +98,7 @@ def splitYear(label):
             label, year = match.groups()
             if year.isdigit():
                 return label, int(year)
-    except: pass
+    except Exception: pass
     return label, None
 
 def getChannelSuffix(name, type):
@@ -154,7 +154,7 @@ def roundTimeUp(dt=None, roundTo=60):
 def strpTime(datestring, format=DTJSONFORMAT): #convert pvr infolabel datetime string to datetime obj, thread safe!
     try:              return datetime.datetime.strptime(datestring, format)
     except TypeError: return datetime.datetime.fromtimestamp(ime.mktime(time.strptime(datestring, format)))
-    except:           return ''
+    except Exception:           return ''
    
 def epochTime(timestamp, tz=True): #convert pvr json datetime string to datetime obj
     if tz: timestamp -= getTimeoffset()
@@ -230,7 +230,7 @@ def cleanMPAA(mpaa):
         text = re.sub('/ US', ''  , text)
         text = re.sub('Rated ', '', text)
         mpaa = text.strip()
-    except: 
+    except Exception: 
         mpaa = mpaa.strip()
     return mpaa
 
@@ -264,7 +264,7 @@ def frange(start,stop,inc):
     
 def timeString2Seconds(string): #hh:mm:ss
     try:    return int(sum(x*y for x, y in zip(list(map(float, string.split(':')[::-1])), (1, 60, 3600, 86400))))
-    except: return -1
+    except Exception: return -1
 
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):

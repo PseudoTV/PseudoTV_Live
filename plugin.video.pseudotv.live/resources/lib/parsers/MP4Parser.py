@@ -44,7 +44,7 @@ class MP4Parser:
     def determineLength(self, filename: str) -> int and float:
         log("MP4Parser: determineLength %s"%filename)
         try: self.File = FileAccess.open(filename, "rb", None)
-        except:
+        except Exception:
             log("MP4Parser: Unable to open the file")
             return 0
             
@@ -85,7 +85,7 @@ class MP4Parser:
                 f.seek(length - 8, 1)  # skip to next box
                 boxes[text] = (offset, offset + length)
                 offset += length
-            except: pass
+            except Exception: pass
         return boxes
 
 
@@ -114,7 +114,7 @@ class MP4Parser:
         # Skip past the file header
         try:
             self.File.seek(data.size, 1)
-        except:
+        except Exception:
             log('MP4Parser: Error while seeking')
             return 0
 
@@ -122,7 +122,7 @@ class MP4Parser:
 
         while not self.monitor.abortRequested() and data.boxtype != 'moov' and data.size > 0:
             try: self.File.seek(data.size, 1)
-            except:
+            except Exception:
                 log('MP4Parser: Error while seeking')
                 return 0
 
@@ -132,7 +132,7 @@ class MP4Parser:
 
         while not self.monitor.abortRequested() and data.boxtype != 'mvhd' and data.size > 0:
             try: self.File.seek(data.size, 1)
-            except:
+            except Exception:
                 log('MP4Parser: Error while seeking')
                 return 0
 
@@ -160,7 +160,7 @@ class MP4Parser:
             self.MovieHeader.modified = data[1]
             self.MovieHeader.scale = data[2]
             self.MovieHeader.duration = data[3]
-        except:
+        except Exception:
             self.MovieHeader.duration = 0
 
 
@@ -180,7 +180,7 @@ class MP4Parser:
             if box.boxtype == 'uuid':
                 box.boxtype = self.File.read(16)
                 box.size -= 16
-        except:
+        except Exception:
             pass
 
         return box

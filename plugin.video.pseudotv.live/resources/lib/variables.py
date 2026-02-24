@@ -63,16 +63,19 @@ class Globals:
         else:     return hash
 
     @staticmethod
-    def _encodeString(text):
-        base64_bytes = base64.b64encode(zlib.compress(text.encode(DEFAULT_ENCODING)))
-        return base64_bytes.decode(DEFAULT_ENCODING)
+    def _encodeString(text, encoding=DEFAULT_ENCODING):
+        data = text.encode(encoding) if isinstance(text, str) else text
+        compressed = zlib.compress(data, level=1)
+        return base64.b64encode(compressed).decode('ascii')
 
     @staticmethod
-    def _decodeString(base64_bytes):
+    def _decodeString(base64_str, encoding=DEFAULT_ENCODING):
+        if isinstance(base64_str, str): base64_str = base64_str.encode('ascii')
         try:
-            message_bytes = zlib.decompress(base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING)))
-            return message_bytes.decode(DEFAULT_ENCODING)
-        except Exception as e: return ''
+            raw_data = zlib.decompress(base64.b64decode(base64_str))
+            return raw_data.decode(encoding)
+        except (zlib.error, UnicodeDecodeError, ValueError):
+            return raw_data if 'raw_data' in locals() else base64_str
         
     @staticmethod
     def _encodePlot(plot, text):
@@ -147,7 +150,7 @@ class Globals:
             try:
                 instance, path = __match(instance)
                 xbmc.executebuiltin("ReplaceWindow(TVGuide,%s)"%(path))
-            except: xbmc.executebuiltin("ReplaceWindow(TVGuide)")
+            except Exception: xbmc.executebuiltin("ReplaceWindow(TVGuide)")
         else: Globals._openSettings()
           
     @staticmethod  
@@ -226,22 +229,20 @@ class Globals:
         return citem
              
     @staticmethod  
-    def _randomShuffle(items, values=None):
+    def _randomShuffle(items):
         if isinstance(items,dict):
-            items  = Globals._randomSamples(list(items.keys()), len(items))
-            titems = {}
-            for key in items:
-                val = copy.list(items[key]) if values else items[key]
-                if values: val = Globals._randomShuffle(val)
-                titems.setdefault(key,[]).append(val)
-            if titems: items = titems
-        elif isinstance(items,list) and len(items) > 0:
-            #reseed random for a "greater sudo random"
-            random.seed(random.randint(0,999999999999))
-            random.shuffle(random.sample(items, len(items)))
+            keys = Globals._randomShuffle(list(items.keys()))
+            return {key: Globals._randomShuffle(items[key]) for key in keys}
+        elif isinstance(items,list):
+            if items:
+                tmpItems = items[:]
+                random.shuffle(tmpItems)
+                return [Globals._randomShuffle(item) for item in tmpItems]
         return items
 
-        
-    def _randomSamples(items=[], x=5):
-        if len(items) >= x: return random.sample(items, x)
-        else:               return random.sample(items, len(items))
+    @staticmethod  
+    def _randomSamples(items=[], x=-1):
+        if isinstance(items, list):
+            if len(items) >= x: return random.sample(items, x)
+            else:               return random.sample(items, len(items))
+        return items

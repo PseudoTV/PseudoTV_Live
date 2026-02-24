@@ -256,9 +256,9 @@ def read_error(msg, fp, e):
         column = int(e.args[0].split(':')[1].split('column ')[1])
         log(f"{msg}, Error at line: {line}, column: {column}")
         try:    lines = fp.readlines()
-        except: lines = []
+        except Exception: lines = []
         if len(lines) >= line: log(f"{msg}, Line {line}: {lines[line-1].strip()}")
-    except: log(f"{msg}, {e}")
+    except Exception: log(f"{msg}, {e}")
 
 def read_data(fp=None, tree=None):
     """

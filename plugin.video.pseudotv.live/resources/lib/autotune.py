@@ -132,7 +132,7 @@ class Autotune(object):
         with BUILTIN.busy_dialog():
             ctl = (1,1) #settings return focus
             try:    param = self.sysARG[1]
-            except: param = None
+            except Exception: param = None
             if param.replace('_',' ') in AUTOTUNE_TYPES:
                 ctl = (1,AUTOTUNE_TYPES.index(param.replace('_',' '))+1)
                 self.selectAutotune(param.replace('_',' '))

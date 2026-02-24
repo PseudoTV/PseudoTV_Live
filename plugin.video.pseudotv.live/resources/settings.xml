@@ -469,9 +469,9 @@
                         <popup>false</popup>
                     </control>
                 </setting>
-                <setting id="Recursive_Limit" type="integer" label="30224" help="33224">
+                <setting id="Recursive_Depth" type="integer" label="30224" help="33224">
                     <level>3</level>
-                    <default>0</default>
+                    <default>1</default>
                     <constraints>
                         <minimum>0</minimum>
                         <step>1</step>
@@ -549,16 +549,6 @@
                         </dependency>
                     </dependencies>
                 </setting>
-                <setting id="Enable_Shuffle" type="boolean" label="30226" help="33226">
-                    <level>2</level>
-                    <default>false</default>
-                    <control type="toggle"/>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Enable_Even">0</condition>
-                        </dependency>
-                    </dependencies>
-                </setting>
                 <setting id="Enable_Even" type="integer" label="30121" help="33121">
                     <level>2</level>
                     <default>0</default>
@@ -570,11 +560,6 @@
                     <control type="slider" format="integer">
                         <popup>false</popup>
                     </control>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Enable_Shuffle">false</condition>
-                        </dependency>
-                    </dependencies>
                 </setting>
                 <setting id="Enable_Even_Force_Episode" type="boolean" label="30181" help="33230" parent="Enable_Even">
                     <level>2</level>

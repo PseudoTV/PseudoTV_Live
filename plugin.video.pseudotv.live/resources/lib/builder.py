@@ -82,11 +82,10 @@ class Builder(object):
         self.saveDuration     = SETTINGS.getSettingBool('Store_Duration')
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
-        self.recursiveLimit   = SETTINGS.getSettingInt('Recursive_Limit') #todo adv. channel rule. set recursive depth.
+        self.recursiveLimit   = SETTINGS.getSettingInt('Recursive_Depth') #todo adv. channel rule. set recursive depth.
         self.padScheduling    = False #todo Adv. Channel Rule, No Global: Default False
         self.padFilelist      = False #todo Adv. Channel Rule, No Global: Default False
-        self.enableEven       = False if SETTINGS.getSettingBool('Enable_Shuffle') else bool(SETTINGS.getSettingInt('Enable_Even'))
-        self.enableShuffle    = False if bool(SETTINGS.getSettingInt('Enable_Even')) else SETTINGS.getSettingBool('Enable_Shuffle')
+        self.enableEven       = bool(SETTINGS.getSettingInt('Enable_Even'))
 
         self.filter           = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
         self.sort             = {}#{"ignorearticle":True,"method":"random","order":"ascending","useartistsortname":True}
@@ -185,7 +184,7 @@ class Builder(object):
                     
         def __hasProgrammes(citem: dict) -> bool:
             try:    state = dict(self.xmltv.hasProgrammes([citem])).get(citem['id'],False)
-            except: state = False
+            except Exception: state = False
             self.log('[%s] buildChannels, __hasProgrammes = %s'%(citem['id'],state))
             return state
 
@@ -326,11 +325,6 @@ class Builder(object):
             #"Even Show Distribution"
             if self.enableEven and not citem.get('rules',{}).get("1000"):
                 nrules = {"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingBool('Enable_Even_Force_Episode')}}}
-                self.log(" [%s] buildVideo: _injectRules, __chkEvenDistro, new rules = %s"%(citem['id'],nrules))
-                tmpCitem.setdefault('rules',{}).update(nrules)
-            #"Smart Shuffle"
-            elif self.enableShuffle and not citem.get('rules',{}).get("1001"):
-                nrules = {"1001":{"values":{"0":SETTINGS.getSettingInt('Enable_Shuffle')}}}
                 self.log(" [%s] buildVideo: _injectRules, __chkEvenDistro, new rules = %s"%(citem['id'],nrules))
                 tmpCitem.setdefault('rules',{}).update(nrules)
             return tmpCitem

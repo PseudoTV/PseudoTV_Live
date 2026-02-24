@@ -128,7 +128,7 @@ class Library(object):
         self.log('clrLibraryCache, type = %s'%(type))
         with BUILTIN.busy_dialog():
             DIALOG.notificationDialog(LANGUAGE(30070)%(type),time=5)
-            self.cache.clear("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__),wait=5)
+            self.cache.clr("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__),wait=5)
 
 
     def getPlaylists(self):
@@ -158,31 +158,31 @@ class Library(object):
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
     def getNetworks(self):
         try:    return self.getTVInfo().get('studios',[])
-        except: return []
+        except Exception: return []
         
         
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
     def getTVShows(self):
         try:    return self.getTVInfo().get('shows',[])
-        except: return []
+        except Exception: return []
         
         
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
     def getTVGenres(self):
         try:    return self.getTVInfo().get('genres',[])
-        except: return []
+        except Exception: return []
  
        
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
     def getMovieGenres(self):
         try:    return self.getMovieInfo().get('genres',[])
-        except: return []
+        except Exception: return []
               
            
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))  
     def getMovieStudios(self):
         try:    return self.getMovieInfo().get('studios',[])
-        except: return []
+        except Exception: return []
         
          
     @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
@@ -234,7 +234,7 @@ class Library(object):
 
     def getMusicGenres(self):
         try:    return self.getMusicInfo().get('genres',[])
-        except: return []
+        except Exception: return []
  
  
     def getPVRRecordings(self):

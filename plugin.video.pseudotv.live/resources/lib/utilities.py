@@ -117,7 +117,7 @@ class Utilities(object):
                 else:
                     log('Utilities: qrDebug failed! %s'%response.text)
                     return False, LANGUAGE(30191)
-            except:
+            except Exception:
                 log('Utilities: qrDebug, unable to retrieve the paste url')
                 return False, LANGUAGE(30190)
               
@@ -231,7 +231,7 @@ class Utilities(object):
         with BUILTIN.busy_dialog():
             ctl = (0,1)
             try:    param = sysARG[1]
-            except: param = None
+            except Exception: param = None
             log('Utilities: param = %s'%(param))
 
             #Globals

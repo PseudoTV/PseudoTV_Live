@@ -33,7 +33,7 @@ class AVIChunk:
     def read(self, thefile):
         data = thefile.readBytes(4)
         try:    self.size = struct.unpack('<i', data)[0]
-        except: self.size = 0
+        except Exception: self.size = 0
         # Putting an upper limit on the chunk size, in case the file is corrupt
         if self.size > 0 and self.size < 10000: 
             self.chunk = thefile.readBytes(self.size)
@@ -57,7 +57,7 @@ class AVIList:
         data = thefile.readBytes(4)
         self.size = struct.unpack('<i', data)[0]
         try:    self.size = struct.unpack('<i', data)[0]
-        except: self.size = 0
+        except Exception: self.size = 0
         self.fourcc = thefile.read(4)
 
 
@@ -113,7 +113,7 @@ class AVIParser:
         log("AVIParser: determineLength %s"%filename)
 
         try: self.File = FileAccess.open(filename, "rb", None)
-        except:
+        except Exception:
             log("AVIParser: Unable to open the file")
             return 0
 
@@ -182,7 +182,7 @@ class AVIParser:
                     self.File.seek(listsize - data.size - 12, 1)
 
                 data = self.getChunkOrList()
-            except:
+            except Exception:
                 log("AVIParser: Unable to seek")
 
         log("AVIParser: Video stream not found")
@@ -192,7 +192,7 @@ class AVIParser:
     def getStreamDuration(self):
         try:
             return int(self.StreamHeader.dwLength / (float(self.StreamHeader.dwRate) / float(self.StreamHeader.dwScale)))
-        except:
+        except Exception:
             return 0
 
 
@@ -209,7 +209,7 @@ class AVIParser:
             self.Header.dwSuggestedBufferSize = header[7]
             self.Header.dwWidth = header[8]
             self.Header.dwHeight = header[9]
-        except:
+        except Exception:
             self.Header.empty()
             log("AVIParser: Unable to parse the header")
 
@@ -231,14 +231,14 @@ class AVIParser:
             self.StreamHeader.dwQuality = header[9]
             self.StreamHeader.dwSampleSize = header[10]
             self.StreamHeader.rcFrame = ''
-        except:
+        except Exception:
             self.StreamHeader.empty()
             log("AVIParser: Error reading stream header")
 
 
     def getChunkOrList(self):
         try: data = self.File.readBytes(4).decode('utf-8')
-        except: data = self.File.read(4)
+        except Exception: data = self.File.read(4)
         
         if data == "RIFF" or data == "LIST":
             dataclass = AVIList()

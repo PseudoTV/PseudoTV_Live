@@ -48,7 +48,7 @@ class Plugin(object):
             try:
                 self.sysInfo['seek'] = int(sysInfo.get('seek') or (abs(self.sysInfo['start'] - self.sysInfo['now']) if self.sysInfo['start'] > 0 else -1))
                 self.sysInfo["progresspercentage"] = -1 if self.sysInfo['seek'] == -1 else (self.sysInfo["seek"]/self.sysInfo["duration"]) * 100
-            except:
+            except Exception:
                 self.sysInfo['seek'] = int(sysInfo.get('seek','-1'))
                 self.sysInfo["progresspercentage"] = -1
                 
@@ -136,7 +136,7 @@ class Plugin(object):
                 if 'citem' in nextitem: nextitem.pop('citem')
                 nextitem.get('customproperties',{})['pvritem'] = nextitems[idx + 1]
                 sysInfo.update({'nitem':nextitem})
-            except: pass
+            except Exception: pass
             
             listitem = LISTITEMS.buildItemListItem(nowitem,'video')
             if (item.get('progress',0) > 0 and item.get('runtime',0) > 0):

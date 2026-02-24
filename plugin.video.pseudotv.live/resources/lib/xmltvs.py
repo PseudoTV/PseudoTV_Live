@@ -226,7 +226,7 @@ class XMLTVS(object):
 
     def sortChannels(self, channels: list) -> list:
         try:    return sorted(channels, key=itemgetter('display-name'))
-        except: return channels
+        except Exception: return channels
         
 
     def sortProgrammes(self, programmes: list) -> list:
@@ -374,7 +374,7 @@ class XMLTVS(object):
             
         if item.get('date'):
             try: pitem['date'] = (strpTime(item['date'], '%Y-%m-%d')).strftime('%Y%m%d')
-            except: pass
+            except Exception: pass
 
         if item.get('new',False): 
             pitem['new'] = '' #write empty tag, tag == True
@@ -453,7 +453,7 @@ class XMLTVS(object):
                             epgdata = data.copy()
                             epgdata['name'] = name
                             epggenres[name.lower()] = epgdata
-                except: continue
+                except Exception: continue
             self.log('buildGenres, __parseGenres: epggenres = %s'%(epggenres.keys())) #todo custom user color selector.
             return epggenres
 

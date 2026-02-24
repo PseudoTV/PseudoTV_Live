@@ -34,7 +34,7 @@ class Backup(object):
 
     def getFileDate(self, file: str) -> str:
         try:    return epochTime(pathlib.Path(FileAccess.translatePath(file)).stat().st_mtime,tz=False).strftime(BACKUP_TIME_FORMAT)
-        except: return LANGUAGE(32105) #Unknown
+        except Exception: return LANGUAGE(32105) #Unknown
         
         
     def hasBackup(self, file=CHANNELFLE_BACKUP) -> bool:
@@ -42,7 +42,7 @@ class Backup(object):
             files   = [CHANNELFLE_BACKUP, CHANNELFLE_LATEST, CHANNELFLE_CHANGED]
             backups = [file for file in files if FileAccess.exists(file)]
             try:    file = max(backups, key=os.path.getmtime)
-            except: return
+            except Exception: return
             self.log('hasBackup, file = %s'%(file))
             
         if FileAccess.exists(file):
@@ -90,7 +90,7 @@ class Backup(object):
         with BUILTIN.busy_dialog():
             ctl = (0,1) #settings return focus
             try:    param = self.sysARG[1]
-            except: param = None
+            except Exception: param = None
             if   param == 'Recover_Backup':  self.recoverChannels()
             elif param == 'Backup_Channels': self.backupChannels()
         

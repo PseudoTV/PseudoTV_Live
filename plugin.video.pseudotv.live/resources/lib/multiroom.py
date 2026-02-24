@@ -190,7 +190,7 @@ class Multiroom(object):
                                         servers[liz.getLabel()]['enabled'] = False
                                         DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
                                     try: FileAccess.delete(SETTINGS.hasPVRInstance(liz.getLabel()))
-                                    except: pass
+                                    except Exception: pass
                         if changed: self.setDiscovery(self._chkServers(servers))
 
 
@@ -209,7 +209,7 @@ class Multiroom(object):
     @threadit
     def _run(self):
         try:    param = self.sysARG[1]
-        except: param = None
+        except Exception: param = None
         if param == 'Enable_ZeroConf': 
             ctl = (5,1)
             self._chkZeroConf()

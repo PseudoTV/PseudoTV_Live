@@ -130,7 +130,7 @@ class Player(xbmc.Player):
         
     def getPlayerItem(self):
         try: return self.getPlayingItem()
-        except:
+        except Exception:
             if not self.isPlaying(): return xbmcgui.ListItem()
             self.monitor.waitForAbort(1.0) 
             return self.getPlayerItem()
@@ -600,6 +600,6 @@ class Service(object):
                 if thread.name != "MainThread" and thread.is_alive():
                     if hasattr(thread, 'cancel'): thread.cancel()
                     try: thread.join(1.0)
-                    except: pass
+                    except Exception: pass
                     self.log('_stop, closing %s...'%(thread.name))
         return pendingRestart

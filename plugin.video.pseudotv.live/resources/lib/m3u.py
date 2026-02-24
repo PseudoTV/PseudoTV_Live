@@ -142,7 +142,7 @@ class M3U(object):
                             mitem[key] = value.group(1)
                         elif key == 'number':
                             try:    mitem[key] = int(value.group(1))
-                            except: mitem[key] = float(value.group(1))#todo why was this needed?
+                            except Exception: mitem[key] = float(value.group(1))#todo why was this needed?
                         elif key == 'group':
                             mitem[key] = [_f for _f in sorted(list(set((value.group(1)).split(';')))) if _f]
                         elif key in ['radio','favorite','realtime','media']:
@@ -268,7 +268,7 @@ class M3U(object):
 
     def sortStations(self, stations, key='number'):
         try:    return sorted(stations, key=itemgetter(key))
-        except: return stations
+        except Exception: return stations
         
         
     def getM3U(self):

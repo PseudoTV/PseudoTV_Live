@@ -161,7 +161,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         checksum  = PROPERTIES.getInstanceID()
         cacheName = 'createChannelList.%s'%(checksum)
         try:   cacheResponse = list(self.cache.get(cacheName, checksum=checksum))
-        except:cacheResponse = []
+        except Exception:cacheResponse = []
         if not cacheResponse:
             poolit(__update)(channelList)
             cacheResponse = self.cache.set(cacheName, channelArray, checksum=checksum)
@@ -208,7 +208,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def setLocked(self, state=True):
         try: self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[PROPERTIES.setEXTPropertyBool('%s.Manager.isLocked'%(ADDON_ID),state)])
-        except: pass
+        except Exception: pass
         
 
     @contextmanager
@@ -435,7 +435,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                     key, path = lizLST[select].getProperty('key'), lizLST[select].getPath()
                     try:    lastOPT = int(lizLST[select].getProperty('idx'))
-                    except: lastOPT = None
+                    except Exception: lastOPT = None
                     if key == 'add': 
                         predefined = {"idx":9, "label":'Predefined Channels', "label2":"Predefined Dynamic Playlists", "default":"", "shares":"", "mask":"?xsp=", "type":"", "multi":False}
                         retval     = DIALOG.browseSources(heading=LANGUAGE(32080), exclude=excLST, monitor=True, include=[])#include=[predefined]
@@ -480,14 +480,14 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if not select is None:
                     key, myId = lizLST[select].getProperty('key'), int(lizLST[select].getProperty('myId') or '-1')
                     try:    lastIDX = int(lizLST[select].getProperty('idx'))
-                    except: lastIDX = None
+                    except Exception: lastIDX = None
                     if key == 'add':
                         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                             lizLST = [self.buildListItem(rule.name,rule.description,icon=DUMMY_ICON.format(text=str(rule.myId)),items={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
                         select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32072), preselect=lastXID, multi=False)
                         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                             try:    lastXID = int(lizLST[select].getProperty('idx'))
-                            except: lastXID = -1
+                            except Exception: lastXID = -1
                             nrule, citem = self.getRule(citem, arules[lastXID])
                             if not nrule is None: ruleLST.update({str(nrule.myId):nrule})
                     elif key == 'save':
@@ -602,7 +602,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if   'tvshows/titles'  in path: paths = Predefined.createShowPlaylist(self.jsonRPC.DBIDtoLabel(path))
                 elif 'tvshows/studios' in path: paths = Predefined.createNetworkPlaylist(self.jsonRPC.DBIDtoLabel(path))
                 elif 'tvshows/genres'  in path: paths = Predefined.createTVGenrePlaylist(self.jsonRPC.DBIDtoLabel(path))
-                elif 'movies/genres'   in path: paths = Predefined.createStudioPlaylist(self.jsonRPC.DBIDtoLabel(path))
+                elif 'movies/genres'   in path: paths = Predefined.createMovieGenrePlaylist(self.jsonRPC.DBIDtoLabel(path))
                 elif 'movies/studios'  in path: paths = Predefined.createStudioPlaylist(self.jsonRPC.DBIDtoLabel(path))
             return paths[0] if isinstance(paths,list) and len(paths) > 0 else path
 
@@ -656,7 +656,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
             while not self.monitor.abortRequested() and cnt > 0:
                 try:    file = FileAccess._getShortPath(path)
-                except: file = FileAccess._getFolderPath(path)
+                except Exception: file = FileAccess._getFolderPath(path)
                 if not fileList: return not bool(DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(32030))))
                 else:
                     if __seek(random.choice(fileList), path): return DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'PASSED!'),time=1)
@@ -744,13 +744,14 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getMontiorList')
         try:
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                labels  = sorted(set([cleanLabel(value).title() for info in DIALOG.getInfoMonitor() for key, value in list(info.items()) if value not in ['','..'] and key not in ['path','logo']]))
+                titles  = DIALOG.getInfoMonitor()
+                labels  = sorted(set([cleanLabel(value).title() for info in titles for key, value in list(info.items()) if value not in ['','..'] and key not in ['path','logo']]))
                 itemLST = [self.buildListItem(label,icon=ICON) for label in labels]
                 if len(itemLST) == 0: raise Exception()
                 itemSEL = DIALOG.selectDialog(itemLST,LANGUAGE(32078)%('Name'),useDetails=True,multi=False)
                 if itemSEL is not None: return itemLST[itemSEL]
                 else: raise Exception()
-        except: return xbmcgui.ListItem(LANGUAGE(32079))
+        except Exception: return xbmcgui.ListItem(LANGUAGE(32079))
 
 
     def clearChannel(self, citem, prompt=True, open=False):
@@ -840,7 +841,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         try: 
             if isinstance(cntrl, int):      cntrl = self.getControl(cntrl)
             if hasattr(cntrl, 'isVisible'): state = cntrl.isVisible()
-        except: state = self.cntrlStates.get(cntrl.getId(),False)
+        except Exception: state = self.cntrlStates.get(cntrl.getId(),False)
         self.log('isVisible, cntrl = %s, state = %s'%(cntrl.getId(),state))
         return state
         
@@ -921,7 +922,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                         requestURL('http://%s/%s'%(self.server.get('host'), CHANNELFLE), payload={'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels})
                     else: #local save
                         self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELFLE_CHANGED,silent=True)))
-                        print(channels)
                         if self.channels.setChannels(channels): self.madeChanges = False #save changes
                         self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
                         timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
@@ -939,7 +939,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if controlId in [5,6,7,9000,9001,9002,9003,9004]:
             label, label2 = self.getLabels(controlId)
             try:     snum = int(cleanLabel(label.replace("|",'')))
-            except:  snum = 1
+            except Exception:  snum = 1
             if self.isVisible(self.chanList):
                 cntrl = controlId
                 sitem = (self.chanList.getSelectedItem() or xbmcgui.ListItem())

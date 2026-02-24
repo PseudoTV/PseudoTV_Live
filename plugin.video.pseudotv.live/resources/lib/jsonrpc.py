@@ -77,7 +77,7 @@ class JSONRPC(object):
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, media='video', depth=SETTINGS.getSettingInt('Recursive_Limit'), chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkFileDirectory(self, path, media='video', depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         walk = {}
         self.log('walkFileDirectory, walking %s, depth = %s'%(path,depth))
         items, limits, errors = self.getDirectory({"directory":path,"media":media},True,checksum,expiration)
@@ -93,7 +93,7 @@ class JSONRPC(object):
         return walk
                 
 
-    def walkListDirectory(self, path, exts=[], depth=SETTINGS.getSettingInt('Recursive_Limit'), chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkListDirectory(self, path, exts=[], depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         def _chkfile(path, f):
             if exts and not f.lower().endswith(tuple(exts)): return
             if chkDuration:
@@ -481,7 +481,7 @@ class JSONRPC(object):
                 params = param.get(item.get('type'))
                 self.log('quePlaycount, params = %s'%(params.get('params',{})))
                 if hasattr(self.service,'_que'): self.service._que(self.sendJSON,1,params)
-            except: pass
+            except Exception: pass
 
 
     def requestList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}, query={}):
@@ -572,7 +572,7 @@ class JSONRPC(object):
     def detectRPCCrash(self, citem):
         SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',citem)
         try: yield
-        except:pass
+        except Exception:pass
         finally:
             SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
 
@@ -613,7 +613,7 @@ class JSONRPC(object):
                 if   self.service._interrupt(): break
                 elif self.getDuration(item.get('file'),item) == 0:
                     try: files.pop(files.index(item))
-                    except: break
+                    except Exception: break
                 else: files.append(item)
         self.log("padItems; files Out = %s"%(len(files)))
         return files
@@ -686,9 +686,9 @@ class JSONRPC(object):
             broadcasts = self.getPVRBroadcasts(pvritem.get('channelid',{}))
             [_parseBroadcast(broadcast) for broadcast in broadcasts]
             try:    pvritem['broadcastpast'] = sorted(channelItem.get('broadcastpast',[]), key=itemgetter('starttime'))
-            except: pvritem['broadcastpast'] = channelItem.get('broadcastpast',[])
+            except Exception: pvritem['broadcastpast'] = channelItem.get('broadcastpast',[])
             try:    pvritem['broadcastnext'] = sorted(channelItem.get('broadcastnext',pvritem['broadcastnext']), key=itemgetter('starttime'))
-            except: pvritem['broadcastnext'] = channelItem.get('broadcastnext',pvritem['broadcastnext'])
+            except Exception: pvritem['broadcastnext'] = channelItem.get('broadcastnext',pvritem['broadcastnext'])
             self.log('matchChannel: __extend, broadcastnext = %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
             

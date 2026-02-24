@@ -68,7 +68,6 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
 class Cache(object):
     service = Service()
     monitor = service.monitor
-    cache_lock = Lock()
 
     def __init__(self, mem_cache=False, disable_cache=False):
         self.cache = _Cache(service=self.service)
@@ -85,37 +84,34 @@ class Cache(object):
     def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         # don't store empty values when cache disabled unless explicitly allowed
         if not self.disable_cache or (not isinstance(value,(bool,list,dict)) and not value):
-            with self.cache_lock:
-                self.log('set, name = %s, value = %s' % (name, '%s...'%(str(value)[:128])))
-                self.cache.set(name, value, checksum, expiration)
+            self.log('set, name = %s, value = %s' % (name, '%s...'%(str(value)[:128])))
+            self.cache.set(name, value, checksum, expiration)
         return value
 
 
     def get(self, name, checksum=ADDON_VERSION):
         if not self.disable_cache:
-            with self.cache_lock:
-                try:
-                    value = self.cache.get(name, checksum)
-                    self.log('get, name = %s, value = %s' % (name, '%s...'%(str(value)[:128])))
-                    return value
-                except Exception as e:
-                    self.log("get, name = %s failed! %s" % (name, e), xbmc.LOGERROR)
-                    self.cache.clr(name)
+            try:
+                value = self.cache.get(name, checksum)
+                self.log('get, name = %s, value = %s' % (name, '%s...'%(str(value)[:128])))
+                return value
+            except Exception as e:
+                self.log("get, name = %s failed! %s" % (name, e), xbmc.LOGERROR)
+                self.cache.clr(name)
 
 
-    def clear(self, name, wait=15):
-        with self.cache_lock:
-            self.log('clear, name = %s' % name)
-            self.cache.clear(name)
+    def clr(self, name, wait=15):
+        self.log('clr, name = %s' % name)
+        self.cache.clr(name)
 
 
 class _Cache(object):
+    cache_lock           = Lock()
     enable_mem_cache     = False
     window               = None
     global_checksum      = ADDON_VERSION
     _auto_clean_interval = datetime.timedelta(hours=MAX_GUIDEDAYS)
     _busy_tasks          = []
-    _database            = None
 
     def __init__(self, service=None, winID=10000):
         self.service = service
@@ -126,7 +122,7 @@ class _Cache(object):
 
 
     def __del__(self):
-        del self.window
+        self.chkCleanup()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -138,15 +134,15 @@ class _Cache(object):
         lastexecuted = Globals._getProperty("cache.lastexecuted")
         if not lastexecuted: Globals._setProperty("cache.lastexecuted", repr(cur_time))
         elif (eval(lastexecuted) + self._auto_clean_interval) < cur_time:
-            self._cleanUp()
+            self._cleanUP()
 
 
     def get(self, endpoint, checksum=""):
         checksum = self.getChecksum(checksum)
         cur_time = self.getTimestamp(datetime.datetime.now())
         result   = None
-        if self.enable_mem_cache: result = self._get_mem_cache(endpoint, checksum, cur_time)
-        if result is None:        result = self._get_db_cache(endpoint, checksum, cur_time)
+        if self.enable_mem_cache: result = self._getMEM(endpoint, checksum, cur_time)
+        if result is None:        result = self._getDB(endpoint, checksum, cur_time)
         return result
 
 
@@ -155,8 +151,8 @@ class _Cache(object):
         self._busy_tasks.append(task_name)
         checksum = self.getChecksum(checksum)
         expires  = self.getTimestamp(datetime.datetime.now() + expiration)
-        if self.enable_mem_cache: self._set_mem_cache(endpoint, checksum, expires, data)
-        self._set_db_cache(endpoint, checksum, expires, data)
+        if self.enable_mem_cache: self._setMEM(endpoint, checksum, expires, data)
+        self._setDB(endpoint, checksum, expires, data)
         self._busy_tasks.remove(task_name)
 
 
@@ -174,21 +170,23 @@ class _Cache(object):
                         del connection
 
 
-    def _get_mem_cache(self, endpoint, checksum, cur_time):
-        result    = None
-        cachedata = Globals._decodeString(Globals._getProperty(endpoint))
-        if cachedata:
-            cachedata = literal_eval(cachedata)
+    def _getMEM(self, endpoint, checksum, cur_time):
+        result = None
+        try: 
+            cachedata = pickle.loads(Globals._decodeString(Globals._getProperty(endpoint)))
             if cachedata[0] > cur_time:
                 if not checksum or checksum == cachedata[2]: result = cachedata[1]
+        except Exception as e: self.log("_getMEM, failed! %s"%(e), xbmc.LOGERROR)
         return result
 
 
-    def _set_mem_cache(self, endpoint, checksum, expires, data):
-        Globals._setProperty(endpoint, Globals._encodeString(repr((expires, data, checksum))))
+    def _setMEM(self, endpoint, checksum, expires, data):
+        try: Globals._setProperty(endpoint,  Globals._encodeString(pickle.dumps((expires, data, checksum))))
+        except Exception as e: self.log("_setMEM, failed! %s"%(e), xbmc.LOGERROR)
 
 
-    def _get_db_cache(self, endpoint, checksum, cur_time):
+
+    def _getDB(self, endpoint, checksum, cur_time):
         result     = None
         query      = "SELECT expires, data, checksum FROM cache WHERE id = ?"
         cache_data = self._execute_sql(query, (endpoint,))
@@ -196,21 +194,24 @@ class _Cache(object):
             cache_data = cache_data.fetchone()
             if cache_data and cache_data[0] > cur_time:
                 if not checksum or cache_data[2] == checksum:
-                    result = literal_eval(cache_data[1])
-                    if self.enable_mem_cache: self._set_mem_cache(endpoint, checksum, cache_data[0], result)
+                    try: 
+                        result = pickle.loads(cache_data[1])
+                        if self.enable_mem_cache: self._setMEM(endpoint, checksum, cache_data[0], result)
+                    except Exception as e: self.log("_getDB, failed! %s"%(e), xbmc.LOGERROR)
         return result
 
 
-    def _set_db_cache(self, endpoint, checksum, expires, data):
+    def _setDB(self, endpoint, checksum, expires, data):
         query = "INSERT OR REPLACE INTO cache( id, expires, data, checksum) VALUES (?, ?, ?, ?)"
-        self._execute_sql(query, (endpoint, expires, repr(data), checksum))
+        try: self._execute_sql(query, (endpoint, expires, pickle.dumps(data), checksum))
+        except Exception as e: self.log("_setDB, failed! %s"%(e), xbmc.LOGERROR)
 
 
-    def _cleanUp(self):
+    def _cleanUP(self):
         self._busy_tasks.append(__name__)
         cur_time      = datetime.datetime.now()
         cur_timestamp = self.getTimestamp(cur_time)
-        self.log("_cleanUp, running _cleanUp...")
+        self.log("_cleanUP, running _cleanUP...")
         
         if Globals._getProperty("cache.cleanbusy"): return
         else:
@@ -224,13 +225,13 @@ class _Cache(object):
                 if cache_expires < cur_timestamp:
                     query = 'DELETE FROM cache WHERE id = ?'
                     self._execute_sql(query, (cache_id,))
-                    self.log("_cleanUp, delete from db %s" % cache_id)
+                    self.log("_cleanUP, delete from db %s" % cache_id)
 
             self._execute_sql("VACUUM")
             self._busy_tasks.remove(__name__)
             Globals._setProperty("cache.lastexecuted", repr(cur_time))
             Globals._clrProperty("cache.cleanbusy")
-            self.log("_cleanUp, auto _cleanUp done")
+            self.log("_cleanUP, auto _cleanUP done")
 
 
     def _ensure_db_initialized(self):
@@ -256,41 +257,41 @@ class _Cache(object):
 
 
     def _execute_sql(self, query, data=None):
-        retries = 0
-        result  = None
-        if not FileAccess.exists(CACHE_LOC): FileAccess.mkdirs(CACHE_LOC)
-        try:
-            connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
-            connection.execute('SELECT * FROM cache LIMIT 1')
-        except Exception as e:
-            if FileAccess.exists(self.dbfile): FileAccess.delete(self.dbfile)
+        with self.cache_lock:
+            retries = 0
+            result  = None
+            if not FileAccess.exists(CACHE_LOC): FileAccess.mkdirs(CACHE_LOC)
             try:
                 connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
-                connection.execute( """CREATE TABLE IF NOT EXISTS cache(id TEXT UNIQUE, expires INTEGER, data TEXT, checksum INTEGER)""")
+                connection.execute('SELECT * FROM cache LIMIT 1')
             except Exception as e:
-                self.log("_execute_sql, Failed! while initializing connection: %s" % str(e), xbmc.LOGWARNING)
-                return
-
-        while not self.service.monitor.abortRequested() and not retries == LOCK_MAX_FILE_TIMEOUT:
-            if self.service._shutdown(CPU_CYCLE): break
-            else:
+                if FileAccess.exists(self.dbfile): FileAccess.delete(self.dbfile)
                 try:
-                    if isinstance(data, list): result = connection.executemany(query, data)
-                    elif data:                 result = connection.execute(query, data)
-                    else:                      result = connection.execute(query)
-                    return result
+                    connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
+                    connection.execute( """CREATE TABLE IF NOT EXISTS cache(id TEXT UNIQUE, expires INTEGER, data TEXT, checksum INTEGER)""")
                 except Exception as e:
-                    if "connection is locked" in e:
-                        self.log("_execute_sql, retrying DB commit...")
-                        retries += 1
-                        self.service._sleep(LOCK_MAX_FILE_DELAY)
-                    else: break
-                self.log("_execute_sql, connection ERROR ! -- %s" % str(e), xbmc.LOGWARNING)
-                    
-        if connection:
-            connection.close()
-            del connection
-        return None
+                    self.log("_execute_sql, Failed! while initializing connection: %s" % str(e), xbmc.LOGWARNING)
+                    return
+
+            while not self.service.monitor.abortRequested() and not retries == LOCK_MAX_FILE_TIMEOUT:
+                if self.service._shutdown(CPU_CYCLE): break
+                else:
+                    try:
+                        if isinstance(data, list): result = connection.executemany(query, data)
+                        elif data:                 result = connection.execute(query, data)
+                        else:                      result = connection.execute(query)
+                        return result
+                    except Exception as e:
+                        if "connection is locked" in e:
+                            self.log("_execute_sql, retrying DB commit...")
+                            retries += 1
+                            self.service._sleep(LOCK_MAX_FILE_DELAY)
+                        else: break
+                    self.log("_execute_sql, connection ERROR ! -- %s" % str(e), xbmc.LOGWARNING)
+                        
+            if connection:
+                connection.close()
+                del connection
 
 
     @staticmethod

@@ -43,7 +43,7 @@ class Settings(object):
 
     def getRealSettings(self, id=ADDON_ID):
         try:    return xbmcaddon.Addon(id)
-        except: return REAL_SETTINGS
+        except Exception: return REAL_SETTINGS
 
 
     #GET
@@ -117,7 +117,7 @@ class Settings(object):
         
     #CLR
     def clrCacheSetting(self, key):
-        self.cache.clear(key)
+        self.cache.clr(key)
     
     
     #SET
@@ -196,7 +196,7 @@ class Settings(object):
                 if   url.startswith('special://profile/addon_data/'):      return re.compile('special://profile/addon_data/(.*?)', re.IGNORECASE).search(url).group(1)
                 elif url.startswith('special://home/addons/'):             return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(url).group(1)
                 elif url.startswith(('plugin://','resource://','pvr://')): return re.compile('(.*)://(.*?)/', re.IGNORECASE).search(url).group(2)
-            except: pass
+            except Exception: pass
             return url
             
         if '://' in id: id = __getIDbyPath(id)
@@ -212,7 +212,7 @@ class Settings(object):
                         return
                 self.builtin.executebuiltin('EnableAddon(%s)'%(id),wait=True)
             try:    return xbmcaddon.Addon(id)
-            except: return False
+            except Exception: return False
         elif install:
             if self.builtin.executebuiltin('InstallAddon(%s)'%(id),wait=True):
                 return self.hasAddon(id, False, enable, force, notify)
@@ -224,7 +224,7 @@ class Settings(object):
             addon = xbmcaddon.Addon(id)
             properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
             return dict([(property,addon.getAddonInfo(property)) for property in properties])    
-        except:
+        except Exception:
             from jsonrpc import JSONRPC
             return JSONRPC().getAddonDetails(id)
 
@@ -440,10 +440,10 @@ class Settings(object):
                             
                     match = re.compile(r'<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(txt)
                     try: name = match.group(1)
-                    except:
+                    except Exception:
                         match = re.compile(r'<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(txt)
                         try:    name = match.group(1)
-                        except: name = None
+                        except Exception: name = None
                         
                     if instance.lower() == str(name).lower():
                         if not found: found = os.path.join(PVR_CLIENT_LOC,file)
@@ -467,12 +467,12 @@ class Settings(object):
                 try: 
                     instanceConf[match.group(1)] = match.group(3)
                     self.log('[%s] getPVRInstanceSettings, setting = %s, value = %s'%(PVR_CLIENT_ID,match.group(1),match.group(3)))
-                except:
+                except Exception:
                     match = re.compile(r'<setting id=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
                     try:
                         instanceConf[match.group(1)] = match.group(2)
                         self.log('[%s] getPVRInstanceSettings, setting = %s, value = %s'%(PVR_CLIENT_ID,match.group(1),match.group(2)))
-                    except: pass
+                    except Exception: pass
             fle.close()
         return instanceConf
         
@@ -1128,7 +1128,7 @@ class Builtin(object):
                 if self.busy is None:
                     from overlay import Busy 
                     try:     self.busy = Busy(BUSY_XML, ADDON_PATH, "default", lock=lock)
-                    except:  self.busy = None
+                    except Exception:  self.busy = None
                     finally: self.busy.show()
                 yield
             finally:
@@ -1139,7 +1139,7 @@ class Builtin(object):
 
     def getIdle(self):
         try:    return int(xbmc.getGlobalIdleTime() or '0')
-        except: return 0
+        except Exception: return 0
             
 
     def getInfoLabel(self, key, param='ListItem', default=''):
@@ -1210,23 +1210,25 @@ class Dialog(object):
         log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def toggleInfoMonitor(self, state, wait=0.5):
+    def toggleInfoMonitor(self, state=False, wait=0.5):
         self.log('toggleInfoMonitor, state = %s'%(state))
-        self.properties.setPropertyBool('chkInfoMonitor',state)
-        if state:
-            self.properties.clrProperty('monitor.montiorList')
-            timerit(self.doInfoMonitor)(0.0001)
-
+        self.properties.setRunning('Kodi.toggleInfoMonitor',state)
+        if state: timerit(self.doInfoMonitor)(wait)
+            
 
     def doInfoMonitor(self):
-        while not self.monitor.abortRequested():
-            if not self.fillInfoMonitor(): break
-            elif self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')/1000)): break
-            
+        if not self.properties.isRunning('Kodi.doInfoMonitor'):
+            with self.properties.chkRunning('Kodi.doInfoMonitor'):
+                self.properties.clrProperty('Kodi.montiorList')
+                while not self.monitor.abortRequested():
+                    if not self.fillInfoMonitor(): break
+                    elif self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')/1000)): break
+                    
 
     def fillInfoMonitor(self, type='ListItem'):
         #todo catch full listitem not singular properties.
         try:
+            if not self.properties.isRunning('Kodi.toggleInfoMonitor'): return False
             item = {'label'       :self.builtin.getInfoLabel('Label'       ,type),
                     'label2'      :self.builtin.getInfoLabel('Label2'      ,type),
                     'set'         :self.builtin.getInfoLabel('Set'         ,type),
@@ -1256,11 +1258,11 @@ class Dialog(object):
 
 
     def getInfoMonitor(self):
-        return self.properties.getPropertyDict('monitor.montiorList').get('info',[])
+        return self.properties.getPropertyDict('Kodi.montiorList').get('info',[])
     
     
     def setInfoMonitor(self, items):
-        return self.properties.setPropertyDict('monitor.montiorList',{'info':list(Globals._setDictLST(items))})
+        return self.properties.setPropertyDict('Kodi.montiorList',{'info':list(Globals._setDictLST(items))})
 
 
     def colorDialog(self, colorlist=[], preselect="", colorfile="", heading=ADDON_NAME):
@@ -1309,7 +1311,7 @@ class Dialog(object):
                 if self.acThread.is_alive():
                     if hasattr(self.acThread, 'cancel'): self.acThread.cancel()
                     try: self.acThread.join()
-                    except: pass
+                    except Exception: pass
                 self.close()
 
         if not self.properties.isRunning('Dialog.qrDialog'):
@@ -1355,7 +1357,7 @@ class Dialog(object):
                     self.textbox.setText(txt)
                     self.builtin.executebuiltin('SetFocus(3000)')
                     self.builtin.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
-                except: pass
+                except Exception: pass
                 
         return TEXTVIEW("DialogTextViewer.xml", os.getcwd(), "Default")
 
@@ -1431,7 +1433,7 @@ class Dialog(object):
                     match   = re.compile(r'(.*?): (.*?)\%', re.IGNORECASE).search(message)
                     message = '%s: %s'%(header.replace('%s, '%(ADDON_NAME),''),match.group(1))
                     percent = int(match.group(2))
-                except: pass
+                except Exception: pass
                 self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
                 dlg.update(percent, message)
         return dlg
@@ -1476,7 +1478,7 @@ class Dialog(object):
             ## - xbmcgui.NOTIFICATION_ERROR
             if show:
                 try:    self.dialog.notification(header, message, icon, time*1000, sound=False)
-                except: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time*1000, icon))
+                except Exception: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time*1000, icon))
             return True
         
              
@@ -1580,7 +1582,7 @@ class Dialog(object):
             return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=Globals._getAbbr(option['label'])))
 
         with self.builtin.busy_dialog():
-            optlabel = "%s"%({'0':'Folders [Recursive]','1':'Files'}[str(type)]) if multi else "%s"%({'0':'Folder [Recursive]','1':'File'}[str(type)])
+            optlabel = "%s"%({'0':'Folders','1':'Files'}[str(type)]) if multi else "%s"%({'0':'Folder','1':'File'}[str(type)])
             opts = [{"idx":10, "label":'%s %s'%(LANGUAGE(32196),optlabel) , "label2":"library://video/"                      , "default":"library://video/"                   , "shares":"video"   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":multi},
                     {"idx":11, "label":'%s %s'%(LANGUAGE(32207),optlabel) , "label2":"library://music/"                      , "default":"library://music/"                   , "shares":"music"   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":multi},
                     {"idx":12, "label":LANGUAGE(32191)                    , "label2":"special://profile/playlists/video/"    , "default":"special://profile/playlists/video/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
@@ -1623,10 +1625,10 @@ class Dialog(object):
         self.log('browseDialog, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask))
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#gafa1e339e5a98ae4ea4e3d3bb3e1d028c
-        if monitor: self.toggleInfoMonitor(True)
+        self.toggleInfoMonitor(monitor)
         if multi == True and type > 0:  retval = self.dialog.browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
         else:                           retval = self.dialog.browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
-        if monitor: self.toggleInfoMonitor(False)
+        self.toggleInfoMonitor(False)
         if not retval is None and retval != default:
             return retval
         
@@ -1653,7 +1655,7 @@ class Dialog(object):
             if not select is None:
                 key, path = lizLST[select].getProperty('key'), lizLST[select].getPath()
                 try:    lastOPT = int(lizLST[select].getProperty('idx'))
-                except: lastOPT = -1
+                except Exception: lastOPT = -1
                 if key == 'add': 
                     with self.builtin.busy_dialog():
                         npath = self.browseSources(heading=LANGUAGE(32080), exclude=exclude, monitor=monitor)
@@ -1785,7 +1787,7 @@ class Dialog(object):
         try:
             path, params = path.split('?xsp=')
             params = FileAccess.loadJSON(params)
-        except:
+        except Exception:
             path, params = __mtype()
         self.log('buildDXSP, path = %s, params = %s'%(path,params))
         

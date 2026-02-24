@@ -70,7 +70,7 @@ class Create(object):
 if __name__ == '__main__': 
     log('Create: __main__, param = %s'%(sys.argv))
     try:    mode = sys.argv[1]
-    except: mode = ''
+    except Exception: mode = ''
     if   mode == 'manager': 
         with BUILTIN.busy_dialog():
             Create().open()

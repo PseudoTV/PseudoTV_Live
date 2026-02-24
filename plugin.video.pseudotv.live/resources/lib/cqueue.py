@@ -33,7 +33,7 @@ class LlNode(object):
 class CustomQueue(object):
     futures = set() #todo refactor heap to workaround pickle callable
     try:    min_heap = list(pickle.loads((SETTINGS.getCacheSetting('min_heap', revive=False) or b'')))
-    except: min_heap = []
+    except Exception: min_heap = []
    
     def __init__(self, fifo: bool=False, lifo: bool=False, priority: bool=False, delay: bool=False, timer: bool=False, service=None):
         self.service     = service
@@ -82,7 +82,7 @@ class CustomQueue(object):
                 try:
                     self.wrkThread.join(0.1)  
                     self.log('_run, joining existing wrkThread')                          
-                except: pass
+                except Exception: pass
             elif not self.service._interrupt() and not self.service._suspend():
                 self.wrkThread = Thread(target=self._worker)
                 self.wrkThread.daemon = True
@@ -92,7 +92,7 @@ class CustomQueue(object):
             try:
                 self.popThread.join(0.1)  
                 self.log('_run, joining existing popThread')                          
-            except: pass
+            except Exception: pass
         elif not self.service._interrupt() and not self.service._suspend():
             self.popThread = Thread(target=self._start)
             self.popThread.daemon = True
@@ -135,7 +135,7 @@ class CustomQueue(object):
                             self.min_heap.pop(idx)
                             heapq.heapify(self.min_heap)  # Ensure heap property is maintained
                             self.log("_exists, replacing queue: func = %s, priority %s => %s"%(epackage[0].__name__,epriority,priority))
-                        except: self.log("_exists, replacing queue: func = %s, idx = %s failed!"%(epackage[0].__name__,idx))
+                        except Exception: self.log("_exists, replacing queue: func = %s, idx = %s failed!"%(epackage[0].__name__,idx))
                     else: return True
         elif timer:
             for idx, func in enumerate(self.nodes):

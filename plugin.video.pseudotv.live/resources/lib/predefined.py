@@ -63,7 +63,7 @@ class Predefined(object):
             match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(show)
             year, title = int(match.group(2)), match.group(1)
             param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":"is","value":[year]},{"field":"tvshow","operator":"is","value":[Globals._quoteString(title)]}])
-        except:
+        except Exception:
             param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":"is","value":[Globals._quoteString(show)]})
         return ['videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(param))]
 

@@ -203,7 +203,7 @@ class FileAccess(object):
         if os.name.lower() == 'nt':
             newname = '\\\\' + filename[6:]
             try:    fle = codecs.open(newname, mode, encoding)
-            except: fle = 0
+            except Exception: fle = 0
         return fle
 
 
@@ -272,12 +272,12 @@ class FileAccess(object):
             success = xbmcvfs.rmdir(dir, force=force)
             if success: return True
             else: raise
-        except: 
+        except Exception: 
             try: 
                 os.rmdir(xbmcvfs.translatePath(path))
                 if os.path.exists(xbmcvfs.translatePath(path)):
                     return True
-            except: log("FileAccess: removedirs failed!", xbmc.LOGERROR)
+            except Exception: log("FileAccess: removedirs failed!", xbmc.LOGERROR)
             return False
             
             
@@ -286,7 +286,7 @@ class FileAccess(object):
         try:  
             os.makedirs(xbmcvfs.translatePath(directory))
             return os.path.exists(xbmcvfs.translatePath(directory))
-        except:
+        except Exception:
             return FileAccess._makedirs(directory)
             
             
@@ -324,7 +324,7 @@ class VFSFile(object):
 
     def read(self, bytes=0):
         try:    return self.currentFile.read(bytes)
-        except: return self.currentFile.readBytes(bytes)
+        except Exception: return self.currentFile.readBytes(bytes)
         
         
     def readBytes(self, bytes=0):
@@ -351,12 +351,12 @@ class VFSFile(object):
 
     def tell(self):
         try:    return self.currentFile.tell()
-        except: return self.currentFile.seek(0, 1)
+        except Exception: return self.currentFile.seek(0, 1)
         
 
     def readlines(self):
         try:    return ''.join(list(self.readline())).split('\n')
-        except: return self.read().split('\n')
+        except Exception: return self.read().split('\n')
 
 
     def readline(self):
