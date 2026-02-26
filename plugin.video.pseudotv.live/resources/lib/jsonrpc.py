@@ -402,13 +402,16 @@ class JSONRPC(object):
 
 
     def DBIDtoLabel(self, path):
-        match = re.search(r"(.*?)(\d+)/?$", path)
+        self.log('DBIDtoLabel, IN = %s'%(path))
+        match = re.search(r"(.*?)/(\d+)/", path)
         if match:
             items = self.getDirectory({"directory":match.group(1),"media":"video"})[0]
             for item in items:
                 if int(match.group(2)) == item.get('id'):
                     self.log('DBIDtoLabel, path = %s, id = %s, label = %s'%(match.group(1),match.group(2),item['label']))
-                    return item['label']
+                    path = item['label']
+                    break
+        self.log('DBIDtoLabel, OUT = %s'%(path))
         return path
         
         

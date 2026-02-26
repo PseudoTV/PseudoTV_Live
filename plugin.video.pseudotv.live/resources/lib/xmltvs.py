@@ -51,38 +51,39 @@ class XMLTVS(object):
 
 
     def _save(self, reset: bool=True) -> bool:
-        if reset: data = self.resetData()
-        else:     data = self.XMLTVDATA['data']
-            
-        self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
-        self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'], opt='PROGRAMMES')
-        self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'], opt='RECORDINGS')
-        self.log('_save, writable = %s, file = %s, reset = %s\nchannels = %s, programmes = %s, recordings = %s'%(self.writable,self.XMLTVFile,reset,len(self.XMLTVDATA['channels']),len(self.XMLTVDATA['programmes']),len(self.XMLTVDATA['recordings'])))
-        
-        if self.writable:
-            writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
-                                  date                = data['date'],
-                                  source_info_url     = self.cleanString(data['source-info-url']), 
-                                  source_info_name    = self.cleanString(data['source-info-name']),
-                                  generator_info_url  = self.cleanString(data['generator-info-url']), 
-                                  generator_info_name = self.cleanString(data['generator-info-name']))
-
-            for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
-                writer.addChannel(channel)
+        with PROPERTIES.interruptActivity():
+            if reset: data = self.resetData()
+            else:     data = self.XMLTVDATA['data']
                 
-            for program in self.XMLTVDATA['programmes']:
-                writer.addProgramme(program)
+            self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
+            self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'], opt='PROGRAMMES')
+            self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'], opt='RECORDINGS')
+            self.log('_save, writable = %s, file = %s, reset = %s\nchannels = %s, programmes = %s, recordings = %s'%(self.writable,self.XMLTVFile,reset,len(self.XMLTVDATA['channels']),len(self.XMLTVDATA['programmes']),len(self.XMLTVDATA['recordings'])))
             
-            try:
-                with FileLock(self.XMLTVFile):
-                    fle = FileAccess.open(self.XMLTVFile, "w")
-                    writer.write(fle, pretty_print=True)
-                    fle.close()
-            except Exception as e:
-                self.log("_save, failed!", xbmc.LOGERROR)
-                DIALOG.notificationDialog(LANGUAGE(32000))
-            self.buildGenres()
-            return True
+            if self.writable:
+                writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
+                                      date                = data['date'],
+                                      source_info_url     = self.cleanString(data['source-info-url']), 
+                                      source_info_name    = self.cleanString(data['source-info-name']),
+                                      generator_info_url  = self.cleanString(data['generator-info-url']), 
+                                      generator_info_name = self.cleanString(data['generator-info-name']))
+
+                for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
+                    writer.addChannel(channel)
+                    
+                for program in self.XMLTVDATA['programmes']:
+                    writer.addProgramme(program)
+                
+                try:
+                    with FileLock(self.XMLTVFile):
+                        fle = FileAccess.open(self.XMLTVFile, "w")
+                        writer.write(fle, pretty_print=True)
+                        fle.close()
+                except Exception as e:
+                    self.log("_save, failed!", xbmc.LOGERROR)
+                    DIALOG.notificationDialog(LANGUAGE(32000))
+                self.buildGenres()
+                return True
         
         
     def _reload(self) -> bool:

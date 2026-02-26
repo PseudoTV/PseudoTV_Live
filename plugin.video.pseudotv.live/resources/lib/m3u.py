@@ -195,47 +195,48 @@ class M3U(object):
         
         
     def _save(self):
-        self.M3UDATA['data']       = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE))
-        self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
-        self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]), key='name')
-        self.log('_save, writable = %s, file = %s\nstations = %s recordings = %s'%(self.writable,self.stationFile,len(self.M3UDATA['stations']),len(self.M3UDATA['recordings'])))
-        if self.writable:
-            with FileLock(self.stationFile):
-                fle = FileAccess.open(self.stationFile, 'w')
-                fle.write('%s\n'%(self.M3UDATA['data']))
-                
-                opts = list(self.getMitem().keys())
-                line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
-                for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
-                    optional  = ''
-                    xplaylist = ''
-                    kodiprops = {}
-                    extvlcopt = {}
-                        
-                    # write optional m3u parameters.
-                    if 'kodiprops'       in station: kodiprops = station.pop('kodiprops')
-                    if 'extvlcopt'       in station: extvlcopt = station.pop('extvlcopt')
-                    if 'x-playlist-type' in station: xplaylist = station.pop('x-playlist-type')
-                    for key, value in list(station.items()):
-                        if key in opts and str(value):
-                            optional += '%s="%s" '%(key,value)
+        with PROPERTIES.interruptActivity():
+            self.M3UDATA['data']       = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE))
+            self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
+            self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]), key='name')
+            self.log('_save, writable = %s, file = %s\nstations = %s recordings = %s'%(self.writable,self.stationFile,len(self.M3UDATA['stations']),len(self.M3UDATA['recordings'])))
+            if self.writable:
+                with FileLock(self.stationFile):
+                    fle = FileAccess.open(self.stationFile, 'w')
+                    fle.write('%s\n'%(self.M3UDATA['data']))
+                    
+                    opts = list(self.getMitem().keys())
+                    line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+                    for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
+                        optional  = ''
+                        xplaylist = ''
+                        kodiprops = {}
+                        extvlcopt = {}
+                            
+                        # write optional m3u parameters.
+                        if 'kodiprops'       in station: kodiprops = station.pop('kodiprops')
+                        if 'extvlcopt'       in station: extvlcopt = station.pop('extvlcopt')
+                        if 'x-playlist-type' in station: xplaylist = station.pop('x-playlist-type')
+                        for key, value in list(station.items()):
+                            if key in opts and str(value):
+                                optional += '%s="%s" '%(key,value)
 
-                    fle.write(line%(station['number'],
-                                    station['id'],
-                                    station['name'],
-                                    station['logo'],
-                                    ';'.join(station['group']),
-                                    station['radio'],
-                                    station['catchup'],
-                                    optional,
-                                    station['label']))
-                           
-                    if kodiprops:  fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop)  for prop in kodiprops])))
-                    if extvlcopt:  fle.write('%s\n'%('\n'.join(['#EXTVLCOPT:%s'%(prop) for prop in extvlcopt])))
-                    if xplaylist:  fle.write('%s\n'%('#EXT-X-PLAYLIST-TYPE:%s'%(xplaylist)))
-                    fle.write('%s\n'%(station['url']))
-                fle.close()
-            return True
+                        fle.write(line%(station['number'],
+                                        station['id'],
+                                        station['name'],
+                                        station['logo'],
+                                        ';'.join(station['group']),
+                                        station['radio'],
+                                        station['catchup'],
+                                        optional,
+                                        station['label']))
+                               
+                        if kodiprops:  fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop)  for prop in kodiprops])))
+                        if extvlcopt:  fle.write('%s\n'%('\n'.join(['#EXTVLCOPT:%s'%(prop) for prop in extvlcopt])))
+                        if xplaylist:  fle.write('%s\n'%('#EXT-X-PLAYLIST-TYPE:%s'%(xplaylist)))
+                        fle.write('%s\n'%(station['url']))
+                    fle.close()
+                return True
         
         
     def _reload(self):

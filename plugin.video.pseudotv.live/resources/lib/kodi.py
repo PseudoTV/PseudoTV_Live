@@ -699,12 +699,14 @@ class Properties(object):
 
     @contextmanager
     def chkRunning(self, key):
-        if not self.isRunning(key):
-            self.setRunning(key,True)
-            try: yield True
-            finally: self.setRunning(key,False)
-        else: yield False
-        
+        try:
+            if not self.isRunning(key):
+                self.setRunning(key,True)
+                try: yield True
+                finally: self.setRunning(key,False)
+            else: return
+        except Exception: yield
+            
         
     def setTrakt(self, state=False):
         self.log('setTrakt, disable trakt = %s'%(state))
@@ -799,12 +801,14 @@ class Properties(object):
 
     @contextmanager
     def lockActivity(self, state=True):
-        if not self.isLockActivity():
-            self.setLockActivity(True)
-            try: yield
-            finally: self.setLockActivity(False)
-        else: yield
-
+        try:
+            if not self.isLockActivity():
+                self.setLockActivity(True)
+                try: yield
+                finally: self.setLockActivity(False)
+            else: return
+        except Exception: yield
+            
 
     def setLockActivity(self, state=True): # context state
         return self.setEXTPropertyBool('%s.lockActivity'%(ADDON_ID),state)
@@ -816,11 +820,11 @@ class Properties(object):
 
     @contextmanager
     def interruptActivity(self): #quit background task
-        if not self.isInterruptActivity() and not self.isLockActivity():
-            self.setInterruptActivity(True)
-            try: yield
-            finally: self.setInterruptActivity(False)
-        else: yield
+        while not self.monitor.abortRequested() and (self.isInterruptActivity() or self.isLockActivity()):
+            if self.monitor.waitForAbort(CPU_CYCLE): break
+        self.setInterruptActivity(True)
+        try: yield
+        finally: self.setInterruptActivity(False)
         
            
     def setInterruptActivity(self, state=True): # context state
@@ -841,11 +845,11 @@ class Properties(object):
         
     @contextmanager
     def suspendActivity(self): #pause background task.
-        if not self.isSuspendActivity() and not self.isLockActivity():
-            self.setSuspendActivity(True)
-            try: yield
-            finally: self.setSuspendActivity(False)
-        else: yield
+        while not self.monitor.abortRequested() and (self.isSuspendActivity() or self.isLockActivity()):
+            if self.monitor.waitForAbort(CPU_CYCLE): break
+        self.setSuspendActivity(True)
+        try: yield
+        finally: self.setSuspendActivity(False)
 
 
     def setSuspendActivity(self, state=True): # context state
@@ -864,30 +868,31 @@ class Properties(object):
         return self.getEXTPropertyBool('%s.pendingSuspend'%(ADDON_ID))
 
 
-    def recessActivity(self, msg, func, *args, **kwargs):
+    def preemptActivity(self, msg, func, *args, **kwargs):
+        results      = None
         orgSuspend   = self.isSuspendActivity()
         orgInterrupt = self.isInterruptActivity()
         while not self.monitor.abortRequested():
             isSuspend   = self.isSuspendActivity()
             isInterrupt = self.isInterruptActivity()
             isBuilding  = self.isRunning('Builder.buildChannels')
-            if msg: Dialog().notificationDialog(msg)
-            self.log('recessActivity, isInterrupt = %s, isSuspend = %s, isBuilding = %s'%(isInterrupt,isSuspend,isBuilding))
-            if not isInterrupt and (isSuspend or isBuilding):
-                if isSuspend:  self.setSuspendActivity(False)
-                if isBuilding: self.setInterruptActivity(True)
-            elif isInterrupt: self.setInterruptActivity(False)
+            
+            Dialog().notificationDialog(msg)
+            self.log('preemptActivity, isInterrupt = %s, isSuspend = %s, isBuilding = %s'%(isInterrupt,isSuspend,isBuilding))
+            if not isInterrupt and (isSuspend or isBuilding):  #force interrupt.
+                if isSuspend:  self.setSuspendActivity(False)  #release suspension 
+                if isBuilding: self.setInterruptActivity(True) #interrupt building.
+            elif isInterrupt:  self.setInterruptActivity(False)#release interrupt.
             elif not isInterrupt and not any(set([isSuspend, isBuilding])):
                 with self.lockActivity():
-                    try: 
-                        results = func(*args, **kwargs)
-                        self.setSuspendActivity(orgSuspend)
-                        self.setInterruptActivity(orgInterrupt)
-                        return results
-                    except Exception as e: 
-                        self.log("recessActivity, failed! %s"%(e), xbmc.LOGERROR)
-                        return
-            if self.monitor.waitForAbort(SUSPEND_INTERVAL): return
+                    try:   results = func(*args, **kwargs)
+                    except Exception as e: self.log("preemptActivity, failed! %s"%(e), xbmc.LOGERROR)
+                    finally: break
+            if self.monitor.waitForAbort(SUSPEND_INTERVAL): break
+        
+        self.setSuspendActivity(orgSuspend)
+        self.setInterruptActivity(orgInterrupt)
+        return results
 
 
     @contextmanager
@@ -896,7 +901,6 @@ class Properties(object):
             self.setEXTPropertyBool('PseudoTVRunning',True)
             try: yield
             finally: self.setEXTPropertyBool('PseudoTVRunning',False)
-        else: yield
 
 
     def isPseudoTVRunning(self):
@@ -1213,22 +1217,18 @@ class Dialog(object):
     def toggleInfoMonitor(self, state=False, wait=0.5):
         self.log('toggleInfoMonitor, state = %s'%(state))
         self.properties.setRunning('Kodi.toggleInfoMonitor',state)
-        if state: timerit(self.doInfoMonitor)(wait)
+        if state: timerit(self.doInfoMonitor)(0.1)
             
 
     def doInfoMonitor(self):
-        if not self.properties.isRunning('Kodi.doInfoMonitor'):
-            with self.properties.chkRunning('Kodi.doInfoMonitor'):
-                self.properties.clrProperty('Kodi.montiorList')
-                while not self.monitor.abortRequested():
-                    if not self.fillInfoMonitor(): break
-                    elif self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')/1000)): break
+        self.properties.clrProperty('Kodi.montiorList')
+        while not self.monitor.abortRequested() and self.properties.isRunning('Kodi.toggleInfoMonitor'):
+            if self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')/1000)): break
+            self.fillInfoMonitor()
                     
 
     def fillInfoMonitor(self, type='ListItem'):
-        #todo catch full listitem not singular properties.
         try:
-            if not self.properties.isRunning('Kodi.toggleInfoMonitor'): return False
             item = {'label'       :self.builtin.getInfoLabel('Label'       ,type),
                     'label2'      :self.builtin.getInfoLabel('Label2'      ,type),
                     'set'         :self.builtin.getInfoLabel('Set'         ,type),
@@ -1251,10 +1251,7 @@ class Dialog(object):
                 montiorList = self.getInfoMonitor()
                 if item.get('label') not in montiorList: montiorList.insert(0,item)
                 self.setInfoMonitor(montiorList)
-            return self.properties.getPropertyBool('chkInfoMonitor')
-        except Exception as e:
-            self.log("fillInfoMonitor, failed! %s"%(e), xbmc.LOGERROR)
-            return False
+        except Exception as e: self.log("fillInfoMonitor, failed! %s"%(e), xbmc.LOGERROR)
 
 
     def getInfoMonitor(self):

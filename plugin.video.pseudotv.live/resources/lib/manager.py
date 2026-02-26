@@ -50,7 +50,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     lastActionTime = time.time()
     
     def __init__(self, *args, **kwargs):
-        self.log('__init__, running = %s'%(PROPERTIES.isRunning('Manager.__init__')))
+        self.log('__init__, running = %s'%(PROPERTIES.isRunning('Manager')))
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)    
 
         def __findAvailChannel(start):
@@ -114,8 +114,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.newChannels = self.channelList.copy()
                 if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
                 self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
-                if kwargs.get('start',True) and not PROPERTIES.isRunning('Manager.__init__'):
-                    with PROPERTIES.chkRunning('Manager.__init__'), PROPERTIES.interruptActivity():
+                if kwargs.get('start',True) and not PROPERTIES.isRunning('Manager'):
+                    with PROPERTIES.chkRunning('Manager'):
                         self.doModal()
         except Exception as e: 
             self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
@@ -610,30 +610,29 @@ class Manager(xbmcgui.WindowXMLDialog):
             citem = self.setName(path, citem)
             return path, self.setLogo(citem.get('name'),citem)
             
-        def __seek(item, path, passed=False):
+        def __seek(item, path, passed=False, wait=FIFTEEN):
             player = PLAYER()
-            if player.isPlaying(): DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(30136)),time=1)
+            if player.isPlaying(): DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(30136)}')
             else:
                 # todo test seek for support disable via adv. rule if fails.
                 # todo set seeklock rule if seek == False
-                wait     = FIFTEEN
                 duration = item.get('duration',item.get('realtime',0))
                 resume   = abs(int(duration/8))
                 liz = xbmcgui.ListItem('Seek Test', path=item.get('file'))
                 liz.setProperty('startoffset', str(resume))
                 infoTag = ListItemInfoTag(liz, 'video')
                 infoTag.set_resume_point({'ResumeTime':resume,'TotalTime':int(duration*60)})
-                
                 player.play(item.get('file'),liz)
+                
                 while not self.monitor.abortRequested() and not player.isPlaying():
-                    DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,'Waiting for Playback (%s)'%(wait)),time=1)
                     if self.monitor.waitForAbort(1.0) or wait < 1: break
                     else: wait -= 1
                     
                 if player.isPlaying() and not  self.monitor.waitForAbort(1.0):
+                    DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\nPlayback: [B]PASSED![/B]',time=2)
                     self.log('validatePaths, _seek: playing %s seeking to %s'%(item.get('file'),resume))
                     if ((int(player.getTime()) > resume) or BUILTIN.getInfoBool('SeekEnabled','Player')):
-                        DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'PASSED!'),time=1)
+                        DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\nSeeking: [B]PASSED![/B]',time=2)
                         passed = True
                     player.stop()
                     
@@ -644,27 +643,24 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __vfs(path, citem, cnt=3):
             def __fileList(citem, fileList=[]):
                 citem['id'] = getChannelID(citem['name'], citem['path'], random.random())
-                return PROPERTIES.recessActivity('%s Path: %s\n%s'%(LANGUAGE(32098), citem['name'],LANGUAGE(32140)), Builder().buildVideo, *(citem,True))
+                return PROPERTIES.preemptActivity(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}', Builder().buildVideo, *(citem,True))
 
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                if    isRadio({'path':[path]}): return True
-                else: DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(32140)))
+                if isRadio({'path':[path]}): return True
+                DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}')
                 tmpcitem = citem.copy()
                 tmpcitem.update({'name':path,'path':[path]})
                 fileList = __fileList(tmpcitem)
-                self.log('validatePaths, __vfs: path = %s fileList = %s'%(path,len(fileList)))
-            
-            while not self.monitor.abortRequested() and cnt > 0:
-                try:    file = FileAccess._getShortPath(path)
-                except Exception: file = FileAccess._getFolderPath(path)
-                if not fileList: return not bool(DIALOG.notificationDialog('%s Path: %s\n%s'%(LANGUAGE(32098),path,LANGUAGE(32030))))
-                else:
-                    if __seek(random.choice(fileList), path): return DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'PASSED!'),time=1)
-                    else:
-                        retval = DIALOG.yesnoDialog(LANGUAGE(30202),customlabel='Try Again (%s)'%(cnt))
-                        if   retval == 1: return DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'FORCED!'),time=1)
-                        elif retval == 2: cnt -=1
-                        else: return not bool(DIALOG.notificationDialog('%s Path: %s\n[B]%s[/B]'%(LANGUAGE(32098),path,'FAILED!'),time=1))
+                if fileList:
+                    DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\nMedia Found!',time=2)
+                    self.log('validatePaths, __vfs: path = %s fileList = %s'%(path,len(fileList)))
+                    while not self.monitor.abortRequested() and cnt > 0:
+                        if __seek(random.choice(fileList), path): return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]PASSED![/B]')
+                        else:
+                            retval = DIALOG.yesnoDialog(LANGUAGE(30202),customlabel='Try Again (%s)'%(cnt))
+                            if   retval == 1: return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]OVERRIDE![/B]')
+                            elif retval == 2: cnt -=1
+                return not bool(DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]FAILED![/B]'))
         if path: 
             path = __convert(path)
             if __vfs(path, citem): return __set(path, citem)
@@ -713,7 +709,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
             
         def __buildPreview(citem={}, msg=''):
-            return PROPERTIES.recessActivity(msg, Builder().buildChannels, *([citem],getUTCstamp(),True))
+            return PROPERTIES.preemptActivity(msg, Builder().buildChannels, *([citem],getUTCstamp(),True))
 
         def __fileList(citem):
             fileList = []
@@ -925,7 +921,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         if self.channels.setChannels(channels): self.madeChanges = False #save changes
                         self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
                         timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
-            else: self.madeChanges = False
+        else: self.madeChanges = False
         self.closeManager()
             
 

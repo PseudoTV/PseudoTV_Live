@@ -30,7 +30,7 @@ class Create(object):
     def open(self):
         log('Create: open')
         if not PROPERTIES.isRunning('Create.open') and not PROPERTIES.isRunning('Library.updateLibrary'):
-            with BUILTIN.busy_dialog(), PROPERTIES.chkRunning('Create.open'), PROPERTIES.interruptActivity():
+            with BUILTIN.busy_dialog(), PROPERTIES.chkRunning('Create.open'):
                 try: manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=self.fitem.get('citem',{}).get('number',1))
                 except Exception as e:
                     log("Create: open, failed! %s"%(e), xbmc.LOGERROR)

@@ -24,7 +24,7 @@ from infotagger.listitem import ListItemInfoTag
 
 class Plugin(object):
     def __init__(self, sysARG=sys.argv, sysInfo={}):
-        with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+        with BUILTIN.busy_dialog():
             self.sysARG  = sysARG
             self.sysInfo = sysInfo
             self.jsonRPC = JSONRPC()

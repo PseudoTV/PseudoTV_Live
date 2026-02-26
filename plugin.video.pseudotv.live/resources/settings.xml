@@ -1149,7 +1149,7 @@
                 </setting>
                 <setting id="Enable_PVR_RELOAD" type="boolean" label="30155" help="33155">
                     <level>3</level>
-                    <default>true</default>
+                    <default>false</default>
                     <control type="toggle"/>
                     <dependencies>
                         <dependency type="enable">
@@ -1184,11 +1184,11 @@
                 </setting>
                 <setting id="RPC_Delay" type="integer" label="30110" help="33109">
                     <level>3</level>
-                    <default>1</default>
+                    <default>2</default>
                     <constraints>
                         <minimum>1</minimum>
-                        <step>10</step>
-                        <maximum>2000</maximum>
+                        <step>1</step>
+                        <maximum>15</maximum>
                     </constraints>
                     <control type="slider" format="integer">
                         <popup>false</popup>

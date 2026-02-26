@@ -65,10 +65,11 @@ class Channels(object):
                 
                 
     def _save(self) -> bool:
-        self.channelDATA['uuid']     = SETTINGS.getMYUUID()
-        self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
-        self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
-        if self.writable: return FileAccess.setJSON(self.channelFile,self.channelDATA)
+        with PROPERTIES.interruptActivity():
+                self.channelDATA['uuid']     = SETTINGS.getMYUUID()
+                self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
+                self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
+                if self.writable: return FileAccess.setJSON(self.channelFile,self.channelDATA)
         
         
     def getTemplate(self) -> dict: 

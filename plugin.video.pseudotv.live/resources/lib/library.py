@@ -85,8 +85,9 @@ class Library(object):
     
     
     def _save(self, file=LIBRARYFLEPATH):
-        self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
-        return FileAccess.setJSON(file, self.libraryDATA)
+        with PROPERTIES.interruptActivity():
+            self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
+            return FileAccess.setJSON(file, self.libraryDATA)
         
   
     def getLibrary(self, type=None):
