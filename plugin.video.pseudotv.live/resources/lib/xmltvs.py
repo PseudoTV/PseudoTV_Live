@@ -27,15 +27,15 @@ from fileaccess  import FileAccess, FileLock
 
 class XMLTVS(object):
     def __init__(self, file=XMLTVFLEPATH, writable=False):
-        self.writable = writable
+        self.writable  = writable
         self.XMLTVFile = file
         self.XMLTVDATA = self._load()
         self.stopTimes = dict(self.loadStopTimes())
-        
-        
+
+
     def __del__(self):
         self._save()
-        
+
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -73,23 +73,22 @@ class XMLTVS(object):
                     
                 for program in self.XMLTVDATA['programmes']:
                     writer.addProgramme(program)
-                
                 try:
                     with FileLock(self.XMLTVFile):
-                        fle = FileAccess.open(self.XMLTVFile, "w")
-                        writer.write(fle, pretty_print=True)
-                        fle.close()
+                        try:
+                            fle = FileAccess.open(self.XMLTVFile, "w")
+                            writer.write(fle, pretty_print=True)
+                        except Exception as e: self.log("_save, failed!", xbmc.LOGERROR)
+                        finally: fle.close()
                 except Exception as e:
                     self.log("_save, failed!", xbmc.LOGERROR)
                     DIALOG.notificationDialog(LANGUAGE(32000))
-                self.buildGenres()
-                return True
+                return self.buildGenres()
         
         
     def _reload(self) -> bool:
         self.log('_reload') 
         self.__init__()
-        return True
     
     
     def _error(self, name, e):
@@ -97,11 +96,14 @@ class XMLTVS(object):
         if not 'no element found: line 1, column 0' in str(e):
             try:
                 match = re.compile(r'line\ (.*?),\ column\ (.*)', re.IGNORECASE).search(str(e))
-                if match: 
-                    fle   = FileAccess.open(self.XMLTVFile,'r')
-                    lines = fle.readlines()
-                    fle.close()
-                    self.log('%s, failed! parser error %s\nLine: %s\n Error: %s'%(name,e,lines[int(match.group(1))],lines[int(match.group(1))][int(match.group(2))-5:]), xbmc.LOGERROR)
+                if match:
+                    try: 
+                        fle   = FileAccess.open(self.XMLTVFile,'r')
+                        return fle.readlines()
+                    except Exception: 
+                        self.log('%s, failed! parser error %s\nLine: %s\n Error: %s'%(name,e,lines[int(match.group(1))],lines[int(match.group(1))][int(match.group(2))-5:]), xbmc.LOGERROR)
+                        return
+                    finally: fle.close()
                 else: raise Exception('no parser match %s'%(str(e)))
             except Exception as en: self.log('%s, failed! %s\n%s'%(name,e,en), xbmc.LOGERROR)
     
@@ -117,23 +119,26 @@ class XMLTVS(object):
 
     def loadData(self) -> dict:
         self.log('loadData, file = %s'%self.XMLTVFile)
-        try: 
-            fle  = FileAccess.open(self.XMLTVFile, 'r')
-            data = (xmltv.read_data(fle) or self.resetData())
-            fle.close()
-            return data
+        try:
+            data = self.resetData()
+            try: 
+                fle  = FileAccess.open(self.XMLTVFile, 'r')
+                return (xmltv.read_data(fle) or data)
+            except: pass
+            finally: fle.close()
         except Exception as e:
             self._error('loadData',self.XMLTVFile,e)
-            return self.resetData()
+            return data
 
 
     def loadChannels(self) -> list:
         self.log('loadChannels, file = %s'%self.XMLTVFile)
         try:
-            fle  = FileAccess.open(self.XMLTVFile, 'r')
-            data = (xmltv.read_channels(fle) or [])
-            fle.close()
-            return data
+            try: 
+                fle  = FileAccess.open(self.XMLTVFile, 'r')
+                return (xmltv.read_channels(fle) or [])
+            except Exception: pass
+            finally: fle.close()
         except Exception as e:
             self._error('loadChannels',self.XMLTVFile,e)
             return []
@@ -142,10 +147,11 @@ class XMLTVS(object):
     def loadProgrammes(self) -> list:
         self.log('loadProgrammes, file = %s'%self.XMLTVFile)
         try: 
-            fle  = FileAccess.open(self.XMLTVFile, 'r')
-            data = (xmltv.read_programmes(fle) or [])
-            fle.close()
-            return data
+            try: 
+                fle = FileAccess.open(self.XMLTVFile, 'r')
+                return (xmltv.read_programmes(fle) or [])
+            except Exception: pass
+            finally: fle.close()
         except Exception as e: 
             self._error('loadProgrammes',self.XMLTVFile,e)
             return []
@@ -321,16 +327,13 @@ class XMLTVS(object):
                   'icon'         : [{'src':ritem['logo']}]})
                   
         self.log('addRecording, sitem = %s'%(sitem))
-        idx, recording = self.findRecording(ritem)
-        if idx is None: 
-            self.XMLTVDATA['recordings'].append(sitem)
-        else: 
-            self.XMLTVDATA['recordings'][idx] = sitem # replace existing channel meta
+        try:              self.XMLTVDATA['recordings'][self.findRecording(ritem)[0]] = sitem # replace existing channel meta
+        except Exception: self.XMLTVDATA['recordings'].append(sitem)
 
         fitem['start'] = getUTCstamp()
         fitem['stop']  = fitem['start'] + fitem['duration']
         if self.addProgram(ritem['id'],self.getProgramItem(ritem,fitem),encodeDESC=True):
-            return self._save()
+            return True
         
     
     def addChannel(self, citem: dict) -> bool:
@@ -339,9 +342,8 @@ class XMLTVS(object):
                   'icon'         : [{'src':citem['logo']}]})
                   
         self.log('addChannel, mitem = %s'%(mitem))
-        idx, channel = self.findChannel(mitem)
-        if idx is None: self.XMLTVDATA['channels'].append(mitem)
-        else:           self.XMLTVDATA['channels'][idx] = mitem # replace existing channel meta
+        try:              self.XMLTVDATA['channels'][self.findChannel(mitem)[0]] = mitem
+        except Exception: self.XMLTVDATA['channels'].append(mitem)
         return True
 
 
@@ -437,7 +439,7 @@ class XMLTVS(object):
             self.XMLTVDATA['recordings'].pop(idx)
             if not ritem.get('id'): ritem['id'] = recording['id']
             self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != ritem.get('id')])
-            return self._save()
+            return True
         
         
     def buildGenres(self, epggenres={}):
@@ -497,5 +499,6 @@ class XMLTVS(object):
                     xmlData = FileAccess.open(GENREFLEPATH, "w")
                     xmlData.write(doc.toprettyxml(indent='  ',encoding=DEFAULT_ENCODING))
                     xmlData.close()
+                    return True
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
         except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)

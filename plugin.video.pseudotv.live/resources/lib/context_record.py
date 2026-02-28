@@ -49,13 +49,15 @@ class Record(object):
                 if retval or int(retval) > 0:
                     with BUILTIN.busy_dialog():
                         m3u   = M3U(writable=True)
+                        xmltv = XMLTVS(writable=True)
                         ritem = m3u.getRecordItem(self.fitem, seek)
-                        added = (m3u.addRecording(ritem), XMLTVS(writable=True).addRecording(ritem,self.fitem))
+                        if any(m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)):
+                            if any(m3u._save(), xmltv._save()):
+                                log('Record: add, ritem = %s'%(ritem))
+                                DIALOG.notificationDialog('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
+                                timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
                         del m3u
-                    if added:
-                        log('Record: add, ritem = %s'%(ritem))
-                        DIALOG.notificationDialog('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
-                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                        del xmltv
         else: DIALOG.notificationDialog(LANGUAGE(32000))
         
  
@@ -64,12 +66,16 @@ class Record(object):
             with PROPERTIES.chkRunning('Record.remove'):
                 if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(self.fitem['label'])):
                     with BUILTIN.busy_dialog():
+                        m3u   = M3U(writable=True)
+                        xmltv = XMLTVS(writable=True)
                         ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})
-                        removed = (M3U(writable=True).delRecording(ritem), XMLTVS(writable=True).delRecording(ritem))
-                    if removed:
-                        log('Record: remove, ritem = %s'%(ritem))
-                        DIALOG.notificationDialog('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
-                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                        if any(m3u.delRecording(ritem), xmltv.delRecording(ritem)):
+                            if any(m3u._save(), xmltv._save()):
+                                log('Record: remove, ritem = %s'%(ritem))
+                                DIALOG.notificationDialog('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
+                                timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                        del m3u
+                        del xmltv
         else: DIALOG.notificationDialog(LANGUAGE(32000))
                 
             

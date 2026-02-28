@@ -217,7 +217,6 @@ M3UFLE              = 'pseudotv.m3u'
 XMLTVFLE            = 'pseudotv.xml'
 CACHEFLE            = 'cache.db'
 GENREFLE            = 'genres.xml'
-REMOTEFLE           = 'remote.json'
 BONJOURFLE          = 'bonjour.json'
 SERVERFLE           = 'servers.json'
 CHANNELFLE          = 'channels.json'
@@ -240,6 +239,7 @@ TEXTURES            = 'Textures.xbt'
 #folders
 IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
+REMOTE_LOC          = os.path.join(ADDON_PATH,'remotes')
 SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
 CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
@@ -259,15 +259,16 @@ BING_WAV            = os.path.join(SFX_LOC,'bing.wav')
 NOTE_WAV            = os.path.join(SFX_LOC,'notify.wav')
 
 #remotes
-M3UFLE_ITEM         = os.path.join(ADDON_PATH,'remotes','m3u.json')
-SEASONS             = os.path.join(ADDON_PATH,'remotes','seasons.json')
-HOLIDAYS            = os.path.join(ADDON_PATH,'remotes','holidays.json')
-GROUPFLE_DEFAULT    = os.path.join(ADDON_PATH,'remotes','groups.xml')
-FORM_DEFAULT        = os.path.join(ADDON_PATH,'remotes','form.html')
-LIBRARYFLE_DEFAULT  = os.path.join(ADDON_PATH,'remotes',LIBRARYFLE)
-CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'remotes',CHANNELFLE)
-GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'remotes',GENREFLE)
-PROVIDERFLE_DEFAULT = os.path.join(ADDON_PATH,'remotes',PROVIDERFLE)
+M3UFLE_ITEM         = os.path.join(REMOTE_LOC,'m3u.json')
+SEASONS             = os.path.join(REMOTE_LOC,'seasons.json')
+HOLIDAYS            = os.path.join(REMOTE_LOC,'holidays.json')
+GROUPFLE_DEFAULT    = os.path.join(REMOTE_LOC,'groups.xml')
+DEFAULT_FORM        = os.path.join(REMOTE_LOC,'form.html')
+MANAGER_FORM        = os.path.join(REMOTE_LOC,'channels.html')
+LIBRARYFLE_DEFAULT  = os.path.join(REMOTE_LOC,LIBRARYFLE)
+CHANNELFLE_DEFAULT  = os.path.join(REMOTE_LOC,CHANNELFLE)
+GENREFLE_DEFAULT    = os.path.join(REMOTE_LOC,GENREFLE)
+PROVIDERFLE_DEFAULT = os.path.join(REMOTE_LOC,PROVIDERFLE)
 
 #colors
 PRIMARY_BACKGROUND        = 'FF11375C'

@@ -220,8 +220,7 @@ class Resources(object):
         if not cacheResponse:
             logos = []
             for id in resources:
-                if not SETTINGS.hasAddon(id):
-                    continue
+                if not SETTINGS.hasAddon(id): continue
                 results = __fillResource(id)
                 self.log('getLogoResources, checking %s, results = %s'%(id,len(results)))
                 for title, logo in list(results.items()):

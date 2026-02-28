@@ -47,8 +47,9 @@ class Library(object):
     channels   = Channels()
     predefined = Predefined()
     
-    def __init__(self, service=None):
+    def __init__(self, service=None, file=LIBRARYFLEPATH, writable=False):
         if service is None: service = Service()
+        self.writable  = writable
         self.service   = service
         self.jsonRPC   = service.jsonRPC
         self.cache     = service.jsonRPC.cache
@@ -59,6 +60,7 @@ class Library(object):
         self.pMSG    = ''
         self.pHeader = ''
         
+        self.libraryFile = file
         self.libraryDATA = FileAccess.getJSON(LIBRARYFLE_DEFAULT)
         self.libraryTEMP = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
@@ -75,19 +77,19 @@ class Library(object):
                          "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                          "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)}}
 
-
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def _load(self, file=LIBRARYFLEPATH):
-        return FileAccess.getJSON(file)
+    def _load(self):
+        return FileAccess.getJSON(self.libraryFile)
     
     
-    def _save(self, file=LIBRARYFLEPATH):
+    def _save(self):
+        self.log('_save, writable = %s, file = %s'%(self.writable,self.libraryFile))
         with PROPERTIES.interruptActivity():
-            self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
-            return FileAccess.setJSON(file, self.libraryDATA)
+            if self.writable: return FileAccess.setJSON(self.libraryFile, self.libraryDATA)
         
   
     def getLibrary(self, type=None):
@@ -98,8 +100,9 @@ class Library(object):
         
     def setLibrary(self, type, items=[]):
         self.log('setLibrary, type = %s, items = %s'%(type,len(items)))
-        PROPERTIES.setLibrary(type,len(items) > 0)
+        self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
         self.libraryDATA['library'][type] = items
+        PROPERTIES.setLibrary(type,len(items) > 0)
         return self._save()
 
 

@@ -32,7 +32,7 @@ class Autotune(object):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _runTune(self, manager=False, start=1, count=AUTOTUNE_CHANNEL_DEFAULT):
+    def _runTune(self, channels=None, manager=False, start=1, count=AUTOTUNE_CHANNEL_DEFAULT):
         def __buildAutotune(type: str, count):
             citems  = []
             items   = library.getLibrary(type)
@@ -89,16 +89,14 @@ class Autotune(object):
             self.pMSG    = ""
             self.pHeader = '%s, %s'%(ADDON_NAME,LANGUAGE(32021))
             
-            channels     = Channels()
-            template     = channels.getTemplate()
-            xchannels    = channels.getChannels() 
-            del channels
-            
-            xnumbers     = [ch.get('number',0) for ch in xchannels]
-            xrange       = list(range(1, CHANNEL_LIMIT+1))
-            numbers      = [num for num in xrange if num+1 not in xnumbers]
-            numbers      = numbers[start-1:] + numbers[:start-1]
-            citems       = []
+            completed = set()
+            template  = channels.getTemplate()
+            xchannels = channels.getChannels() 
+            xnumbers  = [ch.get('number',0) for ch in xchannels]
+            xrange    = list(range(1, CHANNEL_LIMIT+1))
+            numbers   = [num for num in xrange if num+1 not in xnumbers]
+            numbers   = numbers[start-1:] + numbers[:start-1]
+            citems    = []
             with DIALOG._progressDialog(self.pMSG, self.pHeader, manager) as self.pDialog:
                 library = Library()
                 for idx, type in enumerate(AUTOTUNE_TYPES):
@@ -107,15 +105,12 @@ class Autotune(object):
                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, self.pMSG, header=self.pHeader)
                     citems.extend([item for item in __buildAutotune(type,count) if item])
                 del library
+                if len(citems) > 0 and not manager:
+                    if channels.setChannels(citems):
+                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
             if manager: return citems
-            elif len(citems) > 0:
-                channels = Channels(writable=True)
-                channels.addChannel(citems)
-                state = channels.setChannels(channels.getChannels())
-                del channels
-                timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
-                return state
-                
+            return True
+        
  
     def clrLibrary(self):
         Library().clrLibraryCache()

@@ -201,7 +201,7 @@ class Tasks(object):
     def chkLibrary(self, types=None, silent=BUILTIN.isPlaying()):
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
         complete = set()
-        library  = Library(service=self.service)
+        library  = Library(service=self.service, writable=True)
         library.searchRecommended()
         if types is None: types = AUTOTUNE_TYPES
         for idx, type in enumerate(types):
@@ -212,38 +212,48 @@ class Tasks(object):
             elif items:
                 self.log("chkLibrary, %s library found! Setting items (%s), queuing update."%(type,len(items)))
                 complete.add(library.setLibrary(type, items))
-                self.service._que(library.updateLibrary,-1,*([type],True))
+                self.service._que(self.chkLibrary,-1,*([type],True))
             else:
                 self.log("chkLibrary, %s library not found! starting update."%(type))
                 complete.add(library.updateLibrary([type],silent))
+        del library
         if any(list(complete)): self.service._que(self.chkChannels,3)
         self.log("chkLibrary, complete = %s"%(any(list(complete))))
-        del library
         
-        
+
     def chkChanged(self):
-        channels = Channels().getChannels()
-        channels = [channel for channel in channels if channel.get('changed',False)]
-        self.log('chkChanged, channels = %s'%(len(channels)))
-        if channels:
-            builder = Builder(service=self.service)
-            [self.service._que(builder.buildChannels,3,[channel]) for channel in channels]
+        channels = Channels(writable=True)
+        self.citems = channels.getChannels()
+        citems  = self.citems.copy()
+        changes = [citem for citem in citems if citem.get('changed',False)]
+        self.log('chkChanged, changes = %s'%(len(changes)))
+        if changes:
+            builder = Builder(service=self.service, channels=channels)
+            [self.service._que(builder.buildChannels,3,[citem]) for citem in changes]
+            channels.setChannels()
             del builder
+        del channels
         
         
-    def chkChannels(self, channels: list=[]):
-        builder = Builder(service=self.service)
-        if not channels:
-            channels = Channels().getChannels()
-            self.citems = channels
-        if len(channels) > 0:
-            self.log('chkChannels, channels = %s'%(len(channels)))
-            [self.service._que(builder.buildChannels,3,[channel]) for channel in channels]
+    def chkChannels(self, citems=None):
+        channels = Channels(writable=True)
+        builder  = Builder(service=self.service, channels=channels)
+        if citems is None: 
+            self.citems = channels.getChannels()
+            citems = self.citems
+        if len(citems) > 0:
+            self.log('chkChannels, channels = %s'%(len(citems)))
+            [self.service._que(builder.buildChannels,3,[channel]) for channel in citems]
+            channels.setChannels()
+            if SETTINGS.getSettingBool('Build_Filler_Folders'): 
+                self._que(self.tasks.chkFillers,4,citems)
         else:
             self.log('chkChannels, No Channels Configured!')
-            if not SETTINGS.hasAutotuned():      SETTINGS.setAutotuned(Autotune()._runTune())
+            if not SETTINGS.hasAutotuned():
+                if SETTINGS.setAutotuned(Autotune()._runTune(channels)): self.service._que(self.chkChannels,3)
             elif PROPERTIES.hasEnabledServers(): timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
         del builder
+        del channels
 
 
     def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):

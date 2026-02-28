@@ -48,18 +48,20 @@ class Service(object):
         return False
 
 class Builder(object):
-    xsp       = XSP()
-    xmltv     = XMLTVS(writable=True)
-    m3u       = M3U(writable=True)
-    channels  = Channels(writable=True)
-    loopback  = None
+    xsp      = XSP()
+    xmltv    = XMLTVS(writable=True)
+    m3u      = M3U(writable=True)
+    loopback = None
     
-    def __init__(self, service=None):
-        if service is None: service = Service()
-        self.service = service     
-        self.monitor = service.monitor
-        self.jsonRPC = service.jsonRPC
-        self.cache   = service.jsonRPC.cache
+    def __init__(self, service=None, channels=None):
+        if service  is None: service  = Service()
+        if channels is None: channels = Channels(writable=True)
+            
+        self.channels = channels
+        self.service  = service     
+        self.monitor  = service.monitor
+        self.jsonRPC  = service.jsonRPC
+        self.cache    = service.jsonRPC.cache
         
         #global dialog
         self.fCount  = 0
@@ -103,9 +105,9 @@ class Builder(object):
                                  "trailers":{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":PAGE_LIMIT, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
                                              "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{}, "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI')}}
 
-        self.resources        = Resources(service=self.service)
-        self.runActions       = RulesList(self.channels.getChannels()).runActions
-        self.trailerCache     = (SETTINGS.getCacheSetting('trailerCache') or {})
+        self.resources    = Resources(service=self.service)
+        self.runActions   = RulesList(self.channels.getChannels()).runActions
+        self.trailerCache = (SETTINGS.getCacheSetting('trailerCache') or {})
         self.log(f'__init__, trailerCache = {len(self.trailerCache)}')
 
 
@@ -121,7 +123,7 @@ class Builder(object):
     def getVerifiedChannels(self, channels=None):
         if channels is None: channels = self.channels.getChannels()
         channels = sorted(self._verify(channels), key=itemgetter('number'))
-        PROPERTIES.setChannels(len(channels)>0)
+        PROPERTIES.setHasChannels(len(channels)>0)
         self.log('getVerifiedChannels, channels = %s'%(len(channels)))
         return channels
 
@@ -162,7 +164,6 @@ class Builder(object):
 
 
     def buildChannels(self, channels: list=[], stop=-1, preview=False):
-        buildFolders  = SETTINGS.getSettingBool('Build_Filler_Folders')
         enableChanged = SETTINGS.getSettingBool('Enable_Changed')
         self.log('buildChannels, channels = %s'%(len(channels)))
         if channels is None: channels = []
@@ -198,36 +199,20 @@ class Builder(object):
             if self.resetPagination(citem) and self.m3u.delStation(citem) and self.xmltv.delBroadcast(citem):
                 stop = -1
                 citem['changed'] = False
-                return __addChannel(citem)
+                return self.channels.addChannel(citem)
                 
-        def __addChannel(citem: dict) -> bool:
-            citem = Globals._cleanGroups(citem)
-            return self.channels.addChannel(citem)
+        def __addProgrammes(citem: dict, fileList: list) -> bool:
+            completed = set()
+            for item in fileList:
+                completed.add(self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)))
+            self.log('[%s] buildChannels, __addProgrammes = %s, fileList = %s'%(citem['id'],any(completed),len(fileList)))
+            return any(completed)
         
         def __addStation(citem: dict) -> bool:
             citem = Globals._cleanGroups(citem)
             sitem = self.m3u.getStationItem(citem)
-            state = self.m3u.addStation(sitem) and self.xmltv.addChannel(sitem)
-            self.log('[%s] buildChannels, __addStation = %s'%(citem['id'],state))
-            return state
-        
-        def __addProgrammes(citem: dict, fileList: list) -> bool:
-            state = False
-            for item in fileList:
-                if self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)): state = True
-            self.log('[%s] buildChannels, __addProgrammes = %s, fileList = %s'%(citem['id'],state,len(fileList)))
-            return state
-        
-        def __setChannels():
-            state = self.channels.setChannels(self.channels.getChannels())
-            self.log('[%s] buildChannels, __setChannels = %s'%(citem['id'],state))
-            return state
-            
-        def __setProgrammes():
-            state = self.xmltv._save() and self.m3u._save()
-            state = True
-            self.log('[%s] buildChannels, __setProgrammes = %s'%(citem['id'],state))
-            return state
+            self.log('[%s] buildChannels, __addStation = %s'%(citem['id'],self.m3u.addStation(sitem) and self.xmltv.addChannel(sitem)))
+            return any([self.m3u._save(), self.xmltv._save()])
         
         if not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.legacy(), PROPERTIES.chkRunning('Builder.buildChannels'):
@@ -245,7 +230,6 @@ class Builder(object):
                     self.pHeader = ''
                     self.pErrors = []
                     for idx, citem in enumerate(channels):
-                        response     = False
                         self.pCount  = int(idx+1*100)//len(channels)
                         self.pMSG    = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
                         self.pHeader = ADDON_NAME
@@ -269,38 +253,32 @@ class Builder(object):
                             self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
                             self.log("[%s] buildChannels, stop (%s) - start (%s) => %s"%(citem['id'],stop,start,self.pMSG))
 
-                            response = stop > 0
                             if start > 0:
                                 with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=BUILTIN.isPlaying(), background=not preview) as self.pDialog:
                                     self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
-                                    if citem.get('radio',False): response = self.buildMusic(citem)
-                                    else:                        response = self.buildVideo(citem)
-                                    #response = {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
-                                    if isinstance(response,list):
-                                        response = sorted(self.addScheduling(citem, response, now, start), key=itemgetter('start'))
-                                        if not preview and __hasFileList(response): updated.add(__addProgrammes(citem, response))#add xmltv lineup entries.
-                                    elif not response and not __hasProgrammes(citem): #check for current programmes
-                                        response = False
-                                        __clrChannel(citem) #remove m3u/xmltv references when no valid programmes found.
-                                        if len(self.pErrors) > 0:
-                                            self.pErrors.append(LANGUAGE(32026))
-                                            chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
-                                            self.log('[%s] buildChannels, In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
-                                            self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(self.pName,chanErrors),header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
-
+                                    if citem.get('radio',False): fileList = self.buildMusic(citem)
+                                    else:                        fileList = self.buildVideo(citem)
+                                    #fileList = {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
+                                    if isinstance(fileList,list):
+                                        fileList = sorted(self.addScheduling(citem, fileList, now, start), key=itemgetter('start'))
+                                        if not preview and __hasFileList(fileList): updated.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
+                                    elif not fileList:
+                                        updated.add(__hasProgrammes(citem))
+                                        if not any(updated): #check for current programmes
+                                            __clrChannel(citem) #remove m3u/xmltv references when no valid programmes found.
+                                            if len(self.pErrors) > 0:
+                                                self.pErrors.append(LANGUAGE(32026))
+                                                chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
+                                                self.log('[%s] buildChannels, In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
+                                                self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(self.pName,chanErrors),header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
                                     self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
-                                    if preview: return response
-                        else: response = True
-                        if response: completed.add(__addStation(citem)) #add m3u station if lineup available. 
-                        self.log(f'[{citem['id']}] buildChannels, writing station = {response}')
-                            
-                    if any(completed) or any(updated): #save changes
-                        self.log('[%s] buildChannels, saved programmes = %s, saved channels = %s'%(citem['id'],__setProgrammes(),__setChannels()))
-                        if buildFolders: self.service._que(self.service.tasks.chkFillers,4,channels)
-                    if any(updated): timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                                    if preview: return fileList
+                        
+                        if any(updated): 
+                            completed.add(__addStation(citem)) #add m3u station if lineup available. 
+                            self.log(f'[{citem['id']}] buildChannels, writing station = {any(completed)}')
+                            timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
                     self.log('[%s] buildChannels, completed = %s, updated = %s'%(citem['id'],any(completed),any(updated)))
-                else:
-                    self.log('[%s] buildChannels, no verified channels found!'%(citem['id']))
 
 
     def buildMusic(self, citem: dict) -> list:

@@ -59,10 +59,9 @@ class Create(object):
                         citem['changed']  = True
                         citem['radio']    = True if path.startswith('musicdb://') else False
                         manager.channels.addChannel(manager.setLogo(citem['name'], citem))
-                        manager.channels.setChannels()
+                        if manager.channels.setChannels():
+                            timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
                         manager.closeManager()
-                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
-                        del manager
                         manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=citem['number'])
                     del manager
 

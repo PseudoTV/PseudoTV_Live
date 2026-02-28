@@ -262,7 +262,7 @@ class Settings(object):
                    'host'    :self.property.getRemoteHost()}
                    
         payload['remotes']   = {'bonjour':'http://%s/%s'%(payload['host'],BONJOURFLE),
-                                'remote' :'http://%s/%s'%(payload['host'],REMOTEFLE),
+                                'manager':'http://%s/%s'%(payload['host'],'manager'),
                                 'm3u'    :'http://%s/%s'%(payload['host'],M3UFLE),
                                 'xmltv'  :'http://%s/%s'%(payload['host'],XMLTVFLE),
                                 'genre'  :'http://%s/%s'%(payload['host'],GENREFLE),
@@ -699,13 +699,11 @@ class Properties(object):
 
     @contextmanager
     def chkRunning(self, key):
-        try:
-            if not self.isRunning(key):
-                self.setRunning(key,True)
-                try: yield True
-                finally: self.setRunning(key,False)
-            else: return
-        except Exception: yield
+        if not self.isRunning(key):
+            self.setRunning(key,True)
+            try: yield True
+            finally: self.setRunning(key,False)
+        else: yield
             
         
     def setTrakt(self, state=False):
@@ -731,7 +729,7 @@ class Properties(object):
         return self.getEXTPropertyBool('%s.Init.Run'%(ADDON_ID))
 
 
-    def setChannels(self, state=True):
+    def setHasChannels(self, state=True):
         return self.setEXTPropertyBool('%s.has.Channels'%(ADDON_ID),state)
 
 

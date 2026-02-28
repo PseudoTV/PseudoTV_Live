@@ -21,6 +21,7 @@ import gzip, mimetypes, socket, errno
 
 from zeroconf                  import *
 from globals                   import *
+from channels                  import Channels
 from resources                 import Resources
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
@@ -128,9 +129,10 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.log('do_POST incoming uuid [%s] verified!'%(incoming.get('uuid')))
                 #channels - channel manager save
                 if self.path.lower() == '/%s'%(CHANNELFLE.lower()) and incoming.get('payload'):
-                    from channels import Channels
-                    if Channels().setChannels(list(Channels()._verify(incoming.get('payload')))):
+                    channels = Channels(writable=True)
+                    if channels.setChannels(list(channels._verify(incoming.get('payload')))):
                         DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30108),incoming.get('name',ADDON_NAME)))
+                    del channels
                     self.send_response(200, "OK")
                 #filelist w/resume - paused channel rule
                 elif self.path.lower().startswith('/filelist') and incoming.get('payload'):
@@ -208,14 +210,12 @@ class MyHandler(BaseHTTPRequestHandler):
                             use_compression = False
                             chunk = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
                         else: return self.send_error(404, "File Not Found [%s]" % self.path)
-                    elif self.path.startswith(('/manager','/wizard')) and self.path.lower().endswith('form.html'):
-                        def _escape_html(s):
-                            return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")
+                    elif self.path.startswith(('/manager','/wizard')):
+                        def _escape_html(s): return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")
                         use_compression = False
-                        fle  = FileAccess.open(FORM_DEFAULT,'r')
+                        fle  = FileAccess.open(MANAGER_FORM,'r')
                         html = fle.read()
                         fle.close()
-                        html.format(json=_escape_html(FileAccess.dumpJSON(SETTINGS.getPayload(), idnt=4)), uuid=SETTINGS.getMYUUID())
                         chunk = html.encode(encoding=DEFAULT_ENCODING)
                     else: return self.send_error(404, "File Not Found [%s]" % self.path)
                     __sendChunk(self.path, chunk, use_compression)

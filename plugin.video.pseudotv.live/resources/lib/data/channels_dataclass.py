@@ -78,8 +78,7 @@ class Channels:
             return channels
 
     def setChannels(self, channels: List[Channel] = []) -> bool:
-        if len(channels) == 0:
-            channels = self.channelDATA['channels']
+        if len(channels) == 0: channels = self.channelDATA['channels']
         self.channelDATA['channels'] = channels
         SETTINGS.setSetting('Select_Channels', '[B]%s[/B] Channels' % (len(channels)))
         PROPERTIES.setChannels(len(channels) > 0)

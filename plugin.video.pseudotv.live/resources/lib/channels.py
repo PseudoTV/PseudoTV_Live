@@ -24,7 +24,7 @@ from globals    import *
 class Channels(object):
              
     def __init__(self, file=CHANNELFLEPATH, writable=False):
-        self.writable   = writable
+        self.writable    = writable
         self.channelFile = file
         self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP = self.channelDATA.get('channels',[{}]).pop(0)
@@ -33,11 +33,7 @@ class Channels(object):
         self.channelDATA.update(self._load())
         self.channelDATA_OLD = self.channelDATA.copy()
         
-        
-    def __del__(self):
-        self._save()
-        
-        
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -52,7 +48,6 @@ class Channels(object):
     def _reload(self) -> bool:
         self.log('_reload') 
         self.__init__()
-        return True
         
         
     def _verify(self, channels: list=[]):
@@ -60,16 +55,13 @@ class Channels(object):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
                 self.log('_verify, in-valid citem [%s]\n%s'%(citem.get('id'),citem))
                 continue
-            else: 
-                yield citem
+            yield citem
                 
                 
     def _save(self) -> bool:
+        self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
         with PROPERTIES.interruptActivity():
-                self.channelDATA['uuid']     = SETTINGS.getMYUUID()
-                self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
-                self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
-                if self.writable: return FileAccess.setJSON(self.channelFile,self.channelDATA)
+            if self.writable: return FileAccess.setJSON(self.channelFile,self.channelDATA)
         
         
     def getTemplate(self) -> dict: 
@@ -79,32 +71,28 @@ class Channels(object):
     def getChannels(self) -> list:
         return sorted(self.channelDATA['channels'], key=itemgetter('number'))
         
-                
-    def popChannels(self, type: str, channels: list=[]) -> list:
-        return [self.channelDATA['channels'].pop(self.channelDATA['channels'].index(citem)) for citem in list([c for c in channels if c.get('type') == type])]
-        
         
     def getChannelbyID(self, id: str) -> list:
-        channels = self.getChannels()
-        return list([c for c in channels if c.get('id') == id])
+        return list([c for c in self.channelDATA['channels'] if c.get('id') == id])
         
         
-    def getType(self, type: str):
-        channels = self.getChannels()
-        return list([citem for citem in channels if citem.get('type') == type])
+    def getChannelbyType(self, type: str):
+        return list([citem for citem in self.channelDATA['channels'] if citem.get('type') == type])
 
 
     def sortChannels(self, channels: list) -> list:
-        try:    return sorted(channels, key=itemgetter('number'))
+        try:              return sorted(channels, key=itemgetter('number'))
         except Exception: return channels
 
 
-    def setChannels(self, channels: list=[]) -> bool:
-        self.channelDATA['channels'] = channels
+    def setChannels(self, channels=None) -> bool:
+        if channels is None: channels = self.channelDATA['channels']
+        self.channelDATA['uuid']     = SETTINGS.getMYUUID()
+        self.channelDATA['channels'] = self.sortChannels(channels)
         SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channels)))
-        PROPERTIES.setChannels(len(channels)>0)
+        PROPERTIES.setHasChannels(len(channels)>0)
         return self._save()
-
+        
 
     def getImports(self) -> list:
         return self.channelDATA.get('imports',[])
@@ -112,36 +100,30 @@ class Channels(object):
         
     def setImports(self, data: list=[]) -> bool:
         self.channelDATA['imports'] = data
-        return self.setChannels(self.getChannels())
-
+        return self._save()
          
-    def clearChannels(self):
+         
+    def clrChannels(self):
         self.channelDATA['channels'] = []
-         
+        
 
     def delChannel(self, citem: dict={}) -> bool:
         if isinstance(citem,list): return any([self.delChannel(channel) for channel in citem])
-        self.log('delChannel,[%s]'%(citem['id']), xbmc.LOGINFO)
-        idx, channel = self.findChannel(citem)
-        if idx is not None: self.channelDATA['channels'].pop(idx)
-        return True
+        try: 
+            self.channelDATA['channels'].pop(self.findChannel(citem)[0])
+            self.log('[%s] delChannel, channel deleted!'%(citem['id']), xbmc.LOGINFO)
+        except Exception: pass
     
     
     def addChannel(self, citem: dict={}) -> bool:
         if isinstance(citem,list): return any([self.addChannel(channel) for channel in citem])
-        channels = self.getChannels()
-        idx, channel = self.findChannel(citem, channels)
-        if idx is not None:
-            channels[idx].update(citem)
-            self.log('addChannel, [%s] updating channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
-            self.channelDATA['channels'] = channels
-        else:
-            self.log('addChannel, [%s] adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
-            self.channelDATA.setdefault('channels',[]).append(citem)
-        return True
+        self.delChannel(citem)
+        self.log('addChannel, [%s] adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
+        self.channelDATA.setdefault('channels',[]).append(citem)
         
         
-    def findChannel(self, citem: dict={}, channels: list=[]) -> tuple:
-        if len(channels) == 0: channels = self.getChannels()
-        return tuple(next(((idx, eitem) for idx, eitem in enumerate(channels) if citem.get('id') == (eitem.get('id') or str(random.random()))), (None,{})))
+    def findChannel(self, citem: dict={}, channels=None) -> tuple:
+        if channels is None: channels = self.channelDATA['channels']
+        if citem.get('id') is None: citem['id'] = getChannelID(citem.get('name'), citem.get('path'), citem.get('number'), uuid=self.channelDATA.get('uuid'))
+        return tuple(next(((idx, eitem) for idx, eitem in enumerate(channels) if citem['id'] == eitem.get('id', str(random.random()))), (None,{})))
         

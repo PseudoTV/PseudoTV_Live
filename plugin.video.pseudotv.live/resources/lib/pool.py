@@ -91,6 +91,7 @@ def threadit(method):
             try: thread.join()
             except Exception: pass
         thread.name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
+        thread.daemon =True
         thread.start()
         log('%s, threadit starting %s'%(method.__qualname__.replace('.',': '),thread.name))
         return thread
@@ -111,6 +112,7 @@ def timerit(method):
                     log('%s, timerit canceling existing Timer: %s'%(method.__qualname__.replace('.',': '),timer_name))    
         timer = Timer(float(timer_wait), method, *args, **kwargs)
         timer.name = timer_name
+        timer.daemon =True
         timer.start()
         log('%s, timerit starting %s wait = %s'%(method.__qualname__.replace('.',': '),timer_name,timer_wait))
         return timer

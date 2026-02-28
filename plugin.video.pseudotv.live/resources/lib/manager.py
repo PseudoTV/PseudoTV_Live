@@ -643,7 +643,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __vfs(path, citem, cnt=3):
             def __fileList(citem, fileList=[]):
                 citem['id'] = getChannelID(citem['name'], citem['path'], random.random())
-                return PROPERTIES.preemptActivity(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}', Builder().buildVideo, *(citem,True))
+                return PROPERTIES.preemptActivity(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}', Builder(channels=self.channels)).buildVideo, *(citem,True))
 
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 if isRadio({'path':[path]}): return True
@@ -676,8 +676,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                 number = 1
                 for channel in channels:
                     number = channel.get('number',0)
-                    if number > 0: self.newChannels.insert(number-1,channel)
-                    self.madeChanges = True
+                    if number > 0: 
+                        self.madeChanges = True
+                        self.newChannels.insert(number-1,channel)
                 if self.madeChanges: self.fillChanList(self.newChannels,True,focus=(number-1))
 
 
@@ -686,11 +687,12 @@ class Manager(xbmcgui.WindowXMLDialog):
         if DIALOG.yesnoDialog("Would you like to AutoTune sample channels?"):
             with BUILTIN.busy_dialog():
                 number   = 1
-                channels = (Autotune()._runTune(True,start,int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT))) or [])
+                channels = (Autotune()._runTune(self.channels,True,start,int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT))) or [])
                 for channel in channels:
                     number = channel.get('number',0)
-                    if number > 0: self.newChannels.insert(number-1,channel)
-                    self.madeChanges = True
+                    if number > 0: 
+                        self.madeChanges = True
+                        self.newChannels.insert(number-1,channel)
                 if self.madeChanges: self.fillChanList(self.newChannels,True,focus=(number-1))
 
 
@@ -883,10 +885,10 @@ class Manager(xbmcgui.WindowXMLDialog):
     def saveChannelItems(self, citem: dict={}, open=False):
         self.log('saveChannelItems [%s], open = %s'%(citem.get('id'),open))
         if self.madeItemchange:
+            self.madeChanges = True
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 self.madeItemchange = False
                 citem['changed'] = True
-                self.madeChanges = True
                 self.newChannels[citem['number'] - 1] = citem
         self.fillChanList(self.newChannels,True,(citem['number'] - 1),citem if open else None)
         return citem
@@ -918,9 +920,10 @@ class Manager(xbmcgui.WindowXMLDialog):
                         requestURL('http://%s/%s'%(self.server.get('host'), CHANNELFLE), payload={'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels})
                     else: #local save
                         self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELFLE_CHANGED,silent=True)))
-                        if self.channels.setChannels(channels): self.madeChanges = False #save changes
-                        self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
-                        timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
+                        if self.channels.setChannels(channels):
+                            self.madeChanges = False
+                            self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
+                            timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
         else: self.madeChanges = False
         self.closeManager()
             

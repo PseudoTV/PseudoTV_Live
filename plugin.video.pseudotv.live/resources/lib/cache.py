@@ -176,7 +176,7 @@ class _Cache(object):
             cachedata = pickle.loads(Globals._decodeString(Globals._getProperty(endpoint)))
             if cachedata[0] > cur_time:
                 if not checksum or checksum == cachedata[2]: result = cachedata[1]
-        except Exception as e: self.log("_getMEM, failed! %s"%(e), xbmc.LOGERROR)
+        except Exception as e: pass
         return result
 
 
@@ -195,8 +195,9 @@ class _Cache(object):
             if cache_data and cache_data[0] > cur_time:
                 if not checksum or cache_data[2] == checksum:
                     try: 
-                        result = pickle.loads(cache_data[1])
-                        if self.enable_mem_cache: self._setMEM(endpoint, checksum, cache_data[0], result)
+                        data = pickle.loads(cache_data[1])
+                        if self.enable_mem_cache: self._setMEM(endpoint, checksum, cache_data[0], data)
+                        results = data
                     except Exception as e: self.log("_getDB, failed! %s"%(e), xbmc.LOGERROR)
         return result
 
