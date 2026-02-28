@@ -53,12 +53,6 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('__init__, running = %s'%(PROPERTIES.isRunning('Manager')))
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)    
 
-        def __findAvailChannel(start):
-            if start == -1: 
-                for channel in self.channelList:
-                    if not channel.get('id'): return channel.get('number')
-            return start
-
         def __loadChannels(name=SETTINGS.getSetting('Default_Channels')): #load local or remote channel configurations
             self.log('__loadChannels, name = %s, local = %s'%(name, self.friendly))
             self.oldChannels = self.channels.getChannels()
@@ -92,10 +86,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.madeItemchange = False
             self.showingList    = True
             
-            self.openChannel    = kwargs.get('open')
-            self.startChannel   = __findAvailChannel(kwargs.get('channel',-1))
-            self.focusIndex     = (self.startChannel - 1) #Covert from channel number to list index ie. channel 1 => index 0
-            
             self.cache          = SETTINGS.cache
             self.channels       = Channels(writable=True)
             self.rule           = RulesList()
@@ -110,8 +100,12 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         try:
             with BUILTIN.busy_dialog(lock=True):
-                self.channelList = self.channels.sortChannels(self.createChannelList(list(self.buildArray()), __loadChannels()))
-                self.newChannels = self.channelList.copy()
+                self.channelList  = self.channels.sortChannels(self.createChannelList(list(self.buildArray()), __loadChannels()))
+                self.newChannels  = self.channelList.copy()
+                self.openChannel  = kwargs.get('open')
+                self.startChannel = self._findAvailChannel(kwargs.get('channel',-1))
+                self.focusIndex   = (self.startChannel - 1) #Covert from channel number to list index ie. channel 1 => index 0
+                
                 if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
                 self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
                 if kwargs.get('start',True) and not PROPERTIES.isRunning('Manager'):
@@ -142,6 +136,12 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.closeManager()
 
 
+    def _findAvailChannel(self, start=-1):
+        if start == -1: 
+            for channel in self.channelList:
+                if not channel.get('id'): return channel.get('number')
+        return start
+
     @cacheit(checksum=PROPERTIES.getInstanceID())
     def buildArray(self):
         self.log('buildArray') # Create blank array of citem templates. 
@@ -164,7 +164,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         except Exception:cacheResponse = []
         if not cacheResponse:
             poolit(__update)(channelList)
-            cacheResponse = self.cache.set(cacheName, channelArray, checksum=checksum)
+            cacheResponse = self.cache.set(cacheName, channelArray, checksum=checksum, expiration=datetime.timedelta(seconds=5))
         return cacheResponse
 
 
@@ -643,7 +643,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __vfs(path, citem, cnt=3):
             def __fileList(citem, fileList=[]):
                 citem['id'] = getChannelID(citem['name'], citem['path'], random.random())
-                return PROPERTIES.preemptActivity(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}', Builder(channels=self.channels)).buildVideo, *(citem,True))
+                return PROPERTIES.preemptActivity(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}', Builder(channels=self.channels).buildVideo, *(citem,True))
 
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 if isRadio({'path':[path]}): return True
@@ -835,12 +835,18 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.fillChanList(self.newChannels,refresh=True,focus=channelPOS)
 
 
+    def getControlID(self, cntrl):
+        try: return cntrl.getId()
+        except Exception as e: 
+            self.log("getControlID, failed! %s"%(e), xbmc.LOGERROR)
+
+
     def isVisible(self, cntrl):
         try: 
-            if isinstance(cntrl, int):      cntrl = self.getControl(cntrl)
+            if isinstance(cntrl, int): cntrl = self.getControl(cntrl)
             if hasattr(cntrl, 'isVisible'): state = cntrl.isVisible()
-        except Exception: state = self.cntrlStates.get(cntrl.getId(),False)
-        self.log('isVisible, cntrl = %s, state = %s'%(cntrl.getId(),state))
+        except Exception: state = self.cntrlStates.get(self.getControlID(cntrl),False)
+        self.log('isVisible, cntrl = %s, state = %s'%(self.getControlID(cntrl),state))
         return state
         
         
@@ -848,10 +854,11 @@ class Manager(xbmcgui.WindowXMLDialog):
         try: 
             if isinstance(cntrl, int):       cntrl = self.getControl(cntrl)
             if hasattr(cntrl, 'setVisible'): cntrl.setVisible(state)
-            self.cntrlStates[cntrl.getId()] = state
-            self.log('setVisibility, cntrl = ' + str(cntrl.getId()) + ', state = ' + str(state))
+            self.cntrlStates[self.getControlID(cntrl)] = state
+            self.log('setVisibility, cntrl = ' + str(self.getControlID(cntrl)) + ', state = ' + str(state))
         except Exception as e: self.log("setVisibility, failed! %s"%(e), xbmc.LOGERROR)
-    
+        return state
+        
     
     def getLabels(self, cntrl):
         try:

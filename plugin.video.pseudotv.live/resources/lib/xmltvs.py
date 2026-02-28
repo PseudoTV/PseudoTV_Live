@@ -79,7 +79,9 @@ class XMLTVS(object):
                             fle = FileAccess.open(self.XMLTVFile, "w")
                             writer.write(fle, pretty_print=True)
                         except Exception as e: self.log("_save, failed!", xbmc.LOGERROR)
-                        finally: fle.close()
+                        finally: 
+                            if hasattr(fle, 'close'): 
+                                fle.close()
                 except Exception as e:
                     self.log("_save, failed!", xbmc.LOGERROR)
                     DIALOG.notificationDialog(LANGUAGE(32000))
@@ -103,7 +105,9 @@ class XMLTVS(object):
                     except Exception: 
                         self.log('%s, failed! parser error %s\nLine: %s\n Error: %s'%(name,e,lines[int(match.group(1))],lines[int(match.group(1))][int(match.group(2))-5:]), xbmc.LOGERROR)
                         return
-                    finally: fle.close()
+                    finally:
+                        if hasattr(fle, 'close'): 
+                            fle.close()
                 else: raise Exception('no parser match %s'%(str(e)))
             except Exception as en: self.log('%s, failed! %s\n%s'%(name,e,en), xbmc.LOGERROR)
     
@@ -125,7 +129,9 @@ class XMLTVS(object):
                 fle  = FileAccess.open(self.XMLTVFile, 'r')
                 return (xmltv.read_data(fle) or data)
             except: pass
-            finally: fle.close()
+            finally:
+                if hasattr(fle, 'close'): 
+                    fle.close()
         except Exception as e:
             self._error('loadData',self.XMLTVFile,e)
             return data
@@ -138,7 +144,9 @@ class XMLTVS(object):
                 fle  = FileAccess.open(self.XMLTVFile, 'r')
                 return (xmltv.read_channels(fle) or [])
             except Exception: pass
-            finally: fle.close()
+            finally:
+                if hasattr(fle, 'close'): 
+                    fle.close()
         except Exception as e:
             self._error('loadChannels',self.XMLTVFile,e)
             return []
@@ -151,7 +159,9 @@ class XMLTVS(object):
                 fle = FileAccess.open(self.XMLTVFile, 'r')
                 return (xmltv.read_programmes(fle) or [])
             except Exception: pass
-            finally: fle.close()
+            finally:
+                if hasattr(fle, 'close'): 
+                    fle.close()
         except Exception as e: 
             self._error('loadProgrammes',self.XMLTVFile,e)
             return []

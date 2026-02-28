@@ -302,12 +302,12 @@ class Resources(object):
         print('matchName',a_tokens,b_tokens)
         if not a_tokens or not b_tokens: return False
         # if there's very low token intersection, skip expensive ratio
-        inter = a_tokens.intersection(b_tokens)
-        print('matchName inter',inter)
-        if len(inter) / max(1, min(len(a_tokens), len(b_tokens))) < (1.00 - threshold):
-            # fallback to startswith/contains checks which are cheap
-            if a.startswith(b) or b.startswith(a) or (a in b) or (b in a): return True
-        # fallback to SequenceMatcher only when token overlap suggests potential match
+        # inter = a_tokens.intersection(b_tokens)
+        # print('matchName inter',inter)
+        # if len(inter) / max(1, min(len(a_tokens), len(b_tokens))) < (1.00 - threshold):
+            # # fallback to startswith/contains checks which are cheap
+            # if a.startswith(b) or b.startswith(a) or (a in b) or (b in a): return True
+        # # fallback to SequenceMatcher only when token overlap suggests potential match
         try:
             ratio = SequenceMatcher(None, a, b).ratio()
             print('matchName ratio',ratio)

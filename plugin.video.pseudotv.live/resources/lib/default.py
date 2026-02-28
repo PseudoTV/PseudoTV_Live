@@ -67,10 +67,15 @@ def _run(sysARG, fitem: dict={}, nitem: dict={}):
     else: Globals._notificationDialog(LANGUAGE(32000))
         
 if __name__ == '__main__':
-    mode = dict(urllib.parse.parse_qsl(sys.argv[2][1:].replace('.pvr',''))).get("mode")
-    if mode is None:
-        if __hasChannels(): Globals._openGuide()
-        else:               Globals._openSettings()
-        xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
-    else: _run(sys.argv, Globals._decodePlot(Globals._getInfoLabel('Plot')), Globals._decodePlot(Globals._getInfoLabel('NextPlot')))
+    try:
+        log('Default: __main__, param = %s'%(sys.argv))
+        mode = dict(urllib.parse.parse_qsl(sys.argv[2][1:].replace('.pvr',''))).get("mode")
+        if mode is None:
+            if __hasChannels(): Globals._openGuide()
+            else:               Globals._openSettings()
+            xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
+        else: _run(sys.argv, Globals._decodePlot(Globals._getInfoLabel('Plot')), Globals._decodePlot(Globals._getInfoLabel('NextPlot')))
+    except Exception as e: 
+        log('Default: __main__, failed! %s' % e, xbmc.LOGERROR)
+        Globals._notificationDialog(LANGUAGE(30079))
     

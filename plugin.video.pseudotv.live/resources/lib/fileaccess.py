@@ -56,7 +56,9 @@ class FileAccess(object):
             fle  = FileAccess.open(file,'r')
             data = FileAccess.loadJSON(fle.read())
         except Exception as e: log('FileAccess: getJSON failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
-        finally: fle.close()
+        finally: 
+            if hasattr(fle, 'close'): 
+                fle.close()
         return data
 
 
@@ -67,22 +69,26 @@ class FileAccess(object):
                 fle = FileAccess.open(file, 'w')
                 fle.write(FileAccess.dumpJSON(data, idnt=4, sortkey=False))
             except Exception as e: log('FileAccess: setJSON failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
-            finally: fle.close()
+            finally:
+                if hasattr(fle, 'close'): 
+                    fle.close()
             return True
 
 
     @staticmethod
-    def setURL(url, file):
-        try:
-            with FileLock(file):
+    def setURL(url, file):#todo settingscache?
+        with FileLock(file):
+            try:
                 contents = requestURL(url)
                 fle = FileAccess.open(file, 'w')
                 fle.write(contents)
-                fle.close()
-                return FileAccess.exists(file)
-        except Exception as e: log('FileAccess: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
-
-
+            except Exception as e: log('FileAccess: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
+            finally:
+                if hasattr(fle, 'close'): 
+                    fle.close()
+        return FileAccess.exists(file)
+        
+        
     @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):
         fle = 0

@@ -85,7 +85,9 @@ class M3U(object):
                 fle   = FileAccess.open(self.stationFile, 'r')
                 lines = fle.readlines()
             except Exception: lines = []
-            finally: fle.close()
+            finally:
+                if hasattr(fle, 'close'): 
+                    fle.close()
             
             chCount = 0
             data    = {}
@@ -243,7 +245,9 @@ class M3U(object):
                             fle.write('%s\n'%(station['url']))
                         return True
                     except Exception: self.log("_save, failed! %s"%(e), xbmc.LOGERROR)
-                    finally: fle.close()
+                    finally:
+                        if hasattr(fle, 'close'): 
+                            fle.close()
         
         
     def _reload(self):

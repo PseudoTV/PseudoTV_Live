@@ -1132,6 +1132,8 @@ class Builtin(object):
                     try:     self.busy = Busy(BUSY_XML, ADDON_PATH, "default", lock=lock)
                     except Exception:  self.busy = None
                     finally: self.busy.show()
+                elif cancel and hasattr(self.busy, 'close'):
+                    self.busy = self.busy.close()
                 yield
             finally:
                 if hasattr(self.busy, 'close'):
