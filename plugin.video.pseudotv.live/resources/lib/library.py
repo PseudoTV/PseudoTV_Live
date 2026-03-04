@@ -77,7 +77,7 @@ class Library(object):
                          "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                          "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)}}
 
-        
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
@@ -88,8 +88,9 @@ class Library(object):
     
     def _save(self):
         self.log('_save, writable = %s, file = %s'%(self.writable,self.libraryFile))
-        with PROPERTIES.interruptActivity():
-            if self.writable: return FileAccess.setJSON(self.libraryFile, self.libraryDATA)
+        if self.writable:
+            with PROPERTIES.interruptActivity():
+                return FileAccess.setJSON(self.libraryFile, self.libraryDATA)
         
   
     def getLibrary(self, type=None):

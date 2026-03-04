@@ -51,13 +51,13 @@ class Builder(object):
     xsp      = XSP()
     xmltv    = XMLTVS(writable=True)
     m3u      = M3U(writable=True)
+    channels = Channels(writable=True)
     loopback = None
     
-    def __init__(self, service=None, channels=None):
-        if service  is None: service  = Service()
-        if channels is None: channels = Channels(writable=True)
+    def __init__(self, service=None):
+        if service  is None:
+            service  = Service()
             
-        self.channels = channels
         self.service  = service     
         self.monitor  = service.monitor
         self.jsonRPC  = service.jsonRPC
@@ -167,17 +167,16 @@ class Builder(object):
         enableChanged = SETTINGS.getSettingBool('Enable_Changed')
         self.log('buildChannels, channels = %s'%(len(channels)))
         if channels is None: channels = []
-        def __needsUpdate(citem, stop=-1, now=getUTCstamp()):
-            state = True
-            stop  = self.xmltv.stopTimes.get(citem['id'],stop)#check last stop times
+        def __needsUpdate(citem, stop=-1, now=getUTCstamp(), state=True):
             #max guidedata days to seconds, minus fill buffer (12hrs) in seconds.
-            if stop > (now + ((MAX_GUIDEDAYS * 86400) - 43200)):  state = False
+            stop = self.xmltv.stopTimes.get(citem['id'],stop)#check last stop times
+            if stop > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): state = False
             self.log('[%s] needsUpdate = %s, stop = %s'%(citem['id'],state, stop))
             return state, stop
             
         def __hasChanged(citem: dict, detect=SETTINGS.getSettingBool('Enable_Changed')) -> bool:
             if not citem.get('changed',False) and detect:
-                state = any(set([SETTINGS.getFileCRC(file) for file in citem.get('path',[]) if file.endswith(tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS))]))
+                state = any([SETTINGS.getFileCRC(file) for file in citem.get('path',[]) if file.endswith(tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS))])
             else:
                 state = citem.get('changed',False)
             self.log('[%s] buildChannels, __hasChanged = %s'%(citem['id'],state))
@@ -196,20 +195,17 @@ class Builder(object):
         
         def __clrChannel(citem: dict) -> bool:
             self.log('[%s] buildChannels, __clrChannel'%(citem['id']))
-            if self.resetPagination(citem) and self.m3u.delStation(citem) and self.xmltv.delBroadcast(citem):
+            if any([self.resetPagination(citem),self.m3u.delStation(citem),self.xmltv.delBroadcast(citem)]):
                 stop = -1
                 citem['changed'] = False
-                return self.channels.addChannel(citem)
-                
+                if self.channels.addChannel(citem):
+                    self.channels.setChannels()
+
         def __addProgrammes(citem: dict, fileList: list) -> bool:
-            completed = set()
-            for item in fileList:
-                completed.add(self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)))
-            self.log('[%s] buildChannels, __addProgrammes = %s, fileList = %s'%(citem['id'],any(completed),len(fileList)))
-            return any(completed)
+            self.log('[%s] buildChannels, __addProgrammes fileList = %s'%(citem['id'],len(fileList)))
+            return any([self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)) for item in fileList])
         
         def __addStation(citem: dict) -> bool:
-            citem = Globals._cleanGroups(citem)
             sitem = self.m3u.getStationItem(citem)
             self.log('[%s] buildChannels, __addStation = %s'%(citem['id'],self.m3u.addStation(sitem) and self.xmltv.addChannel(sitem)))
             return any([self.m3u._save(), self.xmltv._save()])
@@ -230,54 +226,56 @@ class Builder(object):
                     self.pHeader = ''
                     self.pErrors = []
                     for idx, citem in enumerate(channels):
-                        self.pCount  = int(idx+1*100)//len(channels)
-                        self.pMSG    = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
-                        self.pHeader = ADDON_NAME
-                        self.pName   = citem['name']
-                        citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self) #inject temporary citem changes here
-                        self.log('[%s] buildChannels, preview = %s, rules = %s'%(citem['id'],preview,citem.get('rules',{})))
-                        if self.service._interrupt() or self.service._suspend():
-                            self.log("[%s] buildChannels, _interrupt/_suspend"%(citem['id']))
-                            self.pErrors = [LANGUAGE(32160)]
-                            self.service._que(self.service.tasks.chkChannels,3,channels[idx:])
-                            break
-                        elif __needsUpdate(citem, stop, now):
-                            if __hasChanged(citem, enableChanged): __clrChannel(citem) #clear channel m3u/xmltv
-                            if stop < 0: stop  = self.xmltv.stopTimes.get(citem['id'],-1)   #check last stop times
-                            if stop < 0: start = nstart
-                            else:        start = stop #last stop time is the next start time.
-                            
-                            if    preview:  self.pMSG = LANGUAGE(32236)                           #Preview
-                            elif  stop > 0: self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(30223)) #Updating
-                            else:           self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(30223)) #Building
-                            self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
-                            self.log("[%s] buildChannels, stop (%s) - start (%s) => %s"%(citem['id'],stop,start,self.pMSG))
+                        try:
+                            self.pCount  = int(idx+1*100)//len(channels)
+                            self.pMSG    = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
+                            self.pHeader = ADDON_NAME
+                            self.pName   = citem['name']
+                            citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, Globals._cleanGroups(citem), inherited=self) #inject temporary citem changes here
+                            self.log('[%s] buildChannels, preview = %s, rules = %s'%(citem['id'],preview,citem.get('rules',{})))
+                            if self.service._interrupt() or self.service._suspend():
+                                self.log("[%s] buildChannels, _interrupt/_suspend"%(citem['id']))
+                                self.pErrors = [LANGUAGE(32160)]
+                                self.service._que(self.service.tasks.chkChannels,3,channels[idx:])
+                                break
+                            elif __needsUpdate(citem, stop, now):
+                                if __hasChanged(citem, enableChanged): __clrChannel(citem) #clear channel m3u/xmltv
+                                if stop < 0: stop  = self.xmltv.stopTimes.get(citem['id'],-1)   #check last stop times
+                                if stop < 0: start = nstart
+                                else:        start = stop #last stop time is the next start time.
+                                
+                                if    preview:  self.pMSG = LANGUAGE(32236)                           #Preview
+                                elif  stop > 0: self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(30223)) #Updating
+                                else:           self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(30223)) #Building
+                                self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
+                                self.log("[%s] buildChannels, stop (%s) - start (%s) => %s"%(citem['id'],stop,start,self.pMSG))
 
-                            if start > 0:
-                                with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=BUILTIN.isPlaying(), background=not preview) as self.pDialog:
-                                    self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
-                                    if citem.get('radio',False): fileList = self.buildMusic(citem)
-                                    else:                        fileList = self.buildVideo(citem)
-                                    #fileList = {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
-                                    if isinstance(fileList,list):
-                                        fileList = sorted(self.addScheduling(citem, fileList, now, start), key=itemgetter('start'))
-                                        if not preview and __hasFileList(fileList): updated.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
-                                    elif not fileList:
-                                        updated.add(__hasProgrammes(citem))
-                                        if not any(updated): #check for current programmes
-                                            __clrChannel(citem) #remove m3u/xmltv references when no valid programmes found.
-                                            if len(self.pErrors) > 0:
-                                                self.pErrors.append(LANGUAGE(32026))
-                                                chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
-                                                self.log('[%s] buildChannels, In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
-                                                self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(self.pName,chanErrors),header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
-                                    self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
-                                    if preview: return fileList
-                        
-                        if any(updated): 
-                            completed.add(__addStation(citem)) #add m3u station if lineup available. 
-                            self.log(f'[{citem['id']}] buildChannels, writing station = {any(completed)}')
-                            timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                                if start > 0:
+                                    with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=BUILTIN.isPlaying(), background=not preview) as self.pDialog:
+                                        self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
+                                        if citem.get('radio',False): fileList = self.buildMusic(citem)
+                                        else:                        fileList = self.buildVideo(citem)
+                                        #fileList = {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
+                                        if isinstance(fileList,list):
+                                            fileList = sorted(self.addScheduling(citem, fileList, now, start), key=itemgetter('start'))
+                                            if not preview and __hasFileList(fileList): updated.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
+                                        elif not fileList:
+                                            updated.add(__hasProgrammes(citem))
+                                            if not any(updated): #check for current programmes
+                                                __clrChannel(citem) #remove m3u/xmltv references when no valid programmes found.
+                                                if len(self.pErrors) > 0:
+                                                    self.pErrors.append(LANGUAGE(32026))
+                                                    chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
+                                                    self.log('[%s] buildChannels, In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
+                                                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(self.pName,chanErrors),header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
+                                        self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
+                                        if preview: return fileList
+                            
+                            if any(updated): 
+                                completed.add(__addStation(citem)) #add m3u station if lineup available. 
+                                self.log(f'[{citem['id']}] buildChannels, writing station = {any(completed)}')
+                                timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                        except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)
                     self.log('[%s] buildChannels, completed = %s, updated = %s'%(citem['id'],any(completed),any(updated)))
 
 

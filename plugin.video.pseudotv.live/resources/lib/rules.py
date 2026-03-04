@@ -553,7 +553,7 @@ class MST3k(BaseRule):
         self.optionDescriptions = ["Enable Silhouette"]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_OPEN+.1,RULES_ACTION_OVERLAY_CLOSE]
         self.storedValues       = [[],[],[]]
-        self.threadTimer        = Timer(5.0, self.runAction)
+        self.threadTimer        = Timer(SERVICE_INTERVAL, self.runAction)
         self.optionImages       = [os.path.join(MEDIA_LOC,'overlays','MST3K_1.gif'), os.path.join(MEDIA_LOC,'overlays','MST3K_2.gif')]
 
    
@@ -571,7 +571,7 @@ class MST3k(BaseRule):
 
     def setImage(self, actionid, citem, overlay, image):
         if not self.threadTimer.is_alive():
-            self.threadTimer = Timer(5.0, overlay.runActions,[actionid, citem, None, overlay])
+            self.threadTimer = Timer(SERVICE_INTERVAL, overlay.runActions,[actionid, citem, None, overlay])
             self.threadTimer.name = 'MST3k.setImage'
             self.threadTimer.start()
         self.log('setImage, image = %s'%(image))
@@ -1583,8 +1583,8 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         return os.path.join(RESUME_LOC,'%s.json'%(Globals._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id))))
         
         
-    def _getTotRuntime(self, id, filelist=[]):
-        return JSONRPC().getTotRuntime(filelist)
+    def _getTotDuration(self, id, filelist=[]):
+        return JSONRPC().getTotDuration(filelist)
             
 
     def _buildSchedule(self, citem, filelist, builder):     
@@ -1592,10 +1592,10 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         updated = self._getResume(citem.get('id')).get('updated',{})
         try:    viewed = '%s: %s (%s)'%(LANGUAGE(32250),epochTime(updated.get('time')).strftime(BACKUP_TIME_FORMAT),updated.get('instance'))
         except Exception: viewed = LANGUAGE(32251)
-        return builder.buildCells(citem, duration=self._getTotRuntime(citem.get('id'), filelist), entries=1, 
+        return builder.buildCells(citem, duration=self._getTotDuration(citem.get('id'), filelist), entries=1, 
                                   info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
                                         "episodetitle":viewed,
-                                        "plot":'%s: %s\nSize: %s\nRuntime: ~%s hrs.'%(LANGUAGE(32249),epochTime(time.time(),tz=False).strftime(BACKUP_TIME_FORMAT),len(filelist),round(self._getTotRuntime(citem.get('id'), filelist)//60//60)),
+                                        "plot":'%s: %s\nSize: %s\nRuntime: ~%s hrs.'%(LANGUAGE(32249),epochTime(time.time(),tz=False).strftime(BACKUP_TIME_FORMAT),len(filelist),round(self._getTotDuration(citem.get('id'), filelist)//60//60)),
                                         "art":{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
 
             
@@ -1656,7 +1656,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
             # parameter['resume'] = True
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: #load cached filelist if not outdated, else new buildFileList
-            if self._getTotRuntime(citem.get('id'), self.storedValues[1]) >= (MIN_GUIDEDAYS * 86400): 
+            if self._getTotDuration(citem.get('id'), self.storedValues[1]) >= (MIN_GUIDEDAYS * 86400): 
                 self.log("[%s] runAction, returning valid cached filelist = %s"%(citem.get('id'),len(self.storedValues[1])))
                 return [self.storedValues[1]]
             

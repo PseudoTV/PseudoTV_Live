@@ -220,40 +220,34 @@ class Tasks(object):
         if any(list(complete)): self.service._que(self.chkChannels,3)
         self.log("chkLibrary, complete = %s"%(any(list(complete))))
         
-
+       
     def chkChanged(self):
-        channels = Channels(writable=True)
-        self.citems = channels.getChannels()
+        self.citems = Channels().getChannels()
         citems  = self.citems.copy()
         changes = [citem for citem in citems if citem.get('changed',False)]
         self.log('chkChanged, changes = %s'%(len(changes)))
         if changes:
-            builder = Builder(service=self.service, channels=channels)
+            builder = Builder(service=self.service)
             [self.service._que(builder.buildChannels,3,[citem]) for citem in changes]
-            channels.setChannels()
             del builder
-        del channels
         
         
     def chkChannels(self, citems=None):
-        channels = Channels(writable=True)
-        builder  = Builder(service=self.service, channels=channels)
+        builder  = Builder(service=self.service)
         if citems is None: 
-            self.citems = channels.getChannels()
+            self.citems = Channels().getChannels()
             citems = self.citems
         if len(citems) > 0:
             self.log('chkChannels, channels = %s'%(len(citems)))
             [self.service._que(builder.buildChannels,3,[channel]) for channel in citems]
-            channels.setChannels()
             if SETTINGS.getSettingBool('Build_Filler_Folders'): 
                 self._que(self.tasks.chkFillers,4,citems)
         else:
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():
-                if SETTINGS.setAutotuned(Autotune()._runTune(channels)): self.service._que(self.chkChannels,3)
+                if SETTINGS.setAutotuned(Autotune()._runTune()): self.service._que(self.chkChannels,3)
             elif PROPERTIES.hasEnabledServers(): timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
         del builder
-        del channels
 
 
     def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):

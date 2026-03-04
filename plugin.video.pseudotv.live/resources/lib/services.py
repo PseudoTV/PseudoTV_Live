@@ -533,7 +533,7 @@ class Service(object):
         self._que(self.tasks._chkEpochTimer,-1,*('chkQueTimer', self.tasks.chkQueTimer, FIFTEEN)) #keep CustomQueue alive after interrupt.
     
     
-    def _shutdown(self, wait=5.0) -> bool: #service break
+    def _shutdown(self, wait=SERVICE_INTERVAL) -> bool: #service break
         pendingShutdown = (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
         if self.pendingShutdown != pendingShutdown:
             self.pendingShutdown = pendingShutdown

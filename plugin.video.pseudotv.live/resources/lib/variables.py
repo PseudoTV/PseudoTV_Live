@@ -37,7 +37,6 @@ GENREFLEPATH        = os.path.join(USER_LOC,GENREFLE)
 PROVIDERFLEPATH     = os.path.join(USER_LOC,PROVIDERFLE)
 CHANNELFLEPATH      = os.path.join(USER_LOC,CHANNELFLE)
 LIBRARYFLEPATH      = os.path.join(USER_LOC,LIBRARYFLE) 
-CACHEFLEPATH        = os.path.join(USER_LOC,CACHEFLE)
 SERVERFLEPATH       = os.path.join(USER_LOC,SERVERFLE)
 
 class Globals:
@@ -246,3 +245,5 @@ class Globals:
             if len(items) >= x: return random.sample(items, x)
             else:               return random.sample(items, len(items))
         return items
+        
+        import os

@@ -933,6 +933,9 @@ msgctxt "#30226"
 msgid "Enable Smart Shuffling"
 msgstr ""
 
+msgctxt "#30227"
+msgid "Cache Percentage of Ram"
+msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins
 
@@ -2441,6 +2444,10 @@ msgstr ""
 
 msgctxt "#33226"
 msgid "Enable Smart Shuffling\nChanges may propagate slowly over time and may not be instantaneous. [False Default] *see wiki for details"
+msgstr ""
+
+msgctxt "#33227"
+msgid "Percentage of system ram to reserve for cache"
 msgstr ""
 
 msgctxt "#33228"

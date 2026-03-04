@@ -19,7 +19,7 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, re, struct
-import json, pickle
+import json, pickle, ctypes, platform
 import random, base64, binascii, hashlib, heapq, zlib
 import time, datetime, calendar
 import requests
@@ -71,8 +71,8 @@ QUEUE_CHUNK         = min(16, THREAD_COUNT // 2)
 
 FIFTEEN             = 15    #unit
 DISCOVERY_TIMER     = 60    #secs
-SUSPEND_INTERVAL    = 5.0   #secs
-SERVICE_INTERVAL    = 2.5   #secs
+SERVICE_INTERVAL    = 5.0   #secs
+SUSPEND_INTERVAL    = 2.5   #secs
 DISCOVER_INTERVAL   = 30    #secs
 MIN_EPG_DURATION    = 10800 #secs
 TIMEOUT_EXECUTOR    = 1800
@@ -215,7 +215,6 @@ LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 #files
 M3UFLE              = 'pseudotv.m3u'
 XMLTVFLE            = 'pseudotv.xml'
-CACHEFLE            = 'cache.db'
 GENREFLE            = 'genres.xml'
 BONJOURFLE          = 'bonjour.json'
 SERVERFLE           = 'servers.json'

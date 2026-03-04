@@ -26,6 +26,8 @@ from fileaccess  import FileAccess, FileLock
 #todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
 
 class XMLTVS(object):
+    xmltv_lock = Lock()
+    
     def __init__(self, file=XMLTVFLEPATH, writable=False):
         self.writable  = writable
         self.XMLTVFile = file
@@ -34,9 +36,10 @@ class XMLTVS(object):
 
 
     def __del__(self):
-        self._save()
-
-
+        self.log('__del__, writable = %s'%(self.writable))
+        if writable: self._save()
+            
+            
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -50,8 +53,9 @@ class XMLTVS(object):
                 'programmes' : self.cleanSelf(self.loadProgrammes(),'channel')}
 
 
+    @debounceit(SERVICE_INTERVAL)
     def _save(self, reset: bool=True) -> bool:
-        with PROPERTIES.interruptActivity():
+        with PROPERTIES.interruptActivity(), self.xmltv_lock:
             if reset: data = self.resetData()
             else:     data = self.XMLTVDATA['data']
                 

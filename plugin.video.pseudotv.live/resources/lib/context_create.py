@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from variables  import *
+from globals    import *
 from manager    import Manager
 
 @threadit
@@ -40,7 +40,7 @@ def _add(sysARG, listitem: dict={}):
     if not path: return DIALOG.notificationDialog(LANGUAGE(32030))
     elif DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto the first available %s channel?'%(listitem.getLabel(),ADDON_NAME)):
         if not PROPERTIES.isRunning('Create.add'):
-            with PROPERTIES.chkRunning('Create.add'), BUILTIN.busy_dialog(lock=True):
+            with PROPERTIES.chkRunning('Create.add'):
                 manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
                 citem           = manager.newChannel
                 citem['number'] = manager._findAvailChannel()

@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -17,15 +17,27 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from globals    import *
+from typing import Union
 
 class FFProbe:
-    def determineLength(self, filename: str) -> int and float :
+    def determineLength(self, filename: str) -> Union[int, float]:
+        """
+        Determines video length using FFProbe.
+        Returns duration in seconds.
+        """
         try:
             import ffmpeg
             log("FFProbe: determineLength %s"%(filename))
-            dur  = ffmpeg.probe(FileAccess.translatePath(filename))["format"]["duration"]
-            log('FFProbe: Duration is %s'%(dur))
+            dur = ffmpeg.probe(FileAccess.translatePath(filename))["format"]["duration"]
+            dur = int(float(dur))  # Ensure integer seconds
+            log('FFProbe: Duration is %s seconds'%(dur))
             return dur
+        except ImportError:
+            log("FFProbe: ffmpeg-python module not available", xbmc.LOGERROR)
+            return 0
+        except (KeyError, ValueError, TypeError) as e:
+            log("FFProbe: failed to parse duration! %s"%(e), xbmc.LOGERROR)
+            return 0
         except Exception as e:
             log("FFProbe: failed! %s"%(e), xbmc.LOGERROR)
             return 0

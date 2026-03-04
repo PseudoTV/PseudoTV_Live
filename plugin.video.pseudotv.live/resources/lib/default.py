@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from variables  import *
+from globals    import *
 from logger     import log
 from plugin     import Plugin
 from pool       import threadit
@@ -78,4 +78,3 @@ if __name__ == '__main__':
     except Exception as e: 
         log('Default: __main__, failed! %s' % e, xbmc.LOGERROR)
         Globals._notificationDialog(LANGUAGE(30079))
-    

@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -17,15 +17,36 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from globals    import *
+from typing import Union
 
 class OpenCV:
-    def determineLength(self, filename: str) -> int and float:
+    def determineLength(self, filename: str) -> Union[int, float]:
+        """
+        Determines video length using OpenCV.
+        Returns duration in seconds.
+        """
         try:
             import cv2
             log("OpenCV: determineLength %s"%(filename))
-            dur = cv2.VideoCapture(FileAccess.translatePath(filename)).get(cv2.CAP_PROP_POS_MSEC)
-            log('OpenCV: Duration is %s'%(dur))
+            # CAP_PROP_POS_MSEC returns milliseconds, convert to seconds
+            dur_ms = cv2.VideoCapture(FileAccess.translatePath(filename)).get(cv2.CAP_PROP_FRAME_COUNT)
+            if dur_ms <= 0:
+                # Fallback to frame count method
+                cap = cv2.VideoCapture(FileAccess.translatePath(filename))
+                frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                cap.release()
+                if frame_count > 0 and fps > 0:
+                    dur = int(frame_count / fps)
+                else:
+                    return 0
+            else:
+                dur = int(dur_ms)
+            log('OpenCV: Duration is %s seconds'%(dur))
             return dur
+        except ImportError:
+            log("OpenCV: cv2 module not available", xbmc.LOGERROR)
+            return 0
         except Exception as e:
             log("OpenCV: failed! %s"%(e), xbmc.LOGERROR)
             return 0

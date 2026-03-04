@@ -368,39 +368,6 @@ class JSONRPC(object):
         else:     return self.sendJSON(param).get('result',{}).get(key)
     
     
-    def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected by player, accurate meta.
-        self.cache.set('getRuntime.%s'%(Globals._getMD5(item.get('file'))), runtime, checksum=Globals._getMD5(item.get('file')), expiration=datetime.timedelta(days=28))
-        if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)) and save and runtime > 0: self.queDuration(item, runtime=runtime)
-    
-        
-    def _getRuntime(self, item={}): #get runtime collected by player, else less accurate provider meta
-        runtime = self.cache.get('getRuntime.%s'%(Globals._getMD5(item.get('file'))), checksum=Globals._getMD5(item.get('file')))
-        return (runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
-        
-
-    def _setDuration(self, path, item={}, duration=0, save=SETTINGS.getSettingBool('Store_Duration')):#set VideoParser cache
-        self.cache.set('getDuration.%s'%(Globals._getMD5(path)), duration, checksum=Globals._getMD5(path), expiration=datetime.timedelta(days=28))
-        if save and item: self.queDuration(item, duration)
-        return duration
-
-    
-    def _getDuration(self, path): #get VideoParser cache
-        return (self.cache.get('getDuration.%s'%(Globals._getMD5(path)), checksum=Globals._getMD5(path)) or 0)
-
-
-    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
-        if not item: item = {'file':path}
-        runtime = self._getRuntime(item) #player runtime, fallback meta provider runtime
-        if runtime == 0 or accurate:
-            duration = 0
-            if isStack(path):# handle "stacked" videos
-                for file in splitStacks(path): duration += self.__parseDuration(runtime, file)
-            else: duration = self.__parseDuration(runtime, path, item, save)
-            if duration > 0: runtime = duration
-        self.log("getDuration, accurate = %s, path = %s, save = %s\nreturn path = %s, runtime = %s" % (accurate, path, save,path, runtime))
-        return runtime
-
-
     def DBIDtoLabel(self, path):
         self.log('DBIDtoLabel, IN = %s'%(path))
         match = re.search(r"(.*?)/(\d+)/", path)
@@ -415,14 +382,43 @@ class JSONRPC(object):
         return path
         
         
-    def getTotRuntime(self, items=[]):
-        total = sum((self._getRuntime(item) for item in items))
-        self.log("getTotRuntime, items = %s, total = %s" % (len(items), total))
-        return total
+    def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected by player, accurate meta.
+        runtime = round(runtime)
+        self.cache.set('getRuntime.%s'%(Globals._getMD5(item.get('file'))), runtime, checksum=Globals._getMD5(item.get('file')), expiration=datetime.timedelta(days=28))
+        if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)) and save and runtime > 0: self.queDuration(item, runtime=runtime)
+    
+        
+    def _getRuntime(self, item={}): #get runtime collected by player, else less accurate provider meta
+        runtime = self.cache.get('getRuntime.%s'%(Globals._getMD5(item.get('file'))), checksum=Globals._getMD5(item.get('file')))
+        return round(runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+        
+
+    def _setDuration(self, path, item={}, duration=0, save=SETTINGS.getSettingBool('Store_Duration')):#set VideoParser cache
+        duration = round(duration)
+        self.cache.set('getDuration.%s'%(Globals._getMD5(path)), duration, checksum=Globals._getMD5(path), expiration=datetime.timedelta(days=28))
+        if save and item: self.queDuration(item, duration)
+        return duration
+
+    
+    def _getDuration(self, path): #get VideoParser cache
+        return round(self.cache.get('getDuration.%s'%(Globals._getMD5(path)), checksum=Globals._getMD5(path)) or self._getRuntime({'file':path}))
 
 
-    def getTotDuration(self, items=[]):
-        total = sum((self.getDuration(item.get('file'),item) for item in items))
+    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
+        if not item: item = {'file':path}
+        runtime = self._getRuntime(item) #player runtime, fallback meta provider runtime
+        if runtime == 0 or accurate:
+            duration = 0
+            if isStack(path):# handle "stacked" videos
+                for file in splitStacks(path): duration += self.__parseDuration(runtime, file)
+            else: duration = self.__parseDuration(runtime, path, item, save)
+            if duration > 0: runtime = duration
+        self.log(f"getDuration [{runtime}] {path}, accurate = {accurate}, save ={save}")
+        return runtime
+
+
+    def getTotDuration(self, items=[], accurate=bool(SETTINGS.getSettingInt('Duration_Type'))):
+        total = sum((self.getDuration(item.get('file'),item,accurate) for item in items))
         self.log("getTotDuration, items = %s, total = %s" % (len(items), total))
         return total
 
@@ -430,19 +426,10 @@ class JSONRPC(object):
     def __parseDuration(self, runtime, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("__parseDuration, runtime = %s, path = %s, save = %s" % (runtime, path, save))
         duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
-        if not path.startswith(tuple(VFS_TYPES)):
-            ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.
-            rundiff = int(percentDiff(runtime, duration))
-            runsafe = False
-            if (rundiff <= 45 and rundiff > 0) or (rundiff == 100 and (duration == 0 or runtime == 0)) or (rundiff == 0 and (duration > 0 and runtime > 0)) or (duration > runtime): runsafe = True
-            self.log("__parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
-            ## save parsed duration to Kodi database, if enabled.
-            if runsafe:
-                runtime = duration
-                if save: self.queDuration(item, duration)
-        else: runtime = duration
-        self.log("__parseDuration, returning runtime = %s" % (runtime))
-        return runtime
+        if round(percentDiff(runtime, duration)) > 25: duration = runtime
+        if save and duration != runtime: self.queDuration(item, duration)
+        self.log(f"__parseDuration [{runtime}] {path}, save = {save}")
+        return duration
   
   
     def queDuration(self, item={}, duration=0, runtime=0):

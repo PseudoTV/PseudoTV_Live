@@ -25,8 +25,10 @@ from logger      import log
 #constants 
 DEFAULT_ENCODING = "utf-8"
 FILE_LOCK_NAME   = "pseudotv"
+ThreadLock       = Lock()
 
 class FileAccess(object):
+    
     @staticmethod
     def dumpJSON(item={}, idnt=None, sortkey=False, separators=(',', ':')):
         try:
@@ -64,7 +66,7 @@ class FileAccess(object):
 
     @staticmethod
     def setJSON(file, data):
-        with FileLock(file):
+        with FileLock(file), ThreadLock:
             try:
                 fle = FileAccess.open(file, 'w')
                 fle.write(FileAccess.dumpJSON(data, idnt=4, sortkey=False))
@@ -77,7 +79,7 @@ class FileAccess(object):
 
     @staticmethod
     def setURL(url, file):#todo settingscache?
-        with FileLock(file):
+        with FileLock(file), ThreadLock:
             try:
                 contents = requestURL(url)
                 fle = FileAccess.open(file, 'w')
@@ -473,14 +475,7 @@ class FileLock(object):
         FileAccess.delete(self.lockfile)
         
 
-class FileOpener(ContextDecorator):
-    """
-    @FileOpener("special://home/data.bin")
-    def my_function():
-        # Note: ContextDecorator doesn't easily inject 'f' into args.
-        # It is best for side-effect setup/teardown.
-        pass
-    """
+class FileStreamer(ContextDecorator):
     def __init__(self, filepath, mode='rb', encoding=DEFAULT_ENCODING):
         self.filepath = filepath
         self.file_obj = None

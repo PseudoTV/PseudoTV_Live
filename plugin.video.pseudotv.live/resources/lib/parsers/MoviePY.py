@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -17,15 +17,25 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from globals    import *
+from typing import Union
 
 class MoviePY:
-    def determineLength(self, filename: str) -> int and float:
+    def determineLength(self, filename: str) -> Union[int, float]:
+        """
+        Determines video length using MoviePy.
+        Returns duration in seconds.
+        """
         try:
             from moviepy.editor import VideoFileClip
             log("MoviePY: determineLength %s"%(filename))
-            dur = VideoFileClip(FileAccess.translatePath(filename)).duration
-            log('MoviePY: Duration is %s'%(dur))
+            clip = VideoFileClip(FileAccess.translatePath(filename))
+            dur = int(clip.duration)
+            clip.close()
+            log('MoviePY: Duration is %s seconds'%(dur))
             return dur
+        except ImportError:
+            log("MoviePY: moviepy module not available", xbmc.LOGERROR)
+            return 0
         except Exception as e:
             log("MoviePY: failed! %s"%(e), xbmc.LOGERROR)
             return 0

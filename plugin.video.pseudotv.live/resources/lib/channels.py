@@ -22,7 +22,7 @@ from globals    import *
 #todo create dataclasses for all jsons
 # https://pypi.org/project/dataclasses-json/
 class Channels(object):
-             
+    
     def __init__(self, file=CHANNELFLEPATH, writable=False):
         self.writable    = writable
         self.channelFile = file
@@ -33,7 +33,7 @@ class Channels(object):
         self.channelDATA.update(self._load())
         self.channelDATA_OLD = self.channelDATA.copy()
         
-
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -60,8 +60,10 @@ class Channels(object):
                 
     def _save(self) -> bool:
         self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
-        with PROPERTIES.interruptActivity():
-            if self.writable: return FileAccess.setJSON(self.channelFile,self.channelDATA)
+        if self.writable:
+            with PROPERTIES.interruptActivity():
+                if FileAccess.setJSON(self.channelFile,self.channelDATA):
+                    SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
         
         
     def getTemplate(self) -> dict: 
@@ -89,7 +91,6 @@ class Channels(object):
         if channels is None: channels = self.channelDATA['channels']
         self.channelDATA['uuid']     = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(channels)
-        SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channels)))
         PROPERTIES.setHasChannels(len(channels)>0)
         return self._save()
         
@@ -112,6 +113,7 @@ class Channels(object):
         try: 
             self.channelDATA['channels'].pop(self.findChannel(citem)[0])
             self.log('[%s] delChannel, channel deleted!'%(citem['id']), xbmc.LOGINFO)
+            return True
         except Exception: pass
     
     
@@ -119,8 +121,8 @@ class Channels(object):
         if isinstance(citem,list): return any([self.addChannel(channel) for channel in citem])
         self.delChannel(citem)
         self.log('addChannel, [%s] adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
-        self.channelDATA.setdefault('channels',[]).append(citem)
-        
+        self.channelDATA.setdefault('channels',[]).append(Globals._cleanGroups(citem))
+        return True
         
     def findChannel(self, citem: dict={}, channels=None) -> tuple:
         if channels is None: channels = self.channelDATA['channels']

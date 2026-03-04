@@ -32,7 +32,7 @@ class Autotune(object):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _runTune(self, channels=None, manager=False, start=1, count=AUTOTUNE_CHANNEL_DEFAULT):
+    def _runTune(self, manager=False, start=1, count=AUTOTUNE_CHANNEL_DEFAULT):
         def __buildAutotune(type: str, count):
             citems  = []
             items   = library.getLibrary(type)
@@ -75,7 +75,7 @@ class Autotune(object):
                     
                 while not MONITOR().abortRequested():
                     retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
-                    if   retval == 0: return True #No
+                    if   retval == 0: return True if hasChannels else Globals._openSettings()#No
                     elif retval == 1: break       #Yes
                     elif retval == 2:             #Custom
                         with BUILTIN.busy_dialog():
@@ -90,6 +90,7 @@ class Autotune(object):
             self.pHeader = '%s, %s'%(ADDON_NAME,LANGUAGE(32021))
             
             completed = set()
+            channels  = Channels(writable=True)
             template  = channels.getTemplate()
             xchannels = channels.getChannels() 
             xnumbers  = [ch.get('number',0) for ch in xchannels]
@@ -108,6 +109,7 @@ class Autotune(object):
                 if len(citems) > 0 and not manager:
                     if channels.setChannels(citems):
                         timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
+            del channels
             if manager: return citems
             return True
         

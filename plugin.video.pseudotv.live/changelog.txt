@@ -1,6 +1,10 @@
 ### NOTICE: The wizard branch is in alpha; things will break! ####
 v.0.7.0+nightly
-- Removed Support for "Mixed" Smartplaylists as "TV/Movie" Playlists.
+- Improved Autotuning
+- Added Memory Cache limit, Settings under Miscellaneous.
+- Tweaked Caching
+- Improved Media duration parsing.
+- Removed Support for Lazy "Mixed" Smartplaylists as "TV/Movie" Playlists. Achieve mixed content channels via the Channel Manager.
 
 v.0.6.9-wizard
 - Improved Asynchronous Executors.

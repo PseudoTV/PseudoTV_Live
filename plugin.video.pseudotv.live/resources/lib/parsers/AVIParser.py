@@ -17,11 +17,12 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from globals    import *
+from typing import Union
+import struct
 
 class AVIChunk:
     def __init__(self):
         self.empty()
-
 
     def empty(self):
         self.size = 0
@@ -29,11 +30,12 @@ class AVIChunk:
         self.datatype = 1
         self.chunk = ''
 
-
     def read(self, thefile):
         data = thefile.readBytes(4)
-        try:    self.size = struct.unpack('<i', data)[0]
-        except Exception: self.size = 0
+        try:    
+            self.size = struct.unpack('<i', data)[0]
+        except: 
+            self.size = 0
         # Putting an upper limit on the chunk size, in case the file is corrupt
         if self.size > 0 and self.size < 10000: 
             self.chunk = thefile.readBytes(self.size)
@@ -46,25 +48,23 @@ class AVIList:
     def __init__(self):
         self.empty()
 
-
     def empty(self):
         self.size = 0
         self.fourcc = ''
         self.datatype = 2
 
-
     def read(self, thefile):
         data = thefile.readBytes(4)
-        self.size = struct.unpack('<i', data)[0]
-        try:    self.size = struct.unpack('<i', data)[0]
-        except Exception: self.size = 0
+        try:    
+            self.size = struct.unpack('<i', data)[0]
+        except: 
+            self.size = 0
         self.fourcc = thefile.read(4)
 
 
 class AVIHeader:
     def __init__(self):
         self.empty()
-
 
     def empty(self):
         self.dwMicroSecPerFrame = 0
@@ -79,11 +79,9 @@ class AVIHeader:
         self.dwHeight = 0
 
 
-
 class AVIStreamHeader:
     def __init__(self):
         self.empty()
-
 
     def empty(self):
         self.fccType = ''
@@ -102,26 +100,40 @@ class AVIStreamHeader:
         self.rcFrame = ''
 
 
-
 class AVIParser:
+    """
+    Parser for AVI video files.
+    Duration is calculated from stream header information.
+    """
     def __init__(self):
         self.Header = AVIHeader()
         self.StreamHeader = AVIStreamHeader()
 
-
-    def determineLength(self, filename: str) -> int and float:
+    def determineLength(self, filename: str) -> Union[int, float]:
+        """
+        Determines video length from AVI file.
+        Returns duration in seconds.
+        """
         log("AVIParser: determineLength %s"%filename)
 
-        try: self.File = FileAccess.open(filename, "rb", None)
-        except Exception:
-            log("AVIParser: Unable to open the file")
+        try: 
+            self.File = FileAccess.open(filename, "rb", None)
+        except IOError as e:
+            log("AVIParser: Unable to open the file: %s"%e)
             return 0
 
-        dur = int(self.readHeader())
-        self.File.close()
-        log('AVIParser: Duration is %s'%(dur))
-        return dur
-
+        try:
+            dur = int(self.readHeader())
+            log('AVIParser: Duration is %s seconds'%(dur))
+            return dur
+        except Exception as e:
+            log("AVIParser: Error reading header: %s"%e)
+            return 0
+        finally:
+            try:
+                self.File.close()
+            except:
+                pass
 
     def readHeader(self):
         # AVI Chunk
@@ -130,7 +142,7 @@ class AVIParser:
         if data.datatype != 2:
             log("AVIParser: Not an avi")
             return 0
-        #todo fix
+        
         if data.fourcc[0:4] != "AVI ":
             log("AVIParser: Wrong FourCC")
             return 0
@@ -182,17 +194,21 @@ class AVIParser:
                     self.File.seek(listsize - data.size - 12, 1)
 
                 data = self.getChunkOrList()
-            except Exception:
-                log("AVIParser: Unable to seek")
+            except Exception as e:
+                log("AVIParser: Unable to seek: %s"%e)
 
         log("AVIParser: Video stream not found")
         return 0
 
 
     def getStreamDuration(self):
+        """Calculate duration from stream header (duration in seconds)."""
         try:
+            if self.StreamHeader.dwRate <= 0 or self.StreamHeader.dwScale <= 0:
+                return 0
             return int(self.StreamHeader.dwLength / (float(self.StreamHeader.dwRate) / float(self.StreamHeader.dwScale)))
-        except Exception:
+        except (ZeroDivisionError, TypeError):
+            log("AVIParser: Error calculating duration", xbmc.LOGERROR)
             return 0
 
 
@@ -209,9 +225,9 @@ class AVIParser:
             self.Header.dwSuggestedBufferSize = header[7]
             self.Header.dwWidth = header[8]
             self.Header.dwHeight = header[9]
-        except Exception:
+        except Exception as e:
             self.Header.empty()
-            log("AVIParser: Unable to parse the header")
+            log("AVIParser: Unable to parse the header: %s"%e)
 
 
     def parseStreamHeader(self, data):
@@ -231,14 +247,16 @@ class AVIParser:
             self.StreamHeader.dwQuality = header[9]
             self.StreamHeader.dwSampleSize = header[10]
             self.StreamHeader.rcFrame = ''
-        except Exception:
+        except Exception as e:
             self.StreamHeader.empty()
-            log("AVIParser: Error reading stream header")
+            log("AVIParser: Error reading stream header: %s"%e)
 
 
     def getChunkOrList(self):
-        try: data = self.File.readBytes(4).decode('utf-8')
-        except Exception: data = self.File.read(4)
+        try: 
+            data = self.File.readBytes(4).decode('utf-8')
+        except: 
+            data = self.File.read(4)
         
         if data == "RIFF" or data == "LIST":
             dataclass = AVIList()

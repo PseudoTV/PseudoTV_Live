@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -17,19 +17,41 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from globals    import *
+from typing import Union
 
 class Hachoir:
-    def determineLength(self, filename: str) -> int and float:
+    def determineLength(self, filename: str) -> Union[int, float]:
+        """
+        Determines video length using Hachoir metadata.
+        Returns duration in seconds.
+        """
         try:
             meta = {}
             from hachoir.parser   import createParser
             from hachoir.metadata import extractMetadata
             log("Hachoir: determineLength %s"%(filename))
-            meta = extractMetadata(createParser(FileAccess.open(filename,'r')))
-            if not meta: raise Exception('No meta found')
-            dur  = meta.get('duration').total_seconds()
-            log('Hachoir: Duration is %s'%(dur))
+            
+            file_obj = FileAccess.open(filename, 'rb')
+            parser = createParser(file_obj)
+            if not parser:
+                raise Exception('Unable to create parser')
+            
+            meta = extractMetadata(parser)
+            file_obj.close()
+            
+            if not meta:
+                raise Exception('No metadata found')
+            
+            duration = meta.get('duration')
+            if not duration:
+                raise Exception('Duration not found in metadata')
+            
+            dur = int(duration.total_seconds())
+            log('Hachoir: Duration is %s seconds'%(dur))
             return dur
+        except ImportError:
+            log("Hachoir: hachoir module not available", xbmc.LOGERROR)
+            return 0
         except Exception as e:
-            log("Hachoir: failed! %s\nmeta = %s"%(e,meta), xbmc.LOGERROR)
+            log("Hachoir: failed! %s"%(e), xbmc.LOGERROR)
             return 0

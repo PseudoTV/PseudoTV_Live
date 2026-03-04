@@ -19,7 +19,7 @@
 # -*- coding: utf-8 -*-
 from variables   import *
 from kodi        import *
-from pool        import killit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
+from pool        import debounceit, killit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
 
 DIALOG     = Dialog()
 PROPERTIES = DIALOG.properties
@@ -316,7 +316,7 @@ def interleave(seqs, sets=1, repeats=False):
     else: return list(chain.from_iterable(seqs))
         
 def percentDiff(org, new):
-    try: return (abs(float(org) - float(new)) / float(new)) * 100.0
+    try: return (abs(round(org) - round(new)) / round(new)) * 100.0
     except ZeroDivisionError: return -1
         
 def pagination(list, end):

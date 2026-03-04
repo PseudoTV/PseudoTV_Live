@@ -31,6 +31,22 @@ def timeit(method):
         end_time = time.time()
         log('%s timeit => %.2f ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
 
+def debounceit(wait=SERVICE_INTERVAL):
+    def decorator(method):
+        timer = None
+        timer_lock = Lock()
+        @wraps(method)
+        def wrapper(*args, **kwargs):
+            nonlocal timer
+            with timer_lock:
+                if timer is not None: timer.cancel()
+                timer = Timer(wait, method, args=args, kwargs=kwargs)
+                timer.name = '%s.%s'%('debounceit',method.__qualname__.replace('.',': '))
+                log('%s, debounceit starting %s waiting (%s)'%(method.__qualname__.replace('.',': => -:'),timer.name,wait))
+                timer.start()
+        return wrapper
+    return decorator
+
 def killit(method):
     @wraps(method)
     def wrapper(wait=30, *args, **kwargs):
@@ -67,7 +83,6 @@ def poolit(method):
                 except Exception: self.error  = traceback.format_exc()
         thread = pooler()
         thread.name   = '%s.%s'%('poolit',method.__qualname__.replace('.',': '))
-        thread.daemon =True
         thread.start()
         log('%s, poolit starting %s waiting (%s)'%(method.__qualname__.replace('.',': => -:'),thread.name,wait))
         try:    thread.join(wait)
@@ -91,7 +106,6 @@ def threadit(method):
             try: thread.join()
             except Exception: pass
         thread.name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
-        thread.daemon =True
         thread.start()
         log('%s, threadit starting %s'%(method.__qualname__.replace('.',': '),thread.name))
         return thread

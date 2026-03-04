@@ -214,17 +214,21 @@ class Manager(xbmcgui.WindowXMLDialog):
     @contextmanager
     def toggleSpinner(self, state=True, lock=True, condition=None):
         self.log('toggleSpinner, state = %s, condition = %s, lock = %s'%(state,condition,lock))
-        if not condition is None and condition:
-            PROPERTIES.setRunning('Manager.toggleSpinner',state)
-            self.setVisibility(self.spinner,state)
-            if lock: self.setLocked(True)
-            try: yield
-            finally:
-                if self.isLocked(): self.setLocked(False)
-                self.setVisibility(self.spinner,False)
-                PROPERTIES.setRunning('Manager.toggleSpinner',False)
-        else: yield
-        
+        if PROPERTIES.isRunning('Manager'):
+            if not condition is None and condition:
+                PROPERTIES.setRunning('Manager.toggleSpinner',state)
+                self.setVisibility(self.spinner,state)
+                if lock: self.setLocked(True)
+                try: yield
+                finally:
+                    if self.isLocked(): self.setLocked(False)
+                    self.setVisibility(self.spinner,False)
+                    PROPERTIES.setRunning('Manager.toggleSpinner',False)
+            else: yield
+        else:
+            with BUILTIN.busy_dialog(not bool(condition), lock):
+                yield
+
 
     def togglechanList(self, state=True, focus=0, reset=False):
         self.log('togglechanList, state = %s, focus = %s, reset = %s'%(state,focus,reset))
@@ -546,7 +550,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             else:     logo = citem.get('logo')
             if not logo or logo in [LOGO,COLOR_LOGO,ICON]:
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                    citem['logo'] = self.resources.getLogo(citem, fallback=self.resources.getCache(citem['name']), lookup=True)
+                    citem['logo'] = self.resources.getLogo(citem, fallback=self.resources.getCache(citem['name']))
         self.log('setLogo, id = %s, logo = %s, force = %s'%(citem.get('id'),citem.get('logo'),force))
         return citem
        
@@ -610,7 +614,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             citem = self.setName(path, citem)
             return path, self.setLogo(citem.get('name'),citem)
             
-        def __seek(item, path, passed=False, wait=FIFTEEN):
+        def __seek(item, passed=False, wait=FIFTEEN):
+            self.log('validatePaths, __seek: path = %s'%(item.get('file')))
             player = PLAYER()
             if player.isPlaying(): DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(30136)}')
             else:
@@ -643,7 +648,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __vfs(path, citem, cnt=3):
             def __fileList(citem, fileList=[]):
                 citem['id'] = getChannelID(citem['name'], citem['path'], random.random())
-                return PROPERTIES.preemptActivity(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}', Builder(channels=self.channels).buildVideo, *(citem,True))
+                return PROPERTIES.preemptActivity(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}', Builder().buildVideo, *(citem,True))
 
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 if isRadio({'path':[path]}): return True
@@ -655,11 +660,12 @@ class Manager(xbmcgui.WindowXMLDialog):
                     DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\nMedia Found!',time=2)
                     self.log('validatePaths, __vfs: path = %s fileList = %s'%(path,len(fileList)))
                     while not self.monitor.abortRequested() and cnt > 0:
-                        if __seek(random.choice(fileList), path): return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]PASSED![/B]')
+                        if __seek(random.choice(fileList)): return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]PASSED![/B]')
                         else:
                             retval = DIALOG.yesnoDialog(LANGUAGE(30202),customlabel='Try Again (%s)'%(cnt))
                             if   retval == 1: return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]OVERRIDE![/B]')
                             elif retval == 2: cnt -=1
+                            else: break
                 return not bool(DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]FAILED![/B]'))
         if path: 
             path = __convert(path)
@@ -687,7 +693,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if DIALOG.yesnoDialog("Would you like to AutoTune sample channels?"):
             with BUILTIN.busy_dialog():
                 number   = 1
-                channels = (Autotune()._runTune(self.channels,True,start,int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT))) or [])
+                channels = (Autotune()._runTune(True,start,int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT))) or [])
                 for channel in channels:
                     number = channel.get('number',0)
                     if number > 0: 

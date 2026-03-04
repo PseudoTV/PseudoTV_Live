@@ -106,18 +106,20 @@ class Cache(object):
 
 
 class _Cache(object):
+    _cache_idx           = deque()
+    _busy_tasks          = []
     cache_lock           = Lock()
     enable_mem_cache     = False
     window               = None
     global_checksum      = ADDON_VERSION
-    _auto_clean_interval = datetime.timedelta(hours=MAX_GUIDEDAYS)
-    _busy_tasks          = []
+    _auto_clean_interval = datetime.timedelta(hours=int((REAL_SETTINGS.getSetting('Max_Days') or "3")))
 
-    def __init__(self, service=None, winID=10000):
-        self.service = service
-        self.monitor = service.monitor
-        self.window  = xbmcgui.Window(winID)
-        self.dbfile  = FileAccess.translatePath(CACHEFLEPATH)
+    def __init__(self, service=None, winID=10000, limit=REAL_SETTINGS.getSettingInt('Cache_MEM_Limit')):
+        self.max_bytes = int(_Cache._getTotMEM() * (limit / 100))
+        self.service   = service
+        self.monitor   = service.monitor
+        self.window    = xbmcgui.Window(winID)
+        self.dbfile    = FileAccess.translatePath(os.path.join(REAL_SETTINGS.getSetting('User_Folder'),'cache.db'))
         self.chkCleanup()
 
 
@@ -129,6 +131,40 @@ class _Cache(object):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
 
+    @staticmethod
+    def _getTotMEM():
+        try:
+            # Linux / Android / macOS (mostly)
+            with open('/proc/meminfo', 'r') as f:
+                for line in f:
+                    if "MemTotal" in line:
+                        # Line looks like: "MemTotal: 16345678 kB"
+                        return int(line.split()[1]) * 1024
+        except:
+            try:
+                # Windows approach using ctypes to call GlobalMemoryStatusEx
+                if platform.system() == "Windows":
+                    class MEMORYSTATUSEX(ctypes.Structure):
+                        _fields_ = [
+                            ("dwLength", ctypes.c_uint),
+                            ("dwMemoryLoad", ctypes.c_uint),
+                            ("ullTotalPhys", ctypes.c_uint64),
+                            ("ullAvailPhys", ctypes.c_uint64),
+                            ("ullTotalPageFile", ctypes.c_uint64),
+                            ("ullAvailPageFile", ctypes.c_uint64),
+                            ("ullTotalVirtual", ctypes.c_uint64),
+                            ("ullAvailVirtual", ctypes.c_uint64),
+                            ("sullAvailExtendedVirtual", ctypes.c_uint64),
+                        ]
+                    stat = MEMORYSTATUSEX()
+                    stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+                    ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
+                    return stat.ullTotalPhys
+            except Exception: pass
+        # Fallback: Default to a conservative 1GB if detection fails
+        return 1024 * 1024 * 1024
+        
+        
     def chkCleanup(self):
         cur_time     = datetime.datetime.now()
         lastexecuted = Globals._getProperty("cache.lastexecuted")
@@ -157,33 +193,42 @@ class _Cache(object):
 
 
     def clr(self, endpoint, wait=15):
-        if FileAccess.exists(self.dbfile):
-            with FileLock(self.dbfile):
-                try:
-                    connection = sqlite3.connect(self.dbfile, timeout=wait, isolation_level=None)
-                    connection.execute('DELETE FROM cache WHERE id LIKE ?', (endpoint + '%',))
-                    connection.commit()
-                except sqlite3.Error as e: self.log('clr, failed! %s' % e, xbmc.LOGERROR)
-                finally:
-                    if connection:
-                        connection.close()
-                        del connection
+        self._execute_sql('DELETE FROM cache WHERE id LIKE ?', (endpoint + '%',))
 
 
     def _getMEM(self, endpoint, checksum, cur_time):
         result = None
         try: 
             cachedata = pickle.loads(Globals._decodeString(Globals._getProperty(endpoint)))
-            if cachedata[0] > cur_time:
-                if not checksum or checksum == cachedata[2]: result = cachedata[1]
+            if cachedata[0] > cur_time and not checksum or checksum == cachedata[2]: result = cachedata[1]
         except Exception as e: pass
         return result
 
 
     def _setMEM(self, endpoint, checksum, expires, data):
-        try: Globals._setProperty(endpoint,  Globals._encodeString(pickle.dumps((expires, data, checksum))))
+        try: 
+            string_text = Globals._encodeString(pickle.dumps((expires, data, checksum)))
+            string_size = sys.getsizeof(string_text)
+            if string_size > self.max_bytes: raise Exception(f"_setMEM, {endpoint} too large for cache limit {self.max_bytes}!")
+            else:
+                Globals._setProperty(endpoint, string_text)
+                self._cache_idx.append((endpoint, string_size))
+                self._trimMEM()
         except Exception as e: self.log("_setMEM, failed! %s"%(e), xbmc.LOGERROR)
 
+
+    def _getSize(self):
+        return sum(size for _, size in self._cache_idx)
+
+
+    def _trimMEM(self):
+        # While current size exceeds limit, remove the oldest (leftmost) items
+        while not self.monitor.abortRequested() and self._getSize() > self.max_bytes:
+            try:
+                endpoint, removed_size = self._cache_idx.popleft().items()
+                Globals._clrProperty(endpoint)
+                self.log(f"_trimMEM, {endpoint} removed {removed_size} bytes from memory!")
+            except Exception as e: self.log("_trimMEM, failed! %s"%(e), xbmc.LOGERROR)
 
 
     def _getDB(self, endpoint, checksum, cur_time):
@@ -195,9 +240,8 @@ class _Cache(object):
             if cache_data and cache_data[0] > cur_time:
                 if not checksum or cache_data[2] == checksum:
                     try: 
-                        data = pickle.loads(cache_data[1])
-                        if self.enable_mem_cache: self._setMEM(endpoint, checksum, cache_data[0], data)
-                        results = data
+                        result = pickle.loads(cache_data[1])
+                        if self.enable_mem_cache: self._setMEM(endpoint, checksum, cache_data[0], result)
                     except Exception as e: self.log("_getDB, failed! %s"%(e), xbmc.LOGERROR)
         return result
 
@@ -214,19 +258,19 @@ class _Cache(object):
         cur_timestamp = self.getTimestamp(cur_time)
         self.log("_cleanUP, running _cleanUP...")
         
-        if Globals._getProperty("cache.cleanbusy"): return
-        else:
+        if not Globals._getProperty("cache.cleanbusy"):
             Globals._setProperty("cache.cleanbusy", "busy")
             query = "SELECT id, expires FROM cache"
             for cache_data in self._execute_sql(query).fetchall():
-                if self.service._shutdown(CPU_CYCLE): return
-                cache_id      = cache_data[0]
-                cache_expires = cache_data[1]
-                Globals._clrProperty(cache_id)
-                if cache_expires < cur_timestamp:
-                    query = 'DELETE FROM cache WHERE id = ?'
-                    self._execute_sql(query, (cache_id,))
-                    self.log("_cleanUP, delete from db %s" % cache_id)
+                if self.service._shutdown(CPU_CYCLE): break
+                else:
+                    cache_id      = cache_data[0]
+                    cache_expires = cache_data[1]
+                    Globals._clrProperty(cache_id)
+                    if cache_expires < cur_timestamp:
+                        query = 'DELETE FROM cache WHERE id = ?'
+                        self._execute_sql(query, (cache_id,))
+                        self.log("_cleanUP, delete from db %s" % cache_id)
 
             self._execute_sql("VACUUM")
             self._busy_tasks.remove(__name__)
@@ -235,33 +279,11 @@ class _Cache(object):
             self.log("_cleanUP, auto _cleanUP done")
 
 
-    def _ensure_db_initialized(self):
-        # Ensure DB and table exist. Keep it simple and idempotent.
-        if not FileAccess.exists(USER_LOC):
-            try: FileAccess.mkdirs(USER_LOC)
-            except Exception: pass
-        try:
-            # Use connection context; create table if missing
-            conn = sqlite3.connect(self.dbfile, timeout=30)
-            try:
-                conn.execute("""CREATE TABLE IF NOT EXISTS cache(
-                                    id TEXT UNIQUE,
-                                    expires INTEGER,
-                                    data TEXT,
-                                    checksum INTEGER
-                                )""")
-                conn.commit()
-            finally:
-                conn.close()
-        except Exception as e:
-            self.log("_ensure_db_initialized Failed: %s" % e, xbmc.LOGWARNING)
-
-
     def _execute_sql(self, query, data=None):
-        with self.cache_lock:
-            retries = 0
-            result  = None
-            if not FileAccess.exists(CACHE_LOC): FileAccess.mkdirs(CACHE_LOC)
+        retries = 0
+        result  = None
+        if not FileAccess.exists(CACHE_LOC): FileAccess.mkdirs(CACHE_LOC)
+        with self.cache_lock, FileLock(self.dbfile):
             try:
                 connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
                 connection.execute('SELECT * FROM cache LIMIT 1')

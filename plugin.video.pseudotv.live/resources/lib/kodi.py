@@ -880,13 +880,13 @@ class Properties(object):
             if not isInterrupt and (isSuspend or isBuilding):  #force interrupt.
                 if isSuspend:  self.setSuspendActivity(False)  #release suspension 
                 if isBuilding: self.setInterruptActivity(True) #interrupt building.
-            elif isInterrupt:  self.setInterruptActivity(False)#release interrupt.
-            elif not isInterrupt and not any(set([isSuspend, isBuilding])):
+            elif isInterrupt and not isBuilding: self.setInterruptActivity(False)#release interrupt.
+            elif not isInterrupt and not any([isSuspend, isBuilding]):
                 with self.lockActivity():
                     try:   results = func(*args, **kwargs)
                     except Exception as e: self.log("preemptActivity, failed! %s"%(e), xbmc.LOGERROR)
                     finally: break
-            if self.monitor.waitForAbort(SUSPEND_INTERVAL): break
+            if self.monitor.waitForAbort(CPU_CYCLE): break
         
         self.setSuspendActivity(orgSuspend)
         self.setInterruptActivity(orgInterrupt)

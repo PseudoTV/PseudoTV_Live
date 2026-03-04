@@ -61,14 +61,14 @@ except Exception: pass
     
 class VideoParser(object):
     def __init__(self):
-        self.AVIExts   = ['.avi']
-        self.MP4Exts   = ['.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov']
-        self.MKVExts   = ['.mkv']
-        self.FLVExts   = ['.flv']
-        self.TSExts    = ['.ts', '.m2ts']
-        self.STRMExts  = ['.strm']
-        self.VFSPaths  = ['resource://','plugin://','upnp://','pvr://']
-        self.YTPaths   = ['plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious']
+        self.AVIExts  = ['.avi']
+        self.MP4Exts  = ['.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov']
+        self.MKVExts  = ['.mkv']
+        self.FLVExts  = ['.flv']
+        self.TSExts   = ['.ts', '.m2ts']
+        self.STRMExts = ['.strm']
+        self.VFSPaths = ['resource://','plugin://','upnp://','pvr://']
+        self.YTPaths  = ['plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious']
 
 
     def getVideoLength(self, filename: str, fileitem: dict={}, jsonRPC=None) -> int and float:
@@ -106,6 +106,7 @@ class VideoParser(object):
                         if monitor.waitForAbort(0.0001) or duration > 0: break
                         duration = parser().determineLength(filename)
                     del monitor
-            if duration > 0: duration = jsonRPC._setDuration(filename, fileitem, int(duration))
+            
+            if duration > 0: duration = jsonRPC._setDuration(filename, fileitem, round(duration))
         log("VideoParser: getVideoLength duration = %s, filename = %s"%(duration,filename))
         return duration
