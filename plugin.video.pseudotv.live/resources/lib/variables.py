@@ -219,11 +219,10 @@ class Globals:
             
     @staticmethod  
     def _cleanGroups(citem):
+        if ADDON_NAME not in citem['group']: citem['group'].append(ADDON_NAME)
         if REAL_SETTINGS.getSetting('Enable_Grouping') == "true":
-            if   ADDON_NAME not in citem['group']:                      citem['group'].append(ADDON_NAME)
-            if   citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']: citem['group'].append(LANGUAGE(32019))
+            if citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']: citem['group'].append(LANGUAGE(32019))
             elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']: citem['group'].remove(LANGUAGE(32019))
-        else:                                                           citem['group'] = [ADDON_NAME]
         citem['group'] = sorted(set(citem['group']))
         return citem
              

@@ -65,14 +65,14 @@ class Library(object):
         self.libraryTEMP = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
 
-        self.AUTOTUNE = {"Playlists"    :{'func':self.getPlaylists   ,'life':datetime.timedelta(minutes=FIFTEEN)},
+        self.AUTOTUNE = {"Playlists"    :{'func':self.getPlaylists   ,'life':datetime.timedelta(minutes=15)},
                          "TV Networks"  :{'func':self.getNetworks    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                          "TV Shows"     :{'func':self.getTVShows     ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                          "TV Genres"    :{'func':self.getTVGenres    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                          "Movie Genres" :{'func':self.getMovieGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                          "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                          "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                         "Mixed"        :{'func':self.getMixed       ,'life':datetime.timedelta(minutes=FIFTEEN)},
+                         "Mixed"        :{'func':self.getMixed       ,'life':datetime.timedelta(minutes=15)},
                          "Recommended"  :{'func':self.getRecommend   ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                          "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                          "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)}}
@@ -160,37 +160,37 @@ class Library(object):
         return PlayList
 
     
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getNetworks(self):
         try:    return self.getTVInfo().get('studios',[])
         except Exception: return []
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getTVShows(self):
         try:    return self.getTVInfo().get('shows',[])
         except Exception: return []
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getTVGenres(self):
         try:    return self.getTVInfo().get('genres',[])
         except Exception: return []
  
        
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getMovieGenres(self):
         try:    return self.getMovieInfo().get('genres',[])
         except Exception: return []
               
            
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))  
+    @cacheit(expiration=datetime.timedelta(minutes=15))  
     def getMovieStudios(self):
         try:    return self.getMovieInfo().get('studios',[])
         except Exception: return []
         
          
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getMixedGenres(self):
         MixedGenreList = []
         tvGenres    = self.getTVGenres()
@@ -268,7 +268,7 @@ class Library(object):
         return searchList
                 
 
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getTVInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getTVInfo')
         NetworkList = ShowGenreList = TVShowList = []
@@ -337,7 +337,7 @@ class Library(object):
         return {'studios':NetworkList,'genres':ShowGenreList,'shows':TVShowList}
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getMovieInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getMovieInfo')
         StudioList = MovieGenreList = []
@@ -390,7 +390,7 @@ class Library(object):
         return {'studios':StudioList,'genres':MovieGenreList}
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getMusicInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getMusicInfo')
         MusicGenreList = []

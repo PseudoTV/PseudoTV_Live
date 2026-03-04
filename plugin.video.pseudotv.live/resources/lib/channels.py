@@ -44,11 +44,6 @@ class Channels(object):
         self.log('_load, file = %s\nchannels = %s'%(self.channelFile,len(channelDATA.get('channels',[]))))
         return channelDATA
     
-    
-    def _reload(self) -> bool:
-        self.log('_reload') 
-        self.__init__()
-        
         
     def _verify(self, channels: list=[]):
         for idx, citem in enumerate(self.channelDATA.get('channels',[])):
@@ -123,6 +118,7 @@ class Channels(object):
         self.log('addChannel, [%s] adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
         self.channelDATA.setdefault('channels',[]).append(Globals._cleanGroups(citem))
         return True
+        
         
     def findChannel(self, citem: dict={}, channels=None) -> tuple:
         if channels is None: channels = self.channelDATA['channels']

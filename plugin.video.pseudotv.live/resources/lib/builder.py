@@ -198,8 +198,7 @@ class Builder(object):
             if any([self.resetPagination(citem),self.m3u.delStation(citem),self.xmltv.delBroadcast(citem)]):
                 stop = -1
                 citem['changed'] = False
-                if self.channels.addChannel(citem):
-                    self.channels.setChannels()
+                self.channels.addChannel(citem)
 
         def __addProgrammes(citem: dict, fileList: list) -> bool:
             self.log('[%s] buildChannels, __addProgrammes fileList = %s'%(citem['id'],len(fileList)))
@@ -274,7 +273,7 @@ class Builder(object):
                             if any(updated): 
                                 completed.add(__addStation(citem)) #add m3u station if lineup available. 
                                 self.log(f'[{citem['id']}] buildChannels, writing station = {any(completed)}')
-                                timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                                timerit(PROPERTIES.setPropTimer)(15,['chkPVRRefresh'])
                         except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)
                     self.log('[%s] buildChannels, completed = %s, updated = %s'%(citem['id'],any(completed),any(updated)))
 
@@ -379,7 +378,7 @@ class Builder(object):
             elif self.service._suspend():
                 self.log("[%s] buildFileList, _suspend"%(citem['id']))
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=self.pHeader)
-                self.service._sleep(FIFTEEN)
+                self.service._sleep(15)
                 continue
             elif len(dirList) == 0 or dirCount >= self.recursiveLimit:
                 if self.padFilelist and len(fileList) > 0 and len(fileList) < page: fileList = __padFileList(fileList,page)

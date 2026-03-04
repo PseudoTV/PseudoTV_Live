@@ -34,7 +34,7 @@ class OpenRouter(object):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _request(self, url, params={}, payload={}, header=HEADER, timeout=FIFTEEN):
+    def _request(self, url, params={}, payload={}, header=HEADER, timeout=15):
         if SETTINGS.getSettingBool('Enable_Generative_Artwork'):
             header.update({"Authorization": f"Bearer {SETTINGS.getSetting('Open_Router_APIKEY')}"})
             return requestURL(url, params, payload, header, timeout, cache={'cache':self.cache,'life':datetime.timedelta(days=MAX_GUIDEDAYS)})

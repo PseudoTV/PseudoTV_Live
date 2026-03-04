@@ -402,7 +402,7 @@ class Plugin(object):
             BUILTIN.executebuiltin('AlarmClock(last,Number(0),.5,true,false)') #last channel
         elif self.sysInfo.get('playcount',3) <= 3:
             DIALOG.notificationDialog(LANGUAGE(32000))
-            timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+            timerit(PROPERTIES.setPropTimer)(15,['chkPVRRefresh'])
             timerit(DIALOG.okDialog)(0.1,[LANGUAGE(32134)%(ADDON_NAME)])
         else:
             DIALOG.notificationDialog(LANGUAGE(32000))

@@ -267,12 +267,12 @@ class Player(xbmc.Player):
         self.log('_onSleep')
         sec = 0
         cnx = False
-        inc = int(100/FIFTEEN)
+        inc = int(100/15)
         xbmc.playSFX(NOTE_WAV)
         dia = DIALOG.progressDialog(message=LANGUAGE(30078))
-        while not self.monitor.abortRequested() and (sec < FIFTEEN):
+        while not self.monitor.abortRequested() and (sec < 15):
             sec += 1
-            msg = '%s\n%s'%(LANGUAGE(32039),LANGUAGE(32040)%(FIFTEEN-sec))
+            msg = '%s\n%s'%(LANGUAGE(32039),LANGUAGE(32040)%(15-sec))
             dia = DIALOG.progressDialog((inc*sec),dia, msg)
             if self.service._shutdown(1.0) or dia is None:
                 cnx = True
@@ -445,22 +445,18 @@ class Monitor(xbmc.Monitor):
                     if self.isIdle: self.player._onIdle()
             self.isRunning = False
             self.log("_chkIdle, shutting down...")
-            
-            
-    def _onSettingsChanged(self):
-        self.log('_onSettingsChanged') 
-        self.service._que(self._updatePlayerSettings)
-        self.service._que(self._updateServiceSettings)
-        
-        
+
+
     def onNotification(self, sender, method, data):
         self.log("onNotification, sender %s - method: %s  - data: %s" % (sender, method, data))
             
 
+    @debounceit(15)
     def onSettingsChanged(self):
-        self.log('onSettingsChanged')
-        timerit(self._onSettingsChanged)(30)
-        
+        self.log('onSettingsChanged') 
+        self.service._que(self._updatePlayerSettings)
+        self.service._que(self._updateServiceSettings)
+            
             
     def _updateServiceSettings(self):
         self.log('_updateServiceSettings')
@@ -530,7 +526,7 @@ class Service(object):
     
         
     def _tasks(self):
-        self._que(self.tasks._chkEpochTimer,-1,*('chkQueTimer', self.tasks.chkQueTimer, FIFTEEN)) #keep CustomQueue alive after interrupt.
+        self._que(self.tasks._chkEpochTimer,-1,*('chkQueTimer', self.tasks.chkQueTimer, 15)) #keep CustomQueue alive after interrupt.
     
     
     def _shutdown(self, wait=SERVICE_INTERVAL) -> bool: #service break
@@ -581,7 +577,7 @@ class Service(object):
     def _start(self):
         self.log('_start')
         self._initialize()
-        if DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=FIFTEEN):
+        if DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=15):
             if self.player.isPlayingPseudoTV(): self.player.onAVStarted()
             while not self.monitor.abortRequested():
                 self.isScanning = BUILTIN.isScanning()

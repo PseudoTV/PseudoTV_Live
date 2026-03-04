@@ -41,7 +41,7 @@ def stripRegion(s):
 def chanceBool(percent=25):
     return random.randrange(100) <= percent
 
-def requestURL(url, params={}, payload={}, header=HEADER, timeout=FIFTEEN, cache=None, file=None):
+def requestURL(url, params={}, payload={}, header=HEADER, timeout=15, cache=None, file=None):
     #cache = {"cache":None, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}
     def __error(result={}):                                                         return result
     def __getCache(key, cache, checksum):                return (cache.get('requestURL.%s'%(Globals._getMD5(key)), checksum) or __error())

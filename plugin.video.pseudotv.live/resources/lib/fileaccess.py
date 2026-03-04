@@ -24,7 +24,6 @@ from logger      import log
 
 #constants 
 DEFAULT_ENCODING = "utf-8"
-FILE_LOCK_NAME   = "pseudotv"
 ThreadLock       = Lock()
 
 class FileAccess(object):
@@ -59,8 +58,7 @@ class FileAccess(object):
             data = FileAccess.loadJSON(fle.read())
         except Exception as e: log('FileAccess: getJSON failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
         finally: 
-            if hasattr(fle, 'close'): 
-                fle.close()
+            if hasattr(fle, 'close'): fle.close()
         return data
 
 
@@ -72,8 +70,7 @@ class FileAccess(object):
                 fle.write(FileAccess.dumpJSON(data, idnt=4, sortkey=False))
             except Exception as e: log('FileAccess: setJSON failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
             finally:
-                if hasattr(fle, 'close'): 
-                    fle.close()
+                if hasattr(fle, 'close'): fle.close()
             return True
 
 
@@ -86,19 +83,28 @@ class FileAccess(object):
                 fle.write(contents)
             except Exception as e: log('FileAccess: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
             finally:
-                if hasattr(fle, 'close'): 
-                    fle.close()
+                if hasattr(fle, 'close'): fle.close()
         return FileAccess.exists(file)
         
         
     @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):
-        fle = 0
-        try: return VFSFile(filename, mode)
-        except UnicodeDecodeError: return FileAccess.open(filename, mode, encoding)
-        return fle
+        # monitor    = MONITOR()
+        # start_time = time.time()
+        # lock_path  = '%s.lock' % (os.path.splitext(filename.strip('\\'))[0])
+        # while not monitor.abortRequested() and FileAccess.exists(lock_path):
+            # if not FileAccess.exists(lock_path): break
+            # elif (time.time() - start_time) >= LOCK_MAX_FILE_TIMEOUT:
+                # log(f"FileAccess: Timeout waiting for lock to clear on {filename}", xbmc.LOGWARNING)
+                # break
+            # elif monitor.waitForAbort(LOCK_MAX_FILE_DELAY): break
+        # del monitor
+        try:
+            return VFSFile(filename, mode)
+        except UnicodeDecodeError:
+            return FileAccess.open(filename, mode, encoding)
 
-
+                
     @staticmethod
     @contextmanager
     def stream(filename, mode='r', encoding=DEFAULT_ENCODING):
@@ -131,13 +137,13 @@ class FileAccess(object):
         
     @staticmethod
     def listdir(path):
-        return xbmcvfs.listdir(path)
+        if FileAccess.exists(path): xbmcvfs.listdir(path)
+        return [],[]
 
 
     @staticmethod
     def mkdirs(path):
-        if not path.endswith(("/","\\")):
-            path = "%s/"%(path)
+        if not path.endswith(("/","\\")): path = "%s/"%(path)
         return xbmcvfs.mkdirs(path)
 
 
@@ -148,24 +154,21 @@ class FileAccess(object):
 
 
     @staticmethod
-    def copyFolder(src, dir, dia=None, delete=False):
+    def copyFolder(src, dir, dia=None, move=False):
         log('FileAccess: copyFolder %s to %s'%(src,dir))
         if not FileAccess.exists(dir): FileAccess.makedirs(dir)
-        if dia:
-            from kodi import Dialog
-            DIALOG = Dialog()
-        
+        if not dia is None: dia = dia._updateProgress(dia, 0, message='%s\n%s'%(LANGUAGE(32051),src))
+
         subs, files = FileAccess.listdir(src)
-        pct = 0
-        if dia: dia = DIALOG.progressDialog(pct, control=dia, message='%s\n%s'%(LANGUAGE(32051),src))
         for fidx, file in enumerate(files):
-            if dia: dia = DIALOG.progressDialog(pct, control=dia, message='%s: (%s%)\n%s'%(LANGUAGE(32051),(int(fidx*100)//len(files)),FileAccess._getFolderPath(file)))
-            if delete: FileAccess.move(os.path.join(src, file), os.path.join(dir, file))
-            else:      FileAccess.copy(os.path.join(src, file), os.path.join(dir, file))
+            if not dia is None: dia = dia._updateProgress(dia, int(fidx*100)//len(files), message=f'copying {file} {int(fidx*100)//len(files)}%\n{fidx}/{len(files)}')
+            if move: FileAccess.move(os.path.join(src, file), os.path.join(dir, file))
+            else:    FileAccess.copy(os.path.join(src, file), os.path.join(dir, file))
         
         for sidx, sub in enumerate(subs):
-            pct = int(sidx)//len(subs)
-            FileAccess.copyFolder(os.path.join(src, sub), os.path.join(dir, sub), dia, delete)
+            if not dia is None: dia = dia._updateProgress(dia, int(sidx*100)//len(subs), message=f'copying {sub} {int(sidx*100)//len(subs)}%\n{sidx}/{len(subs)}')
+            dia = FileAccess.copyFolder(os.path.join(src, sub), os.path.join(dir, sub), dia, move)
+        return dia
         
 
     @staticmethod
@@ -181,12 +184,12 @@ class FileAccess(object):
         log('FileAccess: moving %s to %s'%(orgfilename,newfilename))
         if FileAccess.copy(orgfilename, newfilename):
             return FileAccess.delete(orgfilename)
-        return False
         
 
     @staticmethod
     def delete(filename):
-        return xbmcvfs.delete(filename)
+        try: return xbmcvfs.delete(filename)
+        except Exception as e: log('FileAccess: delete failed! %s'%(e), xbmc.LOGERROR)
         
         
     @staticmethod
@@ -385,6 +388,7 @@ class VFSFile(object):
 
 class FileLock(object):
     monitor = MONITOR()
+    thread_lock = Lock()
     
     # https://github.com/dmfrey/FileLock
     """ A file locking mechanism that has context-manager support so 
@@ -392,99 +396,46 @@ class FileLock(object):
         compatible as it doesn't rely on msvcrt or fcntl for the locking.
     """
  
-    def __init__(self, file_name=FILE_LOCK_NAME, timeout=LOCK_MAX_FILE_TIMEOUT, delay: float=LOCK_MAX_FILE_DELAY):
-        """ Prepare the file locker. Specify the file to lock and optionally
-            the maximum timeout and the delay between each attempt to lock.
-        """
-        if timeout is not None and delay is None:
-            raise ValueError("If timeout is not None, then delay must not be None.")
-            
+    def __init__(self, filename, timeout=LOCK_MAX_FILE_TIMEOUT, delay: float=LOCK_MAX_FILE_DELAY):
         self.is_locked = False
-        self.file_name = file_name
-        self.lockpath  = self.checkpath()
-        self.lockfile  = os.path.join(self.lockpath, "%s.lock" % self.file_name)
+        self.lockfile  = '%s.lock' % (os.path.splitext(filename.strip('\\'))[0])
         self.timeout   = timeout
         self.delay     = delay
+        self.fd        = None
  
  
-    def checkpath(self):
-        lockpath = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
-        if not FileAccess.exists(lockpath):
-            if FileAccess.makedirs(lockpath):
-                return lockpath
-            else:#fallback to local folder.
-                #todo log error with lock path
-                lockpath = os.path.join(SETTINGS_LOC,'cache')
-                if not FileAccess.exists(lockpath):
-                    FileAccess.makedirs(lockpath)
-        return lockpath
+    def __del__(self):
+        self.release()
         
         
     def acquire(self):
-        """ Acquire the lock, if possible. If the lock is in use, it check again
-            every `wait` seconds. It does this until it either gets the lock or
-            exceeds `timeout` number of seconds, in which case it throws 
-            an exception.
-        """
-        start_time = time.time()
-        while not self.monitor.abortRequested():
-            if self.monitor.waitForAbort(self.delay): break
-            else:
+        with self.thread_lock:
+            start_time = time.time()
+            while not self.monitor.abortRequested():
                 try:
                     self.fd = FileAccess.open(self.lockfile, 'w')
                     self.is_locked = True #moved to ensure tag only when locked
-                    break;
+                    break
                 except OSError as e:
-                    if e.errno != errno.EEXIST:                    return
+                    if e.errno != errno.EEXIST:                    return log("FileLock: Could not create lock.\n%s"%(e), xbmc.LOGERROR)
                     if self.timeout is None:                       return log("FileLock: Could not acquire lock.\n%s"%(e), xbmc.LOGERROR)
                     if (time.time() - start_time) >= self.timeout: return log("FileLock: Timeout occurred.\n%s"%(e), xbmc.LOGERROR)
+                if self.monitor.waitForAbort(self.delay): break
  
  
     def release(self):
-        """ Get rid of the lock by deleting the lockfile. 
-            When working in a `with` statement, this gets automatically 
-            called at the end.
-        """
         if self.is_locked:
-            self.fd.close()
+            if hasattr(self.fd, 'close'): 
+                self.fd.close()
             self.is_locked = False
+        FileAccess.delete(self.lockfile)
  
  
     def __enter__(self):
-        """ Activated when used in the with statement. 
-            Should automatically acquire a lock to be used in the with block.
-        """
-        if not self.is_locked:
+        if not self.is_locked: 
             self.acquire()
         return self
  
  
     def __exit__(self, type, value, traceback):
-        """ Activated at the end of the with statement.
-            It automatically releases the lock if it isn't locked.
-        """
-        if self.is_locked:
-            self.release()
- 
- 
-    def __del__(self):
-        """ Make sure that the FileLock instance doesn't leave a lockfile
-            lying around.
-        """
         self.release()
-        FileAccess.delete(self.lockfile)
-        
-
-class FileStreamer(ContextDecorator):
-    def __init__(self, filepath, mode='rb', encoding=DEFAULT_ENCODING):
-        self.filepath = filepath
-        self.file_obj = None
-
-    def __enter__(self):
-        self.file_obj = xbmcvfs.File(self.filepath, mode, encoding)
-        return self.file_obj
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.file_obj:
-            self.file_obj.close()
-

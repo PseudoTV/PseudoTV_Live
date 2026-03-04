@@ -159,7 +159,7 @@ class Tasks(object):
             self.service._que(func, priority, *args, **kwargs)
             
 
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getOnlineVersion(self):
         try:    ONLINE_VERSION = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(requestURL(ADDON_URL)))[0]
         except Exception: ONLINE_VERSION = ADDON_VERSION
@@ -246,7 +246,7 @@ class Tasks(object):
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():
                 if SETTINGS.setAutotuned(Autotune()._runTune()): self.service._que(self.chkChannels,3)
-            elif PROPERTIES.hasEnabledServers(): timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+            elif PROPERTIES.hasEnabledServers(): timerit(PROPERTIES.setPropTimer)(15,['chkPVRRefresh'])
         del builder
 
 
@@ -264,7 +264,7 @@ class Tasks(object):
                         BUILTIN.executewindow('ActivateWindow(home)')
                         DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
                         __toggle(False), self.monitor.waitForAbort(M3U_REFRESH), __toggle(True)
-                    else: timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkPVRRefresh'])
+                    else: timerit(PROPERTIES.setPropTimer)(15,['chkPVRRefresh'])
             
             
     def chkSettingsChange(self, settings={}):

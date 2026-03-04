@@ -201,7 +201,7 @@ class M3U(object):
                     yield mitem
         
         
-    @debounceit(5.0)
+    @debounceit(SERVICE_INTERVAL)
     def _save(self):
         with PROPERTIES.interruptActivity(), self.m3u_lock:
             self.M3UDATA['data']       = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE))

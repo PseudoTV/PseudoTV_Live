@@ -614,7 +614,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             citem = self.setName(path, citem)
             return path, self.setLogo(citem.get('name'),citem)
             
-        def __seek(item, passed=False, wait=FIFTEEN):
+        def __seek(item, passed=False, wait=15):
             self.log('validatePaths, __seek: path = %s'%(item.get('file')))
             player = PLAYER()
             if player.isPlaying(): DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(30136)}')
@@ -936,7 +936,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         if self.channels.setChannels(channels):
                             self.madeChanges = False
                             self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
-                            timerit(PROPERTIES.setPropTimer)(FIFTEEN,['chkChanged'])#trigger channel building
+                            timerit(PROPERTIES.setPropTimer)(15,['chkChanged'])#trigger channel building
         else: self.madeChanges = False
         self.closeManager()
             

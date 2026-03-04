@@ -183,7 +183,7 @@ class Settings(object):
         return xbmcaddon.Addon(id).setSetting(key,value)
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=FIFTEEN))
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getIP(self, default='0.0.0.0'):
         IP = (xbmc.getIPAddress() or gethostbyname(gethostname()) or default)
         log('getIP, IP = %s'%(IP))

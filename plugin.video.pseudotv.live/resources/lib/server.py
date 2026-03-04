@@ -275,7 +275,7 @@ class HTTP(object):
             if not silent: DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
             SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
 
-        def __cancel(wait=FIFTEEN):
+        def __cancel(wait=15):
             try:
                 if self.httpd.is_alive():
                     if hasattr(self.httpd, 'cancel'): self.httpd.cancel()
@@ -323,7 +323,7 @@ class HTTP(object):
                         except Exception as e:
                             self.log("run, http server startup failed! %s"%(e), xbmc.LOGERROR)
                             break
-                    elif self.service._shutdown(FIFTEEN) or self._pendingRestart(): 
+                    elif self.service._shutdown(15) or self._pendingRestart(): 
                         self.log("run, _shutdown/pendingRestart", xbmc.LOGERROR)
                         break
             __stop(self._pendingRestart())

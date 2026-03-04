@@ -69,7 +69,6 @@ CPU_CYCLE           = (1/CPU_COUNT)/CPU_COUNT #safe none taxing cycle time.
 THREAD_COUNT        = min(32, CPU_COUNT + 4)
 QUEUE_CHUNK         = min(16, THREAD_COUNT // 2)
 
-FIFTEEN             = 15    #unit
 DISCOVERY_TIMER     = 60    #secs
 SERVICE_INTERVAL    = 5.0   #secs
 SUSPEND_INTERVAL    = 2.5   #secs
