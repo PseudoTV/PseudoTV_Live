@@ -59,6 +59,7 @@ class Channels(object):
             with PROPERTIES.interruptActivity():
                 if FileAccess.setJSON(self.channelFile,self.channelDATA):
                     SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
+                    return True
         
         
     def getTemplate(self) -> dict: 
@@ -81,7 +82,7 @@ class Channels(object):
         try:              return sorted(channels, key=itemgetter('number'))
         except Exception: return channels
 
-
+    
     def setChannels(self, channels=None) -> bool:
         if channels is None: channels = self.channelDATA['channels']
         self.channelDATA['uuid']     = SETTINGS.getMYUUID()

@@ -152,7 +152,7 @@ class Restart(xbmcgui.WindowXMLDialog):
                     liz = LISTITEMS.buildItemListItem(self.fitem)
                     liz.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.player.playingItem)))
                     self.player.stop()
-                timerit(self.player.play)(1.0,[self.fitem.get('catchup-id'),liz])
+                timerit(self.player.play)(1.0,*(self.fitem.get('catchup-id'),liz))
             else: DIALOG.notificationDialog(LANGUAGE(30154))
         elif actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),.5,true,false)')
         elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
@@ -176,7 +176,6 @@ class Overlay(object):
         self.runActions = self.player.runActions
         self.resources  = Resources(service=self.service)
         self.citem      = self.player.playingItem.get('citem',{})
-        
         self.window     = xbmcgui.Window(12005) 
         self.window_w, self.window_h = WH
         
@@ -270,7 +269,7 @@ class Overlay(object):
         self.log("close")
         self._delControl(self.vignette)
         self._delControl(self.channelBug)
-        if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,[self.defaultView])
+        if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,self.defaultView)
         # self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.citem, inherited=self) #debug NoneType, RULES_ACTION_OVERLAY_CLOSE obsolete? 
         
         
@@ -410,7 +409,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             data.update(next_episode)
 
         except Exception: pass
-        if data: timerit(self.jsonRPC.notifyAll)(0.5,['upnext_data', binascii.hexlify(FileAccess.dumpJSON(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)])
+        if data: timerit(self.jsonRPC.notifyAll)(0.5,*('upnext_data', binascii.hexlify(FileAccess.dumpJSON(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)))
         
         
     def onAction(self, act):

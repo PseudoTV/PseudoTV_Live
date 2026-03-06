@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.7.0+nightly" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.7.1+nightly" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
         <import addon="script.module.six" version="1.0.0"/>
@@ -37,7 +37,7 @@
                     <label>30117</label>
                     <visible>[String.StartsWith(ListItem.PVRInstanceName, PseudoTV Live) + Window.IsVisible(tvrecordings)]</visible>
                 </item>
-                <item library="resources/lib/context_play.py" args="playlist">
+                <item library="resources/lib/default.py" args="?mode=playlist">
                     <label>30076</label>
                     <visible>[String.Contains(ListItem.Plot,"item=") + ListItem.HasEpg] + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
                 </item>

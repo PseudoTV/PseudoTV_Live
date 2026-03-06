@@ -235,11 +235,7 @@ def cleanMPAA(mpaa):
     return mpaa
 
 def combineDicts(dict1={}, dict2={}):
-    if dict1 and dict2:
-        for k,v in list(dict1.items()):
-            if dict2.get(k): k = dict2.pop(k)
-        dict1.update(dict2)
-    return dict1
+    return {**dict1, **dict2}
     
 def _setDictLST(lst=[]):
     items = {}

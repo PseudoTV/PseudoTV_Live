@@ -108,7 +108,7 @@ class Autotune(object):
                 del library
                 if len(citems) > 0 and not manager:
                     if channels.setChannels(citems):
-                        timerit(PROPERTIES.setPropTimer)(15,['chkChanged'])#trigger channel building
+                        timerit(PROPERTIES.setPropTimer)(15,'chkChanged')#trigger channel building
             del channels
             if manager: return citems
             return True

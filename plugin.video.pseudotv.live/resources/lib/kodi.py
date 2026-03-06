@@ -937,7 +937,47 @@ class ListItems(object):
 
     def InfoTagMusic(self, offscreen=False):
         return xbmc.InfoTagVideo(offscreen)
+
+
+    def buildDictListItem(self, listitem):
+        item = {'label'       : listitem.getLabel(),
+                'label2'      : listitem.getLabel2(),
+                'file'        : listitem.getPath(),
+                'isFolder'    : listitem.isFolder(),
+                'isSelected'  : listitem.isSelected(),
+                'dateadded'   : listitem.getDateTime(),
+                'videoInfoTag': listitem.getVideoInfoTag(),#todo expand
+                'musicInfoTag': listitem.getMusicInfoTag(),#todo expand
+                'uniqueid '   : {},
+                'art'         : {},
+                'rating'      : {},
+                'votes'       : {},
+                'properties'  : {}}
+                      
+        for key in ['imdb','tvdb','tmdb','anidb']:
+            uid = listitem.getUniqueID(key)
+            if uid: item['uniqueID'][key] = uid
+            rat = listitem.getRating(key)
+            if rat: item['rating'][key] = rat
+            vot = listitem.getVotes(key)
+            if vot: item['votes'][key] = vot
+            
+        for key in  ['thumb', 'poster', 'banner', 'fanart', 'clearart', 'clearlogo', 'landscape', 'icon']:
+            val = listitem.getArt(key)
+            if val: item['art'][key] = val
+                
+        for key in self.getEnums("List.Fields.Files", type='items') + ['citem','catchup-id','stop','start','idx','friendly','plot','customproperties','runtime','originalpath','remote']:
+            val = listitem.getProperty(key)
+            if val: item[key] = val
+            
+        for prop in ['StartOffset', 'IsPlayable', 'AspectRatio']:
+            val = listitem.getProperty(prop)
+            if val: item['properties'][prop] = val
+                
         
+        # item['fitem'] = Globals._decodePlot(item.get('Plot'))
+        return item
+
 
     def buildItemListItem(self, item, media='video', offscreen=False, playable=True):
         try:
@@ -1272,7 +1312,7 @@ class Dialog(object):
         
         
     def _okDialog(self, msg, heading, autoclose):
-        return timerit(self.okDialog)(0.1,[msg, heading, autoclose])
+        return timerit(self.okDialog)(0.1,*(msg, heading, autoclose))
 
 
     def okDialog(self, msg, heading=ADDON_NAME, autoclose=AUTOCLOSE_DELAY, usethread=False):
@@ -1360,7 +1400,7 @@ class Dialog(object):
 
 
     def _textViewer(self, msg, heading, usemono, autoclose):
-        return timerit(self.textviewer)(0.1,[msg, heading, usemono, autoclose])
+        return timerit(self.textviewer)(0.1,*(msg, heading, usemono, autoclose))
         
         
     def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=AUTOCLOSE_DELAY, usethread=False, custom=False):
@@ -1382,7 +1422,7 @@ class Dialog(object):
 
 
     def _notificationWait(self, message, header, wait):
-        return timerit(self.notificationWait)(0.1,[message, header, wait])
+        return timerit(self.notificationWait)(0.1,*(message, header, wait))
 
 
     def notificationWait(self, message, header=ADDON_NAME, wait=4, show=True, usethread=False):

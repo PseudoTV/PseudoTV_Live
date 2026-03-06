@@ -54,18 +54,18 @@ class OpenRouter(object):
         return image_models, text_models
         
             
-    def _getImage(self, chname, count=1, model="google/gemini-2.5-flash-image-preview", background_color=(0, 255, 0)):
-        self.log('_getImage, chname = %s, count = %s, model = %s'%(chname, count, model))
-        payload = { "model"          : model,
-                    "messages"       : [{"role"        : "user",
-                                         "content"     : f"Create a logo with a background rgb({background_color}), {SETTINGS.getSetting('Gnerative_Artwork_Prompt').format(channel_name=chname)}",
-                                         "type"        : "text"}],
-                    "modalities"     : ["image"],
-                    "image_config"   : {"aspect_ratio": "16:9"},
-                    "n"              : count,
-                    "size"           : "512x512",
-                    "response_format": {"type": "b64_json"}}
-    
+    def _getImage(self, citem, count=1, model="google/gemini-2.5-flash-image-preview", background_color=(0, 255, 0)):
+        self.log('_getImage, chname = %s, count = %s, model = %s'%(citem.get('name'), count, model))
+        payload = { "model"        : model,
+                    "messages"     : [ { "role": "user",
+                                          "content": SETTINGS.getSetting('Gnerative_Artwork_Prompt').format(name=citem.get('name'),group='%s %s'%(citem.get('name'),', '.join(citem.get('group',[]).remove(ADDON_NAME))))}],
+                  "modalities"     : ["image"],
+                  "response_format": {"type": "b64_json"},
+                   "n"             : count,
+                  "provider"       : { "allow_fallbacks": true,
+                                       "require_parameters": true,
+                                       "data_collection": "deny"}}
+
         response = self._request("https://openrouter.ai/api/v1/chat/completions",payload=payload)
         if "choices" in response:
             for idx, image in enumerate(response["choices"][0]["message"]["images"]):
@@ -101,7 +101,7 @@ class OpenRouter(object):
                     # if __nearest(pixel[:3], background_color): pixels.append((0, 255, 0, 0))
                     # else:                                      pixels.append(pixel)
 
-                # new_img = Image.new('RGBA', img.size)
+                # new_img = Image.new('RGBA', img.size)e
                 # new_img.putdata(pixels)
                 # new_img.save(os.path.join(FileAccess.translatePath(LOGO_LOC),file_name), "PNG")  # Save as PNG to preserve transparency
                 # self.log(f"_alphaImage, Image saved with transparency at: {os.path.join(LOGO_LOC,file_name)}")

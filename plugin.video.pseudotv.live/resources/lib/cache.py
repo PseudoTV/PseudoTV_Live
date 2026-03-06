@@ -114,12 +114,13 @@ class _Cache(object):
     global_checksum      = ADDON_VERSION
     _auto_clean_interval = datetime.timedelta(hours=int((REAL_SETTINGS.getSetting('Max_Days') or "3")))
 
-    def __init__(self, service=None, winID=10000, limit=REAL_SETTINGS.getSettingInt('Cache_MEM_Limit')):
-        self.max_bytes = int(_Cache._getTotMEM() * (limit / 100))
+    def __init__(self, service=None, winID=10000):
+        self.max_bytes = _Cache._getFreeMEM()
         self.service   = service
         self.monitor   = service.monitor
         self.window    = xbmcgui.Window(winID)
         self.dbfile    = FileAccess.translatePath(os.path.join(REAL_SETTINGS.getSetting('User_Folder'),'cache.db'))
+        self.log('__init__, max_bytes = %s, winID = %s, dbfile = %s' % (self.max_bytes, winID, self.dbfile))
         self.chkCleanup()
 
 
@@ -132,37 +133,11 @@ class _Cache(object):
 
 
     @staticmethod
-    def _getTotMEM():
-        try:
-            # Linux / Android / macOS (mostly)
-            with open('/proc/meminfo', 'r') as f:
-                for line in f:
-                    if "MemTotal" in line:
-                        # Line looks like: "MemTotal: 16345678 kB"
-                        return int(line.split()[1]) * 1024
-        except:
-            try:
-                # Windows approach using ctypes to call GlobalMemoryStatusEx
-                if platform.system() == "Windows":
-                    class MEMORYSTATUSEX(ctypes.Structure):
-                        _fields_ = [
-                            ("dwLength", ctypes.c_uint),
-                            ("dwMemoryLoad", ctypes.c_uint),
-                            ("ullTotalPhys", ctypes.c_uint64),
-                            ("ullAvailPhys", ctypes.c_uint64),
-                            ("ullTotalPageFile", ctypes.c_uint64),
-                            ("ullAvailPageFile", ctypes.c_uint64),
-                            ("ullTotalVirtual", ctypes.c_uint64),
-                            ("ullAvailVirtual", ctypes.c_uint64),
-                            ("sullAvailExtendedVirtual", ctypes.c_uint64),
-                        ]
-                    stat = MEMORYSTATUSEX()
-                    stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-                    ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
-                    return stat.ullTotalPhys
-            except Exception: pass
-        # Fallback: Default to a conservative 1GB if detection fails
-        return 1024 * 1024 * 1024
+    def _getFreeMEM():
+        try:              free = int("".join(re.findall(r"\d", BUILTIN.getInfoLabel('FreeMemory','System'))))
+        except Exception: free = 1024 #1GB
+        return floor(free * (REAL_SETTINGS.getSettingInt('Cache_MEM_Limit') / 100)) * 1024 * 1024
+        
         
         
     def chkCleanup(self):
@@ -229,6 +204,7 @@ class _Cache(object):
                 Globals._clrProperty(endpoint)
                 self.log(f"_trimMEM, {endpoint} removed {removed_size} bytes from memory!")
             except Exception as e: self.log("_trimMEM, failed! %s"%(e), xbmc.LOGERROR)
+        self.log(f'_trimMEM, {self._getSize()}/{self.max_bytes} available bytes')
 
 
     def _getDB(self, endpoint, checksum, cur_time):

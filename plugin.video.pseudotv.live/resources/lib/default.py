@@ -20,61 +20,46 @@
 from globals    import *
 from logger     import log
 from plugin     import Plugin
-from pool       import threadit
+from pool       import threadit, debounceit
 
-def __hasChannels():
-    return Globals._getProperty('has.Channels') == "true"
+@debounceit(int(REAL_SETTINGS.getSetting('RPC_Delay'))/1000)
+def _run(mode, sysInfo={}):
+    plugin = Plugin(sysInfo)
+    if   mode == 'live':                    plugin.playLive()
+    elif mode == 'radio':                   plugin.playRadio()
+    elif mode == 'resume':                  plugin.playPaused()
+    elif mode == 'playlist':                plugin.playPlaylist()
+    elif mode in ['vod','dvr','broadcast']: plugin.playVOD()
+    del plugin
     
-def __getPVRRefresh():
-    return Globals._getProperty('Tasks.chkPVRRefresh.Running') == "true"
-    
-def __setPVRRefresh():
-    return Globals._setProperty('chkPVRRefresh',"true")
-    
-@threadit
-def _run(sysARG, fitem: dict={}, nitem: dict={}):
-    params = dict(urllib.parse.parse_qsl(sys.argv[2][1:].replace('.pvr','')))
-    params['mode']       = params.get("mode")
-    params['radio']      = params['mode'] == "radio"
-    params['fitem']      = fitem
-    params['nitem']      = nitem
-    params['vid']        = Globals._decodeString(params.get("vid",''))
-    params["chid"]       = (params.get("chid")  or fitem.get('citem',{}).get('id'))
-    params['title']      = (params.get('title') or Globals._getInfoLabel('label'))
-    params['name']       = (Globals._unquoteString(params.get("name",'')) or Globals._getInfoLabel('ChannelName'))
-    params['isPlaylist'] = bool(int(REAL_SETTINGS.getSetting('Playback_Method')))
-    log("Default: run, params = %s"%(params))
-    
-    if __getPVRRefresh(): Globals._notificationDialog(LANGUAGE(32166))
-    elif params['mode'] == 'live':
-        if params.get('start') == '{utc}' or str(Globals._getInfoLabel('ChannelNumber')) == '0':
-            __setPVRRefresh()
-            params.update({'start':0,'stop':0,'duration':0})
-            if   params['isPlaylist']:          threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
-            elif params['vid'] :                threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
-        elif params['isPlaylist']:              threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
-        elif params['vid']:                     threadit(Plugin(sysARG, sysInfo=params).playLive)(params["name"],params["chid"],params["vid"])
-        else:                                   threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
-        MONITOR().waitForAbort(float(int(REAL_SETTINGS.getSetting('RPC_Delay'))/1000)) #delay to avoid thread crashes when fast channel changing ie PVR channel surfing.
-    elif params['vid']:
-        if   params['mode'] == 'vod':           threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
-        elif params['mode'] == 'dvr':           threadit(Plugin(sysARG, sysInfo=params).playDVR)(params["title"],params["vid"])
-        elif params['chid']:
-            if   mode == 'broadcast':           threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
-            elif mode == 'radio':               threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
-    elif params['mode'] == 'resume' and params['chid']: 
-                                                threadit(Plugin(sysARG, sysInfo=params).playPaused)(params["name"],params["chid"])
-    else: Globals._notificationDialog(LANGUAGE(32000))
-        
 if __name__ == '__main__':
     try:
-        log('Default: __main__, param = %s'%(sys.argv))
-        mode = dict(urllib.parse.parse_qsl(sys.argv[2][1:].replace('.pvr',''))).get("mode")
-        if mode is None:
-            if __hasChannels(): Globals._openGuide()
-            else:               Globals._openSettings()
-            xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
-        else: _run(sys.argv, Globals._decodePlot(Globals._getInfoLabel('Plot')), Globals._decodePlot(Globals._getInfoLabel('NextPlot')))
+        with PROPERTIES.suspendActivity():
+            try: 
+                sysARG  = sys.argv
+                sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
+            except: 
+                sysARG  = ['plugin://plugin.video.pseudotv.live/', '1', sys.argv[1], 'resume:false']
+                sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
+            sysInfo['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
+            mode = 'playlist' if sysInfo['isPlaylist'] else sysInfo.get('mode')
+            log(f'Default: __main__, mode = {mode}, argv = {sysARG}')
+            
+            if mode is None:
+                xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
+                if Globals._getProperty('has.Channels') == "true": Globals._openGuide()
+                else:                                              Globals._openSettings()
+            elif any(item in sysARG[2] for item in ['{catchup-id}', '{utc}', '{duration}', '{utcend}']):
+                Globals._setProperty('chkPVRRefresh',"true")
+                xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())
+                raise Exception('Refreshing Guide!')
+            else:
+                try:    fitem, nitem = LISTITEMS.buildDictListItem(sys.listitem), {}
+                except: fitem, nitem = Globals._decodePlot(Globals._getInfoLabel('Plot')), Globals._decodePlot(Globals._getInfoLabel('NextPlot'))
+                chid, vid   = (sysInfo.get("chid")  or fitem.get('citem',{}).get('id')), Globals._decodeString(sysInfo.get("vid",""))
+                name, title = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ChannelName')), (Globals._unquoteString(sysInfo.get('title','')) or Globals._getInfoLabel('label'))
+                sysInfo.update({'mode':mode,'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':vid,'name':name,'title':title,'radio':sysInfo.get('mode') == "radio"})
+                _run(sysInfo.get('mode'), sysInfo)
     except Exception as e: 
-        log('Default: __main__, failed! %s' % e, xbmc.LOGERROR)
+        log(f'Default: __main__, failed! {e}', xbmc.LOGERROR)
         Globals._notificationDialog(LANGUAGE(30079))

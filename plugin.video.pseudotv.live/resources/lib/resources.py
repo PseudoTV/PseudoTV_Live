@@ -395,14 +395,10 @@ class Resources(object):
             return None
 
 
-    def generateOnline(self, chname, select=False, model=SETTINGS.getSetting('OPENROUTER_IMAGE_MODEL')):
+    def generateOnline(self, citem, select=False, model=SETTINGS.getSetting('OPENROUTER_IMAGE_MODEL')):
         # deferred/disabled for memory and cost reasons by default; can be implemented on-demand via self.openRouter
-        if not self.openRouter:
-            return None
-        try:
-            count = 5 if select else 1
-            logos = self.openRouter.getImage(chname, count, model)
-            return logos
-        except Exception as e:
-            self.log(f'generateOnline failed: {e}', xbmc.LOGWARNING)
-            return None
+        if self.openRouter:
+            try: return self.openRouter.getImage(citem, 1, model)
+            except Exception as e: self.log(f'generateOnline failed: {e}', xbmc.LOGWARNING)
+                
+                

@@ -163,16 +163,16 @@ class Builder(object):
         return out
 
 
-    def buildChannels(self, channels: list=[], stop=-1, preview=False):
+    def buildChannels(self, channels: list=[], preview=False, silent=False):
         enableChanged = SETTINGS.getSettingBool('Enable_Changed')
         self.log('buildChannels, channels = %s'%(len(channels)))
         if channels is None: channels = []
-        def __needsUpdate(citem, stop=-1, now=getUTCstamp(), state=True):
+        def __needsUpdate(citem, now, fallback, state=True):
             #max guidedata days to seconds, minus fill buffer (12hrs) in seconds.
-            stop = self.xmltv.stopTimes.get(citem['id'],stop)#check last stop times
-            if stop > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): state = False
-            self.log('[%s] needsUpdate = %s, stop = %s'%(citem['id'],state, stop))
-            return state, stop
+            last_stop = dict(self.xmltv.loadStopTimes([citem], fallback=fallback)).get(citem['id']) #check last stop times 
+            if last_stop > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): state = False
+            self.log('[%s] needsUpdate = %s, last_stop = %s'%(citem['id'],state, last_stop))
+            return state, last_stop
             
         def __hasChanged(citem: dict, detect=SETTINGS.getSettingBool('Enable_Changed')) -> bool:
             if not citem.get('changed',False) and detect:
@@ -231,23 +231,24 @@ class Builder(object):
                             self.pHeader = ADDON_NAME
                             self.pName   = citem['name']
                             citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, Globals._cleanGroups(citem), inherited=self) #inject temporary citem changes here
-                            self.log('[%s] buildChannels, preview = %s, rules = %s'%(citem['id'],preview,citem.get('rules',{})))
-                            if self.service._interrupt() or self.service._suspend():
-                                self.log("[%s] buildChannels, _interrupt/_suspend"%(citem['id']))
+                            _update, start = __needsUpdate(citem, now, fallback)
+                            self.log('[%s] buildChannels, preview = %s, rules = %s, _update = %s'%(citem['id'],preview,citem.get('rules',{}),_update))
+                            if self.service._interrupt():
+                                self.log("[%s] buildChannels, _interrupt"%(citem['id']))
                                 self.pErrors = [LANGUAGE(32160)]
-                                self.service._que(self.service.tasks.chkChannels,3,channels[idx:])
+                                self.service._que(self.service.tasks.chkChannels,3,*(channels[idx:],silent))
                                 break
-                            elif __needsUpdate(citem, stop, now):
-                                if __hasChanged(citem, enableChanged): __clrChannel(citem) #clear channel m3u/xmltv
-                                if stop < 0: stop  = self.xmltv.stopTimes.get(citem['id'],-1)   #check last stop times
-                                if stop < 0: start = nstart
-                                else:        start = stop #last stop time is the next start time.
-                                
-                                if    preview:  self.pMSG = LANGUAGE(32236)                           #Preview
-                                elif  stop > 0: self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(30223)) #Updating
-                                else:           self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(30223)) #Building
+                            elif self.service._suspend(CPU_CYCLE):
+                                self.log("[%s] buildChannels, _suspend"%(citem['id']))
+                                continue
+                            elif _update:
+                                if __hasChanged(citem, enableChanged): __clrChannel(citem) #clear channel m3u/xmltv                                
+                                if    preview:           self.pMSG = LANGUAGE(32236)                           #Preview
+                                elif  start == fallback: self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(30223)) #Building
+                                else:                    self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(30223)) #Updating
+                                    
                                 self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
-                                self.log("[%s] buildChannels, stop (%s) - start (%s) => %s"%(citem['id'],stop,start,self.pMSG))
+                                self.log("[%s] buildChannels, start (%s) => %s"%(citem['id'],start,self.pMSG))
 
                                 if start > 0:
                                     with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=BUILTIN.isPlaying(), background=not preview) as self.pDialog:
@@ -269,11 +270,11 @@ class Builder(object):
                                                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(self.pName,chanErrors),header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
                                         self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                                         if preview: return fileList
-                            
+                                            
                             if any(updated): 
                                 completed.add(__addStation(citem)) #add m3u station if lineup available. 
                                 self.log(f'[{citem['id']}] buildChannels, writing station = {any(completed)}')
-                                timerit(PROPERTIES.setPropTimer)(15,['chkPVRRefresh'])
+                                timerit(PROPERTIES.setPropTimer)(15,'chkPVRRefresh')
                         except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)
                     self.log('[%s] buildChannels, completed = %s, updated = %s'%(citem['id'],any(completed),any(updated)))
 
@@ -311,10 +312,13 @@ class Builder(object):
         #Primary rule for handling fileList injection bypassing channel building below.
         if not _validFileList(fileArray): #if valid array bypass channel building
             for idx, paths in enumerate(citem.get('path',[])):
-                if self.service._interrupt() or self.service._suspend():
-                    self.log("[%s] buildVideo, _interrupt/_suspend"%(citem['id']))
+                if self.service._interrupt():
+                    self.log("[%s] buildVideo, _interrupt"%(citem['id']))
                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)),header=self.pHeader)
                     return []
+                elif self.service._suspend(CPU_CYCLE):
+                    self.log("[%s] buildVideo, _suspend"%(citem['id']))
+                    continue
                 else:
                     if self.xsp.isXSP(paths):           paths = self.xsp.parseXSP(citem['id'], paths)# smartplaylist - convert tvshows types to multi-path, apply sort methods
                     elif isinstance(paths,(str,bytes)): paths = [paths]
@@ -378,7 +382,6 @@ class Builder(object):
             elif self.service._suspend():
                 self.log("[%s] buildFileList, _suspend"%(citem['id']))
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=self.pHeader)
-                self.service._sleep(15)
                 continue
             elif len(dirList) == 0 or dirCount >= self.recursiveLimit:
                 if self.padFilelist and len(fileList) > 0 and len(fileList) < page: fileList = __padFileList(fileList,page)

@@ -170,7 +170,8 @@ class Utilities(object):
 
     @staticmethod
     def _runReload():
-        if DIALOG.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): timerit(PROPERTIES.setPropTimer)(15,['chkPVRRefresh'])
+        if DIALOG.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
+            timerit(PROPERTIES.setPropTimer)(15,'chkPVRRefresh')
             
     @staticmethod
     def _runRestart():
@@ -183,7 +184,7 @@ class Utilities(object):
     @staticmethod
     def _runUpdate(full=False):
         log('Utilities: _runUpdate, full = %s'%(full))
-        timerit(PROPERTIES.setPropTimer)(15,['chkChanged'])#trigger channel building
+        timerit(PROPERTIES.setPropTimer)(15,'chkChanged')#trigger channel building
               
     @staticmethod
     def buildMenu(select=None):

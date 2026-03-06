@@ -32,8 +32,7 @@ class XMLTVS(object):
         self.writable  = writable
         self.XMLTVFile = file
         self.XMLTVDATA = self._load()
-        self.stopTimes = dict(self.loadStopTimes())
-
+        
 
     def __del__(self):
         self.log('__del__, writable = %s'%(self.writable))
@@ -439,7 +438,6 @@ class XMLTVS(object):
         programmes = self.XMLTVDATA['programmes']
         self.XMLTVDATA['channels']   = list([channel for channel in channels if channel.get('id') != citem.get('id')])
         self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != citem.get('id')])
-        if citem.get('id') in self.stopTimes: del self.stopTimes[citem['id']] 
         self.log('delBroadcast, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.XMLTVDATA['channels']),len(programmes),len(self.XMLTVDATA['programmes'])))
         return True
         

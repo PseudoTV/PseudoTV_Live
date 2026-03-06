@@ -44,18 +44,20 @@ class JSONRPC(object):
     def __init__(self, service=None):
         if service is None: service = Service()
         self.service = service
+        self.monitor = service.monitor
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
 
-    def sendJSON(self, param, timeout=-1):
+    def sendJSON(self, param, timeout=SETTINGS.getSettingInt('RPC_Timer')):
         self.log('sendJSON, timeout = %s'%(timeout))
         command  = param
         command["jsonrpc"] = "2.0"
         command["id"] = ADDON_ID #todo debug killit crashing Kodi
         # if timeout > 0: response = FileAccess.loadJSON((killit(BUILTIN.executeJSONRPC)(timeout,command)) or {'error':{'message':'JSONRPC timed out!'}})
+        # else:           
         response = FileAccess.loadJSON(BUILTIN.executeJSONRPC(command))
         self.log('sendJSON, response received')
         if response.get('error'):
@@ -68,7 +70,7 @@ class JSONRPC(object):
         if hasattr(self.service,'jsonQue'): self.service.jsonQue.add(param)
         
         
-    def cacheJSON(self, param, life=datetime.timedelta(minutes=5), checksum=ADDON_VERSION, timeout=-1):
+    def cacheJSON(self, param, life=datetime.timedelta(minutes=5), checksum=ADDON_VERSION, timeout=SETTINGS.getSettingInt('RPC_Timer')):
         cacheName = 'cacheJSON.%s'%(Globals._getMD5(FileAccess.dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
@@ -254,7 +256,7 @@ class JSONRPC(object):
 
 
     def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), timeout=-1):
-        param["properties"] = self.getEnums("List.Fields.Files", type='items')
+        param["properties"] = self.getEnums("List.Fields.Files", type='items') #todo change enums from files to media specific? 
         param = {"method":"Files.GetDirectory","params":param}
         if cache: results = self.cacheJSON(param, expiration, checksum, timeout).get('result',{})
         else:     results = self.sendJSON(param, timeout).get('result',{})
@@ -296,20 +298,28 @@ class JSONRPC(object):
         return (result.get('item', {}) or result.get('items', []))
 
 
-    def getClients(self):
+    def getPVRClients(self, id=PVR_CLIENT_ID):
         param = {"method":"PVR.GetClients","params":{}}
-        return self.sendJSON(param).get('result',{}).get('clients', [])
+        results = self.sendJSON(param).get('result',{}).get('clients', [])
+        if id is None: return results
+        return next((result for result in results if result.get('addonid').lower() == id.lower()),None)
 
 
-    def getChannelGroups(self, radio=False):
-        param = {"method":"PVR.GetChannelGroups","params":{"channeltype":{True:'radio',False:'tv'}[radio]}}
-        return self.sendJSON(param).get('result',{}).get('channelgroups', [])
+    def getPVRChannelGroups(self, match=ADDON_NAME, radio=False):
+        param   = {"method":"PVR.GetChannelGroups","params":{"channeltype":{True:'radio',False:'tv'}[radio]}}
+        results = self.sendJSON(param).get('result',{}).get('channelgroups', [])
+        if match is None: return results
+        return next((result for result in results if result.get('label').lower() == match.lower()), None)
+
+        
+    def getPVRChannelGroupDetails(self, id):
+        param = {"method":"PVR.GetChannelGroupDetails","params":{"channelgroupid":1,"channels":{"limits":{"end":0,"start":0},"properties":self.getEnums("PVR.Fields.Channel", type='items')}}}
+        return self.sendJSON(param).get('result',{}).get('channelgroupdetails', {}).get('channels',[])
         
 
-    def getChannelGroupDetails(self, id):
-        param = {"method":"PVR.GetChannelGroupDetails","params":{"channeltype":{"channelgroupid":id},"properties":self.getEnums("PVR.Fields.Channel", type='items')}}
-        return self.sendJSON(param).get('result',{}).get('channelgroupdetails', [])
-        PVR.Fields.Channel
+    def PVRScan(self, id):
+        param = {"method":"PVR.Scan","params":{"clientid":id}}
+        return self.sendJSON(param).get('result',{})
         
         
     def getPVRChannels(self, radio=False):
@@ -598,7 +608,7 @@ class JSONRPC(object):
         self.log("padItems; files In = %s"%(len(files)))
         if len(files) < page:
             iters = cycle(files)
-            while not self.service.monitor.abortRequested() and (len(files) < page and len(files) > 0):
+            while not self.monitor.abortRequested() and (len(files) < page and len(files) > 0):
                 item = next(iters).copy()
                 if   self.service._interrupt(): break
                 elif self.getDuration(item.get('file'),item) == 0:

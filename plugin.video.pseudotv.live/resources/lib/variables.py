@@ -68,7 +68,7 @@ class Globals:
         return base64.b64encode(compressed).decode('ascii')
 
     @staticmethod
-    def _decodeString(base64_str, encoding=DEFAULT_ENCODING):
+    def _decodeString(base64_str='', encoding=DEFAULT_ENCODING):
         if isinstance(base64_str, str): base64_str = base64_str.encode('ascii')
         try:
             raw_data = zlib.decompress(base64.b64decode(base64_str))

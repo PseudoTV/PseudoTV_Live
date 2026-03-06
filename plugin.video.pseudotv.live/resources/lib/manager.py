@@ -572,7 +572,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             return None, citem
 
         def __validateGroup(groups, citem):
-            return groups, citem #todo check values
+            return groups, Globals._cleanGroups(citem)
+            
                    
         def __validateRules(rules, citem):
             return rules, citem #todo check values
@@ -717,7 +718,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
             
         def __buildPreview(citem={}, msg=''):
-            return PROPERTIES.preemptActivity(msg, Builder().buildChannels, *([citem],getUTCstamp(),True))
+            return PROPERTIES.preemptActivity(msg, Builder().buildChannels, *([citem],True))
 
         def __fileList(citem):
             fileList = []
@@ -936,8 +937,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                         if self.channels.setChannels(channels):
                             self.madeChanges = False
                             self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
-                            timerit(PROPERTIES.setPropTimer)(15,['chkChanged'])#trigger channel building
-        else: self.madeChanges = False
+                            timerit(PROPERTIES.setPropTimer)(15,'chkChanged')#trigger channel building
+            else: self.madeChanges = False
         self.closeManager()
             
 

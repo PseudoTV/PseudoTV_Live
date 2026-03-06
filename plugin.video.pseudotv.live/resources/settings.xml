@@ -959,9 +959,9 @@
                 </setting>
                 <setting id="Gnerative_Artwork_Prompt" type="string" label="30220" help="33220" parent="Enable_Generative_Artwork">
                     <level>3</level>
-                    <default>Title "{channel_name}" in the foreground and artwork that best reflects the title.</default>
+                    <default>"Create a TV channel network station identifier based on the Station Title "{name}". The station includes themes such as "{group}". The image can be either a 512x512 square or 400 x 175 wide rectangle; with a transparent background. Incorporate subtle themes that hit at the stations content while primarily displaying the stations name."</default>
                     <constraints>
-                        <allowempty>true</allowempty>
+                        <allowempty>false</allowempty>
                     </constraints>
                     <dependencies>
                         <dependency type="enable">
@@ -970,7 +970,7 @@
                     </dependencies>
                     <control type="edit" format="string">
                         <heading/>
-						<hidden>true</hidden>
+						<hidden>false</hidden>
                     </control>
                 </setting>
             </group>
@@ -1213,11 +1213,11 @@
                 </setting>
                 <setting id="RPC_Timer" type="integer" label="30201" help="33201">
                     <level>3</level>
-                    <default>3</default>
+                    <default>600</default>
                     <constraints>
                         <minimum>0</minimum>
                         <step>1</step>
-                        <maximum>10</maximum>
+                        <maximum>900</maximum>
                     </constraints>
                     <control type="slider" format="integer">
                         <popup>false</popup>

@@ -62,7 +62,7 @@ class Tasks(object):
     
     
     def chkHTTP(self):
-        timerit(HTTP)(0.1,[self.service])
+        timerit(HTTP)(0.1,self.service)
         self.log('chkHTTP')
         
         
@@ -89,7 +89,7 @@ class Tasks(object):
                     
              
     def chkDiscovery(self):
-        timerit(Discovery)(0.1,[self.service, Multiroom(service=self.service)])
+        timerit(Discovery)(0.1,*(self.service, Multiroom(service=self.service)))
         self.log('chkDiscovery')
          
          
@@ -198,6 +198,38 @@ class Tasks(object):
                 return self.service._que(self.chkChannels,3)
 
 
+    def chkFillers(self, channels=None, silent=BUILTIN.isPlaying()):
+        self.log('chkFillers')
+        # if channels is None: channels = self.getChannels())))
+        # if len(channels) > 0:
+            # for fidx, ftype in enumerate(FILLER_TYPES):
+                # fpath = os.path.join(FILLER_LOC,ftype.lower(),'')
+                # if not FileAccess.exists(fpath): FileAccess.makedirs(fpath)
+                
+                # for cidx, citem in enumerate(channels):
+                    # cpath = os.path.join(fpath, citem.get('name','').lower())
+                    # if not FileAccess.exists(cpath): FileAccess.makedirs(cpath)
+                    
+                    # for gidx, genres in channels()
+                    
+                    # if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),'')):
+                        # FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),''))
+                
+                # for ftype in FILLER_TYPES[1:]:
+                    # for genre in genres:
+                        # if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),'')):
+                            # pDialog = DIALOG.progressBGDialog(int(idx*50//len(channels)), pDialog, message='%s: %s'%(genre,int(idx*100//len(channels)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+                            # FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower()))
+                    
+                    # if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
+                        # if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
+                        # else:                          IGNORE = IGNORE_CHTYPE
+                        # if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE: 
+                            # pDialog = DIALOG.progressBGDialog(int(idx*50//len(channels)), pDialog, message='%s: %s'%(citem.get('name'),int(idx*100//len(channels)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+                            # FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
+            # pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+        
+
     def chkLibrary(self, types=None, silent=BUILTIN.isPlaying()):
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
         complete = set()
@@ -212,7 +244,7 @@ class Tasks(object):
             elif items:
                 self.log("chkLibrary, %s library found! Setting items (%s), queuing update."%(type,len(items)))
                 complete.add(library.setLibrary(type, items))
-                self.service._que(self.chkLibrary,-1,*([type],True))
+                self.service._que(library.updateLibrary,-1,*([type],True))
             else:
                 self.log("chkLibrary, %s library not found! starting update."%(type))
                 complete.add(library.updateLibrary([type],silent))
@@ -220,34 +252,26 @@ class Tasks(object):
         if any(list(complete)): self.service._que(self.chkChannels,3)
         self.log("chkLibrary, complete = %s"%(any(list(complete))))
         
-       
-    def chkChanged(self):
-        self.citems = Channels().getChannels()
-        citems  = self.citems.copy()
-        changes = [citem for citem in citems if citem.get('changed',False)]
+
+    def chkChanged(self, channels=None, silent=BUILTIN.isPlaying()):
+        if channels is None: channels = self.getChannels()
+        changes = [channel for channel in channels if channel.get('changed',False)]
         self.log('chkChanged, changes = %s'%(len(changes)))
-        if changes:
-            builder = Builder(service=self.service)
-            [self.service._que(builder.buildChannels,3,[citem]) for citem in changes]
-            del builder
+        (self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent)) for channel in changes)       
         
         
-    def chkChannels(self, citems=None):
-        builder  = Builder(service=self.service)
-        if citems is None: 
-            self.citems = Channels().getChannels()
-            citems = self.citems
-        if len(citems) > 0:
-            self.log('chkChannels, channels = %s'%(len(citems)))
-            [self.service._que(builder.buildChannels,3,[channel]) for channel in citems]
-            if SETTINGS.getSettingBool('Build_Filler_Folders'): 
-                self._que(self.tasks.chkFillers,4,citems)
+    def chkChannels(self, channels=None, silent=BUILTIN.isPlaying()):
+        if channels is None: channels = self.getChannels()
+        if len(channels) > 0:
+            self.log('chkChannels, channels = %s'%(len(channels)))
+            # self.service._que(Builder(service=self.service).buildChannels,3,*(channels,False,silent))
+            (self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent)) for channel in channels)
+            if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,4,*(channels,silent))
         else:
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():
                 if SETTINGS.setAutotuned(Autotune()._runTune()): self.service._que(self.chkChannels,3)
-            elif PROPERTIES.hasEnabledServers(): timerit(PROPERTIES.setPropTimer)(15,['chkPVRRefresh'])
-        del builder
+            elif PROPERTIES.hasEnabledServers(): timerit(PROPERTIES.setPropTimer)(15,'chkPVRRefresh')
 
 
     def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):
@@ -258,13 +282,15 @@ class Tasks(object):
             
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh') and not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
-                timerit(PROPERTIES.setEXTPropertyBool)(M3U_REFRESH,['HTTP.pendingRestart',True])
+                timerit(PROPERTIES.setEXTPropertyBool)(M3U_REFRESH,*('HTTP.pendingRestart',True))
                 if brute:
                     if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
                         BUILTIN.executewindow('ActivateWindow(home)')
                         DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
                         __toggle(False), self.monitor.waitForAbort(M3U_REFRESH), __toggle(True)
-                    else: timerit(PROPERTIES.setPropTimer)(15,['chkPVRRefresh'])
+                    else: timerit(PROPERTIES.setPropTimer)(15,'chkPVRRefresh')
+                else: DIALOG.notificationDialog(f"Attempting to refresh {PVR_CLIENT_NAME}\n It's recommend users enable automatic PVR Refresh")
+                self.jsonRPC.PVRScan(self.jsonRPC.getPVRClients(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
             
             
     def chkSettingsChange(self, settings={}):
@@ -311,3 +337,7 @@ class Tasks(object):
             FileAccess.copyFolder(old, new, dia)
             PROPERTIES.setPendingRestart()
             DIALOG.progressDialog(100, dia)
+
+
+    def getChannels(self):
+        return Channels().getChannels()

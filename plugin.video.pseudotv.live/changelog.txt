@@ -1,5 +1,6 @@
 ### NOTICE: The wizard branch is in alpha; things will break! ####
 v.0.7.0+nightly
+- Refactored Playback handling, improved VOD handling and all aspects of playback including modified strm playback handling. 
 - Improved Autotuning
 - Added Memory Cache limit, Settings under Miscellaneous.
 - Tweaked Caching

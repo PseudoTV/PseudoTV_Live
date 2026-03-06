@@ -37,10 +37,17 @@ def debounceit(wait=SERVICE_INTERVAL):
         timer_lock = Lock()
         @wraps(method)
         def wrapper(*args, **kwargs):
+            def __run():
+                try: 
+                    with timeit(method):
+                        method(*args, **kwargs)
+                    log('%s, debounceit running %s'%(method.__qualname__.replace('.',': => -:'),timer.name))
+                except Exception as e:
+                    log('%s, debounceit failed! %s'%(method.__qualname__.replace('.',': '),e), xbmc.LOGERROR) 
             nonlocal timer
             with timer_lock:
                 if timer is not None: timer.cancel()
-                timer = Timer(wait, method, args=args, kwargs=kwargs)
+                timer = Timer(float(wait), __run)
                 timer.name = '%s.%s'%('debounceit',method.__qualname__.replace('.',': '))
                 log('%s, debounceit starting %s waiting (%s)'%(method.__qualname__.replace('.',': => -:'),timer.name,wait))
                 timer.start()
@@ -50,25 +57,26 @@ def debounceit(wait=SERVICE_INTERVAL):
 def killit(method):
     @wraps(method)
     def wrapper(wait=30, *args, **kwargs):
-        class waiter(Thread):
-            def __init__(self):
-                Thread.__init__(self)
-                self.result = None
-                self.error  = None
-            def run(self):
-                try:    self.result = ExecutorPool().executor(method, wait, *args, **kwargs)
-                except Exception: self.error  = sys.exc_info()[0]
-        timer = waiter()
-        timer.name = '%s.%s'%('killit',method.__qualname__.replace('.',': '))
-        timer.daemon=True
-        timer.start()
-        log('%s, killit starting %s waiting (%s)'%(method.__qualname__.replace('.',': => -:'),timer.name,wait))
-        try: timer.join(wait)
-        except Exception: pass
-        if (timer.is_alive() or timer.error): log('%s, killit Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),timer.error), xbmc.LOGERROR)
-        return timer.result
+        response = {'result': None, 'success': False, 'error': ''}
+        def __run():
+            try:
+                with timeit(method):
+                    response['result']  = method(*args, **kwargs)
+                    response['success'] = True
+            except Exception as e:
+                response['error'] = e
+        
+        thread = Thread(target=__run)
+        thread.name = f'killit.{method.__qualname__.replace('.',': ')}'
+        thread.daemon = True # This is crucial: allows the app to exit even if thread hangs
+        thread.start()
+        thread.join(timeout=float(wait))
+        if thread.is_alive() or response.get('error'):
+            log('%s, killit Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),response.get('error')), xbmc.LOGERROR)
+            return None 
+        return response['result'] if response['success'] else None
     return wrapper
-    
+       
 def poolit(method):
     @wraps(method)
     def wrapper(items=None, wait=TIMEOUT_EXECUTORS, *args, **kwargs):
@@ -101,36 +109,51 @@ def executeit(method):
 def threadit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
-        thread = Thread(None, method, None, args, kwargs)
-        if thread.is_alive():
-            try: thread.join()
-            except Exception: pass
-        thread.name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
+        thread_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
+        for thread in thread_enumerate():
+            if thread.name == thread_name and thread.is_alive():
+                try:
+                    thread.join(CPU_CYCLE) 
+                    log('%s, threadit joining existing Thread: %s'%(method.__qualname__.replace('.',': '),thread_name)) 
+                except Exception: pass
+        def __run():
+            try: 
+                with timeit(method):
+                    method(*args, **kwargs)
+                log('%s, threadit running %s'%(method.__qualname__.replace('.',': => -:'),thread_name))
+            except Exception as e:
+                log('%s, threadit failed! %s'%(method.__qualname__.replace('.',': '),e), xbmc.LOGERROR) 
+             
+        thread = Thread(target=__run)
+        thread.name = thread_name
         thread.start()
-        log('%s, threadit starting %s'%(method.__qualname__.replace('.',': '),thread.name))
+        log('%s, threadit starting %s'%(method.__qualname__.replace('.',': '),thread_name))
         return thread
     return wrapper
 
 def timerit(method):
     @wraps(method)
-    def wrapper(timer_wait, *args, **kwargs):
+    def wrapper(wait, *args, **kwargs):
         timer_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
-        for timer in thread_enumerate():
-            if timer.name == timer_name and timer.is_alive():
-                try:
-                    timer.join(CPU_CYCLE)
-                    log('%s, timerit joining existing Timer: %s'%(method.__qualname__.replace('.',': '),timer_name))       
-                except Exception: pass
-                if hasattr(timer, 'cancel'): 
-                    timer.cancel()
-                    log('%s, timerit canceling existing Timer: %s'%(method.__qualname__.replace('.',': '),timer_name))    
-        timer = Timer(float(timer_wait), method, *args, **kwargs)
+        for thread in thread_enumerate():
+            if thread.name == timer_name:
+                if hasattr(thread, 'cancel'):
+                    thread.cancel()
+                    log('%s, timerit canceling existing Timer: %s'%(method.__qualname__.replace('.',': '),timer_name)) 
+        def __run():
+            try:
+                with timeit(method):
+                    method(*args, **kwargs)
+                log('%s, timerit running %s'%(method.__qualname__.replace('.',': => -:'),timer_name))
+            except Exception as e:
+                log('%s, timerit failed! %s'%(method.__qualname__.replace('.',': '),e), xbmc.LOGERROR) 
+
+        timer = Timer(float(wait), __run)
         timer.name = timer_name
-        timer.daemon =True
         timer.start()
-        log('%s, timerit starting %s wait = %s'%(method.__qualname__.replace('.',': '),timer_name,timer_wait))
+        log('%s, timerit starting %s wait = %s'%(method.__qualname__.replace('.',': '),timer_name,wait))
         return timer
-    return wrapper  
+    return wrapper
 
 class ExecutorPool:
     _executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)

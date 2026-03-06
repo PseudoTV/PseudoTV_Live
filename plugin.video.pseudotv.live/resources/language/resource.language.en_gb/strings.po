@@ -937,6 +937,10 @@ msgctxt "#30227"
 msgid "Cache Percentage of Ram"
 msgstr ""
 
+msgctxt "#30228"
+msgid "Professional TV network station identifier logo for a channel titled '{name}'. The design should feature bold, high-clarity typography of the station name as the central focus. Subtly integrate visual motifs and textures inspired by '{group}' into the lettering or the immediate surrounding frame. The style should be clean, high-contrast, and optimized for a [512x512 square / 400x175 wide] format on a transparent background. Avoid cluttered backgrounds; prioritize brand legibility."
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -1679,7 +1683,7 @@ msgid "Restart Percentage (%s)"
 msgstr ""
 
 msgctxt "#32185"
-msgid "Playing VOD:\n%s"
+msgid "Playing VOD"
 msgstr ""
 
 msgctxt "#32186"
@@ -2391,7 +2395,7 @@ msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\n
 msgstr ""
 
 msgctxt "#33201"
-msgid "How long to wait for JSONRPC response in minutes [0 Disabled, 3 Default]\nPervent system hangs while waiting for a lengthy response."
+msgid "How long to wait for JSONRPC response in minutes [0 Disabled 600 Default]\nPervent system hangs while waiting for a lengthy response."
 msgstr ""
 
 msgctxt "#33202"
@@ -2486,3 +2490,5 @@ msgstr ""
 msgctxt "#33310"
 msgid "Open Channel Manager"
 msgstr ""
+
+

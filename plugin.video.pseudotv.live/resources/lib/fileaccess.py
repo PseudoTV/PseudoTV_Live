@@ -99,6 +99,7 @@ class FileAccess(object):
                 # break
             # elif monitor.waitForAbort(LOCK_MAX_FILE_DELAY): break
         # del monitor
+        
         try:
             return VFSFile(filename, mode)
         except UnicodeDecodeError:

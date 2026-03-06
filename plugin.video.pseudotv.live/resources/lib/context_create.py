@@ -56,7 +56,7 @@ def _add(sysARG, listitem: dict={}):
                     citem['changed']  = True
                     citem['radio']    = True if path.startswith('musicdb://') else False
                     manager.channels.addChannel(manager.setLogo(citem['name'], citem))
-                    if manager.channels.setChannels(): timerit(PROPERTIES.setPropTimer)(15,['chkChanged'])#trigger channel building
+                    if manager.channels.setChannels(): timerit(PROPERTIES.setPropTimer)(15,'chkChanged')#trigger channel building
                     manager.closeManager()
                     manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=citem['number'])
                 del manager
