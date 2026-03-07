@@ -62,8 +62,6 @@ M3U_MIN  = {"id"                : "",
             "url"               : ""}
             
 class M3U(object):
-    m3u_lock = Lock()
-    
     def __init__(self, file=M3UFLEPATH, writable=False):
         self.writable    = writable
         self.stationFile = file
@@ -203,7 +201,7 @@ class M3U(object):
         
     @debounceit(SERVICE_INTERVAL)
     def _save(self):
-        with PROPERTIES.interruptActivity(), self.m3u_lock:
+        with PROPERTIES.interruptActivity():
             self.M3UDATA['data']       = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE))
             self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
             self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]), key='name')

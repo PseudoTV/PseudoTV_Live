@@ -1,8 +1,12 @@
-### NOTICE: The wizard branch is in alpha; things will break! ####
+### NOTICE: The nightly branch is in alpha; things will break! ####
+
+v.0.7.1+nightly
+- Refactored the playback core to improve VOD handling, overall performance, and .strm file compatibility.
+  - All on-demand content will queue as a playlist. Live programs will default to the users chosen playback method; found in settings.
+  
 v.0.7.0+nightly
-- Refactored Playback handling, improved VOD handling and all aspects of playback including modified strm playback handling. 
 - Improved Autotuning
-- Added Memory Cache limit, Settings under Miscellaneous.
+- Added Memory Cache limit, settings found under Miscellaneous.
 - Tweaked Caching
 - Improved Media duration parsing.
 - Removed Support for Lazy "Mixed" Smartplaylists as "TV/Movie" Playlists. Achieve mixed content channels via the Channel Manager.

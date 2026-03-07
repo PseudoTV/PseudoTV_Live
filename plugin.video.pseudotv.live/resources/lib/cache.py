@@ -108,7 +108,6 @@ class Cache(object):
 class _Cache(object):
     _cache_idx           = deque()
     _busy_tasks          = []
-    cache_lock           = Lock()
     enable_mem_cache     = False
     window               = None
     global_checksum      = ADDON_VERSION
@@ -259,7 +258,7 @@ class _Cache(object):
         retries = 0
         result  = None
         if not FileAccess.exists(CACHE_LOC): FileAccess.mkdirs(CACHE_LOC)
-        with self.cache_lock, FileLock(self.dbfile):
+        with FileLock(self.dbfile):
             try:
                 connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
                 connection.execute('SELECT * FROM cache LIMIT 1')

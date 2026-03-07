@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -24,13 +24,7 @@ from pool       import threadit, debounceit
 
 @debounceit(int(REAL_SETTINGS.getSetting('RPC_Delay'))/1000)
 def _run(mode, sysInfo={}):
-    plugin = Plugin(sysInfo)
-    if   mode == 'live':                    plugin.playLive()
-    elif mode == 'radio':                   plugin.playRadio()
-    elif mode == 'resume':                  plugin.playPaused()
-    elif mode == 'playlist':                plugin.playPlaylist()
-    elif mode in ['vod','dvr','broadcast']: plugin.playVOD()
-    del plugin
+    Plugin(mode, sysInfo)
     
 if __name__ == '__main__':
     try:
@@ -41,11 +35,9 @@ if __name__ == '__main__':
             except: 
                 sysARG  = ['plugin://plugin.video.pseudotv.live/', '1', sys.argv[1], 'resume:false']
                 sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-            sysInfo['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
-            mode = 'playlist' if sysInfo['isPlaylist'] else sysInfo.get('mode')
-            log(f'Default: __main__, mode = {mode}, argv = {sysARG}')
+            log(f'Default: __main__, mode = {sysInfo.get('mode')}, argv = {sysARG}')
             
-            if mode is None:
+            if sysInfo.get('mode') is None:
                 xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
                 if Globals._getProperty('has.Channels') == "true": Globals._openGuide()
                 else:                                              Globals._openSettings()
@@ -58,7 +50,7 @@ if __name__ == '__main__':
                 except: fitem, nitem = Globals._decodePlot(Globals._getInfoLabel('Plot')), Globals._decodePlot(Globals._getInfoLabel('NextPlot'))
                 chid, vid   = (sysInfo.get("chid")  or fitem.get('citem',{}).get('id')), Globals._decodeString(sysInfo.get("vid",""))
                 name, title = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ChannelName')), (Globals._unquoteString(sysInfo.get('title','')) or Globals._getInfoLabel('label'))
-                sysInfo.update({'mode':mode,'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':vid,'name':name,'title':title,'radio':sysInfo.get('mode') == "radio"})
+                sysInfo.update({'mode':sysInfo.get('mode'),'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':vid,'name':name,'title':title,'radio':sysInfo.get('mode') == "radio"})
                 _run(sysInfo.get('mode'), sysInfo)
     except Exception as e: 
         log(f'Default: __main__, failed! {e}', xbmc.LOGERROR)

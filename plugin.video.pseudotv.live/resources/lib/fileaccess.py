@@ -24,7 +24,6 @@ from logger      import log
 
 #constants 
 DEFAULT_ENCODING = "utf-8"
-ThreadLock       = Lock()
 
 class FileAccess(object):
     
@@ -64,7 +63,7 @@ class FileAccess(object):
 
     @staticmethod
     def setJSON(file, data):
-        with FileLock(file), ThreadLock:
+        with FileLock(file):
             try:
                 fle = FileAccess.open(file, 'w')
                 fle.write(FileAccess.dumpJSON(data, idnt=4, sortkey=False))
@@ -76,7 +75,7 @@ class FileAccess(object):
 
     @staticmethod
     def setURL(url, file):#todo settingscache?
-        with FileLock(file), ThreadLock:
+        with FileLock(file):
             try:
                 contents = requestURL(url)
                 fle = FileAccess.open(file, 'w')
@@ -417,12 +416,12 @@ class FileLock(object):
                     self.fd = FileAccess.open(self.lockfile, 'w')
                     self.is_locked = True #moved to ensure tag only when locked
                     break
-                except OSError as e:
-                    if e.errno != errno.EEXIST:                    return log("FileLock: Could not create lock.\n%s"%(e), xbmc.LOGERROR)
-                    if self.timeout is None:                       return log("FileLock: Could not acquire lock.\n%s"%(e), xbmc.LOGERROR)
-                    if (time.time() - start_time) >= self.timeout: return log("FileLock: Timeout occurred.\n%s"%(e), xbmc.LOGERROR)
-                if self.monitor.waitForAbort(self.delay): break
- 
+                except Exception as e:
+                    log("FileLock, Failed! %s"%(e), xbmc.LOGERROR)
+                    if self.timeout is None:                         raise Exception("FileLock: Could not acquire lock.\n%s"%(e))
+                    elif (time.time() - start_time) >= self.timeout: raise Exception("FileLock: Timeout occurred.\n%s"%(e))
+                    elif self.monitor.waitForAbort(self.delay):      break
+     
  
     def release(self):
         if self.is_locked:

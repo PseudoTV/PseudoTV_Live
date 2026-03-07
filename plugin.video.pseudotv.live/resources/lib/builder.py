@@ -123,7 +123,6 @@ class Builder(object):
     def getVerifiedChannels(self, channels=None):
         if channels is None: channels = self.channels.getChannels()
         channels = sorted(self._verify(channels), key=itemgetter('number'))
-        PROPERTIES.setHasChannels(len(channels)>0)
         self.log('getVerifiedChannels, channels = %s'%(len(channels)))
         return channels
 

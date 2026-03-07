@@ -1683,7 +1683,7 @@ msgid "Restart Percentage (%s)"
 msgstr ""
 
 msgctxt "#32185"
-msgid "Playing VOD"
+msgid "Playing %s"
 msgstr ""
 
 msgctxt "#32186"

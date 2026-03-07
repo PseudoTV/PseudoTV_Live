@@ -257,15 +257,18 @@ class Tasks(object):
         if channels is None: channels = self.getChannels()
         changes = [channel for channel in channels if channel.get('changed',False)]
         self.log('chkChanged, changes = %s'%(len(changes)))
-        (self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent)) for channel in changes)       
+        for channel in changes:
+            self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent))
         
         
     def chkChannels(self, channels=None, silent=BUILTIN.isPlaying()):
         if channels is None: channels = self.getChannels()
         if len(channels) > 0:
             self.log('chkChannels, channels = %s'%(len(channels)))
-            # self.service._que(Builder(service=self.service).buildChannels,3,*(channels,False,silent))
-            (self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent)) for channel in channels)
+            if not PROPERTIES.hasChannels():
+                self.service._que(Builder(service=self.service).buildChannels,3,*(channels,False,silent))
+            else:
+                [self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent)) for channel in channels]
             if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,4,*(channels,silent))
         else:
             self.log('chkChannels, No Channels Configured!')
@@ -289,7 +292,7 @@ class Tasks(object):
                         DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
                         __toggle(False), self.monitor.waitForAbort(M3U_REFRESH), __toggle(True)
                     else: timerit(PROPERTIES.setPropTimer)(15,'chkPVRRefresh')
-                else: DIALOG.notificationDialog(f"Attempting to refresh {PVR_CLIENT_NAME}\n It's recommend users enable automatic PVR Refresh")
+                else: DIALOG.notificationDialog(f"Attempting to refresh {PVR_CLIENT_NAME}\n {LANGUAGE(30155)}")
                 self.jsonRPC.PVRScan(self.jsonRPC.getPVRClients(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
             
             

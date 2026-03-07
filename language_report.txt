@@ -156,7 +156,6 @@ Language IDS not found in py files, possibly only in xml: {
     "30149": "Enable Recording Cleanup",
     "30150": "Copy Logo Folder?",
     "30151": "Copy Fillers Folder?",
-    "30155": "Enable Automatic PVR Refresh",
     "30156": "Enable ZeroConf",
     "30157": "PVR & Live TV Settings",
     "30159": "Visit Support Forum",

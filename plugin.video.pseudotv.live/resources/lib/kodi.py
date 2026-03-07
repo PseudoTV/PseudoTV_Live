@@ -174,7 +174,7 @@ class Settings(object):
         return self.setSetting(key,Globals._encodeString(FileAccess.dumpJSON(values)))
             
             
-    def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=datetime.timedelta(days=84)):
+    def setCacheSetting(self, key, value=None, checksum=ADDON_VERSION, life=datetime.timedelta(days=84)):
         return self.cacheDB.set(key, value, checksum, life)
             
 

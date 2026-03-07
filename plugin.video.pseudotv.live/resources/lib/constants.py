@@ -82,7 +82,7 @@ DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'
 BACKUP_TIME_FORMAT  = '%Y-%m-%d %I:%M %p'
 
-LOCK_MAX_FILE_TIMEOUT = 30
+LOCK_MAX_FILE_TIMEOUT = 15
 LOCK_MAX_FILE_DELAY   = 0.5
 
 LANG                = 'en' #todo parse kodi region settings

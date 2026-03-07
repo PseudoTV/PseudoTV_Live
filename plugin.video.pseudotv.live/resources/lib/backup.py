@@ -55,6 +55,7 @@ class Backup(object):
             
     def getChannels(self, file: str=CHANNELFLE_BACKUP) -> list:
         channels = Channels(file).getChannels()
+        PROPERTIES.setHasChannels(len(channels)>0)
         self.log('getChannels, file = %s, channels = %s'%(file, len(channels)))
         return channels
         

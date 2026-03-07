@@ -355,7 +355,6 @@ class Player(xbmc.Player):
         self.log("toggleBackground, state = %s, background = %s"%(state,self.background))
 
 
-
     def toggleOverlay(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
         if state and self.overlay is None and self.isPlayingPseudoTV():
             self.overlay = Overlay(player=self)
@@ -384,6 +383,7 @@ class Player(xbmc.Player):
         self.log("toggleOnNext, state = %s, onnext = %s"%(state,self.onnext))
     
         
+    @debounceit(OSD_TIMER)
     def toggleInfo(self, state: bool=SETTINGS.getSettingBool('Enable_OnInfo')):
         if state and not self.playingItem.get('isfiller',False):
             BUILTIN.executewindow('ActivateWindow(fullscreeninfo)')
@@ -471,6 +471,9 @@ class Service(object):
     pendingInterrupt = PROPERTIES.setPendingInterrupt(False)
     pendingShutdown  = PROPERTIES.setPendingShutdown(False)
     pendingRestart   = PROPERTIES.setPendingRestart(False)
+    jsonQue          = set(SETTINGS.getCacheSetting('jsonQue') or [])
+    postQue          = set(SETTINGS.getCacheSetting('postQue') or [])
+    logoQue          = set(SETTINGS.getCacheSetting('logoQue') or [])
     
     def __init__(self):
         self.jsonRPC     = JSONRPC(service=self)
@@ -481,20 +484,15 @@ class Service(object):
         self.settings    = SETTINGS.getCurrentSettings()
         self.isClient    = SETTINGS.getSettingBool('Enable_Client')
         self.priorityQUE = CustomQueue(priority=True, service=self)
-        self.jsonQue     = set(SETTINGS.getCacheSetting('jsonQue') or [])
-        self.postQue     = set(SETTINGS.getCacheSetting('postQue') or [])
-        self.logoQue     = set(SETTINGS.getCacheSetting('logoQue') or [])
         self.isScanning  = BUILTIN.isScanning()
         self.isPaused    = BUILTIN.isPaused()
         self.isPlaying   = self._isPlaying()
-        self.log(f'__init__, jsonQue = {len(self.jsonQue)}, postQue = {len(self.postQue)}, logoQue = {len(self.logoQue)}')
     
 
     def __del__(self):
-        SETTINGS.setCacheSetting('jsonQue', list(self.jsonQue))
-        SETTINGS.setCacheSetting('postQue', list(self.postQue))
-        SETTINGS.setCacheSetting('logoQue', list(self.logoQue))
-        self.log(f'__del__, jsonQue = {len(self.jsonQue)}, postQue = {len(self.postQue)}, logoQue = {len(self.logoQue)}')
+        SETTINGS.setCacheSetting('jsonQue', self.jsonQue)
+        SETTINGS.setCacheSetting('postQue', self.postQue)
+        SETTINGS.setCacheSetting('logoQue', self.logoQue)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

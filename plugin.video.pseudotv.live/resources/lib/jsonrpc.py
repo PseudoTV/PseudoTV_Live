@@ -44,7 +44,6 @@ class JSONRPC(object):
     def __init__(self, service=None):
         if service is None: service = Service()
         self.service = service
-        self.monitor = service.monitor
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -608,7 +607,7 @@ class JSONRPC(object):
         self.log("padItems; files In = %s"%(len(files)))
         if len(files) < page:
             iters = cycle(files)
-            while not self.monitor.abortRequested() and (len(files) < page and len(files) > 0):
+            while not self.service.monitor.abortRequested() and (len(files) < page and len(files) > 0):
                 item = next(iters).copy()
                 if   self.service._interrupt(): break
                 elif self.getDuration(item.get('file'),item) == 0:
@@ -647,12 +646,12 @@ class JSONRPC(object):
                             if item.get('label','').lower() == sysInfo.get('name','').lower() and Globals._decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
                                 self.log('[%s] getCallback: _matchJSON, found file = %s'%(sysInfo.get('chid'),item.get('file')))
                                 return item.get('file')
-                  
+   
         if sysInfo.get('mode','').lower() == 'live' and sysInfo.get('chpath'):
             callback = sysInfo.get('chpath')
         elif sysInfo.get('isPlaylist'):
             callback = sysInfo.get('citem',{}).get('url')
-        elif sysInfo.get('mode','').lower() == 'vod' and sysInfo.get('nitem',{}).get('file'):
+        elif sysInfo.get('mode','').lower() in ['vod','broadcast'] and sysInfo.get('nitem',{}).get('file'):
             callback = sysInfo.get('nitem',{}).get('file')
         else:
             callback = sysInfo.get('callback','')
@@ -672,7 +671,7 @@ class JSONRPC(object):
                             channel['broadcastnext'] = [channel.get('broadcastnext',{})]
                             self.log('[%s] matchChannel: __match, found pvritem = %s'%(id,channel))
                             return channel
-        
+                            
         def __extend(pvritem: dict={}) -> dict:
             channelItem = {}
             def _parseBroadcast(broadcast={}):
