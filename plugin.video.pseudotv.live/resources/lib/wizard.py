@@ -61,11 +61,11 @@ class Wizard(xbmcgui.WindowXMLDialog):
 
         
     def isLocked(self):
-        return PROPERTIES.getEXTPropertyBool('%s.Wizard.isLocked'%(ADDON_ID))
+        return (PROPERTIES.getEXTProperty('%s.Wizard.isLocked'%(ADDON_ID)) or False)
         
         
     def setLocked(self, state=True):
-        self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[PROPERTIES.setEXTPropertyBool('%s.Wizard.isLocked'%(ADDON_ID),state)])
+        self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[PROPERTIES.setEXTProperty('%s.Wizard.isLocked'%(ADDON_ID),state)])
 
 
     @contextmanager

@@ -112,7 +112,7 @@ class Player(xbmc.Player):
 
 
     def getplayingItem(self):
-        playingItem = FileAccess.loadJSON(Globals._decodeString(self.getPlayerItem().getProperty('sysInfo')))
+        playingItem = FileAccess.loadJSON(FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo')))
         if '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid',''):
             #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
             playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')))})
@@ -124,7 +124,7 @@ class Player(xbmc.Player):
             playingItem['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
             playingItem['isfiller']   = self.isPlayingFiller()
             playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
-            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),Globals._encodeString(FileAccess.dumpJSON(playingItem)))
+            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),FileAccess._encodeString(FileAccess.dumpJSON(playingItem)))
         return playingItem
       
         
@@ -296,7 +296,7 @@ class Player(xbmc.Player):
             if not self.playingItem.get('callback'):
                 self.playingItem['callback'] = self.jsonRPC.getCallback(self.playingItem)
                 self.log('__chkCallback, callback = %s'%(self.playingItem['callback']))
-                PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),Globals._encodeString(FileAccess.dumpJSON(self.playingItem)))
+                PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),FileAccess._encodeString(FileAccess.dumpJSON(self.playingItem)))
 
         def __chkBackground():
             remaining = floor(self.getRemainingTime())

@@ -17,9 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import pickle
-
 from globals             import *
+from fileaccess          import FileAccess
 from concurrent.futures  import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 class LlNode(object):
@@ -32,7 +31,7 @@ class LlNode(object):
 
 class CustomQueue(object):
     futures = set() #todo refactor heap to workaround pickle callable
-    try:    min_heap = list(pickle.loads((SETTINGS.getCacheSetting('min_heap', revive=False) or b'')))
+    try:    min_heap = list(FileAccess.loadPickle((SETTINGS.getCacheSetting('min_heap', revive=False) or b'')))
     except Exception: min_heap = []
    
     def __init__(self, fifo: bool=False, lifo: bool=False, priority: bool=False, delay: bool=False, timer: bool=False, service=None):
@@ -225,7 +224,7 @@ class CustomQueue(object):
                 
     def _stop(self):
         self.executor.shutdown(wait=False, cancel_futures=True)
-        # SETTINGS.setCacheSetting('min_heap', pickle.dumps(self.min_heap), checksum=ADDON_VERSION)
+        # SETTINGS.setCacheSetting('min_heap', FileAccess.dumpPickle(self.min_heap), checksum=ADDON_VERSION)
         self.log("_stop, finished: shutting down...")
                 
                 

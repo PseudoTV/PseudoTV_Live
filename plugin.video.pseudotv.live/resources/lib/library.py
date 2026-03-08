@@ -434,7 +434,7 @@ class Library(object):
         ...#todo refactor feature
         # library.importPrompt() 
         # def _search(addonid):
-            # cacheName = 'searchRecommended.%s'%(Globals._getMD5(addonid))
+            # cacheName = 'searchRecommended.%s'%(FileAccess._getMD5(addonid))
             # addonMeta = SETTINGS.getAddonDetails(addonid)
             # payload   = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
             # if not payload: #startup services may not be broadcasting beacon; use last cached beacon instead.
@@ -476,7 +476,7 @@ class Library(object):
         whiteList = self.getWhiteList()
         whiteList.append(addonid)
         whiteList = sorted(set(whiteList))
-        if len(whiteList) > 0: PROPERTIES.setEXTPropertyBool('%s.has.WhiteList'%(ADDON_ID),len(whiteList) > 0)
+        if len(whiteList) > 0: PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),len(whiteList) > 0)
         return self.setWhiteList(whiteList)
         
 
@@ -518,6 +518,6 @@ class Library(object):
                     else:
                         self.addWhiteList(addonid)
                 
-        PROPERTIES.setEXTPropertyBool('%s.has.WhiteList'%(ADDON_ID),len(self.getWhiteList()) > 0)
-        PROPERTIES.setEXTPropertyBool('%s.has.BlackList'%(ADDON_ID),len(self.getBlackList()) > 0)
+        PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),len(self.getWhiteList()) > 0)
+        PROPERTIES.setEXTProperty('%s.has.BlackList'%(ADDON_ID),len(self.getBlackList()) > 0)
         SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))

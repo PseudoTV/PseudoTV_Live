@@ -52,41 +52,40 @@ class XMLTVS(object):
 
     @debounceit(SERVICE_INTERVAL)
     def _save(self, reset: bool=True) -> bool:
-        with PROPERTIES.interruptActivity():
-            if reset: data = self.resetData()
-            else:     data = self.XMLTVDATA['data']
-                
-            self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
-            self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'], opt='PROGRAMMES')
-            self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'], opt='RECORDINGS')
-            self.log('_save, writable = %s, file = %s, reset = %s\nchannels = %s, programmes = %s, recordings = %s'%(self.writable,self.XMLTVFile,reset,len(self.XMLTVDATA['channels']),len(self.XMLTVDATA['programmes']),len(self.XMLTVDATA['recordings'])))
+        if reset: data = self.resetData()
+        else:     data = self.XMLTVDATA['data']
             
-            if self.writable:
-                writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
-                                      date                = data['date'],
-                                      source_info_url     = self.cleanString(data['source-info-url']), 
-                                      source_info_name    = self.cleanString(data['source-info-name']),
-                                      generator_info_url  = self.cleanString(data['generator-info-url']), 
-                                      generator_info_name = self.cleanString(data['generator-info-name']))
+        self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
+        self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'], opt='PROGRAMMES')
+        self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'], opt='RECORDINGS')
+        self.log('_save, writable = %s, file = %s, reset = %s\nchannels = %s, programmes = %s, recordings = %s'%(self.writable,self.XMLTVFile,reset,len(self.XMLTVDATA['channels']),len(self.XMLTVDATA['programmes']),len(self.XMLTVDATA['recordings'])))
+        
+        if self.writable:
+            writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
+                                  date                = data['date'],
+                                  source_info_url     = self.cleanString(data['source-info-url']), 
+                                  source_info_name    = self.cleanString(data['source-info-name']),
+                                  generator_info_url  = self.cleanString(data['generator-info-url']), 
+                                  generator_info_name = self.cleanString(data['generator-info-name']))
 
-                for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
-                    writer.addChannel(channel)
-                    
-                for program in self.XMLTVDATA['programmes']:
-                    writer.addProgramme(program)
-                try:
-                    with FileLock(self.XMLTVFile):
-                        try:
-                            fle = FileAccess.open(self.XMLTVFile, "w")
-                            writer.write(fle, pretty_print=True)
-                        except Exception as e: self.log("_save, failed!", xbmc.LOGERROR)
-                        finally: 
-                            if hasattr(fle, 'close'): 
-                                fle.close()
-                except Exception as e:
-                    self.log("_save, failed!", xbmc.LOGERROR)
-                    DIALOG.notificationDialog(LANGUAGE(32000))
-                return self.buildGenres()
+            for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
+                writer.addChannel(channel)
+                
+            for program in self.XMLTVDATA['programmes']:
+                writer.addProgramme(program)
+            try:
+                with FileLock(self.XMLTVFile):
+                    try:
+                        fle = FileAccess.open(self.XMLTVFile, "w")
+                        writer.write(fle, pretty_print=True)
+                    except Exception as e: self.log("_save, failed!", xbmc.LOGERROR)
+                    finally: 
+                        if hasattr(fle, 'close'): 
+                            fle.close()
+            except Exception as e:
+                self.log("_save, failed!", xbmc.LOGERROR)
+                DIALOG.notificationDialog(LANGUAGE(32000))
+            return self.buildGenres()
         
         
     def _reload(self) -> bool:
@@ -306,7 +305,7 @@ class XMLTVS(object):
         if item['type'] == 'movie': item['date'] = (fItem.get('premiered')  or fItem.get('releasedate') or fItem.get('firstaired'))
         else:                       item['date'] = (fItem.get('firstaired') or fItem.get('releasedate') or fItem.get('premiered'))
         
-        item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=Globals._quoteString(item['title']),chid=Globals._quoteString(citem['id']),vid=Globals._quoteString(Globals._encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=Globals._quoteString(citem['name']))
+        item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=Globals._quoteString(item['title']),chid=Globals._quoteString(citem['id']),vid=Globals._quoteString(FileAccess._encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=Globals._quoteString(citem['name']))
         fItem['catchup-id']   = item['catchup-id']
             
         if (item['type'] != 'movie' and ((fItem.get("season",0) > 0) and (fItem.get("episode",0) > 0))):

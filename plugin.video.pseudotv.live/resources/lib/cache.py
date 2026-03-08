@@ -51,9 +51,9 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
             instance = args[0]
             cacheName = "%s.%s" % (instance.__class__.__name__, method.__name__)
             for item in args[1:]:
-                cacheName += u".%s"%(Globals._getMD5(item))
+                cacheName += u".%s"%(FileAccess._getMD5(item))
             for k, v in list(kwargs.items()):
-                cacheName += u".%s=%s"%(k,Globals._getMD5(v))
+                cacheName += u".%s=%s"%(k,FileAccess._getMD5(v))
             results = instance.cache.get(cacheName, checksum,)
             if results is not None:
                 log('%s, cacheit returning cache' % (method.__qualname__.replace('.', ': ')))
@@ -83,9 +83,9 @@ class Cache(object):
 
     def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         # don't store empty values when cache disabled unless explicitly allowed
-        if not self.disable_cache or (not isinstance(value,(bool,list,dict)) and not value):
-            self.log('set, name = %s, value = %s' % (name, '%s...'%(str(value)[:128])))
+        if not any([self.disable_cache,value is None]):
             self.cache.set(name, value, checksum, expiration)
+            self.log('set, name = %s, value = %s, type = %s' % (name, '%s...'%(str(value)[:128]),type(value).__name__))
         return value
 
 
@@ -93,7 +93,7 @@ class Cache(object):
         if not self.disable_cache:
             try:
                 value = self.cache.get(name, checksum)
-                self.log('get, name = %s, value = %s' % (name, '%s...'%(str(value)[:128])))
+                self.log('get, name = %s, value = %s, type = %s' % (name, '%s...'%(str(value)[:128]),type(value).__name__))
                 return value
             except Exception as e:
                 self.log("get, name = %s failed! %s" % (name, e), xbmc.LOGERROR)
@@ -173,7 +173,7 @@ class _Cache(object):
     def _getMEM(self, endpoint, checksum, cur_time):
         result = None
         try: 
-            cachedata = pickle.loads(Globals._decodeString(Globals._getProperty(endpoint)))
+            cachedata = FileAccess.loadPICKLE(FileAccess._decodeString(Globals._getProperty(endpoint)))
             if cachedata[0] > cur_time and not checksum or checksum == cachedata[2]: result = cachedata[1]
         except Exception as e: pass
         return result
@@ -181,7 +181,7 @@ class _Cache(object):
 
     def _setMEM(self, endpoint, checksum, expires, data):
         try: 
-            string_text = Globals._encodeString(pickle.dumps((expires, data, checksum)))
+            string_text = FileAccess._encodeString(FileAccess.dumpPICKLE((expires, data, checksum)))
             string_size = sys.getsizeof(string_text)
             if string_size > self.max_bytes: raise Exception(f"_setMEM, {endpoint} too large for cache limit {self.max_bytes}!")
             else:
@@ -215,7 +215,7 @@ class _Cache(object):
             if cache_data and cache_data[0] > cur_time:
                 if not checksum or cache_data[2] == checksum:
                     try: 
-                        result = pickle.loads(cache_data[1])
+                        result = FileAccess.loadPICKLE(cache_data[1])
                         if self.enable_mem_cache: self._setMEM(endpoint, checksum, cache_data[0], result)
                     except Exception as e: self.log("_getDB, failed! %s"%(e), xbmc.LOGERROR)
         return result
@@ -223,7 +223,7 @@ class _Cache(object):
 
     def _setDB(self, endpoint, checksum, expires, data):
         query = "INSERT OR REPLACE INTO cache( id, expires, data, checksum) VALUES (?, ?, ?, ?)"
-        try: self._execute_sql(query, (endpoint, expires, pickle.dumps(data), checksum))
+        try: self._execute_sql(query, (endpoint, expires, FileAccess.dumpPICKLE(data), checksum))
         except Exception as e: self.log("_setDB, failed! %s"%(e), xbmc.LOGERROR)
 
 
@@ -280,7 +280,7 @@ class _Cache(object):
                         else:                      result = connection.execute(query)
                         return result
                     except Exception as e:
-                        if "connection is locked" in e:
+                        if "is locked" in e:
                             self.log("_execute_sql, retrying DB commit...")
                             retries += 1
                             self.service._sleep(LOCK_MAX_FILE_DELAY)

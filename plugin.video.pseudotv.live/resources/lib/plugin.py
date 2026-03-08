@@ -29,16 +29,19 @@ class Plugin(object):
     cache   = SETTINGS.cache
     
     def __init__(self, mode='playlist', sysInfo={}):
+        print('sysInfo IN',sysInfo)
         self.sysInfo = sysInfo
         self.sysInfo['seek'] = (sysInfo.get('seek') or abs(int(sysInfo.get('start',-1)) - int(sysInfo.get('now',-1))) if int(sysInfo.get('start',-1)) > 0 else -1)
         self.sysInfo["progresspercentage"] = round((self.sysInfo["seek"]/int(self.sysInfo["duration"])) * 100, 2) if self.sysInfo['seek'] > 0 else -1 
         
-        if not self.sysInfo.get('fitem'):  self._updateSysInfo() #Widgets don't include listitem meta, attempt to find matching meta with jsonrpc
+        if not self.sysInfo.get('fitem'):
+            self._updateSysInfo() #Widgets don't include listitem meta, attempt to find matching meta with jsonrpc
         self.sysInfo['isVOD']      = self.sysInfo.get('fitem').get('file','-1') != self.sysInfo.get('vid','-1')
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
         self.sysInfo['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
         mode = 'playlist' if any([self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist']]) else sysInfo.get('mode')
         self.log(f'__init__, mode = {mode}, sysARG = {sysInfo.get('sysARG')}')
+        print('sysInfo OUT',self.sysInfo)
         
         if   mode == 'live':                    self.playLive()
         elif mode == 'radio':                   self.playRadio()
@@ -78,73 +81,102 @@ class Plugin(object):
 
 
     def _getPVRItems(self):
+        def __findCurrent(items, byFile=True, found=-1):
+            for pos, nextitem in enumerate(items):
+                fitem = Globals._decodePlot(nextitem.get('plot',{}))
+                file  = self.sysInfo.get('fitem',{}).get('file')
+                if byFile and file.lower() == fitem.get('file','').lower(): found = pos
+                elif not byFile and ntime >= strpTime(nextitem.get('starttime')) and ntime < strpTime(nextitem.get('endtime')) and self.sysInfo.get('chid') == fitem.get('citem',{}).get('id',str(random.random())): found = pos
+                if found >= 0:
+                    self.log('[%s] __buildPlaylist __findCurrent found match!'%(self.sysInfo.get('chid')))
+                    items = items[found:]
+                    break
+                
+            if len(items) > 0:
+                if self.sysInfo.get('mode',False) == 'playlist':
+                    # Offset start based on user configured tolerances. 
+                    nowitem = items.pop(0)
+                    # content almost concluded, move to next queued item
+                    if round(nowitem['progresspercentage']) > SETTINGS.getSettingInt('Seek_Threshold'):
+                        self.log('[%s] __buildPlaylist, __findCurrent progress past threshold advance to nextitem'%(self.sysInfo.get('chid')))
+                        nowitem = items.pop(0)
+                    # content just started, reset seek and progress to the beginning. 
+                    if round(nowitem['progress']) < SETTINGS.getSettingInt('Seek_Tolerance'):
+                        self.log('[%s] __buildPlaylist, __findCurrent progress start at the beginning'%(self.sysInfo.get('chid')))
+                        nowitem['progress']           = 0
+                        nowitem['progresspercentage'] = 0
+                    self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
+                    items = items[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
+                    items.insert(0,nowitem)
+                combineDicts(self.sysInfo['fitem'],items[0].get('fitem',{}))
+            self.log('[%s] __buildPlaylist, __findCurrent building nextitems (%s)'%(self.sysInfo.get('chid'),len(items)))
+            return items
+            
         self.log('[%s] _getPVRItems'%(self.sysInfo.get('chid')))
         with PROPERTIES.interruptActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=True)
-            if pvritem:
-                pastItems = pvritem.get('broadcastpast',[]) # past items
-                nowitem   = pvritem.get('broadcastnow',{})  # current item
-                nextitems = pvritem.get('broadcastnext',[]) # future items
-                nextitems.insert(0,nowitem)
-                nextitems = pastItems + nextitems
-                
-                # start array at correct position
-                if self.sysInfo['fitem'].get('file'):
-                    for pos, nextitem in enumerate(nextitems):
-                        fitem = Globals._decodePlot(nextitem.get('plot',{}))
-                        file  = self.sysInfo.get('fitem',{}).get('file')
-                        if file == fitem.get('file'):
-                            self.log('[%s] __buildPlaylist found match!'%(self.sysInfo.get('chid')))
-                            del nextitems[0:pos]
-                            break
-                elif self.sysInfo.get('now'):
-                    for pos, nextitem in enumerate(nextitems):
-                        fitem = Globals._decodePlot(nextitem.get('plot',{}))
-                        ntime = epochTime(float(self.sysInfo.get('now')),tz=False)
-                        if ntime >= strpTime(nextitem.get('starttime')) and ntime < strpTime(nextitem.get('endtime')) and self.sysInfo.get('chid') == fitem.get('citem',{}).get('id',str(random.random())):
-                            self.log('[%s] __buildPlaylist found match!'%(self.sysInfo.get('chid')))
-                            del nextitems[0:pos]
-                            break
-                
-                # Offset start based on user configured tolerances. 
-                if len(nextitems) > 0:
-                    nowitem = nextitems.pop(0)
-                    # content almost concluded, move to next queued item
-                    if round(nowitem['progresspercentage']) > SETTINGS.getSettingInt('Seek_Threshold'):
-                        self.log('[%s] __buildPlaylist, progress past threshold advance to nextitem'%(self.sysInfo.get('chid')))
-                        nowitem = nextitems.pop(0)
-                        
-                    # content just started, reset seek and progress to the beginning. 
-                    if round(nowitem['progress']) < SETTINGS.getSettingInt('Seek_Tolerance'):
-                        self.log('[%s] __buildPlaylist, progress start at the beginning'%(self.sysInfo.get('chid')))
-                        nowitem['progress']           = 0
-                        nowitem['progresspercentage'] = 0
-
-                    self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
-                    nextitems = nextitems[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
-                    nextitems.insert(0,nowitem)
-                    self.log('[%s] __buildPlaylist, building nextitems (%s)'%(self.sysInfo.get('chid'),len(nextitems)))
-                    return nextitems
-                else: DIALOG.notificationDialog(LANGUAGE(32164))
-            else: DIALOG.notificationDialog(LANGUAGE(32000))
-            return []
+        
+        if pvritem:
+            pastItems = pvritem.get('broadcastpast',[]) # past items
+            nowitem   = pvritem.get('broadcastnow',{})  # current item
+            nextitems = pvritem.get('broadcastnext',[]) # future items
+            nextitems.insert(0,nowitem)
+            nextitems = pastItems + nextitems
+            # start array at correct position
+            if   self.sysInfo['fitem'].get('file'): nextitems = __findCurrent(nextitems)
+            else:                                   nextitems = __findCurrent(nextitems, byFile=False)
+            if len(nextitems) > 0: return nextitems
+            else: DIALOG.notificationDialog(LANGUAGE(32164))
+        else: DIALOG.notificationDialog(LANGUAGE(32000))
+        return []
                    
                    
-    def _playCheck(self, found, listitem):
+    def _playCheck(self, found, listitem=None):
+        def __findMissing(listitem):
+            file  = listitem.getPath()
+            title = listitem.getLabel()
+            oSeason, oEpisode = parseSE(file)
+            folder, filename  = os.path.split(file)
+            self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {title} = {filename} in {folder}')
+            with PROPERTIES.interruptActivity():
+                DIALOG.notificationDialog(f'Missing: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
+                items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
+                
+            found = False
+            for item in items:
+                if item.get('file','').endswith(tuple(VIDEO_EXTS)):
+                    if type == 'movies' and item.get('title','').lower() == title.lower():
+                        found = True
+                        break
+                    season, episode = parseSE(item.get('file',''))
+                    if oSeason and oEpisode and (oSeason == season and oEpisode == episode):
+                        found = True
+                        break
+                if found: 
+                    combineDicts(self.sysInfo['fitem'],item)
+                    listitem.setPath(self.sysInfo['fitem']['file'])
+                    self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing found {self.sysInfo['fitem']['file']}')
+                    DIALOG.notificationDialog(f'Found: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
+            #if not found: listitem.setPath(insert missing media placeholder)
+            return found, listitem
+            
+        if listitem is None: listitem = xbmcgui.ListItem()
+        if listitem.getPath() and not FileAccess.exists(listitem.getPath()): found, listitem = __findMissing(listitem)
         return found, listitem #todo refactor file validation. 
 
 
     def _resolveURL(self, found, listitem=None):
-        self.log(f'_resolveURL, found = {found}')
+        self.log(f'[{self.sysInfo.get('chid')}] _resolveURL, found = {found}')
         if listitem is None: listitem = xbmcgui.ListItem()
         xbmcplugin.setResolvedUrl(int(self.sysInfo['sysARG'][1]), *self._playCheck(found, listitem))
         
         
     def _play(self, file, listitem=None, wait=30):
         #PVR Live Channel Detection workaround.
+        if listitem is None: listitem = xbmcgui.ListItem()
         if self.player.isPlaying() and self.sysInfo['fitem'].get('file') != self.player.getPlayingFile():
             self.player.stop()
-        timerit(self.player.play)(1.0,*(file,listitem,True))
+        timerit(self.player.play)(1.0,*(file,self._playCheck(True, listitem)[1],True))
         self._resolveURL(False, listitem)
         #Playlist don't always gain screen focus depending on user Kodi configuration. Force fullscreen.
         while not self.monitor.abortRequested() and not self.player.isPlaying():
@@ -170,7 +202,7 @@ class Plugin(object):
         with PROPERTIES.suspendActivity():
             #LIVE called from Guide/Channels.
             listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-            listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
+            listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.sysInfo)))
             self._resolveURL(True, listitem)
         
             
@@ -178,7 +210,7 @@ class Plugin(object):
     def playRadio(self, limit=RADIO_ITEM_LIMIT):
         def __buildfItem(item: dict={}):
             listitem = LISTITEMS.buildItemListItem(item,'music')
-            listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
+            listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.sysInfo)))
             return listitem
             
         def __buildPlaylist(chid, name):
@@ -196,18 +228,18 @@ class Plugin(object):
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             listitem = LISTITEMS.buildItemListItem(item,'video')
-            
-            if item.get('file') == item.get('resume',{}).get('file',str(random.random())):
-                seektime = int(item.get('resume',{}).get('position',0.0))
-                runtime  = int(item.get('resume',{}).get('total',0.0))
-                self.log('[%s] __buildfItem, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(chid, runtime, seektime))
-                listitem.setProperty('startoffset', str(seektime)) #secs
-                infoTag = ListItemInfoTag(listitem, 'video')
-                infoTag.set_resume_point({'ResumeTime':seektime, 'TotalTime':runtime * 60})
-                
-            sysInfo.update({'fitem':item,'resume':{"idx":listitems.index(item)}})
-            listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(sysInfo)))
-            return listitem
+            if FileAccess.exists(listitem.getPath()):  #todo insert missing media placeholder
+                if item.get('file') == item.get('resume',{}).get('file',str(random.random())):
+                    seektime = int(item.get('resume',{}).get('position',0.0))
+                    runtime  = int(item.get('resume',{}).get('total',0.0))
+                    self.log('[%s] __buildfItem, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(chid, runtime, seektime))
+                    listitem.setProperty('startoffset', str(seektime)) #secs
+                    infoTag = ListItemInfoTag(listitem, 'video')
+                    infoTag.set_resume_point({'ResumeTime':seektime, 'TotalTime':runtime * 60})
+                    
+                sysInfo.update({'fitem':item,'resume':{"idx":listitems.index(item)}})
+                listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(sysInfo)))
+                return listitem
             
         def __buildPlaylist(chid, name):
             listitems = RulesList([self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid}))
@@ -241,11 +273,12 @@ class Plugin(object):
             idx      = nextitems.index(nextitem)
             fitem    = Globals._decodePlot(nextitem.get('plot',''))
             listitem = LISTITEMS.buildItemListItem(fitem,'video')
-            if not self.sysInfo['isVOD']:
-                listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-            sysInfo.update({'fitem':fitem,'resume':{"idx":idx}})
-            listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(sysInfo)))
-            return listitem
+            if FileAccess.exists(listitem.getPath()): #todo insert missing media placeholder
+                if not self.sysInfo['isVOD']:
+                    listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+                sysInfo.update({'fitem':fitem,'resume':{"idx":idx}})
+                listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(sysInfo)))
+                return listitem
             
         self.log('[%s] playPlaylist, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
         with PROPERTIES.suspendActivity():

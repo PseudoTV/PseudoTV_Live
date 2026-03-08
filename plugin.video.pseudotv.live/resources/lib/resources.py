@@ -214,8 +214,8 @@ class Resources(object):
             return results
 
         resources = __getResources(citem.get('type','Custom'))
-        checksum  = Globals._getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if SETTINGS.hasAddon(id)]))
-        cacheName = 'getLogoResources.%s.%s' % (Globals._getMD5(citem.get('name')), select)
+        checksum  = FileAccess._getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if SETTINGS.hasAddon(id)]))
+        cacheName = 'getLogoResources.%s.%s' % (FileAccess._getMD5(citem.get('name')), select)
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
             logos = []
@@ -246,7 +246,7 @@ class Resources(object):
 
     def getTVShowLogo(self, chname: str, select: bool=False):
         self.log('getTVShowLogo, chname = %s, select = %s'%(chname,select))
-        cacheName     = 'getTVShowLogo.%s.%s'%(Globals._getMD5(chname),select)
+        cacheName     = 'getTVShowLogo.%s.%s'%(FileAccess._getMD5(chname),select)
         cacheResponse = self.cache.get(cacheName)
         if not cacheResponse:
             logos = []
@@ -273,49 +273,27 @@ class Resources(object):
 
 
     def matchName(self, chname: str, title: str, type: str='Custom', threshold=0.75) -> bool and None:
-        def __normalize(s):
-            if not s: return ''
+        def __normalize(s: str) -> str:
+            if not s:  return ''
             s = s.lower()
-            # replace common separators with spaces
             s = s.replace('&', ' and ')
-            # Remove parenthetical content: year, regions, extras
             s = _PAREN_RE.sub(' ', s)
-            # Remove explicit years (standalone)
             s = _YEAR_RE.sub(' ', s)
-            # Replace non-alphanumerics with space
             s = _NON_ALNUM_RE.sub(' ', s)
-            # Collapse whitespace and trim
             s = _MULTI_WS_RE.sub(' ', s).strip()
-            if s.startswith('the '): s = s[4:]
-            return s
-
-        a = __normalize(chname)
-        b = __normalize(title)
-        print('matchName',chname,title)
-        print('matchName',a,b)
-        if not a and not b: return False
-        if a == b:          return True
-       
-       # quick token checks to avoid heavy SequenceMatcher when unlikely to match
+            return s[4:] if s.startswith('the ') else s
+            
+        a, b = __normalize(chname), __normalize(title)
+        if not a or not b:   return False
+        if a == b:           return True
+        if a in b or b in a: return True
+        # Token Intersection check
         a_tokens = set(_TOKEN_SPLIT_RE.split(a))
         b_tokens = set(_TOKEN_SPLIT_RE.split(b))
-        print('matchName',a_tokens,b_tokens)
-        if not a_tokens or not b_tokens: return False
-        # if there's very low token intersection, skip expensive ratio
-        # inter = a_tokens.intersection(b_tokens)
-        # print('matchName inter',inter)
-        # if len(inter) / max(1, min(len(a_tokens), len(b_tokens))) < (1.00 - threshold):
-            # # fallback to startswith/contains checks which are cheap
-            # if a.startswith(b) or b.startswith(a) or (a in b) or (b in a): return True
-        # # fallback to SequenceMatcher only when token overlap suggests potential match
-        try:
-            ratio = SequenceMatcher(None, a, b).ratio()
-            print('matchName ratio',ratio)
-            if ratio >= threshold: return True
-        except Exception: pass
-        return False
-
-
+        if not a_tokens.intersection(b_tokens): return False
+        return SequenceMatcher(None, a, b).ratio() >= threshold
+            
+        
     def isMono(self, file: str, mono: bool=False) -> bool:
         if   file.startswith('resource://') and (bool(set([match in file.lower() for match in ['transparent','white','mono']]))):
             return True

@@ -203,11 +203,11 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def isLocked(self):
-        return PROPERTIES.getEXTPropertyBool('%s.Manager.isLocked'%(ADDON_ID))
+        return (PROPERTIES.getEXTProperty('%s.Manager.isLocked'%(ADDON_ID)) or False)
         
         
     def setLocked(self, state=True):
-        try: self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[PROPERTIES.setEXTPropertyBool('%s.Manager.isLocked'%(ADDON_ID),state)])
+        try: self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[PROPERTIES.setEXTProperty('%s.Manager.isLocked'%(ADDON_ID),state)])
         except Exception: pass
         
 

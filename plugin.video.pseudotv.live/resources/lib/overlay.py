@@ -150,7 +150,7 @@ class Restart(xbmcgui.WindowXMLDialog):
             elif self.fitem: 
                 with BUILTIN.busy_dialog():
                     liz = LISTITEMS.buildItemListItem(self.fitem)
-                    liz.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.player.playingItem)))
+                    liz.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.player.playingItem)))
                     self.player.stop()
                 timerit(self.player.play)(1.0,*(self.fitem.get('catchup-id'),liz))
             else: DIALOG.notificationDialog(LANGUAGE(30154))

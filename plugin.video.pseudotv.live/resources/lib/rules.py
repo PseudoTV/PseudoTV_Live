@@ -1576,11 +1576,11 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         
         
     def _getURL(self, id):
-        return 'http://%s/filelist/%s.json'%(PROPERTIES.getRemoteHost(),Globals._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id)))
+        return 'http://%s/filelist/%s.json'%(PROPERTIES.getRemoteHost(),FileAccess._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id)))
         
         
     def _getPath(self, id):
-        return os.path.join(RESUME_LOC,'%s.json'%(Globals._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id))))
+        return os.path.join(RESUME_LOC,'%s.json'%(FileAccess._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id))))
         
         
     def _getTotDuration(self, id, filelist=[]):

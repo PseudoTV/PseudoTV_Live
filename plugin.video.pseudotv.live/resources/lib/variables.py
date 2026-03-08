@@ -18,6 +18,7 @@
 #
 # -*- coding: utf-8 -*-
 from constants   import *
+from logger      import log
 from fileaccess  import FileAccess, FileLock
 
 #variables
@@ -54,37 +55,14 @@ class Globals:
         return xbmcgui.Window(10000).clearProperty('%s.%s'%(ADDON_ID, key))
 
     @staticmethod
-    def _getMD5(text,hash=0,hexit=True):
-        if isinstance(text,dict):     text = FileAccess.dumpJSON(text)
-        elif not isinstance(text,str):text = str(text)
-        for ch in text: hash = (hash*281 ^ ord(ch)*997) & 0xFFFFFFFF
-        if hexit: return hex(hash)[2:].upper().zfill(8)
-        else:     return hash
-
-    @staticmethod
-    def _encodeString(text, encoding=DEFAULT_ENCODING):
-        data = text.encode(encoding) if isinstance(text, str) else text
-        compressed = zlib.compress(data, level=1)
-        return base64.b64encode(compressed).decode('ascii')
-
-    @staticmethod
-    def _decodeString(base64_str='', encoding=DEFAULT_ENCODING):
-        if isinstance(base64_str, str): base64_str = base64_str.encode('ascii')
-        try:
-            raw_data = zlib.decompress(base64.b64decode(base64_str))
-            return raw_data.decode(encoding)
-        except (zlib.error, UnicodeDecodeError, ValueError):
-            return raw_data if 'raw_data' in locals() else base64_str
-        
-    @staticmethod
     def _encodePlot(plot, text):
-        return '%s [COLOR item="%s"][/COLOR]'%(plot,Globals._encodeString(FileAccess.dumpJSON(text)))
+        return '%s [COLOR item="%s"][/COLOR]'%(plot,FileAccess._encodeString(FileAccess.dumpJSON(text)))
         
     @staticmethod
     def _decodePlot(text: str = '') -> dict:
         if isinstance(text, str):
             plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
-            if plot: return FileAccess.loadJSON(Globals._decodeString(plot.group(1)))
+            if plot: return FileAccess.loadJSON(FileAccess._decodeString(plot.group(1)))
         return {}
         
     @staticmethod

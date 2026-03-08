@@ -201,55 +201,54 @@ class M3U(object):
         
     @debounceit(SERVICE_INTERVAL)
     def _save(self):
-        with PROPERTIES.interruptActivity():
-            self.M3UDATA['data']       = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE))
-            self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
-            self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]), key='name')
-            self.log('_save, writable = %s, file = %s\nstations = %s recordings = %s'%(self.writable,self.stationFile,len(self.M3UDATA['stations']),len(self.M3UDATA['recordings'])))
-            if self.writable:
-                with FileLock(self.stationFile):
-                    try:
-                        fle = FileAccess.open(self.stationFile, 'w')
-                        fle.write('%s\n'%(self.M3UDATA['data']))
-                        opts = list(self.getMitem().keys())
-                        line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
-                        for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
-                            try:
-                                optional  = ''
-                                xplaylist = ''
-                                kodiprops = {}
-                                extvlcopt = {}
-                                    
-                                # write optional m3u parameters.
-                                if 'kodiprops'       in station: kodiprops = station.pop('kodiprops')
-                                if 'extvlcopt'       in station: extvlcopt = station.pop('extvlcopt')
-                                if 'x-playlist-type' in station: xplaylist = station.pop('x-playlist-type')
-                                for key, value in list(station.items()):
-                                    if key in opts and str(value):
-                                        optional += '%s="%s" '%(key,value)
+        self.M3UDATA['data']       = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE))
+        self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
+        self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]), key='name')
+        self.log('_save, writable = %s, file = %s\nstations = %s recordings = %s'%(self.writable,self.stationFile,len(self.M3UDATA['stations']),len(self.M3UDATA['recordings'])))
+        if self.writable:
+            with FileLock(self.stationFile):
+                try:
+                    fle = FileAccess.open(self.stationFile, 'w')
+                    fle.write('%s\n'%(self.M3UDATA['data']))
+                    opts = list(self.getMitem().keys())
+                    line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+                    for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
+                        try:
+                            optional  = ''
+                            xplaylist = ''
+                            kodiprops = {}
+                            extvlcopt = {}
+                                
+                            # write optional m3u parameters.
+                            if 'kodiprops'       in station: kodiprops = station.pop('kodiprops')
+                            if 'extvlcopt'       in station: extvlcopt = station.pop('extvlcopt')
+                            if 'x-playlist-type' in station: xplaylist = station.pop('x-playlist-type')
+                            for key, value in list(station.items()):
+                                if key in opts and str(value):
+                                    optional += '%s="%s" '%(key,value)
 
-                                fle.write(line%(station['number'],
-                                                station['id'],
-                                                station['name'],
-                                                station['logo'],
-                                                ';'.join(station['group']),
-                                                station['radio'],
-                                                station['catchup'],
-                                                optional,
-                                                station['label']))
-                                       
-                                if kodiprops:  fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop)  for prop in kodiprops])))
-                                if extvlcopt:  fle.write('%s\n'%('\n'.join(['#EXTVLCOPT:%s'%(prop) for prop in extvlcopt])))
-                                if xplaylist:  fle.write('%s\n'%('#EXT-X-PLAYLIST-TYPE:%s'%(xplaylist)))
-                            except Exception as e:
-                                self.log("_save, failed! %s"%(e), xbmc.LOGERROR)
-                                continue
-                            fle.write('%s\n'%(station['url']))
-                        return True
-                    except Exception: self.log("_save, failed! %s"%(e), xbmc.LOGERROR)
-                    finally:
-                        if hasattr(fle, 'close'): 
-                            fle.close()
+                            fle.write(line%(station['number'],
+                                            station['id'],
+                                            station['name'],
+                                            station['logo'],
+                                            ';'.join(station['group']),
+                                            station['radio'],
+                                            station['catchup'],
+                                            optional,
+                                            station['label']))
+                                   
+                            if kodiprops:  fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop)  for prop in kodiprops])))
+                            if extvlcopt:  fle.write('%s\n'%('\n'.join(['#EXTVLCOPT:%s'%(prop) for prop in extvlcopt])))
+                            if xplaylist:  fle.write('%s\n'%('#EXT-X-PLAYLIST-TYPE:%s'%(xplaylist)))
+                        except Exception as e:
+                            self.log("_save, failed! %s"%(e), xbmc.LOGERROR)
+                            continue
+                        fle.write('%s\n'%(station['url']))
+                    return True
+                except Exception: self.log("_save, failed! %s"%(e), xbmc.LOGERROR)
+                finally:
+                    if hasattr(fle, 'close'): 
+                        fle.close()
         
         
     def _reload(self):
@@ -264,7 +263,7 @@ class M3U(object):
             self.log('_verify, stations = %s'%(len(stations)))
             return stations
         elif recordings:#remove recordings that no longer exists on disk
-            if chkPath: recordings = [recording for recording in recordings if hasFile(Globals._decodeString(dict(urllib.parse.parse_qsl(recording.get('url',''))).get('vid').replace('.pvr','')))]
+            if chkPath: recordings = [recording for recording in recordings if hasFile(FileAccess._decodeString(dict(urllib.parse.parse_qsl(recording.get('url',''))).get('vid').replace('.pvr','')))]
             else:       recordings = [recording for recording in recordings if recording.get('media',False)]
             self.log('_verify, recordings = %s, chkPath = %s'%(len(recordings),chkPath))
             return recordings
@@ -336,7 +335,7 @@ class M3U(object):
         ritem['media-dir']     = ''#todo optional add parent directory via user prompt?
         ritem['group']         = ['%s (%s)'%(group,ADDON_NAME)]
         ritem['id']            = getRecordID(ritem['name'], (fitem.get('originalfile') or fitem.get('file','')), ritem['number'], SETTINGS.getMYUUID())
-        ritem['url']           = DVR_URL.format(addon=ADDON_ID,title=Globals._quoteString(ritem['label']),chid=Globals._quoteString(ritem['id']),vid=Globals._quoteString(Globals._encodeString((fitem.get('originalfile') or fitem.get('file','')))),seek=seek,duration=fitem.get('duration',0))#fitem.get('catchup-id','')
+        ritem['url']           = DVR_URL.format(addon=ADDON_ID,title=Globals._quoteString(ritem['label']),chid=Globals._quoteString(ritem['id']),vid=Globals._quoteString(FileAccess._encodeString((fitem.get('originalfile') or fitem.get('file','')))),seek=seek,duration=fitem.get('duration',0))#fitem.get('catchup-id','')
         return ritem
         
         

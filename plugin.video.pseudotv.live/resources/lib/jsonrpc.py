@@ -70,7 +70,7 @@ class JSONRPC(object):
         
         
     def cacheJSON(self, param, life=datetime.timedelta(minutes=5), checksum=ADDON_VERSION, timeout=SETTINGS.getSettingInt('RPC_Timer')):
-        cacheName = 'cacheJSON.%s'%(Globals._getMD5(FileAccess.dumpJSON(param)))
+        cacheName = 'cacheJSON.%s'%(FileAccess._getMD5(FileAccess.dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
             cacheResponse = self.sendJSON(param, timeout)
@@ -122,7 +122,7 @@ class JSONRPC(object):
                 
         
     def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        cacheName = 'getListDirectory.%s'%(Globals._getMD5(path))
+        cacheName = 'getListDirectory.%s'%(FileAccess._getMD5(path))
         results   = self.cache.get(cacheName, checksum)
         if not results:
             try:    
@@ -273,7 +273,7 @@ class JSONRPC(object):
     def getStreamDetails(self, path, media='video'):
         if isStack(path): path = splitStacks(path)[0]
         param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}
-        return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=Globals._getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
+        return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=FileAccess._getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
 
     def getFileDetails(self, file, media='video', properties=["duration","runtime"]):
@@ -393,24 +393,24 @@ class JSONRPC(object):
         
     def _setRuntime(self, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')): #set runtime collected by player, accurate meta.
         runtime = round(runtime)
-        self.cache.set('getRuntime.%s'%(Globals._getMD5(item.get('file'))), runtime, checksum=Globals._getMD5(item.get('file')), expiration=datetime.timedelta(days=28))
+        self.cache.set('getRuntime.%s'%(FileAccess._getMD5(item.get('file'))), runtime, checksum=FileAccess._getMD5(item.get('file')), expiration=datetime.timedelta(days=28))
         if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)) and save and runtime > 0: self.queDuration(item, runtime=runtime)
     
         
     def _getRuntime(self, item={}): #get runtime collected by player, else less accurate provider meta
-        runtime = self.cache.get('getRuntime.%s'%(Globals._getMD5(item.get('file'))), checksum=Globals._getMD5(item.get('file')))
+        runtime = self.cache.get('getRuntime.%s'%(FileAccess._getMD5(item.get('file'))), checksum=FileAccess._getMD5(item.get('file')))
         return round(runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         
 
     def _setDuration(self, path, item={}, duration=0, save=SETTINGS.getSettingBool('Store_Duration')):#set VideoParser cache
         duration = round(duration)
-        self.cache.set('getDuration.%s'%(Globals._getMD5(path)), duration, checksum=Globals._getMD5(path), expiration=datetime.timedelta(days=28))
+        self.cache.set('getDuration.%s'%(FileAccess._getMD5(path)), duration, checksum=FileAccess._getMD5(path), expiration=datetime.timedelta(days=28))
         if save and item: self.queDuration(item, duration)
         return duration
 
     
     def _getDuration(self, path): #get VideoParser cache
-        return round(self.cache.get('getDuration.%s'%(Globals._getMD5(path)), checksum=Globals._getMD5(path)) or self._getRuntime({'file':path}))
+        return round(self.cache.get('getDuration.%s'%(FileAccess._getMD5(path)), checksum=FileAccess._getMD5(path)) or self._getRuntime({'file':path}))
 
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
@@ -558,8 +558,8 @@ class JSONRPC(object):
             
             
     def autoPagination(self, id, path, query={}, limits={}):
-        if not limits: return (self.cache.get('autoPagination.%s.%s.%s'%(id,Globals._getMD5(path),Globals._getMD5(FileAccess.dumpJSON(query))), checksum=id) or {"end": 0, "start": 0, "total":0})
-        else:          return  self.cache.set('autoPagination.%s.%s.%s'%(id,Globals._getMD5(path),Globals._getMD5(FileAccess.dumpJSON(query))), limits, checksum=id, expiration=datetime.timedelta(days=28))
+        if not limits: return (self.cache.get('autoPagination.%s.%s.%s'%(id,FileAccess._getMD5(path),FileAccess._getMD5(FileAccess.dumpJSON(query))), checksum=id) or {"end": 0, "start": 0, "total":0})
+        else:          return  self.cache.set('autoPagination.%s.%s.%s'%(id,FileAccess._getMD5(path),FileAccess._getMD5(FileAccess.dumpJSON(query))), limits, checksum=id, expiration=datetime.timedelta(days=28))
             
              
     def randomPagination(self, page=SETTINGS.getSettingInt('Page_Limit'), limits={}, start=0):
@@ -691,7 +691,7 @@ class JSONRPC(object):
             self.log('matchChannel: __extend, broadcastnext = %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
             
-        cacheName     = 'matchChannel.%s'%(Globals._getMD5('%s.%s.%s.%s'%(chname,id,radio,extend)))
+        cacheName     = 'matchChannel.%s'%(FileAccess._getMD5('%s.%s.%s.%s'%(chname,id,radio,extend)))
         cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID()) or {})
         if not cacheResponse:
             pvrItem = __match()

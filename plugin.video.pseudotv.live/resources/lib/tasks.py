@@ -143,7 +143,7 @@ class Tasks(object):
         
         
     def _chkEpochTimer(self, key, func, runevery=900, priority=-1, nextrun=None, *args, **kwargs):
-        if nextrun is None: nextrun = PROPERTIES.getPropertyInt(key, default=0) # nextrun == 0 => force que
+        if nextrun is None: nextrun = (PROPERTIES.getProperty(key) or 0) # nextrun == 0 => force que
         epoch = int(time.time())
         if epoch >= nextrun:
             self.log('_chkEpochTimer, key = %s, last run %s' % (key, epoch - nextrun))
@@ -153,7 +153,7 @@ class Tasks(object):
 
     def _chkPropTimer(self, key, func, priority=-1, *args, **kwargs):
         key = '%s.%s' % (ADDON_ID, key)
-        if PROPERTIES.getEXTPropertyBool(key):
+        if PROPERTIES.getEXTProperty(key):
             self.log('_chkPropTimer, key = %s'%(key))
             PROPERTIES.clrEXTProperty(key)
             self.service._que(func, priority, *args, **kwargs)
@@ -334,12 +334,12 @@ class Tasks(object):
         
                 
     def setUserPath(self, old, new):
+        self.log('setUserPath, old = %s, new = %s'%(old,new))
+        dia = DIALOG.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
         with PROPERTIES.interruptActivity():
-            self.log('setUserPath, old = %s, new = %s'%(old,new))
-            dia = DIALOG.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
             FileAccess.copyFolder(old, new, dia)
-            PROPERTIES.setPendingRestart()
-            DIALOG.progressDialog(100, dia)
+        PROPERTIES.setPendingRestart()
+        DIALOG.progressDialog(100, dia)
 
 
     def getChannels(self):

@@ -78,10 +78,9 @@ class Utilities(object):
                 return text  
                 
             with BUILTIN.busy_dialog():
-                fle = FileAccess.open(CHANGELOG_FLE, "r")
-                txt = __addColor(fle.read())
-                fle.close()
-            DIALOG.textviewer(txt, heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+                with FileAccess.stream(CHANGELOG_FLE) as fle:
+                    txt = __addColor(fle.read())
+                DIALOG.textviewer(txt, heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: log('Utilities: showChangelog failed! %s'%(e), xbmc.LOGERROR)
 
     @staticmethod

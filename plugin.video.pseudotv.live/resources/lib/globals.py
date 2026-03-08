@@ -44,8 +44,8 @@ def chanceBool(percent=25):
 def requestURL(url, params={}, payload={}, header=HEADER, timeout=15, cache=None, file=None):
     #cache = {"cache":None, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}
     def __error(result={}):                                                         return result
-    def __getCache(key, cache, checksum):                return (cache.get('requestURL.%s'%(Globals._getMD5(key)), checksum) or __error())
-    def __setCache(key, results, cache, checksum, life): return cache.set('requestURL.%s'%(Globals._getMD5(key)), results, checksum, life)
+    def __getCache(key, cache, checksum):                return (cache.get('requestURL.%s'%(FileAccess._getMD5(key)), checksum) or __error())
+    def __setCache(key, results, cache, checksum, life): return cache.set('requestURL.%s'%(FileAccess._getMD5(key)), results, checksum, life)
         
     results  = None
     session  = requests.Session()

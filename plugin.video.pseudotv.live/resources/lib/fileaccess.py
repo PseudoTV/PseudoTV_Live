@@ -28,25 +28,81 @@ DEFAULT_ENCODING = "utf-8"
 class FileAccess(object):
     
     @staticmethod
-    def dumpJSON(item={}, idnt=None, sortkey=False, separators=(',', ':')):
+    def _getMD5(text):
+        if not isinstance(text, (str, bytes, bytearray)): text = FileAccess.dumpPICKLE(text)
+        if isinstance(text, str): text = text.encode(DEFAULT_ENCODING)
+        return hashlib.md5(text).hexdigest().upper()
+
+    @staticmethod
+    def _encodeString(text, encoding=DEFAULT_ENCODING):
         try:
-            if item:
-                if   isinstance(item,(str, bytes)): return item
-                elif hasattr(item,'read'):          return json.dump(item)
-                elif isinstance(item,dict):         return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
-        except Exception as e: pass
-        return ''
+            if isinstance(text, str): text = text.encode(encoding)
+            return base64.b64encode(zlib.compress(text, level=1)).decode('ascii')
+        except Exception as e:
+            log(f"_encodeString failed! {e}", xbmc.LOGERROR)
+            return ""
+
+    @staticmethod
+    def _decodeString(text='', encoding=DEFAULT_ENCODING):
+        if not text: return ""
+        if isinstance(text, str): text = text.encode('ascii')
+        try:
+            decoded_bytes = base64.b64decode(text)
+            return zlib.decompress(decoded_bytes).decode(encoding)
+        except UnicodeDecodeError: pass
+        except Exception as e:
+            log(f"_decodeString failed! {e}", xbmc.LOGERROR)
+            return locals().get('decoded_bytes', text)
+            
+    @staticmethod
+    def dumpPICKLE(item={}, fle=None):
+        try:
+            if fle and hasattr(item,'write'):        
+                pickle.dump(item, fle)
+                return True
+            if isinstance(item, (bytes, bytearray)): return item
+            return pickle.dumps(item)
+        except Exception as e:
+            log('FileAccess: dumpPICKLE failed! %s'%(e), xbmc.LOGERROR)
+            return None
         
+        
+    @staticmethod
+    def loadPICKLE(item="", encoding=DEFAULT_ENCODING):
+        try:        
+            if not item:              return None
+            if hasattr(item,'read'):  return pickle.load(item)
+            if isinstance(item, str): item = item.encode('latin-1')
+            return pickle.loads(item)
+        except pickle.UnpicklingError: pass
+        except Exception as e:
+            log('FileAccess: loadPICKLE failed! %s'%(e), xbmc.LOGERROR)
+            return None
+        
+        
+    @staticmethod
+    def dumpJSON(item={}, fle=None, idnt=None, sortkey=False, separators=(',', ':')):
+        try:
+            if fle and hasattr(item,'write'):    
+                json.dump(item, fle, indent=idnt, sort_keys=sortkey, separators=separators)
+                return True
+            if isinstance(item, (str, bytes)): return item
+            return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
+        except Exception as e:
+            log('FileAccess: dumpJSON failed! %s'%(e), xbmc.LOGERROR)
+            return ''
+            
         
     @staticmethod
     def loadJSON(item=""):
         try:
-            if item:
-                if   isinstance(item,dict):          return item
-                elif hasattr(item,'read'):           return json.load(item)
-                elif isinstance(item,(str, bytes)):  return json.loads(item)
-        except Exception as e: pass
-        return {}
+            if not item: return {}
+            if isinstance(item, (dict, list)): return item
+            if hasattr(item, 'read'):          return json.load(item)
+            if isinstance(item, (str, bytes)): return json.loads(item)
+        except Exception as e:
+            log('FileAccess: loadJSON failed! %s'%(e), xbmc.LOGERROR)
+            return {}
         
         
     @staticmethod

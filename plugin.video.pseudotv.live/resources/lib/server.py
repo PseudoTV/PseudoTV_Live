@@ -266,7 +266,7 @@ class HTTP(object):
         
 
     def _pendingRestart(self):
-        return PROPERTIES.getEXTPropertyBool('HTTP.pendingRestart')
+        return (PROPERTIES.getEXTProperty('HTTP.pendingRestart') or False)
        
 
     def run(self, silent=False):  
@@ -292,7 +292,7 @@ class HTTP(object):
             if restart:
                 self.monitor.waitForAbort(M3U_REFRESH)
                 self.service._que(self.service.tasks.chkHTTP,1)
-                PROPERTIES.setEXTPropertyBool('HTTP.pendingRestart',False)
+                PROPERTIES.setEXTProperty('HTTP.pendingRestart',False)
             else: __update(restart)
             
         """Starts the threaded HTTP server with GZIP support."""
