@@ -26,10 +26,9 @@
     # def _shutdown(self, wait=1.0) -> bool:
         # return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     # def _interrupt(self) -> bool:
-        # return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt() | PROPERTIES.isInterruptActivity())
+        # return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
     # def _suspend(self, wait=1.0) -> bool:
-        # pendingSuspend = PROPERTIES.isPendingSuspend()
-        # return pendingSuspend
+        # return PROPERTIES.isPendingSuspend()
     # def _sleep(self, wait=1.0):
         # while not self.monitor.abortRequested() and wait > 0:
             # if (self.monitor.waitForAbort(0.5) | self._interrupt()): return True

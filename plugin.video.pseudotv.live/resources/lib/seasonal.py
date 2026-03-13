@@ -171,14 +171,14 @@ class Seasonal(object):
         return holiday
 
 
-    def buildSeasonal(self):
+    def buildSeasonal(self, holiday=None):
         """
         Builds a generator that provides seasonal content queries. Each query is augmented
         with holiday-specific metadata, including sorting and filtering options.
 
         :yield: A dictionary representing a seasonal content query.
         """
-        holiday = self.getHoliday()
+        if holiday is None: holiday = self.getHoliday()
         season  = self.getSeason(holiday.get('keyword'))
         for type, params in list(season.items()):
             for param in params:

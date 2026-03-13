@@ -23,7 +23,7 @@ from manager    import Manager
 @threadit
 def _open(fitem):
     log('Create: open')
-    if not PROPERTIES.isRunning('Create.open') and not PROPERTIES.isRunning('Library.updateLibrary'):
+    if not PROPERTIES.isRunning('Create.open'):
         with PROPERTIES.chkRunning('Create.open'), BUILTIN.busy_dialog(cancel=PROPERTIES.isRunning('Manager'), lock=True):
             try: manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=fitem.get('citem',{}).get('number',1))
             except Exception as e:
@@ -55,11 +55,10 @@ def _add(sysARG, listitem: dict={}):
                     citem['favorite'] = True
                     citem['changed']  = True
                     citem['radio']    = True if path.startswith('musicdb://') else False
-                    manager.channels.addChannel(manager.setLogo(citem['name'], citem))
-                    if manager.channels.setChannels(): timerit(PROPERTIES.setPropTimer)(15,'chkChanged')#trigger channel building
+                    manager._addChannels(citem['number'], citem)
                     manager.closeManager()
-                    manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=citem['number'])
                 del manager
+                return DIALOG.notificationDialog("%s [B]%s[/B]: [B]%s[/B]\nAdded!"%(LANGUAGE(30223),citem['number'],citem['name']))
 
 if __name__ == '__main__': 
     log('Create: __main__, param = %s'%(sys.argv))

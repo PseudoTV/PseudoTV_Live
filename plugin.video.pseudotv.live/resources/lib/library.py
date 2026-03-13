@@ -33,10 +33,9 @@ class Service(object):
     def _shutdown(self, wait=1.0) -> bool:
         return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
-        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt() | PROPERTIES.isInterruptActivity())
+        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
     def _suspend(self, wait=1.0) -> bool:
-        pendingSuspend = PROPERTIES.isPendingSuspend()
-        return pendingSuspend
+        return PROPERTIES.isPendingSuspend()
     def _sleep(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
@@ -64,7 +63,6 @@ class Library(object):
         self.libraryDATA = FileAccess.getJSON(LIBRARYFLE_DEFAULT)
         self.libraryTEMP = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
-
         self.AUTOTUNE = {"Playlists"    :{'func':self.getPlaylists   ,'life':datetime.timedelta(minutes=15)},
                          "TV Networks"  :{'func':self.getNetworks    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                          "TV Shows"     :{'func':self.getTVShows     ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
@@ -72,7 +70,8 @@ class Library(object):
                          "Movie Genres" :{'func':self.getMovieGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                          "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
                          "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                         "Mixed"        :{'func':self.getMixed       ,'life':datetime.timedelta(minutes=15)},
+                         "Mixed Video"  :{'func':self.getMixedVideo  ,'life':datetime.timedelta(minutes=15)},
+                         "Mixed Music"  :{'func':self.getMixedMusic  ,'life':datetime.timedelta(minutes=15)},
                          "Recommended"  :{'func':self.getRecommend   ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                          "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                          "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)}}
@@ -201,13 +200,20 @@ class Library(object):
         return sorted(MixedGenreList,key=itemgetter('name'))
     
 
-    def getMixed(self):
+    def getMixedVideo(self):
         MixedList = []
-        MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed"})}) #"Recently Added"
-        MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo({'name':LANGUAGE(32002),'type':"Mixed"})}) #"Seasonal"
+        MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed Video",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Video"})}) #"Recently Added"
+        MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed Video",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo({'name':LANGUAGE(32002),'type':"Mixed Video"})}) #"Seasonal"
         MixedList.extend(self.getPVRRecordings())#"PVR Recordings"
         MixedList.extend(self.getPVRSearches())  #"PVR Searches"
-        self.log('getMixed, mixed = %s' % (len(MixedList)))
+        self.log('getMixedVideo, mixed = %s' % (len(MixedList)))
+        return sorted(MixedList,key=itemgetter('name'))
+
+
+    def getMixedMusic(self):
+        MixedList = []
+        MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed Music",'path':self.predefined.createMusicRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Music"})}) #"Recently Added"
+        self.log('getMixedMusic, mixed = %s' % (len(MixedList)))
         return sorted(MixedList,key=itemgetter('name'))
 
 
@@ -238,7 +244,7 @@ class Library(object):
 
 
     def getMusicGenres(self):
-        try:    return self.getMusicInfo().get('genres',[])
+        try: return self.getMusicInfo().get('genres',[])
         except Exception: return []
  
  
@@ -247,7 +253,7 @@ class Library(object):
         self.pDialog  = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
         json_response = self.jsonRPC.getPVRRecordings()
         paths = [item.get('file') for idx, item in enumerate(json_response) if item.get('label','').endswith('(%s)'%(ADDON_NAME))]
-        if len(paths) > 0: recordList.append({'name':LANGUAGE(32003),'type':"Mixed",'path':[paths],'logo':self.resources.getLogo({'name':LANGUAGE(32003),'type':"Mixed"})})
+        if len(paths) > 0: recordList.append({'name':LANGUAGE(32003),'type':"Mixed Video",'path':[paths],'logo':self.resources.getLogo({'name':LANGUAGE(32003),'type':"Mixed Video"})})
         self.log('getPVRRecordings, recordings = %s' % (len(recordList)))
         return sorted(recordList,key=itemgetter('name'))
 
@@ -262,7 +268,7 @@ class Library(object):
                 return
             elif not item.get('file'): continue
             else:
-                searchList.append({'name':"%s (%s)"%(item.get('label',LANGUAGE(32241)),LANGUAGE(32241)),'type':"Mixed",'path':[item.get('file')],'logo':self.resources.getLogo({'name':item.get('label',LANGUAGE(32241)),'type':"Mixed"})})
+                searchList.append({'name':"%s (%s)"%(item.get('label',LANGUAGE(32241)),LANGUAGE(32241)),'type':"Mixed Video",'path':[item.get('file')],'logo':self.resources.getLogo({'name':item.get('label',LANGUAGE(32241)),'type':"Mixed Video"})})
         self.log('getPVRSearches, searches = %s' % (len(searchList)))
         searchList = sorted(searchList,key=itemgetter('name'))
         return searchList
@@ -476,7 +482,7 @@ class Library(object):
         whiteList = self.getWhiteList()
         whiteList.append(addonid)
         whiteList = sorted(set(whiteList))
-        if len(whiteList) > 0: PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),len(whiteList) > 0)
+        if len(whiteList) > 0: PROPERTIES.setProperty('has.WhiteList',len(whiteList) > 0)
         return self.setWhiteList(whiteList)
         
 
@@ -518,6 +524,6 @@ class Library(object):
                     else:
                         self.addWhiteList(addonid)
                 
-        PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),len(self.getWhiteList()) > 0)
-        PROPERTIES.setEXTProperty('%s.has.BlackList'%(ADDON_ID),len(self.getBlackList()) > 0)
+        PROPERTIES.setProperty('has.WhiteList',len(self.getWhiteList()) > 0)
+        PROPERTIES.setProperty('has.BlackList',len(self.getBlackList()) > 0)
         SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))

@@ -941,6 +941,15 @@ msgctxt "#30228"
 msgid "Professional TV network station identifier logo for a channel titled '{name}'. The design should feature bold, high-clarity typography of the station name as the central focus. Subtly integrate visual motifs and textures inspired by '{group}' into the lettering or the immediate surrounding frame. The style should be clean, high-contrast, and optimized for a [512x512 square / 400x175 wide] format on a transparent background. Avoid cluttered backgrounds; prioritize brand legibility."
 msgstr ""
 
+msgctxt "#30229"
+msgid "Predefined"
+msgstr ""
+
+msgctxt "#30230"
+msgid "Automatic Channels"
+msgstr ""
+
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -1114,7 +1123,7 @@ msgid "Library"
 msgstr ""
 
 msgctxt "#32042"
-msgid "[B]Welcome to %s![/B]\n[B]No[/B] Channels found, Would you like to AutoTune sample channels"
+msgid "[B]Welcome to %s![/B]\n[B]No[/B] Channels found, Would you like enable Automatic Channel Creation"
 msgstr ""
 
 msgctxt "#32043"
@@ -2491,4 +2500,6 @@ msgctxt "#33310"
 msgid "Open Channel Manager"
 msgstr ""
 
-
+msgctxt "#33311"
+msgid "Periodically populate channels based on your top 25 Kodi content by category.\nDisable to enable Channel Manager w\ advanced configuration options."
+msgstr ""

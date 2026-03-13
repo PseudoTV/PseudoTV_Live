@@ -23,20 +23,15 @@ from variables   import *
 from logger      import log
 from fileaccess  import FileAccess, FileLock
 
+
 class Service(object):
     monitor = MONITOR()
     def _shutdown(self, wait=1.0) -> bool:
-        pendingShutdown = Globals._getProperty('pendingShutdown') == "true"
-        return (self.monitor.waitForAbort(wait) | pendingShutdown)
+        return (self.monitor.waitForAbort(wait) | (Globals._getProperty('%s.pendingShutdown'%(ADDON_ID)) or False))
     def _interrupt(self) -> bool:
-        pendingShutdown   = Globals._getProperty('pendingShutdown') == "true"
-        pendingInterrupt  = Globals._getProperty('pendingInterrupt') == "true"
-        pendingRestart    = Globals._getProperty('pendingRestart') == "true"
-        interruptActivity = Globals._getProperty('interruptActivity') == "true"
-        return (pendingShutdown | pendingRestart | pendingInterrupt | interruptActivity)
+        return ((Globals._getProperty('%s.pendingShutdown'%(ADDON_ID)) or False) | (Globals._getProperty('%s.pendingRestart'%(ADDON_ID)) or False) | (Globals._getProperty('%s.pendingInterrupt'%(ADDON_ID)) or False))
     def _suspend(self, wait=1.0) -> bool:
-        pendingSuspend = Globals._getProperty('pendingSuspend') == "true"
-        return pendingSuspend
+        return (Globals._getProperty('%s.pendingSuspend'%(ADDON_ID)) or False)
     def _sleep(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
@@ -141,8 +136,8 @@ class _Cache(object):
         
     def chkCleanup(self):
         cur_time     = datetime.datetime.now()
-        lastexecuted = Globals._getProperty("cache.lastexecuted")
-        if not lastexecuted: Globals._setProperty("cache.lastexecuted", repr(cur_time))
+        lastexecuted = Globals._getProperty("%s.cache.lastexecuted"%(ADDON_ID))
+        if not lastexecuted: Globals._setProperty("%s.cache.lastexecuted"%(ADDON_ID), repr(cur_time))
         elif (eval(lastexecuted) + self._auto_clean_interval) < cur_time:
             self._cleanUP()
 
@@ -173,7 +168,7 @@ class _Cache(object):
     def _getMEM(self, endpoint, checksum, cur_time):
         result = None
         try: 
-            cachedata = FileAccess.loadPICKLE(FileAccess._decodeString(Globals._getProperty(endpoint)))
+            cachedata = FileAccess.loadPICKLE(FileAccess._decodeString(Globals._getProperty('%s.%s'%(ADDON_ID,endpoint))))
             if cachedata[0] > cur_time and not checksum or checksum == cachedata[2]: result = cachedata[1]
         except Exception as e: pass
         return result
@@ -185,7 +180,7 @@ class _Cache(object):
             string_size = sys.getsizeof(string_text)
             if string_size > self.max_bytes: raise Exception(f"_setMEM, {endpoint} too large for cache limit {self.max_bytes}!")
             else:
-                Globals._setProperty(endpoint, string_text)
+                Globals._setProperty('%s.%s'%(ADDON_ID,endpoint), string_text)
                 self._cache_idx.append((endpoint, string_size))
                 self._trimMEM()
         except Exception as e: self.log("_setMEM, failed! %s"%(e), xbmc.LOGERROR)
@@ -200,7 +195,7 @@ class _Cache(object):
         while not self.monitor.abortRequested() and self._getSize() > self.max_bytes:
             try:
                 endpoint, removed_size = self._cache_idx.popleft().items()
-                Globals._clrProperty(endpoint)
+                Globals._clrProperty('%s.%s'%(ADDON_ID,endpoint))
                 self.log(f"_trimMEM, {endpoint} removed {removed_size} bytes from memory!")
             except Exception as e: self.log("_trimMEM, failed! %s"%(e), xbmc.LOGERROR)
         self.log(f'_trimMEM, {self._getSize()}/{self.max_bytes} available bytes')
@@ -233,15 +228,15 @@ class _Cache(object):
         cur_timestamp = self.getTimestamp(cur_time)
         self.log("_cleanUP, running _cleanUP...")
         
-        if not Globals._getProperty("cache.cleanbusy"):
-            Globals._setProperty("cache.cleanbusy", "busy")
+        if not Globals._getProperty("%s.cache.cleanbusy"%(ADDON_ID)):
+            Globals._setProperty("%s.cache.cleanbusy"%(ADDON_ID), "busy")
             query = "SELECT id, expires FROM cache"
             for cache_data in self._execute_sql(query).fetchall():
                 if self.service._shutdown(CPU_CYCLE): break
                 else:
                     cache_id      = cache_data[0]
                     cache_expires = cache_data[1]
-                    Globals._clrProperty(cache_id)
+                    Globals._clrProperty('%s.%s'%(ADDON_ID,cache_id))
                     if cache_expires < cur_timestamp:
                         query = 'DELETE FROM cache WHERE id = ?'
                         self._execute_sql(query, (cache_id,))
@@ -249,8 +244,8 @@ class _Cache(object):
 
             self._execute_sql("VACUUM")
             self._busy_tasks.remove(__name__)
-            Globals._setProperty("cache.lastexecuted", repr(cur_time))
-            Globals._clrProperty("cache.cleanbusy")
+            Globals._setProperty("%s.cache.lastexecuted"%(ADDON_ID), repr(cur_time))
+            Globals._clrProperty("%s.cache.cleanbusy"%(ADDON_ID))
             self.log("_cleanUP, auto _cleanUP done")
 
 
@@ -279,13 +274,13 @@ class _Cache(object):
                         elif data:                 result = connection.execute(query, data)
                         else:                      result = connection.execute(query)
                         return result
-                    except Exception as e:
-                        if "is locked" in e:
-                            self.log("_execute_sql, retrying DB commit...")
-                            retries += 1
-                            self.service._sleep(LOCK_MAX_FILE_DELAY)
-                        else: break
-                    self.log("_execute_sql, connection ERROR ! -- %s" % str(e), xbmc.LOGWARNING)
+                    except sqlite3.OperationalError as e:
+                        retries += 1
+                        self.log("_execute_sql, retrying DB commit...", xbmc.LOGWARNING)
+                        self.service._sleep(LOCK_MAX_FILE_DELAY)
+                    except Exception:
+                        self.log("_execute_sql, connection ERROR ! -- %s" % str(e), xbmc.LOGERROR)
+                        break
                         
             if connection:
                 connection.close()

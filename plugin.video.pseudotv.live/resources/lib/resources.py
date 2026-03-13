@@ -19,12 +19,10 @@
 # -*- coding: utf-8 -*-
 
 from globals      import *
-from seasonal     import Seasonal
 from intergration import OpenRouter
 
 # Tunable: maximum number of entries to keep in the in-memory image cache.
-IMAGE_CACHE_MAX = 500
-
+IMAGE_CACHE_MAX = CHANNEL_LIMIT
 LOCAL_FOLDERS   = [LOGO_LOC, IMAGE_LOC, TEMP_IMAGE_LOC]
 MUSIC_RESOURCE  = ["resource.images.musicgenreicons.text"]
 GENRE_RESOURCE  = ["resource.images.moviegenreicons.transparent"]
@@ -45,10 +43,9 @@ class Service(object):
     def _shutdown(self, wait=1.0) -> bool:
         return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
-        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt() | PROPERTIES.isInterruptActivity())
+        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
     def _suspend(self, wait=1.0) -> bool:
-        pendingSuspend = PROPERTIES.isPendingSuspend()
-        return pendingSuspend
+        return PROPERTIES.isPendingSuspend()
     def _sleep(self, wait=1.0):
         # use a small cpu-cycle sleep loop but avoid heavy operations inside
         while not self.monitor.abortRequested() and wait > 0:
@@ -64,8 +61,6 @@ class Resources(object):
         self.cache       = service.jsonRPC.cache
         self.baseURL     = service.jsonRPC.buildWebBase()
         self.remoteHost  = PROPERTIES.getRemoteHost()
-        self.seasonal    = Seasonal()
-        self.season      = self.seasonal.getHoliday()
         self.openRouter  = OpenRouter(cache=self.cache)
         self.imageCache  = OrderedDict(SETTINGS.getCacheSetting('imageCache'  ) or {})
         
@@ -133,7 +128,7 @@ class Resources(object):
 
     def getLogo(self, citem: dict, fallback=None, lookup=False, logo=None) -> str:
         self.log('[%s] getLogo, name = %s, lookup = %s'%(citem.get('id'),citem.get('name'),lookup))
-        if not logo and citem.get('name') == LANGUAGE(32002): logo = self.season.get('logo')               # seasonal
+        # if not logo and citem.get('name') == LANGUAGE(32002): logo = self.season.get('logo')               # seasonal
         if not logo and not lookup:                           logo = self.getCache(citem.get('name'))      # cache
         if not logo and not lookup:                           logo = self.queueLogo(citem)                 # queue lookup
         if not logo and not lookup and fallback:              logo = fallback                              # fallback

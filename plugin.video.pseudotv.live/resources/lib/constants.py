@@ -118,7 +118,8 @@ AUTOTUNE_TYPES      = ["Playlists",
                        "Movie Studios",
                        "Mixed Genres",
                        "Music Genres",
-                       "Mixed",
+                       "Mixed Video",
+                       "Mixed Music",
                        "Recommended",
                        "Services"]
 
@@ -181,7 +182,8 @@ BASIC_PLAYLISTS     = [".cue",
                        ".wpl"] 
 
 IGNORE_CHTYPE       = ['TV Shows',
-                       'Mixed',
+                       'Mixed Video',
+                       'Mixed Music',
                        'Recommended',
                        'Services',
                        'Music Genres']
@@ -226,6 +228,7 @@ CHANNELBACKUPFLE    = 'channels.backup'
 CHANNELRESTOREFLE   = 'channels.restore'
 CHANNELCHANGEDFLE   = 'channels.changed'
 CHANNELLATESTFLE    = 'channels.latest'
+CHANNELAUTOFLE      = 'channels.auto'
 
 #exts
 VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')[:-1]
@@ -251,6 +254,7 @@ CHANNELFLE_BACKUP   = os.path.join(BACKUP_LOC,CHANNELBACKUPFLE)
 CHANNELFLE_RESTORE  = os.path.join(BACKUP_LOC,CHANNELRESTOREFLE)
 CHANNELFLE_CHANGED  = os.path.join(BACKUP_LOC,CHANNELCHANGEDFLE)
 CHANNELFLE_LATEST   = os.path.join(BACKUP_LOC,CHANNELLATESTFLE)
+CHANNELFLE_AUTOTUNE = os.path.join(BACKUP_LOC,CHANNELAUTOFLE)
 
 #sfx
 BING_WAV            = os.path.join(SFX_LOC,'bing.wav')
@@ -300,6 +304,7 @@ LOGO                = os.path.join(MEDIA_LOC,'wlogo.png')
 DIM_LOGO            = os.path.join(MEDIA_LOC,'dimlogo.png')
 COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 COLOR_FANART        = os.path.join(MEDIA_LOC,'fanart.jpg')
+SEASONAL_LOGO       = os.path.join(IMAGE_LOC,'Seasonal.png')
 HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
 DUMMY_ICON          = 'https://dummyimage.com/512x512/%s/%s.png&text={text}'%(COLOR_BACKGROUND,COLOR_TEXT)
 

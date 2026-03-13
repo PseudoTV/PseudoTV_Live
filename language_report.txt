@@ -196,6 +196,7 @@ Language IDS not found in py files, possibly only in xml: {
     "30226": "Enable Smart Shuffling",
     "30227": "Cache Percentage of Ram",
     "30228": "Professional TV network station identifier logo for a channel titled '{name}'. The design should feature bold, high-clarity typography of the station name as the central focus. Subtly integrate visual motifs and textures inspired by '{group}' into the lettering or the immediate surrounding frame. The style should be clean, high-contrast, and optimized for a [512x512 square / 400x175 wide] format on a transparent background. Avoid cluttered backgrounds; prioritize brand legibility.",
+    "30230": "Automatic Channels",
     "32009": "Mixed Genres",
     "32012": "Recommended",
     "32013": "Services",
@@ -268,7 +269,6 @@ Language IDS not found in py files, possibly only in xml: {
     "32245": "Parsing",
     "32246": "Loading",
     "32247": "Starting",
-    "32248": "Querying",
     "32256": "Recover Autotune from M3U",
     "32257": "Recover M3U",
     "32258": "Parser",
@@ -354,7 +354,8 @@ Language IDS not found in py files, possibly only in xml: {
     "33226": "Enable Smart Shuffling\\nChanges may propagate slowly over time and may not be instantaneous. [False Default] *see wiki for details",
     "33227": "Percentage of system ram to reserve for cache",
     "33308": "Install Log Uploader.",
-    "33309": "Submit debugging log for review to http://paste.kodi.tv."
+    "33309": "Submit debugging log for review to http://paste.kodi.tv.",
+    "33311": "Periodically populate channels based on your top 25 Kodi content by category.\\nDisable to enable Channel Manager w\\ advanced configuration options."
 }
 
 

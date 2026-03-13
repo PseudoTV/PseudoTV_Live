@@ -266,11 +266,12 @@ class HTTP(object):
         
 
     def _pendingRestart(self):
-        return (PROPERTIES.getEXTProperty('HTTP.pendingRestart') or False)
+        return (PROPERTIES.getEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID)) or False)
        
 
-    def run(self, silent=False):  
-        def __update(silent=True):
+    def run(self):  
+        def __update(silent=None):
+            if silent is None: silent = BUILTIN.isPlaying()
             isRunning = PROPERTIES.isRunning('HTTP.run')
             if not silent: DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
             SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
@@ -292,7 +293,7 @@ class HTTP(object):
             if restart:
                 self.monitor.waitForAbort(M3U_REFRESH)
                 self.service._que(self.service.tasks.chkHTTP,1)
-                PROPERTIES.setEXTProperty('HTTP.pendingRestart',False)
+                PROPERTIES.setEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),False)
             else: __update(restart)
             
         """Starts the threaded HTTP server with GZIP support."""
@@ -305,11 +306,11 @@ class HTTP(object):
                             host   = SETTINGS.getIP()
                             port   = self._chkPort(host, SETTINGS.getSettingInt('TCP_PORT'))
                             server = PROPERTIES.setRemoteHost('%s:%s'%(host,port))
-                            self.log("run, http server @ %s"%(server),xbmc.LOGINFO)
                             SETTINGS.setSetting('Remote_NAME' ,PROPERTIES.getFriendlyName())
                             SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
                             SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
                             SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
+                            self.log("run, http server @ %s"%(server),xbmc.LOGINFO)
                             
                             ThreadedHTTPServer.allow_reuse_address = True
                             self._server = ThreadedHTTPServer((host, port), partial(MyHandler,service=self.service))
@@ -319,7 +320,7 @@ class HTTP(object):
                             self.httpd = Thread(target=self._server.serve_forever)
                             self.httpd.daemon=True
                             self.httpd.start()
-                            __update(silent)
+                            __update()
                         except Exception as e:
                             self.log("run, http server startup failed! %s"%(e), xbmc.LOGERROR)
                             break

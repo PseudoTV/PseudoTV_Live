@@ -43,11 +43,14 @@ SERVERFLEPATH       = os.path.join(USER_LOC,SERVERFLE)
 class Globals:
     @staticmethod
     def _getProperty(key):
-        return xbmcgui.Window(10000).getProperty('%s.%s'%(ADDON_ID, key))
+        value = xbmcgui.Window(10000).getProperty('%s.%s'%(ADDON_ID, key))
+        log(f'Globals: [10000] _getProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+        return value
 
     @staticmethod
     def _setProperty(key, value):
         xbmcgui.Window(10000).setProperty('%s.%s'%(ADDON_ID, key), value)
+        log(f'Globals: [10000] _setProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return value
 
     @staticmethod
@@ -106,7 +109,7 @@ class Globals:
         
     @staticmethod
     def _getInfoLabel(key, param='ListItem', default=''):
-        return xbmc.getInfoLabel('%s.%s'%(param,key))
+        return (xbmc.getInfoLabel('%s.%s'%(param,key)) or "")
         
     @staticmethod
     def _openSettings(ctl=(0,1), id=ADDON_ID):
@@ -196,8 +199,8 @@ class Globals:
         return {"added": [FileAccess.loadJSON(s) for s in set2 - set1], "removed": [FileAccess.loadJSON(s) for s in set1 - set2]}
             
     @staticmethod  
-    def _cleanGroups(citem):
-        if ADDON_NAME not in citem['group']: citem['group'].append(ADDON_NAME)
+    def _cleanGroups(citem={}):
+        if ADDON_NAME not in citem.get('group'): citem.setdefault('group',[]).append(ADDON_NAME)
         if REAL_SETTINGS.getSetting('Enable_Grouping') == "true":
             if citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']: citem['group'].append(LANGUAGE(32019))
             elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']: citem['group'].remove(LANGUAGE(32019))

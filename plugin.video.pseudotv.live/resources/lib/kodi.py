@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import platform, pyqrcode
+import platform, pyqrcode, threading
 
 from ast                 import literal_eval
 from uuid                import uuid1, uuid4, UUID
@@ -308,7 +308,7 @@ class Settings(object):
             return payload
 
         payload = __getMeta(self.getBonjour(inclChannels=True))
-        if inclDebug: payload['debug'] = FileAccess.loadJSON(self.property.getEXTProperty('%s.debug.log'%(ADDON_ID))).get('DEBUG',{})
+        if inclDebug: payload['debug'] = FileAccess.loadJSON(self.property.getProperty('debug.log')).get('DEBUG',{})
         payload['updated']   = epochTime(time.time(),tz=False).strftime(DTFORMAT)
         payload['md5']       = FileAccess._getMD5(FileAccess.dumpJSON(payload))
         return payload
@@ -320,19 +320,20 @@ class Settings(object):
 
 
     def hasAutotuned(self):
-        return self.properties.setEXTProperty('has.Autotuned',self.getCacheSetting('has.Autotuned'))
+        return self.properties.setProperty('has.Autotuned',self.getCacheSetting('has.Autotuned'))
         
         
     def setAutotuned(self, state=True):
-        return self.properties.setEXTProperty('has.Autotuned',self.setCacheSetting('has.Autotuned',state))
-
-
-    def setWizardRun(self, state=True):
-        return self.setCacheSetting('has.wizardRun',state)
+        return self.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned',state,life=datetime.timedelta(days=MAX_GUIDEDAYS)))
 
 
     def hasWizardRun(self):
-        return self.getCacheSetting('has.wizardRun', revive=True)
+        return self.properties.setProperty('has.wizardRun',self.getCacheSetting('has.wizardRun'))
+
+
+    def setWizardRun(self, state=True):
+        return self.properties.setProperty('has.wizardRun',self.setCacheSetting('has.wizardRun',state))
+
 
        
     def _IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
@@ -569,7 +570,7 @@ class Properties(object):
 
     def _clrTrash(self, instanceID=None): #clear abandoned properties after instanceID change
         if not instanceID is None:
-            tmpDCT = FileAccess.loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
+            tmpDCT = self._getTrash()
             if instanceID in tmpDCT:
                 self.log('_clrTrash, instanceID = %s'%(instanceID))
                 tmpLST = tmpDCT.pop(instanceID)
@@ -577,29 +578,39 @@ class Properties(object):
                     self.clrProperty(prop)
 
 
-    def _regTrash(self, key, instanceID): #catalog instance properties that are abandoned
-        tmpDCT = FileAccess.loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
-        if key not in tmpDCT.setdefault(instanceID,[]): tmpDCT.setdefault(instanceID,[]).append(key)
-        self.setEXTProperty('%s.TRASH'%(ADDON_ID),FileAccess.dumpJSON(tmpDCT))
-        return key
+    def _getTrash(self):
+        try:    return (FileAccess.loadPICKLE(FileAccess._decodeString(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))) or {})
+        except: return {}
+
+
+    def _setTrash(self, key, instanceID): #catalog instance properties that are abandoned
+        tmpDCT = self._getTrash()
+        if key not in tmpDCT.setdefault(instanceID,[]):
+            tmpDCT.setdefault(instanceID,[]).append(key)
+            self.setEXTProperty('%s.TRASH'%(ADDON_ID),str(FileAccess._encodeString(FileAccess.dumpPICKLE(tmpDCT))))
 
         
     def _getKey(self, key, useInstance=True):
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID,key)
-        if useInstance: return self._regTrash('%s.%s'%(key,self.getInstanceID()),self.getInstanceID())
-        return key
+        if useInstance: 
+            thid = threading.get_ident()
+            uuid = self.getInstanceID()
+            key  = '%s.%s.%s'%(key,uuid,thid)
+            self._setTrash(key, uuid)
+            return key, thid
+        return key, '-1'
 
 
     #GET
     def getProperty(self, key):
         try:
-            key   = self._getKey(key)
+            key, thid = self._getKey(key)
             value = self.window.getProperty(key)
             if len(value) > 0: value = FileAccess.loadPICKLE(FileAccess._decodeString(value))
-            self.log(f'[{self.winID}] getProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+            self.log(f'[{self.winID}] getProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
             return value
         except Exception as e: 
-            self.log("[%s] getProperty, failed! %s - key = %s"%(self.winID, e,key), xbmc.LOGERROR)
+            self.log(f"[{self.winID}] getProperty [{thid}], failed! {e} - key = [{key}]", xbmc.LOGERROR)
             return None
             
         
@@ -609,7 +620,7 @@ class Properties(object):
             if len(value) > 0:
                 try: value = literal_eval(value)
                 except (ValueError, SyntaxError): pass
-            self.log(f'[10000] getEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+            if not '.TRASH' in key: self.log(f'[10000] getEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
             return value
         except Exception as e: 
             self.log("[%s] getEXTProperty, failed! %s - key = %s, value = %s"%('10000', e,key,str(value)[:128]), xbmc.LOGERROR)
@@ -623,8 +634,9 @@ class Properties(object):
         
         
     def clrProperty(self, key):
-        self.log('[%s] clrProperty, key = %s'%(self.winID, key))
-        return self.window.clearProperty(self._getKey(key))
+        key, thid = self._getKey(key)
+        self.log(f'[{self.winID}] clrProperty [{thid}], key = {key}')
+        return self.window.clearProperty(key)
 
 
     def clrEXTProperty(self, key):
@@ -634,12 +646,12 @@ class Properties(object):
         
     #SET
     def setProperty(self, key, value):
+        key, thid = self._getKey(key)
         try:
-            key = self._getKey(key)
             if not value is None: 
                 self.window.setProperty(key, str(FileAccess._encodeString(FileAccess.dumpPICKLE(value))))
-                self.log(f'[{self.winID}] setProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-        except Exception as e: self.log("[%s] setProperty, failed! %s - key = %s, value = %s"%(self.winID, e,key,str(value)[:128]), xbmc.LOGERROR)
+                self.log(f'[{self.winID}] setProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+        except Exception as e: self.log(f"[{self.winID}] setProperty [{thid}], failed! {e} - key = {key}, value = {str(value)[:128]}", xbmc.LOGERROR)
         return value
         
         
@@ -648,14 +660,18 @@ class Properties(object):
             xbmcgui.Window(10000).setProperty(key,str(value))
             if not '.TRASH' in key: self.log(f'[10000] setEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return value
-        
-
-    def setEpochTimer(self, key, time=0): #_chkEpochTimer trigger - Time = 0 == Run
-        return self.setProperty(key,time)
 
 
-    def setPropTimer(self, key, state=True): #_chkPropTimer trigger - True == Run
-        return self.setEXTProperty('%s.%s'%(ADDON_ID,key),state)
+    def setTrakt(self, state=False):
+        self.log('setTrakt, disable trakt = %s'%(state))
+        # https://github.com/trakt/script.trakt/blob/d45f1363c49c3e1e83dabacb70729cc3dec6a815/resources/lib/kodiUtilities.py#L104
+        if state: self.setEXTProperty('script.trakt.paused',state)
+        else:     self.clrEXTProperty('script.trakt.paused')
+
+
+    def setPropTimer(self, key, state=True):
+        if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
+        return self.setProperty(key,state)
 
 
     def setRemoteHost(self, value):
@@ -666,38 +682,6 @@ class Properties(object):
         remote = self.getEXTProperty('%s.Remote_Host'%(ADDON_ID))
         if not remote: remote = self.setRemoteHost('%s:%s'%(Settings().getIP(),Settings().getSettingInt('TCP_PORT')))
         return remote
-
-
-    @contextmanager
-    def chkRunning(self, key):
-        if not self.isRunning(key):
-            self.setRunning(key,True)
-            try: yield True
-            finally: self.setRunning(key,False)
-        else: yield
-            
-        
-    def setTrakt(self, state=False):
-        self.log('setTrakt, disable trakt = %s'%(state))
-        # https://github.com/trakt/script.trakt/blob/d45f1363c49c3e1e83dabacb70729cc3dec6a815/resources/lib/kodiUtilities.py#L104
-        if state: self.setEXTProperty('script.trakt.paused',state)
-        else:     self.clrEXTProperty('script.trakt.paused')
-
-
-    def setRunning(self, key, state=True):
-        return self.setEXTProperty('%s.%s.Running'%(ADDON_ID,key),state)
-        
-        
-    def isRunning(self, key):
-        return (self.getEXTProperty('%s.%s.Running'%(ADDON_ID,key)) or False)
-
-
-    def setInitRun(self, state=True):
-        return self.setEXTProperty('%s.Init.Run'%(ADDON_ID),state)
-
-
-    def hasInitRun(self):
-        return (self.getEXTProperty('%s.Init.Run'%(ADDON_ID)) or False)
 
 
     def setHasChannels(self, state=True):
@@ -746,7 +730,7 @@ class Properties(object):
 
     def isPendingShutdown(self):
         value = (self.getEXTProperty('%s.pendingShutdown'%(ADDON_ID)) or False)
-        self.clrEXTProperty('%s.pendingShutdown'%(ADDON_ID))
+        # self.clrProperty('pendingShutdown')
         return value
         
                 
@@ -756,16 +740,26 @@ class Properties(object):
 
     def isPendingRestart(self):
         value = (self.getEXTProperty('%s.pendingRestart'%(ADDON_ID)) or False)
-        self.clrEXTProperty('%s.pendingRestart'%(ADDON_ID))
+        # self.clrProperty('pendingRestart')
         return value
 
-     
-    def setFirstRun(self, state=True):
-        return self.setEXTProperty('%s.has.firstRun'%(ADDON_ID),state)
 
+    @contextmanager
+    def chkRunning(self, key):
+        if not self.isRunning(key):
+            self.setRunning(key,True)
+            try: yield True
+            finally: self.setRunning(key,False)
+        else: yield
+            
 
-    def hasFirstRun(self):
-        return (self.getEXTProperty('%s.has.firstRun'%(ADDON_ID)) or False)
+    def setRunning(self, key, state=True):
+        return self.setEXTProperty('%s.%s.Running'%(ADDON_ID,key),state)
+        
+        
+    def isRunning(self, key):
+        return (self.getEXTProperty('%s.%s.Running'%(ADDON_ID,key)) or False)
+
 
     @contextmanager
     def lockActivity(self, state=True):
@@ -838,6 +832,26 @@ class Properties(object):
         return (self.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) or False)
 
 
+    @contextmanager
+    def legacy(self): #toggle legacy property from older pseudotv project that may still be used by third-party plugins.
+        if not self.isPseudoTVRunning():
+            self.setEXTProperty('PseudoTVRunning',True)
+            try: yield
+            finally: self.setEXTProperty('PseudoTVRunning',False)
+
+
+    def isPseudoTVRunning(self):
+        return (self.getEXTProperty('PseudoTVRunning') or False)
+
+
+    def getFriendlyName(self):
+        friendly = self.getProperty('Instance_Name')
+        if not friendly or friendly == LANGUAGE(32105):
+            from jsonrpc import JSONRPC
+            friendly = self.setProperty('Instance_Name', JSONRPC().inputFriendlyName())
+        return friendly
+        
+        
     def preemptActivity(self, msg, func, *args, **kwargs):
         results      = None
         orgSuspend   = self.isSuspendActivity()
@@ -863,34 +877,6 @@ class Properties(object):
         self.setSuspendActivity(orgSuspend)
         self.setInterruptActivity(orgInterrupt)
         return results
-
-
-    @contextmanager
-    def legacy(self): #toggle legacy property from older pseudotv project that may still be used by third-party plugins.
-        if not self.isPseudoTVRunning():
-            self.setEXTProperty('PseudoTVRunning',True)
-            try: yield
-            finally: self.setEXTProperty('PseudoTVRunning',False)
-
-
-    def isPseudoTVRunning(self):
-        return (self.getEXTProperty('PseudoTVRunning') or False)
-
-
-    def getFriendlyName(self):
-        friendly = self.getEXTProperty('Instance_Name')
-        if not friendly or friendly == LANGUAGE(32105):
-            from jsonrpc import JSONRPC
-            friendly = self.setEXTProperty('Instance_Name', JSONRPC().inputFriendlyName())
-        return friendly
-        
-        
-    @contextmanager
-    def setBackgroundLabel(self, text):
-        self.setEXTProperty('%s.background.text'%(ADDON_ID),text)
-        try: yield 
-        finally:
-            self.clrEXTProperty('%s.background.text'%(ADDON_ID))
 
 
 class ListItems(object):
@@ -991,6 +977,7 @@ class ListItems(object):
         if not art: art = {'thumb':icon,'logo':icon,'icon':icon}
         listitem = self.getListItem(label, label2, url, offscreen=offscreen)
         listitem.setIsFolder(True)
+        listitem.setPath(url)
         listitem.setArt(art)
         if info:
             infoTag = ListItemInfoTag(listitem, media)
@@ -1111,7 +1098,7 @@ class Builtin(object):
           
                       
     def isSettingsOpened(self) -> bool:
-        return (self.getInfoBool('IsVisible(addonsettings)','Window') | self.getInfoBool('IsVisible(selectdialog)' ,'Window'))
+        return any([self.getInfoBool('IsVisible(addonsettings)','Window'),self.getInfoBool('IsVisible(selectdialog)' ,'Window')])
 
 
     def isPlaying(self):
@@ -1119,11 +1106,11 @@ class Builtin(object):
 
 
     def isPVRPlaying(self) -> bool:
-        return (self.getInfoBool('IsPlayingTv','Pvr') | self.getInfoBool('IsPlayingRadio','Pvr') | self.getInfoBool('IsPlayingRecording','Pvr') | self.getInfoBool('IsPlayingActiveRecording','Pvr'))
+        return any([self.getInfoBool('IsPlayingTv','Pvr'),self.getInfoBool('IsPlayingRadio','Pvr'),self.getInfoBool('IsPlayingRecording','Pvr'),self.getInfoBool('IsPlayingActiveRecording','Pvr')])
 
 
     def isBusyDialog(self):
-        return (self.properties.isRunning('BUSY_OVERLAY') | self.getInfoBool('IsActive(busydialognocancel)','Window') | self.getInfoBool('IsActive(busydialog)','Window'))
+        return any([self.properties.isRunning('BUSY_OVERLAY'),self.getInfoBool('IsActive(busydialognocancel)','Window'),self.getInfoBool('IsActive(busydialog)','Window')])
 
 
     def closeBusyDialog(self):
@@ -1410,7 +1397,8 @@ class Dialog(object):
         
 
     @contextmanager
-    def _progressDialog(self, message='', header=ADDON_NAME, silent=False, background=True):
+    def _progressDialog(self, message='', header=ADDON_NAME, silent=None, background=True):
+        if silent is None: silent = self.builtin.isPlaying()
         if not self.properties.isRunning('_progressDialog'):
             with self.properties.chkRunning('_progressDialog'):
                 if not silent:
@@ -1536,10 +1524,6 @@ class Dialog(object):
         ## - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
         return self.dialog.input(message, default, key, opt, close)
         
-        
-    def selectPredefined(self, type=None):
-        self.log('selectPredefined, type = %s'%(type))
-        
 
     def importSTRM(self, strm):
         try:
@@ -1621,12 +1605,11 @@ class Dialog(object):
         multi   = options[select]['multi']
         idx     = options[select]['idx']
         if type == 0:
-            if "resource."   in default or options[select]["idx"] == 22: return self._resourcePath(default, {xbmc.getSupportedMedia('video'):'videos',xbmc.getSupportedMedia('picture'):'images'}.get(mask,xbmc.getSupportedMedia('video')))
+            if   "resource." in default or options[select]["idx"] == 22: return self._resourcePath(default, {xbmc.getSupportedMedia('video'):'videos',xbmc.getSupportedMedia('picture'):'images'}.get(mask,xbmc.getSupportedMedia('video')))
         elif type == 1:
             if   "?xsp="     in default or options[select]["idx"] == 15: return self.buildDXSP(default)
             elif ".strm"     in default or options[select]["idx"] == 16: return self.importSTRM(default)
             elif "resource." in default or options[select]["idx"] == 22: default = self._resourcePath(default, {xbmc.getSupportedMedia('video'):'videos',xbmc.getSupportedMedia('picture'):'images'}.get(mask,xbmc.getSupportedMedia('video')))
-        elif mask == '?xsp=':                                            return self.selectPredefined(default)
         return self.browseDialog(type, heading, default, shares, mask, useThumbs, treatAsFolder, multi, monitor)
             
     
@@ -1655,8 +1638,7 @@ class Dialog(object):
         while not self.monitor.abortRequested() and not select is None:
             with self.builtin.busy_dialog():
                 npath  = None
-                lizLST = []
-                lizLST.extend(poolit(__buildListItem)(pathLST))
+                lizLST = poolit(__buildListItem)(pathLST)
                 lizLST.insert(0,__buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,items={'key':'add','idx':0}))
                 if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,__buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32101)),LANGUAGE(33114),icon=ICON,items={'key':'save'}))
             

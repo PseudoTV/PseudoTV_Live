@@ -27,7 +27,7 @@ from fillers    import Fillers
 from resources  import Resources
 from seasonal   import Seasonal 
 from rules      import RulesList
-from itertools  import cycle
+from seasonal   import Seasonal
 
 class Service(object):
     from jsonrpc import JSONRPC
@@ -37,10 +37,9 @@ class Service(object):
     def _shutdown(self, wait=1.0) -> bool:
         return (self.monitor.waitForAbort(wait) or PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
-        return (PROPERTIES.isPendingShutdown() or PROPERTIES.isPendingRestart() or PROPERTIES.isPendingInterrupt() or PROPERTIES.isInterruptActivity())
+        return (PROPERTIES.isPendingShutdown() or PROPERTIES.isPendingRestart() or PROPERTIES.isPendingInterrupt())
     def _suspend(self, wait=1.0) -> bool:
-        pendingSuspend = PROPERTIES.isPendingSuspend()
-        return pendingSuspend
+        return PROPERTIES.isPendingSuspend()
     def _sleep(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) or self._interrupt()): return True
@@ -52,6 +51,7 @@ class Builder(object):
     xmltv    = XMLTVS(writable=True)
     m3u      = M3U(writable=True)
     channels = Channels(writable=True)
+    seasonal = Seasonal()
     loopback = None
     
     def __init__(self, service=None):
@@ -62,6 +62,7 @@ class Builder(object):
         self.monitor  = service.monitor
         self.jsonRPC  = service.jsonRPC
         self.cache    = service.jsonRPC.cache
+        self.holiday  = self.seasonal.getHoliday()
         
         #global dialog
         self.fCount  = 0
@@ -92,6 +93,7 @@ class Builder(object):
         self.filter           = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
         self.sort             = {}#{"ignorearticle":True,"method":"random","order":"ascending","useartistsortname":True}
         self.limits           = {"end":-1,"start":0,"total":0}
+        self.query            = {}
         
         self.bctTypes         = {"ratings" :{"min":-1, "max":SETTINGS.getSettingInt('Enable_Preroll'), "auto":SETTINGS.getSettingInt('Enable_Preroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')), "chance":SETTINGS.getSettingInt('Random_Pre_Chance'),
                                              "sources" :{"ids":SETTINGS.getSetting('Resource_Ratings').split('|'),"paths":[os.path.join(FILLER_LOC,'Ratings' ,'')]},"items":{}},
@@ -170,7 +172,7 @@ class Builder(object):
             #max guidedata days to seconds, minus fill buffer (12hrs) in seconds.
             last_stop = dict(self.xmltv.loadStopTimes([citem], fallback=fallback)).get(citem['id']) #check last stop times 
             if last_stop > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): state = False
-            self.log('[%s] needsUpdate = %s, last_stop = %s'%(citem['id'],state, last_stop))
+            self.log('[%s] buildChannels, __needsUpdate = %s, last_stop = %s'%(citem['id'],state, last_stop))
             return state, last_stop
             
         def __hasChanged(citem: dict, detect=SETTINGS.getSettingBool('Enable_Changed')) -> bool:
@@ -195,9 +197,8 @@ class Builder(object):
         def __clrChannel(citem: dict) -> bool:
             self.log('[%s] buildChannels, __clrChannel'%(citem['id']))
             if any([self.resetPagination(citem),self.m3u.delStation(citem),self.xmltv.delBroadcast(citem)]):
-                stop = -1
                 citem['changed'] = False
-                self.channels.addChannel(citem)
+                changes.add(self.channels.addChannel(citem))
 
         def __addProgrammes(citem: dict, fileList: list) -> bool:
             self.log('[%s] buildChannels, __addProgrammes fileList = %s'%(citem['id'],len(fileList)))
@@ -213,7 +214,8 @@ class Builder(object):
                 channels = self.getVerifiedChannels(channels)
                 if len(channels) > 0:
                     completed = set()
-                    updated   = set()
+                    updates   = set()
+                    changes   = set()
                     now       = getUTCstamp()
                     nstart    = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
                     fallback  = epochTime(nstart,tz=False).strftime(DTFORMAT)
@@ -231,6 +233,8 @@ class Builder(object):
                             self.pName   = citem['name']
                             citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, Globals._cleanGroups(citem), inherited=self) #inject temporary citem changes here
                             _update, start = __needsUpdate(citem, now, fallback)
+                            _changed = __hasChanged(citem, enableChanged)
+                            if _changed: __clrChannel(citem) #clear channel m3u/xmltv    
                             self.log('[%s] buildChannels, preview = %s, rules = %s, _update = %s'%(citem['id'],preview,citem.get('rules',{}),_update))
                             if self.service._interrupt():
                                 self.log("[%s] buildChannels, _interrupt"%(citem['id']))
@@ -240,8 +244,7 @@ class Builder(object):
                             elif self.service._suspend(CPU_CYCLE):
                                 self.log("[%s] buildChannels, _suspend"%(citem['id']))
                                 continue
-                            elif _update:
-                                if __hasChanged(citem, enableChanged): __clrChannel(citem) #clear channel m3u/xmltv                                
+                            elif _update or _changed:                       
                                 if    preview:           self.pMSG = LANGUAGE(32236)                           #Preview
                                 elif  start == fallback: self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(30223)) #Building
                                 else:                    self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(30223)) #Updating
@@ -250,17 +253,17 @@ class Builder(object):
                                 self.log("[%s] buildChannels, start (%s) => %s"%(citem['id'],start,self.pMSG))
 
                                 if start > 0:
-                                    with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=BUILTIN.isPlaying(), background=not preview) as self.pDialog:
+                                    with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=None, background=not preview) as self.pDialog:
                                         self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
                                         if citem.get('radio',False): fileList = self.buildMusic(citem)
                                         else:                        fileList = self.buildVideo(citem)
                                         #fileList = {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                                         if isinstance(fileList,list):
                                             fileList = sorted(self.addScheduling(citem, fileList, now, start), key=itemgetter('start'))
-                                            if not preview and __hasFileList(fileList): updated.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
+                                            if not preview and __hasFileList(fileList): updates.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
                                         elif not fileList:
-                                            updated.add(__hasProgrammes(citem))
-                                            if not any(updated): #check for current programmes
+                                            updates.add(__hasProgrammes(citem))
+                                            if not any(updates): #check for current programmes
                                                 __clrChannel(citem) #remove m3u/xmltv references when no valid programmes found.
                                                 if len(self.pErrors) > 0:
                                                     self.pErrors.append(LANGUAGE(32026))
@@ -269,13 +272,15 @@ class Builder(object):
                                                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(self.pName,chanErrors),header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
                                         self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                                         if preview: return fileList
-                                            
-                            if any(updated): 
+                            else: updates.add(__hasProgrammes(citem))
+                                 
+                            if any(changes): self.channels.setChannels()
+                            if any(updates): 
                                 completed.add(__addStation(citem)) #add m3u station if lineup available. 
-                                self.log(f'[{citem['id']}] buildChannels, writing station = {any(completed)}')
-                                timerit(PROPERTIES.setPropTimer)(15,'chkPVRRefresh')
+                                timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+                            
                         except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)
-                    self.log('[%s] buildChannels, completed = %s, updated = %s'%(citem['id'],any(completed),any(updated)))
+                    self.log('[%s] buildChannels, completed = %s, updates = %s, changes = %s'%(citem['id'],any(completed),any(updates),any(changes)))
 
 
     def buildMusic(self, citem: dict) -> list:
@@ -295,12 +300,18 @@ class Builder(object):
             if enable: return  Fillers(citem,self).injectBCTs(fileList)
             return fileList
           
-        def _injectRules(citem):#todo refactor.
+        def _injectRules(citem):
             tmpCitem = citem.copy()
+            #"Seasonal Content"
+            if tmpCitem.get('path',[]) == ["{Seasonal}"]:
+                nrules = {"800":{"values":{"0":list(self.seasonal.buildSeasonal(self.holiday))}}}
+                self.log(" [%s] buildVideo: _injectRules, Seasonal Content, new rules = %s"%(citem['id'],nrules))
+                tmpCitem.setdefault('rules',{}).update(nrules)
+                
             #"Even Show Distribution"
             if self.enableEven and not citem.get('rules',{}).get("1000"):
                 nrules = {"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingBool('Enable_Even_Force_Episode')}}}
-                self.log(" [%s] buildVideo: _injectRules, __chkEvenDistro, new rules = %s"%(citem['id'],nrules))
+                self.log(" [%s] buildVideo: _injectRules, Even Show Distribution, new rules = %s"%(citem['id'],nrules))
                 tmpCitem.setdefault('rules',{}).update(nrules)
             return tmpCitem
             
@@ -319,7 +330,7 @@ class Builder(object):
                     self.log("[%s] buildVideo, _suspend"%(citem['id']))
                     continue
                 else:
-                    if self.xsp.isXSP(paths):           paths = self.xsp.parseXSP(citem['id'], paths)# smartplaylist - convert tvshows types to multi-path, apply sort methods
+                    if   self.xsp.isXSP(paths):           paths = self.xsp.parseXSP(citem['id'], paths)# smartplaylist - convert tvshows types to multi-path, apply sort methods
                     elif isinstance(paths,(str,bytes)): paths = [paths]
                     
                     if self.sort.get("method","") == 'random':
@@ -329,7 +340,7 @@ class Builder(object):
                     for cnt, path in enumerate(paths):
                         if len(paths) > 1: self.pName = '%s %s/%s'%(citem['name'],cnt+1,len(paths))
                         self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}',header=self.pHeader)
-                        fileList = self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, path, inherited=self), 'video', self.limit, self.sort, self.limits)
+                        fileList = self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, path, inherited=self), 'video', self.limit, self.sort, self.limits, self.query)
                         if isinstance(fileList,list): fileArray.append(fileList)
                         if validate and len(fileList) > 0: break
                         self.log("[%s]  buildVideo, validate = %s, fileList [%s/%s], path [%s/%s]\n%s, "%(citem['id'],validate,len(fileList),(sum(len(sublist) for sublist in fileArray)),cnt,self.limit,path))
@@ -352,8 +363,8 @@ class Builder(object):
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN, citem, fileList, inherited=self)
 
 
-    def buildFileList(self, citem: dict, path: str, media: str='video', page: int=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={"end":-1,"start":0,"total":0}) -> list: #buildChannels channel via vfs path.
-        self.log("[%s] buildFileList, media = %s, limit = %s, sort = %s, page = %s\npath = %s"%(citem['id'],media,page,sort,limits,path))
+    def buildFileList(self, citem: dict, path: str, media: str='video', page: int=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={"end":-1,"start":0,"total":0}, query={}) -> list: #buildChannels channel via vfs path.
+        self.log("[%s] buildFileList, path = %s\nmedia = %s, limit = %s, sort = %s, page = %s"%(citem['id'],path,media,page,sort,limits))
         self.loopback = None
         def __padFileList(fileItems, page):
             self.log('[%s] buildFileList, __padFileList fileItems'%(citem['id']))
@@ -368,11 +379,11 @@ class Builder(object):
 
         if self.xsp.isDXSP(path):
             path = self.xsp.parseDXSP(citem['id'], path, self.filter, self.incExtras)#dynamicplaylist - correct param issues, inject adv. filters rules.
-        
+  
         fileList = []
         dirCount = -1
         dirList  = [{'file':path}]
-        self.log("[%s] buildFileList, page = %s, sort = %s, limits = %s\npath = %s"%(citem['id'],page, sort, limits, path))
+        self.log("[%s] buildFileList, path = %s\nsort = %s, limits = %s, page = %s"%(citem['id'], path, sort, limits, page))
         while not self.monitor.abortRequested():
             if self.service._interrupt():
                 self.log("[%s] buildFileList, _interrupt"%(citem['id']))
@@ -389,11 +400,10 @@ class Builder(object):
                 break
             elif len(dirList) > 0:
                 dirCount += 1
-                dir  = dirList.pop(0)
-                path = dir.get('file')
-                
+                dir   = dirList.pop(0)
+                path  = dir.get('file')
                 if dir.get("label"): self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'parsing folder: {dir.get("label")}',header=self.pHeader)
-                subfileList, subdirList, limits, errors = self.buildList(citem, path, media, abs(page - len(fileList)), sort, limits, dir) #parse all directories under root. Flattened hierarchies recommended to stream line channel building.
+                subfileList, subdirList, limits, errors = self.buildList(citem, path, media, abs(page - len(fileList)), sort, limits, dir, query) #parse all directories under root. Flattened hierarchies recommended to stream line channel building.
 
                 if sort.get("method","") == 'random':
                     self.log("[%s] buildFileList, depth [%s/%s], random shuffling "%(citem['id'],dirCount,self.recursiveLimit))
@@ -519,15 +529,16 @@ class Builder(object):
                     if item.get('year',0) == 0 and spYear: item['year'] = spYear #replace missing item year with one parsed from show title
                     item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(32020)).strip()
                         
-                    if query.get('holiday'):
-                        citem['holiday'] = query.get('holiday')
-                        holiday = "[B]%s[/B] - [I]%s[/I]"%(query["holiday"]["name"],query["holiday"]["tagline"]) if query["holiday"]["tagline"] else "[B]%s[/B]"%(query["holiday"]["name"])
-                        item["plot"] = "%s \n%s"%(holiday,item["plot"])
-
+                    if citem.get('rules',{}).get('800'):
+                        try: 
+                            holiday = citem['rules']['800']['values']['0'][0]['holiday']
+                            item["plot"] = "%s \n%s"%("[B]%s[/B] - [I]%s[/I]"%(holiay["name"],holiday["tagline"]) if holiday["tagline"] else "[B]%s[/B]"%(holiday["name"]),item["plot"])
+                        except Exception: pass
+                        
                     item['art'] = (item.get('art',{}) or dirItem.get('art',{}))
                     item.get('art',{})['icon'] = citem['logo']
                         
-                    if self.bctTypes['trailers'].get('enabled',False) and item.get('trailer'): self.setTrailers(item)
+                    if item.get('trailer'): self.setTrailers(item)
                     if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                         seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
                     else: 

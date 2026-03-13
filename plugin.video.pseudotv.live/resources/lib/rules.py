@@ -19,7 +19,6 @@
 # -*- coding: utf-8 -*-
 from globals    import *
 from jsonrpc    import JSONRPC
-from seasonal   import Seasonal
 from channels   import Channels
 #todo pinlock
         
@@ -59,6 +58,7 @@ class RulesList(object):
                          PreRoll(),
                          PostRoll(),
                          InterleaveValue(),
+                         SeasonalRule(),
                          HandleMethodOrder(),
                          HandleLimits(),
                          ForceEpisodeOrder(),
@@ -1136,6 +1136,56 @@ class InterleaveValue(BaseRule):
             builder.interleaveRepeat = self.storedValues[1]
             self.log("runAction, restoring interleaveSet = %s, interleaveRepeat = %s"%(builder.interleaveSet, builder.interleaveRepeat))
         
+        return parameter
+
+
+class SeasonalRule(BaseRule): #PARSING RULES [800-999]
+    """
+    SeasonalRule
+    """
+    def __init__(self):
+        self.myId               = 800
+        self.name               = "Seasonal"
+        self.description        = "Automatically Populate Channels with Seasonal Media."
+        self.optionLabels       = ["Holiday"]
+        self.optionValues       = [[{"path":"","method":"","enum":"","limits":{},"sort":{},"filter":{},"holiday":{}}]]
+        self.optionDescriptions = ["INTERNAL USE ONLY!"]
+        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE]
+        self.storedValues       = [[]]
+        
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+                  
+
+    def copy(self): 
+        return SeasonalRule()
+        
+        
+    def getTitle(self): 
+        return '%s (%s)'%(self.name,self.optionValues[0][0].get('holiday',{}).get('name','None'))
+            
+
+    def runAction(self, actionid, citem, parameter, builder):
+        if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
+            if self.optionValues[0][0].get('holiday',{}):
+                try:
+                    if builder.pDialog: builder.pDialog = DIALOG._updateProgress(builder.pDialog, builder.pCount, message=f"{builder.pName}: {LANGUAGE(32209)} {self.name}",header=builder.pHeader)
+                    self.log(f"[{citem['id']}] runAction, {self.optionValues[0][0]['holiday']['name']}")
+                    for query in self.optionValues[0]:
+                        citem['logo'] = (query.get('holiday',{}).get('logo') or SEASONAL_LOGO)
+                        if query["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
+                            if not builder.incExtras:
+                                query["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
+                                                                             {"field":"episode","operator":"greaterthan","value":"0"}])
+                            else:
+                                query['filter']['and'] = [r for r in params['filter'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
+                                query['filter']['and'] = Globals._setDictLST(params['filter']['and'])
+                        # subfileList, subdirList, limits, errors = builder.buildList(citem, query.get('path',''), 'video', (query.get('limit') or builder.limit), query.get('sort',{}), builder.limits, {'file':query.get('path')}, query) #parse all directories under root. Flattened hierarchies recommended to stream line channel building.
+                        self.storedValues[0].append(builder.buildFileList(citem, query.get('path',''), 'video', (query.get('limit') or builder.limit), query.get('sort',{}), builder.limits, query))
+                    return [fileList for fileList in self.storedValues[0] if fileList] #fileArray
+                except Exception as e: self.log(f"[{citem['id']}] runAction, failed! {e}", xbmc.LOGERROR)
+                return []
         return parameter
 
 

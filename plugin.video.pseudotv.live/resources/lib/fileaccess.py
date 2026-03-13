@@ -54,6 +54,7 @@ class FileAccess(object):
             log(f"_decodeString failed! {e}", xbmc.LOGERROR)
             return locals().get('decoded_bytes', text)
             
+            
     @staticmethod
     def dumpPICKLE(item={}, fle=None):
         try:

@@ -124,7 +124,7 @@ class Player(xbmc.Player):
             playingItem['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
             playingItem['isfiller']   = self.isPlayingFiller()
             playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
-            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),FileAccess._encodeString(FileAccess.dumpJSON(playingItem)))
+            PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(playingItem)))
         return playingItem
       
         
@@ -296,7 +296,7 @@ class Player(xbmc.Player):
             if not self.playingItem.get('callback'):
                 self.playingItem['callback'] = self.jsonRPC.getCallback(self.playingItem)
                 self.log('__chkCallback, callback = %s'%(self.playingItem['callback']))
-                PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),FileAccess._encodeString(FileAccess.dumpJSON(self.playingItem)))
+                PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.playingItem)))
 
         def __chkBackground():
             remaining = floor(self.getRemainingTime())
@@ -581,4 +581,5 @@ class Service(object):
                     try: thread.join(1.0)
                     except Exception: pass
                     self.log('_stop, closing %s...'%(thread.name))
+            PROPERTIES.setInstanceID() #clrTrash
         return pendingRestart

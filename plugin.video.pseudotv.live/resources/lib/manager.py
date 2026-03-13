@@ -19,6 +19,7 @@
 
 from globals    import *
 from cache      import Cache
+from library    import Library 
 from channels   import Channels
 from jsonrpc    import JSONRPC
 from rules      import RulesList
@@ -28,7 +29,6 @@ from xsp        import XSP
 from builder    import Builder
 from predefined import Predefined
 from backup     import Backup
-from autotune   import Autotune
 from infotagger.listitem import ListItemInfoTag
 
 # Actions
@@ -62,14 +62,16 @@ class Manager(xbmcgui.WindowXMLDialog):
                 else:                          return __loadChannels(LANGUAGE(32069))
             elif name == LANGUAGE(32069):#Ask
                 def __buildItem(server):
-                    return self.buildListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],
-                    {True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)]),server.get('host'),len(server.get('channels',[]))),icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
+                    return LISTITEMS.buildMenuListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],
+                                                                                                                     {True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)]),
+                                                                                                                     server.get('host'),len(server.get('channels',[]))),
+                                                                                                                     icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
                 
                 lizLST  = []
                 serLST  = Multiroom().getDiscovery()
                 servers = [value for key, value in list(serLST.items()) if value.get('online',False)]
                 if servers: lizLST.extend(poolit(__buildItem)(servers))
-                lizLST.insert(0,self.buildListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(self.oldChannels)),icon=ICON))
+                lizLST.insert(0,LISTITEMS.buildMenuListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(self.oldChannels)),icon=ICON))
                 select = DIALOG.selectDialog(lizLST, '%s for Channel Setup'%(LANGUAGE(30173)), None, True, SELECT_DELAY, False)
                 if not select is None: return __loadChannels(lizLST[select].getLabel())
                 else:                  return
@@ -100,15 +102,16 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         try:
             with BUILTIN.busy_dialog(lock=True):
-                self.channelList  = self.channels.sortChannels(self.createChannelList(list(self.buildArray()), __loadChannels()))
-                self.newChannels  = self.channelList.copy()
-                self.openChannel  = kwargs.get('open')
-                self.startChannel = self._findAvailChannel(kwargs.get('channel',-1))
-                self.focusIndex   = (self.startChannel - 1) #Covert from channel number to list index ie. channel 1 => index 0
+                self.channelList   = self.channels.sortChannels(self.createChannelList(list(self.buildArray()), __loadChannels()))
+                self.newChannels   = self.channelList.copy()
+                self.openChannel   = kwargs.get('open')
+                self.launchManager = kwargs.get('start',True)
+                self.startChannel  = self._findAvailChannel(kwargs.get('channel',-1))
+                self.focusIndex    = (self.startChannel - 1) #Covert from channel number to list index ie. channel 1 => index 0
                 
                 if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
                 self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
-                if kwargs.get('start',True) and not PROPERTIES.isRunning('Manager'):
+                if self.launchManager and not PROPERTIES.isRunning('Manager'):
                     with PROPERTIES.chkRunning('Manager'):
                         self.doModal()
         except Exception as e: 
@@ -168,33 +171,26 @@ class Manager(xbmcgui.WindowXMLDialog):
         return cacheResponse
 
 
-    def buildListItem(self, label: str="", label2: str="", icon: str="", paths: list=[], items: dict={}):
-        if not icon:  icon  = (items.get('citem',{}).get('logo') or COLOR_LOGO)
-        if not paths: paths = (items.get('citem',{}).get("path") or [])
-        return LISTITEMS.buildMenuListItem(label, label2, icon, url='|'.join(paths), props=items)
-
-
     def fillChanList(self, channelList, refresh=False, focus=None, channel=None):
         self.log('fillChanList, focus = %s, channel = %s'%(focus,channel))
         def __buildItem(citem):
             isFavorite    = citem.get('favorite',False)
-            isRadio       = citem.get('radio',False)
             isLocked      = False #todo parse channel lock rule
+            isSeasonal    = citem.get('path',[]) == ["{Seasonal}"]
             channelColor  = COLOR_UNAVAILABLE_CHANNEL
             labelColor    = COLOR_UNAVAILABLE_CHANNEL
             
             if citem.get("path"):
                 labelColor = COLOR_AVAILABLE_CHANNEL
-                if   isLocked:   channelColor = COLOR_LOCKED_CHANNEL
-                elif isFavorite: channelColor = COLOR_FAVORITE_CHANNEL
-                elif isRadio:    channelColor = COLOR_RADIO_CHANNEL
-                else:            channelColor = COLOR_AVAILABLE_CHANNEL
-            return self.buildListItem('[COLOR=%s][B]%s|[/COLOR][/B]'%(channelColor,citem["number"]),'[COLOR=%s]%s[/COLOR]'%(labelColor,citem.get("name",'')),items={'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':LANGUAGE(32169)%(citem["number"],self.server.get('name',self.friendly))})
+                if   isLocked:       channelColor = COLOR_LOCKED_CHANNEL
+                elif isFavorite:     channelColor = COLOR_FAVORITE_CHANNEL
+                elif isRadio(citem): channelColor = COLOR_RADIO_CHANNEL
+                elif not isSeasonal: channelColor = COLOR_AVAILABLE_CHANNEL
+            return  LISTITEMS.buildMenuListItem('[COLOR=%s][B]%s|[/COLOR][/B]'%(channelColor,citem["number"]),'[COLOR=%s]%s[/COLOR]'%(labelColor,citem.get("name",'')),citem.get("logo",COLOR_LOGO),'|'.join(citem.get("path",[])),props={'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':LANGUAGE(32169)%(citem["number"],self.server.get('name',self.friendly))})
                 
         self.togglechanList(reset=refresh)
         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-            lizLST = []
-            lizLST.extend(poolit(__buildItem)(channelList))
+            lizLST = poolit(__buildItem)(channelList)
             self.chanList.addItems(lizLST)
             if focus is None: self.selItem(self.chanList, self.setFocusPOS(lizLST))
             else:             self.selItem(self.chanList, focus)
@@ -203,18 +199,18 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def isLocked(self):
-        return (PROPERTIES.getEXTProperty('%s.Manager.isLocked'%(ADDON_ID)) or False)
+        return (PROPERTIES.getProperty('Manager.isLocked') or False)
         
         
     def setLocked(self, state=True):
-        try: self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[PROPERTIES.setEXTProperty('%s.Manager.isLocked'%(ADDON_ID),state)])
+        try: self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[PROPERTIES.setProperty('Manager.isLocked',state)])
         except Exception: pass
         
 
     @contextmanager
     def toggleSpinner(self, state=True, lock=True, condition=None):
         self.log('toggleSpinner, state = %s, condition = %s, lock = %s'%(state,condition,lock))
-        if PROPERTIES.isRunning('Manager'):
+        if self.launchManager:
             if not condition is None and condition:
                 PROPERTIES.setRunning('Manager.toggleSpinner',state)
                 self.setVisibility(self.spinner,state)
@@ -244,30 +240,41 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.selItem(self.chanList, focus)
                 
                 if self.madeChanges:
+                    #1
                     self.setLabels(self.right_button1,LANGUAGE(32059))#Save
+                    self.setEnableCondition(self.right_button1,'')
+                    #2
                     self.setLabels(self.right_button2,LANGUAGE(32060))#Cancel
+                    self.setEnableCondition(self.right_button2,'')
+                    #3
                     self.setLabels(self.right_button3,LANGUAGE(32136))#Move
+                    self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                    #4
                     self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
-                    self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
-                    self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
+                    self.setEnableCondition(self.right_button4,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                 else:
-                    if len(self.oldChannels) == 0:
-                        self.setLabels(self.right_button1,LANGUAGE(32062))#Close
-                        if self.recoveryFile:       self.setLabels(self.right_button2,LANGUAGE(32112))#Recover
-                        else:                       self.setLabels(self.right_button2,"")
-                        if SETTINGS.hasAutotuned(): self.setLabels(self.right_button3,LANGUAGE(30038))#AutoTune
-                        else:                       self.setLabels(self.right_button3,"")
+                    #1
+                    self.setLabels(self.right_button1,LANGUAGE(32062))#Close
+                    self.setEnableCondition(self.right_button1,'')
+                    #2
+                    if len(self.oldChannels) == 0: #no configured channels
+                        if SETTINGS.hasAutotuned():  self.setLabels(self.right_button2,LANGUAGE(30038))#AutoTune
+                        self.setEnableCondition(self.right_button2,'[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                     else:
-                        self.setLabels(self.right_button1,LANGUAGE(32062))#Close
-                        self.setLabels(self.right_button2,LANGUAGE(32235))#Preview
+                        self.setLabels(self.right_button2,LANGUAGE(30229))#Predefined
+                        self.setEnableCondition(self.right_button2,'[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                    #3
+                    if len(self.oldChannels) == 0: #no configured channels
+                        if self.recoveryFile: self.setLabels(self.right_button3,LANGUAGE(32112))#Recover
+                        self.setEnableCondition(self.right_button3,'[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                    else: 
                         self.setLabels(self.right_button3,LANGUAGE(32136))#Move
-                        self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
-                    self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')
-                    self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) + String.IsEqual(Container(5).ListItem(Container(5).Position).Property(radio),False) | !String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
-                    
+                        self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                    #4
+                    self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
+                    self.setEnableCondition(self.right_button4,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+
                 self.setFocus(self.right_button1)
-                self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) | !String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chnum))]')# + Integer.IsLessOrEqual(Container(5).ListItem(Container(5).Position).Property(chnum),CHANNEL_LIMIT)]')
-                self.setEnableCondition(self.right_button4,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path)]')# + Integer.IsLessOrEqual(Container(5).ListItem(Container(5).Position).Property(chnum),CHANNEL_LIMIT)]')
             else: # channelitems
                 self.itemList.reset()
                 self.setVisibility(self.chanList,False)
@@ -334,7 +341,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 elif key == "rules" : value = '|'.join([rule.name for key, rule in list(self.rule.loadRules([citem]).get(citem['id'],{}).items())])#todo load rule names
             elif not isinstance(value,str): value = str(value)
             elif not value: value = ' '
-            return self.buildListItem(LABEL.get(key,' '),value,items={'key':key,'value':value,'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':DESC.get(key,''),'colorDiffuse':self.getLogoColor(citem)})
+            return LISTITEMS.buildMenuListItem(LABEL.get(key,' '),value,citem.get('logo',COLOR_LOGO),'|'.join(citem.get('path',[])),props={'key':key,'value':value,'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':DESC.get(key,''),'colorDiffuse':self.getLogoColor(citem)})
 
         self.togglechanList(False)
         LABEL = {'name'    : LANGUAGE(32092),
@@ -415,7 +422,7 @@ class Manager(xbmcgui.WindowXMLDialog):
    
     def getPaths(self, citem: dict={}, paths: list=[]):
         def __buildItem(path):
-            return self.buildListItem('%s|'%(pathLST.index(path)+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(pathLST.index(path)+1)),items={'citem':citem,'idx':pathLST.index(path)+1})
+            return LISTITEMS.buildMenuListItem('%s|'%(pathLST.index(path)+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(pathLST.index(path)+1)),props={'citem':citem,'idx':pathLST.index(path)+1})
         
         select  = -1
         lastOPT = None
@@ -431,8 +438,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                 npath  = None
                 lizLST = []
                 if pathLST: lizLST.extend(poolit(__buildItem)(pathLST))
-                lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,items={'key':'add','citem':citem,'idx':0}))
-                if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32101)),LANGUAGE(33114),icon=ICON,items={'key':'save','citem':citem}))
+                lizLST.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,props={'key':'add','citem':citem,'idx':0}))
+                if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,LISTITEMS.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32101)),LANGUAGE(33114),icon=ICON,props={'key':'save','citem':citem}))
                 
             select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32086), preselect=lastOPT, multi=False)
             if not select is None:
@@ -441,8 +448,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     try:    lastOPT = int(lizLST[select].getProperty('idx'))
                     except Exception: lastOPT = None
                     if key == 'add': 
-                        predefined = {"idx":9, "label":'Predefined Channels', "label2":"Predefined Dynamic Playlists", "default":"", "shares":"", "mask":"?xsp=", "type":"", "multi":False}
-                        retval     = DIALOG.browseSources(heading=LANGUAGE(32080), exclude=excLST, monitor=True, include=[])#include=[predefined]
+                        retval = DIALOG.browseSources(heading=LANGUAGE(32080), exclude=excLST, monitor=True)
                         if not retval is None:
                             npath, citem = self.validatePaths(retval,citem)
                             if npath: pathLST.append(npath)
@@ -461,7 +467,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def getRules(self, citem: dict={}, rules: dict={}):
         def __buildItem(data):
-            return self.buildListItem(data[1].name,data[1].getTitle(),icon=DUMMY_ICON.format(text=str(data[1].myId)),items={'myId':data[1].myId,'citem':citem,'idx':list(ruleLST.keys()).index(data[0])+1}) 
+            return LISTITEMS.buildMenuListItem(data[1].name,data[1].getTitle(),icon=DUMMY_ICON.format(text=str(data[1].myId)),props={'myId':data[1].myId,'citem':citem,'idx':list(ruleLST.keys()).index(data[0])+1}) 
         
         if citem.get('id') is None or len(citem.get('path',[])) == 0: DIALOG.notificationDialog(LANGUAGE(32071))
         else:            
@@ -477,8 +483,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                     arules = [rule for key, rule in list(crules.items()) if not ruleLST.get(key)] #all unused rule instances
                     lizLST = []
                     lizLST.extend(poolit(__buildItem)([(key, rule) for key, rule in list(ruleLST.items()) if rule.myId]))
-                    lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,items={'key':'add' ,'citem':citem,'idx':0}))
-                    if len(ruleLST) > 0 and erules != ruleLST: lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,items={'key':'save','citem':citem}))
+                    lizLST.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,props={'key':'add' ,'citem':citem,'idx':0}))
+                    if len(ruleLST) > 0 and erules != ruleLST: lizLST.insert(1,LISTITEMS.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save','citem':citem}))
                             
                 select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32095), preselect=lastIDX, multi=False)
                 if not select is None:
@@ -487,7 +493,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     except Exception: lastIDX = None
                     if key == 'add':
                         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                            lizLST = [self.buildListItem(rule.name,rule.description,icon=DUMMY_ICON.format(text=str(rule.myId)),items={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
+                            lizLST = [LISTITEMS.buildMenuListItem(rule.name,rule.description,icon=DUMMY_ICON.format(text=str(rule.myId)),props={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
                         select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32072), preselect=lastXID, multi=False)
                         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                             try:    lastXID = int(lizLST[select].getProperty('idx'))
@@ -516,7 +522,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         select = -1
         while not self.monitor.abortRequested() and not select is None:
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],DUMMY_ICON.format(text=str(idx+1)),[str(rule.myId)],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
+                lizLST = [LISTITEMS.buildMenuListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],DUMMY_ICON.format(text=str(idx+1)),[str(rule.myId)],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
             select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
             if not select is None:
                 try: rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
@@ -690,19 +696,69 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def autoTune(self, start=1):
-        self.log('autoTune')
-        if DIALOG.yesnoDialog("Would you like to AutoTune sample channels?"):
-            with BUILTIN.busy_dialog():
-                number   = 1
-                channels = (Autotune()._runTune(True,start,int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT))) or [])
-                for channel in channels:
-                    number = channel.get('number',0)
-                    if number > 0: 
+        def __buildAutotune(type, count):
+            return Globals._randomSamples(Library().getLibrary(type),count)
+            
+        with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+            try:
+                if DIALOG.yesnoDialog("Would you like to AutoTune sample channels?"):   
+                    items = []
+                    count = int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT))
+                    for idx, type in enumerate(AUTOTUNE_TYPES):
+                        items.extend(__buildAutotune(type,count))
+                    self._addChannels(start, Globals._randomShuffle(items))
+            except Exception as e: self.log("autoTune, failed! %s"%(e), xbmc.LOGERROR)
+
+
+    def selectPredefined(self, start=1):
+        def __buildMenuItem(citem):
+            return LISTITEMS.buildMenuListItem(citem['name'],citem['type'],citem['logo'],'|'.join(citem['path']),props={'citem':citem})
+        try:
+            with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+                items = Library().getLibrary()
+                types = [LISTITEMS.buildMenuListItem(type,icon=DUMMY_ICON.format(text=type)) for type in (list(items.keys()))]
+            
+            type = types[DIALOG.selectDialog(types, header=ADDON_NAME, multi=False)].getLabel()
+            lizLST   = poolit(__buildMenuItem)(items.get(type,[]))
+            selected = DIALOG.selectDialog(lizLST, header=ADDON_NAME)
+            self.log(f'selectPredefined, type = {type}, lizLST = {len(lizLST)}, selected = {len(selected)}')
+            self._addChannels(start,  Globals._randomShuffle([FileAccess.loadJSON(liz.getProperty('citem')) for idx, liz in enumerate(lizLST) if idx in selected]))
+        except Exception as e: self.log("selectPredefined, failed! %s"%(e), xbmc.LOGERROR)
+        
+            
+    def _addChannels(self, start=1, items=[]):
+        if start > 0 and items:
+            with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+                self.log(f'_addChannels, start = {start}, items = {len(items)}')
+                numbers = [channel.get('number',0) for channel in self.newChannels if not channel.get('name')]
+                numbers = numbers[start-1:] + numbers[:start-1]
+                
+                for idx, item in enumerate(items):
+                    if len(numbers) > 0:
                         self.madeChanges = True
-                        self.newChannels.insert(number-1,channel)
-                if self.madeChanges: self.fillChanList(self.newChannels,True,focus=(number-1))
-
-
+                        chnum   = numbers.pop(0)
+                        type    = item.get('type',LANGUAGE(30127))
+                        citem   = self.newChannel.copy()
+                        radio   = isRadio(item)
+                        citem.update({"id"      : getChannelID(item['name'],item['path'],chnum),
+                                      "type"    : type,
+                                      "number"  : chnum,
+                                      "name"    : getChannelSuffix(item['name'], type),
+                                      "logo"    : item.get('logo'),
+                                      "path"    : item.get('path',''),
+                                      "group"   : [type],
+                                      "rules"   : item.get('rules',{}),
+                                      "catchup" : ('vod' if not radio else ''),
+                                      "changed" : True,
+                                      "enabled" : True,
+                                      "radio"   : radio,
+                                      "favorite": False})
+                        self.newChannels.insert(chnum-1,citem)
+                        
+                if self.madeChanges and self.launchManager: self.fillChanList(self.newChannels,True,focus=(chnum-1))
+                return True
+            
+         
     def openEditor(self, path):
         self.log('openEditor, path = %s'%(path))
         if '|' in path: 
@@ -715,7 +771,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def previewChannel(self, citem, retCntrl=None):
         def __buildItem(fitem):
-            return self.buildListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
+            return LISTITEMS.buildMenuListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
             
         def __buildPreview(citem={}, msg=''):
             return PROPERTIES.preemptActivity(msg, Builder().buildChannels, *([citem],True))
@@ -751,42 +807,13 @@ class Manager(xbmcgui.WindowXMLDialog):
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 titles  = DIALOG.getInfoMonitor()
                 labels  = sorted(set([cleanLabel(value).title() for info in titles for key, value in list(info.items()) if value not in ['','..'] and key not in ['path','logo']]))
-                itemLST = [self.buildListItem(label,icon=ICON) for label in labels]
+                itemLST = [LISTITEMS.buildMenuListItem(label,icon=ICON) for label in labels]
                 if len(itemLST) == 0: raise Exception()
                 itemSEL = DIALOG.selectDialog(itemLST,LANGUAGE(32078)%('Name'),useDetails=True,multi=False)
                 if itemSEL is not None: return itemLST[itemSEL]
                 else: raise Exception()
         except Exception: return xbmcgui.ListItem(LANGUAGE(32079))
 
-
-    def clearChannel(self, citem, prompt=True, open=False):
-        self.log('clearChannel, channelPOS = %s'%(citem['number'] - 1))
-        with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-            if prompt and not DIALOG.yesnoDialog('%s %s\n%s'%(LANGUAGE(30223),citem.get('number',-1),LANGUAGE(32073))): return citem
-            self.madeItemchange = True
-            tmpItem = self.newChannel.copy()
-            tmpItem['number'] = citem['number'] #preserve channel number
-            self.saveChannelItems(tmpItem, open)
-            
-
-    def moveChannel(self, citem, channelPOS):
-        self.log('moveChannel, channelPOS = %s'%(channelPOS))
-        if citem['number'] > CHANNEL_LIMIT: return DIALOG.notificationDialog(LANGUAGE(32064))
-        retval = DIALOG.inputDialog(LANGUAGE(32137), key=xbmcgui.INPUT_NUMERIC, opt=citem['number'])
-        if retval:
-            retval = int(retval)
-            if (retval > 0 and retval < CHANNEL_LIMIT) and retval != channelPOS + 1:
-                if DIALOG.yesnoDialog('%s %s %s from [B]%s[/B] to [B]%s[/B]?'%(LANGUAGE(32136),citem['name'],LANGUAGE(32023),citem['number'],retval)):
-                    with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                        if retval in [channel.get('number') for channel in self.newChannels if channel.get('path')]: DIALOG.notificationDialog(LANGUAGE(32138))
-                        else:
-                            self.madeItemchange = True
-                            nitem = self.newChannel.copy()
-                            nitem['number'] = channelPOS + 1
-                            self.newChannels[channelPOS] = nitem
-                            citem['number'] = retval
-                            self.saveChannelItems(citem)
-            
 
     def switchLogo(self, channelData, channelPOS):
         def __cleanLogo(chlogo):
@@ -798,7 +825,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         def __select():
             def __buildItem(logo):
-                return self.buildListItem('%s| %s'%(logos.index(logo)+1, os.path.splitext(os.path.basename(logo))[0].upper() if len(os.path.splitext(os.path.basename(logo))[0]) <= 4 else os.path.splitext(os.path.basename(logo))[0].title()), Globals._unquoteString(logo), logo, [logo])
+                return LISTITEMS.buildMenuListItem('%s| %s'%(logos.index(logo)+1, os.path.splitext(os.path.basename(logo))[0].upper() if len(os.path.splitext(os.path.basename(logo))[0]) <= 4 else os.path.splitext(os.path.basename(logo))[0].title()), Globals._unquoteString(logo), logo, [logo])
                 
             DIALOG.notificationDialog(LANGUAGE(32140))
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
@@ -896,6 +923,49 @@ class Manager(xbmcgui.WindowXMLDialog):
         except Exception as e: self.log("setEnableCondition, failed! %s"%(e), xbmc.LOGERROR)
 
 
+    def clearChannel(self, citem, channelPOS, prompt=True, open=False):
+        self.log('clearChannel, channelPOS = %s'%(citem['number'] - 1))
+        with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+            if prompt and not DIALOG.yesnoDialog('%s %s\n%s'%(LANGUAGE(30223),citem.get('number',-1),LANGUAGE(32073))): return citem
+            self.madeItemchange = True
+            tmpItem = self.newChannel.copy()
+            tmpItem['number'] = citem['number'] #preserve channel number
+            self.newChannels[channelPOS] = tmpItem
+            self.saveChannelItems(tmpItem, open)
+            
+
+    def moveChannel(self, citem, channelPOS):
+        self.log('moveChannel, channelPOS = %s'%(channelPOS))
+        if citem['number'] > CHANNEL_LIMIT: return DIALOG.notificationDialog(LANGUAGE(32064))
+        retval = DIALOG.inputDialog(LANGUAGE(32137), key=xbmcgui.INPUT_NUMERIC, opt=citem['number'])
+        if retval:
+            retval = int(retval)
+            if (retval > 0 and retval < CHANNEL_LIMIT) and retval != channelPOS + 1:
+                if DIALOG.yesnoDialog('%s %s %s from [B]%s[/B] to [B]%s[/B]?'%(LANGUAGE(32136),citem['name'],LANGUAGE(32023),citem['number'],retval)):
+                    with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+                        if retval in [channel.get('number') for channel in self.newChannels if channel.get('path')]: DIALOG.notificationDialog(LANGUAGE(32138))
+                        else:
+                            self.madeItemchange = True
+                            tmpItem = self.newChannel.copy()
+                            tmpItem['number'] = channelPOS + 1
+                            self.newChannels[channelPOS] = tmpItem
+                            citem['number'] = retval
+                            self.saveChannelItems(citem)
+            
+
+    def closeChannel(self, citem, focus=0, open=False):
+        self.log('closeChannel')
+        if self.madeItemchange:
+            if DIALOG.yesnoDialog(LANGUAGE(32243)): return self.saveChannelItems(citem, open)
+        self.togglechanList(focus=focus)
+                 
+                 
+    def closeManager(self):
+        self.log('closeManager, madeChanges = %s'%(self.madeChanges))
+        if self.madeChanges: self.saveChanges() 
+        else:                self.close()
+        
+        
     def saveChannelItems(self, citem: dict={}, open=False):
         self.log('saveChannelItems [%s], open = %s'%(citem.get('id'),open))
         if self.madeItemchange:
@@ -907,15 +977,12 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.fillChanList(self.newChannels,True,(citem['number'] - 1),citem if open else None)
         return citem
     
-
-    def closeChannel(self, citem, focus=0, open=False):
-        self.log('closeChannel')
-        if self.madeItemchange:
-            if DIALOG.yesnoDialog(LANGUAGE(32243)): return self.saveChannelItems(citem, open)
-        self.togglechanList(focus=focus)
-                    
-            
+   
     def saveChanges(self):
+        def __yesno():
+            if self.launchManager: return DIALOG.yesnoDialog(LANGUAGE(32076))
+            elif not self.server:  return True
+                
         self.log("saveChanges")
         def __validateChannels(newChannels):
             def __validate(citem):
@@ -926,28 +993,23 @@ class Manager(xbmcgui.WindowXMLDialog):
             return newChannels
         
         if self.madeChanges:
-            if DIALOG.yesnoDialog(LANGUAGE(32076)):
+            if __yesno():
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                     channels = __validateChannels(self.newChannels)
                     self.log("saveChanges, channels = %s"%(len(channels)))
                     if self.server: #remote save
                         requestURL('http://%s/%s'%(self.server.get('host'), CHANNELFLE), payload={'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels})
+                        timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
                     else: #local save
                         self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELFLE_CHANGED,silent=True)))
                         if self.channels.setChannels(channels):
                             self.madeChanges = False
                             self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
-                            timerit(PROPERTIES.setPropTimer)(15,'chkChanged')#trigger channel building
+                            timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkChanged',True))#trigger channel check
             else: self.madeChanges = False
         self.closeManager()
             
-
-    def closeManager(self):
-        self.log('closeManager, madeChanges = %s'%(self.madeChanges))
-        if self.madeChanges: self.saveChanges() 
-        else:                self.close()
-        
-        
+            
     def getFocusItems(self, controlId=None):
         if controlId in [5,6,7,9000,9001,9002,9003,9004]:
             label, label2 = self.getLabels(controlId)
@@ -1013,22 +1075,26 @@ class Manager(xbmcgui.WindowXMLDialog):
                     elif controlId == 10: self.switchLogo(focusItems.get('citem'), focusItems.get('chpos',0))#logo button
                     elif controlId in [9001,9002,9003,9004]: #side buttons
                         if   focusItems.get('label') == LANGUAGE(32059): self.saveChanges()                                   #Save 
-                        elif focusItems.get('label') == LANGUAGE(32061): self.clearChannel(focusItems.get('citem'))           #Delete
-                        elif focusItems.get('label') == LANGUAGE(32239): self.clearChannel(focusItems.get('citem'), open=True)#Clear
+                        elif focusItems.get('label') == LANGUAGE(32061): self.clearChannel(focusItems.get('citem'), focusItems.get('chpos',0)) #Delete
+                        elif focusItems.get('label') == LANGUAGE(32239): self.clearChannel(focusItems.get('citem'), focusItems.get('chpos',0), open=True)#Clear
                         elif focusItems.get('label') == LANGUAGE(32136): self.moveChannel(focusItems.get('citem'), focusItems.get('chpos',0))  #Move 
                         elif focusItems.get('label') == LANGUAGE(32062): #Close
                             if   self.isVisible(self.itemList): self.closeChannel(focusItems.get('citem'), focus=focusItems.get('chpos',0))
                             elif self.isVisible(self.chanList): self.closeManager()
                         elif focusItems.get('label') == LANGUAGE(32060): #Cancel
-                            if   self.isVisible(self.itemList): self.closeChannel(focusItems.get('citem'))
+                            if self.isVisible(self.itemList): 
+                                self.madeItemchange = False
+                                self.closeChannel(focusItems.get('citem'), focus=focusItems.get('chpos',0))
                             elif self.isVisible(self.chanList): self.closeManager()
                         elif focusItems.get('label') == LANGUAGE(32240): #Confirm
                             if   self.isVisible(self.itemList): self.saveChannelItems(focusItems.get('citem'))
                             elif self.isVisible(self.chanList): self.saveChanges()
                         elif focusItems.get('label') == LANGUAGE(32235): #Preview
-                            if self.isVisible(self.itemList) and self.madeItemchange: self.closeChannel(focusItems.get('citem'), open=True)
+                            if self.isVisible(self.itemList) and self.madeItemchange: self.closeChannel(focusItems.get('citem'), focus=focusItems.get('chpos',0), open=True)
                             self.previewChannel(focusItems.get('citem'), focusItems.get('retCntrl'))
                         elif focusItems.get('label') == LANGUAGE(32110): ...#Backup
                         elif focusItems.get('label') == LANGUAGE(32112): self.autoRecovery() #Recover
                         elif focusItems.get('label') == LANGUAGE(30038): self.autoTune(focusItems.get('number',1)) #AutoTune
+                        elif focusItems.get('label') == LANGUAGE(30229): self.selectPredefined(focusItems.get('number',1)) #Predefined
+                            
                             

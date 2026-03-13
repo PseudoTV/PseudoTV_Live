@@ -1,8 +1,13 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
 
 v.0.7.1+nightly
-- Refactored the playback core to improve VOD handling, overall performance, and .strm file compatibility.
-  - All on-demand content will queue as a playlist. Live programs will default to the users chosen playback method; found in settings.
+- Added "Recently Added Music" to Autotuning.
+- Added "Automatic" channels to settings; disables Channel Manager while active. Provides lazy configuration free channels that periodically update based on your "Future Days" LiveTV setting. Channels are curated from Kodi's top 25 content by category.
+- Added "Predefined" channel menu to manager. Provides quick channel building from a curated list of your top 25 Kodi content by category.
+- Tweaked Autotuning wizard and channel manager.
+- Thread aware Kodi properties.
+- Refactored playback core to improve VOD handling, overall performance, and .strm file compatibility.
+  - All on-demand content will queue as playlists. Live programs will default to the users chosen playback method; found in settings.
   
 v.0.7.0+nightly
 - Improved Autotuning

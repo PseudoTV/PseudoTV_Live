@@ -20,6 +20,8 @@
 from globals import *
 
 class Utilities(object):
+    def __init__(self, sysARG=None):
+        self.sysARG  = sys.argv
 
     @staticmethod
     def qrWiki():
@@ -170,7 +172,7 @@ class Utilities(object):
     @staticmethod
     def _runReload():
         if DIALOG.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
-            timerit(PROPERTIES.setPropTimer)(15,'chkPVRRefresh')
+            timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
             
     @staticmethod
     def _runRestart():
@@ -183,7 +185,7 @@ class Utilities(object):
     @staticmethod
     def _runUpdate(full=False):
         log('Utilities: _runUpdate, full = %s'%(full))
-        timerit(PROPERTIES.setPropTimer)(15,'chkChanged')#trigger channel building
+        timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkChanged',True))#trigger channel check
               
     @staticmethod
     def buildMenu(select=None):
@@ -230,52 +232,52 @@ class Utilities(object):
     def _run(sysARG):
         with BUILTIN.busy_dialog():
             ctl = (0,1)
-            try:    param = sysARG[1]
+            try:              param = sysARG[1]
             except Exception: param = None
             log('Utilities: param = %s'%(param))
 
             #Globals
-            elif param.startswith('Move_Channelbug'):
+            if param.startswith('Move_Channelbug'):
                 ctl = (3,15)
-                Utilities().openPositionUtil(1)
+                Utilities(sys.argv).openPositionUtil(1)
             elif param.startswith('Move_OnNext'):
                 ctl = (3,15)
-                Utilities().openPositionUtil(2)
+                Utilities(sys.argv).openPositionUtil(2)
                 
             #Multi-Room
             elif param == 'Show_ZeroConf_QR':
                 ctl = (5,5)
-                Utilities().qrBonjourDL()
+                Utilities(sys.argv).qrBonjourDL()
                 
             #Misc. Scripts
             elif param == 'CPU_Bench':
-                Utilities()._runCPUBench()
+                Utilities(sys.argv)._runCPUBench()
             elif param == 'IO_Bench':
-                Utilities()._runIOBench()
+                Utilities(sys.argv)._runIOBench()
             elif param == 'Logger':
-                Utilities()._runLogger()
+                Utilities(sys.argv)._runLogger()
                 
             #Misc.Docs
             elif param == 'Utilities':
                 ctl = (6,1)
-                return Utilities().buildMenu()
+                return Utilities(sys.argv).buildMenu()
             elif param == 'Show_Wiki_QR':
                 ctl = (6,4)
-                return Utilities().qrWiki()
+                return Utilities(sys.argv).qrWiki()
             elif param == 'Show_Support_QR':
                 ctl = (6,5)
-                return Utilities().qrSupport()
+                return Utilities(sys.argv).qrSupport()
             elif param == 'Show_Remote_UI':
                 ctl = (6,6)
-                return Utilities().qrRemote()
+                return Utilities(sys.argv).qrRemote()
             elif param == 'Show_Changelog':
                 ctl = (6,8)
-                return Utilities().showChangelog()
+                return Utilities(sys.argv).showChangelog()
                 
             #Misc. Debug
             elif param == 'Debug_QR':
                 ctl = (6,1)
-                return Utilities().qrDebug()
+                return Utilities(sys.argv).qrDebug()
             return Globals._openSettings(ctl)
 
-if __name__ == '__main__': Utilities()._run(sys.argv)
+if __name__ == '__main__': Utilities(sys.argv)._run()

@@ -29,19 +29,18 @@ class Plugin(object):
     cache   = SETTINGS.cache
     
     def __init__(self, mode='playlist', sysInfo={}):
-        print('sysInfo IN',sysInfo)
         self.sysInfo = sysInfo
         self.sysInfo['seek'] = (sysInfo.get('seek') or abs(int(sysInfo.get('start',-1)) - int(sysInfo.get('now',-1))) if int(sysInfo.get('start',-1)) > 0 else -1)
         self.sysInfo["progresspercentage"] = round((self.sysInfo["seek"]/int(self.sysInfo["duration"])) * 100, 2) if self.sysInfo['seek'] > 0 else -1 
         
-        if not self.sysInfo.get('fitem'):
+        if not self.sysInfo.get('fitem'): 
             self._updateSysInfo() #Widgets don't include listitem meta, attempt to find matching meta with jsonrpc
+            
         self.sysInfo['isVOD']      = self.sysInfo.get('fitem').get('file','-1') != self.sysInfo.get('vid','-1')
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
         self.sysInfo['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
         mode = 'playlist' if any([self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist']]) else sysInfo.get('mode')
         self.log(f'__init__, mode = {mode}, sysARG = {sysInfo.get('sysARG')}')
-        print('sysInfo OUT',self.sysInfo)
         
         if   mode == 'live':                    self.playLive()
         elif mode == 'radio':                   self.playRadio()
@@ -56,19 +55,22 @@ class Plugin(object):
             
     def _updateSysInfo(self):
         self.log('[%s] _updateSysInfo'%(self.sysInfo.get('chid')))
+        if not self.player.isPlaying(): DIALOG.notificationDialog(f'{LANGUAGE(32248)} {LANGUAGE(30223)}\n{LANGUAGE(32140)}')
         with PROPERTIES.interruptActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
             if pvritem:
                 self.sysInfo['fitem'] = Globals._decodePlot(pvritem.get('broadcastnow',{}).get('plot',''))
                 self.sysInfo['nitem'] = Globals._decodePlot(pvritem.get('broadcastnext',[{}])[0].get('plot',''))
+            else: DIALOG.notificationDialog(LANGUAGE(32000))
+                
             
-            
-    def _quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=BUILTIN.isPlaylistRandom()):
+    def _quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=None):
         def __add(listitem):
             if listitem.getPath():
                 playlist.add(listitem.getPath(),listitem,listitems.index(listitem))
                 
         if listitems:
+            if shuffle is None: shuffle = BUILTIN.isPlaylistRandom()
             self.log('[%s] _quePlaylist, listitems = %s, shuffle = %s'%(self.sysInfo.get('chid'), len(listitems), shuffle))
             playlist = xbmc.PlayList(pltype)
             playlist.clear()
@@ -174,7 +176,7 @@ class Plugin(object):
     def _play(self, file, listitem=None, wait=30):
         #PVR Live Channel Detection workaround.
         if listitem is None: listitem = xbmcgui.ListItem()
-        if self.player.isPlaying() and self.sysInfo['fitem'].get('file') != self.player.getPlayingFile():
+        if self.player.isPlaying() and listitem.getPath() != self.player.getPlayingFile():
             self.player.stop()
         timerit(self.player.play)(1.0,*(file,self._playCheck(True, listitem)[1],True))
         self._resolveURL(False, listitem)
@@ -200,10 +202,25 @@ class Plugin(object):
     def playLive(self):
         self.log('[%s] playLive, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
         with PROPERTIES.suspendActivity():
-            #LIVE called from Guide/Channels.
-            listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-            listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.sysInfo)))
-            self._resolveURL(True, listitem)
+            #VOD called from Guide not live! / break PVR bind for correct meta.
+            if self.sysInfo['isVOD'] or self.sysInfo['isSTRM']:
+                if self.sysInfo['isVOD']:
+                    self.sysInfo['mode'] = 'vod'
+                    self.sysInfo["seek"] = -1
+                    self.sysInfo["progresspercentage"] = -1
+                    self.sysInfo['name'] = self.sysInfo['fitem'].get('label')
+                    self.sysInfo['vid']  = self.sysInfo['fitem'].get('file')
+                    DIALOG.notificationDialog(f'{LANGUAGE(32185)}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
+                    listitem = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+                else:
+                    #STRM called from Guide, presumably live; workaround for Kodi breaking .strm handling in setResolvedUrl.
+                    listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+                listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
+                self._play(listitem.getPath(),listitem)
+            else:#LIVE called from Guide/Channels.
+                listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+                listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.sysInfo)))
+                self._resolveURL(True, listitem)
         
             
     @threadit

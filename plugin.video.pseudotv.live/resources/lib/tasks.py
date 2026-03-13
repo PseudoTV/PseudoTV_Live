@@ -115,7 +115,7 @@ class Tasks(object):
         
     def chkServers(self):
         self.log('chkServers')
-        Multiroom(service=self.service)._chkServers()
+        Multiroom(service=self.service).chkServers()
 
 
     def chkPVRBackend(self): 
@@ -142,20 +142,22 @@ class Tasks(object):
         self._chkPropTimer('chkChanged'       , self.chkChanged       , 3)
         
         
+    #_chkEpochTimer trigger - Time = 0 == Run
     def _chkEpochTimer(self, key, func, runevery=900, priority=-1, nextrun=None, *args, **kwargs):
         if nextrun is None: nextrun = (PROPERTIES.getProperty(key) or 0) # nextrun == 0 => force que
         epoch = int(time.time())
         if epoch >= nextrun:
             self.log('_chkEpochTimer, key = %s, last run %s' % (key, epoch - nextrun))
-            PROPERTIES.setEpochTimer(key, (epoch + runevery))
+            PROPERTIES.setProperty(key, (epoch + runevery))
             self.service._que(func, priority, *args, **kwargs)
 
 
+     #_chkPropTimer trigger - True == Run
     def _chkPropTimer(self, key, func, priority=-1, *args, **kwargs):
         key = '%s.%s' % (ADDON_ID, key)
-        if PROPERTIES.getEXTProperty(key):
+        if PROPERTIES.getProperty(key):
             self.log('_chkPropTimer, key = %s'%(key))
-            PROPERTIES.clrEXTProperty(key)
+            PROPERTIES.clrProperty(key)
             self.service._que(func, priority, *args, **kwargs)
             
 
@@ -198,7 +200,8 @@ class Tasks(object):
                 return self.service._que(self.chkChannels,3)
 
 
-    def chkFillers(self, channels=None, silent=BUILTIN.isPlaying()):
+    def chkFillers(self, channels=None, silent=None):
+        if silent is None: silent = BUILTIN.isPlaying()
         self.log('chkFillers')
         # if channels is None: channels = self.getChannels())))
         # if len(channels) > 0:
@@ -230,7 +233,8 @@ class Tasks(object):
             # pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
         
 
-    def chkLibrary(self, types=None, silent=BUILTIN.isPlaying()):
+    def chkLibrary(self, types=None, silent=None):
+        if silent is None: silent = BUILTIN.isPlaying()
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
         complete = set()
         library  = Library(service=self.service, writable=True)
@@ -253,7 +257,8 @@ class Tasks(object):
         self.log("chkLibrary, complete = %s"%(any(list(complete))))
         
 
-    def chkChanged(self, channels=None, silent=BUILTIN.isPlaying()):
+    def chkChanged(self, channels=None, silent=None):
+        if silent is None: silent = BUILTIN.isPlaying()
         if channels is None: channels = self.getChannels()
         changes = [channel for channel in channels if channel.get('changed',False)]
         self.log('chkChanged, changes = %s'%(len(changes)))
@@ -261,7 +266,8 @@ class Tasks(object):
             self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent))
         
         
-    def chkChannels(self, channels=None, silent=BUILTIN.isPlaying()):
+    def chkChannels(self, channels=None, silent=None):
+        if silent is None: silent = BUILTIN.isPlaying()
         if channels is None: channels = self.getChannels()
         if len(channels) > 0:
             self.log('chkChannels, channels = %s'%(len(channels)))
@@ -274,7 +280,7 @@ class Tasks(object):
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():
                 if SETTINGS.setAutotuned(Autotune()._runTune()): self.service._que(self.chkChannels,3)
-            elif PROPERTIES.hasEnabledServers(): timerit(PROPERTIES.setPropTimer)(15,'chkPVRRefresh')
+            elif PROPERTIES.hasEnabledServers(): timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
 
 
     def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):
@@ -285,13 +291,13 @@ class Tasks(object):
             
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh') and not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
-                timerit(PROPERTIES.setEXTPropertyBool)(M3U_REFRESH,*('HTTP.pendingRestart',True))
+                timerit(PROPERTIES.setEXTProperty)(M3U_REFRESH,*('%s.HTTP.pendingRestart'%(ADDON_ID),True))
                 if brute:
                     if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
                         BUILTIN.executewindow('ActivateWindow(home)')
                         DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
                         __toggle(False), self.monitor.waitForAbort(M3U_REFRESH), __toggle(True)
-                    else: timerit(PROPERTIES.setPropTimer)(15,'chkPVRRefresh')
+                    else:  timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
                 else: DIALOG.notificationDialog(f"Attempting to refresh {PVR_CLIENT_NAME}\n {LANGUAGE(30155)}")
                 self.jsonRPC.PVRScan(self.jsonRPC.getPVRClients(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
             

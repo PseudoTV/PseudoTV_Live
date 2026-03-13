@@ -26,10 +26,9 @@ class Service(object):
     def _shutdown(self, wait=1.0) -> bool:
         return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
-        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt() | PROPERTIES.isInterruptActivity())
+        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
     def _suspend(self, wait=1.0) -> bool:
-        pendingSuspend = PROPERTIES.isPendingSuspend()
-        return pendingSuspend
+        return PROPERTIES.isPendingSuspend()
     def _sleep(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
@@ -484,6 +483,7 @@ class JSONRPC(object):
 
 
     def requestList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}, query={}):
+         # Query
          # {"method": "VideoLibrary.GetEpisodes",
          # "params": {
          # "properties": ["title"],
@@ -495,7 +495,7 @@ class JSONRPC(object):
          # "filter": {"and": [{"field": "title", "operator": "contains", "value": "Star Wars"}]}}}
 
          ##################################
-
+         # VFS Path
          # {"method": "Files.GetDirectory",
          # "params": {
          # "directory": "videodb://tvshows/studios/-1/-1/-1/",
