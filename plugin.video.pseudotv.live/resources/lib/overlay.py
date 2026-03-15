@@ -99,8 +99,8 @@ class Restart(xbmcgui.WindowXMLDialog):
         
         if bool(self.player.restartPercentage) and self.fitem:
             progress = self.player.getPlayerProgress()
-            self.log("__init__, restartPercentage = %s, progress = %s"%(self.player.restartPercentage, progress))
             if (progress >= self.player.restartPercentage and progress < self.player.maxProgress):
+                self.log("__init__, restartPercentage = %s, progress = %s"%(self.player.restartPercentage, progress))
                 self.doModal()
                 
                 
@@ -162,6 +162,7 @@ class Restart(xbmcgui.WindowXMLDialog):
     def onClose(self):
         self.log("onClose")
         self.closing = True
+        return None
         
 
 class Overlay(object):
@@ -424,3 +425,4 @@ class OnNext(xbmcgui.WindowXMLDialog):
     def onClose(self):
         self.log('onClose')
         self.closing = True
+        return None

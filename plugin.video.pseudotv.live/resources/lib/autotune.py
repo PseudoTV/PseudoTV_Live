@@ -33,16 +33,15 @@ class Autotune(object):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _runTune(self, start=1, count=AUTOTUNE_CHANNEL_DEFAULT):
+    def _runTune(self, start=1, count=None):
         def __buildAutotune(type, count):
             return Globals._randomSamples(Library().getLibrary(type),count)
                 
-        state        = False
-        autoChannels = SETTINGS.getSettingBool('Automatic_Channels')
+        autoChannels = SETTINGS.getSettingBool('Autotuned_Channels')
         if not autoChannels:
             hasChannels  = PROPERTIES.hasChannels()
             hasLibrary   = any([PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES])
-            if count > AUTOTUNE_CHANNEL_LIMIT: count = AUTOTUNE_CHANNEL_DEFAULT
+            if count is None: count = min(max(SETTINGS.getSettingInt('Autotune_Limit'), AUTOTUNE_CHANNEL_DEFAULT), AUTOTUNE_CHANNEL_LIMIT)
             self.log(f'_runTune, Count = {count}, hasChannels = {hasChannels}, hasLibrary = {hasLibrary}')
             
             if not hasChannels and hasLibrary:
@@ -54,7 +53,7 @@ class Autotune(object):
                     if retval == 0: #No
                         return True if hasChannels else Globals._openSettings()
                     elif retval == 1: #Yes
-                        SETTINGS.setSettingBool('Automatic_Channels',True)
+                        SETTINGS.setSettingBool('Autotuned_Channels',True)
                         break       
                     elif retval == 2:#Custom
                         with BUILTIN.busy_dialog():

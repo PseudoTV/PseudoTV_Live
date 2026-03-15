@@ -178,9 +178,12 @@ class Builder(object):
         def __hasChanged(citem: dict, detect=SETTINGS.getSettingBool('Enable_Changed')) -> bool:
             if not citem.get('changed',False) and detect:
                 state = any([SETTINGS.getFileCRC(file) for file in citem.get('path',[]) if file.endswith(tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS))])
-            else:
-                state = citem.get('changed',False)
+            else: state = citem.get('changed',False)
+            citem['changed'] = False
             self.log('[%s] buildChannels, __hasChanged = %s'%(citem['id'],state))
+            if state: 
+                __clrChannel(citem) #clear channel m3u/xmltv 
+                changes.add(self.channels.addChannel(citem))
             return state
                     
         def __hasProgrammes(citem: dict) -> bool:
@@ -195,14 +198,13 @@ class Builder(object):
             return state
         
         def __clrChannel(citem: dict) -> bool:
-            self.log('[%s] buildChannels, __clrChannel'%(citem['id']))
             if any([self.resetPagination(citem),self.m3u.delStation(citem),self.xmltv.delBroadcast(citem)]):
-                citem['changed'] = False
-                changes.add(self.channels.addChannel(citem))
+                self.log('[%s] buildChannels, __clrChannel'%(citem['id']))
 
         def __addProgrammes(citem: dict, fileList: list) -> bool:
+            state = any([self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)) for item in fileList])
             self.log('[%s] buildChannels, __addProgrammes fileList = %s'%(citem['id'],len(fileList)))
-            return any([self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)) for item in fileList])
+            return state
         
         def __addStation(citem: dict) -> bool:
             sitem = self.m3u.getStationItem(citem)
@@ -233,8 +235,7 @@ class Builder(object):
                             self.pName   = citem['name']
                             citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, Globals._cleanGroups(citem), inherited=self) #inject temporary citem changes here
                             _update, start = __needsUpdate(citem, now, fallback)
-                            _changed = __hasChanged(citem, enableChanged)
-                            if _changed: __clrChannel(citem) #clear channel m3u/xmltv    
+                            _changed = __hasChanged(citem, enableChanged) 
                             self.log('[%s] buildChannels, preview = %s, rules = %s, _update = %s'%(citem['id'],preview,citem.get('rules',{}),_update))
                             if self.service._interrupt():
                                 self.log("[%s] buildChannels, _interrupt"%(citem['id']))

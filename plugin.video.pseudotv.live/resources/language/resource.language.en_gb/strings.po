@@ -946,7 +946,7 @@ msgid "Predefined"
 msgstr ""
 
 msgctxt "#30230"
-msgid "Automatic Channels"
+msgid "Autotuned Channels"
 msgstr ""
 
 
@@ -1123,7 +1123,7 @@ msgid "Library"
 msgstr ""
 
 msgctxt "#32042"
-msgid "[B]Welcome to %s![/B]\n[B]No[/B] Channels found, Would you like enable Automatic Channel Creation"
+msgid "[B]Welcome to %s![/B]\n[B]No[/B] Channels found, Would you like enable Autotuned Channel Creation"
 msgstr ""
 
 msgctxt "#32043"
@@ -1211,7 +1211,7 @@ msgid "OK"
 msgstr ""
 
 msgctxt "#32064"
-msgid "Autotuned Channels are currently\nnon-configurable."
+msgid "Max Channels by Type"
 msgstr ""
 
 msgctxt "#32065"
@@ -2380,7 +2380,7 @@ msgid "Build Filler Template folders based on your channels."
 msgstr ""
 
 msgctxt "#33181"
-msgid "Force Autotune to run."
+msgid "Autotuned Channel Limit by Type. [2 Min.|Default, 25 Max.]"
 msgstr ""
 
 msgctxt "#33182"
@@ -2501,5 +2501,5 @@ msgid "Open Channel Manager"
 msgstr ""
 
 msgctxt "#33311"
-msgid "Periodically populate channels based on your top 25 Kodi content by category.\nDisable to enable Channel Manager w\ advanced configuration options."
+msgid "Periodically populate channels based on your top 25 Kodi content by category.\nDisable to enable Channel Manager."
 msgstr ""

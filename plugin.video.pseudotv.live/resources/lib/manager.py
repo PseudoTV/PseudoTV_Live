@@ -695,17 +695,24 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if self.madeChanges: self.fillChanList(self.newChannels,True,focus=(number-1))
 
 
+    def getLibrary(self, type=None):
+        return Library().getLibrary(type)
+
+
+    def clrLibrary(self):
+        return Library().clrLibraryCache()
+
+
     def autoTune(self, start=1):
-        def __buildAutotune(type, count):
-            return Globals._randomSamples(Library().getLibrary(type),count)
-            
         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
             try:
                 if DIALOG.yesnoDialog("Would you like to AutoTune sample channels?"):   
                     items = []
-                    count = int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", key=xbmcgui.INPUT_NUMERIC, opt=AUTOTUNE_CHANNEL_DEFAULT))
+                    count = int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", default = SETTINGS.getSettingInt('Autotune_Limit') , key=xbmcgui.INPUT_NUMERIC))
                     for idx, type in enumerate(AUTOTUNE_TYPES):
-                        items.extend(__buildAutotune(type,count))
+                        samples = Globals._randomSamples(self.getLibrary(type),count)
+                        items.extend([s for s in samples if s])
+                        
                     self._addChannels(start, Globals._randomShuffle(items))
             except Exception as e: self.log("autoTune, failed! %s"%(e), xbmc.LOGERROR)
 
@@ -715,7 +722,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             return LISTITEMS.buildMenuListItem(citem['name'],citem['type'],citem['logo'],'|'.join(citem['path']),props={'citem':citem})
         try:
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                items = Library().getLibrary()
+                items = self.getLibrary()
                 types = [LISTITEMS.buildMenuListItem(type,icon=DUMMY_ICON.format(text=type)) for type in (list(items.keys()))]
             
             type = types[DIALOG.selectDialog(types, header=ADDON_NAME, multi=False)].getLabel()
@@ -980,8 +987,10 @@ class Manager(xbmcgui.WindowXMLDialog):
    
     def saveChanges(self):
         def __yesno():
-            if self.launchManager: return DIALOG.yesnoDialog(LANGUAGE(32076))
-            elif not self.server:  return True
+            if self.launchManager:
+                self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELFLE_CHANGED,silent=True)))
+                return DIALOG.yesnoDialog(LANGUAGE(32076))
+            elif not self.server: return True
                 
         self.log("saveChanges")
         def __validateChannels(newChannels):
@@ -1001,7 +1010,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                         requestURL('http://%s/%s'%(self.server.get('host'), CHANNELFLE), payload={'uuid':SETTINGS.getMYUUID(),'name':self.friendly,'payload':channels})
                         timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
                     else: #local save
-                        self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELFLE_CHANGED,silent=True)))
                         if self.channels.setChannels(channels):
                             self.madeChanges = False
                             self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))

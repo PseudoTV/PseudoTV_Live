@@ -60,12 +60,74 @@ def _add(sysARG, listitem: dict={}):
                 del manager
                 return DIALOG.notificationDialog("%s [B]%s[/B]: [B]%s[/B]\nAdded!"%(LANGUAGE(30223),citem['number'],citem['name']))
 
+def _auto(start=1, count=-1):
+    if count <= 0:
+        count = min(max(SETTINGS.getSettingInt('Autotune_Limit'), AUTOTUNE_CHANNEL_DEFAULT), AUTOTUNE_CHANNEL_LIMIT)
+        
+    autoChannels = SETTINGS.getSettingBool('Autotuned_Channels')
+    if not autoChannels:
+        hasChannels  = PROPERTIES.hasChannels()
+        hasLibrary   = any([PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES])
+        log(f'Create: _auto, Count = {count}, hasChannels = {hasChannels}, hasLibrary = {hasLibrary}')
+        
+        if not hasChannels and hasLibrary:
+            hasBackup  = PROPERTIES.hasBackup()
+            hasServers = PROPERTIES.hasServers()
+            log(f'Create: _auto, hasBackup = {hasBackup}, hasServers = {hasServers}')
+            while not MONITOR().abortRequested():
+                retval = DIALOG.yesnoDialog(message='%s\n%s'%(LANGUAGE(32042)%(ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254))
+                if retval == 0: #No
+                    return True
+                elif retval == 1: #Yes
+                    SETTINGS.setSettingBool('Autotuned_Channels',True)
+                    break       
+                elif retval == 2:#Custom
+                    with BUILTIN.busy_dialog():
+                        menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33310),url='special://home/addons/%s/resources/lib/utilities.py, Channel_Manager'%(ADDON_ID))]
+                        if hasBackup:  menu.append(LISTITEMS.buildMenuListItem('%s %s'%(LANGUAGE(32112),LANGUAGE(30108)),LANGUAGE(32111),url='special://home/addons/%s/resources/lib/backup.py, Recover_Backup'%(ADDON_ID)))
+                        if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='special://home/addons/%s/resources/lib/multiroom.py, Select_Server_Client'%(ADDON_ID)))
+                    select = DIALOG.selectDialog(menu,multi=False)
+                    if not select is None: return BUILTIN.executescript(menu[select].getPath())
+                return False #Cancel
+        else: return True #Has Channnels / No Kodi Library
+        
+    with DIALOG._progressDialog("", LANGUAGE(30038)) as pDialog:
+        items   = []
+        manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
+        if autoChannels: 
+            if manager.backup.backupChannels(CHANNELFLE_AUTOTUNE,silent=True): 
+                FileAccess.delete(CHANNELFLEPATH)
+        
+        for idx, type in enumerate(AUTOTUNE_TYPES):
+            pDialog = DIALOG._updateProgress(pDialog, int(idx*100//len(AUTOTUNE_TYPES)), type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
+            samples = Globals._randomSamples(manager.getLibrary(type),count)
+            items.extend([s for s in samples if s])
+        
+        manager._addChannels(start, Globals._randomShuffle(items))
+        manager.closeManager()
+    del manager
+    return True
+              
+@threadit      
+def _clrLibrary():
+    DIALOG.notificationDialog(LANGUAGE(32025))
+    manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
+    manager.clrLibraryCache()
+    del manager       
+    
+@threadit   
+def _clrBlacklist():
+    DIALOG.notificationDialog(LANGUAGE(32025))
+    SETTINGS.setSetting('Clear_BlackList','')
+        
 if __name__ == '__main__': 
     log('Create: __main__, param = %s'%(sys.argv))
     try:              mode = sys.argv[1]
     except Exception: mode = ''
     try:
-        if   mode == 'manager': _open(Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
+        if   mode == 'manager':         _open(Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
+        elif mode == 'Clear_Autotune' : _clrLibrary()
+        elif mode == 'Clear_BlackList': _clrBlacklist()
         elif mode == 'select':  
             values = SETTINGS.getSettingList('Select_server')
             values = [cleanLabel(value) for value in values]

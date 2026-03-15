@@ -97,7 +97,7 @@ class Multiroom(object):
             if response: response['online'] = True
             else:        response['online'] = False
             response['enabled'] = server.get('enabled',False)
-            server[server.get('name')].update(response)
+            server.setdefault(server.get('name'),{}).update(response)
             if response['enabled']:
                 if response['online'] != server.get('online',False):
                     DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))

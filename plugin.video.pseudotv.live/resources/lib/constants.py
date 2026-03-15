@@ -64,10 +64,10 @@ MONITOR             = xbmc.Monitor
 PLAYER              = xbmc.Player
 
 #constants
-CPU_COUNT           = (os.cpu_count() or 1)
-CPU_CYCLE           = (1/CPU_COUNT)/CPU_COUNT #safe none taxing cycle time.
-THREAD_COUNT        = min(32, CPU_COUNT + 4)
-QUEUE_CHUNK         = min(16, THREAD_COUNT // 2)
+CPU_COUNT           = max((os.cpu_count() or 1), 1)
+CPU_CYCLE           = 0.016 # ~60Hz
+THREAD_COUNT        = min(16, CPU_COUNT + 4)
+QUEUE_CHUNK         = min(CPU_COUNT, 8)
 
 DISCOVERY_TIMER     = 60    #secs
 SERVICE_INTERVAL    = 5.0   #secs

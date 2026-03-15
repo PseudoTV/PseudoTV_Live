@@ -377,8 +377,10 @@ class Player(xbmc.Player):
     def toggleOnNext(self, state: bool=bool(SETTINGS.getSettingInt('OnNext_Mode'))):
         if state and self.onnext is None and not self.playingItem.get('isfiller',False):
             self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", player=self, mode=self.OnNextMode, position=self.onNextPosition, next=self.jsonRPC.getNextItem(self.playingItem.get('citem',{}),self.playingItem.get('nitem')))
+            print('toggleOnNext',state, self.onnext)
         elif not state and hasattr(self.onnext,'onClose'):
             self.onnext = self.onnext.onClose()
+            print('toggleOnNext',state, self.onnext)
         else: return
         self.log("toggleOnNext, state = %s, onnext = %s"%(state,self.onnext))
     

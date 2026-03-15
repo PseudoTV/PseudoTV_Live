@@ -671,7 +671,7 @@ class Properties(object):
 
     def setPropTimer(self, key, state=True):
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
-        return self.setProperty(key,state)
+        return self.setEXTProperty(key,state)
 
 
     def setRemoteHost(self, value):
@@ -1516,12 +1516,14 @@ class Dialog(object):
       
       
     def inputDialog(self, message, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0):
-        ## - xbmcgui.INPUT_ALPHANUM (standard keyboard)
-        ## - xbmcgui.INPUT_NUMERIC (format: #)
-        ## - xbmcgui.INPUT_DATE (format: DD/MM/YYYY)
-        ## - xbmcgui.INPUT_TIME (format: HH:MM)
-        ## - xbmcgui.INPUT_IPADDRESS (format: #.#.#.#)
-        ## - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
+        ## - key: xbmcgui.INPUT_ALPHANUM (standard keyboard)
+        ## - key: xbmcgui.INPUT_NUMERIC (format: #)
+        ## - key: xbmcgui.INPUT_DATE (format: DD/MM/YYYY)
+        ## - key: xbmcgui.INPUT_TIME (format: HH:MM)
+        ## - key: xbmcgui.INPUT_IPADDRESS (format: #.#.#.#)
+        ## - key: xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
+        ## - opt: xbmcgui.PASSWORD_VERIFY (verifies an existing (default) md5 hashed password)
+        ## - opt: xbmcgui.ALPHANUM_HIDE_INPUT (masks input)
         return self.dialog.input(message, default, key, opt, close)
         
 

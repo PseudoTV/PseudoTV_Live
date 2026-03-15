@@ -222,8 +222,6 @@ class Globals:
     @staticmethod  
     def _randomSamples(items=[], x=-1):
         if isinstance(items, list):
-            if len(items) >= x: return random.sample(items, x)
+            if items and len(items) >= x: return random.sample(items, x)
             else:               return random.sample(items, len(items))
         return items
-        
-        import os
