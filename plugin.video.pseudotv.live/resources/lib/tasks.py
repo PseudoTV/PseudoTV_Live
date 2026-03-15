@@ -234,7 +234,6 @@ class Tasks(object):
             # pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
         
 
-    @threadit
     def chkLibrary(self, types=None, silent=None):
         if silent is None: silent = BUILTIN.isPlaying()
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
@@ -259,7 +258,6 @@ class Tasks(object):
         self.log("chkLibrary, complete = %s"%(any(list(complete))))
         
 
-    @threadit
     def chkChanged(self, channels=None, silent=None):
         if silent is None: silent = BUILTIN.isPlaying()
         if channels is None: channels = self.getChannels()
@@ -269,7 +267,6 @@ class Tasks(object):
             self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent))
         
         
-    @threadit
     def chkChannels(self, channels=None, silent=None):
         if silent is None: silent = BUILTIN.isPlaying()
         if channels is None: channels = self.getChannels()
@@ -285,7 +282,7 @@ class Tasks(object):
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():
                 if SETTINGS.setAutotuned(_auto()):
-                    self.service._que(self.chkChannels,3)
+                    if self.service._sleep(5): self.service._que(self.chkChannels,3)
             elif PROPERTIES.hasEnabledServers():
                 timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
 

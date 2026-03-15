@@ -179,10 +179,11 @@ class Builder(object):
             if not citem.get('changed',False) and detect:
                 state = any([SETTINGS.getFileCRC(file) for file in citem.get('path',[]) if file.endswith(tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS))])
             else: state = citem.get('changed',False)
-            citem['changed'] = False
             self.log('[%s] buildChannels, __hasChanged = %s'%(citem['id'],state))
-            if state: 
-                __clrChannel(citem) #clear channel m3u/xmltv 
+            if state: #clear channel m3u/xmltv 
+                if any([self.resetPagination(citem),self.m3u.delStation(citem),self.xmltv.delBroadcast(citem)]):
+                    self.log('[%s] buildChannels, __hasChanged cleared channel meta'%(citem['id']))
+                    citem['changed'] = False
                 changes.add(self.channels.addChannel(citem))
             return state
                     
@@ -197,10 +198,6 @@ class Builder(object):
             self.log('[%s] buildChannels, __hasFileList = %s'%(citem['id'],state))
             return state
         
-        def __clrChannel(citem: dict) -> bool:
-            if any([self.resetPagination(citem),self.m3u.delStation(citem),self.xmltv.delBroadcast(citem)]):
-                self.log('[%s] buildChannels, __clrChannel'%(citem['id']))
-
         def __addProgrammes(citem: dict, fileList: list) -> bool:
             state = any([self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)) for item in fileList])
             self.log('[%s] buildChannels, __addProgrammes fileList = %s'%(citem['id'],len(fileList)))
@@ -275,12 +272,11 @@ class Builder(object):
                                         if preview: return fileList
                             else: updates.add(__hasProgrammes(citem))
                                  
-                            if any(changes): self.channels.setChannels()
                             if any(updates): 
                                 completed.add(__addStation(citem)) #add m3u station if lineup available. 
                                 timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
-                            
                         except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)
+                    if any(changes): self.channels.setChannels()
                     self.log('[%s] buildChannels, completed = %s, updates = %s, changes = %s'%(citem['id'],any(completed),any(updates),any(changes)))
 
 

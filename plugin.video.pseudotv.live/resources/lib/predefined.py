@@ -42,7 +42,10 @@ class Predefined(object):
         
     @staticmethod
     def createMusicRecent() -> list:
-        return ['musicdb://recentlyaddedalbums/?xsp=%s'%(FileAccess.dumpJSON(Predefined.getTemplete()))]
+        param = Predefined.getTemplete()
+        param["order"]["method"] = "dateadded"
+        param["direction"]["method"] = "descending"
+        return ['musicdb://songs/?xsp=%s'%(FileAccess.dumpJSON(param))]
         
         
     @staticmethod
