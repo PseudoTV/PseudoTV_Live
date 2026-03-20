@@ -19,21 +19,18 @@
 # -*- coding: utf-8 -*-
 
 from globals      import *
+from seasonal     import Seasonal 
 from intergration import OpenRouter
 
 # Tunable: maximum number of entries to keep in the in-memory image cache.
 IMAGE_CACHE_MAX = CHANNEL_LIMIT
 LOCAL_FOLDERS   = [LOGO_LOC, IMAGE_LOC, TEMP_IMAGE_LOC]
-MUSIC_RESOURCE  = ["resource.images.musicgenreicons.text"]
-GENRE_RESOURCE  = ["resource.images.moviegenreicons.transparent"]
-STUDIO_RESOURCE = ["resource.images.studios.white"]
 
 # Precompile regexes used across calls
-_YEAR_RE        = re.compile(r'\b(19|20)\d{2}\b')
-_PAREN_RE       = re.compile(r'[\(\[\{].*?[\)\]\}]')
-_NON_ALNUM_RE   = re.compile(r'[^0-9a-z\s]+', re.IGNORECASE)
-_MULTI_WS_RE    = re.compile(r'\s+')
-_TOKEN_SPLIT_RE = re.compile(r'\s+')
+_YEAR_RE      = re.compile(r'\b\d{4}\b')
+_PAREN_RE     = re.compile(r'\([^)]*\)')
+_NON_ALNUM_RE = re.compile(r'[^a-zA-Z0-9\s&]')
+_MULTI_WS_RE  = re.compile(r'\s+')
 
 class Service(object):
     from jsonrpc import JSONRPC
@@ -54,30 +51,25 @@ class Service(object):
         return False
 
 class Resources(object):
+    seasonal = Seasonal()
+    
     def __init__(self, service=None):
         if service is None: service = Service()
         self.service     = service
+        self.monitor     = service.monitor
         self.jsonRPC     = service.jsonRPC
         self.cache       = service.jsonRPC.cache
         self.baseURL     = service.jsonRPC.buildWebBase()
+        self.holiday     = self.seasonal.getHoliday()
         self.remoteHost  = PROPERTIES.getRemoteHost()
         self.openRouter  = OpenRouter(cache=self.cache)
         self.imageCache  = OrderedDict(SETTINGS.getCacheSetting('imageCache'  ) or {})
+        self.pruneCache()
         
-        # trim if oversized
-        while len(self.imageCache) > IMAGE_CACHE_MAX:
-            self.imageCache.popitem(last=False)
-        self.log(f'__init__, imageCache = {len(self.imageCache)}')
-
 
     def __del__(self):
-        try:
-            # persist as a plain dict (smaller on disk than OrderedDict)
-            SETTINGS.setCacheSetting('imageCache'  , dict(self.imageCache)  )
-            self.log(f'__del__, imageCache = {len(self.imageCache)}')
-        except Exception:
-            # avoid raising in destructor
-            pass
+        SETTINGS.setCacheSetting('imageCache', dict(self.imageCache)  )
+        self.log(f'__del__, imageCache = {len(self.imageCache)}')
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -99,65 +91,60 @@ class Resources(object):
             except Exception as e: self.log(f'queueLogo failed: {e}', xbmc.LOGWARNING)
 
 
+    def pruneCache(self):
+        while not self.monitor.abortRequested() and len(self.imageCache) > IMAGE_CACHE_MAX:
+            self.imageCache.popitem(last=False)
+        self.log(f'pruneCache, imageCache = {len(self.imageCache)}')
+
+
     def getCache(self, chname):
         # Use OrderedDict LRU behavior: move to end on access
         image = self.imageCache.get(chname)
         if image is not None:
             try: self.imageCache.move_to_end(chname)
             except Exception: pass
-        else: self.queueLogo({'name':chname})
+        else: return self.queueLogo({'name':chname})
         self.log('getCache, name = %s, image = %s'%(chname,image))
         return image
 
 
     def setCache(self, chname, image=None):
-        # avoid caching sentinel logo values
-        if image in [LOGO,COLOR_LOGO]: return image
-        try:
-            if not image: return None
-            self.imageCache[chname] = image
-            try: self.imageCache.move_to_end(chname)
-            except Exception: pass
-            while len(self.imageCache) > IMAGE_CACHE_MAX:
-                self.imageCache.popitem(last=False)
-            self.log('setCache, name = %s, image = %s'%(chname,image))
-        except Exception as e:
-            self.log(f'setCache failed: {e}', xbmc.LOGWARNING)
+        if image:
+            try:
+                self.imageCache[chname] = image
+                try: self.imageCache.move_to_end(chname)
+                except Exception: pass
+                self.pruneCache()
+                self.log('setCache, name = %s, image = %s'%(chname,image))
+            except Exception as e: self.log(f'setCache failed: {e}', xbmc.LOGWARNING)
         return image
 
 
     def getLogo(self, citem: dict, fallback=None, lookup=False, logo=None) -> str:
-        self.log('[%s] getLogo, name = %s, lookup = %s'%(citem.get('id'),citem.get('name'),lookup))
-        # if not logo and citem.get('name') == LANGUAGE(32002): logo = self.season.get('logo')               # seasonal
-        if not logo and not lookup:                           logo = self.getCache(citem.get('name'))      # cache
-        if not logo and not lookup:                           logo = self.queueLogo(citem)                 # queue lookup
-        if not logo and not lookup and fallback:              logo = fallback                              # fallback
+        if not logo and citem.get('name') == LANGUAGE(32002): logo = self.holiday.get('logo')         # seasonal
+        if not logo and not lookup:                           logo = self.getCache(citem.get('name')) # cache
+        if not logo and not lookup:                           logo = self.queueLogo(citem)            # queue lookup
+        if not logo and not lookup and fallback:              logo = fallback                         # fallback
         if not logo and lookup: # perform progressively heavier lookups only when lookup=True
-            logo = self.getLocalLogo(citem.get('name'))  # local
+            logo = self.getLocalLogo(citem.get('name'))                # local
             if not logo: logo = self.getLogoResources(citem)           # resources
             if not logo: logo = self.getTVShowLogo(citem.get('name'))  # tvshow
             if not logo: logo = self.generateOnline(citem.get('name')) # generative (online)
             if not logo: logo = self.generateLocal(citem.get('name'))  # generative (local)
-        if not logo: logo = LOGO  # default
+            if logo: self.setCache(citem.get('name'), logo)            # cache
+        if not logo: logo = LOGO                                       # default
+        self.log('[%s] getLogo, name = %s, lookup = %s, logo = %s'%(citem.get('id'),citem.get('name'),lookup,logo))
         return self.buildWebImage(citem.get('name'), cleanImage(logo))
 
 
     def buildWebImage(self, chname: str, image: str='') -> str:
-        # Avoid repeated heavy set() operation and use efficient checks
         if image:
             lower_image = image.lower()
-            if not (lower_image.startswith('image://') or lower_image.startswith('resource://') or
-                    lower_image.startswith('http://') or lower_image.startswith('https://') or
-                    'smb://' in lower_image or 'nfs://' in lower_image):
-                # convert to web served image URL
-                if image.startswith('image://'):
-                    image = '%s/image/%s'%(self.baseURL,Globals._quoteString(image))
-                elif not image.startswith('http://%s/logos/'%(self.remoteHost)):
-                    image = 'http://%s/images/%s'%(self.remoteHost,Globals._quoteString(image))
-                # Cache the resolved image path and return the hosted logo URL
-                self.setCache(chname, image)
+            if not lower_image.startswith(('image://','resource://')) and not any(p in lower_image for p in ['http', 'smb', 'nfs']):
+                if image.startswith('image://'):                                 image = '%s/image/%s'%(self.baseURL,Globals._quoteString(image))
+                elif not image.startswith('http://%s/logos/'%(self.remoteHost)): image = 'http://%s/images/%s'%(self.remoteHost,Globals._quoteString(image))
                 return 'http://%s/logos/%s'%(self.remoteHost,Globals._quoteString(chname)) # host channel logos
-        return self.setCache(chname, image)
+        return image
 
 
     @cacheit(expiration=datetime.timedelta(minutes=5))
@@ -168,74 +155,38 @@ class Resources(object):
                 fn = os.path.join(path, f'{chname}{ext}')
                 if FileAccess.exists(fn):
                     self.log('getLocalLogo, found %s' % fn)
-                    if select:
-                        logos.append(fn)
-                    else:
-                        return fn
-        if select:
-            return logos
+                    if select: logos.append(fn)
+                    else: return fn
+        if select: return logos
         return None
 
 
-    def getLogoResources(self, citem: dict, select: bool=False,  copy: bool=False) -> dict and None:
+    def getLogoResources(self, citem: dict, select: bool=False) -> dict and None:
         self.log('getLogoResources, chname = %s, type = %s, select = %s'%(citem.get('name'), citem.get('type'),select))
 
         def __getResources(type):
-            resources = SETTINGS.getSetting('Resource_Logos').split('|').copy()
-            if   type in ["TV Genres","Movie Genres"]:
-                resources.extend(GENRE_RESOURCE)
-            elif type in ["TV Networks","Movie Studios"]:
-                resources.extend(STUDIO_RESOURCE)
-            elif type in ["Music Genres","Radio"] or isRadio(citem):
-                resources.extend(MUSIC_RESOURCE)
-            else:
-                resources.extend(GENRE_RESOURCE + STUDIO_RESOURCE)
-            self.log('getResources, type = %s, resources = %s'%(type,resources))
-            return resources
+            return SETTINGS.getSetting('Resource_Logos').split('|')
 
-        def __fillResource(id):
-            results  = {}
-            try:
-                addon_version = SETTINGS.getAddonDetails(id).get('version', ADDON_VERSION)
-                response = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources' % id),
-                                                         exts=IMG_EXTS,
-                                                         checksum=addon_version,
-                                                         expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
-                for path, images in list(response.items()):
-                    for image in images:
-                        results[os.path.splitext(image)[0]] = '%s/%s' % (path, image)
-            except Exception as e:
-                self.log('__fillResource failed for %s: %s' % (id, e), xbmc.LOGWARNING)
-            return results
+        def __exists(path):
+            return FileAccess.exists(path)
 
-        resources = __getResources(citem.get('type','Custom'))
-        checksum  = FileAccess._getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if SETTINGS.hasAddon(id)]))
-        cacheName = 'getLogoResources.%s.%s' % (FileAccess._getMD5(citem.get('name')), select)
+        resources     = __getResources(citem.get('type','Custom'))
+        checksum      = FileAccess._getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if SETTINGS.hasAddon(id)]))
+        cacheName     = 'getLogoResources.%s.%s' % (FileAccess._getMD5(citem.get('name')), select)
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
             logos = []
-            for id in resources:
-                if not SETTINGS.hasAddon(id): continue
-                results = __fillResource(id)
-                self.log('getLogoResources, checking %s, results = %s'%(id,len(results)))
-                for title, logo in list(results.items()):
-                    if self.matchName(citem.get('name'), title):
-                        self.log('getLogoResources, found %s'%(logo))
-                        # append full resource path
-                        logos.append(logo)
-                        if not select:
-                            if copy:
-                                try:
-                                    ext = os.path.splitext(logo)[1].lstrip('/')
-                                    nlogo = os.path.join(TEMP_IMAGE_LOC, '%s.%s' % (citem.get('name'), ext))
-                                    if FileAccess.copy(logo, nlogo):
-                                        logo = nlogo
-                                except Exception as e:
-                                    self.log(f'copy resource failed: {e}', xbmc.LOGWARNING)
-                            # cache first match and return immediately
-                            return self.cache.set(cacheName, logo, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
-            if logos:
-                return self.cache.set(cacheName, logos, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            names = self.getNames(citem.get('name'), citem.get('type'))
+            for name in names:
+                for id in resources:
+                    if SETTINGS.hasAddon(id):
+                        logo = f'resource://{id}/{name}.png'
+                        if __exists(logo):
+                            self.log('getLogoResources, found %s'%(logo))
+                            logos.append(logo)
+                            if not select: 
+                                return self.cache.set(cacheName, logo, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            if logos: cacheResponse = self.cache.set(cacheName, logos, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
 
 
@@ -245,48 +196,44 @@ class Resources(object):
         cacheResponse = self.cache.get(cacheName)
         if not cacheResponse:
             logos = []
-            try:
-                items = self.jsonRPC.getTVshows()
+            try: items = self.jsonRPC.getTVshows()
             except Exception as e:
                 self.log('getTVShowLogo: getTVshows failed: %s' % e, xbmc.LOGWARNING)
                 return None
-            for item in items:
-                if self.matchName(chname, item.get('title','')):
-                    art = item.get('art', {})
-                    for key in ['clearlogo','logo','logos','clearart','icon']:
-                        logo = art.get(key,'')
-                        if not logo: continue
-                        logo = logo.replace('image://DefaultFolder.png/','').rstrip('/')
-                        if logo:
-                            self.log('getTVShowLogo, found %s'%(logo))
-                            logos.append(logo)
-                            if not select:
-                                return self.cache.set(cacheName, logo, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
-            if logos:
-                return self.cache.set(cacheName, logos, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            
+            names = self.getNames(chname, "TV Shows")
+            for name in names:
+                for item in items:
+                    if name.casefold() == item.get('title','').casefold():
+                        art = item.get('art', {})
+                        for key in ['clearlogo','logo','logos','clearart','icon']:
+                            logo = art.get(key,'')
+                            if not logo: continue
+                            logo = logo.replace('image://DefaultFolder.png/','').rstrip('/')
+                            if logo:
+                                self.log('getTVShowLogo, found %s'%(logo))
+                                logos.append(logo)
+                                if not select: return self.cache.set(cacheName, logo, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            if logos: cacheResponse = self.cache.set(cacheName, logos, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
 
 
-    def matchName(self, chname: str, title: str, type: str='Custom', threshold=0.75) -> bool and None:
-        def __normalize(s: str) -> str:
-            if not s:  return ''
-            s = s.lower()
-            s = s.replace('&', ' and ')
-            s = _PAREN_RE.sub(' ', s)
-            s = _YEAR_RE.sub(' ', s)
-            s = _NON_ALNUM_RE.sub(' ', s)
-            s = _MULTI_WS_RE.sub(' ', s).strip()
-            return s[4:] if s.startswith('the ') else s
-            
-        a, b = __normalize(chname), __normalize(title)
-        if not a or not b:   return False
-        if a == b:           return True
-        if a in b or b in a: return True
-        # Token Intersection check
-        a_tokens = set(_TOKEN_SPLIT_RE.split(a))
-        b_tokens = set(_TOKEN_SPLIT_RE.split(b))
-        if not a_tokens.intersection(b_tokens): return False
-        return SequenceMatcher(None, a, b).ratio() >= threshold
+    def getNames(self, chname: str, type: str="Custom") -> list:
+        if not chname: return []
+        variations = {chname} # original name
+        variations.add(cleanChannelSuffix(chname, type)) # Remove Suffix
+        variations.add(_NON_ALNUM_RE.sub(' ', chname)) # Remove Non-Alphanumeric (except spaces and &)
+        
+        if '&' in chname: variations.add(chname.replace('&', ' and '))  # '&' to 'and' replacement
+        elif ' and ' in chname: variations.add(chname.replace(' and ', '&')) # 'and' to '&' replacement
+        if '(' in chname and ')' in chname: variations.add(_PAREN_RE.sub(' ', chname))# Remove Parentheses contents
+        if _YEAR_RE.search(chname): variations.add(_YEAR_RE.sub(' ', chname)) # Remove Years
+        if chname.lower().startswith('the '): variations.add(chname[4:])# Handle 'the ' prefix removal
+        final_results = set() # Final cleanup: apply the 'multi-whitespace' rule to all generated variants
+        for v in variations:
+            cleaned = _MULTI_WS_RE.sub(' ', v).strip()
+            if cleaned: final_results.add(cleaned)
+        return sorted(list(final_results))
             
         
     def isMono(self, file: str, mono: bool=False) -> bool:
@@ -364,14 +311,11 @@ class Resources(object):
                 except Exception: pass
             return image_path
         except Exception as e:
-            self.log(f'generateLocal failed: {e}', xbmc.LOGWARNING)
+            self.log(f'generateLocal failed!: {e}', xbmc.LOGWARNING)
             return None
 
 
-    def generateOnline(self, citem, select=False, model=SETTINGS.getSetting('OPENROUTER_IMAGE_MODEL')):
-        # deferred/disabled for memory and cost reasons by default; can be implemented on-demand via self.openRouter
+    def generateOnline(self, citem, select=False):
         if self.openRouter:
-            try: return self.openRouter.getImage(citem, 1, model)
-            except Exception as e: self.log(f'generateOnline failed: {e}', xbmc.LOGWARNING)
-                
-                
+            try: return self.openRouter.getImage(citem, 1, SETTINGS.getSetting('Generative_Image_Model'))
+            except Exception as e: self.log(f'generateOnline failed!: {e}', xbmc.LOGWARNING)

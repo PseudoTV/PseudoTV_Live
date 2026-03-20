@@ -62,7 +62,7 @@ msgid "Options"
 msgstr ""
 
 msgctxt "#30011"
-msgid "[COLOR=red][B]Warning!! [/B]It's Recommend Flash/SSD users change path to a HDD or PMem.[/COLOR]"
+msgid "[COLOR=orange][B]Notice!! [/B]It's Recommend Flash/SSD users change path to a HDD or PMem.[/COLOR]"
 msgstr ""
 
 msgctxt "#30012"
@@ -126,7 +126,7 @@ msgid "One Insert"
 msgstr ""
 
 msgctxt "#30027"
-msgid "Logo Resource"
+msgid "Logo Resources"
 msgstr ""
 
 msgctxt "#30028"
@@ -934,7 +934,7 @@ msgid "Enable Smart Shuffling"
 msgstr ""
 
 msgctxt "#30227"
-msgid "Cache Percentage of Ram"
+msgid "System Memory Limit Percentage."
 msgstr ""
 
 msgctxt "#30228"
@@ -946,9 +946,16 @@ msgid "Predefined"
 msgstr ""
 
 msgctxt "#30230"
-msgid "Autotuned Channels"
+msgid "Autotune Channels"
 msgstr ""
 
+msgctxt "#30231"
+msgid "Select Image Model"
+msgstr ""
+
+msgctxt "#30232"
+msgid "Select Contextual Model"
+msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins
 
@@ -1123,7 +1130,7 @@ msgid "Library"
 msgstr ""
 
 msgctxt "#32042"
-msgid "[B]Welcome to %s![/B]\n[B]No[/B] Channels found, Would you like enable Autotuned Channel Creation"
+msgid "[B]Welcome to %s![/B]\n[B]No[/B] Channels found, Would you like enable Autotuned Channels for automatic channel creation?"
 msgstr ""
 
 msgctxt "#32043"
@@ -2216,7 +2223,7 @@ msgid "Restore the last channel backup."
 msgstr ""
 
 msgctxt "#33109"
-msgid "Adjust delay between JSONRPC requests (in milliseconds) to avoid crashes.\nIncreading value decreases performance; while adding system stability. [1 Default]"
+msgid "Adjust delay between JSONRPC requests (in seconds) to avoid crashes.\nIncreasing value decreases performance; while adding system stability. [1 Default]"
 msgstr ""
 
 msgctxt "#33110"
@@ -2316,7 +2323,7 @@ msgid "Force a complete rebuild of your Autotune library."
 msgstr ""
 
 msgctxt "#33160"
-msgid "Select one or more logo resource packs."
+msgid "Select one or more channel logo resource packs."
 msgstr ""
 
 msgctxt "#33161"
@@ -2404,7 +2411,7 @@ msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\n
 msgstr ""
 
 msgctxt "#33201"
-msgid "How long to wait for JSONRPC response in minutes [0 Disabled 600 Default]\nPervent system hangs while waiting for a lengthy response."
+msgid "How long to wait for JSONRPC response in minutes [0 Disabled 2 Default]\nPervent system hangs while waiting for a lengthy response."
 msgstr ""
 
 msgctxt "#33202"
@@ -2440,7 +2447,7 @@ msgid "[COLOR=red][B]Warning!! [/B][/COLOR]PseudoTV is not responsible for exces
 msgstr ""
 
 msgctxt "#33220"
-msgid ""
+msgid "Change the default A.I. generative prompt use {name} and {group} along with details on the type of logo to generate."
 msgstr ""
 
 msgctxt "#33222"
@@ -2448,7 +2455,7 @@ msgid "How long to wait in seconds before PseudoTV attempts to correct failed pl
 msgstr ""
 
 msgctxt "#33224"
-msgid "How many sub-folders to recursively search, 0 == Root Folder Only. [0 Default]"
+msgid "How many sub-folders to recursively search, 0 == Root Folder Only. [0 Default]\nIncrease based on your media folder hierarchy."
 msgstr ""
 
 msgctxt "#33225"
@@ -2460,7 +2467,7 @@ msgid "Enable Smart Shuffling\nChanges may propagate slowly over time and may no
 msgstr ""
 
 msgctxt "#33227"
-msgid "Percentage of system ram to reserve for cache"
+msgid "System Memory limit by percentage cache can utilize."
 msgstr ""
 
 msgctxt "#33228"
@@ -2497,7 +2504,7 @@ msgid "Submit debugging log for review to http://paste.kodi.tv."
 msgstr ""
 
 msgctxt "#33310"
-msgid "Open Channel Manager"
+msgid "Open Settings"
 msgstr ""
 
 msgctxt "#33311"

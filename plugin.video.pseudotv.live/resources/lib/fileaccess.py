@@ -194,8 +194,7 @@ class FileAccess(object):
         
     @staticmethod
     def listdir(path):
-        if FileAccess.exists(path): xbmcvfs.listdir(path)
-        return [],[]
+        xbmcvfs.listdir(path)
 
 
     @staticmethod
@@ -402,6 +401,10 @@ class VFSFile(object):
     def write(self, data):
         if isinstance(data,bytes):
             data = data.decode(DEFAULT_ENCODING, 'backslashreplace')
+        return self.currentFile.write(data)
+        
+        
+    def writeBytes(self, data):
         return self.currentFile.write(data)
         
         

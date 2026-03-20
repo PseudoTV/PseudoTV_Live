@@ -1,5 +1,10 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
 
+v.0.7.2+nightly
+- Improved Channel logo detection, and logo resource selection in settings.
+- Improved A.I. Integration.
+- Tweaked "Even Show Distribution" rules.
+
 v.0.7.1+nightly
 - Added "Recently Added Music" to Autotuning.
 - Added "Automatic" channels to settings; disables Channel Manager while active. Provides lazy configuration free channels that periodically update based on your "Future Days" LiveTV setting. Channels are curated from Kodi's top 25 content by category.

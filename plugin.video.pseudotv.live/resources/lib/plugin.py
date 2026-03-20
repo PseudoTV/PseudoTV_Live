@@ -40,7 +40,7 @@ class Plugin(object):
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
         self.sysInfo['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
         mode = 'playlist' if any([self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist']]) else sysInfo.get('mode')
-        self.log(f'__init__, mode = {mode}, sysARG = {sysInfo.get('sysARG')}')
+        self.log(f'__init__, mode = {mode}, sysInfo = {self.sysInfo}')
         
         if   mode == 'live':                    self.playLive()
         elif mode == 'radio':                   self.playRadio()
@@ -213,12 +213,13 @@ class Plugin(object):
                     DIALOG.notificationDialog(f'{LANGUAGE(32185)}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
                     listitem = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
                 else:
-                    #STRM called from Guide, presumably live; workaround for Kodi breaking .strm handling in setResolvedUrl.
+                    #STRM called from Guide, presumably live; workaround for Kodi bug w/strm handling in setResolvedUrl.
                     listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
                 listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
                 self._play(listitem.getPath(),listitem)
             else:#LIVE called from Guide/Channels.
-                listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+                listitem = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+                listitem = self._setResume(listitem)
                 listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.sysInfo)))
                 self._resolveURL(True, listitem)
         

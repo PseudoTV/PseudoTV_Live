@@ -35,14 +35,15 @@ class OpenRouter(object):
 
 
     def _request(self, url, params={}, payload={}, header=HEADER, timeout=15):
-        if SETTINGS.getSettingBool('Enable_Generative_Artwork'):
+        if SETTINGS.getSettingBool('Allow_Artificial_Intelligence'):
             header.update({"Authorization": f"Bearer {SETTINGS.getSetting('Open_Router_APIKEY')}"})
             return requestURL(url, params, payload, header, timeout, cache={'cache':self.cache,'life':datetime.timedelta(days=MAX_GUIDEDAYS)})
 
 
+    @cacheit()
     def _getModels(self):
         response = self._request("https://openrouter.ai/api/v1/models")
-        print('_getModels',response)
+        print(response)
         image_models = []
         text_models  = []
         if "data" in response:
@@ -51,14 +52,34 @@ class OpenRouter(object):
                 if   "image" in capabilities: image_models.append(model)
                 elif "text"  in capabilities: text_models.append(model)
         self.log('_getModels, image_models = %s, text_models = %s'%(len(image_models),len(text_models)))
-        return image_models, text_models
+        return sorted(image_models,key=itemgetter('name')), sorted(text_models,key=itemgetter('name'))
+        
+        
+    def _getImageModels(self):
+        try:
+            image_models, text_models = self._getModels()
+            print(image_models)
+            select = DIALOG.selectDialog([item.get('name') for item in image_models], header=ADDON_NAME, preselect=Globals._findItemsInLST(image_models,SETTINGS.getSetting('Generative_Image_Model'),'id'), useDetails=False, multi=False)
+            print(select)
+            SETTINGS.setSetting('Generative_Image_Model',image_models[select].get('id'))
+        except Exception as e: self.log("_getImageModels, failed! %s"%(e), xbmc.LOGERROR)
+            
+            
+    def _getContextModels(self):
+        try:
+            image_models, text_models = self._getModels()
+            print(text_models)
+            select = DIALOG.selectDialog([item.get('name') for item in text_models], header=ADDON_NAME, preselect=Globals._findItemsInLST(text_models,SETTINGS.getSetting('Generative_Contextual_Model'),'id'), useDetails=False, multi=False)
+            print(select)
+            SETTINGS.setSetting('Generative_Contextual_Model',text_models[select].get('id'))
+        except Exception as e: self.log("_getContextModels, failed! %s"%(e), xbmc.LOGERROR)
         
             
-    def _getImage(self, citem, count=1, model="google/gemini-2.5-flash-image-preview", background_color=(0, 255, 0)):
-        self.log('_getImage, chname = %s, count = %s, model = %s'%(citem.get('name'), count, model))
+    def getImage(self, citem, count=1, model="google/gemini-2.5-flash-image-preview", background_color=(0, 255, 0)):
+        self.log('getImage, chname = %s, count = %s, model = %s'%(citem.get('name'), count, model))
         payload = { "model"        : model,
                     "messages"     : [ { "role": "user",
-                                          "content": SETTINGS.getSetting('Gnerative_Artwork_Prompt').format(name=citem.get('name'),group='%s %s'%(citem.get('name'),', '.join(citem.get('group',[]).remove(ADDON_NAME))))}],
+                                          "content": SETTINGS.getSetting('Generative_Image_Prompt').format(name=citem.get('name'),group='%s %s'%(citem.get('name'),', '.join(citem.get('group',[]).remove(ADDON_NAME))))}],
                   "modalities"     : ["image"],
                   "response_format": {"type": "b64_json"},
                    "n"             : count,
@@ -111,9 +132,8 @@ class OpenRouter(object):
         IMAGE_PATH = "/path/to/your/image.jpg" # Replace with the path to your image file
         OUTPUT_PATH = "image-no-bg.png" # Desired output file name
 
-        response = requests.post(
-            'https://api.remove.bg/v1.0/removebg',
-            files={'image_file': open(os.path.join(TEMP_IMAGE_LOC,file_name), 'rb')}, data={'size': 'auto'}, headers={'X-Api-Key': SETTINGS.getSetting('Remove_BG_APIKEY')})
+        response = requests.post('https://api.remove.bg/v1.0/removebg',
+             files={'image_file': open(os.path.join(TEMP_IMAGE_LOC,file_name), 'rb')}, data={'size': 'auto'}, headers={'X-Api-Key': SETTINGS.getSetting('Remove_BG_APIKEY')})
 
         if response.status_code == requests.codes.ok:
             with open(os.path.join(LOGO_LOC,file_name), 'wb') as out:
@@ -121,5 +141,17 @@ class OpenRouter(object):
             print(f"Background removed successfully! Image saved to {os.path.join(LOGO_LOC,file_name)}")
         else:
             print("Error:", response.status_code, response.text)
-                
-    
+            
+            
+    @staticmethod
+    def _run(sysARG):
+        with BUILTIN.busy_dialog():
+            ctl = (5,1)
+            try:              param = sysARG[1]
+            except Exception: param = None
+            log('OpenRouter: param = %s'%(param))
+            if param == 'getImageModels':   OpenRouter()._getImageModels()
+            if param == 'getContextModels': OpenRouter()._getContextModels()
+            return Globals._openSettings(ctl)
+
+if __name__ == '__main__': OpenRouter()._run(sys.argv)

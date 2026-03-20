@@ -21,15 +21,16 @@ from globals    import *
 from manager    import Manager
 
 @threadit
-def _open(fitem):
+def _open(fitem={}):
     log('Create: open')
     if not PROPERTIES.isRunning('Create.open'):
-        with PROPERTIES.chkRunning('Create.open'), BUILTIN.busy_dialog(cancel=PROPERTIES.isRunning('Manager'), lock=True):
+        with PROPERTIES.interruptActivity(), PROPERTIES.chkRunning('Create.open'), BUILTIN.busy_dialog(cancel=PROPERTIES.isRunning('Manager'), lock=True):
             try: manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=fitem.get('citem',{}).get('number',1))
             except Exception as e:
                 log("Create: open, failed! %s"%(e), xbmc.LOGERROR)
                 PROPERTIES.setRunning('Create.open',False)
             finally:del manager
+            return True
     else: DIALOG.notificationDialog(LANGUAGE(32057)%(ADDON_NAME))
             
 @threadit  
@@ -58,17 +59,16 @@ def _add(sysARG, listitem: dict={}):
                     manager._addChannels(citem['number'], citem)
                     manager.closeManager()
                 del manager
+                timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkChanged',True))#trigger channel check
                 return DIALOG.notificationDialog("%s [B]%s[/B]: [B]%s[/B]\nAdded!"%(LANGUAGE(30223),citem['number'],citem['name']))
 
 def _auto(start=1, count=-1):
-    if count <= 0:
-        count = min(max(SETTINGS.getSettingInt('Autotune_Limit'), AUTOTUNE_CHANNEL_DEFAULT), AUTOTUNE_CHANNEL_LIMIT)
-        
-    autoChannels = SETTINGS.getSettingBool('Autotuned_Channels')
+    if count <= 0: count = min(max(SETTINGS.getSettingInt('Autotune_Limit'), AUTOTUNE_CHANNEL_DEFAULT), AUTOTUNE_CHANNEL_LIMIT)
+    autoChannels = SETTINGS.getSettingBool('Enable_Autotuned_Channels')
     if not autoChannels:
-        hasChannels  = PROPERTIES.hasChannels()
-        hasLibrary   = any([PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES])
-        log(f'Create: _auto, Count = {count}, hasChannels = {hasChannels}, hasLibrary = {hasLibrary}')
+        hasLibrary  = any([PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES])
+        hasChannels = PROPERTIES.hasChannels()
+        log(f'Create: _auto, Count = {count}, hasLibrary = {hasLibrary}, hasChannels = {hasChannels}')
         
         if not hasChannels and hasLibrary:
             hasBackup  = PROPERTIES.hasBackup()
@@ -79,15 +79,24 @@ def _auto(start=1, count=-1):
                 if retval == 0: #No
                     return True
                 elif retval == 1: #Yes
-                    SETTINGS.setSettingBool('Autotuned_Channels',True)
+                    SETTINGS.setSettingBool('Enable_Autotuned_Channels',True)
+                    timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkChanged',True))#trigger channel check
                     break       
                 elif retval == 2:#Custom
+                    def __manager():  return _open()
+                    def __settings(): return Globals._openSettings()
+                    def __recover():  return BUILTIN.executebuiltin(f'RunScript(special://home/addons/{ADDON_ID}/resources/lib/backup.py, Recover_Backup)')
+                    def __server():   return BUILTIN.executebuiltin(f'RunScript(special://home/addons/{ADDON_ID}/resources/lib/multiroom.py, Select_Server_Client)')
+                        
                     with BUILTIN.busy_dialog():
-                        menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33310),url='special://home/addons/%s/resources/lib/utilities.py, Channel_Manager'%(ADDON_ID))]
-                        if hasBackup:  menu.append(LISTITEMS.buildMenuListItem('%s %s'%(LANGUAGE(32112),LANGUAGE(30108)),LANGUAGE(32111),url='special://home/addons/%s/resources/lib/backup.py, Recover_Backup'%(ADDON_ID)))
-                        if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='special://home/addons/%s/resources/lib/multiroom.py, Select_Server_Client'%(ADDON_ID)))
+                        menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),url='__manager'),
+                                LISTITEMS.buildMenuListItem(LANGUAGE(33310),url='__settings')]
+                        if hasBackup:  menu.append(LISTITEMS.buildMenuListItem('%s %s'%(LANGUAGE(32112),LANGUAGE(30108)),LANGUAGE(32111),url='__recover'))
+                        if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='__server'))
                     select = DIALOG.selectDialog(menu,multi=False)
-                    if not select is None: return BUILTIN.executescript(menu[select].getPath())
+                    if not select is None: 
+                        try: return eval(menu[select].getPath())()
+                        except Exception: log("Create: _auto, failed! %s"%(e), xbmc.LOGERROR)
                 return False #Cancel
         else: return True #Has Channnels / No Kodi Library
         
@@ -108,35 +117,27 @@ def _auto(start=1, count=-1):
     del manager
     return True
               
-@threadit      
-def _clrLibrary():
-    DIALOG.notificationDialog(LANGUAGE(32025))
-    manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
-    manager.clrLibraryCache()
-    del manager       
+# @threadit      
+# def _clrLibrary():
+    # #elif mode == 'clear_autotune' : _clrLibrary()
+    # DIALOG.notificationDialog(LANGUAGE(32025))
+    # manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
+    # manager.clrLibraryCache()
+    # del manager       
     
-@threadit   
-def _clrBlacklist():
-    DIALOG.notificationDialog(LANGUAGE(32025))
-    SETTINGS.setSetting('Clear_BlackList','')
+# @threadit   
+# def _clrBlacklist():
+    # # elif mode == 'clear_blackList': _clrBlacklist()
+    # DIALOG.notificationDialog(LANGUAGE(32025))
+    # SETTINGS.setSetting('Clear_BlackList','')
         
 if __name__ == '__main__': 
     log('Create: __main__, param = %s'%(sys.argv))
     try:              mode = sys.argv[1]
     except Exception: mode = ''
     try:
-        if   mode == 'manager':         _open(Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
-        elif mode == 'Clear_Autotune' : _clrLibrary()
-        elif mode == 'Clear_BlackList': _clrBlacklist()
-        elif mode == 'select':  
-            values = SETTINGS.getSettingList('Select_server')
-            values = [cleanLabel(value) for value in values]
-            values.insert(0,LANGUAGE(30022)) #Auto
-            values.insert(1,LANGUAGE(32069)) #Ask
-            select = DIALOG.selectDialog(values, '%s for Channel Setup'%(LANGUAGE(30173)), Globals._findItemsInLST(values, [SETTINGS.getSetting('Default_Channels')])[0], False, SELECT_DELAY, False)
-            if not select is None: SETTINGS.setSetting('Default_Channels',values[select])
-            else:                  SETTINGS.setSetting('Default_Channels',LANGUAGE(30022))
-        else: _add(sys.argv,sys.listitem)
+        if   mode == 'add':          _add(sys.argv,sys.listitem)
+        elif mode == 'open_manager': _open(Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
     except Exception as e: 
         log('Create: __main__, failed! %s' % e, xbmc.LOGERROR)
         Globals._notificationDialog(LANGUAGE(30079))

@@ -306,7 +306,6 @@ COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 COLOR_FANART        = os.path.join(MEDIA_LOC,'fanart.jpg')
 SEASONAL_LOGO       = os.path.join(IMAGE_LOC,'Seasonal.png')
 HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
-DUMMY_ICON          = 'https://dummyimage.com/512x512/%s/%s.png&text={text}'%(COLOR_BACKGROUND,COLOR_TEXT)
 
 #skins
 BUSY_XML        = '%s.busy.xml'%(ADDON_ID)

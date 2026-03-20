@@ -132,7 +132,7 @@ class Tasks(object):
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800 , 1)#3HRS
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300   , 1)#5MINS
         self._chkEpochTimer('chkServers'      , self.chkServers       , 1800  , 1)#30MINS
-        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 600   , 1)#10MINS
+        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 120   , 1)#2MINS
         
         if not self.service.isClient:
             self._chkEpochTimer('chkFiles'    , self.chkFiles         , 600   , 1)#10MINS
@@ -282,7 +282,8 @@ class Tasks(object):
             self.log('chkChannels, No Channels Configured!')
             if not SETTINGS.hasAutotuned():
                 if SETTINGS.setAutotuned(_auto()):
-                    if self.service._sleep(5): self.service._que(self.chkChannels,3)
+                    if self.service._sleep(5):
+                        self.service._que(self.chkChannels,3)
             elif PROPERTIES.hasEnabledServers():
                 timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
 
@@ -298,8 +299,8 @@ class Tasks(object):
                 timerit(PROPERTIES.setEXTProperty)(M3U_REFRESH*2,*('%s.HTTP.pendingRestart'%(ADDON_ID),True))
                 if brute:
                     if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
-                        BUILTIN.executewindow('ActivateWindow(home)')
-                        DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
+                        DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH*2, usethread=True)
+                        BUILTIN.qf('ActivateWindow(home)')
                         __toggle(False), timerit(__toggle)(M3U_REFRESH*2)
                     else:  timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
                 else: DIALOG.notificationDialog(f"Attempting to refresh {PVR_CLIENT_NAME}\n {LANGUAGE(30155)}")

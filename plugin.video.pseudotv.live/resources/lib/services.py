@@ -476,7 +476,8 @@ class Service(object):
     jsonQue          = set(SETTINGS.getCacheSetting('jsonQue') or [])
     postQue          = set(SETTINGS.getCacheSetting('postQue') or [])
     logoQue          = set(SETTINGS.getCacheSetting('logoQue') or [])
-    
+
+
     def __init__(self):
         self.jsonRPC     = JSONRPC(service=self)
         self.monitor     = Monitor(service=self)
@@ -515,7 +516,7 @@ class Service(object):
     
     
     def _shutdown(self, wait=SERVICE_INTERVAL) -> bool: #service break
-        pendingShutdown = (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
+        pendingShutdown = any([self.monitor.waitForAbort(wait),PROPERTIES.isPendingShutdown()])
         if self.pendingShutdown != pendingShutdown:
             self.pendingShutdown = pendingShutdown
             self.log('_shutdown, pendingShutdown = %s, wait = %s'%(self.pendingShutdown,wait))
@@ -531,7 +532,7 @@ class Service(object):
          
         
     def _interrupt(self) -> bool: #tasks break
-        pendingInterrupt = (self.pendingShutdown | self.pendingRestart | self.isScanning | self.isPlaying | PROPERTIES.isInterruptActivity())
+        pendingInterrupt = any([self.pendingShutdown, self.pendingRestart, self.isScanning, self.isPlaying, PROPERTIES.isInterruptActivity()])
         if pendingInterrupt != self.pendingInterrupt:
             self.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
             self.log('_interrupt, pendingInterrupt = %s'%(self.pendingInterrupt))
@@ -539,16 +540,16 @@ class Service(object):
     
 
     def _suspend(self, wait=0) -> bool: #tasks continue
-        pendingSuspend = (PROPERTIES.isSuspendActivity() | BUILTIN.isSettingsOpened())
+        pendingSuspend = any([PROPERTIES.isSuspendActivity(),BUILTIN.isSettingsOpened()])
         if pendingSuspend != self.pendingSuspend:
             self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
-            self.log('_suspend,   = %s'%(self.pendingSuspend))
+            self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))
         return self.pendingSuspend
         
 
     def _sleep(self, wait=1.0): #waitForAbort replacement for tasks
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | self.pendingInterrupt): return True
+            if any([self.monitor.waitForAbort(CPU_CYCLE),self.pendingInterrupt]): return True
             else: wait -= CPU_CYCLE
         if wait > 0: self.log('_wait, remaining = %s'%(wait))
         return False

@@ -22,7 +22,7 @@ from logger     import log
 from plugin     import Plugin
 from pool       import threadit, debounceit
 
-@debounceit(int(REAL_SETTINGS.getSetting('RPC_Delay'))/1000)
+@debounceit(int(REAL_SETTINGS.getSetting('RPC_Delay')))
 def _run(mode, sysInfo={}):
     Plugin(mode, sysInfo)
     

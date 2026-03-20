@@ -78,14 +78,17 @@ class JSONRPC(object):
 
 
     def walkFileDirectory(self, path, media='video', depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+        def __chkitem(path, f):
+            if chkDuration:
+                item['duration'] = self.getDuration(item.get('file'),item, accurate=bool(SETTINGS.getSettingInt('Duration_Type')))
+            
         walk = {}
         self.log('walkFileDirectory, walking %s, depth = %s'%(path,depth))
         items, limits, errors = self.getDirectory({"directory":path,"media":media},True,checksum,expiration)
         for idx, item in enumerate(items):
             if item.get('filetype') == 'file':
-                if chkDuration:
-                    item['duration'] = self.getDuration(item.get('file'),item, accurate=bool(SETTINGS.getSettingInt('Duration_Type')))
-                    if item['duration'] == 0: continue
+                __chkitem(item)
+                if item['duration'] == 0: continue
                 walk.setdefault(path,[]).append(item if retItem else item.get('file'))
             elif item.get('filetype') == 'directory' and depth > 0:
                 depth -= 1
@@ -94,24 +97,18 @@ class JSONRPC(object):
                 
 
     def walkListDirectory(self, path, exts=[], depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        def _chkfile(path, f):
-            if exts and not f.lower().endswith(tuple(exts)): return
+        def __chkfile(path, f):
+            if exts and f.lower().endswith(tuple(exts)): return
             if chkDuration:
                 if self.getDuration(os.path.join(path,f), accurate=bool(SETTINGS.getSettingInt('Duration_Type'))) == 0: return
             return {True:os.path.join(path,f).replace('\\','/'),False:f}[appendPath]
             
-        def _parseXBT(resource):
-            self.log('walkListDirectory, parsing XBT = %s'%(resource))
-            walk.setdefault(resource,[]).extend(self.getListDirectory(resource,checksum,expiration)[1])
-            return walk
-
         walk = {}
         path = path.replace('\\','/')
         subs, files = self.getListDirectory(path,checksum,expiration)
-        if TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
-        nfiles = [_f for _f in [_chkfile(path, file) for file in files] if _f]
-        self.log('walkListDirectory, walking %s, found = %s, appended = %s, depth = %s, ext = %s'%(path,len(files),len(nfiles),depth,exts))
-        walk.setdefault(path,[]).extend(nfiles)
+        print('walkListDirectory',subs, files, walk)
+        self.log('walkListDirectory, walking %s, found = (%s,%s), appended = %s, depth = %s, ext = %s'%(path,len(subs),len(files),depth,exts))
+        walk.setdefault(path,[]).extend([_f for _f in [__chkfile(path, file) for file in files] if _f])
         
         for sub in subs:
             if depth == 0: break
@@ -119,18 +116,17 @@ class JSONRPC(object):
             walk.update(self.walkListDirectory(os.path.join(path,sub), exts, depth, chkDuration, appendPath, checksum, expiration))
         return walk
                 
-        
+                
     def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         cacheName = 'getListDirectory.%s'%(FileAccess._getMD5(path))
         results   = self.cache.get(cacheName, checksum)
-        if not results:
-            try:    
-                results = self.cache.set(cacheName, FileAccess.listdir(path), checksum, expiration)
+        if results is None:
+            try:
+                results  = self.cache.set(cacheName, FileAccess.listdir(path), checksum, expiration)
                 self.log('getListDirectory path = %s, checksum = %s'%(path, checksum))
             except Exception as e:
                 self.log("getListDirectory, failed! %s\npath = %s"%(e,path), xbmc.LOGERROR)
                 results = [],[]
-        self.log('getListDirectory return dirs = %s, files = %s\n%s'%(len(results[0]),len(results[1]),path))
         return results
 
 

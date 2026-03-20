@@ -65,7 +65,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     return LISTITEMS.buildMenuListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],
                                                                                                                      {True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)]),
                                                                                                                      server.get('host'),len(server.get('channels',[]))),
-                                                                                                                     icon=DUMMY_ICON.format(text=str(servers.index(server)+1)))
+                                                                                                                     icon=Globals._getDummyIcon(str(servers.index(server)+1)))
                 
                 lizLST  = []
                 serLST  = Multiroom().getDiscovery()
@@ -258,7 +258,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     self.setEnableCondition(self.right_button1,'')
                     #2
                     if len(self.oldChannels) == 0: #no configured channels
-                        if SETTINGS.hasAutotuned():  self.setLabels(self.right_button2,LANGUAGE(30038))#AutoTune
+                        self.setLabels(self.right_button2,LANGUAGE(30038))#AutoTune
                         self.setEnableCondition(self.right_button2,'[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                     else:
                         self.setLabels(self.right_button2,LANGUAGE(30229))#Predefined
@@ -422,7 +422,7 @@ class Manager(xbmcgui.WindowXMLDialog):
    
     def getPaths(self, citem: dict={}, paths: list=[]):
         def __buildItem(path):
-            return LISTITEMS.buildMenuListItem('%s|'%(pathLST.index(path)+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(pathLST.index(path)+1)),props={'citem':citem,'idx':pathLST.index(path)+1})
+            return LISTITEMS.buildMenuListItem('%s|'%(pathLST.index(path)+1),path,paths=[path],icon=Globals._getDummyIcon(str(pathLST.index(path)+1)),props={'citem':citem,'idx':pathLST.index(path)+1})
         
         select  = -1
         lastOPT = None
@@ -467,7 +467,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def getRules(self, citem: dict={}, rules: dict={}):
         def __buildItem(data):
-            return LISTITEMS.buildMenuListItem(data[1].name,data[1].getTitle(),icon=DUMMY_ICON.format(text=str(data[1].myId)),props={'myId':data[1].myId,'citem':citem,'idx':list(ruleLST.keys()).index(data[0])+1}) 
+            return LISTITEMS.buildMenuListItem(data[1].name,data[1].getTitle(),icon=Globals._getDummyIcon(str(data[1].myId)),props={'myId':data[1].myId,'citem':citem,'idx':list(ruleLST.keys()).index(data[0])+1}) 
         
         if citem.get('id') is None or len(citem.get('path',[])) == 0: DIALOG.notificationDialog(LANGUAGE(32071))
         else:            
@@ -493,7 +493,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     except Exception: lastIDX = None
                     if key == 'add':
                         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                            lizLST = [LISTITEMS.buildMenuListItem(rule.name,rule.description,icon=DUMMY_ICON.format(text=str(rule.myId)),props={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
+                            lizLST = [LISTITEMS.buildMenuListItem(rule.name,rule.description,icon=Globals._getDummyIcon(str(rule.myId)),props={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
                         select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32072), preselect=lastXID, multi=False)
                         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                             try:    lastXID = int(lizLST[select].getProperty('idx'))
@@ -522,7 +522,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         select = -1
         while not self.monitor.abortRequested() and not select is None:
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                lizLST = [LISTITEMS.buildMenuListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],DUMMY_ICON.format(text=str(idx+1)),[str(rule.myId)],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
+                lizLST = [LISTITEMS.buildMenuListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],Globals._getDummyIcon(str(idx+1)),[str(rule.myId)],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
             select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
             if not select is None:
                 try: rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
@@ -707,12 +707,13 @@ class Manager(xbmcgui.WindowXMLDialog):
         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
             try:
                 if DIALOG.yesnoDialog("Would you like to AutoTune sample channels?"):   
+                    SETTINGS.setAutotuned(True)
                     items = []
-                    count = int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", default = SETTINGS.getSettingInt('Autotune_Limit') , key=xbmcgui.INPUT_NUMERIC))
+                    count = max(1, min(int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", default = str(SETTINGS.getSettingInt('Autotune_Limit')) , key=xbmcgui.INPUT_NUMERIC)), AUTOTUNE_CHANNEL_LIMIT))
                     for idx, type in enumerate(AUTOTUNE_TYPES):
                         samples = Globals._randomSamples(self.getLibrary(type),count)
                         items.extend([s for s in samples if s])
-                        
+                        DIALOG.notificationDialog(f'Input [B]{count}[/B] Valid!\n{LANGUAGE(32140)}')
                     self._addChannels(start, Globals._randomShuffle(items))
             except Exception as e: self.log("autoTune, failed! %s"%(e), xbmc.LOGERROR)
 
@@ -723,13 +724,14 @@ class Manager(xbmcgui.WindowXMLDialog):
         try:
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 items = self.getLibrary()
-                types = [LISTITEMS.buildMenuListItem(type,icon=DUMMY_ICON.format(text=type)) for type in (list(items.keys()))]
+                types = [LISTITEMS.buildMenuListItem(type,icon=Globals._getDummyIcon(type)) for type in (list(items.keys()))]
             
             type = types[DIALOG.selectDialog(types, header=ADDON_NAME, multi=False)].getLabel()
             lizLST   = poolit(__buildMenuItem)(items.get(type,[]))
             selected = DIALOG.selectDialog(lizLST, header=ADDON_NAME)
-            self.log(f'selectPredefined, type = {type}, lizLST = {len(lizLST)}, selected = {len(selected)}')
-            self._addChannels(start,  Globals._randomShuffle([FileAccess.loadJSON(liz.getProperty('citem')) for idx, liz in enumerate(lizLST) if idx in selected]))
+            if selected:
+                self.log(f'selectPredefined, type = {type}, lizLST = {len(lizLST)}, selected = {len(selected)}')
+                self._addChannels(start,  Globals._randomShuffle([FileAccess.loadJSON(liz.getProperty('citem')) for idx, liz in enumerate(lizLST) if idx in selected]))
         except Exception as e: self.log("selectPredefined, failed! %s"%(e), xbmc.LOGERROR)
         
             
@@ -761,10 +763,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                                       "radio"   : radio,
                                       "favorite": False})
                         self.newChannels.insert(chnum-1,citem)
-                        
                 if self.madeChanges and self.launchManager: self.fillChanList(self.newChannels,True,focus=(chnum-1))
                 return True
-            
+                
          
     def openEditor(self, path):
         self.log('openEditor, path = %s'%(path))

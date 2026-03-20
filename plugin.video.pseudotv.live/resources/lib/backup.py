@@ -79,12 +79,12 @@ class Backup(object):
 
     def recoverChannels(self, file: str=CHANNELFLE_BACKUP) -> bool:
         self.log('recoverChannels, file = %s'%(file))
-        if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(SETTINGS.getSetting('Recover_Backup').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
-            return False
-        with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
-            FileAccess.move(CHANNELFLEPATH,CHANNELFLE_RESTORE)
-            if FileAccess.copy(file,CHANNELFLEPATH):
-                PROPERTIES.setPendingRestart()
+        if DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(SETTINGS.getSetting('Recover_Backup').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
+            with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
+                FileAccess.move(CHANNELFLEPATH,CHANNELFLE_RESTORE)
+                if FileAccess.copy(file,CHANNELFLEPATH):
+                    PROPERTIES.setPendingRestart()
+                    return True
         
     @threadit
     def run(self):  

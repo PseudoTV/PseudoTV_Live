@@ -44,7 +44,7 @@ class Predefined(object):
     def createMusicRecent() -> list:
         param = Predefined.getTemplete()
         param["order"]["method"] = "dateadded"
-        param["direction"]["method"] = "descending"
+        param["order"]["direction"] = "descending"
         return ['musicdb://songs/?xsp=%s'%(FileAccess.dumpJSON(param))]
         
         

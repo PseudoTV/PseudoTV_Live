@@ -140,7 +140,7 @@ class Multiroom(object):
         self.log('_delServer')
         def __buildMenuItem(payload):
             idx = list(servers.values()).index(payload)
-            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(idx+1)),url=FileAccess.dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=Globals._getDummyIcon(str(idx+1)),url=FileAccess.dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             if not servers: servers = self.getDiscovery()
@@ -157,7 +157,7 @@ class Multiroom(object):
     def _selServer(self):
         self.log('_selServer')
         def __buildMenuItem(payload): #build menu item
-            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=DUMMY_ICON.format(text=str(list(servers.values()).index(payload)+1)),url=FileAccess.dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=Globals._getDummyIcon(str(list(servers.values()).index(payload)+1)),url=FileAccess.dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()

@@ -1414,9 +1414,9 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
         self.optionLabels       = [LANGUAGE(30180),LANGUAGE(30181),LANGUAGE(30182)]
         self.optionValues       = [SETTINGS.getSettingInt('Enable_Even'),SETTINGS.getSettingBool('Enable_Even_Force_Episode'),SETTINGS.getSettingBool('Enable_Even_Force_Random')]
         self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33230),LANGUAGE(30182)]
-        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
+        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(0,26,1))]
-        self.storedValues       = [[],SETTINGS.getSettingInt('Page_Limit'),[],{},[],[],[]]
+        self.storedValues       = [[],[],[],[],{},[],[],[]]
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -1458,9 +1458,9 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
                 title = item.get('showtitle')
                 if title and type.startswith(tuple(TV_TYPES)):
                     if episode_order and item not in self.storedValues[3].get('title',[]): 
-                        self.storedValues[3].setdefault(title, []).append(item)
+                        self.storedValues[3].setdefault(title, []).append(item) #no duplicates
                     elif not episode_order:
-                        self.storedValues[3].setdefault(title, []).append(item)
+                        self.storedValues[3].setdefault(title, []).append(item) #duplicates allowed
                 else:
                     item_id = item.get('id') or item.get('file')
                     if episode_order and item_id in self.storedValues[4]: continue
@@ -1515,7 +1515,16 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
 
     def runAction(self, actionid, citem, parameter, builder):
         if bool(self.optionValues[0]):
-            if actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
+            if actionid == RULES_ACTION_CHANNEL_START:
+                self.storedValues[0] = builder.enableEven
+                self.storedValues[1] = builder.evenEpisode
+                self.storedValues[2] = builder.evenShuffle
+                builder.enableEven   = self.optionValues[0]
+                builder.evenEpisode  = self.optionValues[1]
+                builder.evenShuffle  = self.optionValues[2]
+                self.log("runAction, setting enableEven = %s, evenEpisode = %s, evenShuffle = %s"%(builder.enableEven,builder.evenEpisode,builder.evenShuffle))
+                
+            elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
                 if len(parameter) > 0:
                     builder.pDialog = DIALOG._updateProgress(builder.pDialog, builder.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,builder.pMSG))
                     episode_order = False if self.optionValues[2] else self.optionValues[1]
@@ -1529,7 +1538,13 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
                     sortShows, sortMovies = self._sortShows(fileItems, episode_order, random_order)
                     self.log('runAction, episode_order %s, random_order %s, tvshows = %s, movies = %s'%(episode_order, random_order, len(list(sortShows.keys())), len(sortMovies)))
                     return self._mergeShows(sortShows,sortMovies,builder)
-                
+                    
+            elif actionid == RULES_ACTION_CHANNEL_STOP:
+                builder.enableEven  = self.storedValues[0]
+                builder.evenEpisode = self.storedValues[1]
+                builder.evenShuffle = self.storedValues[2]
+                self.log("runAction, restoring enableEven = %s, evenEpisode = %s, evenShuffle = %s"%(builder.enableEven,builder.evenEpisode,builder.evenShuffle))
+            
         return parameter
         
         

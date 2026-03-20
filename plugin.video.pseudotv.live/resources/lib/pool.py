@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import traceback
+import traceback, threading
 
 from variables           import *
 from logger              import log
@@ -110,50 +110,65 @@ def threadit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
         thread_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
-        for thread in thread_enumerate():
-            if thread.name == thread_name and thread.is_alive():
+        with wrapper._lock:
+            if wrapper._active_thread and wrapper._active_thread.is_alive():
+                log('%s, threadit joining existing Thread: %s' % (method.__qualname__.replace('.', ': '), thread_name))
+                wrapper._active_thread.join(CPU_CYCLE)
+
+            def __run():
                 try:
-                    thread.join(CPU_CYCLE) 
-                    log('%s, threadit joining existing Thread: %s'%(method.__qualname__.replace('.',': '),thread_name)) 
-                except Exception: pass
-        def __run():
-            try: 
-                with timeit(method):
-                    method(*args, **kwargs)
-                log('%s, threadit running %s'%(method.__qualname__.replace('.',': => -:'),thread_name))
-            except Exception as e:
-                log('%s, threadit failed! %s'%(method.__qualname__.replace('.',': '),e), xbmc.LOGERROR) 
-             
-        thread = Thread(target=__run)
-        thread.name = thread_name
-        thread.start()
-        log('%s, threadit starting %s'%(method.__qualname__.replace('.',': '),thread_name))
-        return thread
+                    with timeit(method):
+                        method(*args, **kwargs)
+                    log('%s, threadit running %s' % (method.__qualname__.replace('.', ': => -:'), thread_name))
+                except Exception as e:
+                    log('%s, threadit failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
+                finally:
+                    with wrapper._lock:
+                        if wrapper._active_thread == threading.current_thread():
+                            wrapper._active_thread = None
+
+            thread = Thread(target=__run, name=thread_name)
+            wrapper._active_thread = thread
+            thread.start()
+            log('%s, threadit starting %s' % (method.__qualname__.replace('.', ': '), thread_name))
+            return thread 
+            
+    wrapper._active_thread = None
+    wrapper._lock = Lock()
     return wrapper
+    
 
 def timerit(method):
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
-        timer_name = 'timerit.%s'%(method.__qualname__.replace('.',': '))
-        for thread in thread_enumerate():
-            if thread.name == timer_name:
-                if hasattr(thread, 'cancel'):
-                    thread.cancel()
-                    log('%s, timerit canceling existing Timer: %s'%(method.__qualname__.replace('.',': '),timer_name)) 
-        def __run():
-            try:
-                with timeit(method):
-                    method(*args, **kwargs)
-                log('%s, timerit running %s'%(method.__qualname__.replace('.',': => -:'),timer_name))
-            except Exception as e:
-                log('%s, timerit failed! %s'%(method.__qualname__.replace('.',': '),e), xbmc.LOGERROR) 
+        timer_name = 'timerit.%s' % (method.__qualname__.replace('.', ': '))
+        with wrapper._lock:  # Use wrapper's lock
+            if wrapper._active_timer is not None:
+                wrapper._active_timer.cancel()
+                log('%s, timerit canceling existing Timer: %s' % (method.__qualname__.replace('.', ': '), timer_name))
 
-        timer = Timer(float(wait), __run)
-        timer.name = timer_name
-        timer.start()
-        log('%s, timerit starting %s wait = %s'%(method.__qualname__.replace('.',': '),timer_name,wait))
-        return timer
+            def __run():
+                try:
+                    with timeit(method):
+                        method(*args, **kwargs)
+                    log('%s, timerit running %s' % (method.__qualname__.replace('.', ': => -:'), timer_name))
+                except Exception as e:
+                    log('%s, timerit failed! %s' % (method.__qualname__.replace('.', ': '), e), level='ERROR')
+                finally:
+                    with wrapper._lock:
+                        wrapper._active_timer = None
+
+            timer = Timer(float(wait), __run)
+            timer.name = timer_name
+            wrapper._active_timer = timer
+            timer.start()
+            log('%s, timerit starting %s wait = %s' % (method.__qualname__.replace('.', ': '), timer_name, wait))
+            return timer
+
+    wrapper._active_timer = None
+    wrapper._lock = Lock()
     return wrapper
+
 
 class ExecutorPool:
     _executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)

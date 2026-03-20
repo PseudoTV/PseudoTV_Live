@@ -9,7 +9,9 @@
         <import addon="script.module.pyqrcode" version="1.2.1+matrix.1"/>
         <import addon="plugin.library.node.editor" version="0.0.1"/>
         <import addon="resource.images.studios.white" version="0.0.1"/>
+        <import addon="resource.images.studios.coloured" version="0.0.1"/>
         <import addon="resource.images.musicgenreicons.text" version="0.0.1"/>
+        <import addon="resource.images.moviegenreicons.white" version="0.0.1"/>
         <import addon="resource.images.moviegenreicons.transparent" version="0.0.1"/>
         <import addon="resource.images.pseudotv.logos" optional="true" version="0.0.1"/>
         <import addon="resource.images.overlays.crttv" optional="true" version="0.0.2"/>
@@ -52,11 +54,11 @@
                     <label>30087</label>
                     <visible>[String.Contains(ListItem.Plot,"item=") + ListItem.HasEpg] + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
                 </item>
-                <item library="resources/lib/context_create.py">
+                <item library="resources/lib/context_create.py" args="add">
                     <label>30114</label>
                     <visible>[!ListItem.IsPlayable + ListItem.IsFolder] + [!String.IsEmpty(ListItem.Label)]</visible>
                 </item>
-                <item library="resources/lib/context_create.py" args="manager">
+                <item library="resources/lib/context_create.py" args="open_manager">
                     <label>32261</label>
                     <visible>[String.Contains(ListItem.Plot,"item=")] + [Window.IsVisible(tvguide)|Window.IsVisible(tvchannels)]</visible>
                 </item>

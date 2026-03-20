@@ -118,6 +118,7 @@ class Globals:
         xbmc.executebuiltin('SetFocus(%i)'%(ctl[0]-200))
         xbmc.sleep(50)
         xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]-180))
+        return True
 
     @staticmethod
     def _openGuide(instance=ADDON_NAME):
@@ -225,3 +226,7 @@ class Globals:
             if items and len(items) >= x: return random.sample(items, x)
             else:               return random.sample(items, len(items))
         return items
+        
+    @staticmethod
+    def _getDummyIcon(text, background=COLOR_BACKGROUND, color=COLOR_TEXT):
+        return f'https://dummyimage.com/512x512/{background}/{color}.png&text={Globals._quoteString(text)}'

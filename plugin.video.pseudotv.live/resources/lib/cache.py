@@ -252,39 +252,41 @@ class _Cache(object):
     def _execute_sql(self, query, data=None):
         retries = 0
         result  = None
-        if not FileAccess.exists(CACHE_LOC): FileAccess.mkdirs(CACHE_LOC)
-        with FileLock(self.dbfile):
+        if not FileAccess.exists(CACHE_LOC):
+            FileAccess.mkdirs(CACHE_LOC)
+        try:
+            connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
+            connection.execute('SELECT * FROM cache LIMIT 1')
+        except Exception as e:
+            if FileAccess.exists(self.dbfile):
+                FileAccess.delete(self.dbfile)
             try:
                 connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
-                connection.execute('SELECT * FROM cache LIMIT 1')
+                connection.execute( """CREATE TABLE IF NOT EXISTS cache(id TEXT UNIQUE, expires INTEGER, data TEXT, checksum INTEGER)""")
             except Exception as e:
-                if FileAccess.exists(self.dbfile): FileAccess.delete(self.dbfile)
-                try:
-                    connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
-                    connection.execute( """CREATE TABLE IF NOT EXISTS cache(id TEXT UNIQUE, expires INTEGER, data TEXT, checksum INTEGER)""")
-                except Exception as e:
-                    self.log("_execute_sql, Failed! while initializing connection: %s" % str(e), xbmc.LOGWARNING)
-                    return
+                self.log("_execute_sql, Failed! while initializing connection: %s" % str(e), xbmc.LOGWARNING)
+                return
 
-            while not self.service.monitor.abortRequested() and not retries == LOCK_MAX_FILE_TIMEOUT:
-                if self.service._shutdown(CPU_CYCLE): break
-                else:
-                    try:
+        while not self.service.monitor.abortRequested() and not retries == LOCK_MAX_FILE_TIMEOUT:
+            if self.service._shutdown(CPU_CYCLE): break
+            else:
+                try:
+                    with FileLock(self.dbfile):
                         if isinstance(data, list): result = connection.executemany(query, data)
                         elif data:                 result = connection.execute(query, data)
                         else:                      result = connection.execute(query)
                         return result
-                    except sqlite3.OperationalError as e:
-                        retries += 1
-                        self.log("_execute_sql, retrying DB commit...", xbmc.LOGWARNING)
-                        self.service._sleep(LOCK_MAX_FILE_DELAY)
-                    except Exception:
-                        self.log("_execute_sql, connection ERROR ! -- %s" % str(e), xbmc.LOGERROR)
-                        break
-                        
-            if connection:
-                connection.close()
-                del connection
+                except sqlite3.OperationalError as e:
+                    retries += 1
+                    self.log("_execute_sql, retrying DB commit...", xbmc.LOGWARNING)
+                    self.service._sleep(LOCK_MAX_FILE_DELAY)
+                except Exception:
+                    self.log("_execute_sql, connection ERROR ! -- %s" % str(e), xbmc.LOGERROR)
+                    break
+                    
+        if connection:
+            connection.close()
+            del connection
 
 
     @staticmethod

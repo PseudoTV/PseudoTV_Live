@@ -130,9 +130,8 @@ class Settings(object):
         except Exception as e: self.log("_setSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
             
         
-    def setSetting(self, key, value=""):  
-        if self.getSetting(key) != str(value): #Kodi setsetting() can tax system performance. i/o issue? block unneeded saves.
-            self._setSetting(self.getRealSettings().setSetting,key,str(value))
+    def setSetting(self, key, value=""):
+        self._setSetting(self.getRealSettings().setSetting,key,str(value))
         return value
             
             
@@ -1180,7 +1179,7 @@ class Builtin(object):
     def executeJSONRPC(self, request):
         with self.json_lock:
             response = xbmc.executeJSONRPC(FileAccess.dumpJSON(request))
-            self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')/1000))
+            self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')))
             self.log('executeJSONRPC, request = %s\nresponse = %s'%(request,response))
             return response
         
@@ -1222,7 +1221,7 @@ class Dialog(object):
     def doInfoMonitor(self):
         self.properties.clrProperty('Kodi.montiorList')
         while not self.monitor.abortRequested() and self.properties.isRunning('Kodi.toggleInfoMonitor'):
-            if self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')/1000)): break
+            if self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay'))): break
             self.fillInfoMonitor()
                     
 
@@ -1384,8 +1383,8 @@ class Dialog(object):
         return timerit(self.notificationWait)(0.1,*(message, header, wait))
 
 
-    def notificationWait(self, message, header=ADDON_NAME, wait=4, show=True, usethread=False):
-        # if show is None: show = self.settings.getSettingBool('Notify_While_Playing')
+    def notificationWait(self, message, header=ADDON_NAME, wait=4, show=None, usethread=False):
+        if show is None: show = self.settings.getSettingBool('Notify_While_Playing')
         if usethread: return self._notificationWait(message, header, wait)
         else:
             with self._progressDialog(message, header, show==False) as pDialog:
@@ -1464,8 +1463,8 @@ class Dialog(object):
         threadit(self.notificationDialog)(message, header, sound, time, icon, show)
 
 
-    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO, show=True, usethread=False):
-        # if show is None: show = self.settings.getSettingBool('Notify_While_Playing')
+    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO, show=None, usethread=False):
+        if show is None: show = self.settings.getSettingBool('Notify_While_Playing')
         self.log('notificationDialog: %s, show = %s'%(message,show))
         if usethread: return self._notificationDialog(message, header, sound, time, icon, show)
         else:
@@ -1574,7 +1573,7 @@ class Dialog(object):
     def browseSources(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, include=[], exclude=[]):
         self.log('browseSources, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s, mask= %s, include= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,len(include),exclude))
         def __buildMenuItem(option):
-            return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=Globals._getAbbr(option['label'])))
+            return self.listitems.buildMenuListItem(option['label'],option['label2'],Globals._getDummyIcon(Globals._getAbbr(option['label'])))
 
         with self.builtin.busy_dialog():
             optlabel = "%s"%({'0':'Folders','1':'Files'}[str(type)]) if multi else "%s"%({'0':'Folder','1':'File'}[str(type)])
@@ -1631,7 +1630,7 @@ class Dialog(object):
         self.log('multiBrowse, IN paths = %s'%(paths))
         def __buildListItem(item): #label: str="", label2: str="", icon: str=COLOR_LOGO, paths: list=[], items: dict={}
             idx = pathLST.index(item)
-            return self.listitems.buildMenuListItem('%s|'%(idx+1), item, DUMMY_ICON.format(text=str(idx+1)), url='|'.join(item), props={'idx':idx+1})
+            return self.listitems.buildMenuListItem('%s|'%(idx+1), item, Globals._getDummyIcon(str(idx+1)), url='|'.join(item), props={'idx':idx+1})
 
         select  = -1
         epaths  = paths.copy()
@@ -1729,7 +1728,7 @@ class Dialog(object):
         def __getRule(params={}, rule={"field":"","operator":"","value":[]}):
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=DUMMY_ICON.format(text=Globals._getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=Globals._getDummyIcon(Globals._getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
                 enumSEL = self.selectDialog(enumLST,header="Select method",preselect=-1, multi=False)
                 if not enumSEL is None: rule.update({enumLST[enumSEL].getProperty('key'):({"field":field,"operator":operator,"value":value}[enumLST[enumSEL].getProperty('key')])(params,rule)})
             return rule
@@ -1738,7 +1737,7 @@ class Dialog(object):
             enumSEL = -1
             eparams = params.copy()
             while not self.monitor.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),FileAccess.dumpJSON(params.get('rules',{}).get(key,[])),icon=DUMMY_ICON.format(text=Globals._getAbbr(key.title())),props={'key':key}) for key in ["and","or"]]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),FileAccess.dumpJSON(params.get('rules',{}).get(key,[])),icon=Globals._getDummyIcon(Globals._getAbbr(key.title())),props={'key':key}) for key in ["and","or"]]
                 enumSEL = self.selectDialog(enumLST,header="Edit Rules",multi=False)
                 if not enumSEL is None:
                     if enumLST[enumSEL].getLabel() in ['And','Or']:
@@ -1746,7 +1745,7 @@ class Dialog(object):
                         CONLKEY = enumLST[enumSEL].getProperty('key')
                         ruleLST = params.get('rules',{}).get(CONLKEY,[])
                         while not self.monitor.abortRequested() and not CONSEL is None:
-                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),FileAccess.dumpJSON(value),icon=DUMMY_ICON.format(text=str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
+                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),FileAccess.dumpJSON(value),icon=Globals._getDummyIcon(str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
                             andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,props={'key':'add'}))
                             if len(ruleLST) > 0 and eparams != params: andLST.insert(1,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save'}))
                             CONSEL = self.selectDialog(andLST,header="Edit Rules",multi=False)
@@ -1765,7 +1764,7 @@ class Dialog(object):
         def __getOrder(params={}):
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=Globals._getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=Globals._getDummyIcon(Globals._getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
                 enumLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save'}))
                 enumSEL = self.selectDialog(enumLST,header="Edit Selection",preselect=-1,multi=False)
                 if not enumSEL is None:

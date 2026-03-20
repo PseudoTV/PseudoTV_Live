@@ -185,7 +185,8 @@ class CustomQueue(object):
         
     def _start(self):
         while not self.service.monitor.abortRequested():
-            if self.service._interrupt() or self.service._suspend():
+            if self.service._isPlaying(): continue
+            elif self.service._interrupt() or self.service._suspend():
                 self.log("_start, _interrupt/_suspend")
                 break
             elif not self.head and not self.priority:

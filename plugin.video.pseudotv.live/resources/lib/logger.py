@@ -68,5 +68,3 @@ def log(event, level=xbmc.LOGDEBUG):
         # Log the event if the level is above the configured debug level
         if level >= DEBUG_LEVEL:
             xbmc.log(event, level)
-            if not xbmcgui.Window(10000).getProperty('%s.has.debug' % (ADDON_ID)) == 'true':
-                xbmcgui.Window(10000).setProperty('%s.has.debug' % (ADDON_ID), 'true')

@@ -89,6 +89,8 @@ class Builder(object):
         self.padScheduling    = False #todo Adv. Channel Rule, No Global: Default False
         self.padFilelist      = False #todo Adv. Channel Rule, No Global: Default False
         self.enableEven       = bool(SETTINGS.getSettingInt('Enable_Even'))
+        self.evenEpisode      = SETTINGS.getSettingBool('Enable_Even_Force_Episode')
+        self.evenShuffle      = SETTINGS.getSettingBool('Enable_Even_Force_Random')
 
         self.filter           = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
         self.sort             = {}#{"ignorearticle":True,"method":"random","order":"ascending","useartistsortname":True}
@@ -140,7 +142,7 @@ class Builder(object):
                 continue
             else:
                 if not citem.get('id'): citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'],SETTINGS.getMYUUID()) #generate new channelid
-                citem['logo'] = self.resources.getLogo(citem,fallback=self.resources.getCache(citem['name']))
+                citem['logo'] = self.resources.getLogo(citem,fallback=self.resources.getCache(citem['name']),lookup=True)
                 self.log('[%s] VERIFIED - channel %s: %s changed = %s'%(citem['id'],citem['number'],citem['name'],citem.get('changed',False)),xbmc.LOGINFO)
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self) #inject persistent citem changes here
 
@@ -181,7 +183,7 @@ class Builder(object):
             else: state = citem.get('changed',False)
             self.log('[%s] buildChannels, __hasChanged = %s'%(citem['id'],state))
             if state: #clear channel m3u/xmltv 
-                if any([self.resetPagination(citem),self.m3u.delStation(citem),self.xmltv.delBroadcast(citem)]):
+                if __clrStation(citem):
                     self.log('[%s] buildChannels, __hasChanged cleared channel meta'%(citem['id']))
                     citem['changed'] = False
                 changes.add(self.channels.addChannel(citem))
@@ -205,15 +207,25 @@ class Builder(object):
         
         def __addStation(citem: dict) -> bool:
             sitem = self.m3u.getStationItem(citem)
-            self.log('[%s] buildChannels, __addStation = %s'%(citem['id'],self.m3u.addStation(sitem) and self.xmltv.addChannel(sitem)))
-            return any([self.m3u._save(), self.xmltv._save()])
+            state = any([self.m3u.addStation(sitem),self.xmltv.addChannel(sitem)])
+            self.log('[%s] buildChannels, __addStation = %s'%(citem['id'],state))
+            return state
         
+        def __clrStation(citem: dict) -> bool:
+            state = any([self.resetPagination(citem),self.m3u.delStation(citem),self.xmltv.delBroadcast(citem)])
+            self.log('[%s] buildChannels, __clrStation = %s'%(citem['id'],state))
+            return state
+            
+        def __setStation():
+            state = any([self.m3u._save(), self.xmltv._save()])
+            self.log('[%s] buildChannels, __setStation = %s'%(citem['id'],state))
+            return state
+            
         if not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.legacy(), PROPERTIES.chkRunning('Builder.buildChannels'):
                 channels = self.getVerifiedChannels(channels)
                 if len(channels) > 0:
                     completed = set()
-                    updates   = set()
                     changes   = set()
                     now       = getUTCstamp()
                     nstart    = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
@@ -226,6 +238,7 @@ class Builder(object):
                     self.pErrors = []
                     for idx, citem in enumerate(channels):
                         try:
+                            updated      = set()
                             self.pCount  = int(idx+1*100)//len(channels)
                             self.pMSG    = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
                             self.pHeader = ADDON_NAME
@@ -258,26 +271,27 @@ class Builder(object):
                                         #fileList = {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                                         if isinstance(fileList,list):
                                             fileList = sorted(self.addScheduling(citem, fileList, now, start), key=itemgetter('start'))
-                                            if not preview and __hasFileList(fileList): updates.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
+                                            if not preview and __hasFileList(fileList):
+                                                updated.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
                                         elif not fileList:
-                                            updates.add(__hasProgrammes(citem))
-                                            if not any(updates): #check for current programmes
-                                                __clrChannel(citem) #remove m3u/xmltv references when no valid programmes found.
-                                                if len(self.pErrors) > 0:
-                                                    self.pErrors.append(LANGUAGE(32026))
-                                                    chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
-                                                    self.log('[%s] buildChannels, In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
-                                                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(self.pName,chanErrors),header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
+                                            updated.add(__hasProgrammes(citem))
+                                            if len(self.pErrors) > 0:
+                                                self.pErrors.append(LANGUAGE(32026))
+                                                chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
+                                                self.log('[%s] buildChannels, In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
+                                                self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(self.pName,chanErrors),header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
                                         self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                                         if preview: return fileList
-                            else: updates.add(__hasProgrammes(citem))
-                                 
-                            if any(updates): 
+                            else: updated.add(__hasProgrammes(citem))
+                                
+                            if any(updated): 
                                 completed.add(__addStation(citem)) #add m3u station if lineup available. 
                                 timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+                            else: __clrStation(citem) #remove m3u/xmltv references when no valid programmes found.
+                            __setStation()
                         except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)
                     if any(changes): self.channels.setChannels()
-                    self.log('[%s] buildChannels, completed = %s, updates = %s, changes = %s'%(citem['id'],any(completed),any(updates),any(changes)))
+                    self.log('[%s] buildChannels, completed = %s, updated = %s, changes = %s'%(citem['id'],any(completed),any(updated),any(changes)))
 
 
     def buildMusic(self, citem: dict) -> list:
@@ -302,14 +316,14 @@ class Builder(object):
             #"Seasonal Content"
             if tmpCitem.get('path',[]) == ["{Seasonal}"]:
                 nrules = {"800":{"values":{"0":list(self.seasonal.buildSeasonal(self.holiday))}}}
-                self.log(" [%s] buildVideo: _injectRules, Seasonal Content, new rules = %s"%(citem['id'],nrules))
                 tmpCitem.setdefault('rules',{}).update(nrules)
+                self.log(" [%s] buildVideo: _injectRules, Seasonal Content, new rules = %s"%(citem['id'],nrules))
                 
             #"Even Show Distribution"
             if self.enableEven and not citem.get('rules',{}).get("1000"):
-                nrules = {"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingBool('Enable_Even_Force_Episode')}}}
-                self.log(" [%s] buildVideo: _injectRules, Even Show Distribution, new rules = %s"%(citem['id'],nrules))
+                nrules = {"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":self.evenEpisode,"2":self.evenShuffle}}}
                 tmpCitem.setdefault('rules',{}).update(nrules)
+                self.log(" [%s] buildVideo: _injectRules, Even Show Distribution, new rules = %s"%(citem['id'],nrules))
             return tmpCitem
             
         citem     = _injectRules(citem) #inject temporary adv. channel rules here
@@ -526,11 +540,9 @@ class Builder(object):
                     if item.get('year',0) == 0 and spYear: item['year'] = spYear #replace missing item year with one parsed from show title
                     item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(32020)).strip()
                         
-                    if citem.get('rules',{}).get('800'):
-                        try: 
-                            holiday = citem['rules']['800']['values']['0'][0]['holiday']
-                            item["plot"] = "%s \n%s"%("[B]%s[/B] - [I]%s[/I]"%(holiay["name"],holiday["tagline"]) if holiday["tagline"] else "[B]%s[/B]"%(holiday["name"]),item["plot"])
-                        except Exception: pass
+                    holiday = citem.get('rules',{}).get('800',{}).get('values',{}).get('0',[{}])[0].get('holiday',{})
+                    if holiday: #add seasonal meta
+                        item["plot"] = "%s \n%s"%("[B]%s[/B] - [I]%s[/I]"%(holiday["name"],holiday["tagline"]) if holiday["tagline"] else "[B]%s[/B]"%(holiday["name"]),item["plot"])
                         
                     item['art'] = (item.get('art',{}) or dirItem.get('art',{}))
                     item.get('art',{})['icon'] = citem['logo']
