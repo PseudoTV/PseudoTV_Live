@@ -39,6 +39,7 @@ PROVIDERFLEPATH     = os.path.join(USER_LOC,PROVIDERFLE)
 CHANNELFLEPATH      = os.path.join(USER_LOC,CHANNELFLE)
 LIBRARYFLEPATH      = os.path.join(USER_LOC,LIBRARYFLE) 
 SERVERFLEPATH       = os.path.join(USER_LOC,SERVERFLE)
+AUTOTUNEFLEPATH     = os.path.join(USER_LOC,AUTOTUNEFLE)
 
 class Globals:
     @staticmethod
@@ -230,3 +231,4 @@ class Globals:
     @staticmethod
     def _getDummyIcon(text, background=COLOR_BACKGROUND, color=COLOR_TEXT):
         return f'https://dummyimage.com/512x512/{background}/{color}.png&text={Globals._quoteString(text)}'
+        

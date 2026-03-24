@@ -23,7 +23,8 @@ from globals    import *
 # https://pypi.org/project/dataclasses-json/
 class Channels(object):
     
-    def __init__(self, file=CHANNELFLEPATH, writable=False):
+    def __init__(self, file=None, writable=False):
+        if file is None: file = self._getCHANNELFLE()
         self.writable    = writable
         self.channelFile = file
         self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
@@ -38,6 +39,11 @@ class Channels(object):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def _getCHANNELFLE(self):
+        if SETTINGS.getSettingBool('Enable_Autotuned_Channels'): return AUTOTUNEFLEPATH
+        return CHANNELFLEPATH
+        
+        
     def _load(self) -> dict:
         channelDATA = FileAccess.getJSON(self.channelFile)
         SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))

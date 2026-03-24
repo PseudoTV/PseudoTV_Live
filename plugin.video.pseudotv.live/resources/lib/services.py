@@ -19,7 +19,7 @@
 # -*- coding: utf-8 -*-
 from globals    import *
 from cqueue     import *
-from overlay    import Background, Restart, Overlay, OnNext
+from overlay    import Background, Overlay, Replay
 from rules      import RulesList
 from tasks      import Tasks
 from jsonrpc    import JSONRPC
@@ -28,9 +28,8 @@ class Player(xbmc.Player):
     pendingItem       = {}
     playingItem       = {}
     background        = None
-    restart           = None
-    onnext            = None
     overlay           = None
+    replay            = None
     runActions        = None
     lastSubState      = False
     
@@ -44,9 +43,9 @@ class Player(xbmc.Player):
     maxProgress       = SETTINGS.getSettingInt('Seek_Threshold')
     sleepTime         = SETTINGS.getSettingInt('Idle_Timer')
     runWhilePlaying   = SETTINGS.getSettingBool('Run_While_Playing')
-    restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
+    replayPercentage  = SETTINGS.getSettingInt('Replay_Percentage')
     OnNextMode        = SETTINGS.getSettingInt('OnNext_Mode')
-    onNextPosition    = SETTINGS.getSetting("OnNext_Position_XY")
+    onNextPosition    = SETTINGS.getSetting("OnNext_Position_XY")	
     
     """ 
     Player() Trigger Order
@@ -114,15 +113,15 @@ class Player(xbmc.Player):
     def getplayingItem(self):
         playingItem = FileAccess.loadJSON(FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo')))
         if '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid',''):
-            #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
-            playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')))})
-            playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')))})
-            playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.channels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
             playingItem['isPseudoTV'] = True
             playingItem['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
             playingItem['chfolder']   = BUILTIN.getInfoLabel('Folderpath','Player')
             playingItem['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
             playingItem['isfiller']   = self.isPlayingFiller()
+            #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
+            playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')))})
+            playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')))})
+            playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.channels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
             playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
             PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(playingItem)))
         return playingItem
@@ -194,11 +193,9 @@ class Player(xbmc.Player):
     @threadit
     def _onPlay(self, playingItem={}):
         self.log('_onPlay, playingItem = %s'%(playingItem))
-        self.toggleBackground(False)
-        self.toggleOverlay(False)
-        self.toggleRestart(False)
-        self.toggleOnNext(False)
         self.toggleInfo(False)
+        self.toggleOverlay(False)
+        self.toggleBackground(False)
         self.lastSubState = BUILTIN.isSubtitle()
         if playingItem.get('isPseudoTV'):
             oldInfo = self.playingItem
@@ -207,9 +204,9 @@ class Player(xbmc.Player):
             if newChan: #New channel
                 self.runActions  = RulesList([playingItem.get('citem',{})]).runActions
                 self.playingItem = self._runActions(RULES_ACTION_PLAYER_START, playingItem.get('citem',{}), playingItem, inherited=self)
-                self.toggleRestart(bool(self.restartPercentage))
                 PROPERTIES.setTrakt(self.disableTrakt)
                 self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
+                self.toggleReplay(bool(self.replayPercentage))
             else: #New Program/Same Channel
                 self.playingItem = playingItem
                 if playingItem.get('radio',False): 
@@ -226,9 +223,6 @@ class Player(xbmc.Player):
     def _onChange(self, playingItem={}):
         self.log('_onChange, playingItem = %s'%(playingItem))
         self.toggleOverlay(False)
-        self.toggleRestart(False)
-        self.toggleOnNext(False)
-        self.toggleInfo(False)
         if playingItem:
             if not playingItem.get('isPlaylist',False):
                 self.toggleBackground(self.enableOverlay)
@@ -251,8 +245,6 @@ class Player(xbmc.Player):
     def _onStop(self, playingItem={}):
         self.log('_onStop, playingItem = %s'%(playingItem))
         self.toggleInfo(False)
-        self.toggleOnNext(False)
-        self.toggleRestart(False)
         self.toggleOverlay(False)
         self.toggleBackground(False)
         if playingItem:
@@ -285,7 +277,6 @@ class Player(xbmc.Player):
         return not bool(cnx)
 
 
-    @threadit
     def _onIdle(self):
         def __chkPlayback():
             if self.pendingItem.get('invoked',-1) > 0:
@@ -305,7 +296,7 @@ class Player(xbmc.Player):
                 self.toggleBackground(self.enableOverlay)
 
         def __chkResumeTime():
-            if not self.playingItem.get('isfiller',False) and self.playingItem.get('isPlaylist',False):
+            if not self.playingItem.get('isfiller',True) and self.playingItem.get('isPlaylist',False):
                 if self.playingItem.get('fitem',{}).get('file') == self.getPlayingFile():
                     resume = {"position":self.getPlayedTime(),
                               "total":   self.getPlayerTime(),
@@ -316,7 +307,7 @@ class Player(xbmc.Player):
 
         def __chkOverlay():
             played = ceil(self.getPlayedTime())
-            if not self.playingItem.get('isfiller',False) and played > self.minDuration: 
+            if not self.playingItem.get('isfiller',True) and played > self.minDuration: 
                 self.toggleOverlay(self.enableOverlay)
 
         def __chkOnNext():
@@ -325,9 +316,10 @@ class Player(xbmc.Player):
             totalTime = int(self.getPlayerTime() * (self.maxProgress / 100))
             threshold = abs((totalTime - (totalTime * .75)) - (ONNEXT_TIMER*3))
             intTime   = roundupDIV(threshold,3)
-            if not self.playingItem.get('isfiller',False) and played > self.minDuration and (remaining <= threshold and remaining >= intTime) and self.background is None: 
-                self.log('__chkOnNext, played = %s, remaining = %s'%(played,remaining))
-                self.toggleOnNext(bool(self.OnNextMode))
+            if self.isPlayingPseudoTV() and not self.playingItem.get('isfiller',True) and not self.overlay is None:
+                if played > self.minDuration and (remaining <= threshold and remaining >= intTime): 
+                    self.log('__chkOnNext, played = %s, remaining = %s'%(played,remaining))
+                    self.overlay.toggleOnNext(bool(self.OnNextMode))
                 
         def __chkSleep():
             if self.sleepTime > 0 and (self.monitor.idleTime > (self.sleepTime * 10800)):
@@ -340,12 +332,13 @@ class Player(xbmc.Player):
         __chkResumeTime()
         __chkCallback()
         __chkOverlay()
-        __chkOnNext()
+        __chkOnNext()	
         __chkSleep()
             
                 
     def toggleBackground(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
-        if state and self.background is None and self.service.monitor.isIdle:
+        if state and self.service.monitor.isIdle and self.background is None:
+            if not self.overlay is None: self.toggleOverlay(False)
             BUILTIN.executebuiltin("Dialog.Close(all)")
             self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self)
             self.background.show()
@@ -356,7 +349,7 @@ class Player(xbmc.Player):
 
 
     def toggleOverlay(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
-        if state and self.overlay is None and self.isPlayingPseudoTV():
+        if state and self.isPlayingPseudoTV() and self.overlay is None:
             self.overlay = Overlay(player=self)
             self.overlay.open()
         elif not state and hasattr(self.overlay,'close'):
@@ -365,29 +358,19 @@ class Player(xbmc.Player):
         self.log("toggleOverlay, state = %s, overlay = %s"%(state, self.overlay))
 
 
-    def toggleRestart(self, state: bool=bool(SETTINGS.getSettingInt('Restart_Percentage'))):
-        if state and self.restart is None and self.isPlayingPseudoTV():
-            self.restart = Restart(RESTART_XML, ADDON_PATH, "default", "1080i", player=self)
-        elif not state and hasattr(self.restart,'onClose'):
-            self.restart = self.restart.onClose()
+    @debounceit(OSD_TIMER)
+    def toggleReplay(self, state: bool=bool(SETTINGS.getSettingInt('Replay_Percentage'))):
+        if state and self.isPlayingPseudoTV() and not self.playingItem.get('isfiller',True) and self.replay is None:
+            self.replay = Replay(REPLAY_XML, ADDON_PATH, "default", "1080i", player=self)
+        elif not state and hasattr(self.replay,'onClose'):
+            self.replay = self.replay.onClose()
         else: return
-        self.log("toggleRestart, state = %s, restart = %s"%(state,self.restart))
+        self.log("toggleReplay, state = %s, replay = %s"%(state,self.replay))
         
-        
-    def toggleOnNext(self, state: bool=bool(SETTINGS.getSettingInt('OnNext_Mode'))):
-        if state and self.onnext is None and not self.playingItem.get('isfiller',False):
-            self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", player=self, mode=self.OnNextMode, position=self.onNextPosition, next=self.jsonRPC.getNextItem(self.playingItem.get('citem',{}),self.playingItem.get('nitem')))
-            print('toggleOnNext',state, self.onnext)
-        elif not state and hasattr(self.onnext,'onClose'):
-            self.onnext = self.onnext.onClose()
-            print('toggleOnNext',state, self.onnext)
-        else: return
-        self.log("toggleOnNext, state = %s, onnext = %s"%(state,self.onnext))
-    
         
     @debounceit(OSD_TIMER)
     def toggleInfo(self, state: bool=SETTINGS.getSettingBool('Enable_OnInfo')):
-        if state and not self.playingItem.get('isfiller',False):
+        if state and self.isPlayingPseudoTV() and not self.playingItem.get('isfiller',True) and not BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
             BUILTIN.executewindow('ActivateWindow(fullscreeninfo)')
             timerit(self.toggleInfo)(float(OSD_TIMER),False)
         elif not state and BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
@@ -429,8 +412,11 @@ class Monitor(xbmc.Monitor):
                     self.isIdle   = bool(self.idleTime) | self.idleTime > OSD_TIMER
                     self.log('_chkIdle, isIdle = %s, idleTime = %s'%(self.isIdle, self.idleTime))
                     if self.isIdle: self.player._onIdle()
+                elif self.service._shutdown(0.5):
+                    self.log("_chkIdle, not playing!")
+                    break # not playing loosen timing
             self.isRunning = False
-            self.log("_chkIdle, not playing!")
+            self.log("_chkIdle, shutdown!")
 
 
     def onNotification(self, sender, method, data):
@@ -461,7 +447,7 @@ class Monitor(xbmc.Monitor):
         self.player.maxProgress       = SETTINGS.getSettingInt('Seek_Threshold')
         self.player.sleepTime         = SETTINGS.getSettingInt('Idle_Timer')
         self.player.runWhilePlaying   = SETTINGS.getSettingBool('Run_While_Playing')
-        self.player.restartPercentage = SETTINGS.getSettingInt('Restart_Percentage')
+        self.player.replayPercentage  = SETTINGS.getSettingInt('Replay_Percentage')
         self.player.OnNextMode        = SETTINGS.getSettingInt('OnNext_Mode')
         self.player.onNextPosition    = SETTINGS.getSetting("OnNext_Position_XY")
         

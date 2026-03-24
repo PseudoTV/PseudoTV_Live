@@ -782,7 +782,7 @@ class DisableRestart(BaseRule):
         self.name               = "Restart Button"
         self.description        = LANGUAGE(33153)
         self.optionLabels       = [LANGUAGE(30153)]
-        self.optionValues       = [SETTINGS.getSettingInt('Restart_Percentage')]
+        self.optionValues       = [SETTINGS.getSettingInt('Replay_Percentage')]
         self.optionDescriptions = [LANGUAGE(33153)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [list(range(25,100,5))]
@@ -808,13 +808,13 @@ class DisableRestart(BaseRule):
 
     def runAction(self, actionid, citem, parameter, player):
         if actionid == RULES_ACTION_PLAYER_START:
-            self.storedValues[0] = player.restartPercentage
-            player.restartPercentage = self.optionValues[0]
-            self.log("runAction, setting restartPercentage = %s"%(player.restartPercentage))
+            self.storedValues[0] = player.replayPercentage
+            player.replayPercentage = self.optionValues[0]
+            self.log("runAction, setting replayPercentage = %s"%(player.replayPercentage))
             
         elif actionid == RULES_ACTION_PLAYER_STOP:
-            player.restartPercentage = self.storedValues[0]
-            self.log("runAction, restoring restartPercentage = %s"%(player.restartPercentage))
+            player.replayPercentage = self.storedValues[0]
+            self.log("runAction, restoring replayPercentage = %s"%(player.replayPercentage))
         return parameter
 
         

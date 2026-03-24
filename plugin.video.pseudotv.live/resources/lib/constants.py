@@ -220,6 +220,7 @@ GENREFLE            = 'genres.xml'
 BONJOURFLE          = 'bonjour.json'
 SERVERFLE           = 'servers.json'
 CHANNELFLE          = 'channels.json'
+AUTOTUNEFLE         = 'autotune.json'
 LIBRARYFLE          = 'library.json'
 TVGROUPFLE          = 'tv_groups.xml'
 RADIOGROUPFLE       = 'radio_groups.xml'
@@ -254,7 +255,6 @@ CHANNELFLE_BACKUP   = os.path.join(BACKUP_LOC,CHANNELBACKUPFLE)
 CHANNELFLE_RESTORE  = os.path.join(BACKUP_LOC,CHANNELRESTOREFLE)
 CHANNELFLE_CHANGED  = os.path.join(BACKUP_LOC,CHANNELCHANGEDFLE)
 CHANNELFLE_LATEST   = os.path.join(BACKUP_LOC,CHANNELLATESTFLE)
-CHANNELFLE_AUTOTUNE = os.path.join(BACKUP_LOC,CHANNELAUTOFLE)
 
 #sfx
 BING_WAV            = os.path.join(SFX_LOC,'bing.wav')
@@ -310,7 +310,7 @@ HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plug
 #skins
 BUSY_XML        = '%s.busy.xml'%(ADDON_ID)
 ONNEXT_XML      = '%s.onnext.xml'%(ADDON_ID)
-RESTART_XML     = '%s.restart.xml'%(ADDON_ID)
+REPLAY_XML     = '%s.restart.xml'%(ADDON_ID)
 ONNEXT_XML      = '%s.onnext.xml'%(ADDON_ID)
 BACKGROUND_XML  = '%s.background.xml'%(ADDON_ID)
 MANAGER_XML     = '%s.manager.xml'%(ADDON_ID)

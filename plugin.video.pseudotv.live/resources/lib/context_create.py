@@ -103,10 +103,6 @@ def _auto(start=1, count=-1):
     with DIALOG._progressDialog("", LANGUAGE(30038)) as pDialog:
         items   = []
         manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
-        if autoChannels: 
-            if manager.backup.backupChannels(CHANNELFLE_AUTOTUNE,silent=True): 
-                FileAccess.delete(CHANNELFLEPATH)
-        
         for idx, type in enumerate(AUTOTUNE_TYPES):
             pDialog = DIALOG._updateProgress(pDialog, int(idx*100//len(AUTOTUNE_TYPES)), type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
             samples = Globals._randomSamples(manager.getLibrary(type),count)

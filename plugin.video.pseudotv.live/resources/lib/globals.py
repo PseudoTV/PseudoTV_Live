@@ -342,19 +342,16 @@ def chkLogo(old, new=LOGO):
     
 def parseSE(filename):
     pattern = re.compile(
-        r'(?:s|season)\s*(\d+)\s*(?:e|x|episode)\s*(\d+)|'  # s01e01, 1x01, Season 1 Episode 1
-        r'(\d{1,2})[xX](\d{1,2})|'                          # 1x01 format
-        r'(\d)(\d{2})(?!\d)'                                # 101 format (single digit season, two digit episode)
-    , re.IGNORECASE)
-
+        r'(?:s|season)\s*(?P<s>\d+)\s*(?:e|x|episode)\s*(?P<e>\d+)|' # S01E01
+        r'(?P<s2>\d{1,2})[xX](?P<e2>\d{1,2})|'                       # 1x01
+        r'(?<!\d)(?P<s3>\d)(?P<e3>\d{2})(?!\d)',                     # 101 (excludes 4-digit years)
+        re.IGNORECASE)
     match = pattern.search(filename)
     if match:
-        if match.group(1) is not None:
-            return int(match.group(1)), int(match.group(2))
-        elif match.group(3) is not None:
-            return int(match.group(3)), int(match.group(4))
-        elif match.group(5) is not None:
-            return int(match.group(5)), int(match.group(6))
+        res = {k: v for k, v in match.groupdict().items() if v is not None}
+        if 's'  in res: return int(res['s']), int(res['e'])
+        if 's2' in res: return int(res['s2']), int(res['e2'])
+        if 's3' in res: return int(res['s3']), int(res['e3'])
     return -1, -1
 
 def hasURLencoding(s):

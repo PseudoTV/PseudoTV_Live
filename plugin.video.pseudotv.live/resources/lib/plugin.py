@@ -135,11 +135,12 @@ class Plugin(object):
                    
     def _playCheck(self, found, listitem=None):
         def __findMissing(listitem):
-            file  = listitem.getPath()
-            title = listitem.getLabel()
-            oSeason, oEpisode = parseSE(file)
+            label = (self.sysInfo['fitem'].get('label') or listitem.getLabel())
+            file  = (self.sysInfo['fitem'].get('file')  or listitem.getPath())
             folder, filename  = os.path.split(file)
-            self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {title} = {filename} in {folder}')
+            oSeason, oEpisode = parseSE(filename)
+            self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {label}: {filename} in {folder}')
+            
             with PROPERTIES.interruptActivity():
                 DIALOG.notificationDialog(f'Missing: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
                 items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
@@ -147,11 +148,11 @@ class Plugin(object):
             found = False
             for item in items:
                 if item.get('file','').endswith(tuple(VIDEO_EXTS)):
-                    if type == 'movies' and item.get('title','').lower() == title.lower():
+                    season, episode  = parseSE(os.path.split(item.get('file',''))[1])
+                    if item.get('type') == 'movies' and item.get('label','').lower() == label.lower():
                         found = True
                         break
-                    season, episode = parseSE(item.get('file',''))
-                    if oSeason and oEpisode and (oSeason == season and oEpisode == episode):
+                    elif oSeason and oEpisode and (oSeason == season and oEpisode == episode):
                         found = True
                         break
                 if found: 
@@ -164,13 +165,14 @@ class Plugin(object):
             
         if listitem is None: listitem = xbmcgui.ListItem()
         if listitem.getPath() and not FileAccess.exists(listitem.getPath()): found, listitem = __findMissing(listitem)
-        return found, listitem #todo refactor file validation. 
+        return listitem.getPath(), found, listitem
 
 
     def _resolveURL(self, found, listitem=None):
         self.log(f'[{self.sysInfo.get('chid')}] _resolveURL, found = {found}')
         if listitem is None: listitem = xbmcgui.ListItem()
-        xbmcplugin.setResolvedUrl(int(self.sysInfo['sysARG'][1]), *self._playCheck(found, listitem))
+        _, found, listitem = self._playCheck(found, listitem)
+        xbmcplugin.setResolvedUrl(int(self.sysInfo['sysARG'][1]), found, listitem)
         
         
     def _play(self, file, listitem=None, wait=30):
@@ -178,7 +180,8 @@ class Plugin(object):
         if listitem is None: listitem = xbmcgui.ListItem()
         if self.player.isPlaying() and listitem.getPath() != self.player.getPlayingFile():
             self.player.stop()
-        timerit(self.player.play)(1.0,*(file,self._playCheck(True, listitem)[1],True))
+        file, found, listitem = self._playCheck(True, listitem)
+        timerit(self.player.play)(1.0,file,found,listitem,True)
         self._resolveURL(False, listitem)
         #Playlist don't always gain screen focus depending on user Kodi configuration. Force fullscreen.
         while not self.monitor.abortRequested() and not self.player.isPlaying():

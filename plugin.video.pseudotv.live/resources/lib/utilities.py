@@ -155,6 +155,7 @@ class Utilities(object):
                  LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
                  LANGUAGE(30096):GENREFLEPATH,  #"Genre"
                  LANGUAGE(30108):CHANNELFLEPATH,#"Channels"
+                 LANGUAGE(30038):AUTOTUNEFLEPATH,#"Autotune"
                  LANGUAGE(32041):LIBRARYFLEPATH}#"Library"
 
         keys = list(files.keys())

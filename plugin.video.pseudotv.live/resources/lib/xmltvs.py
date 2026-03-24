@@ -213,7 +213,7 @@ class XMLTVS(object):
         if key == 'id': #stations
             self.log('cleanSelf, slug = %s, key = %s: returning channels = %s, recordings = %s'%(slug,key,len(channels),len(recordings)))
             return self.sortChannels(Globals._setDictLST(channels)), self.sortChannels(Globals._setDictLST(recordings))
-        else: #programmes
+        elif key == 'channel': #programmes
             programmes = self.cleanProgrammes(channels) + recordings
             self.log('cleanSelf, slug = %s, key = %s: returning programmes = %s'%(slug,key,len(programmes)))
             return self.sortProgrammes(programmes)
@@ -232,8 +232,14 @@ class XMLTVS(object):
         
         def __filterProgrammes(program):
             citem = Globals._decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
-            if citem.get('holiday') and citem.get('holiday',{}).get('name',str(random.random())) != holiday.get('name',str(random.random())): return None
-            elif (strpTime(program.get('stop',now).rstrip(),DTFORMAT) < now): return None  # remove expired content, ignore "recordings" ie. media=True
+            seasonal = citem.get('rules',{}).get('800',{}).get('values',{}).get('0',[{}])[0].get('holiday',{})
+            print(citem,seasonal,holiday.get('name'))
+            if seasonal and seasonal.get('name',str(random.random())) != holiday.get('name'):
+                self.log('[%s] cleanProgrammes, __filterProgrammes removing expired holiday (%s)'%(citem.get('id'),season))
+                return None
+            elif (strpTime(program.get('stop',now).rstrip(),DTFORMAT) < now): 
+                self.log('[%s] cleanProgrammes, __filterProgrammes removing expired programmes'%(citem.get('id')))
+                return None  # remove expired content, todo ignore "recordings" ie. media=True
             return program
             
         tmpProgrammes = [program for program in [__filterProgrammes(program) for program in programmes] if program is not None]
