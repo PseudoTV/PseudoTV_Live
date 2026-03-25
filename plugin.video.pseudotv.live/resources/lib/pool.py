@@ -137,7 +137,6 @@ def threadit(method):
     wrapper._lock = Lock()
     return wrapper
     
-
 def timerit(method):
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
@@ -153,7 +152,7 @@ def timerit(method):
                         method(*args, **kwargs)
                     log('%s, timerit running %s' % (method.__qualname__.replace('.', ': => -:'), timer_name))
                 except Exception as e:
-                    log('%s, timerit failed! %s' % (method.__qualname__.replace('.', ': '), e), level='ERROR')
+                    log('%s, timerit failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
                 finally:
                     with wrapper._lock:
                         wrapper._active_timer = None

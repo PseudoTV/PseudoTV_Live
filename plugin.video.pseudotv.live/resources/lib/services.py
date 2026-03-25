@@ -454,6 +454,9 @@ class Monitor(xbmc.Monitor):
         
 class Service(object):
     channels         = []
+    isScanning       = BUILTIN.isScanning()
+    isPaused         = BUILTIN.isPaused()
+    isPlaying        = BUILTIN.isPlaying()
     isClient         = SETTINGS.getSettingBool('Enable_Client')
     pendingSuspend   = PROPERTIES.setPendingSuspend(False)
     pendingInterrupt = PROPERTIES.setPendingInterrupt(False)
@@ -473,9 +476,6 @@ class Service(object):
         self.settings    = SETTINGS.getCurrentSettings()
         self.isClient    = SETTINGS.getSettingBool('Enable_Client')
         self.priorityQUE = CustomQueue(priority=True, service=self)
-        self.isScanning  = BUILTIN.isScanning()
-        self.isPaused    = BUILTIN.isPaused()
-        self.isPlaying   = self._isPlaying()
     
 
     def __del__(self):
@@ -493,7 +493,7 @@ class Service(object):
 
 
     def _isPlaying(self) -> bool: #assert playback for background service throttling.
-        if (self.player.isPlaying() or self.isPaused) and not self.player.runWhilePlaying: return True
+        if (self.isPlaying or self.isPaused) and not self.player.runWhilePlaying: return True
         return False
     
         
@@ -518,7 +518,7 @@ class Service(object):
          
         
     def _interrupt(self) -> bool: #tasks break
-        pendingInterrupt = any([self.pendingShutdown, self.pendingRestart, self.isScanning, self.isPlaying, PROPERTIES.isInterruptActivity()])
+        pendingInterrupt = any([self.pendingShutdown, self.pendingRestart, self.isScanning, self._isPlaying(), PROPERTIES.isInterruptActivity()])
         if pendingInterrupt != self.pendingInterrupt:
             self.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
             self.log('_interrupt, pendingInterrupt = %s'%(self.pendingInterrupt))
@@ -554,7 +554,7 @@ class Service(object):
             while not self.monitor.abortRequested():
                 self.isScanning = BUILTIN.isScanning()
                 self.isPaused   = BUILTIN.isPaused()
-                self.isPlaying  = self._isPlaying()
+                self.isPlaying  = self.player.isPlaying()
                 if    self._shutdown() and self._interrupt() and self._sleep(): break
                 elif  self._restart()  and self._interrupt() and self._sleep(): break
                 else: self._tasks()

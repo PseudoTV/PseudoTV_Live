@@ -70,6 +70,7 @@ class Plugin(object):
                 playlist.add(listitem.getPath(),listitem,listitems.index(listitem))
                 
         if listitems:
+            self.sysInfo['isPlaylist'] = True
             if shuffle is None: shuffle = BUILTIN.isPlaylistRandom()
             self.log('[%s] _quePlaylist, listitems = %s, shuffle = %s'%(self.sysInfo.get('chid'), len(listitems), shuffle))
             playlist = xbmc.PlayList(pltype)
@@ -79,7 +80,7 @@ class Plugin(object):
             self.log('[%s] _quePlaylist, Playlist size = %s, shuffle = %s'%(self.sysInfo.get('chid'), playlist.size(),shuffle))
             if shuffle: playlist.shuffle()
             else:       playlist.unshuffle()
-            return playlist
+            return playlist, listitems[0]
 
 
     def _getPVRItems(self):
@@ -133,65 +134,6 @@ class Plugin(object):
         return []
                    
                    
-    def _playCheck(self, found, listitem=None):
-        def __findMissing(listitem):
-            label = (self.sysInfo['fitem'].get('label') or listitem.getLabel())
-            file  = (self.sysInfo['fitem'].get('file')  or listitem.getPath())
-            folder, filename  = os.path.split(file)
-            oSeason, oEpisode = parseSE(filename)
-            self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {label}: {filename} in {folder}')
-            
-            with PROPERTIES.interruptActivity():
-                DIALOG.notificationDialog(f'Missing: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
-                items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
-                
-            found = False
-            for item in items:
-                if item.get('file','').endswith(tuple(VIDEO_EXTS)):
-                    season, episode  = parseSE(os.path.split(item.get('file',''))[1])
-                    if item.get('type') == 'movies' and item.get('label','').lower() == label.lower():
-                        found = True
-                        break
-                    elif oSeason and oEpisode and (oSeason == season and oEpisode == episode):
-                        found = True
-                        break
-                if found: 
-                    combineDicts(self.sysInfo['fitem'],item)
-                    listitem.setPath(self.sysInfo['fitem']['file'])
-                    self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing found {self.sysInfo['fitem']['file']}')
-                    DIALOG.notificationDialog(f'Found: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
-            #if not found: listitem.setPath(insert missing media placeholder)
-            return found, listitem
-            
-        if listitem is None: listitem = xbmcgui.ListItem()
-        if listitem.getPath() and not FileAccess.exists(listitem.getPath()): found, listitem = __findMissing(listitem)
-        return listitem.getPath(), found, listitem
-
-
-    def _resolveURL(self, found, listitem=None):
-        self.log(f'[{self.sysInfo.get('chid')}] _resolveURL, found = {found}')
-        if listitem is None: listitem = xbmcgui.ListItem()
-        _, found, listitem = self._playCheck(found, listitem)
-        xbmcplugin.setResolvedUrl(int(self.sysInfo['sysARG'][1]), found, listitem)
-        
-        
-    def _play(self, file, listitem=None, wait=30):
-        #PVR Live Channel Detection workaround.
-        if listitem is None: listitem = xbmcgui.ListItem()
-        if self.player.isPlaying() and listitem.getPath() != self.player.getPlayingFile():
-            self.player.stop()
-        file, found, listitem = self._playCheck(True, listitem)
-        timerit(self.player.play)(1.0,file,found,listitem,True)
-        self._resolveURL(False, listitem)
-        #Playlist don't always gain screen focus depending on user Kodi configuration. Force fullscreen.
-        while not self.monitor.abortRequested() and not self.player.isPlaying():
-            if self.monitor.waitForAbort(1.0) or wait < 1: return
-            wait -= 1
-        if self.player.isPlayingAudio(): window = 'visualisation'
-        else:                            window = 'fullscreenvideo'
-        timerit(BUILTIN.executewindow)(1.0,*('ActivateWindow(%s)'%(window),True,False,self.player.isPlaying))
-
-
     def _setResume(self, listitem):
         if self.sysInfo.get('seek',0) > SETTINGS.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
             self.log('[%s] _setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), listitem.getPath()))
@@ -221,8 +163,7 @@ class Plugin(object):
                 listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
                 self._play(listitem.getPath(),listitem)
             else:#LIVE called from Guide/Channels.
-                listitem = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
-                listitem = self._setResume(listitem)
+                listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
                 listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.sysInfo)))
                 self._resolveURL(True, listitem)
         
@@ -230,8 +171,10 @@ class Plugin(object):
     @threadit
     def playRadio(self, limit=RADIO_ITEM_LIMIT):
         def __buildfItem(item: dict={}):
+            sysInfo = self.sysInfo.copy()
+            sysInfo['isPlaylist'] = True
             listitem = LISTITEMS.buildItemListItem(item,'music')
-            listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.sysInfo)))
+            listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(sysInfo)))
             return listitem
             
         def __buildPlaylist(chid, name):
@@ -240,7 +183,8 @@ class Plugin(object):
         
         self.log('[%s] playRadio, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
         with PROPERTIES.suspendActivity():
-            self._play(self._quePlaylist(poolit(__buildfItem)(__buildPlaylist(self.sysInfo.get('chid'),self.sysInfo.get('name'))),pltype=xbmc.PLAYLIST_MUSIC))
+            listitems = poolit(__buildfItem)(__buildPlaylist(self.sysInfo.get('chid'),self.sysInfo.get('name')))
+            self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True)))
                
                       
     @threadit         
@@ -258,22 +202,23 @@ class Plugin(object):
                     infoTag = ListItemInfoTag(listitem, 'video')
                     infoTag.set_resume_point({'ResumeTime':seektime, 'TotalTime':runtime * 60})
                     
-                sysInfo.update({'fitem':item,'resume':{"idx":listitems.index(item)}})
+                sysInfo.update({'fitem':item,'resume':{"idx":lizLST.index(item)}})
                 listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(sysInfo)))
                 return listitem
             
         def __buildPlaylist(chid, name):
-            listitems = RulesList([self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid}))
-            if listitems:
-                listitems = nextitems[:SETTINGS.getSettingInt('Page_Limit')]
-                self.log('[%s] __buildPlaylist, building listitems (%s)'%(chid, len(listitems)))
-                return poolit(__buildfItem)(listitems)
+            lizLST = RulesList([self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid}))
+            if lizLST:
+                lizLST = nextitems[:SETTINGS.getSettingInt('Page_Limit')]
+                self.log('[%s] __buildPlaylist, building lizLST (%s)'%(chid, len(lizLST)))
+                return poolit(__buildfItem)(lizLST)
             else: DIALOG.notificationDialog(LANGUAGE(32000))
             return []
         
         self.log('[%s] playPaused, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
         with PROPERTIES.suspendActivity():
-            self._play(self._quePlaylist(self.__buildPlaylist(self.sysInfo.get('chid'), self.sysInfo.get('name')), shuffle=False))
+            listitems = self.__buildPlaylist(self.sysInfo.get('chid'), self.sysInfo.get('name'))
+            self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
             
             
     @threadit         
@@ -303,6 +248,79 @@ class Plugin(object):
             
         self.log('[%s] playPlaylist, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
         with PROPERTIES.suspendActivity():
-            nextitems = self._getPVRItems()
             DIALOG.notificationDialog(f'{LANGUAGE(32185)%('Queue')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem']['label']}')
-            self._play(self._quePlaylist(poolit(__buildfItem)(nextitems), shuffle=False))
+            nextitems = self._getPVRItems()
+            listitems = poolit(__buildfItem)(nextitems)
+            self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
+            
+            
+    def _playCheck(self, path, found, listitem=None):
+        def __findMissing(listitem):
+            label = (self.sysInfo['fitem'].get('label') or listitem.getLabel())
+            file  = (self.sysInfo['fitem'].get('file')  or listitem.getPath())
+            if file.startswith(tuple(VFS_TYPES)): found = True
+            else:
+                folder, filename  = os.path.split(file)
+                oSeason, oEpisode = parseSE(filename)
+                self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {label}: {filename} in {folder}')
+                
+                with PROPERTIES.interruptActivity():
+                    DIALOG.notificationDialog(f'Missing: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
+                    items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
+                    
+                found = False
+                for item in items:
+                    if item.get('file','').endswith(tuple(VIDEO_EXTS)):
+                        season, episode  = parseSE(os.path.split(item.get('file',''))[1])
+                        if item.get('type') == 'movies' and item.get('label','').lower() == label.lower():
+                            found = True
+                            break
+                        elif oSeason and oEpisode and (oSeason == season and oEpisode == episode):
+                            found = True
+                            break
+                if found: 
+                    combineDicts(self.sysInfo['fitem'],item)
+                    listitem.setPath(self.sysInfo['fitem']['file'])
+                    self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing found {self.sysInfo['fitem']['file']}')
+                    DIALOG.notificationDialog(f'Found: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
+                #else: listitem.setPath(insert missing media placeholder)
+            return found, listitem
+            
+        #File Exists
+        if listitem is None: listitem = xbmcgui.ListItem()
+        if not FileAccess.exists(listitem.getPath()): found, listitem = __findMissing(listitem)
+        #TODO ROBOUST ERROR CORRECTION
+        if self.sysInfo['isPlaylist']: return path, found, listitem
+        else:                          return listitem.getPath(), found, listitem
+
+
+    def _play(self, file, listitem=None, wait=30):
+        #PVR Live Channel Detection workaround.
+        if listitem is None: listitem = xbmcgui.ListItem()
+       
+        while not self.monitor.abortRequested() and self.player.isPlaying():
+            if    self.monitor.waitForAbort(0.5): return
+            else: self.player.stop()
+            
+        file, found, listitem = self._playCheck(file, True, listitem)
+        timerit(self.player.play)(1.0,*(file,listitem))
+        self._resolveURL(False, listitem)
+        #Playlist don't always gain screen focus depending on user Kodi configuration. Force fullscreen.
+        self.log(f'[{self.sysInfo.get('chid')}] _play, found = {found}, playlist = {self.sysInfo['isPlaylist']}')
+        
+        while not self.monitor.abortRequested() and not self.player.isPlaying():
+            if self.monitor.waitForAbort(0.5) or wait < 1: return
+            wait -= 1
+            
+        if self.player.isPlayingAudio(): window = 'visualisation'
+        else:                            window = 'fullscreenvideo'
+        timerit(BUILTIN.executewindow)(1.0,*('ActivateWindow(%s)'%(window),True,False,self.player.isPlaying))
+
+
+    def _resolveURL(self, found=False, listitem=None):
+        self.log(f'[{self.sysInfo.get('chid')}] _resolveURL, found = {found}: {listitem.getPath()}')
+        if listitem is None: listitem = xbmcgui.ListItem()
+        else: _, found, listitem = self._playCheck(listitem.getPath(), found, listitem)
+        xbmcplugin.setResolvedUrl(int(self.sysInfo['sysARG'][1]), found, listitem)
+        
+        
