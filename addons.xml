@@ -61,7 +61,11 @@
                 </item>
                 <item library="resources/lib/context_create.py" args="open_manager">
                     <label>32261</label>
-                    <visible>[String.Contains(ListItem.Plot,"item=")] + [Window.IsVisible(tvguide)|Window.IsVisible(tvchannels)]</visible>
+                    <visible>[String.Contains(ListItem.Plot,"item=")]</visible>
+                </item>
+                <item library="resources/lib/context_create.py" args="open_manager">
+                    <label>30107</label>
+                    <visible>[!String.Contains(ListItem.Plot,"item=")]</visible>
                 </item>
             </menu>
         </menu>

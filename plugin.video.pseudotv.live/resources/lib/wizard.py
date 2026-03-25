@@ -61,7 +61,7 @@ class Wizard(xbmcgui.WindowXMLDialog):
 
         
     def isLocked(self):
-        return (PROPERTIES.getProperty('Wizard.isLocked') or False)
+        return PROPERTIES.getProperty('Wizard.isLocked',False)
         
         
     def setLocked(self, state=True):

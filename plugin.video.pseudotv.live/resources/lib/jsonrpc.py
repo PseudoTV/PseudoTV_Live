@@ -106,10 +106,8 @@ class JSONRPC(object):
         walk = {}
         path = path.replace('\\','/')
         subs, files = self.getListDirectory(path,checksum,expiration)
-        print('walkListDirectory',subs, files, walk)
         self.log('walkListDirectory, walking %s, found = (%s,%s), appended = %s, depth = %s, ext = %s'%(path,len(subs),len(files),depth,exts))
         walk.setdefault(path,[]).extend([_f for _f in [__chkfile(path, file) for file in files] if _f])
-        
         for sub in subs:
             if depth == 0: break
             depth -= 1
@@ -292,11 +290,14 @@ class JSONRPC(object):
         return (result.get('item', {}) or result.get('items', []))
 
 
-    def getPVRClients(self, id=PVR_CLIENT_ID):
+    def getPVRClients(self):
         param = {"method":"PVR.GetClients","params":{}}
-        results = self.sendJSON(param).get('result',{}).get('clients', [])
-        if id is None: return results
-        return next((result for result in results if result.get('addonid').lower() == id.lower()),None)
+        return self.sendJSON(param).get('result',{}).get('clients',[])
+
+
+    def getPVRClient(self, id=PVR_CLIENT_ID):
+        results = self.getPVRClients()
+        return next((result for result in results if result.get('addonid','').lower() == id.lower()),None)
 
 
     def getPVRChannelGroups(self, match=ADDON_NAME, radio=False):

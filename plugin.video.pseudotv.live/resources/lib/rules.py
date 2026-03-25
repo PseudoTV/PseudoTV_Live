@@ -1416,7 +1416,7 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
         self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33230),LANGUAGE(30182)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(0,26,1))]
-        self.storedValues       = [[],[],[],[],{},[],[],[]]
+        self.storedValues       = [[],[],[],{},[]]
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -1457,7 +1457,7 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
                 type  = item.get('type', '')
                 title = item.get('showtitle')
                 if title and type.startswith(tuple(TV_TYPES)):
-                    if episode_order and item not in self.storedValues[3].get('title',[]): 
+                    if episode_order and item not in self.storedValues[3].setdefault(title,[]): 
                         self.storedValues[3].setdefault(title, []).append(item) #no duplicates
                     elif not episode_order:
                         self.storedValues[3].setdefault(title, []).append(item) #duplicates allowed

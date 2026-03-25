@@ -48,8 +48,8 @@ class Service(object):
 
 class Builder(object):
     xsp      = XSP()
-    xmltv    = XMLTVS(writable=True)
     m3u      = M3U(writable=True)
+    xmltv    = XMLTVS(writable=True, m3u=m3u)
     channels = Channels(writable=True)
     seasonal = Seasonal()
     loopback = None

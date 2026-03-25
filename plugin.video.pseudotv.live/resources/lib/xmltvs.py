@@ -26,15 +26,18 @@ from fileaccess  import FileAccess, FileLock
 #todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
 
 class XMLTVS(object):
-    def __init__(self, file=XMLTVFLEPATH, writable=False):
+    XMLTVDATA = {}
+    
+    def __init__(self, file=XMLTVFLEPATH, writable=False, m3u=None):
         self.writable  = writable
+        self.m3u       = m3u
         self.XMLTVFile = file
         self.XMLTVDATA = self._load()
         
 
     def __del__(self):
         self.log('__del__, writable = %s'%(self.writable))
-        if writable: self._save()
+        if self.writable: self._save()
             
             
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -176,11 +179,11 @@ class XMLTVS(object):
             try: 
                 firstStart = min((program['start'] for program in programmes if program['channel'] == channel['id']), default=fallback)
                 lastStop   = max((program['stop']  for program in programmes if program['channel'] == channel['id']), default=fallback)
-                self.log('loadStopTimes [%s] first-start = %s, last-stop = %s, fallback = %s'%(channel['id'],firstStart,lastStop,fallback))
+                self.log(' [%s] loadStopTimes first-start = %s, last-stop = %s, fallback = %s'%(channel['id'],firstStart,lastStop,fallback))
                 if firstStart > fallback: raise Exception('First start-time in the future, rebuild channel with fallback')
                 yield channel['id'],datetime.datetime.timestamp(strpTime(lastStop, DTFORMAT))
             except Exception as e:
-                self.log("loadStopTimes [%s] failed!\nMalformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s"%(channel.get('id'),e,fallback), xbmc.LOGWARNING)
+                self.log(" [%s] loadStopTimes failed!\nMalformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s"%(channel.get('id'),e,fallback), xbmc.LOGWARNING)
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
 
 
@@ -188,25 +191,47 @@ class XMLTVS(object):
         if not channels:   channels   = self.getChannels()
         if not programmes: programmes = self.getProgrammes()
         if not now: now = epochTime(roundTimeDown(getUTCstamp(),offset=60),tz=False).strftime(DTFORMAT)
-        
         for channel in channels:
-            try: 
-                valid = False
-                lastStop  = max((program['stop'] for program in programmes if program['channel'] == channel['id']), default=now)
-                if lastStop > now: valid = True
-                self.log('hasProgrammes, channel = %s, valid = %s'%(channel['id'],valid))
-                yield channel['id'],valid
-            except Exception as e:
-                self.log("hasProgrammes, channel = %s failed!\nMalformed XMLTV channel/programmes %s! valid = False %s"%(channel.get('id'),e), xbmc.LOGWARNING)
-                yield channel['id'],False
+            # try: 
+            valid = False
+            lastStop  = max((program['stop'] for program in programmes if program['channel'] == channel['id']), default=now)
+            if lastStop > now: valid = True
+            self.log('[%s] hasProgrammes, valid = %s'%(channel['id'],valid))
+            yield channel['id'],valid
+            # except Exception as e:
+                # self.log("[%s] hasProgrammes, failed!\nMalformed XMLTV channel/programmes %s! valid = False"%(channel.get('id'),e), xbmc.LOGWARNING)
+                # yield channel['id'],False
 
 
     def cleanString(self, text: str) -> str:
         if text == ', ' or not text: text = LANGUAGE(32020) #"Unavailable"
         return bytes(text,DEFAULT_ENCODING).decode(DEFAULT_ENCODING,'ignore')
 
-             
-    def cleanSelf(self, items: list, key: str='id', slug: str='@%s'%(Globals._slugify(ADDON_NAME))) -> list: # remove (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
+
+    def cleanStations(self, programmes: list=[]):
+        if not self.m3u is None:
+            programs = dict(self.hasProgrammes(self.getChannels(),programmes))
+            for id, hasProgram in programs.items():
+                print(id, hasProgram)
+                if id and not hasProgram:
+                    self.m3u.delStation({'id':id})
+                    self.delBroadcast({'id':id})
+                    self.log('cleanStations, removing = %s; no programmes!'%(id))
+        return programmes
+        
+        
+    def cleanRecordings(self, programmes: list=[]):
+        if not self.m3u is None:
+            programs = dict(self.hasProgrammes(self.getRecordings(), programmes))
+            for id, hasProgram in programs.items():
+                if id and not hasProgram:
+                    self.m3u.delRecording({'id':id})
+                    self.delRecording({'id':id})
+                    self.log('cleanRecordings, removing = %s; no programmes!'%(id))
+        return programmes
+        
+        
+    def cleanSelf(self, items: list=[], key: str='id', slug: str='@%s'%(Globals._slugify(ADDON_NAME))) -> list: # remove (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
         if not slug: return items
         channels   = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 32])
         recordings = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 16])
@@ -214,31 +239,31 @@ class XMLTVS(object):
             self.log('cleanSelf, slug = %s, key = %s: returning channels = %s, recordings = %s'%(slug,key,len(channels),len(recordings)))
             return self.sortChannels(Globals._setDictLST(channels)), self.sortChannels(Globals._setDictLST(recordings))
         elif key == 'channel': #programmes
-            programmes = self.cleanProgrammes(channels) + recordings
+            programmes = self.cleanStations(self.cleanProgrammes(channels)) +  self.cleanRecordings(recordings)
             self.log('cleanSelf, slug = %s, key = %s: returning programmes = %s'%(slug,key,len(programmes)))
             return self.sortProgrammes(programmes)
         
         
-    def cleanChannels(self, channels: list, programmes: list, opt='PROGRAMMES') -> list: # remove stations with no guidedata
+    def cleanChannels(self, channels: list=[], programmes: list=[], opt='PROGRAMMES') -> list: # remove stations with no guidedata
         stations    = list(set([program.get('channel') for program in programmes]))
         tmpChannels = [channel for station in stations for channel in channels if channel.get('id') == station]
         self.log('cleanChannels [%s], before = %s, after = %s'%(opt,len(channels),len(tmpChannels)))
         return tmpChannels
 
 
-    def cleanProgrammes(self, programmes: list) -> list:
+    def cleanProgrammes(self, programmes: list=[]) -> list:
         now = (epochTime(float(getUTCstamp()),tz=False) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells
         holiday = Seasonal().getHoliday()
         
         def __filterProgrammes(program):
-            citem = Globals._decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
+            citem    = Globals._decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
             seasonal = citem.get('rules',{}).get('800',{}).get('values',{}).get('0',[{}])[0].get('holiday',{})
-            print(citem,seasonal,holiday.get('name'))
+            stopTime = program.get('stop',now).rstrip()
             if seasonal and seasonal.get('name',str(random.random())) != holiday.get('name'):
                 self.log('[%s] cleanProgrammes, __filterProgrammes removing expired holiday (%s)'%(citem.get('id'),season))
                 return None
-            elif (strpTime(program.get('stop',now).rstrip(),DTFORMAT) < now): 
-                self.log('[%s] cleanProgrammes, __filterProgrammes removing expired programmes'%(citem.get('id')))
+            elif strpTime(stopTime,DTFORMAT) < now: 
+                self.log('[%s] cleanProgrammes, __filterProgrammes removing expired programmes (%s)'%(citem.get('id'),stopTime))
                 return None  # remove expired content, todo ignore "recordings" ie. media=True
             return program
             
@@ -247,12 +272,12 @@ class XMLTVS(object):
         return tmpProgrammes
 
 
-    def sortChannels(self, channels: list) -> list:
+    def sortChannels(self, channels: list=[]) -> list:
         try:    return sorted(channels, key=itemgetter('display-name'))
         except Exception: return channels
         
 
-    def sortProgrammes(self, programmes: list) -> list:
+    def sortProgrammes(self, programmes: list=[]) -> list:
         try:
             programmes.sort(key=itemgetter('start'))
             programmes.sort(key=itemgetter('channel'))

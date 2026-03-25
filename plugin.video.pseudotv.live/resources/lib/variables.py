@@ -43,10 +43,10 @@ AUTOTUNEFLEPATH     = os.path.join(USER_LOC,AUTOTUNEFLE)
 
 class Globals:
     @staticmethod
-    def _getProperty(key):
-        value = xbmcgui.Window(10000).getProperty('%s.%s'%(ADDON_ID, key))
+    def _getProperty(key, default=''):
+        value = (xbmcgui.Window(10000).getProperty('%s.%s'%(ADDON_ID, key)) or default)
         log(f'Globals: [10000] _getProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-        return value
+        return value 
 
     @staticmethod
     def _setProperty(key, value):

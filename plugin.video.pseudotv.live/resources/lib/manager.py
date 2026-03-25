@@ -199,7 +199,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def isLocked(self):
-        return (PROPERTIES.getProperty('Manager.isLocked') or False)
+        return PROPERTIES.getProperty('Manager.isLocked',False)
         
         
     def setLocked(self, state=True):

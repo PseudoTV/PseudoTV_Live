@@ -62,6 +62,8 @@ M3U_MIN  = {"id"                : "",
             "url"               : ""}
             
 class M3U(object):
+    M3UDATA = {}
+    
     def __init__(self, file=M3UFLEPATH, writable=False):
         self.writable    = writable
         self.stationFile = file
@@ -72,7 +74,7 @@ class M3U(object):
 
     def __del__(self):
         self.log('__del__, writable = %s'%(self.writable))
-        if writable: self._save()
+        if self.writable: self._save()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

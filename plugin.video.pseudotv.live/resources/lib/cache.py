@@ -27,11 +27,11 @@ from fileaccess  import FileAccess, FileLock
 class Service(object):
     monitor = MONITOR()
     def _shutdown(self, wait=1.0) -> bool:
-        return (self.monitor.waitForAbort(wait) | (Globals._getProperty('%s.pendingShutdown'%(ADDON_ID)) or False))
+        return (self.monitor.waitForAbort(wait) | (Globals._getProperty('%s.pendingShutdown'%(ADDON_ID),False)))
     def _interrupt(self) -> bool:
-        return ((Globals._getProperty('%s.pendingShutdown'%(ADDON_ID)) or False) | (Globals._getProperty('%s.pendingRestart'%(ADDON_ID)) or False) | (Globals._getProperty('%s.pendingInterrupt'%(ADDON_ID)) or False))
+        return (Globals._getProperty('%s.pendingShutdown'%(ADDON_ID),False) | Globals._getProperty('%s.pendingRestart'%(ADDON_ID),False) | Globals._getProperty('%s.pendingInterrupt'%(ADDON_ID),False))
     def _suspend(self, wait=1.0) -> bool:
-        return (Globals._getProperty('%s.pendingSuspend'%(ADDON_ID)) or False)
+        return Globals._getProperty('%s.pendingSuspend'%(ADDON_ID),False)
     def _sleep(self, wait=1.0):
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True

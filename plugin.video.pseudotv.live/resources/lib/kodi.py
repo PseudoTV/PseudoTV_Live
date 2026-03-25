@@ -563,12 +563,12 @@ class Properties(object):
 
 
     def setInstanceID(self):
-        self._clrTrash(self.getEXTProperty('%s.InstanceID'%(ADDON_ID)))
+        self._clrTrash(self.getEXTProperty('%s.InstanceID'%(ADDON_ID),None))
         return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),FileAccess._getMD5(uuid4()))
 
 
     def _clrTrash(self, instanceID=None): #clear abandoned properties after instanceID change
-        if not instanceID is None:
+        if instanceID:
             tmpDCT = self._getTrash()
             if instanceID in tmpDCT:
                 self.log('_clrTrash, instanceID = %s'%(instanceID))
@@ -578,7 +578,7 @@ class Properties(object):
 
 
     def _getTrash(self):
-        try:    return (FileAccess.loadPICKLE(FileAccess._decodeString(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))) or {})
+        try:    return FileAccess.loadPICKLE(FileAccess._decodeString(self.getEXTProperty('%s.TRASH'%(ADDON_ID),{})))
         except: return {}
 
 
@@ -601,29 +601,29 @@ class Properties(object):
 
 
     #GET
-    def getProperty(self, key):
+    def getProperty(self, key, default=''):
         try:
             key, thid = self._getKey(key)
-            value = self.window.getProperty(key)
-            if len(value) > 0: value = FileAccess.loadPICKLE(FileAccess._decodeString(value))
+            value = (self.window.getProperty(key) or default)
+            try: value = FileAccess.loadPICKLE(FileAccess._decodeString(value))
+            except (ValueError, SyntaxError): pass
             self.log(f'[{self.winID}] getProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
             return value
         except Exception as e: 
             self.log(f"[{self.winID}] getProperty [{thid}], failed! {e} - key = [{key}]", xbmc.LOGERROR)
-            return None
+            return default
             
         
-    def getEXTProperty(self, key):
+    def getEXTProperty(self, key, default=''):
         try:
-            value = xbmcgui.Window(10000).getProperty(key)
-            if len(value) > 0:
-                try: value = literal_eval(value)
-                except (ValueError, SyntaxError): pass
+            value = (xbmcgui.Window(10000).getProperty(key) or default)
+            try: value = literal_eval(value)
+            except (ValueError, SyntaxError): pass
             if not '.TRASH' in key: self.log(f'[10000] getEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
             return value
         except Exception as e: 
             self.log("[%s] getEXTProperty, failed! %s - key = %s, value = %s"%('10000', e,key,str(value)[:128]), xbmc.LOGERROR)
-            return None
+            return default
         
         
     #CLEAR
@@ -673,6 +673,11 @@ class Properties(object):
         return self.setEXTProperty(key,state)
 
 
+    def getPropTimer(self, key, state=True, default=False):
+        if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
+        return self.getEXTProperty(key,default)
+
+
     def setRemoteHost(self, value):
         return self.setEXTProperty('%s.Remote_Host'%(ADDON_ID),value)
         
@@ -696,11 +701,11 @@ class Properties(object):
 
 
     def hasBackup(self):
-        return (self.getEXTProperty('%s.has.Backup'%(ADDON_ID)) or False)
+        return self.getEXTProperty('%s.has.Backup'%(ADDON_ID),False)
 
 
     def hasLibrary(self, type):
-        return (self.getEXTProperty('%s.has.%s'%(ADDON_ID,type)) or False)
+        return self.getEXTProperty('%s.has.%s'%(ADDON_ID,type),False)
         
         
     def setLibrary(self, type, state=True):
@@ -712,7 +717,7 @@ class Properties(object):
         
 
     def hasServers(self):
-        return (self.getEXTProperty('%s.has.Servers'%(ADDON_ID)) or False)
+        return self.getEXTProperty('%s.has.Servers'%(ADDON_ID),False)
         
                 
     def setEnabledServers(self, state=True):
@@ -720,7 +725,7 @@ class Properties(object):
         
         
     def hasEnabledServers(self):
-        return (self.getEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID)) or False)
+        return self.getEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),False)
         
         
     def setPendingShutdown(self, state=True):
@@ -728,7 +733,7 @@ class Properties(object):
         
 
     def isPendingShutdown(self):
-        value = (self.getEXTProperty('%s.pendingShutdown'%(ADDON_ID)) or False)
+        value = self.getEXTProperty('%s.pendingShutdown'%(ADDON_ID),False)
         # self.clrProperty('pendingShutdown')
         return value
         
@@ -738,7 +743,7 @@ class Properties(object):
 
 
     def isPendingRestart(self):
-        value = (self.getEXTProperty('%s.pendingRestart'%(ADDON_ID)) or False)
+        value = self.getEXTProperty('%s.pendingRestart'%(ADDON_ID),False)
         # self.clrProperty('pendingRestart')
         return value
 
@@ -757,7 +762,7 @@ class Properties(object):
         
         
     def isRunning(self, key):
-        return (self.getEXTProperty('%s.%s.Running'%(ADDON_ID,key)) or False)
+        return self.getEXTProperty('%s.%s.Running'%(ADDON_ID,key),False)
 
 
     @contextmanager
@@ -776,7 +781,7 @@ class Properties(object):
 
 
     def isLockActivity(self):# context state
-        return (self.getEXTProperty('%s.lockActivity'%(ADDON_ID)) or False)
+        return self.getEXTProperty('%s.lockActivity'%(ADDON_ID),False)
 
 
     @contextmanager
@@ -794,7 +799,7 @@ class Properties(object):
         
 
     def isInterruptActivity(self): # context state
-        return (self.getEXTProperty('%s.interruptActivity'%(ADDON_ID)) or False)
+        return self.getEXTProperty('%s.interruptActivity'%(ADDON_ID),False)
 
 
     def setPendingInterrupt(self, state=True): # interrupt state
@@ -802,7 +807,7 @@ class Properties(object):
 
 
     def isPendingInterrupt(self):  # interrupt state
-        return (self.getEXTProperty('%s.pendingInterrupt'%(ADDON_ID)) or False)
+        return self.getEXTProperty('%s.pendingInterrupt'%(ADDON_ID),False)
 
         
     @contextmanager
@@ -820,7 +825,7 @@ class Properties(object):
 
 
     def isSuspendActivity(self): # context state
-        return (self.getEXTProperty('%s.suspendActivity'%(ADDON_ID)) or False)
+        return self.getEXTProperty('%s.suspendActivity'%(ADDON_ID),False)
         
         
     def setPendingSuspend(self, state=True): # suspend state
@@ -828,7 +833,7 @@ class Properties(object):
         
         
     def isPendingSuspend(self): # suspend state
-        return (self.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) or False)
+        return self.getEXTProperty('%s.pendingSuspend'%(ADDON_ID),False)
 
 
     @contextmanager
@@ -840,14 +845,14 @@ class Properties(object):
 
 
     def isPseudoTVRunning(self):
-        return (self.getEXTProperty('PseudoTVRunning') or False)
+        return self.getEXTProperty('PseudoTVRunning',False)
 
 
     def getFriendlyName(self):
-        friendly = self.getProperty('Instance_Name')
+        friendly = self.getEXTProperty('%s.Instance_Name'%(ADDON_ID))
         if not friendly or friendly == LANGUAGE(32105):
             from jsonrpc import JSONRPC
-            friendly = self.setProperty('Instance_Name', JSONRPC().inputFriendlyName())
+            friendly = self.setEXTProperty('%s.Instance_Name'%(ADDON_ID), JSONRPC().inputFriendlyName())
         return friendly
         
         
@@ -868,9 +873,10 @@ class Properties(object):
             elif isInterrupt and not isBuilding: self.setInterruptActivity(False)#release interrupt.
             elif not isInterrupt and not any([isSuspend, isBuilding]):
                 with self.lockActivity():
-                    try:   results = func(*args, **kwargs)
+                    try:
+                        results = func(*args, **kwargs)
+                        break
                     except Exception as e: self.log("preemptActivity, failed! %s"%(e), xbmc.LOGERROR)
-                    finally: break
             if self.monitor.waitForAbort(CPU_CYCLE): break
         
         self.setSuspendActivity(orgSuspend)
@@ -1253,7 +1259,7 @@ class Dialog(object):
 
 
     def getInfoMonitor(self):
-        return self.properties.getProperty('Kodi.montiorList').get('info',[])
+        return self.properties.getProperty('Kodi.montiorList',{}).get('info',[])
     
     
     def setInfoMonitor(self, items):

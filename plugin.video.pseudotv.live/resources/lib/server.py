@@ -266,7 +266,7 @@ class HTTP(object):
         
 
     def _pendingRestart(self):
-        return (PROPERTIES.getEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID)) or False)
+        return PROPERTIES.getEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),False)
        
 
     def run(self):  
