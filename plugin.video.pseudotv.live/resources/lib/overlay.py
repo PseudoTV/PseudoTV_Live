@@ -197,7 +197,7 @@ class Overlay(object):
         
     def toggleOnNext(self, state: bool=bool(SETTINGS.getSettingInt('OnNext_Mode'))):
         if state and self.onnext is None:
-            self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", player=self, mode=self.player.OnNextMode, position=self.player.onNextPosition, next=self.jsonRPC.getNextItem(self.playingItem.get('citem',{}),self.playingItem.get('nitem')))
+            self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", player=self, mode=self.player.OnNextMode, position=self.player.onNextPosition, next=self.jsonRPC.getNextItem(self.citem,self.nitem))
         elif not state and hasattr(self.onnext,'onClose'):
             self.onnext = self.onnext.onClose()
         else: return

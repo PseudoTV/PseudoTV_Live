@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PseudoTV Live | Manager</title>
+    <style>
+        :root {
+            --pstv-bg-dark: #002b4d; 
+            --pstv-bg-light: #005a92;
+            --pstv-accent: #ffffff;
+            --pstv-input-bg: #1a4a70;
+            --pstv-border: rgba(255, 255, 255, 0.3);
+            --pstv-focus: #5dade2;
+            --pstv-dim: rgba(255, 255, 255, 0.4);
+            --pstv-success: #27ae60;
+            --pstv-epg-bg: #001a2d;
+            --pstv-epg-prog: #003d66;
+            --hour-width: 340px;
+        }
+
+        body {
+            background: radial-gradient(circle, var(--pstv-bg-light) 0%, var(--pstv-bg-dark) 100%);
+            background-attachment: fixed;
+            color: var(--pstv-accent);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+        }
+
+        .banner { width: 100%; padding: 30px 0 10px 0; text-align: center; }
+        .banner img { max-width: 350px; filter: drop-shadow(0px 8px 15px rgba(0,0,0,0.4)); }
+
+        .tab-bar { display: flex; gap: 5px; width: 95%; max-width: 1000px; margin-bottom: -1px; z-index: 2; }
+        .tab {
+            padding: 12px 25px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--pstv-border);
+            border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer;
+            font-size: 0.8rem; font-weight: bold; text-transform: uppercase; color: var(--pstv-dim);
+        }
+        .tab.active { background: rgba(0, 0, 0, 0.2); color: var(--pstv-accent); border-top: 2px solid var(--pstv-focus); backdrop-filter: blur(12px); }
+
+        .container {
+            width: 95%; max-width: 1000px;
+            background: rgba(0, 0, 0, 0.35); backdrop-filter: blur(12px);
+            border: 1px solid var(--pstv-border); border-radius: 0 12px 12px 12px;
+            padding: 30px; margin-bottom: 60px; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        }
+
+        h2 { font-weight: 300; letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid var(--pstv-border); padding-bottom: 15px; text-align: center; margin-top: 0; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .config-header { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 25px; }
+        .config-item-small { flex: 1; max-width: 250px; }
+        .config-item-large { flex: 2; }
+
+        #channelForm { display: none; margin-top: 30px; border-top: 1px solid var(--pstv-border); padding-top: 30px; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.75rem; margin-bottom: 8px; opacity: 0.8; text-transform: uppercase; }
+        
+        input, select {
+            width: 100%; box-sizing: border-box; padding: 12px;
+            background-color: var(--pstv-input-bg); border: 1px solid var(--pstv-border);
+            border-radius: 6px; color: white; font-size: 1rem; appearance: none;
+        }
+
+        input[readonly] { background-color: rgba(0, 0, 0, 0.2); color: var(--pstv-dim); cursor: not-allowed; }
+
+        .toggle-row { display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border: 1px solid var(--pstv-border); }
+        .toggle-item { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+        
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--pstv-success); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .nested-section { margin: 20px 0 20px 20px; padding: 15px; border-left: 2px solid var(--pstv-focus); background: rgba(255, 255, 255, 0.03); border-radius: 0 8px 8px 0; }
+        .section-label { font-size: 0.7rem; color: var(--pstv-focus); font-weight: bold; margin-bottom: 15px; display: block; }
+        
+        .button-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 40px; }
+        button { padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: all 0.2s; }
+        .btn-save { background: #27ae60; color: white; }
+        .btn-cancel { background: #7f8c8d; color: white; }
+        .btn-action { background: var(--pstv-focus); color: #000; font-size: 0.7rem; margin-top: 8px; padding: 6px 12px; width: auto; }
+        .field-row { display: flex; gap: 10px; align-items: flex-end; }
+
+        .epg-container { display: flex; background: var(--pstv-epg-bg); border: 1px solid var(--pstv-border); height: 500px; overflow: hidden; }
+        .epg-channels { width: 160px; flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--pstv-focus); z-index: 10; }
+        .epg-channel-item { height: 60px; padding: 0 15px; display: flex; align-items: center; border-bottom: 1px solid var(--pstv-border); font-weight: bold; font-size: 0.8rem; }
+        .epg-schedule { flex-grow: 1; overflow: auto; position: relative; }
+        .epg-time-bar { display: flex; height: 35px; background: #003355; position: sticky; top: 0; z-index: 5; }
+        .time-slot { min-width: calc(var(--hour-width) / 2); border-right: 1px solid var(--pstv-border); font-size: 0.75rem; display: flex; align-items: center; padding-left: 10px; color: var(--pstv-focus); }
+        .epg-row { display: flex; height: 60px; border-bottom: 1px solid var(--pstv-border); width: fit-content; }
+        .epg-program { flex-shrink: 0; background: var(--pstv-epg-prog); border-right: 1px solid var(--pstv-bg-dark); padding: 8px; overflow: hidden; cursor: pointer; }
+        .epg-prog-title { display: block; font-size: 0.85rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .epg-prog-time { font-size: 0.65rem; opacity: 0.6; }
+
+        select {
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat; background-position: right 1rem top 50%; background-size: 0.65rem auto; padding-right: 2.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="banner"><img src="http://{{ remote_host }}/images/{{ media_loc }}/splashtext.png" alt="Logo"></div>
+
+    <div class="tab-bar">
+        <div id="btn-channels" class="tab active" onclick="navigateTab('channels')">Channels</div>
+        <div id="btn-guide" class="tab" onclick="navigateTab('guide')">Guide</div>
+        <div id="btn-info" class="tab" onclick="navigateTab('info')">Info</div>
+        <div id="btn-settings" class="tab" onclick="navigateTab('settings')">Global Settings</div>
+    </div>
+
+    <div class="container">
+        <div id="tab-channels" class="tab-content active">
+            <h2>Channel Manager</h2>
+            
+            <div class="config-header">
+                <div class="config-item-small">
+                    <label>Configuration Source</label>
+                    <select id="serverSelector" onchange="changeConfig()">
+                        <option value="">-- Select Source --</option>
+                    </select>
+                </div>
+
+                <div class="config-item-large">
+                    <label>Active Channel</label>
+                    <select id="channelSelector" onchange="handleSelectionChange()">
+                        <option value="">-- Select a Channel --</option>
+                        <option value="NEW" style="color: var(--pstv-focus); font-weight: bold;">+ CREATE NEW CHANNEL</option>
+                    </select>
+                </div>
+            </div>
+
+            <form id="channelForm" method="POST" action="/">
+                <div id="baseFields"></div>
+                <div id="rulesContainer" class="nested-section">
+                    <span class="section-label">RULES MANAGEMENT</span>
+                    <select id="ruleSelector" onchange="loadRuleValues()">
+                        <option value="">-- Select Rule --</option>
+                        <option value="ADD_NEW">+ ADD NEW RULE ID</option>
+                    </select>
+                    <div id="ruleValueFields"></div>
+                </div>
+                <div class="button-bar">
+                    <button type="button" class="btn-save" onclick="saveData()">Save</button>
+                    <button type="button" class="btn-cancel" onclick="window.location.reload()">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="tab-guide" class="tab-content">
+            <h2>Live Guide</h2>
+            <div class="epg-container">
+                <div class="epg-channels" id="epg-channel-list"></div>
+                <div class="epg-schedule"><div class="epg-time-bar" id="epg-time-header"></div><div id="epg-rows-container"></div></div>
+            </div>
+        </div>
+
+        <div id="tab-info" class="tab-content"><h2>System Info</h2><p>V0.4.6 - Multi-Source Layout</p></div>
+        <div id="tab-settings" class="tab-content"><h2>Settings</h2><p>Global Options coming soon.</p></div>
+    </div>
+
+<script>
+    // Injected initially via Python
+    const serverData = {{ servers_json|safe }}; 
+
+    // API State
+    let activeBaseUrl = '';
+    let configData = [];
+    let template = {};
+    let xmltvString = '';
+    let CHANNEL_LIMIT = 999;
+    
+    const ignoredKeys = ['type', 'catchup', 'catchup-source', 'url'];
+    const horizontalBools = ['radio', 'favorite', 'changed', 'enabled'];
+    let activeRules = {}, currentPaths = [], hasChanges = false;
+
+    function formatTime12h(date) {
+        let h = date.getHours(), m = date.getMinutes(), ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${m < 10 ? '0'+m : m} ${ampm}`;
+    }
+
+    function init() {
+        const sSelect = document.getElementById('serverSelector');
+        sSelect.innerHTML = '<option value="">-- Select Source --</option>';
+
+        // Populate dropdown with friendly names from the serverData object
+        if (serverData && serverData.servers) {
+            for (const friendlyName in serverData.servers) {
+                let opt = document.createElement('option');
+                opt.value = friendlyName;
+                opt.textContent = friendlyName;
+                sSelect.appendChild(opt);
+            }
+        }
+        document.addEventListener('input', (e) => { if(!e.target.id.includes('Selector')) hasChanges = true; });
+    }
+
+    async function changeConfig() {
+        const friendlyName = document.getElementById('serverSelector').value;
+        if (!friendlyName) return;
+
+        if (hasChanges && !confirm("Unsaved changes will be lost. Switch source?")) return;
+
+        // 1. Resolve host and set API base
+        const serverEntry = serverData.servers[friendlyName];
+        activeBaseUrl = `http://${serverEntry.host}`;
+
+        try {
+            // 2. Fetch data from the remote host's API endpoints
+            const [channelsRes, templateRes, xmlRes] = await Promise.all([
+                fetch(`${activeBaseUrl}/api/channels`),
+                fetch(`${activeBaseUrl}/api/template`),
+                fetch(`${activeBaseUrl}/api/xmltv`)
+            ]);
+
+            configData = await channelsRes.json();
+            template = await templateRes.json();
+            xmltvString = await xmlRes.text();
+
+            // 3. Update Channel Selector
+            const cSelect = document.getElementById('channelSelector');
+            cSelect.innerHTML = '<option value="">-- Select a Channel --</option>' +
+                               '<option value="NEW" style="color: var(--pstv-focus); font-weight: bold;">+ CREATE NEW CHANNEL</option>';
+
+            configData.forEach((ch, idx) => {
+                let opt = document.createElement('option'); opt.value = idx;
+                opt.textContent = `Ch ${ch.number}: ${ch.name}`; cSelect.appendChild(opt);
+            });
+
+            // 4. Reset Guide and Form
+            document.getElementById('epg-channel-list').innerHTML = '';
+            document.getElementById('epg-rows-container').innerHTML = '';
+            document.getElementById('channelForm').style.display = 'none';
+            hasChanges = false;
+            buildEPG();
+
+        } catch (err) {
+            alert(`API Error (${friendlyName}): ${err.message}`);
+        }
+    }
+
+    function navigateTab(t) {
+        if (t !== 'channels' && hasChanges && !confirm("Save first?")) return;
+        hasChanges = false;
+        document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('btn-'+t).classList.add('active');
+        document.getElementById('tab-'+t).classList.add('active');
+    }
+
+    function handleSelectionChange() {
+        const selector = document.getElementById('channelSelector');
+        const form = document.getElementById('channelForm');
+        const container = document.getElementById('baseFields');
+        if (!selector.value) { form.style.display = 'none'; return; }
+        form.style.display = 'block';
+        const data = (selector.value === "NEW") ? template : configData[selector.value];
+        activeRules = data.rules || {};
+        currentPaths = Array.isArray(data.path) ? data.path : (data.path ? [data.path] : []);
+        container.innerHTML = '';
+        renderFields(data, container);
+    }
+
+    function renderFields(obj, container, prefix = '') {
+        let toggleRow = null;
+        for (let key in obj) {
+            if (ignoredKeys.includes(key) || key === 'rules') continue;
+            const fieldId = prefix ? `${prefix}.${key}` : key;
+            const val = obj[key];
+
+            if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                const sec = document.createElement('div'); sec.className = 'nested-section';
+                sec.innerHTML = `<span class="section-label">${key.toUpperCase()}</span>`;
+                container.appendChild(sec);
+                renderFields(val, sec, fieldId);
+            } else if (horizontalBools.includes(key)) {
+                if (!toggleRow) { toggleRow = document.createElement('div'); toggleRow.className = 'toggle-row'; container.appendChild(toggleRow); }
+                const item = document.createElement('div'); item.className = 'toggle-item';
+                item.innerHTML = `<label>${key}</label><label class="switch"><input type="checkbox" id="${fieldId}" name="${fieldId}" ${val?'checked':''}><span class="slider"></span></label>`;
+                toggleRow.appendChild(item);
+            } else {
+                const div = document.createElement('div'); div.className = 'control-group';
+                let input = '';
+                if (key === 'path') {
+                    input = `<div class="field-row"><select id="${fieldId}" name="${fieldId}">${currentPaths.map(p => `<option value="${p}">${p}</option>`).join('')}</select><button type="button" class="btn-action" onclick="addNewPath()">+ Add</button></div>`;
+                } else if (key === 'logo') {
+                    input = `<div class="field-row"><input type="text" id="${fieldId}" name="${fieldId}" value="${val}"><button type="button" class="btn-action" onclick="searchLogo()">Search</button></div>`;
+                } else {
+                    input = `<input type="${typeof val === 'number'?'number':'text'}" id="${fieldId}" name="${fieldId}" value="${val}" ${key==='id'?'readonly':''} ${key==='number' ? `min="1" max="${CHANNEL_LIMIT}"` : ''}>`;
+                }
+                div.innerHTML = `<label>${key}</label>${input}`;
+                container.appendChild(div);
+            }
+        }
+    }
+
+    function buildEPG() {
+        if (!xmltvString) return;
+        const xmlDoc = new DOMParser().parseFromString(xmltvString, "text/xml");
+        const header = document.getElementById('epg-time-header');
+        header.innerHTML = '';
+        for (let i = 0; i < 24; i++) {
+            const d0 = new Date(); d0.setHours(i, 0); const d3 = new Date(); d3.setHours(i, 30);
+            header.innerHTML += `<div class="time-slot">${formatTime12h(d0)}</div><div class="time-slot">${formatTime12h(d3)}</div>`;
+        }
+        xmlDoc.querySelectorAll('channel').forEach(ch => {
+            const chId = ch.getAttribute('id');
+            document.getElementById('epg-channel-list').innerHTML += `<div class="epg-channel-item">${ch.querySelector('display-name').textContent}</div>`;
+            const row = document.createElement('div'); row.className = 'epg-row';
+            xmlDoc.querySelectorAll(`programme[channel="${chId}"]`).forEach(p => {
+                const start = parseDate(p.getAttribute('start')), stop = parseDate(p.getAttribute('stop'));
+                const duration = (stop - start) / 60000;
+                const prog = document.createElement('div'); prog.className = 'epg-program';
+                prog.style.width = (duration * 6) + 'px';
+                prog.innerHTML = `<span class="epg-prog-title">${p.querySelector('title').textContent}</span><span class="epg-prog-time">${formatTime12h(start)}</span>`;
+                row.appendChild(prog);
+            });
+            document.getElementById('epg-rows-container').appendChild(row);
+        });
+    }
+
+    function parseDate(s) { return new Date(s.substring(0,4), s.substring(4,6)-1, s.substring(6,8), s.substring(8,10), s.substring(10,12)); }
+    function addNewPath() { const p = prompt("New Path:"); if(p) { currentPaths.push(p); handleSelectionChange(); } }
+    
+    function searchLogo() { 
+        const q = prompt("Logo Search:"); 
+        if(q) fetch(`${activeBaseUrl}/api/logo_search?q=${q}`).then(r => r.json()).then(d => { if(d.url) document.getElementById('logo').value = d.url; }); 
+    }
+
+    async function saveData() { 
+        const nInput = document.getElementById('number');
+        if (nInput) {
+            const n = parseInt(nInput.value);
+            if(n < 1 || n > CHANNEL_LIMIT) { alert("Invalid Channel Number"); return; }
+        }
+
+        const formData = new FormData(document.getElementById('channelForm'));
+        const payload = Object.fromEntries(formData.entries());
+
+        try {
+            const res = await fetch(`${activeBaseUrl}/api/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                alert("Channel Saved Successfully");
+                hasChanges = false;
+                changeConfig(); // Reload current view
+            }
+        } catch (e) {
+            alert("Save Failed: " + e.message);
+        }
+    }
+
+    function loadRuleValues() {
+        const rId = document.getElementById('ruleSelector').value;
+        const container = document.getElementById('ruleValueFields');
+        container.innerHTML = '';
+        if (rId === "ADD_NEW") { 
+            const nId = prompt("New Rule ID:"); 
+            if(nId) { 
+                activeRules[nId] = { "values": { "0": 1, "1": 1, "2": 1, "3": 1 } }; 
+                handleSelectionChange(); 
+            } 
+            return; 
+        }
+        if (!rId || !activeRules[rId]) return;
+        const vals = activeRules[rId].values || {};
+        for (let vKey in vals) {
+            const div = document.createElement('div'); div.className = 'control-group';
+            div.innerHTML = `<label>Value ${vKey}</label><input type="text" name="rules.${rId}.values.${vKey}" value='${JSON.stringify(vals[vKey])}'>`;
+            container.appendChild(div);
+        }
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>

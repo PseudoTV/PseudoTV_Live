@@ -67,15 +67,17 @@ class Fillers(object):
             self.log('fillSources, type = %s, items = %s' % (ftype, len(values['items'])))
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=30), checksum=PROPERTIES.getInstanceID())
+    # @cacheit(expiration=datetime.timedelta(minutes=30), checksum=PROPERTIES.getInstanceID())
     def buildSource(self, ftype, path=''):
         self.log('[%s] buildSource, type = %s, path = %s'%(self.citem.get('id'),ftype, path))
         def _parseResource(id):
-            if SETTINGS.hasAddon(id, install=True): return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'),exts=VIDEO_EXTS,depth=CHANNEL_LIMIT,checksum=SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION),expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
-
+            if SETTINGS.hasAddon(id): 
+                a = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'),exts=VIDEO_EXTS,depth=CHANNEL_LIMIT,checksum=SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION),expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                print('_parseResource',a)
+                return a
         def _parseVFS(path):
             if path.startswith('plugin://'):
-                if not SETTINGS.hasAddon(path, install=True): return {}
+                if not SETTINGS.hasAddon(path): return {}
             return self.jsonRPC.walkFileDirectory(escapeDirJSON(path), depth=CHANNEL_LIMIT, chkDuration=True, retItem=True)
 
         def _parseLocal(path):

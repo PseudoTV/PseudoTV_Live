@@ -53,14 +53,14 @@ class Match(object):
             dbid   = (fitem.get('tvshowid') or fitem.get('movieid'))
             log('Match: __init__, sysARG = %s, title = %s, dbtype = %s, dbid = %s'%(sysARG,'%s - %s'%(title,name),dbtype,dbid))
 
-            if SETTINGS.hasAddon(self.EMBUARY_HELPER,install=True) and dbid:
+            if SETTINGS.hasAddon(self.EMBUARY_HELPER) and dbid:
                 self.SEARCH_SCRIPT = self.EMBUARY_HELPER
-            elif SETTINGS.hasAddon(self.GLOBAL_SCRIPT,install=True):
+            elif SETTINGS.hasAddon(self.GLOBAL_SCRIPT):
                 self.SEARCH_SCRIPT = self.GLOBAL_SCRIPT
             else: 
                 DIALOG.notificationDialog(LANGUAGE(32000))
             log('Match: SEARCH_SCRIPT = %s'%(self.SEARCH_SCRIPT))
-            SETTINGS.hasAddon(self.SEARCH_SCRIPT,enable=True)
+            SETTINGS.hasAddon(self.SEARCH_SCRIPT)
 
         if self.SEARCH_SCRIPT == self.EMBUARY_HELPER:
             # plugin://script.embuary.helper/?info=getsimilar&dbid=$INFO[ListItem.DBID]&type=tvshow&tag=HDR

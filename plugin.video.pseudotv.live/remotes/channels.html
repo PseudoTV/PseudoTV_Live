@@ -2,925 +2,310 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PseudoTV Live - Channel Manager</title>
+    <title>PseudoTV Live | Manager</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --pstv-bg-dark: #002b4d; 
+            --pstv-bg-light: #005a92;
+            --pstv-accent: #ffffff;
+            --pstv-input-bg: #1a4a70;
+            --pstv-border: rgba(255, 255, 255, 0.3);
+            --pstv-focus: #5dade2;
+            --pstv-dim: rgba(255, 255, 255, 0.4);
+            --pstv-success: #27ae60;
+            --pstv-epg-bg: #001a2d;
+            --pstv-epg-prog: #003d66;
+            --hour-width: 340px;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #11375C 0%, #334F4F9E 100%);
-            color: #FFFFFF;
-            min-height: 100vh;
-            padding: 20px;
+            background: radial-gradient(circle, var(--pstv-bg-light) 0%, var(--pstv-bg-dark) 100%);
+            background-attachment: fixed;
+            color: var(--pstv-accent);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
         }
+
+        .banner { width: 100%; padding: 30px 0 10px 0; text-align: center; }
+        .banner img { max-width: 350px; filter: drop-shadow(0px 8px 15px rgba(0,0,0,0.4)); }
+
+        .tab-bar { display: flex; gap: 5px; width: 95%; max-width: 1000px; margin-bottom: -1px; z-index: 2; }
+        .tab {
+            padding: 12px 25px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--pstv-border);
+            border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer;
+            font-size: 0.8rem; font-weight: bold; text-transform: uppercase; color: var(--pstv-dim);
+        }
+        .tab.active { background: rgba(0, 0, 0, 0.2); color: var(--pstv-accent); border-top: 2px solid var(--pstv-focus); backdrop-filter: blur(12px); }
 
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            width: 95%; max-width: 1000px;
+            background: rgba(0, 0, 0, 0.35); backdrop-filter: blur(12px);
+            border: 1px solid var(--pstv-border); border-radius: 0 12px 12px 12px;
+            padding: 30px; margin-bottom: 60px; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
         }
 
-        header {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 30px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            text-align: center;
-            border: 2px solid #2866A4;
+        h2 { font-weight: 300; letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid var(--pstv-border); padding-bottom: 15px; text-align: center; margin-top: 0; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Configuration Header Layout */
+        .config-header { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 25px; }
+        .config-item-small { flex: 1; max-width: 250px; }
+        .config-item-large { flex: 2; }
+
+        #channelForm { display: none; margin-top: 30px; border-top: 1px solid var(--pstv-border); padding-top: 30px; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.75rem; margin-bottom: 8px; opacity: 0.8; text-transform: uppercase; }
+        
+        input, select {
+            width: 100%; box-sizing: border-box; padding: 12px;
+            background-color: var(--pstv-input-bg); border: 1px solid var(--pstv-border);
+            border-radius: 6px; color: white; font-size: 1rem; appearance: none;
         }
 
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
+        input[readonly] { background-color: rgba(0, 0, 0, 0.2); color: var(--pstv-dim); cursor: not-allowed; }
 
-        .subtitle {
-            font-size: 1.1em;
-            color: #5BE5EE;
-        }
+        .toggle-row { display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border: 1px solid var(--pstv-border); }
+        .toggle-item { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+        
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--pstv-success); }
+        input:checked + .slider:before { transform: translateX(22px); }
 
-        .content-wrapper {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
+        .nested-section { margin: 20px 0 20px 20px; padding: 15px; border-left: 2px solid var(--pstv-focus); background: rgba(255, 255, 255, 0.03); border-radius: 0 8px 8px 0; }
+        .section-label { font-size: 0.7rem; color: var(--pstv-focus); font-weight: bold; margin-bottom: 15px; display: block; }
+        
+        .button-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 40px; }
+        button { padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: all 0.2s; }
+        .btn-save { background: #27ae60; color: white; }
+        .btn-cancel { background: #7f8c8d; color: white; }
+        .btn-action { background: var(--pstv-focus); color: #000; font-size: 0.7rem; margin-top: 8px; padding: 6px 12px; width: auto; }
+        .field-row { display: flex; gap: 10px; align-items: flex-end; }
 
-        .sidebar {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #2866A4;
-        }
+        .epg-container { display: flex; background: var(--pstv-epg-bg); border: 1px solid var(--pstv-border); height: 500px; overflow: hidden; }
+        .epg-channels { width: 160px; flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--pstv-focus); z-index: 10; }
+        .epg-channel-item { height: 60px; padding: 0 15px; display: flex; align-items: center; border-bottom: 1px solid var(--pstv-border); font-weight: bold; font-size: 0.8rem; }
+        .epg-schedule { flex-grow: 1; overflow: auto; position: relative; }
+        .epg-time-bar { display: flex; height: 35px; background: #003355; position: sticky; top: 0; z-index: 5; }
+        .time-slot { min-width: calc(var(--hour-width) / 2); border-right: 1px solid var(--pstv-border); font-size: 0.75rem; display: flex; align-items: center; padding-left: 10px; color: var(--pstv-focus); }
+        .epg-row { display: flex; height: 60px; border-bottom: 1px solid var(--pstv-border); width: fit-content; }
+        .epg-program { flex-shrink: 0; background: var(--pstv-epg-prog); border-right: 1px solid var(--pstv-bg-dark); padding: 8px; overflow: hidden; cursor: pointer; }
+        .epg-prog-title { display: block; font-size: 0.85rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .epg-prog-time { font-size: 0.65rem; opacity: 0.6; }
 
-        .main-panel {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #2866A4;
-        }
-
-        .channel-list {
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        .channel-item {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            border-left: 4px solid #2866A4;
-            transition: all 0.3s ease;
-        }
-
-        .channel-item:hover {
-            background: rgba(40, 102, 164, 0.3);
-            border-left-color: #5BE5EE;
-        }
-
-        .channel-item.selected {
-            background: rgba(40, 102, 164, 0.5);
-            border-left-color: #5BE5EE;
-        }
-
-        .channel-item-name {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .channel-item-meta {
-            font-size: 0.9em;
-            color: #5BE5EE;
-        }
-
-        .form-section {
-            margin-bottom: 25px;
-        }
-
-        .form-section h3 {
-            color: #5BE5EE;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #2866A4;
-            font-size: 1.2em;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #FFFFFF;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        input[type="url"],
-        select,
-        textarea {
-            width: 100%;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #2866A4;
-            border-radius: 4px;
-            color: #FFFFFF;
-            font-family: inherit;
-        }
-
-        input[type="text"]::placeholder,
-        input[type="url"]::placeholder,
-        textarea::placeholder {
-            color: #999;
-        }
-
-        input[type="text"]:focus,
-        input[type="number"]:focus,
-        input[type="url"]:focus,
-        select:focus,
-        textarea:focus {
-            outline: none;
-            border-color: #5BE5EE;
-            background: rgba(0, 0, 0, 0.6);
-            box-shadow: 0 0 10px rgba(91, 229, 238, 0.3);
-        }
-
-        .checkbox-group {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            margin-top: 10px;
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .tag-input {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #2866A4;
-            border-radius: 4px;
-            padding: 10px;
-            min-height: 40px;
-        }
-
-        .tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-
-        .tag {
-            background: #2866A4;
-            padding: 6px 12px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9em;
-        }
-
-        .tag button {
-            background: none;
-            border: none;
-            color: #FFFFFF;
-            cursor: pointer;
-            font-size: 1.2em;
-            padding: 0;
-            line-height: 1;
-        }
-
-        .tag button:hover {
-            color: #5BE5EE;
-        }
-
-        .path-list {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-
-        .path-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 8px;
-            margin-bottom: 8px;
-            border-radius: 3px;
-            border-left: 3px solid #5BE5EE;
-        }
-
-        .path-item button {
-            background: #E74C3C;
-            border: none;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.9em;
-        }
-
-        .path-item button:hover {
-            background: #C0392B;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 30px;
-        }
-
-        button {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 4px;
-            font-size: 1em;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: #2866A4;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #1F4C7A;
-            box-shadow: 0 0 15px rgba(91, 229, 238, 0.4);
-        }
-
-        .btn-success {
-            background: #27AE60;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #229954;
-        }
-
-        .btn-danger {
-            background: #E74C3C;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #C0392B;
-        }
-
-        .btn-secondary {
-            background: #34495E;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #2C3E50;
-        }
-
-        .sidebar-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .sidebar-buttons button {
-            width: 100%;
-        }
-
-        .status-message {
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-
-        .status-message.success {
-            background: rgba(39, 174, 96, 0.3);
-            border: 1px solid #27AE60;
-            color: #2ECC71;
-            display: block;
-        }
-
-        .status-message.error {
-            background: rgba(231, 76, 60, 0.3);
-            border: 1px solid #E74C3C;
-            color: #EC7063;
-            display: block;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .no-channel {
-            text-align: center;
-            color: #999;
-            padding: 40px 20px;
-        }
-
-        @media (max-width: 768px) {
-            .content-wrapper {
-                grid-template-columns: 1fr;
-            }
-
-            h1 {
-                font-size: 1.8em;
-            }
-
-            .button-group {
-                flex-direction: column;
-            }
-        }
-
-        .logo-preview {
-            width: 100%;
-            max-width: 200px;
-            height: auto;
-            border-radius: 4px;
-            margin-top: 10px;
-            border: 1px solid #2866A4;
-        }
-
-        .section-divider {
-            height: 1px;
-            background: rgba(40, 102, 164, 0.3);
-            margin: 20px 0;
-        }
-
-        .info-text {
-            font-size: 0.9em;
-            color: #999;
-            margin-top: 5px;
+        select {
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat; background-position: right 1rem top 50%; background-size: 0.65rem auto; padding-right: 2.5rem;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🎬 PseudoTV Live</h1>
-            <p class="subtitle">Channel Configuration Manager</p>
-        </header>
+    <div class="banner"><img src="http://{{ remote_host }}/images/{{ media_loc }}/splashtext.png" alt="Logo"></div>
 
-        <div id="statusMessage" class="status-message"></div>
-
-        <div class="content-wrapper">
-            <!-- Sidebar: Channel List -->
-            <div class="sidebar">
-                <h3 style="color: #5BE5EE; margin-bottom: 15px;">📺 Channels</h3>
-                
-                <div class="sidebar-buttons">
-                    <button class="btn-primary" id="btnAddChannel">+ New Channel</button>
-                    <button class="btn-secondary" id="btnDeleteChannel" style="display:none;">🗑️ Delete Channel</button>
-                </div>
-
-                <div class="channel-list" id="channelList">
-                    <div class="no-channel">No channels loaded</div>
-                </div>
-
-                <div class="section-divider"></div>
-
-                <div style="margin-top: 20px;">
-                    <button class="btn-success" id="btnSaveAll" style="width: 100%; margin-bottom: 10px;">💾 Save Changes</button>
-                    <button class="btn-secondary" id="btnRefresh" style="width: 100%;">🔄 Reload</button>
-                </div>
-            </div>
-
-            <!-- Main Panel: Channel Form -->
-            <div class="main-panel">
-                <div id="channelForm" style="display: none;">
-                    <!-- Basic Info -->
-                    <div class="form-section">
-                        <h3>Basic Information</h3>
-
-                        <div class="form-group">
-                            <label for="channelId">Channel ID *</label>
-                            <input type="text" id="channelId" placeholder="unique-channel-id" required>
-                            <p class="info-text">Unique identifier for this channel</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="channelName">Channel Name *</label>
-                            <input type="text" id="channelName" placeholder="My Channel" required>
-                            <p class="info-text">Display name for the channel</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="channelNumber">Channel Number *</label>
-                            <input type="number" id="channelNumber" placeholder="1" min="1" required>
-                            <p class="info-text">Channel position/number</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="channelType">Channel Type *</label>
-                            <input type="text" id="channelType" placeholder="e.g., m3u, strm, library" required>
-                            <p class="info-text">Type of channel content source</p>
-                        </div>
-                    </div>
-
-                    <!-- Media Settings -->
-                    <div class="form-section">
-                        <h3>Media Settings</h3>
-
-                        <div class="form-group">
-                            <label for="channelLogo">Logo URL</label>
-                            <input type="url" id="channelLogo" placeholder="https://example.com/logo.png">
-                            <div id="logoPreviewContainer" style="margin-top: 10px; display: none;">
-                                <img id="logoPreview" class="logo-preview" alt="Logo Preview">
-                            </div>
-                            <p class="info-text">URL to channel logo/icon image</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="channelCatchup">Catchup Type</label>
-                            <select id="channelCatchup">
-                                <option value="vod">VOD (Video on Demand)</option>
-                                <option value="none">None</option>
-                            </select>
-                            <p class="info-text">Catchup/Replay TV feature type</p>
-                        </div>
-
-                        <div class="checkbox-group">
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="channelRadio">
-                                <label for="channelRadio" style="margin: 0;">Radio Station</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="channelFavorite">
-                                <label for="channelFavorite" style="margin: 0;">Favorite</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Paths -->
-                    <div class="form-section">
-                        <h3>Content Paths</h3>
-
-                        <div class="form-group">
-                            <label for="channelPathInput">Add Path</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="text" id="channelPathInput" placeholder="Enter file path or URL" style="flex: 1;">
-                                <button type="button" class="btn-primary" id="btnAddPath" style="padding: 10px 20px;">Add</button>
-                            </div>
-                            <p class="info-text">Add media paths (files, directories, or URLs)</p>
-                        </div>
-
-                        <div class="path-list" id="pathList"></div>
-                    </div>
-
-                    <!-- Groups/Tags -->
-                    <div class="form-section">
-                        <h3>Groups/Categories</h3>
-
-                        <div class="form-group">
-                            <label for="channelGroupInput">Add Group</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="text" id="channelGroupInput" placeholder="Enter group name" style="flex: 1;">
-                                <button type="button" class="btn-primary" id="btnAddGroup" style="padding: 10px 20px;">Add</button>
-                            </div>
-                        </div>
-
-                        <div class="tags" id="groupTags"></div>
-                    </div>
-
-                    <!-- Rules (Advanced) -->
-                    <div class="form-section">
-                        <h3>Advanced Options</h3>
-
-                        <div class="form-group">
-                            <label for="channelRules">Rules (JSON)</label>
-                            <textarea id="channelRules" placeholder='{"key": "value"}' style="min-height: 100px;"></textarea>
-                            <p class="info-text">Advanced configuration rules in JSON format</p>
-                        </div>
-                    </div>
-
-                </div>
-
-                <div id="noChannelSelected" class="no-channel">
-                    <h3>Select a channel to edit or create a new one</h3>
-                    <p style="margin-top: 20px;">Click "New Channel" to add a new channel</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="button-group">
-            <button class="btn-success" id="btnSaveChannel" style="display: none;">✓ Save Channel</button>
-            <button class="btn-danger" id="btnCancelEdit" style="display: none;">✕ Cancel</button>
-        </div>
+    <div class="tab-bar">
+        <div id="btn-channels" class="tab active" onclick="navigateTab('channels')">Channels</div>
+        <div id="btn-guide" class="tab" onclick="navigateTab('guide')">Guide</div>
+        <div id="btn-info" class="tab" onclick="navigateTab('info')">Info</div>
+        <div id="btn-settings" class="tab" onclick="navigateTab('settings')">Global Settings</div>
     </div>
 
-    <script>
-        const API_BASE = window.location.origin;
-        let currentChannels = [];
-        let selectedChannelIdx = null;
-        let isNewChannel = false;
+    <div class="container">
+        <!-- CHANNEL MANAGER TAB -->
+        <div id="tab-channels" class="tab-content active">
+            <h2>Channel Manager</h2>
+            
+            <div class="config-header">
+                <div class="config-item-small">
+                    <label>Configuration Source</label>
+                    <select id="serverSelector" onchange="changeConfig()">
+                        <option value="">-- Select Source --</option>
+                    </select>
+                </div>
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            loadChannels();
-            setupEventListeners();
+                <div class="config-item-large">
+                    <label>Active Channel</label>
+                    <select id="channelSelector" onchange="handleSelectionChange()">
+                        <option value="">-- Select a Channel --</option>
+                        <option value="NEW" style="color: var(--pstv-focus); font-weight: bold;">+ CREATE NEW CHANNEL</option>
+                    </select>
+                </div>
+            </div>
+
+            <form id="channelForm" method="POST" action="/">
+                <div id="baseFields"></div>
+                <div id="rulesContainer" class="nested-section">
+                    <span class="section-label">RULES MANAGEMENT</span>
+                    <select id="ruleSelector" onchange="loadRuleValues()">
+                        <option value="">-- Select Rule --</option>
+                        <option value="ADD_NEW">+ ADD NEW RULE ID</option>
+                    </select>
+                    <div id="ruleValueFields"></div>
+                </div>
+                <div class="button-bar">
+                    <button type="button" class="btn-save" onclick="saveData()">Save</button>
+                    <button type="button" class="btn-cancel" onclick="window.location.reload()">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="tab-guide" class="tab-content">
+            <h2>Live Guide</h2>
+            <div class="epg-container">
+                <div class="epg-channels" id="epg-channel-list"></div>
+                <div class="epg-schedule"><div class="epg-time-bar" id="epg-time-header"></div><div id="epg-rows-container"></div></div>
+            </div>
+        </div>
+
+        <div id="tab-info" class="tab-content"><h2>System Info</h2><p>V0.4.6 - Multi-Source Layout</p></div>
+        <div id="tab-settings" class="tab-content"><h2>Settings</h2><p>Global Options coming soon.</p></div>
+    </div>
+
+<script>
+    const configData = {{ channels_json|safe }};
+    const servers = {{ servers_json|safe }}; // Variable for Servers_List
+    const template = {{ template_json|safe }};
+    const xmltvString = `{{ xmltv_data|safe }}`;
+    const CHANNEL_LIMIT = {{ CHANNEL_LIMIT|safe }};
+    const ignoredKeys = ['type', 'catchup', 'catchup-source', 'url'];
+    const horizontalBools = ['radio', 'favorite', 'changed', 'enabled'];
+    let activeRules = {}, currentPaths = [], hasChanges = false;
+
+    function formatTime12h(date) {
+        let h = date.getHours(), m = date.getMinutes(), ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${m < 10 ? '0'+m : m} ${ampm}`;
+    }
+
+    function init() {
+        // Populate Server/Source List
+        const sSelect = document.getElementById('serverSelector');
+        servers.forEach(srv => {
+            let opt = document.createElement('option'); opt.value = srv; opt.textContent = srv;
+            sSelect.appendChild(opt);
         });
 
-        function setupEventListeners() {
-            // Channel list
-            document.getElementById('btnAddChannel').addEventListener('click', createNewChannel);
-            document.getElementById('btnDeleteChannel').addEventListener('click', deleteSelectedChannel);
-            document.getElementById('btnSaveAll').addEventListener('click', saveChannels);
-            document.getElementById('btnRefresh').addEventListener('click', loadChannels);
+        // Populate Channel List
+        const cSelect = document.getElementById('channelSelector');
+        configData.forEach((ch, idx) => {
+            let opt = document.createElement('option'); opt.value = idx;
+            opt.textContent = `Ch ${ch.number}: ${ch.name}`; cSelect.appendChild(opt);
+        });
+        document.addEventListener('input', (e) => { if(!e.target.id.includes('Selector')) hasChanges = true; });
+        buildEPG();
+    }
 
-            // Form
-            document.getElementById('btnSaveChannel').addEventListener('click', saveSelectedChannel);
-            document.getElementById('btnCancelEdit').addEventListener('click', cancelEdit);
+    function changeConfig() {
+        const val = document.getElementById('serverSelector').value;
+        if (!val) return;
+        if (hasChanges && !confirm("Unsaved changes will be lost. Switch source?")) return;
+        window.location.href = `/?config=${encodeURIComponent(val)}`;
+    }
 
-            // Paths
-            document.getElementById('btnAddPath').addEventListener('click', addPath);
-            document.getElementById('channelPathInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') addPath();
-            });
+    function navigateTab(t) {
+        if (t !== 'channels' && hasChanges && !confirm("Save first?")) return;
+        hasChanges = false;
+        document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('btn-'+t).classList.add('active');
+        document.getElementById('tab-'+t).classList.add('active');
+    }
 
-            // Groups
-            document.getElementById('btnAddGroup').addEventListener('click', addGroup);
-            document.getElementById('channelGroupInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') addGroup();
-            });
+    function handleSelectionChange() {
+        const selector = document.getElementById('channelSelector');
+        const form = document.getElementById('channelForm');
+        const container = document.getElementById('baseFields');
+        if (!selector.value) { form.style.display = 'none'; return; }
+        form.style.display = 'block';
+        const data = (selector.value === "NEW") ? template : configData[selector.value];
+        activeRules = data.rules || {};
+        currentPaths = Array.isArray(data.path) ? data.path : [];
+        container.innerHTML = '';
+        renderFields(data, container);
+    }
 
-            // Logo preview
-            document.getElementById('channelLogo').addEventListener('change', previewLogo);
+    function renderFields(obj, container, prefix = '') {
+        let toggleRow = null;
+        for (let key in obj) {
+            if (ignoredKeys.includes(key) || key === 'rules') continue;
+            const fieldId = prefix ? `${prefix}.${key}` : key;
+            const val = obj[key];
 
-            // Real-time validation
-            document.getElementById('channelId').addEventListener('change', validateChannelId);
-        }
-
-        function loadChannels() {
-            showStatus('Loading channels...', 'info');
-            fetch(`${API_BASE}/remote.json`)
-                .then(response => response.json())
-                .then(data => {
-                    currentChannels = data.channels || [];
-                    renderChannelList();
-                    showStatus('Channels loaded successfully', 'success');
-                    resetForm();
-                })
-                .catch(error => {
-                    console.error('Error loading channels:', error);
-                    showStatus('Error loading channels: ' + error.message, 'error');
-                });
-        }
-
-        function renderChannelList() {
-            const list = document.getElementById('channelList');
-            if (currentChannels.length === 0) {
-                list.innerHTML = '<div class="no-channel">No channels</div>';
-                return;
-            }
-
-            list.innerHTML = currentChannels.map((channel, idx) => `
-                <div class="channel-item ${selectedChannelIdx === idx ? 'selected' : ''}" onclick="selectChannel(${idx})">
-                    <div class="channel-item-name">#${channel.number} - ${channel.name}</div>
-                    <div class="channel-item-meta">ID: ${channel.id}</div>
-                    <div class="channel-item-meta">Type: ${channel.type}</div>
-                </div>
-            `).join('');
-        }
-
-        function selectChannel(idx) {
-            selectedChannelIdx = idx;
-            isNewChannel = false;
-            populateForm(currentChannels[idx]);
-            renderChannelList();
-            showForm();
-            updateDeleteButton();
-        }
-
-        function createNewChannel() {
-            const template = {
-                id: '',
-                type: '',
-                number: currentChannels.length + 1,
-                name: '',
-                logo: '',
-                path: [],
-                group: [],
-                rules: {},
-                catchup: 'vod',
-                radio: false,
-                favorite: false
-            };
-            selectedChannelIdx = null;
-            isNewChannel = true;
-            populateForm(template);
-            showForm();
-            updateDeleteButton();
-            document.getElementById('channelId').focus();
-        }
-
-        function populateForm(channel) {
-            document.getElementById('channelId').value = channel.id || '';
-            document.getElementById('channelName').value = channel.name || '';
-            document.getElementById('channelNumber').value = channel.number || '';
-            document.getElementById('channelType').value = channel.type || '';
-            document.getElementById('channelLogo').value = channel.logo || '';
-            document.getElementById('channelCatchup').value = channel.catchup || 'vod';
-            document.getElementById('channelRadio').checked = channel.radio || false;
-            document.getElementById('channelFavorite').checked = channel.favorite || false;
-
-            // Paths
-            renderPathList(channel.path || []);
-
-            // Groups
-            renderGroupTags(channel.group || []);
-
-            // Rules
-            document.getElementById('channelRules').value = 
-                Object.keys(channel.rules || {}).length > 0 ? 
-                JSON.stringify(channel.rules, null, 2) : '{}';
-        }
-
-        function renderPathList(paths) {
-            const list = document.getElementById('pathList');
-            if (paths.length === 0) {
-                list.innerHTML = '<p style="color: #999;">No paths added</p>';
-                return;
-            }
-
-            list.innerHTML = paths.map((path, idx) => `
-                <div class="path-item">
-                    <span>${path}</span>
-                    <button type="button" onclick="removePath(${idx})">Remove</button>
-                </div>
-            `).join('');
-        }
-
-        function addPath() {
-            const input = document.getElementById('channelPathInput');
-            const path = input.value.trim();
-            if (!path) {
-                showStatus('Please enter a path', 'error');
-                return;
-            }
-
-            const paths = getFormPaths();
-            if (!paths.includes(path)) {
-                paths.push(path);
-                renderPathList(paths);
-                input.value = '';
+            if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                const sec = document.createElement('div'); sec.className = 'nested-section';
+                sec.innerHTML = `<span class="section-label">${key.toUpperCase()}</span>`;
+                container.appendChild(sec);
+                renderFields(val, sec, fieldId);
+            } else if (horizontalBools.includes(key)) {
+                if (!toggleRow) { toggleRow = document.createElement('div'); toggleRow.className = 'toggle-row'; container.appendChild(toggleRow); }
+                const item = document.createElement('div'); item.className = 'toggle-item';
+                item.innerHTML = `<label>${key}</label><label class="switch"><input type="checkbox" id="${fieldId}" name="${fieldId}" ${val?'checked':''}><span class="slider"></span></label>`;
+                toggleRow.appendChild(item);
             } else {
-                showStatus('Path already exists', 'error');
-            }
-        }
-
-        function removePath(idx) {
-            const paths = getFormPaths();
-            paths.splice(idx, 1);
-            renderPathList(paths);
-        }
-
-        function renderGroupTags(groups) {
-            const container = document.getElementById('groupTags');
-            if (groups.length === 0) {
-                container.innerHTML = '';
-                return;
-            }
-
-            container.innerHTML = groups.map((group, idx) => `
-                <div class="tag">
-                    <span>${group}</span>
-                    <button type="button" onclick="removeGroup(${idx})">×</button>
-                </div>
-            `).join('');
-        }
-
-        function addGroup() {
-            const input = document.getElementById('channelGroupInput');
-            const group = input.value.trim();
-            if (!group) {
-                showStatus('Please enter a group name', 'error');
-                return;
-            }
-
-            const groups = getFormGroups();
-            if (!groups.includes(group)) {
-                groups.push(group);
-                renderGroupTags(groups);
-                input.value = '';
-            } else {
-                showStatus('Group already exists', 'error');
-            }
-        }
-
-        function removeGroup(idx) {
-            const groups = getFormGroups();
-            groups.splice(idx, 1);
-            renderGroupTags(groups);
-        }
-
-        function previewLogo() {
-            const url = document.getElementById('channelLogo').value;
-            const container = document.getElementById('logoPreviewContainer');
-            const img = document.getElementById('logoPreview');
-
-            if (url) {
-                img.src = url;
-                img.onerror = () => {
-                    container.style.display = 'none';
-                };
-                img.onload = () => {
-                    container.style.display = 'block';
-                };
-            } else {
-                container.style.display = 'none';
-            }
-        }
-
-        function validateChannelId() {
-            const id = document.getElementById('channelId').value.trim();
-            if (!id) return true;
-
-            // Check if ID already exists (except for current channel)
-            const exists = currentChannels.some((ch, idx) => 
-                ch.id === id && idx !== selectedChannelIdx
-            );
-
-            if (exists) {
-                showStatus('Channel ID already exists', 'error');
-                return false;
-            }
-            return true;
-        }
-
-        function getFormChannel() {
-            if (!validateChannelId()) return null;
-
-            return {
-                id: document.getElementById('channelId').value.trim(),
-                type: document.getElementById('channelType').value.trim(),
-                number: parseInt(document.getElementById('channelNumber').value) || 0,
-                name: document.getElementById('channelName').value.trim(),
-                logo: document.getElementById('channelLogo').value.trim(),
-                path: getFormPaths(),
-                group: getFormGroups(),
-                rules: getFormRules(),
-                catchup: document.getElementById('channelCatchup').value,
-                radio: document.getElementById('channelRadio').checked,
-                favorite: document.getElementById('channelFavorite').checked
-            };
-        }
-
-        function getFormPaths() {
-            const items = document.querySelectorAll('.path-item');
-            return Array.from(items).map(item => item.querySelector('span').textContent);
-        }
-
-        function getFormGroups() {
-            const items = document.querySelectorAll('.tag span');
-            return Array.from(items).map(item => item.textContent);
-        }
-
-        function getFormRules() {
-            try {
-                const rulesText = document.getElementById('channelRules').value.trim();
-                return rulesText ? JSON.parse(rulesText) : {};
-            } catch (e) {
-                showStatus('Invalid JSON in rules field', 'error');
-                return null;
-            }
-        }
-
-        function saveSelectedChannel() {
-            const channel = getFormChannel();
-            if (!channel) return;
-
-            // Validate required fields
-            if (!channel.id || !channel.name || !channel.type || channel.number <= 0) {
-                showStatus('Please fill in all required fields', 'error');
-                return;
-            }
-
-            if (isNewChannel) {
-                currentChannels.push(channel);
-            } else if (selectedChannelIdx !== null) {
-                currentChannels[selectedChannelIdx] = channel;
-            }
-
-            renderChannelList();
-            showStatus('Channel saved (not yet persisted)', 'success');
-        }
-
-        function deleteSelectedChannel() {
-            if (selectedChannelIdx === null) return;
-
-            if (confirm('Are you sure you want to delete this channel?')) {
-                const name = currentChannels[selectedChannelIdx].name;
-                currentChannels.splice(selectedChannelIdx, 1);
-                selectedChannelIdx = null;
-                renderChannelList();
-                resetForm();
-                showStatus(`Channel "${name}" deleted (not yet persisted)`, 'success');
-            }
-        }
-
-        function saveChannels() {
-            if (currentChannels.length === 0) {
-                showStatus('No channels to save', 'error');
-                return;
-            }
-
-            const payload = {
-                uuid: '',
-                channels: currentChannels,
-                imports: []
-            };
-
-            showStatus('Saving channels...', 'info');
-            fetch(`${API_BASE}/channels.json`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    uuid: '',
-                    payload: currentChannels
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    showStatus('Channels saved successfully!', 'success');
-                    loadChannels();
+                const div = document.createElement('div'); div.className = 'control-group';
+                let input = '';
+                if (key === 'path') {
+                    input = `<div class="field-row"><select id="${fieldId}" name="${fieldId}">${currentPaths.map(p => `<option value="${p}">${p}</option>`).join('')}</select><button type="button" class="btn-action" onclick="addNewPath()">+ Add</button></div>`;
+                } else if (key === 'logo') {
+                    input = `<div class="field-row"><input type="text" id="${fieldId}" name="${fieldId}" value="${val}"><button type="button" class="btn-action" onclick="searchLogo()">Search</button></div>`;
                 } else {
-                    showStatus('Error saving channels: ' + response.statusText, 'error');
+                    input = `<input type="${typeof val === 'number'?'number':'text'}" id="${fieldId}" name="${fieldId}" value="${val}" ${key==='id'?'readonly':''} ${key==='number' ? `min="1" max="${CHANNEL_LIMIT}"` : ''}>`;
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showStatus('Error saving channels: ' + error.message, 'error');
-            });
-        }
-
-        function resetForm() {
-            document.getElementById('channelForm').style.display = 'none';
-            document.getElementById('noChannelSelected').style.display = 'block';
-            document.getElementById('btnSaveChannel').style.display = 'none';
-            document.getElementById('btnCancelEdit').style.display = 'none';
-            document.getElementById('btnDeleteChannel').style.display = 'none';
-            selectedChannelIdx = null;
-            isNewChannel = false;
-        }
-
-        function showForm() {
-            document.getElementById('channelForm').style.display = 'block';
-            document.getElementById('noChannelSelected').style.display = 'none';
-            document.getElementById('btnSaveChannel').style.display = 'inline-block';
-            document.getElementById('btnCancelEdit').style.display = 'inline-block';
-        }
-
-        function updateDeleteButton() {
-            const deleteBtn = document.getElementById('btnDeleteChannel');
-            deleteBtn.style.display = isNewChannel ? 'none' : 'inline-block';
-        }
-
-        function cancelEdit() {
-            resetForm();
-        }
-
-        function showStatus(message, type = 'info') {
-            const statusEl = document.getElementById('statusMessage');
-            statusEl.textContent = message;
-            statusEl.className = `status-message ${type}`;
-            
-            if (type !== 'info') {
-                setTimeout(() => {
-                    statusEl.className = 'status-message';
-                }, 5000);
+                div.innerHTML = `<label>${key}</label>${input}`;
+                container.appendChild(div);
             }
         }
-    </script>
+    }
+
+    function buildEPG() {
+        const xmlDoc = new DOMParser().parseFromString(xmltvString, "text/xml");
+        const header = document.getElementById('epg-time-header');
+        for (let i = 0; i < 24; i++) {
+            const d0 = new Date(); d0.setHours(i, 0); const d3 = new Date(); d3.setHours(i, 30);
+            header.innerHTML += `<div class="time-slot">${formatTime12h(d0)}</div><div class="time-slot">${formatTime12h(d3)}</div>`;
+        }
+        xmlDoc.querySelectorAll('channel').forEach(ch => {
+            const chId = ch.getAttribute('id');
+            document.getElementById('epg-channel-list').innerHTML += `<div class="epg-channel-item">${ch.querySelector('display-name').textContent}</div>`;
+            const row = document.createElement('div'); row.className = 'epg-row';
+            xmlDoc.querySelectorAll(`programme[channel="${chId}"]`).forEach(p => {
+                const start = parseDate(p.getAttribute('start')), stop = parseDate(p.getAttribute('stop'));
+                const duration = (stop - start) / 60000;
+                const prog = document.createElement('div'); prog.className = 'epg-program';
+                prog.style.width = (duration * 6) + 'px';
+                prog.innerHTML = `<span class="epg-prog-title">${p.querySelector('title').textContent}</span><span class="epg-prog-time">${formatTime12h(start)}</span>`;
+                row.appendChild(prog);
+            });
+            document.getElementById('epg-rows-container').appendChild(row);
+        });
+    }
+
+    function parseDate(s) { return new Date(s.substring(0,4), s.substring(4,6)-1, s.substring(6,8), s.substring(8,10), s.substring(10,12)); }
+    function addNewPath() { const p = prompt("New Path:"); if(p) { currentPaths.push(p); handleSelectionChange(); } }
+    function searchLogo() { const q = prompt("Logo Search:"); if(q) fetch(`/api/logo_search?q=${q}`).then(r => r.json()).then(d => { if(d.url) document.getElementById('logo').value = d.url; }); }
+    function saveData() { 
+        const n = parseInt(document.getElementById('number').value);
+        if(n < 1 || n > CHANNEL_LIMIT) { alert("Invalid Channel Number"); return; }
+        hasChanges = false; document.getElementById('channelForm').submit(); 
+    }
+    function loadRuleValues() {
+        const rId = document.getElementById('ruleSelector').value;
+        const container = document.getElementById('ruleValueFields');
+        container.innerHTML = '';
+        if (rId === "ADD_NEW") { const nId = prompt("New Rule ID:"); if(nId) { activeRules[nId] = { "values": { "0": 1, "1": 1, "2": 1, "3": 1 } }; handleSelectionChange(); } return; }
+        if (!rId || !activeRules[rId]) return;
+        const vals = activeRules[rId].values || {};
+        for (let vKey in vals) {
+            const div = document.createElement('div'); div.className = 'control-group';
+            div.innerHTML = `<label>Value ${vKey}</label><input type="text" name="rules.${rId}.values.${vKey}" value='${JSON.stringify(vals[vKey])}'>`;
+            container.appendChild(div);
+        }
+    }
+
+    window.onload = init;
+</script>
 </body>
 </html>

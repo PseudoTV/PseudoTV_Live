@@ -53,7 +53,7 @@ class Discovery(Thread):
                     server = info.getServer()
                     self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(IP,info.getPort()),'bonjour':'http://%s:%s/%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
                     self.log("addService, found zeroconf %s @ %s using bonjour %s"%(server,self.zServers[server]['host'],self.zServers[server]['bonjour']))
-                    self.multiroom.addServer(requestURL(self.zServers[server]['bonjour'],cache={'cache':SETTINGS.cache, "life": datetime.timedelta(seconds=300)}))
+                    self.multiroom.addServer(Globals.requestURL(self.zServers[server]['bonjour'],cache={'cache':SETTINGS.cache, "life": datetime.timedelta(seconds=300)}))
             
     def __init__(self, service=None, multiroom=None):
         Thread.__init__(self)
@@ -200,6 +200,7 @@ class MyHandler(BaseHTTPRequestHandler):
                 elif self.path.lower() == f'/{GENREFLE.lower()}': __sendFile(GENREFLEPATH, use_compression)
                 elif self.path.lower() == f'/{XMLTVFLE.lower()}': __sendFile(XMLTVFLEPATH, use_compression)
                 elif self.path.startswith('/images/'):            __sendFile(Globals._unquoteString(self.path.split('/images/')[1]), False)
+                elif self.path.startswith('/api/'):               __sendFile(FileAccess.dumpJSON(Globals._unquoteString(self.path.split('/api/')[1])), False)
                 else:
                     chunk = b''
                     if   self.path.lower() == f'/{BONJOURFLE.lower()}': chunk = FileAccess.dumpJSON(SETTINGS.getBonjour(inclChannels=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
@@ -210,13 +211,10 @@ class MyHandler(BaseHTTPRequestHandler):
                             use_compression = False
                             chunk = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
                         else: return self.send_error(404, "File Not Found [%s]" % self.path)
-                    elif self.path.startswith(('/manager','/wizard')):
-                        def _escape_html(s): return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")
+                    elif self.path.startswith('/manager'):
                         use_compression = False
-                        fle  = FileAccess.open(MANAGER_FORM,'r')
-                        html = fle.read()
-                        fle.close()
-                        chunk = html.encode(encoding=DEFAULT_ENCODING)
+                        if self.path.endswith('channels.html'):
+                            chunk = Channels()._channelManager()
                     else: return self.send_error(404, "File Not Found [%s]" % self.path)
                     __sendChunk(self.path, chunk, use_compression)
         except FileNotFoundError: self.send_error(404, "File Not Found [%s]" % self.path)
@@ -266,7 +264,9 @@ class HTTP(object):
         
 
     def _pendingRestart(self):
-        return PROPERTIES.getEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),False)
+        value = PROPERTIES.getEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),False)
+        PROPERTIES.clrEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID))
+        return value
        
 
     def run(self):  
@@ -285,46 +285,45 @@ class HTTP(object):
                 return self.httpd.is_alive()
             except Exception: pass
             
-        def __stop(restart=False):
-            try: self._server.shutdown()
-            except Exception: pass
-            PROPERTIES.setRunning('HTTP.run',False)
-            self.log('run, http server shutdown, restart = %s, isAlive = %s'%(restart,__cancel()), xbmc.LOGINFO)
-            if restart:
-                self.monitor.waitForAbort(M3U_REFRESH)
-                self.service._que(self.service.tasks.chkHTTP,1)
-                PROPERTIES.setEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),False)
-            else: __update(restart)
-            
         """Starts the threaded HTTP server with GZIP support."""
         if not PROPERTIES.isRunning('HTTP.start'):
-            with PROPERTIES.chkRunning('HTTP.start'):
-                while not self.monitor.abortRequested():
-                    if not PROPERTIES.isRunning('HTTP.run'):
-                        PROPERTIES.setRunning('HTTP.run',True)
-                        try: 
-                            host   = SETTINGS.getIP()
-                            port   = self._chkPort(host, SETTINGS.getSettingInt('TCP_PORT'))
-                            server = PROPERTIES.setRemoteHost('%s:%s'%(host,port))
-                            SETTINGS.setSetting('Remote_NAME' ,PROPERTIES.getFriendlyName())
-                            SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
-                            SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
-                            SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
-                            self.log("run, http server @ %s"%(server),xbmc.LOGINFO)
-                            
-                            ThreadedHTTPServer.allow_reuse_address = True
-                            self._server = ThreadedHTTPServer((host, port), partial(MyHandler,service=self.service))
-                            try: self._server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                            except Exception as e: self.log("run, http server failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
+            PROPERTIES.setRunning('HTTP.start',True)
+            while not self.monitor.abortRequested():
+                pendingRestart = self._pendingRestart()
+                if not PROPERTIES.isRunning('HTTP.run'):
+                    PROPERTIES.setRunning('HTTP.run',True)
+                    try: 
+                        host   = SETTINGS.getIP()
+                        port   = self._chkPort(host, SETTINGS.getSettingInt('TCP_PORT'))
+                        server = PROPERTIES.setRemoteHost('%s:%s'%(host,port))
+                        SETTINGS.setSetting('Remote_NAME' ,PROPERTIES.getFriendlyName())
+                        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
+                        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
+                        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
+                        self.log("run, http server @ %s"%(server),xbmc.LOGINFO)
+                        
+                        ThreadedHTTPServer.allow_reuse_address = True
+                        self._server = ThreadedHTTPServer((host, port), partial(MyHandler,service=self.service))
+                        try: self._server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        except Exception as e: self.log("run, http server failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
 
-                            self.httpd = Thread(target=self._server.serve_forever)
-                            self.httpd.daemon=True
-                            self.httpd.start()
-                            __update()
-                        except Exception as e:
-                            self.log("run, http server startup failed! %s"%(e), xbmc.LOGERROR)
-                            break
-                    elif self.service._shutdown(15) or self._pendingRestart(): 
-                        self.log("run, _shutdown/pendingRestart", xbmc.LOGERROR)
+                        self.httpd = Thread(target=self._server.serve_forever)
+                        self.httpd.daemon=True
+                        self.httpd.start()
+                        __update(pendingRestart)
+                    except Exception as e:
+                        self.log("run, http server failed! %s"%(e), xbmc.LOGERROR)
                         break
-            __stop(self._pendingRestart())
+                elif self.service._shutdown(15) or pendingRestart: 
+                    self.log("run, _shutdown/pendingRestart", xbmc.LOGERROR)
+                    break
+                    
+            try: self._server.shutdown()
+            except Exception: pass
+            self.log('run, http server shutdown, pendingRestart = %s, isAlive = %s'%(pendingRestart,__cancel()), xbmc.LOGINFO)
+            if pendingRestart:
+                self.monitor.waitForAbort(M3U_REFRESH)
+                self.service._que(self.service.tasks.chkHTTP,1)
+            __update(pendingRestart)
+            PROPERTIES.setRunning('HTTP.run',False)
+            PROPERTIES.setRunning('HTTP.start',False)

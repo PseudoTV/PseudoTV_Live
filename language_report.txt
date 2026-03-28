@@ -1,6 +1,8 @@
 Language IDS w\empty strings: {
     "32033": "",
     "32099": "",
+    "32100": "",
+    "32101": "",
     "33130": ""
 }
 
@@ -214,6 +216,8 @@ Language IDS not found in py files, possibly only in xml: {
     "32075": "Saving...",
     "32082": "Clear this Channels Configurations",
     "32099": "",
+    "32100": "",
+    "32101": "",
     "32113": "Recovering Channel",
     "32115": "Running as a client.",
     "32128": "Rebuilding Autotuned Channels",
@@ -343,7 +347,7 @@ Language IDS not found in py files, possibly only in xml: {
     "33182": "Enabled in discovered servers in the list below.",
     "33186": "Vignette Non-Linear Stretch",
     "33198": "Boost Background Processing through Multi-Threading. [Disabled Default]\\nDisable if you experience system instability.",
-    "33201": "How long to wait for JSONRPC response in minutes [0 Disabled 2 Default]\\nPervent system hangs while waiting for a lengthy response.",
+    "33201": "How long to wait for JSONRPC response in seconds [-1 Disabled Default]\\nPervent system hangs while waiting for a lengthy response.",
     "33202": "Minimum Debugging Level [LOGERROR - Default]\\nIf submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error.",
     "33212": "Notifications During Playback",
     "33213": "This Instance of PseudoTV only runs as a client, with no channels configured locally.",

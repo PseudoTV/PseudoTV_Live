@@ -19,6 +19,8 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
+from multiroom  import Multiroom
+
 #todo create dataclasses for all jsons
 # https://pypi.org/project/dataclasses-json/
 class Channels(object):
@@ -46,7 +48,7 @@ class Channels(object):
         
     def _load(self) -> dict:
         channelDATA = FileAccess.getJSON(self.channelFile)
-        SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
+        self._setSetting()
         self.log('_load, file = %s\nchannels = %s'%(self.channelFile,len(channelDATA.get('channels',[]))))
         return channelDATA
     
@@ -64,8 +66,13 @@ class Channels(object):
         if self.writable:
             with PROPERTIES.interruptActivity():
                 if FileAccess.setJSON(self.channelFile,self.channelDATA):
-                    SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
+                    self._setSetting()
                     return True
+        
+        
+    def _setSetting(self):
+        if self.channelFile == CHANNELFLEPATH:
+            SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
         
         
     def getTemplate(self) -> dict: 
@@ -131,4 +138,16 @@ class Channels(object):
         if channels is None: channels = self.channelDATA['channels']
         if citem.get('id') is None: citem['id'] = getChannelID(citem.get('name'), citem.get('path'), citem.get('number'), uuid=self.channelDATA.get('uuid'))
         return tuple(next(((idx, eitem) for idx, eitem in enumerate(channels) if citem['id'] == eitem.get('id', str(random.random()))), (None,{})))
-        
+                    
+                    
+    def _channelManager(self):
+        with FileAccess.stream(MANAGER_FORM, "r") as fle:
+            html = fle.read()
+            
+        with FileAccess.stream(XMLTVFLEPATH, "r") as fle:
+            xmltv = fle.read()
+            
+        html = html.replace("{{ remote_host }}", PROPERTIES.getRemoteHost()).replace("{{ media_loc }}", MEDIA_LOC).replace("{{ CHANNEL_LIMIT|safe }}", str(CHANNEL_LIMIT))
+        html = html.replace("{{ channels_json|safe }}", FileAccess.dumpJSON(self.getChannels())).replace("{{ template_json|safe }}", FileAccess.dumpJSON(self.getTemplate()))
+        html = html.replace("{{ xmltv_data|safe }}", xmltv).replace("{{ servers_json|safe }}",FileAccess.dumpJSON(Multiroom().getEnabled()))
+        return html.encode(encoding=DEFAULT_ENCODING)

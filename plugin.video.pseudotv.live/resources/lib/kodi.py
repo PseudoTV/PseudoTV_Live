@@ -27,7 +27,7 @@ from cache               import Cache, cacheit
 from fileaccess          import FileAccess, FileLock
 from infotagger.listitem import ListItemInfoTag
 from json2html           import Json2Html
-from pool                import poolit, timerit, threadit
+from pool                import poolit, timerit, threadit, debounceit
 
 class Settings(object):
     monitor    = MONITOR()
@@ -192,7 +192,8 @@ class Settings(object):
         return IP
     
     
-    def hasAddon(self, id, install=False, enable=False, force=False, notify=False):
+    @debounceit(CPU_CYCLE)
+    def hasAddon(self, id, install=None, enable=None, force=None, notify=False):
         def __getIDbyPath(url):
             try:
                 if   url.startswith('special://profile/addon_data/'):      return re.compile('special://profile/addon_data/(.*?)', re.IGNORECASE).search(url).group(1)
@@ -201,31 +202,39 @@ class Settings(object):
             except Exception: pass
             return url
             
+        bypass = self.getSettingBool('Enable_Kodi_Access')
+        if install is None: install = bypass
+        if enable  is None: enable  = bypass
+        if force   is None: force   = bypass
         if '://' in id: id = __getIDbyPath(id)
+            
         hasAddon  = self.builtin.getInfoBool('HasAddon(%s)'%(id),'System')
         isEnabled = self.builtin.getInfoBool('AddonIsEnabled(%s)'%(id),'System')
-        self.log(f'[{id}] hasAddon = {hasAddon}, isEnabled = {isEnabled}')
+        self.log(f'[{id}] hasAddon = {hasAddon}, isEnabled = {isEnabled}, Kodi Override Enabled = {bypass}')
         
         if hasAddon:
-            if enable and not isEnabled:
+            if not isEnabled and enable:
                 if not force:
                     if not self.dialog.yesnoDialog(message=LANGUAGE(32156)%(id)):
                         self.log('[%s] hasAddon, (Not Enabled!)'%(id))
                         return
-                self.builtin.executebuiltin('EnableAddon(%s)'%(id),wait=True)
-            try:    return xbmcaddon.Addon(id)
-            except Exception: return False
+                if self.builtin.executebuiltin('EnableAddon(%s)'%(id),wait=True):
+                    return self.hasAddon(id, install, False, force, notify)
+            elif not isEnabled and notify: self.dialog.notificationDialog(LANGUAGE(32264)%(id))
+            try: return xbmcaddon.Addon(id)
+            except Exception: notify = True
         elif install:
             if self.builtin.executebuiltin('InstallAddon(%s)'%(id),wait=True):
                 return self.hasAddon(id, False, enable, force, notify)
         if notify: self.dialog.notificationDialog(LANGUAGE(32034)%(id))
         
         
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getAddonDetails(self, id=ADDON_ID):
         try:
-            addon = xbmcaddon.Addon(id)
+            addon      = xbmcaddon.Addon(id)
             properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
-            return dict([(property,addon.getAddonInfo(property)) for property in properties])    
+            return dict([(property,addon.getAddonInfo(property)) for property in properties])
         except Exception:
             from jsonrpc import JSONRPC
             return JSONRPC().getAddonDetails(id)
@@ -483,7 +492,7 @@ class Settings(object):
     def chkPluginSettings(self, nsettings, instance=ADDON_NAME, prompt=None):
         if prompt is None: prompt = not bool(self.getSettingBool('Enable_Kodi_Access'))
         self.log('[%s] chkPluginSettings, instance = %s, prompt = %s'%(PVR_CLIENT_ID,instance,prompt))
-        addon = self.hasAddon(PVR_CLIENT_ID,enable=True,notify=True)
+        addon = self.hasAddon(PVR_CLIENT_ID,notify=True)
         if addon:
             message   = []
             osettings = self._IPTV_SIMPLE_SETTINGS()
@@ -506,7 +515,7 @@ class Settings(object):
 
 
     def setPVRInstanceSettings(self, instance=ADDON_NAME, settings={}):
-        addon = self.hasAddon(PVR_CLIENT_ID,enable=True)
+        addon = self.hasAddon(PVR_CLIENT_ID)
         if addon:
             for setting, value in list(settings.items()):
                 self.log('[%s] setPVRInstanceSettings, %s = %s'%(PVR_CLIENT_ID,setting,value))
@@ -578,7 +587,7 @@ class Properties(object):
 
 
     def _getTrash(self):
-        try:    return FileAccess.loadPICKLE(FileAccess._decodeString(self.getEXTProperty('%s.TRASH'%(ADDON_ID),{})))
+        try:    return (FileAccess.loadPICKLE(FileAccess._decodeString(self.getEXTProperty('%s.TRASH'%(ADDON_ID),{}))) or {})
         except: return {}
 
 
@@ -602,16 +611,16 @@ class Properties(object):
 
     #GET
     def getProperty(self, key, default=''):
-        try:
-            key, thid = self._getKey(key)
-            value = (self.window.getProperty(key) or default)
-            try: value = FileAccess.loadPICKLE(FileAccess._decodeString(value))
-            except (ValueError, SyntaxError): pass
-            self.log(f'[{self.winID}] getProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-            return value
-        except Exception as e: 
-            self.log(f"[{self.winID}] getProperty [{thid}], failed! {e} - key = [{key}]", xbmc.LOGERROR)
-            return default
+        # try:
+        key, thid = self._getKey(key)
+        value = (self.window.getProperty(key) or default)
+        try: value = FileAccess.loadPICKLE(FileAccess._decodeString(value))
+        except (ValueError, SyntaxError): pass
+        self.log(f'[{self.winID}] getProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+        return value
+        # except Exception as e: 
+            # self.log(f"[{self.winID}] getProperty [{thid}], failed! {e} - key = [{key}]", xbmc.LOGERROR)
+            # return default
             
         
     def getEXTProperty(self, key, default=''):
@@ -668,6 +677,7 @@ class Properties(object):
         else:     self.clrEXTProperty('script.trakt.paused')
 
 
+    @debounceit(M3U_REFRESH)
     def setPropTimer(self, key, state=True):
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
         return self.setEXTProperty(key,state)
@@ -785,21 +795,22 @@ class Properties(object):
 
 
     @contextmanager
-    def interruptActivity(self, wait=15.0): #quit background task
+    def interruptActivity(self, wait=-1): #quit background task
         while not self.monitor.abortRequested() and (self.isInterruptActivity() or self.isLockActivity()):
-            wait -= CPU_CYCLE
-            if self.monitor.waitForAbort(CPU_CYCLE) or wait < 0: break
-        self.setInterruptActivity(True)
+            if wait > 0: wait -= CPU_CYCLE #wait -1 runs indefinitely. 
+            if self.monitor.waitForAbort(CPU_CYCLE) or int(wait) == 0: break
+        self.setPendingInterrupt(self.setInterruptActivity(True))
         try: yield
-        finally: self.setInterruptActivity(False)
+        finally: 
+            self.setPendingInterrupt(self.setInterruptActivity(False))
         
            
     def setInterruptActivity(self, state=True): # context state
-        return self.setEXTProperty('%s.interruptActivity'%(ADDON_ID),state)
+        return self.setProperty('%s.interruptActivity'%(ADDON_ID),state)
         
 
     def isInterruptActivity(self): # context state
-        return self.getEXTProperty('%s.interruptActivity'%(ADDON_ID),False)
+        return self.getProperty('%s.interruptActivity'%(ADDON_ID),False)
 
 
     def setPendingInterrupt(self, state=True): # interrupt state
@@ -811,21 +822,21 @@ class Properties(object):
 
         
     @contextmanager
-    def suspendActivity(self, wait=15): #pause background task.
+    def suspendActivity(self, wait=-1): #pause background task.
         while not self.monitor.abortRequested() and (self.isSuspendActivity() or self.isLockActivity()):
-            wait -= CPU_CYCLE
-            if self.monitor.waitForAbort(CPU_CYCLE) or wait < 0: break
-        self.setSuspendActivity(True)
+            if wait > 0: wait -= CPU_CYCLE #wait -1 runs indefinitely. 
+            if self.monitor.waitForAbort(CPU_CYCLE) or int(wait) == 0: break
+        self.setPendingSuspend(self.setSuspendActivity(True))
         try: yield
-        finally: self.setSuspendActivity(False)
+        finally: self.setPendingSuspend(self.setSuspendActivity(False))
 
 
     def setSuspendActivity(self, state=True): # context state
-        return self.setEXTProperty('%s.suspendActivity'%(ADDON_ID),state)
+        return self.setProperty('%s.suspendActivity'%(ADDON_ID),state)
 
 
     def isSuspendActivity(self): # context state
-        return self.getEXTProperty('%s.suspendActivity'%(ADDON_ID),False)
+        return self.getProperty('%s.suspendActivity'%(ADDON_ID),False)
         
         
     def setPendingSuspend(self, state=True): # suspend state
@@ -858,29 +869,28 @@ class Properties(object):
         
     def preemptActivity(self, msg, func, *args, **kwargs):
         results      = None
-        orgSuspend   = self.isSuspendActivity()
-        orgInterrupt = self.isInterruptActivity()
+        orgSuspend   = self.isPendingSuspend()
+        orgInterrupt = self.isPendingInterrupt()
         while not self.monitor.abortRequested():
-            isSuspend   = self.isSuspendActivity()
-            isInterrupt = self.isInterruptActivity()
+            isSuspend   = self.isPendingSuspend()
+            isInterrupt = self.isPendingInterrupt()
             isBuilding  = self.isRunning('Builder.buildChannels')
             
             Dialog().notificationDialog(msg)
             self.log('preemptActivity, isInterrupt = %s, isSuspend = %s, isBuilding = %s'%(isInterrupt,isSuspend,isBuilding))
-            if not isInterrupt and (isSuspend or isBuilding):  #force interrupt.
-                if isSuspend:  self.setSuspendActivity(False)  #release suspension 
-                if isBuilding: self.setInterruptActivity(True) #interrupt building.
-            elif isInterrupt and not isBuilding: self.setInterruptActivity(False)#release interrupt.
+            if not isInterrupt and any([isSuspend, isBuilding]):  #force interrupt.
+                if isSuspend:  self.setPendingSuspend(False)  #release suspension 
+                if isBuilding: self.setPendingInterrupt(True) #interrupt building.
+            elif isInterrupt and not isBuilding: self.setPendingInterrupt(False)#release interrupt.
             elif not isInterrupt and not any([isSuspend, isBuilding]):
                 with self.lockActivity():
-                    try:
-                        results = func(*args, **kwargs)
-                        break
+                    try: results = func(*args, **kwargs)
                     except Exception as e: self.log("preemptActivity, failed! %s"%(e), xbmc.LOGERROR)
+                    break
             if self.monitor.waitForAbort(CPU_CYCLE): break
         
-        self.setSuspendActivity(orgSuspend)
-        self.setInterruptActivity(orgInterrupt)
+        self.setPendingSuspend(orgSuspend)
+        self.setPendingInterrupt(orgInterrupt)
         return results
 
 
@@ -1185,8 +1195,7 @@ class Builtin(object):
     def executeJSONRPC(self, request):
         with self.json_lock:
             response = xbmc.executeJSONRPC(FileAccess.dumpJSON(request))
-            self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay')))
-            self.log('executeJSONRPC, request = %s\nresponse = %s'%(request,response))
+            self.log('executeJSONRPC\nrequest = %s\nresponse = %s'%(request,response))
             return response
         
 
@@ -1579,7 +1588,7 @@ class Dialog(object):
     def browseSources(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, include=[], exclude=[]):
         self.log('browseSources, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s, mask= %s, include= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,len(include),exclude))
         def __buildMenuItem(option):
-            return self.listitems.buildMenuListItem(option['label'],option['label2'],Globals._getDummyIcon(Globals._getAbbr(option['label'])))
+            return self.listitems.buildMenuListItem(option['label'],option['label2'],Globals._getDummyIcon(str(option['idx'])))
 
         with self.builtin.busy_dialog():
             optlabel = "%s"%({'0':'Folders','1':'Files'}[str(type)]) if multi else "%s"%({'0':'Folder','1':'File'}[str(type)])
@@ -1646,8 +1655,8 @@ class Dialog(object):
             with self.builtin.busy_dialog():
                 npath  = None
                 lizLST = poolit(__buildListItem)(pathLST)
-                lizLST.insert(0,__buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,items={'key':'add','idx':0}))
-                if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,__buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32101)),LANGUAGE(33114),icon=ICON,items={'key':'save'}))
+                lizLST.insert(0,__buildListItem('',LANGUAGE(33113),icon=ICON,items={'key':'add','idx':0}))
+                if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,__buildListItem('',LANGUAGE(33114),icon=ICON,items={'key':'save'}))
             
             select = self.selectDialog(lizLST, header, preselect=lastOPT, multi=False)
             if not select is None:

@@ -41,44 +41,6 @@ def stripRegion(s):
 def chanceBool(percent=25):
     return random.randrange(100) <= percent
 
-def requestURL(url, params={}, payload={}, header=HEADER, timeout=15, cache=None, file=None):
-    #cache = {"cache":None, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}
-    def __error(result={}):                                                         return result
-    def __getCache(key, cache, checksum):                return (cache.get('requestURL.%s'%(FileAccess._getMD5(key)), checksum) or __error())
-    def __setCache(key, results, cache, checksum, life): return cache.set('requestURL.%s'%(FileAccess._getMD5(key)), results, checksum, life)
-        
-    results  = None
-    session  = requests.Session()
-    retries  = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-    adapter  = HTTPAdapter(max_retries=retries)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
-
-    try:
-        headers = HEADER.copy()
-        headers.update(header)
-        if payload: response = session.post(url, json=payload, files=file, headers=headers, timeout=timeout)
-        else:       response = session.get(url, params=params, headers=headers, timeout=timeout)
-        response.raise_for_status()  # Raise an exception for HTTP errors
-        try:    results = response.json()
-        except Exception: results = response.content
-        if isinstance(results,bytes): results = results.decode(DEFAULT_ENCODING)
-        log("Globals: requestURL\nurl = %s, status = %s\nparams = %s\npayload = %s\nreturn type = %s"%(url,response.status_code,params,payload,type(results)))
-        
-        if results and not cache is None: 
-            return __setCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
-                              results, cache["cache"], cache.get("checksum",ADDON_VERSION), cache.get("life",datetime.timedelta(minutes=15)))
-        return results 
-    except Exception as e: 
-        log("Globals: requestURL, failed! %s, An error occurred: %s"%('Returning cache' if cache else 'No Response', e))
-        return __getCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
-                          cache["cache"], cache.get("checksum",ADDON_VERSION)) if cache else __error()
-    finally: #retry failed post
-        if results is None and payload:
-            posts = set(SETTINGS.getCacheSetting('postQue', revive=True) or [])
-            posts.add((url, params, payload, header, timeout, None, file))
-            SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)
-
 def getChannelID(name, path, number, uuid=None):
     if uuid is None: uuid = SETTINGS.getMYUUID()
     if isinstance(path, list): path = '|'.join(path)
@@ -356,3 +318,6 @@ def parseSE(filename):
 
 def hasURLencoding(s):
     return bool(re.search(r'%[0-9a-fA-F]{2}', s))
+    
+def _escape_html(s): 
+    return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")

@@ -23,9 +23,9 @@ from library    import Library
 from builder    import Builder
 from channels   import Channels
 from backup     import Backup
-from multiroom  import Discovery, Multiroom
+from multiroom  import Multiroom
 from wizard     import Wizard
-from server     import HTTP
+from server     import HTTP, Discovery
 
 from context_create import _auto
 
@@ -85,6 +85,7 @@ class Tasks(object):
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Debug_Enable',False)
                 DIALOG.notificationDialog(LANGUAGE(32025))
+        #Force enable Kodi Debugging when enabled in PseudoTV via JSONRPC only if Kodi access allowed by user.
         if SETTINGS.getSettingBool('Enable_Kodi_Access'):
             self.jsonRPC.toggleShowLog(SETTINGS.getSettingBool('Debug_Enable'))
                     
@@ -121,7 +122,7 @@ class Tasks(object):
 
     def chkPVRBackend(self): 
         self.log('chkPVRBackend')
-        if SETTINGS.hasAddon(PVR_CLIENT_ID,True,True,True,True):
+        if SETTINGS.hasAddon(PVR_CLIENT_ID,notify=True):
             if not SETTINGS.hasPVRInstance():
                 SETTINGS.setPVRRemote(PROPERTIES.getRemoteHost(), PROPERTIES.getFriendlyName())
 
@@ -163,7 +164,7 @@ class Tasks(object):
 
     @cacheit(expiration=datetime.timedelta(minutes=15))
     def getOnlineVersion(self):
-        try:    ONLINE_VERSION = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(requestURL(ADDON_URL)))[0]
+        try:    ONLINE_VERSION = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(Globals.requestURL(ADDON_URL)))[0]
         except Exception: ONLINE_VERSION = ADDON_VERSION
         self.log('getOnlineVersion, version = %s'%(ONLINE_VERSION))
         return ONLINE_VERSION
@@ -283,26 +284,27 @@ class Tasks(object):
                     if self.service._sleep(5):
                         self.service._que(self.chkChannels,3)
             elif PROPERTIES.hasEnabledServers():
-                timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+                PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
 
 
     def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):
         self.log('chkPVRRefresh')
         def __toggle(state=True):
-            self.log('chkPVRRefresh, __toggle = %s'%(state))
-            self.service.jsonRPC.sendJSON({"method":"Addons.SetAddonEnabled","params":{"addonid":PVR_CLIENT_ID,"enabled":state}})
+            with BUILTIN.busy_dialog(lock=True):
+                self.log('chkPVRRefresh, __toggle = %s'%(state))
+                self.service.jsonRPC.sendJSON({"method":"Addons.SetAddonEnabled","params":{"addonid":PVR_CLIENT_ID,"enabled":state}})
             
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh') and not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
-                timerit(PROPERTIES.setEXTProperty)(M3U_REFRESH*2,*('%s.HTTP.pendingRestart'%(ADDON_ID),True))
+                timerit(PROPERTIES.setEXTProperty)(M3U_REFRESH,*('%s.HTTP.pendingRestart'%(ADDON_ID),True))
                 if brute:
-                    if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
-                        DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH*2, usethread=True)
+                    if not self.service.player.isPlaying() and self.service.monitor.isIdle and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
+                        DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
                         BUILTIN.executewindow('ActivateWindow(home)')
-                        __toggle(False), timerit(__toggle)(M3U_REFRESH*2)
-                    else:  timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+                        __toggle(False), timerit(__toggle)(M3U_REFRESH)
+                    else:  PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                 else: DIALOG.notificationDialog(f"Attempting to refresh {PVR_CLIENT_NAME}\n {LANGUAGE(30155)}")
-                self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID,{}).get('clientid',-1)) #currently not supported by IPTV Simple.
+                self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
             
             
     def chkSettingsChange(self, settings={}):

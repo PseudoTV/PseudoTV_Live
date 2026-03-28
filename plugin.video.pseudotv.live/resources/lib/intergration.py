@@ -37,7 +37,7 @@ class OpenRouter(object):
     def _request(self, url, params={}, payload={}, header=HEADER, timeout=15):
         if SETTINGS.getSettingBool('Allow_Artificial_Intelligence'):
             header.update({"Authorization": f"Bearer {SETTINGS.getSetting('Open_Router_APIKEY')}"})
-            return requestURL(url, params, payload, header, timeout, cache={'cache':self.cache,'life':datetime.timedelta(days=MAX_GUIDEDAYS)})
+            return Globals.requestURL(url, params, payload, header, timeout, cache={'cache':self.cache,'life':datetime.timedelta(days=MAX_GUIDEDAYS)})
 
 
     @cacheit()
@@ -98,7 +98,7 @@ class OpenRouter(object):
                         with FileLock(file_path):
                             with FileAccess.stream(file_path, "wb") as f:
                                 f.write(base64.b64decode(match.group('data')))
-                        if SETTINGS.hasAddon('script.module.pil', install=True): __alpha(file_name)
+                        if SETTINGS.hasAddon('script.module.pil'): __alpha(file_name)
                     except base64.binascii.Error as e: print(f"Error decoding base64 data: {e}")
                 else: print("Failed to parse the base64 data URI format.")
         

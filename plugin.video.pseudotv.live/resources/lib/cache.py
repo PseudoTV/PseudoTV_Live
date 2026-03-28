@@ -119,7 +119,8 @@ class _Cache(object):
 
 
     def __del__(self):
-        self.chkCleanup()
+        try: self.chkCleanup()
+        except Exception: pass
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

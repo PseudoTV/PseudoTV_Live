@@ -19,7 +19,6 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
-from server     import Discovery
 
 class Service(object):
     from jsonrpc import JSONRPC
@@ -80,16 +79,16 @@ class Multiroom(object):
 
     def getRemote(self, remote):
         self.log("getRemote, remote = %s"%(remote))
-        return requestURL(remote, header={'Accept':'application/json'}, cache={"cache":self.cache, "checksum":SETTINGS.getMYUUID(), "life": datetime.timedelta(days=MAX_GUIDEDAYS)})
+        return Globals.requestURL(remote, header={'Accept':'application/json'}, cache={"cache":self.cache, "checksum":SETTINGS.getMYUUID(), "life": datetime.timedelta(days=MAX_GUIDEDAYS)})
         
          
     def chkServers(self, servers={}):
         def __chkResources(settings):
-            [SETTINGS.hasAddon(id,install=True,enable=True) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
+            [SETTINGS.hasAddon(id) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
             
         def __chkResumeURLs(urls=[]):
             log('_chkResumeURLs, urls = %s'%(len(urls)))
-            [requestURL(url, cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}) for url in urls]
+            [Globals.requestURL(url, cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}) for url in urls]
 
         if not servers: servers = self.getDiscovery()
         for server in list(servers.values()):
@@ -132,7 +131,7 @@ class Multiroom(object):
                     if       payload.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(payload.get('host'),payload.get('name'),cache=True)
                     elif not payload.get('enabled',False) and instancePath:     changed = FileAccess.delete(instancePath)
                     else:                                                       changed = False
-                    if changed: timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+                    if changed: PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                     self.log('addServer, payload changed = %s'%(changed))
 
 
@@ -183,7 +182,7 @@ class Multiroom(object):
                                         DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
                                     if not SETTINGS.hasPVRInstance(liz.getLabel()): 
                                         if SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel(),cache=True):
-                                            timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+                                            PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                                 else:
                                     if servers[liz.getLabel()].get('enabled',False):
                                         changed = True

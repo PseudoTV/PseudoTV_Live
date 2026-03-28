@@ -56,27 +56,34 @@ def debounceit(wait=SERVICE_INTERVAL):
 
 def killit(method):
     @wraps(method)
-    def wrapper(wait=30, *args, **kwargs):
-        response = {'result': None, 'success': False, 'error': ''}
+    def wrapper(wait=None, *args, **kwargs):
+        if wait is None: wait = REAL_SETTINGS.getSettingInt('RPC_Wait')
+        thread_name = 'killit.%s'%(method.__qualname__.replace('.',': '))
+        response    = {'result': None, 'success': False, 'error': ''}
         def __run():
             try:
                 with timeit(method):
                     response['result']  = method(*args, **kwargs)
                     response['success'] = True
+                log('%s, killit running %s' % (method.__qualname__.replace('.', ': => -:'), thread_name))
             except Exception as e:
                 response['error'] = e
+                log('%s, killit failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
         
         thread = Thread(target=__run)
-        thread.name = f'killit.{method.__qualname__.replace('.',': ')}'
+        thread.name   = thread_name
         thread.daemon = True # This is crucial: allows the app to exit even if thread hangs
         thread.start()
-        thread.join(timeout=float(wait))
-        if thread.is_alive() or response.get('error'):
-            log('%s, killit Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),response.get('error')), xbmc.LOGERROR)
-            return None 
+        
+        timeout = float(wait) if wait >= 0 else None
+        thread.join(timeout=timeout)
+        if thread.is_alive():
+            # Thread is still hanging until finished or Kodi closes.
+            log('%s, timed out after %s'%(method.__qualname__.replace('.', ': '), wait), xbmc.LOGERROR)
+            return None
         return response['result'] if response['success'] else None
     return wrapper
-       
+    
 def poolit(method):
     @wraps(method)
     def wrapper(items=None, wait=TIMEOUT_EXECUTORS, *args, **kwargs):
@@ -177,7 +184,8 @@ class ExecutorPool:
 
 
     def __del__(self):
-        self._executor.shutdown(wait=False, cancel_futures=True)
+        try: self._executor.shutdown(wait=False, cancel_futures=True)
+        except Exception: pass
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

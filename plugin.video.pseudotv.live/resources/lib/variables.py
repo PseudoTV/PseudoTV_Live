@@ -60,13 +60,13 @@ class Globals:
 
     @staticmethod
     def _encodePlot(plot, text):
-        return '%s [COLOR item="%s"][/COLOR]'%(plot,FileAccess._encodeString(FileAccess.dumpJSON(text)))
+        return '%s [COLOR item="%s"][/COLOR]'%(plot,Globals._quoteString(FileAccess._encodeString(FileAccess.dumpJSON(text))))
         
     @staticmethod
     def _decodePlot(text: str = '') -> dict:
         if isinstance(text, str):
             plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
-            if plot: return FileAccess.loadJSON(FileAccess._decodeString(plot.group(1)))
+            if plot: return FileAccess.loadJSON(FileAccess._decodeString(Globals._unescapeString(plot.group(1))))
         return {}
         
     @staticmethod
@@ -230,5 +230,61 @@ class Globals:
         
     @staticmethod
     def _getDummyIcon(text, background=COLOR_BACKGROUND, color=COLOR_TEXT):
-        return f'https://dummyimage.com/512x512/{background}/{color}.png&text={Globals._quoteString(text)}'
+        url  = f'https://dummyimage.com/512x512/{background}/{color}.png&text={Globals._quoteString(text)}'
+        file = os.path.join(TEMP_IMAGE_LOC,f'{FileAccess._getMD5(url)}.png')
+        print('_getDummyIcon',url,file)
+        if   FileAccess.exists(file):   return file
+        elif Globals.setURL(url, file): return file
+        return COLOR_LOGO
         
+    @staticmethod
+    def setURL(url, file):
+        with FileLock(file):
+            try:
+                contents = Globals.requestURL(url)
+                print('setURL',contents)
+                fle = FileAccess.open(file, 'w')
+                fle.write(contents)
+            except Exception as e: log('Globals: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
+            finally:
+                if hasattr(fle, 'close'): fle.close()
+        return FileAccess.exists(file)
+        
+    @staticmethod
+    def requestURL(url, params={}, payload={}, header=HEADER, timeout=15, cache=None, file=None):
+        #cache = {"cache":None, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}
+        def __error(result={}):                              return result
+        def __getCache(key, cache, checksum):                return (cache.get('requestURL.%s'%(FileAccess._getMD5(key)), checksum) or __error())
+        def __setCache(key, results, cache, checksum, life): return cache.set('requestURL.%s'%(FileAccess._getMD5(key)), results, checksum, life)
+            
+        results = None
+        session = requests.Session()
+        retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
+        try:
+            headers = HEADER.copy()
+            headers.update(header)
+            if payload: response = session.post(url, json=payload, files=file, headers=headers, timeout=timeout)
+            else:       response = session.get(url, params=params, headers=headers, timeout=timeout)
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            content_type = response.headers.get('Content-Type', '').lower()
+            if 'application/json' in content_type: results = response.json()
+            else: results = response.content
+            log("Globals: requestURL\nurl = %s, status = %s\nparams = %s\npayload = %s\nreturn type = %s"%(url,response.status_code,params,payload,type(results)))
+            
+            if results and not cache is None: 
+                return __setCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
+                                  results, cache["cache"], cache.get("checksum",ADDON_VERSION), cache.get("life",datetime.timedelta(minutes=15)))
+            return results 
+        except Exception as e: 
+            log("Globals: requestURL, failed! %s, An error occurred: %s"%('Returning cache' if cache else 'No Response', e))
+            return __getCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
+                              cache["cache"], cache.get("checksum",ADDON_VERSION)) if cache else __error()
+        finally: #retry failed post
+            if results is None and payload:
+                posts = set(SETTINGS.getCacheSetting('postQue', revive=True) or [])
+                posts.add((url, params, payload, header, timeout, None, file))
+                SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)

@@ -73,8 +73,10 @@ class M3U(object):
 
 
     def __del__(self):
-        self.log('__del__, writable = %s'%(self.writable))
-        if self.writable: self._save()
+        try:
+            if self.writable: self._save()
+            self.log('__del__, writable = %s'%(self.writable))
+        except Exception: pass
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

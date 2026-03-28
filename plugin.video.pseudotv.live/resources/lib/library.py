@@ -202,7 +202,7 @@ class Library(object):
 
     def getMixedVideo(self):
         MixedList = []
-        MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed Video",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Video"})}) #"Recently Added"
+        MixedList.append({'name':'%s Video'%(LANGUAGE(32001)), 'type':"Mixed Video",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Video"})}) #"Recently Added"
         MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed Video",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo({'name':LANGUAGE(32002),'type':"Mixed Video"})}) #"Seasonal"
         MixedList.extend(self.getPVRRecordings())#"PVR Recordings"
         MixedList.extend(self.getPVRSearches())  #"PVR Searches"
@@ -212,7 +212,7 @@ class Library(object):
 
     def getMixedMusic(self):
         MixedList = []
-        MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed Music",'path':self.predefined.createMusicRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Music"})}) #"Recently Added"
+        MixedList.append({'name':'%s Music'%(LANGUAGE(32001)), 'type':"Mixed Music",'path':self.predefined.createMusicRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Music"})}) #"Recently Added"
         self.log('getMixedMusic, mixed = %s' % (len(MixedList)))
         return sorted(MixedList,key=itemgetter('name'))
 

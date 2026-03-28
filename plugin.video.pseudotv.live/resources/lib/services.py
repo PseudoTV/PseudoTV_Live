@@ -466,7 +466,6 @@ class Service(object):
     postQue          = set(SETTINGS.getCacheSetting('postQue') or [])
     logoQue          = set(SETTINGS.getCacheSetting('logoQue') or [])
 
-
     def __init__(self):
         self.jsonRPC     = JSONRPC(service=self)
         self.monitor     = Monitor(service=self)
@@ -479,9 +478,11 @@ class Service(object):
     
 
     def __del__(self):
-        SETTINGS.setCacheSetting('jsonQue', self.jsonQue)
-        SETTINGS.setCacheSetting('postQue', self.postQue)
-        SETTINGS.setCacheSetting('logoQue', self.logoQue)
+        try:
+            SETTINGS.setCacheSetting('jsonQue', self.jsonQue)
+            SETTINGS.setCacheSetting('postQue', self.postQue)
+            SETTINGS.setCacheSetting('logoQue', self.logoQue)
+        except Exception: pass
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -518,7 +519,7 @@ class Service(object):
          
         
     def _interrupt(self) -> bool: #tasks break
-        pendingInterrupt = any([self.pendingShutdown, self.pendingRestart, self.isScanning, self._isPlaying(), PROPERTIES.isInterruptActivity()])
+        pendingInterrupt = any([self.pendingShutdown, self.pendingRestart, self.isScanning, self._isPlaying(), PROPERTIES.isPendingInterrupt()])
         if pendingInterrupt != self.pendingInterrupt:
             self.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
             self.log('_interrupt, pendingInterrupt = %s'%(self.pendingInterrupt))
@@ -526,7 +527,7 @@ class Service(object):
     
 
     def _suspend(self, wait=0) -> bool: #tasks continue
-        pendingSuspend = any([PROPERTIES.isSuspendActivity(),BUILTIN.isSettingsOpened()])
+        pendingSuspend = any([BUILTIN.isSettingsOpened(), PROPERTIES.isPendingSuspend(),])
         if pendingSuspend != self.pendingSuspend:
             self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))

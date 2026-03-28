@@ -133,19 +133,19 @@ class Utilities(object):
     @staticmethod
     def _runCPUBench():
         with BUILTIN.busy_dialog():
-            if SETTINGS.hasAddon('script.pystone.benchmark',install=True, enable=True, notify=True):
+            if SETTINGS.hasAddon('script.pystone.benchmark', notify=True):
                 return BUILTIN.executebuiltin('RunScript(script.pystone.benchmark)')
         
     @staticmethod
     def _runIOBench():
         with BUILTIN.busy_dialog():
-            if SETTINGS.hasAddon('script.io.benchmark',install=True, enable=True, notify=True):
+            if SETTINGS.hasAddon('script.io.benchmark', notify=True):
                 return BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(Gloabls._escapeString(f'path={USER_LOC}')))
         
     @staticmethod
     def _runLogger():
         with BUILTIN.busy_dialog():
-            if SETTINGS.hasAddon('script.kodi.loguploader',install=True, enable=True, notify=True):
+            if SETTINGS.hasAddon('script.kodi.loguploader', notify=True):
                 return BUILTIN.executebuiltin('RunScript(script.kodi.loguploader)')
         
     @staticmethod
@@ -170,7 +170,7 @@ class Utilities(object):
     @staticmethod
     def _runReload():
         if DIALOG.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
-            timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+            PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
             
     @staticmethod
     def _runRestart():
@@ -183,7 +183,7 @@ class Utilities(object):
     @staticmethod
     def _runUpdate(full=False):
         log('Utilities: _runUpdate, full = %s'%(full))
-        timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkChanged',True))#trigger channel check
+        PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
               
     @staticmethod
     def buildMenu(select=None):

@@ -56,7 +56,7 @@ class Plugin(object):
     def _updateSysInfo(self):
         self.log('[%s] _updateSysInfo'%(self.sysInfo.get('chid')))
         if not self.player.isPlaying(): DIALOG.notificationDialog(f'{LANGUAGE(32248)} {LANGUAGE(30223)}\n{LANGUAGE(32140)}')
-        with PROPERTIES.interruptActivity():
+        with PROPERTIES.suspendActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
             if pvritem:
                 self.sysInfo['fitem'] = Globals._decodePlot(pvritem.get('broadcastnow',{}).get('plot',''))
@@ -116,7 +116,7 @@ class Plugin(object):
             return items
             
         self.log('[%s] _getPVRItems'%(self.sysInfo.get('chid')))
-        with PROPERTIES.interruptActivity():
+        with PROPERTIES.suspendActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=True)
         
         if pvritem:
@@ -178,7 +178,7 @@ class Plugin(object):
             return listitem
             
         def __buildPlaylist(chid, name):
-            with PROPERTIES.interruptActivity():
+            with PROPERTIES.suspendActivity():
                 return Globals._randomShuffle(interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in self.sysInfo.get('vid').split('|')], SETTINGS.getSettingInt('Interleave_Set'), SETTINGS.getSettingBool('Interleave_Repeat')))
         
         self.log('[%s] playRadio, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
@@ -264,7 +264,7 @@ class Plugin(object):
                 oSeason, oEpisode = parseSE(filename)
                 self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {label}: {filename} in {folder}')
                 
-                with PROPERTIES.interruptActivity():
+                with PROPERTIES.suspendActivity():
                     DIALOG.notificationDialog(f'Missing: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
                     items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
                     

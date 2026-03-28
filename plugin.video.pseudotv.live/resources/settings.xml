@@ -1251,13 +1251,13 @@
                         <popup>false</popup>
                     </control>
                 </setting>
-                <setting id="RPC_Timer" type="integer" label="30201" help="33201">
+                <setting id="RPC_Wait" type="integer" label="30201" help="33201">
                     <level>3</level>
-                    <default>2</default>
+                    <default>-1</default>
                     <constraints>
-                        <minimum>0</minimum>
+                        <minimum>-1</minimum>
                         <step>1</step>
-                        <maximum>600</maximum>
+                        <maximum>900</maximum>
                     </constraints>
                     <control type="slider" format="integer">
                         <popup>false</popup>

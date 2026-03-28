@@ -131,19 +131,6 @@ class FileAccess(object):
 
 
     @staticmethod
-    def setURL(url, file):#todo settingscache?
-        with FileLock(file):
-            try:
-                contents = requestURL(url)
-                fle = FileAccess.open(file, 'w')
-                fle.write(contents)
-            except Exception as e: log('FileAccess: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
-            finally:
-                if hasattr(fle, 'close'): fle.close()
-        return FileAccess.exists(file)
-        
-        
-    @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):
         # monitor    = MONITOR()
         # start_time = time.time()
@@ -390,22 +377,18 @@ class VFSFile(object):
 
 
     def read(self, bytes=0):
-        try:    return self.currentFile.read(bytes)
+        try:              return self.currentFile.read(bytes)
         except Exception: return self.currentFile.readBytes(bytes)
         
         
     def readBytes(self, bytes=0):
         return self.currentFile.readBytes(bytes)
         
-
-    def write(self, data):
-        if isinstance(data,bytes):
-            data = data.decode(DEFAULT_ENCODING, 'backslashreplace')
-        return self.currentFile.write(data)
         
-        
-    def writeBytes(self, data):
-        return self.currentFile.write(data)
+    def write(self, buffer):
+        if not isinstance(buffer, (bytes, bytearray)):
+            buffer = buffer.encode(DEFAULT_ENCODING, 'backslashreplace')
+        return self.currentFile.write(buffer)
         
         
     def close(self):
@@ -465,7 +448,8 @@ class FileLock(object):
  
  
     def __del__(self):
-        self.release()
+        try: self.release()
+        except Exception: pass
         
         
     def acquire(self):

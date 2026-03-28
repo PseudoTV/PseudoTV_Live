@@ -1362,11 +1362,11 @@ msgid ""
 msgstr ""
 
 msgctxt "#32100"
-msgid "- Add Path"
+msgid ""
 msgstr ""
 
 msgctxt "#32101"
-msgid "- Save Paths"
+msgid ""
 msgstr ""
 
 msgctxt "#32102"
@@ -2005,6 +2005,10 @@ msgstr ""
 msgctxt "#32263"
 msgid "Set Limits"
 msgstr ""
+         
+msgctxt "#32264"
+msgid "%s disabled, Please Enable!"
+msgstr ""
 
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
@@ -2239,11 +2243,11 @@ msgid "Change the onscreen Channel Bug position. [Auto Default]"
 msgstr ""
 
 msgctxt "#33113"
-msgid "Add path"
+msgid "Add New Path"
 msgstr ""
 
 msgctxt "#33114"
-msgid "Save paths"
+msgid "Confirm Paths"
 msgstr ""
 
 msgctxt "#33115"
@@ -2411,7 +2415,7 @@ msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\n
 msgstr ""
 
 msgctxt "#33201"
-msgid "How long to wait for JSONRPC response in minutes [0 Disabled 2 Default]\nPervent system hangs while waiting for a lengthy response."
+msgid "How long to wait for JSONRPC response in seconds [-1 Disabled Default]\nPervent system hangs while waiting for a lengthy response."
 msgstr ""
 
 msgctxt "#33202"

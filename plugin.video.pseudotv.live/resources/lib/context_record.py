@@ -55,7 +55,7 @@ class Record(object):
                             if any(m3u._save(), xmltv._save()):
                                 log('Record: add, ritem = %s'%(ritem))
                                 DIALOG.notificationDialog('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
-                                timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+                                PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                         del m3u
                         del xmltv
         else: DIALOG.notificationDialog(LANGUAGE(32000))
@@ -73,7 +73,7 @@ class Record(object):
                             if any(m3u._save(), xmltv._save()):
                                 log('Record: remove, ritem = %s'%(ritem))
                                 DIALOG.notificationDialog('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
-                                timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+                                PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                         del m3u
                         del xmltv
         else: DIALOG.notificationDialog(LANGUAGE(32000))

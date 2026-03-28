@@ -1670,13 +1670,13 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         if resume.get('updated',{}).get('instance') == friendly: #local
             return FileAccess.setJSON(self._getPath(id),{'resume':resume,'filelist':filelist})
         elif self.optionValues[1]:#remote
-            return requestURL(self.optionValues[1],payload={'uuid':SETTINGS.getMYUUID(),'name':friendly,'payload':{'resume':resume,'filelist':filelist}},
+            return Globals.requestURL(self.optionValues[1],payload={'uuid':SETTINGS.getMYUUID(),'name':friendly,'payload':{'resume':resume,'filelist':filelist}},
                               cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
             
         
     def _get(self, id):
         self.log("[%s] runAction, _get: url = %s"%(id,self.optionValues[1]))
-        if self.optionValues[1]: return requestURL(self.optionValues[1], cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
+        if self.optionValues[1]: return Globals.requestURL(self.optionValues[1], cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
         else:                    return FileAccess.getJSON(self._getPath(id))
 
 

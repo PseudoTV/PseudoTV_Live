@@ -68,8 +68,10 @@ class Resources(object):
         
 
     def __del__(self):
-        SETTINGS.setCacheSetting('imageCache', dict(self.imageCache)  )
-        self.log(f'__del__, imageCache = {len(self.imageCache)}')
+        try:
+            SETTINGS.setCacheSetting('imageCache', dict(self.imageCache))
+            self.log(f'__del__, imageCache = {len(self.imageCache)}')
+        except: pass
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

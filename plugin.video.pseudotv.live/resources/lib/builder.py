@@ -116,8 +116,10 @@ class Builder(object):
 
 
     def __del__(self):
-        SETTINGS.setCacheSetting('trailerCache', self.trailerCache)
-        self.log(f'__del__, trailerCache = {len(self.trailerCache)}')
+        try:
+            SETTINGS.setCacheSetting('trailerCache', self.trailerCache)
+            self.log(f'__del__, trailerCache = {len(self.trailerCache)}')
+        except Exception: pass
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -250,7 +252,7 @@ class Builder(object):
                             if self.service._interrupt():
                                 self.log("[%s] buildChannels, _interrupt"%(citem['id']))
                                 self.pErrors = [LANGUAGE(32160)]
-                                self.service._que(self.service.tasks.chkChannels,3,*(channels[idx:],silent))
+                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,*(channels[idx:],silent))
                                 break
                             elif self.service._suspend(CPU_CYCLE):
                                 self.log("[%s] buildChannels, _suspend"%(citem['id']))
@@ -286,7 +288,7 @@ class Builder(object):
                                 
                             if any(updated): 
                                 completed.add(__addStation(citem)) #add m3u station if lineup available. 
-                                timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkPVRRefresh',True))#refresh pvr guide
+                                PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                             else: __clrStation(citem) #remove m3u/xmltv references when no valid programmes found.
                             __setStation()
                         except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)

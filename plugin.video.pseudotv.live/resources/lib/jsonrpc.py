@@ -49,30 +49,48 @@ class JSONRPC(object):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
 
-    def sendJSON(self, param, timeout=SETTINGS.getSettingInt('RPC_Timer')):
-        self.log('sendJSON, timeout = %s'%(timeout))
-        command  = param
+    def sendJSON(self, param):
+        command = param
         command["jsonrpc"] = "2.0"
-        command["id"] = ADDON_ID #todo debug killit crashing Kodi
-        # if timeout > 0: response = FileAccess.loadJSON((killit(BUILTIN.executeJSONRPC)(timeout,command)) or {'error':{'message':'JSONRPC timed out!'}})
-        # else:           
-        response = FileAccess.loadJSON(BUILTIN.executeJSONRPC(command))
+        command["id"] = ADDON_ID
+        response = FileAccess.loadJSON(killit(BUILTIN.executeJSONRPC)(SETTINGS.getSettingInt('RPC_Wait'),FileAccess.dumpJSON(command)))
+        self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')))
         self.log('sendJSON, response received')
-        if response.get('error'):
-            self.log('sendJSON, failed! error = %s\n%s'%(FileAccess.dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
+        if response and response.get('error'):
+            self.log('sendJSON, failed! error = %s' % FileAccess.dumpJSON(response.get('error')), xbmc.LOGWARNING)
             response.setdefault('result',{})['error'] = response.pop('error')
         return response
+
+
+    def sendRPC(self, param):
+        #slower rpc, with proper timeout (killit) control via socket, internal rpc request requires thread killit which is hit or miss.
+        command = param
+        command["jsonrpc"] = "2.0"
+        command["id"] = ADDON_ID
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(float(SETTINGS.getSettingInt('RPC_Wait'))) # This is the critical line
+            sock.connect((SETTINGS.getIP(), 9090))
+            sock.sendall(command.encode('utf-8'))
+            response = sock.recv(4096)
+            self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')))
+            return FileAccess.loadJSON(response.decode('utf-8'))
+        except socket.timeout:
+            self.log("sendRPC, JSONRPC Timed out!", xbmc.LOGERROR)
+            return None
+        finally:
+            sock.close()
 
 
     def queueJSON(self, param):
         if hasattr(self.service,'jsonQue'): self.service.jsonQue.add(param)
         
         
-    def cacheJSON(self, param, life=datetime.timedelta(minutes=5), checksum=ADDON_VERSION, timeout=SETTINGS.getSettingInt('RPC_Timer')):
+    def cacheJSON(self, param, life=datetime.timedelta(minutes=5), checksum=ADDON_VERSION):
         cacheName = 'cacheJSON.%s'%(FileAccess._getMD5(FileAccess.dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
-            cacheResponse = self.sendJSON(param, timeout)
+            cacheResponse = self.sendJSON(param)
             if cacheResponse.get('result',{}): self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life)
         return cacheResponse
 
@@ -247,11 +265,11 @@ class JSONRPC(object):
         else:     return self.sendJSON(param).get('result',{}).get('genres', [])
 
 
-    def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), timeout=-1):
+    def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         param["properties"] = self.getEnums("List.Fields.Files", type='items') #todo change enums from files to media specific? 
         param = {"method":"Files.GetDirectory","params":param}
-        if cache: results = self.cacheJSON(param, expiration, checksum, timeout).get('result',{})
-        else:     results = self.sendJSON(param, timeout).get('result',{})
+        if cache: results = self.cacheJSON(param, expiration, checksum).get('result',{})
+        else:     results = self.sendJSON(param).get('result',{})
         if 'filedetails' in results: return results.get('filedetails',[]), results.get('limits',{}), results.get('error',{})
         else:                        return results.get('files',[]), results.get('limits',{}), results.get('error',{})
 
@@ -710,6 +728,5 @@ class JSONRPC(object):
 
     def toggleShowLog(self, state=False):
         self.log('toggleShowLog, state = %s'%(state))
-        opState = not bool(state)
-        if self.getSettingValue("debug.showloginfo") == opState:
+        if self.getSettingValue("debug.showloginfo") != state:
             self.setSettingValue("debug.showloginfo",state,queue=False)

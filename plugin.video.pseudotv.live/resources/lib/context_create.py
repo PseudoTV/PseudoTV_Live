@@ -59,7 +59,7 @@ def _add(sysARG, listitem: dict={}):
                     manager._addChannels(citem['number'], citem)
                     manager.closeManager()
                 del manager
-                timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkChanged',True))#trigger channel check
+                PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
                 return DIALOG.notificationDialog("%s [B]%s[/B]: [B]%s[/B]\nAdded!"%(LANGUAGE(30223),citem['number'],citem['name']))
 
 def _auto(start=1, count=-1):
@@ -76,13 +76,11 @@ def _auto(start=1, count=-1):
             log(f'Create: _auto, hasBackup = {hasBackup}, hasServers = {hasServers}')
             while not MONITOR().abortRequested():
                 retval = DIALOG.yesnoDialog(message='%s\n%s'%(LANGUAGE(32042)%(ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254))
-                if retval == 0: #No
-                    return True
-                elif retval == 1: #Yes
+                if   retval == 0: return True #No
+                elif retval == 1:
                     SETTINGS.setSettingBool('Enable_Autotuned_Channels',True)
-                    timerit(PROPERTIES.setPropTimer)(M3U_REFRESH,*('chkChanged',True))#trigger channel check
-                    break       
-                elif retval == 2:#Custom
+                    break #Yes  
+                elif retval == 2: #Custom
                     def __manager():  return _open()
                     def __settings(): return Globals._openSettings()
                     def __recover():  return BUILTIN.executebuiltin(f'RunScript(special://home/addons/{ADDON_ID}/resources/lib/backup.py, Recover_Backup)')
@@ -105,12 +103,13 @@ def _auto(start=1, count=-1):
         manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
         for idx, type in enumerate(AUTOTUNE_TYPES):
             pDialog = DIALOG._updateProgress(pDialog, int(idx*100//len(AUTOTUNE_TYPES)), type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
-            samples = Globals._randomSamples(manager.getLibrary(type),count)
+            samples = manager.getLibrary(type)
             items.extend([s for s in samples if s])
         
         manager._addChannels(start, Globals._randomShuffle(items))
         manager.closeManager()
     del manager
+    PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
     return True
               
 # @threadit      
