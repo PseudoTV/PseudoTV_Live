@@ -46,14 +46,13 @@ class Discovery(Thread):
             self.log("removeService, type = %s, name = %s"%(type,name))
              
         def addService(self, zeroconf, type, name):
-            info = self.zeroconf.getServiceInfo(type, name)
-            if info:
-                IP = socket.inet_ntoa(info.getAddress())
-                if IP != SETTINGS.getIP():
-                    server = info.getServer()
-                    self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(IP,info.getPort()),'bonjour':'http://%s:%s/%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
-                    self.log("addService, found zeroconf %s @ %s using bonjour %s"%(server,self.zServers[server]['host'],self.zServers[server]['bonjour']))
-                    self.multiroom.addServer(Globals.requestURL(self.zServers[server]['bonjour'],cache={'cache':SETTINGS.cache, "life": datetime.timedelta(seconds=300)}))
+            INFO = self.zeroconf.getServiceInfo(type, name)
+            if INFO:
+                server = INFO.getServer()
+                ip     = socket.inet_ntoa(INFO.getAddress())
+                self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(ip,INFO.getPort()),'bonjour':'http://%s:%s/api/%s'%(ip,SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
+                self.log("addService, found zeroconf %s @ %s using bonjour %s"%(server,self.zServers[server]['host'],self.zServers[server]['bonjour']))
+                self.multiroom.addServer(Globals.requestURL(self.zServers[server]['bonjour'],cache={'cache':SETTINGS.cache, "life": datetime.timedelta(seconds=300)}))
             
     def __init__(self, service=None, multiroom=None):
         Thread.__init__(self)
@@ -184,39 +183,28 @@ class MyHandler(BaseHTTPRequestHandler):
         try:
             accept_encoding = self.headers.get("Accept-Encoding", "")
             use_compression = "gzip" in accept_encoding
-            
-            if self.path.lower() == '/favicon.ico':
-                self.send_response(204) # 204 No Content
-                self.end_headers()
-            elif self.path.startswith('/logos/'):
-                self.send_response(302) # 302 Temporary Redirect
-                chname = Globals._unquoteString(self.path.split('/logos/')[1])
-                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getCache(chname))}')
+            if self.path.startswith('/logos/'): # 302 Temporary Redirect
+                self.send_response(302)
+                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getCache(Globals._unquoteString(self.path.split('/logos/')[1])))}')
                 self.log(f'do_GET, redirecting to http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(image)}')
                 self.end_headers()
-            else:
+            else: # 200 OK
                 self.send_response(200)
-                if   self.path.lower() == f'/{M3UFLE.lower()}':   __sendFile(M3UFLEPATH, use_compression)
-                elif self.path.lower() == f'/{GENREFLE.lower()}': __sendFile(GENREFLEPATH, use_compression)
-                elif self.path.lower() == f'/{XMLTVFLE.lower()}': __sendFile(XMLTVFLEPATH, use_compression)
-                elif self.path.startswith('/images/'):            __sendFile(Globals._unquoteString(self.path.split('/images/')[1]), False)
-                elif self.path.startswith('/api/'):               __sendFile(FileAccess.dumpJSON(Globals._unquoteString(self.path.split('/api/')[1])), False)
+                if   self.path.lower() == '/favicon.ico':           __sendFile(os.path.join(MEDIA_LOC,'logo.ico'), use_compression)
+                elif self.path.lower() == f'/{M3UFLE.lower()}':     __sendFile(M3UFLEPATH, use_compression)
+                elif self.path.lower() == f'/{GENREFLE.lower()}':   __sendFile(GENREFLEPATH, use_compression)
+                elif self.path.lower() == f'/{XMLTVFLE.lower()}':   __sendFile(XMLTVFLEPATH, use_compression)
+                elif self.path.startswith('/images/'):              __sendFile(Globals._unquoteString(self.path.split('/images/')[1]), False)
                 else:
-                    chunk = b''
-                    if   self.path.lower() == f'/{BONJOURFLE.lower()}': chunk = FileAccess.dumpJSON(SETTINGS.getBonjour(inclChannels=True),idnt=4).encode(encoding=DEFAULT_ENCODING)
-                    elif self.path.startswith('/filelist'):             chunk = FileAccess.dumpJSON(FileAccess.getJSON((os.path.join(RESUME_LOC, self.path.replace('/filelist/',''))))).encode(encoding=DEFAULT_ENCODING)
-                    elif self.path.startswith('/remote'):
-                        if   self.path.endswith('.json'):               chunk = FileAccess.dumpJSON(SETTINGS.getPayload(),idnt=4).encode(encoding=DEFAULT_ENCODING)
-                        elif self.path.endswith('.html'): 
-                            use_compression = False
-                            chunk = SETTINGS.getPayloadUI().encode(encoding=DEFAULT_ENCODING)
-                        else: return self.send_error(404, "File Not Found [%s]" % self.path)
-                    elif self.path.startswith('/manager'):
-                        use_compression = False
-                        if self.path.endswith('channels.html'):
-                            chunk = Channels()._channelManager()
+                    use_compression = False if self.path.endswith('.html') else use_compression
+                    if self.path.lower().endswith('.json'):
+                        if   self.path.lower() == f'/api/{BONJOURFLE.lower()}': __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.getBonjour(),idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
+                        elif self.path.lower() == f'/api/{DBLOGSFLE.lower()}':  __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.cache.get('log.%s'%(ADDON_ID),checksum=ADDON_VERSION),idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
+                        elif self.path.lower().startswith('/api'):              __sendChunk(self.path, FileAccess.dumpJSON(FileAccess.getJSON(os.path.join(USER_LOC, self.path.replace('/api/','')))).encode(encoding=DEFAULT_ENCODING), use_compression)
+                        elif self.path.lower().startswith('/filelist'):         __sendChunk(self.path, FileAccess.dumpJSON(FileAccess.getJSON((os.path.join(RESUME_LOC, self.path.replace('/filelist/',''))))).encode(encoding=DEFAULT_ENCODING), use_compression)
+                    elif self.path.lower().endswith('.html'):
+                        if self.path.lower() == f'/{MANAGERFLE.lower()}':       __sendChunk(self.path, Channels()._channelManager(), use_compression)
                     else: return self.send_error(404, "File Not Found [%s]" % self.path)
-                    __sendChunk(self.path, chunk, use_compression)
         except FileNotFoundError: self.send_error(404, "File Not Found [%s]" % self.path)
         except Exception as e: self.send_error(500, "Internal Server Error")
 
@@ -225,15 +213,14 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
     
     
-class HTTP(object):
+class HTTP(Thread):
     httpd = None
     
     def __init__(self, service=None):
+        Thread.__init__(self)
         self.service = service
         self.monitor = service.monitor
-        self.httpThread = Thread(target=self.run())
-        self.httpThread.daemon = True
-        self.httpThread.start()
+        self.start()
         
                     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -321,9 +308,7 @@ class HTTP(object):
             try: self._server.shutdown()
             except Exception: pass
             self.log('run, http server shutdown, pendingRestart = %s, isAlive = %s'%(pendingRestart,__cancel()), xbmc.LOGINFO)
-            if pendingRestart:
-                self.monitor.waitForAbort(M3U_REFRESH)
-                self.service._que(self.service.tasks.chkHTTP,1)
+            if pendingRestart: timerit(self.service._que)(M3U_REFRESH,*(self.service.tasks.chkHTTP,1))
             __update(pendingRestart)
             PROPERTIES.setRunning('HTTP.run',False)
             PROPERTIES.setRunning('HTTP.start',False)

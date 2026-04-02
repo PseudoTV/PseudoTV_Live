@@ -188,14 +188,14 @@ class Utilities(object):
     @staticmethod
     def buildMenu(select=None):
         items = [
-                 {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':_runCleanup  , 'hide':True ,'args':(False,)}, #"Rebuild M3U/XMLTV"
-                 {'label':LANGUAGE(32118)                  ,'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':_runCleanup  , 'hide':True ,'args':(True,)}, #"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':COLOR_LOGO,'func':_runReload   , 'hide':False},#"Force PVR reload"
-                 {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':_runRestart  , 'hide':False},#"Force PTVL reload"
-                 {'label':LANGUAGE(32159)                  ,'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':_runLibrary  , 'hide':False},
-                 {'label':LANGUAGE(32180)                  ,'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':_runFillers  , 'hide':False},
-                 {'label':LANGUAGE(30205)                  ,'label2':LANGUAGE(30205),'icon':COLOR_LOGO,'func':_runCPUBench , 'hide':False},
-                 {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':COLOR_LOGO,'func':_runIOBench  , 'hide':False},
+                 {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':LOGO_COLOR,'func':_runCleanup  , 'hide':True ,'args':(False,)}, #"Rebuild M3U/XMLTV"
+                 {'label':LANGUAGE(32118)                  ,'label2':LANGUAGE(32119),'icon':LOGO_COLOR,'func':_runCleanup  , 'hide':True ,'args':(True,)}, #"Clean Start"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':LOGO_COLOR,'func':_runReload   , 'hide':False},#"Force PVR reload"
+                 {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':LOGO_COLOR,'func':_runRestart  , 'hide':False},#"Force PTVL reload"
+                 {'label':LANGUAGE(32159)                  ,'label2':LANGUAGE(33159),'icon':LOGO_COLOR,'func':_runLibrary  , 'hide':False},
+                 {'label':LANGUAGE(32180)                  ,'label2':LANGUAGE(33180),'icon':LOGO_COLOR,'func':_runFillers  , 'hide':False},
+                 {'label':LANGUAGE(30205)                  ,'label2':LANGUAGE(30205),'icon':LOGO_COLOR,'func':_runCPUBench , 'hide':False},
+                 {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':LOGO_COLOR,'func':_runIOBench  , 'hide':False},
                  ]
 
         with BUILTIN.busy_dialog():

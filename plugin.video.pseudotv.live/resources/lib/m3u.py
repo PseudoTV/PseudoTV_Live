@@ -313,7 +313,7 @@ class M3U(object):
                
                
     def getStationItem(self, sitem):
-        if '3000' in list(sitem.get('rules',{}).keys()): #PauseRule
+        if 3000 in list(sitem.get('rules',{}).keys()): #PauseRule
                sitem['url'] = RESUME_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']))
         elif   sitem['radio']: sitem['url'] = RADIO_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']),radio=str(sitem['radio']),vid='{catchup-id}')
         elif   sitem['catchup']:
@@ -329,17 +329,17 @@ class M3U(object):
         ritem = self.getMitem()
         ritem['provider']      = '%s (%s)'%(ADDON_NAME,PROPERTIES.getFriendlyName())
         ritem['provider-type'] = 'addon'
-        ritem['provider-logo'] = HOST_LOGO
+        ritem['provider-logo'] = LOGO_HOST
         ritem['label']         = (fitem.get('showlabel') or '%s%s'%(fitem.get('label',''),' - %s'%(fitem.get('episodelabel','')) if fitem.get('episodelabel','') else ''))
         ritem['name']          = ritem['label']
         ritem['number']        = random.Random(str(fitem.get('id',1))).random()
-        ritem['logo']          = cleanImage((Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
+        ritem['logo']          = Globals._getThumb(fitem,opt=EPG_ARTWORK)
         ritem['media']         = True
         ritem['media-size']    = str(fitem.get('size',0))
         ritem['media-dir']     = ''#todo optional add parent directory via user prompt?
         ritem['group']         = ['%s (%s)'%(group,ADDON_NAME)]
         ritem['id']            = getRecordID(ritem['name'], (fitem.get('originalfile') or fitem.get('file','')), ritem['number'], SETTINGS.getMYUUID())
-        ritem['url']           = DVR_URL.format(addon=ADDON_ID,title=Globals._quoteString(ritem['label']),chid=Globals._quoteString(ritem['id']),vid=Globals._quoteString(FileAccess._encodeString((fitem.get('originalfile') or fitem.get('file','')))),seek=seek,duration=fitem.get('duration',0))#fitem.get('catchup-id','')
+        ritem['url']           = DVR_URL.format(addon=ADDON_ID,title=Globals._quoteString(ritem['label']),chid=Globals._quoteString(ritem['id']),vid=(FileAccess._encodeString((fitem.get('originalfile') or fitem.get('file','')))),seek=seek,duration=fitem.get('duration',0))#fitem.get('catchup-id','')
         return ritem
         
         
@@ -368,7 +368,7 @@ class M3U(object):
         mitem['realtime']      = False
         mitem['provider']      = '%s (%s)'%(ADDON_NAME,PROPERTIES.getFriendlyName())
         mitem['provider-type'] = 'addon'
-        mitem['provider-logo'] = HOST_LOGO
+        mitem['provider-logo'] = LOGO_HOST
         self.log('addStation, mitem:\n%s'%(mitem))
         self.delStation(citem)
         self.M3UDATA.setdefault('stations',[]).append(mitem)

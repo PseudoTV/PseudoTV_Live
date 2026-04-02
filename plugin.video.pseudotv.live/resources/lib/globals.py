@@ -168,17 +168,6 @@ def cleanLabel(text):
     text = text.replace("[B]",'').replace("[/B]",'')
     text = text.replace("[I]",'').replace("[/I]",'')
     return text.replace(":",'')
-  
-def cleanImage(image=''):
-    if image is None: image = ''
-    else:
-        if not image.startswith(('image://','resource://','special://','smb://','nfs://','https://','http://')):
-            realPath = FileAccess.translatePath('special://home/addons/')
-            if image.startswith(realPath):# convert real path. to vfs
-                image = image.replace(realPath,'special://home/addons/').replace('\\','/')
-            elif image.startswith(realPath.replace('\\','/')):
-                image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
-    return image.strip('/')
 
 def cleanMPAA(mpaa):
     orgMPA = mpaa

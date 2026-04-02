@@ -26,7 +26,7 @@ HEADER = {"Authorization": "",
           "X-Reference"  : f"{ADDON_URL}",}
            
 class OpenRouter(object):
-    def __init__(self, cache=SETTINGS.cacheDB):
+    def __init__(self, cache=None):
         self.cache = cache
         
 
@@ -77,30 +77,30 @@ class OpenRouter(object):
             
     def getImage(self, citem, count=1, model="google/gemini-2.5-flash-image-preview", background_color=(0, 255, 0)):
         self.log('getImage, chname = %s, count = %s, model = %s'%(citem.get('name'), count, model))
-        payload = { "model"        : model,
-                    "messages"     : [ { "role": "user",
-                                          "content": SETTINGS.getSetting('Generative_Image_Prompt').format(name=citem.get('name'),group='%s %s'%(citem.get('name'),', '.join(citem.get('group',[]).remove(ADDON_NAME))))}],
-                  "modalities"     : ["image"],
-                  "response_format": {"type": "b64_json"},
-                   "n"             : count,
-                  "provider"       : { "allow_fallbacks": true,
-                                       "require_parameters": true,
-                                       "data_collection": "deny"}}
+        # payload = { "model"        : model,
+                    # "messages"     : [ { "role": "user",
+                                          # "content": SETTINGS.getSetting('Generative_Image_Prompt').format(name=citem.get('name'),group='%s %s'%(citem.get('name'),', '.join(citem.get('group',[]).remove(ADDON_NAME))))}],
+                  # "modalities"     : ["image"],
+                  # "response_format": {"type": "b64_json"},
+                   # "n"             : count,
+                  # "provider"       : { "allow_fallbacks": true,
+                                       # "require_parameters": true,
+                                       # "data_collection": "deny"}}
 
-        response = self._request("https://openrouter.ai/api/v1/chat/completions",payload=payload)
-        if "choices" in response:
-            for idx, image in enumerate(response["choices"][0]["message"]["images"]):
-                match = re.match(r"data:image/(?P<ext>.*?);base64,(?P<data>.*)", image["image_url"]["url"])
-                if match:
-                    try:
-                        file_name = '%s.%s'%(chname,match.group('ext'))# '%s_%s.%s'%(chname,idx,match.group('ext'))
-                        file_path = os.path.join(TEMP_IMAGE_LOC,file_name)
-                        with FileLock(file_path):
-                            with FileAccess.stream(file_path, "wb") as f:
-                                f.write(base64.b64decode(match.group('data')))
-                        if SETTINGS.hasAddon('script.module.pil'): __alpha(file_name)
-                    except base64.binascii.Error as e: print(f"Error decoding base64 data: {e}")
-                else: print("Failed to parse the base64 data URI format.")
+        # response = self._request("https://openrouter.ai/api/v1/chat/completions",payload=payload)
+        # if "choices" in response:
+            # for idx, image in enumerate(response["choices"][0]["message"]["images"]):
+                # match = re.match(r"data:image/(?P<ext>.*?);base64,(?P<data>.*)", image["image_url"]["url"])
+                # if match:
+                    # try:
+                        # file_name = '%s.%s'%(chname,match.group('ext'))# '%s_%s.%s'%(chname,idx,match.group('ext'))
+                        # file_path = os.path.join(TEMP_IMAGE_LOC,file_name)
+                        # with FileLock(file_path):
+                            # with FileAccess.stream(file_path, "wb") as f:
+                                # f.write(base64.b64decode(match.group('data') + b"=="))
+                        # if SETTINGS.hasAddon('script.module.pil'): __alpha(file_name)
+                    # except base64.binascii.Error as e: print(f"Error decoding base64 data: {e}")
+                # else: print("Failed to parse the base64 data URI format.")
         
         
     def _alphaImage(self, file_name, background_color=(0, 255, 0)):
@@ -150,8 +150,8 @@ class OpenRouter(object):
             try:              param = sysARG[1]
             except Exception: param = None
             log('OpenRouter: param = %s'%(param))
-            if param == 'getImageModels':   OpenRouter()._getImageModels()
-            if param == 'getContextModels': OpenRouter()._getContextModels()
+            if param == 'getImageModels':   OpenRouter(cache=SETTINGS.cacheDB)._getImageModels()
+            if param == 'getContextModels': OpenRouter(cache=SETTINGS.cacheDB)._getContextModels()
             return Globals._openSettings(ctl)
 
 if __name__ == '__main__': OpenRouter()._run(sys.argv)

@@ -105,10 +105,9 @@ def _auto(start=1, count=-1):
             pDialog = DIALOG._updateProgress(pDialog, int(idx*100//len(AUTOTUNE_TYPES)), type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
             samples = manager.getLibrary(type)
             items.extend([s for s in samples if s])
-        
         manager._addChannels(start, Globals._randomShuffle(items))
         manager.closeManager()
-    del manager
+        del manager
     PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
     return True
               

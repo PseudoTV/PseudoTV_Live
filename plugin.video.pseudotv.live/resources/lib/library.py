@@ -295,7 +295,7 @@ class Library(object):
                     ShowGenreList.update({genre: info.get('episode', 0) for genre in info.get('genre', [])})
                     
             if sortbycount:
-                TVShowList    = [FileAccess.loadJSON(x[0]) for x in sorted(TVShowList.most_common(limit))]
+                TVShowList    = [FileAccess.loadJSON(x[0]) for x in sorted(TVShowList.most_common(limit*2))]
                 NetworkList   = [x[0] for x in sorted(NetworkList.most_common(limit))]
                 ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(limit))]
             else:

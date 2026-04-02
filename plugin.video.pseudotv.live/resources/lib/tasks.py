@@ -113,18 +113,13 @@ class Tasks(object):
                 # if channels.setChannels(chanLST):
                     # DIALOG.okDialog(f'Kodi encountered a fatal crash while parsing a [B]{ADDON_NAME}[\B] channel.\nPlease check the channel configuration for [B]{citem.get('name')}[\B]\n Channel [B]{citem.get('number')}[\B] temporarily disabled!', usethread=False)
                 # del channels
-        
-        
-    def chkServers(self):
-        self.log('chkServers')
-        Multiroom(service=self.service).chkServers()
-
-
+  
+  
     def chkPVRBackend(self): 
         self.log('chkPVRBackend')
         if SETTINGS.hasAddon(PVR_CLIENT_ID,notify=True):
             if not SETTINGS.hasPVRInstance():
-                SETTINGS.setPVRRemote(PROPERTIES.getRemoteHost(), PROPERTIES.getFriendlyName())
+                SETTINGS.setPVRRemote(PROPERTIES.getRemoteHost(), PROPERTIES.getFriendlyName(), cache=False)
 
 
     def chkQueTimer(self):
@@ -132,7 +127,6 @@ class Tasks(object):
         self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200 , 1)#12HRS
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800 , 1)#3HRS
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300   , 1)#5MINS
-        self._chkEpochTimer('chkServers'      , self.chkServers       , 1800  , 1)#30MINS
         self._chkEpochTimer('chkQUES'         , self.chkQUES          , 120   , 1)#2MINS
         
         if not self.service.isClient:
@@ -287,6 +281,7 @@ class Tasks(object):
                 PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
 
 
+    @debounceit(M3U_REFRESH)
     def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):
         self.log('chkPVRRefresh')
         def __toggle(state=True):
@@ -294,16 +289,15 @@ class Tasks(object):
                 self.log('chkPVRRefresh, __toggle = %s'%(state))
                 self.service.jsonRPC.sendJSON({"method":"Addons.SetAddonEnabled","params":{"addonid":PVR_CLIENT_ID,"enabled":state}})
             
-        if not PROPERTIES.isRunning('Tasks.chkPVRRefresh') and not PROPERTIES.isRunning('Builder.buildChannels'):
+        if not PROPERTIES.isRunning('Tasks.chkPVRRefresh') and self.service.monitor.isIdle and not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
                 timerit(PROPERTIES.setEXTProperty)(M3U_REFRESH,*('%s.HTTP.pendingRestart'%(ADDON_ID),True))
                 if brute:
-                    if not self.service.player.isPlaying() and self.service.monitor.isIdle and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
+                    if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
                         DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
                         BUILTIN.executewindow('ActivateWindow(home)')
                         __toggle(False), timerit(__toggle)(M3U_REFRESH)
-                    else:  PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
-                else: DIALOG.notificationDialog(f"Attempting to refresh {PVR_CLIENT_NAME}\n {LANGUAGE(30155)}")
+                    else:  timerit(PROPERTIES.setPropTimer('chkPVRRefresh'))(M3U_REFRESH)#refresh pvr guide
                 self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
             
             
@@ -338,9 +332,9 @@ class Tasks(object):
                     self.log("chkQUES, queuing = %s\njsonQue:%s"%(len(self.service.jsonQue),param))
                     self.service._que(self.jsonRPC.sendJSON,-1,param)
                 if len(self.service.logoQue) > 0:
-                    param = FileAccess.loadJSON(self.service.logoQue.pop())
-                    self.log("chkQUES, queuing = %s\nlogoQue:%s"%(len(self.service.logoQue),param))
-                    self.service._que(library.resources.getLogo,-1,*(param,library.resources.getCache(param.get('name')),True,None))
+                    chname = FileAccess.loadJSON(self.service.logoQue.pop())
+                    self.log("chkQUES, queuing = %s\nlogoQue:%s"%(len(self.service.logoQue),chname))
+                    self.service._que(library.resources.getLogo,-1,*(chname,library.resources.getCache(param.get('name')),True))
         del library
         
                 

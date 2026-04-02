@@ -51,18 +51,18 @@ class Service(object):
         return False
 
 class Resources(object):
-    seasonal = Seasonal()
-    
     def __init__(self, service=None):
         if service is None: service = Service()
         self.service     = service
         self.monitor     = service.monitor
         self.jsonRPC     = service.jsonRPC
         self.cache       = service.jsonRPC.cache
-        self.baseURL     = service.jsonRPC.buildWebBase()
+        self.baseURL     = service.jsonRPC.getLocalHost()
+        self.seasonal    = Seasonal(cache=service.jsonRPC.cache)
         self.holiday     = self.seasonal.getHoliday()
         self.remoteHost  = PROPERTIES.getRemoteHost()
-        self.openRouter  = OpenRouter(cache=self.cache)
+        self.instanceID  = PROPERTIES.getInstanceID()
+        # self.openRouter  = OpenRouter(cache=service.jsonRPC.cache)
         self.imageCache  = OrderedDict(SETTINGS.getCacheSetting('imageCache'  ) or {})
         self.pruneCache()
         
@@ -87,10 +87,11 @@ class Resources(object):
         return [f for f in logos if f]
 
 
-    def queueLogo(self, citem):
+    def queueLogo(self, chname):
         if hasattr(self.service,'logoQue'):
-            try: self.service.logoQue.add(FileAccess.dumpJSON({'name': citem.get('name')}))
+            try: self.service.logoQue.add(FileAccess.dumpJSON({'name': chname}))
             except Exception as e: self.log(f'queueLogo failed: {e}', xbmc.LOGWARNING)
+        return 'http://%s/logos/%s?%s'%(self.remoteHost,Globals._quoteString(chname),self.instanceID) # host channel logos
 
 
     def pruneCache(self):
@@ -99,13 +100,15 @@ class Resources(object):
         self.log(f'pruneCache, imageCache = {len(self.imageCache)}')
 
 
-    def getCache(self, chname):
+    def getCache(self, chname, fallback=LOGO):
         # Use OrderedDict LRU behavior: move to end on access
         image = self.imageCache.get(chname)
         if image is not None:
             try: self.imageCache.move_to_end(chname)
             except Exception: pass
-        else: return self.queueLogo({'name':chname})
+        else: 
+            image = fallback
+            self.queueLogo(chname)
         self.log('getCache, name = %s, image = %s'%(chname,image))
         return image
 
@@ -122,31 +125,19 @@ class Resources(object):
         return image
 
 
-    def getLogo(self, citem: dict, fallback=None, lookup=False, logo=None) -> str:
-        if not logo and citem.get('name') == LANGUAGE(32002): logo = self.holiday.get('logo')         # seasonal
-        if not logo and not lookup:                           logo = self.getCache(citem.get('name')) # cache
-        if not logo and not lookup:                           logo = self.queueLogo(citem)            # queue lookup
-        if not logo and not lookup and fallback:              logo = fallback                         # fallback
+    def getLogo(self, citem: dict, fallback=LOGO, lookup=False) -> str:
+        logo = None
+        if not logo and citem.get('name') == LANGUAGE(32002): logo = self.holiday.get('logo')                  # seasonal
+        if not logo and not lookup:                           logo = self.getCache(citem.get('name'),fallback) # cache
         if not logo and lookup: # perform progressively heavier lookups only when lookup=True
             logo = self.getLocalLogo(citem.get('name'))                # local
             if not logo: logo = self.getLogoResources(citem)           # resources
             if not logo: logo = self.getTVShowLogo(citem.get('name'))  # tvshow
-            if not logo: logo = self.generateOnline(citem.get('name')) # generative (online)
+            # if not logo: logo = self.generateOnline(citem.get('name')) # generative (online)
             if not logo: logo = self.generateLocal(citem.get('name'))  # generative (local)
             if logo: self.setCache(citem.get('name'), logo)            # cache
-        if not logo: logo = LOGO                                       # default
         self.log('[%s] getLogo, name = %s, lookup = %s, logo = %s'%(citem.get('id'),citem.get('name'),lookup,logo))
-        return self.buildWebImage(citem.get('name'), cleanImage(logo))
-
-
-    def buildWebImage(self, chname: str, image: str='') -> str:
-        if image:
-            lower_image = image.lower()
-            if not lower_image.startswith(('image://','resource://')) and not any(p in lower_image for p in ['http', 'smb', 'nfs']):
-                if image.startswith('image://'):                                 image = '%s/image/%s'%(self.baseURL,Globals._quoteString(image))
-                elif not image.startswith('http://%s/logos/'%(self.remoteHost)): image = 'http://%s/images/%s'%(self.remoteHost,Globals._quoteString(image))
-                return 'http://%s/logos/%s'%(self.remoteHost,Globals._quoteString(chname)) # host channel logos
-        return image
+        return Globals._buildWebImage(logo, fallback)
 
 
     @cacheit(expiration=datetime.timedelta(minutes=5))
@@ -307,7 +298,7 @@ class Resources(object):
             img.save(buf, format="PNG")
             buf.seek(0)
             out = FileAccess.open(image_path, "wb")
-            try: out.writeBytes(buf.read())
+            try: out.write(buf.read())
             finally:
                 try: out.close()
                 except Exception: pass

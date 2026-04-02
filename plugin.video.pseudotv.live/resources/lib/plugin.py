@@ -160,11 +160,11 @@ class Plugin(object):
                 else:
                     #STRM called from Guide, presumably live; workaround for Kodi bug w/strm handling in setResolvedUrl.
                     listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-                listitem.setProperty('sysInfo',Globals._encodeString(FileAccess.dumpJSON(self.sysInfo)))
+                listitem.setProperty('sysInfo',Globals._encodeString(self.sysInfo))
                 self._play(listitem.getPath(),listitem)
             else:#LIVE called from Guide/Channels.
                 listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-                listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.sysInfo)))
+                listitem.setProperty('sysInfo',FileAccess._encodeString(self.sysInfo))
                 self._resolveURL(True, listitem)
         
             
@@ -174,7 +174,7 @@ class Plugin(object):
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             listitem = LISTITEMS.buildItemListItem(item,'music')
-            listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(sysInfo)))
+            listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
             return listitem
             
         def __buildPlaylist(chid, name):
@@ -203,7 +203,7 @@ class Plugin(object):
                     infoTag.set_resume_point({'ResumeTime':seektime, 'TotalTime':runtime * 60})
                     
                 sysInfo.update({'fitem':item,'resume':{"idx":lizLST.index(item)}})
-                listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(sysInfo)))
+                listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
                 return listitem
             
         def __buildPlaylist(chid, name):
@@ -243,7 +243,7 @@ class Plugin(object):
                 if not self.sysInfo['isVOD']:
                     listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
                 sysInfo.update({'fitem':fitem,'resume':{"idx":idx}})
-                listitem.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(sysInfo)))
+                listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
                 return listitem
             
         self.log('[%s] playPlaylist, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))

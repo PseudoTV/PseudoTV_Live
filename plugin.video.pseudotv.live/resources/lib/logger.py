@@ -60,11 +60,7 @@ def log(event, level=xbmc.LOGDEBUG):
         DEBUG_NAMES  = {0: 'LOGDEBUG', 1: 'LOGINFO', 2: 'LOGWARNING', 3: 'LOGERROR', 4: 'LOGFATAL'}
         DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}
         DEBUG_LEVEL  = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
-
-        # Add traceback for error-level events
         if level >= 3: event = '%s\n%s' % (event, traceback.format_exc())
-        # Format event with add-on ID and version
         event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
-        # Log the event if the level is above the configured debug level
         if level >= DEBUG_LEVEL:
             xbmc.log(event, level)

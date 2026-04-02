@@ -1,4 +1,6 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
+v.0.7.3+nightly
+- Added Network hosted channel manger (W.I.P).
 
 v.0.7.2+nightly
 - Improved Channel logo detection, and logo resource selection in settings.

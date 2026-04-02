@@ -46,6 +46,9 @@ class Manager(xbmcgui.WindowXMLDialog):
     newChannels    = []
     oldChannels    = []
     spinner        = None
+    focusItems     = {}
+    chanList       = xbmcgui.ControlList
+    itemList       = xbmcgui.ControlList
     monitor        = MONITOR()
     lastActionTime = time.time()
     
@@ -62,10 +65,11 @@ class Manager(xbmcgui.WindowXMLDialog):
                 else:                          return __loadChannels(LANGUAGE(32069))
             elif name == LANGUAGE(32069):#Ask
                 def __buildItem(server):
-                    return LISTITEMS.buildMenuListItem(server.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],
-                                                                                                                     {True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)]),
-                                                                                                                     server.get('host'),len(server.get('channels',[]))),
-                                                                                                                     icon=Globals._getDummyIcon(str(servers.index(server)+1)))
+                    return LISTITEMS.buildMenuListItem(server.get('name'),
+                                                       '%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],
+                                                       {True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)]),
+                                                       server.get('host'),len(server.get('channels',[]))),
+                                                       icon=Globals._getDummyIcon(str(servers.index(server)+1)))
                 
                 lizLST  = []
                 serLST  = Multiroom().getDiscovery()
@@ -186,7 +190,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 elif isFavorite:     channelColor = COLOR_FAVORITE_CHANNEL
                 elif isRadio(citem): channelColor = COLOR_RADIO_CHANNEL
                 elif not isSeasonal: channelColor = COLOR_AVAILABLE_CHANNEL
-            return  LISTITEMS.buildMenuListItem('[COLOR=%s][B]%s|[/COLOR][/B]'%(channelColor,citem["number"]),'[COLOR=%s]%s[/COLOR]'%(labelColor,citem.get("name",'')),citem.get("logo",COLOR_LOGO),'|'.join(citem.get("path",[])),props={'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':LANGUAGE(32169)%(citem["number"],self.server.get('name',self.friendly))})
+            return  LISTITEMS.buildMenuListItem('[COLOR=%s][B]%s|[/COLOR][/B]'%(channelColor,citem["number"]),'[COLOR=%s]%s[/COLOR]'%(labelColor,citem.get("name",'')),citem.get("logo",LOGO_COLOR),'|'.join(citem.get("path",[])),props={'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':LANGUAGE(32169)%(citem["number"],self.server.get('name',self.friendly))})
                 
         self.togglechanList(reset=refresh)
         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
@@ -315,7 +319,7 @@ class Manager(xbmcgui.WindowXMLDialog):
            
            
     def getRuleAbbr(self, citem, myId, optionindex):
-        value = citem.get('rules',{}).get(str(myId),{}).get('values',{}).get(str(optionindex))
+        value = citem.get('rules',{}).get(myId,{}).get('values',{}).get(optionindex)
         self.log('getRuleAbbr, id = %s, myId = %s, optionindex = %s, optionvalue = %s'%(citem.get('id',-1),myId,optionindex,value))
         return value
                     
@@ -323,7 +327,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def getLogoColor(self, citem):
         self.log('getLogoColor, id = %s'%(citem.get('id',-1)))
         if  (citem.get('logo') and citem.get('name')) is None: return 'FFFFFFFF'
-        elif citem.get('rules',{}).get("1"):
+        elif citem.get('rules',{}).get(1):
             if (self.getRuleAbbr(citem,1,4) or self.resources.isMono(citem['logo'])):
                 return self.getRuleAbbr(citem,1,3)
         return SETTINGS.getSetting('ChannelBug_Color')
@@ -341,7 +345,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 elif key == "rules" : value = '|'.join([rule.name for key, rule in list(self.rule.loadRules([citem]).get(citem['id'],{}).items())])#todo load rule names
             elif not isinstance(value,str): value = str(value)
             elif not value: value = ' '
-            return LISTITEMS.buildMenuListItem(LABEL.get(key,' '),value,citem.get('logo',COLOR_LOGO),'|'.join(citem.get('path',[])),props={'key':key,'value':value,'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':DESC.get(key,''),'colorDiffuse':self.getLogoColor(citem)})
+            return LISTITEMS.buildMenuListItem(LABEL.get(key,' '),value,citem.get('logo',LOGO_COLOR),'|'.join(citem.get('path',[])),props={'key':key,'value':value,'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':DESC.get(key,''),'colorDiffuse':self.getLogoColor(citem)})
 
         self.togglechanList(False)
         LABEL = {'name'    : LANGUAGE(32092),
@@ -493,7 +497,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     except Exception: lastIDX = None
                     if key == 'add':
                         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                            lizLST = [LISTITEMS.buildMenuListItem(rule.name,rule.description,icon=Globals._getDummyIcon(str(rule.myId)),props={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
+                            lizLST = [LISTITEMS.buildMenuListItem(rule.name,rule.description,icon=Globals._getDummyIcon(rule.myId),props={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
                         select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32072), preselect=lastXID, multi=False)
                         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                             try:    lastXID = int(lizLST[select].getProperty('idx'))
@@ -508,11 +512,11 @@ class Manager(xbmcgui.WindowXMLDialog):
                             retval = DIALOG.yesnoDialog(LANGUAGE(32175), customlabel=LANGUAGE(32176))
                             if retval in [1,2]: ruleLST.pop(str(myId))
                             if retval == 2: 
-                                nrule, citem = self.getRule(citem, crules.get(str(myId),{}))
-                                if not nrule is None: ruleLST.update({str(nrule.myId):nrule})
+                                nrule, citem = self.getRule(citem, crules.get(myId,{}))
+                                if not nrule is None: ruleLST.update({nrule.myId:nrule})
                     # elif not ruleLST.get(str(myId)):
-                        # nrule, citem = self.getRule(citem, crules.get(str(myId),{}))
-                        # if not nrule is None:  ruleLST.update({str(nrule.myId):nrule})
+                        # nrule, citem = self.getRule(citem, crules.get(myId,{}))
+                        # if not nrule is None:  ruleLST.update({nrule.myId:nrule})
             self.log('getRules, rules = %s'%(len(rules)))
             return self.rule.dumpRules(rules), citem
         
@@ -522,7 +526,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         select = -1
         while not self.monitor.abortRequested() and not select is None:
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                lizLST = [LISTITEMS.buildMenuListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],Globals._getDummyIcon(str(idx+1)),[str(rule.myId)],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
+                lizLST = [LISTITEMS.buildMenuListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],Globals._getDummyIcon(idx+1),[rule.myId],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
             select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
             if not select is None:
                 try: rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
@@ -554,7 +558,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if name:
             if force: logo = ''
             else:     logo = citem.get('logo')
-            if not logo or logo in [LOGO,COLOR_LOGO,ICON]:
+            if not logo or logo in [LOGO,LOGO_COLOR,ICON]:
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                     citem['logo'] = self.resources.getLogo(citem, fallback=self.resources.getCache(citem['name']))
         self.log('setLogo, id = %s, logo = %s, force = %s'%(citem.get('id'),citem.get('logo'),force))
@@ -742,9 +746,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if start > 0 and items:
             self.log(f'_addChannels, start = {start}, items = {len(items)}')
             numbers = sorted([channel.get('number',0) for channel in self.newChannels if not channel.get('id')])
-            print(numbers)
             numbers = numbers[numbers.index(start):] + numbers[:numbers.index(start)]
-            print('_addChannels',numbers)
             for number in numbers:
                 if len(items) > 0:
                     self.madeChanges = True
@@ -782,7 +784,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def previewChannel(self, citem, retCntrl=None):
         def __buildItem(fitem):
-            return LISTITEMS.buildMenuListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=(Globals._getThumb(fitem,opt=EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK]))
+            return LISTITEMS.buildMenuListItem('%s| %s'%(fileList.index(fitem),fitem.get('showlabel',fitem.get('label'))), fitem.get('file') ,icon=Globals._getThumb(fitem,opt=EPG_ARTWORK))
 
         def __fileList(citem):
             fileList = []

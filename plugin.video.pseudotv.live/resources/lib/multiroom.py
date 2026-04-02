@@ -42,10 +42,10 @@ class Multiroom(object):
     def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = %s'%(sysARG))
         if service is None: service = Service()
-        self.sysARG     = sysARG
-        self.service    = service
-        self.jsonRPC    = service.jsonRPC
-        self.cache      = service.jsonRPC.cache
+        self.sysARG  = sysARG
+        self.service = service
+        self.jsonRPC = service.jsonRPC
+        self.cache   = service.jsonRPC.cache
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -60,12 +60,15 @@ class Multiroom(object):
     def getDiscovery(self):
         servers = (FileAccess.getJSON(SERVERFLEPATH).get('servers') or {})
         PROPERTIES.setServers(len(servers) > 0)
+        SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
         self.log('getDiscovery, servers = %s'%(len(servers)))
         return servers
 
 
     def setDiscovery(self, servers={}):
         self.log('setDiscovery, servers = %s'%(len(servers)))
+        PROPERTIES.setServers(len(servers) > 0)
+        SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
         return FileAccess.setJSON(SERVERFLEPATH,{"servers":servers})
             
             
@@ -79,60 +82,37 @@ class Multiroom(object):
 
     def getRemote(self, remote):
         self.log("getRemote, remote = %s"%(remote))
-        return Globals.requestURL(remote, header={'Accept':'application/json'}, cache={"cache":self.cache, "checksum":SETTINGS.getMYUUID(), "life": datetime.timedelta(days=MAX_GUIDEDAYS)})
+        return Globals.requestURL(remote, header={'Accept':'application/json'}, cache={"cache":self.cache, "checksum":SETTINGS.getMYUUID(), "life": datetime.timedelta(minutes=15)})
         
-         
-    def chkServers(self, servers={}):
-        def __chkResources(settings):
-            [SETTINGS.hasAddon(id) for k,addons in list(settings.items()) for id in addons if id.startswith(('resource','plugin'))]
-            
-        def __chkResumeURLs(urls=[]):
-            log('_chkResumeURLs, urls = %s'%(len(urls)))
-            [Globals.requestURL(url, cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}) for url in urls]
-
-        if not servers: servers = self.getDiscovery()
-        for server in list(servers.values()):
-            response = self.getRemote(server.get('remotes',{}).get('bonjour'))
-            if response: response['online'] = True
-            else:        response['online'] = False
-            response['enabled'] = server.get('enabled',False)
-            server.setdefault(server.get('name'),{}).update(response)
-            if response['enabled']:
-                if response['online'] != server.get('online',False):
-                    DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))
-                __chkResources(server.get('settings'))
-                __chkResumeURLs(server.get('remotes',{}).get('resume',[]))
-        SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
-        self.log('chkServers, servers = %s'%(len(servers)))
-        self.setDiscovery(servers)
-        return servers
-
-
+        
     def addServer(self, payload={}):
-        if isinstance(payload,dict):
-            self.log('addServer, name = %s'%(payload.get('name')))
-            if payload and payload.get('name') and payload.get('host'):
-                payload['online'] = True
-                servers = self.getDiscovery()
-                server  = servers.get(payload.get('name'),{})
-                if not server: 
-                    payload['enabled'] = not bool(SETTINGS.getSettingBool('Debug_Enable'))  #set enabled by default when not debugging.
-                    self.log('addServer, adding server = %s'%(payload))
-                    DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
-                    servers[payload['name']] = payload
-                else:
-                    payload['enabled'] = server.get('enabled',False)
-                    if payload.get('md5',server.get('md5')) != server.get('md5'): 
-                        self.log('addServer, updating server = %s'%(server))
-                        servers.update({payload['name']:payload})
-                
-                if self.setDiscovery(self.chkServers(servers)):
-                    instancePath = SETTINGS.hasPVRInstance(server.get('name'))
-                    if       payload.get('enabled',False) and not instancePath: changed = SETTINGS.setPVRRemote(payload.get('host'),payload.get('name'),cache=True)
-                    elif not payload.get('enabled',False) and instancePath:     changed = FileAccess.delete(instancePath)
-                    else:                                                       changed = False
-                    if changed: PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
-                    self.log('addServer, payload changed = %s'%(changed))
+        if isinstance(payload,dict) and payload.get('name') and payload.get('host'):
+            payload['online'] = True
+            servers = self.getDiscovery()
+            server  = servers.get(payload.get('name'),{})
+            if not server: 
+                payload['enabled'] = True
+                servers[payload['name']] = payload
+                self.log('addServer, adding server = %s'%(payload))
+                DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
+                SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add IPTV Simple config
+                self.setDiscovery(servers)
+            else:
+                payload['enabled'] = server.get('enabled',False)
+                if payload.get('md5') != server.get('md5',str(random.random())):#something changed!
+                    if payload['enabled']:
+                        if payload['online'] != server.get('online',False):
+                            DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))
+                        if payload['host'] != server['host']: 
+                            SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #update IPTV Simple config
+                        if payload.get('settings') != server.get('settings'):
+                            [SETTINGS.hasAddon(id) for _,addons in list(payload.get('settings',{}).items()) for id in addons if id.startswith(('resource','plugin'))]
+                        if payload.get('resume') != server.get('resume'):
+                            [self.getRemote(url) for url in payload.get('resume',[])]
+                    else: FileAccess.delete(SETTINGS.hasPVRInstance(server.get('name'))) #del IPTV Simple config
+                    servers.update({payload['name']:payload})
+                    self.log('addServer, updating server = %s'%(payload))
+                    self.setDiscovery(servers)
 
 
     def _delServer(self, servers={}):
@@ -149,7 +129,7 @@ class Multiroom(object):
         selects = DIALOG.selectDialog(lizLST,LANGUAGE(32183))
         if not selects is None:
             with BUILTIN.busy_dialog():
-                if self.setDiscovery(self.chkServers([servers.pop(liz.getLabel()) for idx, liz in enumerate(lizLST) if not idx in selects])):
+                if self.chkServers([servers.pop(liz.getLabel()) for idx, liz in enumerate(lizLST) if not idx in selects]):
                     return DIALOG.notificationDialog(LANGUAGE(30046))
 
 
@@ -190,7 +170,7 @@ class Multiroom(object):
                                         DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
                                     try: FileAccess.delete(SETTINGS.hasPVRInstance(liz.getLabel()))
                                     except Exception: pass
-                        if changed: self.setDiscovery(self.chkServers(servers))
+                        if changed: self.chkServers(servers)
 
 
     def _chkZeroConf(self):

@@ -29,9 +29,11 @@ class Busy(xbmcgui.WindowXMLDialog):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.isLocked = kwargs.get('isLocked',False)
                 
+                
     def onInit(self):
         log('Busy: onInit, isLocked = %s'%(self.isLocked))
-        self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFF01416b"}[self.isLocked])
+        spinner = self.getControl(41)
+        spinner.setColorDiffuse({True:"0xC0FF0000",False:"0xFF01416b"}[self.isLocked])
 
 
     def onAction(self, act):
@@ -56,7 +58,6 @@ class Background(xbmcgui.WindowXMLDialog):
         try:
             self.log('onInit, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
             logo      = (self.citem.get('logo')        or BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
-            thumb     = (Globals._getThumb(self.nitem) or COLOR_FANART)
             chname    = (self.citem.get('name')        or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
             nowTitle  = (self.fitem.get('label')       or BUILTIN.getInfoLabel('Title','VideoPlayer'))
             nextTitle = (self.nitem.get('showlabel')   or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or chname)
@@ -80,14 +81,91 @@ class Background(xbmcgui.WindowXMLDialog):
                                                   ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
                                                   ('Visible'    , 'effect=zoom start=80 end=100 center=%s,%s delay=160 tween=back time=240 reversible=false'%(onNextX, onNextY)),
                                                   ('Visible'    , 'effect=fade end=100 time=240 reversible=false')])
-            self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
+            self.getControl(40002).setImage(LOGO_COLOR if logo.endswith('wlogo.png') else logo)
             self.getControl(40003).setText('%s %s[CR]%s [B]%s[/B]'%(LANGUAGE(32104),onNow,LANGUAGE(32116),onNext))
-            self.getControl(40004).setImage(thumb)
+            self.getControl(40004).setImage(Globals._getThumb(self.nitem))
         except Exception as e:
             self.log("onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.close()
 
+class Replay(xbmcgui.WindowXMLDialog):
+    closing = False
+    
+    def __init__(self, *args, **kwargs):
+        xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
+        self.player  = kwargs.get('player', None)
+        self.monitor = self.player.service.monitor
+        self.citem   = self.player.playingItem.get('citem',{})
+        self.fitem   = self.player.playingItem.get('fitem',{})
+        
+        if bool(self.player.replayPercentage) and self.fitem:
+            progress = self.player.getPlayerProgress()
+            if (progress >= self.player.replayPercentage and progress < self.player.maxProgress):
+                self.log("__init__, replayPercentage = %s, progress = %s"%(self.player.replayPercentage, progress))
+                self.doModal()
+                
+                
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log('%s: %s'%(self.__class__.__name__,msg),level)
+    
+    
+    def _isVisible(self, control):
+        try:              return control.isVisible()
+        except Exception: return (BUILTIN.getInfoBool('Playing','Player') and not bool(BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window')) | BUILTIN.getInfoBool('IsVisible(fullscreenvideo)','Window'))
+    
+    
+    def onInit(self):
+        self.log("onInit")
+        try:
+            prog  = 0
+            wait  = OSD_TIMER*2
+            tot   = wait
+            control = self.getControl(40000)
+            control.setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo) + Window.IsVisible(fullscreenvideo)]')
+            xpos = control.getX()
             
+            while not self.monitor.abortRequested():
+                if (self.service._shutdown(CPU_CYCLE) or self._isVisible(control) or self.closing): break
+                    
+            while not self.monitor.abortRequested():
+                if (self.service._shutdown(CPU_CYCLE) or wait < 0 or self.closing or not self.player.isPlayingPseudoTV()): break
+                else:
+                    prog = int((abs(wait-tot)*100)//tot)
+                    if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
+                    wait -= CPU_CYCLE
+            
+            control.setAnimations([('Conditional', 'effect=fade start=%s end=0 time=240 delay=0.240 condition=True'%(prog))])
+            control.setVisible(False)
+            self.setFocusId(40001)
+        except Exception as e: self.log("onInit, failed! %s"%(e), xbmc.LOGERROR)
+        self.log("onInit, closing")
+        self.close()
+
+
+    def onAction(self, act):
+        actionId = act.getId()
+        self.log('onAction: actionId = %s'%(actionId))
+        self.closing = True
+        if   actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),.5,true,false)')
+        elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
+        elif actionId in ACTION_PREVIOUS_MENU: BUILTIN.executebuiltin('AlarmClock(back,Action(back),.5,true,false)')
+        elif actionId in ACTION_SELECT_ITEM and self.getFocusId(40001): 
+            if   self.player.playingItem.get('isPlaylist',False): self.player.seekTime(0)
+            elif self.fitem: 
+                with BUILTIN.busy_dialog():
+                    liz = LISTITEMS.buildItemListItem(self.fitem)
+                    liz.setProperty('sysInfo',FileAccess._encodeString(self.player.playingItem))
+                    timerit(self.player.play)(1.0,*(self.fitem.get('catchup-id'),liz))
+                    self.player.stop()
+            else: DIALOG.notificationDialog(LANGUAGE(30154))
+
+
+    def onClose(self):
+        self.log("onClose")
+        self.closing = True
+        return None
+
+
 class Overlay(object):
     channelBug = None
     vignette   = None
@@ -213,84 +291,7 @@ class Overlay(object):
         # self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.citem, inherited=self) #debug NoneType, RULES_ACTION_OVERLAY_CLOSE obsolete? 
         PROPERTIES.setRunning('Overlay',False)
        
-class Replay(xbmcgui.WindowXMLDialog):
-    closing = False
-    
-    def __init__(self, *args, **kwargs):
-        xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.player  = kwargs.get('player', None)
-        self.monitor = self.player.service.monitor
-        self.citem   = self.player.playingItem.get('citem',{})
-        self.fitem   = self.player.playingItem.get('fitem',{})
-        
-        if bool(self.player.replayPercentage) and self.fitem:
-            progress = self.player.getPlayerProgress()
-            if (progress >= self.player.replayPercentage and progress < self.player.maxProgress):
-                self.log("__init__, replayPercentage = %s, progress = %s"%(self.player.replayPercentage, progress))
-                self.doModal()
-                
-                
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
-    
-    
-    def _isVisible(self, control):
-        try:              return control.isVisible()
-        except Exception: return (BUILTIN.getInfoBool('Playing','Player') and not bool(BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window')) | BUILTIN.getInfoBool('IsVisible(fullscreenvideo)','Window'))
-    
-    
-    def onInit(self):
-        self.log("onInit")
-        try:
-            prog  = 0
-            wait  = OSD_TIMER*2
-            tot   = wait
-            control = self.getControl(40000)
-            control.setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo) + Window.IsVisible(fullscreenvideo)]')
-            xpos = control.getX()
-            
-            while not self.monitor.abortRequested():
-                if (self.service._shutdown(CPU_CYCLE) or self._isVisible(control) or self.closing): break
-                    
-            while not self.monitor.abortRequested():
-                if (self.service._shutdown(CPU_CYCLE) or wait < 0 or self.closing or not self.player.isPlayingPseudoTV()): break
-                else:
-                    prog = int((abs(wait-tot)*100)//tot)
-                    if prog > 0: control.setAnimations([('Conditional', 'effect=zoom start=%s,100 end=%s,100 time=1000 center=%s,100 condition=True'%((prog-20),(prog),xpos))])
-                    wait -= CPU_CYCLE
-            
-            control.setAnimations([('Conditional', 'effect=fade start=%s end=0 time=240 delay=0.240 condition=True'%(prog))])
-            control.setVisible(False)
-            self.setFocusId(40001)
-        except Exception as e: self.log("onInit, failed! %s"%(e), xbmc.LOGERROR)
-        self.log("onInit, closing")
-        self.close()
-
-
-    def onAction(self, act):
-        actionId = act.getId()
-        self.log('onAction: actionId = %s'%(actionId))
-        self.closing = True
-        if   actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),.5,true,false)')
-        elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
-        elif actionId in ACTION_PREVIOUS_MENU: BUILTIN.executebuiltin('AlarmClock(back,Action(back),.5,true,false)')
-        elif actionId in ACTION_SELECT_ITEM and self.getFocusId(40001): 
-            if   self.player.playingItem.get('isPlaylist',False): self.player.seekTime(0)
-            elif self.fitem: 
-                with BUILTIN.busy_dialog():
-                    liz = LISTITEMS.buildItemListItem(self.fitem)
-                    liz.setProperty('sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.player.playingItem)))
-                    timerit(self.player.play)(1.0,*(self.fitem.get('catchup-id'),liz))
-                    self.player.stop()
-            else: DIALOG.notificationDialog(LANGUAGE(30154))
-
-
-    def onClose(self):
-        self.log("onClose")
-        self.closing = True
-        return None
-        
-        
+       
 class OnNext(xbmcgui.WindowXMLDialog):
     closing   = False
     totalTime = 0
@@ -338,7 +339,6 @@ class OnNext(xbmcgui.WindowXMLDialog):
             self.log('onInit, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
             if self.onNextMode in [1,2]: 
                 logo      = (self.citem.get('logo')      or BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
-                thumb     = (Globals._getThumb(self.nitem)        or COLOR_FANART)
                 chname    = (self.citem.get('name')      or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
                 nowTitle  = (self.fitem.get('label')     or BUILTIN.getInfoLabel('Title','VideoPlayer'))
                 nextTitle = (self.nitem.get('showlabel') or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or chname)
@@ -365,7 +365,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                 if self.onNextMode == 2:
                     self.onNext_Artwork = self.getControl(40004)
                     self.onNext_Artwork.setVisible(False)
-                    self.onNext_Artwork.setImage(thumb)
+                    self.onNext_Artwork.setImage(Globals._getThumb(self.nitem))
 
                     self.onNext_Text.setVisible(True)
                     self.onNext_Artwork.setVisible(True)

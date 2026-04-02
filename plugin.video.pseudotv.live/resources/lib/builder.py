@@ -156,7 +156,7 @@ class Builder(object):
                     'plot'        : (info.get('plot')         or LANGUAGE(32020)),
                     'genre'       : (info.get('genre')        or ['Undefined']),
                     'file'        : (info.get('path')         or info.get('file') or info.get('originalpath') or  '|'.join(citem.get('path',[]))),
-                    'art'         : (info.get('art')          or {"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO}),
+                    'art'         : (info.get('art')          or {"thumb":LOGO_COLOR,"fanart":FANART,"logo":LOGO,"icon":LOGO}),
                     'type'        : type,
                     'duration'    : duration,
                     'start'       : 0,
@@ -299,8 +299,6 @@ class Builder(object):
     def buildMusic(self, citem: dict) -> list:
         self.log("[%s] buildMusic"%(citem['id']))
         #todo insert custom radio labels,plots based on genre type?
-        # https://www.musicgenreslist.com/
-        # https://www.musicgateway.com/blog/how-to/what-are-the-different-genres-of-music
         return self.buildCells(citem, MIN_EPG_DURATION, 'music', ((MAX_GUIDEDAYS * 8)), info={'genre':["Music"],'art':{'thumb':citem['logo'],'icon':citem['logo'],'fanart':citem['logo']},'plot':LANGUAGE(32029)%(citem['name'])})
         
 
@@ -317,13 +315,13 @@ class Builder(object):
             tmpCitem = citem.copy()
             #"Seasonal Content"
             if tmpCitem.get('path',[]) == ["{Seasonal}"]:
-                nrules = {"800":{"values":{"0":list(self.seasonal.buildSeasonal(self.holiday))}}}
+                nrules = {800:{"values":{0:list(self.seasonal.buildSeasonal(self.holiday))}}}
                 tmpCitem.setdefault('rules',{}).update(nrules)
                 self.log(" [%s] buildVideo: _injectRules, Seasonal Content, new rules = %s"%(citem['id'],nrules))
                 
             #"Even Show Distribution"
-            if self.enableEven and not citem.get('rules',{}).get("1000"):
-                nrules = {"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":self.evenEpisode,"2":self.evenShuffle}}}
+            if self.enableEven and not citem.get('rules',{}).get(1000):
+                nrules = {1000:{"values":{0:SETTINGS.getSettingInt('Enable_Even'),1:self.evenEpisode,2:self.evenShuffle}}}
                 tmpCitem.setdefault('rules',{}).update(nrules)
                 self.log(" [%s] buildVideo: _injectRules, Even Show Distribution, new rules = %s"%(citem['id'],nrules))
             return tmpCitem
@@ -522,7 +520,7 @@ class Builder(object):
                     item["episodelabel"] = item.get("tagline","")
                     item["showlabel"]    = '%s%s'%(item.get("title",""), ' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
                 
-                if not label: 
+                if not label:  
                     self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))
                     continue
                     
@@ -542,7 +540,7 @@ class Builder(object):
                     if item.get('year',0) == 0 and spYear: item['year'] = spYear #replace missing item year with one parsed from show title
                     item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(32020)).strip()
                         
-                    holiday = citem.get('rules',{}).get('800',{}).get('values',{}).get('0',[{}])[0].get('holiday',{})
+                    holiday = citem.get('rules',{}).get(800,{}).get('values',{}).get(0,[{}])[0].get('holiday',{})
                     if holiday: #add seasonal meta
                         item["plot"] = "%s \n%s"%("[B]%s[/B] - [I]%s[/I]"%(holiday["name"],holiday["tagline"]) if holiday["tagline"] else "[B]%s[/B]"%(holiday["name"]),item["plot"])
                         

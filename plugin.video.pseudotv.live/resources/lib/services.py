@@ -111,7 +111,7 @@ class Player(xbmc.Player):
 
 
     def getplayingItem(self):
-        playingItem = FileAccess.loadJSON(FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo')))
+        playingItem = FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo'))
         if '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid',''):
             playingItem['isPseudoTV'] = True
             playingItem['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
@@ -123,7 +123,7 @@ class Player(xbmc.Player):
             playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')))})
             playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.channels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
             playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
-            PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(playingItem)))
+            PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(playingItem))
         return playingItem
       
         
@@ -287,7 +287,7 @@ class Player(xbmc.Player):
             if not self.playingItem.get('callback'):
                 self.playingItem['callback'] = self.jsonRPC.getCallback(self.playingItem)
                 self.log('__chkCallback, callback = %s'%(self.playingItem['callback']))
-                PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(FileAccess.dumpJSON(self.playingItem)))
+                PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(self.playingItem))
 
         def __chkBackground():
             remaining = floor(self.getRemainingTime())

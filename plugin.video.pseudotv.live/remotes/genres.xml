@@ -10,7 +10,7 @@ NOTE: IF YOU MODIFY THIS FILE IT WILL BE OVERWRITTEN NEXT TIME THE ADDON IS STAR
 If you have changes either create a PR containing the changes or an issue with details at:
   https://github.com/kodi-pvr/pvr.iptvsimple
   https://github.com/kodi-pvr/pvr.iptvsimple#using-a-mapping-file-for-genres
-  https://codedocs.xyz/xbmc/xbmc/group__cpp__kodi__addon__pvr___defs__epg___e_p_g___e_v_e_n_t.html#ga0ac9430768fc11505a193241fc2d4008
+  https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d9/d93/group__cpp__kodi__addon__pvr___defs__epg___e_p_g___e_v_e_n_t.html#gac1246f820c20898ff9fbb7ca17b3a79e
 -->
 
 <!-- - 0x10: General Movie / Drama -->

@@ -30,9 +30,8 @@ class LlNode(object):
         self.time      = timer
 
 class CustomQueue(object):
-    futures = set() #todo refactor heap to workaround pickle callable
-    try:    min_heap = list(FileAccess.loadPickle((SETTINGS.getCacheSetting('min_heap', revive=False) or b'')))
-    except Exception: min_heap = []
+    futures  = set()
+    min_heap = []
    
     def __init__(self, fifo: bool=False, lifo: bool=False, priority: bool=False, delay: bool=False, timer: bool=False, service=None):
         self.service     = service
@@ -224,7 +223,6 @@ class CustomQueue(object):
                 
     def _stop(self):
         self.executor.shutdown(wait=False, cancel_futures=True)
-        # SETTINGS.setCacheSetting('min_heap', FileAccess.dumpPickle(self.min_heap), checksum=ADDON_VERSION)
         self.log("_stop, finished: shutting down...")
                 
                 

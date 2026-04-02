@@ -33,26 +33,36 @@ class FileAccess(object):
         if isinstance(text, str): text = text.encode(DEFAULT_ENCODING)
         return hashlib.md5(text).hexdigest().upper()
 
+
     @staticmethod
     def _encodeString(text, encoding=DEFAULT_ENCODING):
         try:
-            if isinstance(text, str): text = text.encode(encoding)
-            return base64.b64encode(zlib.compress(text, level=1)).decode('ascii')
+            if not text: return ""
+            if isinstance(text, str): data = text.encode(encoding)
+            else:                     data = FileAccess.dumpPICKLE(text)
+            return urllib.parse.quote(base64.b64encode(zlib.compress(data, level=1)).decode('ascii'))
         except Exception as e:
             log(f"_encodeString failed! {e}", xbmc.LOGERROR)
             return ""
 
+
     @staticmethod
     def _decodeString(text='', encoding=DEFAULT_ENCODING):
-        if not text: return ""
-        if isinstance(text, str): text = text.encode('ascii')
         try:
-            decoded_bytes = base64.b64decode(text)
-            return zlib.decompress(decoded_bytes).decode(encoding)
-        except UnicodeDecodeError: pass
+            if not text: return ""
+            if isinstance(text, str) and '%' in text: text = urllib.parse.unquote(text)
+            if isinstance(text, str):                 text = text.encode('ascii')
+            missing_padding = len(text) % 4
+            if missing_padding: text += b'=' * (4 - missing_padding)
+            decompressed = zlib.decompress(base64.b64decode(text))
+            if decompressed.startswith(b'\x80'): return FileAccess.loadPICKLE(decompressed)
+            return decompressed.decode(encoding)
+        except (UnicodeDecodeError, zlib.error, base64.binascii.Error) as e:
+            log(f"_decodeString failed to decompress/decode! {e}", xbmc.LOGERROR)
+            return "" # Return empty so the addon can overwrite the bad data
         except Exception as e:
             log(f"_decodeString failed! {e}", xbmc.LOGERROR)
-            return locals().get('decoded_bytes', text)
+            return ""
             
             
     @staticmethod
@@ -181,7 +191,9 @@ class FileAccess(object):
         
     @staticmethod
     def listdir(path):
-        xbmcvfs.listdir(path)
+        if FileAccess.exists(path):
+            return xbmcvfs.listdir(path)
+        return [],[]
 
 
     @staticmethod
@@ -236,18 +248,18 @@ class FileAccess(object):
         
         
     @staticmethod
-    def exists(filename):
-        if filename.startswith('stack://'):
-            try: filename = (filename.split('stack://')[1].split(' , '))[0]
+    def exists(path):
+        if path.startswith('stack://'):
+            try: path = (path.split('stack://')[1].split(' , '))[0]
             except Exception as e: log('FileAccess: exists failed! %s'%(e), xbmc.LOGERROR)
         try:
-            root, ext = os.path.splitext(filename)
-            if not ext and not filename.endswith(("/","\\")): 
-                filename = os.path.join(filename,'')
-            exists = xbmcvfs.exists(filename)
+            root, ext = os.path.splitext(path)
+            if not ext and not path.endswith(("/","\\")): 
+                path = os.path.join(path,'')
+            exists = xbmcvfs.exists(path)
         except UnicodeDecodeError:
-            exists = os.path.exists(xbmcvfs.translatePath(filename))
-        log('FileAccess: filename = %s, exists = %s'%(filename,exists))
+            exists = os.path.exists(xbmcvfs.translatePath(path))
+        log('FileAccess: path = %s, exists = %s'%(path,exists))
         return exists
 
 

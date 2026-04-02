@@ -53,7 +53,7 @@ class JSONRPC(object):
         command = param
         command["jsonrpc"] = "2.0"
         command["id"] = ADDON_ID
-        response = FileAccess.loadJSON(killit(BUILTIN.executeJSONRPC)(SETTINGS.getSettingInt('RPC_Wait'),FileAccess.dumpJSON(command)))
+        response = FileAccess.loadJSON(BUILTIN.executeJSONRPC(FileAccess.dumpJSON(command)))
         self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')))
         self.log('sendJSON, response received')
         if response and response.get('error'):
@@ -124,7 +124,7 @@ class JSONRPC(object):
         walk = {}
         path = path.replace('\\','/')
         subs, files = self.getListDirectory(path,checksum,expiration)
-        self.log('walkListDirectory, walking %s, found = (%s,%s), appended = %s, depth = %s, ext = %s'%(path,len(subs),len(files),depth,exts))
+        self.log(f'walkListDirectory, walking {path}, found = ({len(subs)},{len(files)}), appended = {appendPath}, depth = {depth}, exts = {exts}')
         walk.setdefault(path,[]).extend([_f for _f in [__chkfile(path, file) for file in files] if _f])
         for sub in subs:
             if depth == 0: break
@@ -591,14 +591,13 @@ class JSONRPC(object):
             SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
 
 
-    @cacheit(checksum=PROPERTIES.getInstanceID())
-    def buildWebBase(self, local=False):
+    def getLocalHost(self, local=False):
         port     = 80
         username = 'kodi'
         password = ''
         secure   = False
         enabled  = True
-        settings = self.getSetting('control','services')
+        settings = self.getSetting('control','services',cache=True)
         for setting in settings:
             if setting.get('id','').lower() == 'services.webserver' and not setting.get('value'):
                 enabled = False
@@ -612,8 +611,9 @@ class JSONRPC(object):
         protocol = 'https' if secure else 'http'
         if local: ip = 'localhost'
         else:     ip = SETTINGS.getIP()
-        webURL =  '{0}://{1}{2}:{3}'.format(protocol,username,ip, port)
-        self.log("buildWebBase; returning %s"%(webURL))
+        webURL =  '{0}://{1}{2}:{3}'.format(protocol,username,ip,port)
+        PROPERTIES.setEXTProperty('%s.Local_Host'%(ADDON_ID),webURL)
+        self.log("getLocalHost; returning %s"%(webURL))
         return webURL
             
             

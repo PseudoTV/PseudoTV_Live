@@ -20,6 +20,7 @@
 import xmltv
 
 from globals     import *
+from m3u         import M3U
 from seasonal    import Seasonal
 from fileaccess  import FileAccess, FileLock
 
@@ -29,8 +30,9 @@ class XMLTVS(object):
     XMLTVDATA = {}
     
     def __init__(self, file=XMLTVFLEPATH, writable=False, m3u=None):
-        self.writable  = writable
+        if m3u is None: m3u = M3U(writable=writable)
         self.m3u       = m3u
+        self.writable  = writable
         self.XMLTVFile = file
         self.XMLTVDATA = self._load()
         
@@ -194,15 +196,15 @@ class XMLTVS(object):
         if not programmes: programmes = self.getProgrammes()
         if not now: now = epochTime(roundTimeDown(getUTCstamp(),offset=60),tz=False).strftime(DTFORMAT)
         for channel in channels:
-            # try: 
-            valid = False
-            lastStop  = max((program['stop'] for program in programmes if program['channel'] == channel['id']), default=now)
-            if lastStop > now: valid = True
-            self.log('[%s] hasProgrammes, valid = %s'%(channel['id'],valid))
-            yield channel['id'],valid
-            # except Exception as e:
-                # self.log("[%s] hasProgrammes, failed!\nMalformed XMLTV channel/programmes %s! valid = False"%(channel.get('id'),e), xbmc.LOGWARNING)
-                # yield channel['id'],False
+            try: 
+                valid = False
+                last_stop = max((program['stop'] for program in programmes if program['channel'] == channel['id']), default=now)
+                if last_stop > now: valid = True
+                self.log('[%s] hasProgrammes, valid = %s'%(channel['id'],valid))
+                yield channel['id'],valid
+            except Exception as e:
+                self.log("[%s] hasProgrammes, failed!\nMalformed XMLTV channel/programmes %s! valid = False"%(channel.get('id'),e), xbmc.LOGWARNING)
+                yield channel['id'],False
 
 
     def cleanString(self, text: str) -> str:
@@ -214,7 +216,7 @@ class XMLTVS(object):
         if not self.m3u is None:
             programs = dict(self.hasProgrammes(self.getChannels(),programmes))
             for id, hasProgram in programs.items():
-                print(id, hasProgram)
+                print('cleanStations',id, hasProgram)
                 if id and not hasProgram:
                     self.m3u.delStation({'id':id})
                     self.delBroadcast({'id':id})
@@ -226,6 +228,7 @@ class XMLTVS(object):
         if not self.m3u is None:
             programs = dict(self.hasProgrammes(self.getRecordings(), programmes))
             for id, hasProgram in programs.items():
+                print('cleanRecordings',id, hasProgram)
                 if id and not hasProgram:
                     self.m3u.delRecording({'id':id})
                     self.delRecording({'id':id})
@@ -254,15 +257,15 @@ class XMLTVS(object):
 
 
     def cleanProgrammes(self, programmes: list=[]) -> list:
-        now = (epochTime(float(getUTCstamp()),tz=False) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells
+        now     = (epochTime(float(getUTCstamp()),tz=False) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells
         holiday = Seasonal().getHoliday()
         
         def __filterProgrammes(program):
             citem    = Globals._decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
-            seasonal = citem.get('rules',{}).get('800',{}).get('values',{}).get('0',[{}])[0].get('holiday',{})
+            seasonal = citem.get('rules',{}).get(800,{}).get('values',{}).get(0,[{}])[0].get('holiday',{})
             stopTime = program.get('stop',now).rstrip()
             if seasonal and seasonal.get('name',str(random.random())) != holiday.get('name'):
-                self.log('[%s] cleanProgrammes, __filterProgrammes removing expired holiday (%s)'%(citem.get('id'),season))
+                self.log('[%s] cleanProgrammes, __filterProgrammes removing expired holiday (%s)'%(citem.get('id'),seasonal))
                 return None
             elif strpTime(stopTime,DTFORMAT) < now: 
                 self.log('[%s] cleanProgrammes, __filterProgrammes removing expired programmes (%s)'%(citem.get('id'),stopTime))
@@ -332,13 +335,13 @@ class XMLTVS(object):
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
         
-        item['thumb']         = cleanImage((Globals._getThumb(fItem,EPG_ARTWORK) or {0:FANART,1:COLOR_LOGO}[EPG_ARTWORK])) #unify thumbnail by user preference 
-        fItem.get('art',{})['thumb'] = cleanImage(Globals._getThumb(fItem,{0:1,1:0}[EPG_ARTWORK]) or {0:FANART,1:COLOR_LOGO}[{0:1,1:0}[EPG_ARTWORK]]) #unify thumbnail artwork, opposite of EPG_Artwork
+        item['thumb']                = Globals._getThumb(fItem,EPG_ARTWORK) #unify thumbnail by user preference 
+        fItem.get('art',{})['thumb'] = Globals._getThumb(fItem,{0:1,1:0}[EPG_ARTWORK]) #unify thumbnail artwork, opposite of EPG_Artwork
          
         if item['type'] == 'movie': item['date'] = (fItem.get('premiered')  or fItem.get('releasedate') or fItem.get('firstaired'))
         else:                       item['date'] = (fItem.get('firstaired') or fItem.get('releasedate') or fItem.get('premiered'))
         
-        item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=Globals._quoteString(item['title']),chid=Globals._quoteString(citem['id']),vid=Globals._quoteString(FileAccess._encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=Globals._quoteString(citem['name']))
+        item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=Globals._quoteString(item['title']),chid=Globals._quoteString(citem['id']),vid=(FileAccess._encodeString((fItem.get('originalfile') or fItem.get('file','')))),name=Globals._quoteString(citem['name']))
         fItem['catchup-id']   = item['catchup-id']
             
         if (item['type'] != 'movie' and ((fItem.get("season",0) > 0) and (fItem.get("episode",0) > 0))):

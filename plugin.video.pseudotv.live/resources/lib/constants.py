@@ -218,6 +218,7 @@ M3UFLE              = 'pseudotv.m3u'
 XMLTVFLE            = 'pseudotv.xml'
 GENREFLE            = 'genres.xml'
 BONJOURFLE          = 'bonjour.json'
+DBLOGSFLE           = 'logs.json'
 SERVERFLE           = 'servers.json'
 CHANNELFLE          = 'channels.json'
 AUTOTUNEFLE         = 'autotune.json'
@@ -230,6 +231,7 @@ CHANNELRESTOREFLE   = 'channels.restore'
 CHANNELCHANGEDFLE   = 'channels.changed'
 CHANNELLATESTFLE    = 'channels.latest'
 CHANNELAUTOFLE      = 'channels.auto'
+MANAGERFLE          = 'manager.html'
 
 #exts
 VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')[:-1]
@@ -265,8 +267,7 @@ M3UFLE_ITEM         = os.path.join(REMOTE_LOC,'m3u.json')
 SEASONS             = os.path.join(REMOTE_LOC,'seasons.json')
 HOLIDAYS            = os.path.join(REMOTE_LOC,'holidays.json')
 GROUPFLE_DEFAULT    = os.path.join(REMOTE_LOC,'groups.xml')
-DEFAULT_FORM        = os.path.join(REMOTE_LOC,'form.html')
-MANAGER_FORM        = os.path.join(REMOTE_LOC,'channels.html')
+MANAGERPATH         = os.path.join(REMOTE_LOC,MANAGERFLE)
 LIBRARYFLE_DEFAULT  = os.path.join(REMOTE_LOC,LIBRARYFLE)
 CHANNELFLE_DEFAULT  = os.path.join(REMOTE_LOC,CHANNELFLE)
 GENREFLE_DEFAULT    = os.path.join(REMOTE_LOC,GENREFLE)
@@ -301,11 +302,13 @@ URL_README                = 'https://github.com/PseudoTV/PseudoTV_Live/blob/mast
 
 #images
 LOGO                = os.path.join(MEDIA_LOC,'wlogo.png')
-DIM_LOGO            = os.path.join(MEDIA_LOC,'dimlogo.png')
-COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
-COLOR_FANART        = os.path.join(MEDIA_LOC,'fanart.jpg')
-SEASONAL_LOGO       = os.path.join(IMAGE_LOC,'Seasonal.png')
-HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
+LOGO_DIM            = os.path.join(MEDIA_LOC,'dimlogo.png')
+LOGO_COLOR          = os.path.join(MEDIA_LOC,'logo.png')
+FANART_COLOR        = os.path.join(MEDIA_LOC,'fanart.jpg')
+LOGO_POSTER         = os.path.join(MEDIA_LOC,'poster.png')
+LOGO_LANDSCAPE      = os.path.join(MEDIA_LOC,'landscape.png')
+LOGO_SEASONAL       = os.path.join(IMAGE_LOC,'Seasonal.png')
+LOGO_HOST           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
 
 #skins
 BUSY_XML        = '%s.busy.xml'%(ADDON_ID)

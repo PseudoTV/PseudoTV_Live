@@ -43,7 +43,7 @@ class Settings(object):
         
 
     def getRealSettings(self, id=ADDON_ID):
-        try:    return xbmcaddon.Addon(id)
+        try:              return xbmcaddon.Addon(id)
         except Exception: return REAL_SETTINGS
 
 
@@ -101,7 +101,7 @@ class Settings(object):
         
 
     def getSettingDict(self, key):
-        return FileAccess.loadJSON(FileAccess._decodeString(self.getSetting(key)))
+        return FileAccess._decodeString(self.getSetting(key))
     
     
     def getCacheSetting(self, key, checksum=ADDON_VERSION, revive=False):
@@ -172,7 +172,7 @@ class Settings(object):
         
         
     def setSettingDict(self, key, values):
-        return self.setSetting(key,FileAccess._encodeString(FileAccess.dumpJSON(values)))
+        return self.setSetting(key,FileAccess._encodeString(values))
             
             
     def setCacheSetting(self, key, value=None, checksum=ADDON_VERSION, life=datetime.timedelta(days=84)):
@@ -192,7 +192,6 @@ class Settings(object):
         return IP
     
     
-    @debounceit(CPU_CYCLE)
     def hasAddon(self, id, install=None, enable=None, force=None, notify=False):
         def __getIDbyPath(url):
             try:
@@ -202,37 +201,39 @@ class Settings(object):
             except Exception: pass
             return url
             
+        def __hasADDON(id):
+            hasAddon  = self.builtin.getInfoBool('HasAddon(%s)'%(id),'System')
+            isEnabled = self.builtin.getInfoBool('AddonIsEnabled(%s)'%(id),'System')
+            self.log(f'[{id}] hasAddon = {hasAddon}, isEnabled = {isEnabled}, Kodi Override Enabled = {bypass}')
+            if hasAddon:
+                if isEnabled: return True
+                elif enable:
+                    if not force:
+                        if not self.dialog.yesnoDialog(message=LANGUAGE(32156)%(id)):
+                            self.log('[%s] hasAddon, (Not Enabled!)'%(id))
+                            return
+                    self.builtin.executebuiltin('EnableAddon(%s)'%(id),wait=True)
+                elif notify: self.dialog.notificationDialog(LANGUAGE(32264)%(id))
+            elif install: self.builtin.executebuiltin('InstallAddon(%s)'%(id),wait=True)
+            elif notify:  self.dialog.notificationDialog(LANGUAGE(32034)%(id))
+            return self.builtin.getInfoBool('HasAddon(%s)'%(id),'System')
+        
         bypass = self.getSettingBool('Enable_Kodi_Access')
         if install is None: install = bypass
         if enable  is None: enable  = bypass
         if force   is None: force   = bypass
         if '://' in id: id = __getIDbyPath(id)
+        cacheName     = 'hasAddon.%s'%(id)
+        cacheResponse = self.cache.get(cacheName)
+        if not cacheResponse: cacheResponse = self.cache.set(cacheName, __hasADDON(id), checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15))
+        if cacheResponse: return xbmcaddon.Addon(id)
+        return cacheResponse
             
-        hasAddon  = self.builtin.getInfoBool('HasAddon(%s)'%(id),'System')
-        isEnabled = self.builtin.getInfoBool('AddonIsEnabled(%s)'%(id),'System')
-        self.log(f'[{id}] hasAddon = {hasAddon}, isEnabled = {isEnabled}, Kodi Override Enabled = {bypass}')
-        
-        if hasAddon:
-            if not isEnabled and enable:
-                if not force:
-                    if not self.dialog.yesnoDialog(message=LANGUAGE(32156)%(id)):
-                        self.log('[%s] hasAddon, (Not Enabled!)'%(id))
-                        return
-                if self.builtin.executebuiltin('EnableAddon(%s)'%(id),wait=True):
-                    return self.hasAddon(id, install, False, force, notify)
-            elif not isEnabled and notify: self.dialog.notificationDialog(LANGUAGE(32264)%(id))
-            try: return xbmcaddon.Addon(id)
-            except Exception: notify = True
-        elif install:
-            if self.builtin.executebuiltin('InstallAddon(%s)'%(id),wait=True):
-                return self.hasAddon(id, False, enable, force, notify)
-        if notify: self.dialog.notificationDialog(LANGUAGE(32034)%(id))
-        
-        
+            
     @cacheit(expiration=datetime.timedelta(minutes=15))
     def getAddonDetails(self, id=ADDON_ID):
         try:
-            addon      = xbmcaddon.Addon(id)
+            addon = xbmcaddon.Addon(id)
             properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
             return dict([(property,addon.getAddonInfo(property)) for property in properties])
         except Exception:
@@ -254,77 +255,78 @@ class Settings(object):
         return uuid
 
 
-    def _getResumeURLs(self):
-        for file in FileAccess.listdir(RESUME_LOC)[1]:
-            yield 'http://%s/filelist/%s'%(self.properties.getRemoteHost(),file)
-
-
     @cacheit(expiration=datetime.timedelta(minutes=5))
-    def getBonjour(self, inclChannels=False):
-        self.log("getBonjour, inclChannels = %s"%(inclChannels))
-        payload = {'id'      :ADDON_ID,
-                   'uuid'    :self.getMYUUID(),
-                   'version' :ADDON_VERSION,
-                   'python'  :platform.python_version(),
-                   'machine' :platform.machine(),
-                   'platform':self.builtin.getInfoLabel('OSVersionInfo','System'),
-                   'build'   :self.builtin.getInfoLabel('BuildVersion','System'),
-                   'name'    :self.properties.getFriendlyName(),
-                   'host'    :self.property.getRemoteHost()}
+    def getBonjour(self):
+        def __getResumeURLs(remote):
+            files = FileAccess.listdir(RESUME_LOC)[1]
+            return ['http://%s/filelist/%s'%(remote,file) for file in files]
+            
+        def __getChannels():
+            from channels import Channels
+            return Channels().getChannels()
+            
+        host    = self.property.getRemoteHost()
+        payload = {'id'       :ADDON_ID,
+                   'host'     :host,
+                   'uuid'     :self.getMYUUID(),
+                   'name'     :self.properties.getFriendlyName(),
+                   'version'  :ADDON_VERSION,
+                   'machine'  :platform.machine(),
+                   'platform' :self.builtin.getInfoLabel('OSVersionInfo','System'),
+                   'build'    :self.builtin.getInfoLabel('BuildVersion','System'),
+                   'python'   :platform.python_version(),
+                   'remotes'  : {'m3u'     :'http://%s/%s'%(host,M3UFLE),
+                                 'xmltv'   :'http://%s/%s'%(host,XMLTVFLE),
+                                 'genre'   :'http://%s/%s'%(host,GENREFLE),
+                                 'bonjour' :'http://%s/api/%s'%(host,BONJOURFLE),
+                                 'logs'    :'http://%s/api/%s'%(host,DBLOGSFLE),
+                                 'servers' :'http://%s/api/%s'%(host,SERVERFLE),
+                                 'channels':'http://%s/api/%s'%(host,CHANNELFLE),
+                                 'resume'  : __getResumeURLs(host)},
+                   'settings' : {'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
+                                 'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
+                                 'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
+                                 'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
+                                 'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}}
                    
-        payload['remotes']   = {'bonjour':'http://%s/%s'%(payload['host'],BONJOURFLE),
-                                'manager':'http://%s/%s'%(payload['host'],'manager'),
-                                'm3u'    :'http://%s/%s'%(payload['host'],M3UFLE),
-                                'xmltv'  :'http://%s/%s'%(payload['host'],XMLTVFLE),
-                                'genre'  :'http://%s/%s'%(payload['host'],GENREFLE),
-                                'resume' : list(self._getResumeURLs())}
-                              
-        payload['settings']  = {'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
-                                'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
-                                'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
-                                'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
-                                'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}
-                                
-        if inclChannels: 
-            from channels    import Channels
-            payload['channels'] = Channels().getChannels()
-        payload['updated'] = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         payload['md5']     = FileAccess._getMD5(FileAccess.dumpJSON(payload))
+        payload['updated'] = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
+        self.log(f"getBonjour:\npayload = %s"%(payload))
         return payload
-    
-    
-    @cacheit(expiration=datetime.timedelta(minutes=5))
-    def getPayload(self, inclDebug: bool=False):
-        self.log("getPayload, inclDebug! %s"%(inclDebug))
-        def __getMeta(payload):
-            from m3u         import M3U
-            from xmltvs      import XMLTVS
-            from library     import Library
-            from multiroom   import Multiroom
-            xmltv = XMLTVS()
-            payload.pop('updated')
-            payload.pop('md5')
-            payload['m3u'] = M3U().getM3U()
-            stations = xmltv.getChannels()
-            recordings = xmltv.getRecordings()
-            payload['xmltv']   = {'stations'  :[{'id':station.get('id'),'display-name':station.get('display-name',[['','']])[0][0],'icon':station.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for station in stations],
-                                  'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in recordings], 
-                                  'programmes':[{'id':key,'end-time':epochTime(time.time(),tz=False).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
-            payload['library'] = Library().getLibrary()
-            payload['servers'] = Multiroom().getDiscovery()
-            del xmltv
-            return payload
 
-        payload = __getMeta(self.getBonjour(inclChannels=True))
-        if inclDebug: payload['debug'] = FileAccess.loadJSON(self.property.getProperty('debug.log')).get('DEBUG',{})
-        payload['updated']   = epochTime(time.time(),tz=False).strftime(DTFORMAT)
-        payload['md5']       = FileAccess._getMD5(FileAccess.dumpJSON(payload))
-        return payload
+
+    # @cacheit(expiration=datetime.timedelta(minutes=5))
+    # def getPayload(self, inclDebug: bool=False):
+        # self.log("getPayload, inclDebug! %s"%(inclDebug))
+        # def __getMeta(payload):
+            # from m3u         import M3U
+            # from xmltvs      import XMLTVS
+            # from library     import Library
+            # from multiroom   import Multiroom
+            # xmltv = XMLTVS()
+            # payload.pop('updated')
+            # payload.pop('md5')
+            # payload['m3u'] = M3U().getM3U()
+            # stations = xmltv.getChannels()
+            # recordings = xmltv.getRecordings()
+            # payload['xmltv']   = {'stations'  :[{'id':station.get('id'),'display-name':station.get('display-name',[['','']])[0][0],'icon':station.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for station in stations],
+                                  # 'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in recordings], 
+                                  # 'programmes':[{'id':key,'end-time':epochTime(time.time(),tz=False).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
+            # payload['library'] = Library().getLibrary()
+            # payload['servers'] = Multiroom().getDiscovery()
+            # del xmltv
+            # return payload
+
+        # payload = __getMeta(self.getBonjour())
+        # if inclDebug: payload['debug'] = FileAccess.loadJSON(self.property.getProperty('debug.log')).get('DEBUG',{})
+        # payload['updated']   = epochTime(time.time(),tz=False).strftime(DTFORMAT)
+        # payload['md5']       = FileAccess._getMD5(FileAccess.dumpJSON(payload))
+        # return payload
 
             
-    @cacheit(expiration=datetime.timedelta(minutes=5))
-    def getPayloadUI(self):
-        return Json2Html().convert(self.getPayload(inclDebug=True))
+    # @cacheit(expiration=datetime.timedelta(minutes=5))
+    # def getPayloadUI(self):
+        # return Json2Html().convert(self.getPayload(inclDebug=True))
 
 
     def hasAutotuned(self):
@@ -407,13 +409,14 @@ class Settings(object):
         return self.chkPluginSettings(settings, instance, prompt)
         
         
-    def setPVRRemote(self, host, instance=ADDON_NAME, prompt=None, cache=True):
+    def setPVRRemote(self, host, instance=ADDON_NAME, prompt=None, cache=None):
+        if cache is None: cache = True if host != self.properties.getRemoteHost() else False
         settings  = self._IPTV_SIMPLE_SETTINGS()
         nsettings = {'m3uPathType'                :'1',
-                     'm3uCache'                   :'%s'%(str(cache)),
+                     'm3uCache'                   :'%s'%(str(cache).lower()),
                      'm3uUrl'                     :'http://%s/%s'%(host,M3UFLE),
                      'epgPathType'                :'1',
-                     'epgCache'                   :'%s'%(str(cache)),
+                     'epgCache'                   :'%s'%(str(cache).lower()),
                      'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
                      'genresPathType'             :'1',
                      'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
@@ -492,11 +495,11 @@ class Settings(object):
     def chkPluginSettings(self, nsettings, instance=ADDON_NAME, prompt=None):
         if prompt is None: prompt = not bool(self.getSettingBool('Enable_Kodi_Access'))
         self.log('[%s] chkPluginSettings, instance = %s, prompt = %s'%(PVR_CLIENT_ID,instance,prompt))
-        addon = self.hasAddon(PVR_CLIENT_ID,notify=True)
+        addon = self.hasAddon(PVR_CLIENT_ID,notify=prompt)
         if addon:
             message   = []
-            osettings = self._IPTV_SIMPLE_SETTINGS()
-            osettings.update(self.getPVRInstanceSettings(instance))
+            osettings = self._IPTV_SIMPLE_SETTINGS()               # Default Configuration
+            osettings.update(self.getPVRInstanceSettings(instance))# User Configuration
             for setting, nvalue in list(nsettings.items()):
                 ovalue = (osettings.get(setting) or '')
                 if str(nvalue).lower() != str(ovalue).lower(): 
@@ -510,16 +513,20 @@ class Settings(object):
                     if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon.getAddonInfo('name'))):
                         self.dialog.notificationDialog(LANGUAGE(32046))
                         return False
-                return self.setPVRInstanceSettings(instance, osettings)
+                        
+                if self.setPVRInstanceSettings(instance, osettings):
+                    self.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
+                    return self.properties.setPropTimer('chkPVRRefresh')
             self.log('[%s] chkPluginSettings, no changes detected!'%(PVR_CLIENT_ID))
 
 
     def setPVRInstanceSettings(self, instance=ADDON_NAME, settings={}):
         addon = self.hasAddon(PVR_CLIENT_ID)
-        if addon:
+        if isinstance(addon, xbmcaddon.Addon):
             for setting, value in list(settings.items()):
-                self.log('[%s] setPVRInstanceSettings, %s = %s'%(PVR_CLIENT_ID,setting,value))
-                try:   addon.setSetting(setting, value)
+                try:
+                    addon.setSetting(setting, value)
+                    self.log('[%s] setPVRInstanceSettings, %s = %s'%(PVR_CLIENT_ID,setting,value))
                 except Exception as e: log("[%s] setPVRInstanceSettings, failed! %s"%(PVR_CLIENT_ID,e), xbmc.LOGERROR)
 
             # todo https://github.com/xbmc/xbmc/pull/23648
@@ -528,9 +535,8 @@ class Settings(object):
                 instanceFile = os.path.join(PVR_CLIENT_LOC,'instance-settings-%s.xml'%(self.gePVRInstance(instance)))
                 if FileAccess.exists(instanceFile): FileAccess.delete(instanceFile)
                 self.log('[%s] setPVRInstanceSettings, creating %s'%(PVR_CLIENT_ID,instanceFile))
-                FileAccess.move(defaultFile, instanceFile)
-                return self.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
-        return True
+                return FileAccess.move(defaultFile, instanceFile)
+        return False
         
         
     def getCurrentSettings(self):
@@ -539,21 +545,21 @@ class Settings(object):
                
 
     def getFileCRC(self, file):
-        def __getCRC32(text):
-            return binascii.crc32(text.encode(DEFAULT_ENCODING))
         try:
             fle = FileAccess.open(file,'r')
-            crc = __getCRC32(fle.read())
-            fle.close()
-            name  = 'getFileCRC.%s'%(FileAccess._getMD5(file))
-            cache = self.getCacheSetting(name, checksum=crc, revive=True)
-            if not cache or cache != crc:
-                self.setCacheSetting(name, crc, checksum=crc)
-                return True
-            return False
+            crc = binascii.crc32(fle.read().encode(DEFAULT_ENCODING))
         except Exception as e:
             self.log("getFileCRC, failed! %s"%(file,e), xbmc.LOGERROR)
             return False
+        finally:
+            fle.close()
+        name  = 'getFileCRC.%s'%(FileAccess._getMD5(file))
+        cache = self.getCacheSetting(name, checksum=crc, revive=True)
+        if not cache or cache != crc:
+            self.setCacheSetting(name, crc, checksum=crc)
+            return True
+        return False
+        
         
 class Properties(object):
     def __init__(self, winID=10131):
@@ -587,7 +593,7 @@ class Properties(object):
 
 
     def _getTrash(self):
-        try:    return (FileAccess.loadPICKLE(FileAccess._decodeString(self.getEXTProperty('%s.TRASH'%(ADDON_ID),{}))) or {})
+        try:    return (FileAccess._decodeString(self.getEXTProperty('%s.TRASH'%(ADDON_ID),{})) or {})
         except: return {}
 
 
@@ -595,7 +601,7 @@ class Properties(object):
         tmpDCT = self._getTrash()
         if key not in tmpDCT.setdefault(instanceID,[]):
             tmpDCT.setdefault(instanceID,[]).append(key)
-            self.setEXTProperty('%s.TRASH'%(ADDON_ID),str(FileAccess._encodeString(FileAccess.dumpPICKLE(tmpDCT))))
+            self.setEXTProperty('%s.TRASH'%(ADDON_ID),str(FileAccess._encodeString(tmpDCT)))
 
         
     def _getKey(self, key, useInstance=True):
@@ -614,7 +620,7 @@ class Properties(object):
         # try:
         key, thid = self._getKey(key)
         value = (self.window.getProperty(key) or default)
-        try: value = FileAccess.loadPICKLE(FileAccess._decodeString(value))
+        try: value = FileAccess._decodeString(value)
         except (ValueError, SyntaxError): pass
         self.log(f'[{self.winID}] getProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return value
@@ -657,7 +663,7 @@ class Properties(object):
         key, thid = self._getKey(key)
         try:
             if not value is None: 
-                self.window.setProperty(key, str(FileAccess._encodeString(FileAccess.dumpPICKLE(value))))
+                self.window.setProperty(key, str(FileAccess._encodeString(value)))
                 self.log(f'[{self.winID}] setProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         except Exception as e: self.log(f"[{self.winID}] setProperty [{thid}], failed! {e} - key = {key}, value = {str(value)[:128]}", xbmc.LOGERROR)
         return value
@@ -677,7 +683,6 @@ class Properties(object):
         else:     self.clrEXTProperty('script.trakt.paused')
 
 
-    @debounceit(M3U_REFRESH)
     def setPropTimer(self, key, state=True):
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
         return self.setEXTProperty(key,state)
@@ -964,8 +969,8 @@ class ListItems(object):
             if 'pvritem' in info: properties.update({'pvritem':info.pop('pvritem')}) # write dump to single key
             
             if media != 'video': #unify default artwork for music.
-                art['poster'] = (Globals._getThumb(info,opt=1) or COLOR_LOGO)
-                art['fanart'] = (Globals._getThumb(info)       or FANART)
+                art['poster'] = Globals._getThumb(info,opt=1)
+                art['fanart'] = Globals._getThumb(info)
                 
             listitem = self.getListItem(info.pop('label',''), info.pop('label2',''), info.pop('file',''), offscreen=offscreen)
             listitem.setArt(art)
@@ -988,7 +993,7 @@ class ListItems(object):
         except Exception as e: log("buildItemListItem, failed! %s\n%s"%(e,item), xbmc.LOGERROR)
             
                      
-    def buildMenuListItem(self, label="", label2="", icon=COLOR_LOGO, url="", info={}, art={}, props={}, offscreen=False, media='video'):
+    def buildMenuListItem(self, label="", label2="", icon=LOGO_COLOR, url="", info={}, art={}, props={}, offscreen=False, media='video'):
         if not art: art = {'thumb':icon,'logo':icon,'icon':icon}
         listitem = self.getListItem(label, label2, url, offscreen=offscreen)
         listitem.setIsFolder(True)
@@ -1163,10 +1168,10 @@ class Builtin(object):
     def getInfoLabel(self, key, param='ListItem', default=''):
         value = xbmc.getInfoLabel('%s.%s'%(param,key))
         if value == "Busy": 
-            if not self.monitor.waitForAbort(1.0): return self.getInfoLabel(key,param,default)
+            if not self.monitor.waitForAbort(0.5): return self.getInfoLabel(key,param,default)
         self.log('getInfoLabel, key = %s.%s, value = %s'%(param,key,value))
         return (value or default)
-        
+
 
     def getInfoBool(self, key, param='Library'):
         value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or False)
@@ -1478,7 +1483,7 @@ class Dialog(object):
         threadit(self.notificationDialog)(message, header, sound, time, icon, show)
 
 
-    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO, show=None, usethread=False):
+    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=LOGO_COLOR, show=None, usethread=False):
         if show is None: show = self.settings.getSettingBool('Notify_While_Playing')
         self.log('notificationDialog: %s, show = %s'%(message,show))
         if usethread: return self._notificationDialog(message, header, sound, time, icon, show)
@@ -1643,7 +1648,7 @@ class Dialog(object):
 
     def multiBrowse(self, paths: list=[], header=ADDON_NAME, exclude=[], monitor=True):
         self.log('multiBrowse, IN paths = %s'%(paths))
-        def __buildListItem(item): #label: str="", label2: str="", icon: str=COLOR_LOGO, paths: list=[], items: dict={}
+        def __buildListItem(item): #label: str="", label2: str="", icon: str=LOGO_COLOR, paths: list=[], items: dict={}
             idx = pathLST.index(item)
             return self.listitems.buildMenuListItem('%s|'%(idx+1), item, Globals._getDummyIcon(str(idx+1)), url='|'.join(item), props={'idx':idx+1})
 

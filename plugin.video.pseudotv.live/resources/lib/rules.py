@@ -82,38 +82,41 @@ class RulesList(object):
     def dumpRules(self, rules={}):
         #convert rule instances to json
         nrules = {}
-        if not list(rules.items()): return None
         for myId, rule in list(rules.items()):
             ritem = {}
-            ritem[str(myId)] = {"values":dict()}
+            if isinstance(myId, str): myId = int(myId) #temp correct format change
+            ritem[myId] = {"values":dict()}
             for idx, value in enumerate(rule.optionValues):
-                ritem[str(myId)]["values"][str(idx)] = value
+                if isinstance(idx, str): idx = int(idx) #temp correct format change
+                ritem[myId]["values"][idx] = value
             nrules.update(ritem)
         return nrules
             
 
     def loadRules(self, channels=None, append=False):
-        #load channel rules and their instances. append = full rule list.
         if channels is None: channels = Channels().getChannels()
-        def _load(ruleList, citem={}):
+        #load channel rules and their instances. append = full rule list.
+        def __load(ruleList, citem={}):
             tmpruleList = {}
             if not append and len(citem.get('rules',{})) == 0: return None
             for rule in ruleList:
                 ruleInstance = rule.copy()
                 tmpritem = {"values":{}}
                 for idx, value in enumerate(ruleInstance.optionValues): #load default rule as template
-                    tmpritem["values"][str(idx)] = value
+                    if isinstance(idx, str): idx = int(idx) #temp correct format change
+                    tmpritem["values"][idx] = value
 
-                if citem.get('rules',{}).get(str(rule.myId)):
-                    for key, value in list(citem['rules'][str(rule.myId)].get('values',{}).items()): #load channel rule
+                if citem.get('rules',{}).get(rule.myId):
+                    for key, value in list(citem['rules'][rule.myId].get('values',{}).items()): #load channel rule
                         try:
-                            tmpritem["values"].update({str(key):value}) #update default rule value with channel value.
-                            ruleInstance.optionValues[int(key)] = tmpritem["values"][str(key)] #load values to rule instance
-                        except Exception as e: log('[%s] loadRules, failed! %s\nrule = %s'%(citem['id'],e,citem['rules'][str(rule.myId)]), xbmc.LOGERROR)
-                    tmpruleList[str(rule.myId)] = ruleInstance
+                            if isinstance(key, str): key = int(key) #temp correct format change
+                            tmpritem["values"].update({key:value}) #update default rule value with channel value.
+                            ruleInstance.optionValues[key] = tmpritem["values"][key] #load values to rule instance
+                        except Exception as e: log('[%s] loadRules, failed! %s\nrule = %s'%(citem['id'],e,citem['rules'][rule.myId]), xbmc.LOGERROR)
+                    tmpruleList[rule.myId] = ruleInstance
                     
                 elif append: #append missing default rule values
-                    tmpruleList[str(rule.myId)] = ruleInstance
+                    tmpruleList[rule.myId] = ruleInstance
 
             self.log('[%s] loadRules: append = %s, rule myIds = %s'%(citem.get('id'), append,list(tmpruleList.keys())))
             rules[citem['id']] = tmpruleList
@@ -121,7 +124,7 @@ class RulesList(object):
         rules    = {}
         ruleList = self.ruleList.copy()
         ruleList.pop(0) #remove boilerplate baseRule()
-        [_load(ruleList,channel) for channel in channels]
+        [__load(ruleList,channel) for channel in channels]
         return rules
 
 
@@ -1024,8 +1027,8 @@ class PreRoll(BaseRule):
         
     def onAction(self, optionindex):
         if   optionindex in [0,1]: self.onActionSelect(optionindex)
-        elif optionindex in [2,3]: self.onActionResources(optionindex, ftype={"2":"ratings","3":"bumpers"}[str(optionindex)])
-        elif optionindex in [4,5]: self.onActionMultiBrowse(optionindex, header="%s for %s"%(LANGUAGE(32080), {"4":"Ratings","5":"Bumpers"}[str(optionindex)]), exclude=[12,13,14,15,16,21,22])
+        elif optionindex in [2,3]: self.onActionResources(optionindex, ftype={2:"ratings",3:"bumpers"}[optionindex])
+        elif optionindex in [4,5]: self.onActionMultiBrowse(optionindex, header="%s for %s"%(LANGUAGE(32080), {4:"Ratings",5:"Bumpers"}[optionindex]), exclude=[12,13,14,15,16,21,22])
         return self.optionValues[optionindex]
 
 
@@ -1071,8 +1074,8 @@ class PostRoll(BaseRule):
 
     def onAction(self, optionindex):
         if   optionindex in [0,1]: self.onActionSelect(optionindex)
-        elif optionindex in [2,4]: self.onActionResources(optionindex, ftype={"2":"adverts","4":"trailers"}[str(optionindex)])
-        elif optionindex in [3,5]: self.onActionMultiBrowse(optionindex, header="%s for %s"%(LANGUAGE(32080),{"3":"Adverts","5":"Trailers"}[str(optionindex)]), exclude=[12,13,14,15,16,21,22])
+        elif optionindex in [2,4]: self.onActionResources(optionindex, ftype={2:"adverts",4:"trailers"}[optionindex])
+        elif optionindex in [3,5]: self.onActionMultiBrowse(optionindex, header="%s for %s"%(LANGUAGE(32080),{3:"Adverts",5:"Trailers"}[optionindex]), exclude=[12,13,14,15,16,21,22])
         elif optionindex in [6]:   self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
 
@@ -1173,7 +1176,7 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
                     if builder.pDialog: builder.pDialog = DIALOG._updateProgress(builder.pDialog, builder.pCount, message=f"{builder.pName}: {LANGUAGE(32209)} {self.name}",header=builder.pHeader)
                     self.log(f"[{citem['id']}] runAction, {self.optionValues[0][0]['holiday']['name']}")
                     for query in self.optionValues[0]:
-                        citem['logo'] = (query.get('holiday',{}).get('logo') or SEASONAL_LOGO)
+                        citem['logo'] = (query.get('holiday',{}).get('logo') or LOGO_SEASONAL)
                         if query["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                             if not builder.incExtras:
                                 query["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
@@ -1661,7 +1664,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
                                   info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
                                         "episodetitle":viewed,
                                         "plot":'%s: %s\nSize: %s\nRuntime: ~%s hrs.'%(LANGUAGE(32249),epochTime(time.time(),tz=False).strftime(BACKUP_TIME_FORMAT),len(filelist),round(self._getTotDuration(citem.get('id'), filelist)//60//60)),
-                                        "art":{"thumb":citem.get('logo',COLOR_LOGO),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
+                                        "art":{"thumb":citem.get('logo',LOGO_COLOR),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
 
             
     def _set(self, id, filelist=[], resume={"idx":0,"position":0.0,"total":0.0,"file":"","updated":{"instance":"","time":-1}}):
@@ -1712,8 +1715,8 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
             
         elif actionid == RULES_ACTION_CHANNEL_CITEM:
             try:
-                parameter["rules"]["3000"]["values"].update({"1":self._getURL(parameter.get('id'))})
-                self.log("runAction, updated rule values = %s"%( parameter["rules"]["3000"]["values"]), xbmc.LOGERROR)
+                parameter["rules"][3000]["values"].update({1:self._getURL(parameter.get('id'))})
+                self.log("runAction, updated rule values = %s"%( parameter["rules"][3000]["values"]), xbmc.LOGERROR)
             except Exception as e:
                 self.log("runAction, updated rule values failed! %s"%(e), xbmc.LOGERROR)
 

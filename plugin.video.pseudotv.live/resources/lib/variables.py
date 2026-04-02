@@ -60,13 +60,13 @@ class Globals:
 
     @staticmethod
     def _encodePlot(plot, text):
-        return '%s [COLOR item="%s"][/COLOR]'%(plot,Globals._quoteString(FileAccess._encodeString(FileAccess.dumpJSON(text))))
+        return '%s [COLOR item="%s"][/COLOR]'%(plot,FileAccess._encodeString(text))
         
     @staticmethod
     def _decodePlot(text: str = '') -> dict:
         if isinstance(text, str):
             plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
-            if plot: return FileAccess.loadJSON(FileAccess._decodeString(Globals._unescapeString(plot.group(1))))
+            if plot: return FileAccess._decodeString(plot.group(1))
         return {}
         
     @staticmethod
@@ -101,7 +101,7 @@ class Globals:
         return s
             
     @staticmethod
-    def _notificationDialog(msg, header=ADDON_NAME, time=PROMPT_DELAY, logo=COLOR_LOGO):
+    def _notificationDialog(msg, header=ADDON_NAME, time=PROMPT_DELAY, logo=LOGO_COLOR):
         xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, msg, time*1000, logo))
         
     @staticmethod
@@ -136,7 +136,8 @@ class Globals:
         else: Globals._openSettings()
           
     @staticmethod  
-    def _getThumb(item={},opt=0): #unify thumbnail artwork
+    def _getThumb(item={}, opt=0): #unify thumbnail artwork
+        art  = None
         keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
                 1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
         for key in keys:
@@ -146,8 +147,36 @@ class Globals:
                    item.get('art',{}).get('season.%s'%(key))      or 
                    item.get('art',{}).get('tvshow.%s'%(key))      or 
                    item.get('art',{}).get(key)                    or
-                   item.get(key) or '')
-            if art: return art
+                   item.get(key))
+        return Globals._buildWebImage(art, {0:LOGO_LANDSCAPE,1:LOGO_POSTER}[opt])
+
+    @staticmethod  
+    def _buildWebImage(image=None, fallback=LOGO):
+        image = Globals._cleanImage(image)
+        if not image: return fallback
+        elif   image.startswith('image://'): image = '%s/image/%s'%(Globals._getProperty('%s.Local_Host'%(ADDON_ID)),Globals._quoteString(image))
+        elif   image.startswith('http'):     image = 'http://%s/images/%s'%(Globals._getProperty('%s.Remote_Host'%(ADDON_ID)),Globals._quoteString(image))
+        return image
+
+    @staticmethod
+    def _getDummyIcon(text, background=COLOR_BACKGROUND, color=COLOR_TEXT):
+        if not isinstance(text, (str,bytes)): text = str(text)
+        url  = f'https://dummyimage.com/512x512/{background}/{color}.png&text={Globals._quoteString(text)}'
+        file = os.path.join(TEMP_IMAGE_LOC,f'{FileAccess._getMD5(url)}.png')
+        if   FileAccess.exists(file):   return file
+        elif Globals.setURL(url, file): return file
+        return LOGO_COLOR
+          
+    @staticmethod
+    def _cleanImage(image=''):
+        if image is None: image = ''
+        if not image.startswith(('image://','resource://','special://','smb://','nfs://','https://','http://')):
+            realPath = FileAccess.translatePath('special://home/addons/')
+            if image.startswith(realPath):# convert real path. to vfs
+                image = image.replace(realPath,'special://home/addons/').replace('\\','/')
+            elif image.startswith(realPath.replace('\\','/')):
+                image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
+        return image.strip('/')
 
     @staticmethod  
     def _findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
@@ -229,22 +258,11 @@ class Globals:
         return items
         
     @staticmethod
-    def _getDummyIcon(text, background=COLOR_BACKGROUND, color=COLOR_TEXT):
-        url  = f'https://dummyimage.com/512x512/{background}/{color}.png&text={Globals._quoteString(text)}'
-        file = os.path.join(TEMP_IMAGE_LOC,f'{FileAccess._getMD5(url)}.png')
-        print('_getDummyIcon',url,file)
-        if   FileAccess.exists(file):   return file
-        elif Globals.setURL(url, file): return file
-        return COLOR_LOGO
-        
-    @staticmethod
     def setURL(url, file):
         with FileLock(file):
             try:
-                contents = Globals.requestURL(url)
-                print('setURL',contents)
                 fle = FileAccess.open(file, 'w')
-                fle.write(contents)
+                fle.write(Globals.requestURL(url))
             except Exception as e: log('Globals: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
             finally:
                 if hasattr(fle, 'close'): fle.close()
@@ -283,8 +301,13 @@ class Globals:
             log("Globals: requestURL, failed! %s, An error occurred: %s"%('Returning cache' if cache else 'No Response', e))
             return __getCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
                               cache["cache"], cache.get("checksum",ADDON_VERSION)) if cache else __error()
-        finally: #retry failed post
-            if results is None and payload:
-                posts = set(SETTINGS.getCacheSetting('postQue', revive=True) or [])
-                posts.add((url, params, payload, header, timeout, None, file))
-                SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)
+        # finally: #retry failed post
+            # if results is None and payload:
+                # Globals.queuePost(url, params, payload, header, timeout, None, file)
+        
+    # @staticmethod
+    # def queuePost(url, params, payload, header, timeout, None, file):
+        ...
+        # posts = set(SETTINGS.getCacheSetting('postQue', revive=True) or [])
+        # posts.add()
+        # SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)

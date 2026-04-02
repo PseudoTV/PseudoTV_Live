@@ -34,7 +34,10 @@ TV_QUERY    = {"path":"videodb://tvshows/titles/", "method":"VideoLibrary.GetEpi
 MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"  ,"limits":LIMITS,"sort":SORT,"filter":FILTER}
 
 class Seasonal(object):
-    cache = SETTINGS.cacheDB
+    def __init__(self, cache=None):
+        if cache is None: cache = SETTINGS.cacheDB
+        self.cache = cache
+    
     
     def log(self, msg, level=xbmc.LOGDEBUG):
         """

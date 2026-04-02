@@ -169,7 +169,7 @@ class _Cache(object):
     def _getMEM(self, endpoint, checksum, cur_time):
         result = None
         try: 
-            cachedata = FileAccess.loadPICKLE(FileAccess._decodeString(Globals._getProperty('%s.%s'%(ADDON_ID,endpoint))))
+            cachedata = FileAccess._decodeString(Globals._getProperty('%s.%s'%(ADDON_ID,endpoint)))
             if cachedata[0] > cur_time and not checksum or checksum == cachedata[2]: result = cachedata[1]
         except Exception as e: pass
         return result
@@ -177,7 +177,7 @@ class _Cache(object):
 
     def _setMEM(self, endpoint, checksum, expires, data):
         try: 
-            string_text = FileAccess._encodeString(FileAccess.dumpPICKLE((expires, data, checksum)))
+            string_text = FileAccess._encodeString((expires, data, checksum))
             string_size = sys.getsizeof(string_text)
             if string_size > self.max_bytes: raise Exception(f"_setMEM, {endpoint} too large for cache limit {self.max_bytes}!")
             else:

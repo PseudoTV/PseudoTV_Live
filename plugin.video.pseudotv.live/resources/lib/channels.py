@@ -141,13 +141,10 @@ class Channels(object):
                     
                     
     def _channelManager(self):
-        with FileAccess.stream(MANAGER_FORM, "r") as fle:
-            html = fle.read()
-            
-        with FileAccess.stream(XMLTVFLEPATH, "r") as fle:
-            xmltv = fle.read()
-            
-        html = html.replace("{{ remote_host }}", PROPERTIES.getRemoteHost()).replace("{{ media_loc }}", MEDIA_LOC).replace("{{ CHANNEL_LIMIT|safe }}", str(CHANNEL_LIMIT))
-        html = html.replace("{{ channels_json|safe }}", FileAccess.dumpJSON(self.getChannels())).replace("{{ template_json|safe }}", FileAccess.dumpJSON(self.getTemplate()))
-        html = html.replace("{{ xmltv_data|safe }}", xmltv).replace("{{ servers_json|safe }}",FileAccess.dumpJSON(Multiroom().getEnabled()))
-        return html.encode(encoding=DEFAULT_ENCODING)
+        with FileAccess.stream(MANAGERPATH, "r") as fle:
+            html_content = fle.read()
+        html_content = html_content.replace("{{ channel_limit }}", str(CHANNEL_LIMIT))
+        html_content = html_content.replace("{{ media_loc }}"    , MEDIA_LOC)
+        html_content = html_content.replace("{{ remote_host }}"  , PROPERTIES.getRemoteHost())
+        return html_content.encode(encoding=DEFAULT_ENCODING)
+        
