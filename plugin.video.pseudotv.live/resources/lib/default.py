@@ -35,7 +35,7 @@ if __name__ == '__main__':
             except: 
                 sysARG  = ['plugin://plugin.video.pseudotv.live/', '1', sys.argv[1], 'resume:false']
                 sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-            log(f'Default: __main__, mode = {sysInfo.get('mode')}, argv = {sysARG}')
+            log(f'Default: __main__, mode = {sysInfo.get("mode")}, argv = {sysARG}')
             
             if sysInfo.get('mode') is None:
                 xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())

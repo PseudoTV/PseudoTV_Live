@@ -185,7 +185,7 @@ class MyHandler(BaseHTTPRequestHandler):
             use_compression = "gzip" in accept_encoding
             if self.path.startswith('/logos/'): # 302 Temporary Redirect
                 self.send_response(302)
-                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getCache(Globals._unquoteString(self.path.split('/logos/')[1])))}')
+                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getCache(Globals._unquoteString(self.path.split("/logos/")[1])))}')
                 self.log(f'do_GET, redirecting to http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(image)}')
                 self.end_headers()
             else: # 200 OK
