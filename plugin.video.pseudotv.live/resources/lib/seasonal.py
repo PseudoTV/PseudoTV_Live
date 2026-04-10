@@ -192,4 +192,3 @@ class Seasonal(object):
                 self.log('buildSeasonal, %s - item = %s'%(holiday.get('name'),item))
                 yield item
        
-       
