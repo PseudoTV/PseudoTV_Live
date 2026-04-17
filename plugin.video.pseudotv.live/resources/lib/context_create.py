@@ -23,7 +23,7 @@ from manager    import Manager
 @threadit
 def _open(fitem={}):
     log('Create: open')
-    if not PROPERTIES.isRunning('Create.open'):
+    if not PROPERTIES.isRunning('Create.open') and SETTINGS.hasAutotuned():
         with PROPERTIES.interruptActivity(), PROPERTIES.chkRunning('Create.open'), BUILTIN.busy_dialog(cancel=PROPERTIES.isRunning('Manager'), lock=True):
             try: manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=fitem.get('citem',{}).get('number',1))
             except Exception as e:
@@ -64,7 +64,7 @@ def _add(sysARG, listitem: dict={}):
 
 def _auto(start=1, count=-1):
     if count <= 0: count = min(max(SETTINGS.getSettingInt('Autotune_Limit'), AUTOTUNE_CHANNEL_DEFAULT), AUTOTUNE_CHANNEL_LIMIT)
-    autoChannels = SETTINGS.getSettingBool('Enable_Autotuned_Channels')
+    autoChannels = SETTINGS.getSettingBool('Enable_Autotuned')
     if not autoChannels:
         hasLibrary  = any([PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES])
         hasChannels = PROPERTIES.hasChannels()
@@ -78,7 +78,7 @@ def _auto(start=1, count=-1):
                 retval = DIALOG.yesnoDialog(message='%s\n%s'%(LANGUAGE(32042)%(ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254))
                 if   retval == 0: return True #No
                 elif retval == 1:
-                    SETTINGS.setSettingBool('Enable_Autotuned_Channels',True)
+                    SETTINGS.setSettingBool('Enable_Autotuned',True)
                     break #Yes  
                 elif retval == 2: #Custom
                     def __manager():  return _open()

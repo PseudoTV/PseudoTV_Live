@@ -960,7 +960,7 @@ msgstr ""
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
-# Labels - strings 32000 thru 32999 reserved buildChannelsfor scripts
+# Labels - strings 32000 thru 32999 reserved for scripts
 msgctxt "#32000"
 msgid "Something went wrong, Try again later..."
 msgstr ""
@@ -1150,7 +1150,7 @@ msgid "No Changes Applied!"
 msgstr ""
 
 msgctxt "#32047"
-msgid "Discovered Server"
+msgid "Discovered"
 msgstr ""
 
 msgctxt "#32048"
@@ -1474,7 +1474,7 @@ msgid "Rebuilding Autotuned Channels"
 msgstr ""
 
 msgctxt "#32129"
-msgid "%s is missing guide data for this channel\nPlease wait for Kodi and %s to finish updating."
+msgid "%s is missing guide data for this channel\nPlease wait for Kodi and %s to finish."
 msgstr ""
 
 msgctxt "#32130"

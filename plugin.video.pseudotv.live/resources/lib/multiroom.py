@@ -25,13 +25,14 @@ class Service(object):
     jsonRPC = JSONRPC()
     player  = PLAYER()
     monitor = MONITOR()
-    def _shutdown(self, wait=1.0) -> bool:
+    def _shutdown(self, wait=CPU_CYCLE) -> bool:
         return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
         return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
-    def _suspend(self, wait=1.0) -> bool:
+    def _suspend(self, wait=CPU_CYCLE) -> bool:
+        # if wait > 0: self._sleep(wait)
         return PROPERTIES.isPendingSuspend()
-    def _sleep(self, wait=1.0):
+    def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
             else: wait -= CPU_CYCLE
@@ -82,7 +83,7 @@ class Multiroom(object):
 
     def getRemote(self, remote):
         self.log("getRemote, remote = %s"%(remote))
-        return Globals.requestURL(remote, header={'Accept':'application/json'}, cache={"cache":self.cache, "checksum":SETTINGS.getMYUUID(), "life": datetime.timedelta(minutes=15)})
+        return self.jsonRPC.requestURL(remote, header={'Accept':'application/json'})
         
         
     def addServer(self, payload={}):
@@ -95,7 +96,8 @@ class Multiroom(object):
                 servers[payload['name']] = payload
                 self.log('addServer, adding server = %s'%(payload))
                 DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
-                SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add IPTV Simple config
+                if payload.get('host') != PROPERTIES.getRemoteHost():
+                    SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add IPTV Simple config
                 self.setDiscovery(servers)
             else:
                 payload['enabled'] = server.get('enabled',False)
@@ -110,7 +112,7 @@ class Multiroom(object):
                         if payload.get('resume') != server.get('resume'):
                             [self.getRemote(url) for url in payload.get('resume',[])]
                     else: FileAccess.delete(SETTINGS.hasPVRInstance(server.get('name'))) #del IPTV Simple config
-                    servers.update({payload['name']:payload})
+                    servers[payload['name']] = payload
                     self.log('addServer, updating server = %s'%(payload))
                     self.setDiscovery(servers)
 
@@ -161,7 +163,7 @@ class Multiroom(object):
                                         servers[liz.getLabel()]['enabled'] = True
                                         DIALOG.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
                                     if not SETTINGS.hasPVRInstance(liz.getLabel()): 
-                                        if SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel(),cache=True):
+                                        if SETTINGS.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel()):
                                             PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                                 else:
                                     if servers[liz.getLabel()].get('enabled',False):

@@ -23,13 +23,14 @@
     # from jsonrpc import JSONRPC
     # monitor = MONITOR()
     # jsonRPC = JSONRPC()
-    # def _shutdown(self, wait=1.0) -> bool:
+    # def _shutdown(self, wait=CPU_CYCLE) -> bool:
         # return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     # def _interrupt(self) -> bool:
         # return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
-    # def _suspend(self, wait=1.0) -> bool:
+    # def _suspend(self, wait=CPU_CYCLE) -> bool:
+        # if wait > 0: self._sleep(wait)
         # return PROPERTIES.isPendingSuspend()
-    # def _sleep(self, wait=1.0):
+    # def _sleep(self, wait=CPU_CYCLE):
         # while not self.monitor.abortRequested() and wait > 0:
             # if (self.monitor.waitForAbort(0.5) | self._interrupt()): return True
             # else: wait -= 0.5

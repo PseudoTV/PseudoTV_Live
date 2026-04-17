@@ -28,11 +28,11 @@ class YTParser(object):
                 elif 'video_id' in filename: vID = (re.compile(r'video_id\=(.*)', re.IGNORECASE).search(filename)).group(1)
                 else: raise Exception('No video_id found!')
                 log("YTParser: determineLength, file = %s, id = %s"%(filename,vID))
-                ydl = YoutubeDL({'no_color': True, 'format': 'best', 'outtmpl': '%(id)s.%(ext)s', 'no-mtime': True, 'add-header': HEADER})
+                ydl = YoutubeDL({'quiet': False, 'skip_download': True, 'cookiefile': FileAccess.translatePath(YOUTUBE_COOKIES), 'no_color': True, 'format': 'best', 'outtmpl': '%(id)s.%(ext)s', 'no-mtime': True, 'add-header': HEADER})
                 with ydl:
                     dur = ydl.extract_info("https://www.youtube.com/watch?v={sID}".format(sID=vID), download=False).get('duration',0)
             log('YTParser: Duration is %s'%(dur))
             return dur
         except Exception as e:
-            log("YTParser: failed! %s\nfile = %s"%(e,filename), xbmc.LOGERROR)
+            log("YTParser: failed! %s\nfile = %s"%(e,filename), xbmc.LOGWARNING)
             return 0

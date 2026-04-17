@@ -1,13 +1,17 @@
 {
-    "Atmospheric & Niche": "A curated experience focused on mood and environment, featuring non-traditional soundscapes for relaxation, focus, or humor. Includes Ambient, Lo-fi, New Age, Drone, and Comedy.",
-    "Blues & Soul": "A station dedicated to the soulful roots of modern music, delivering raw emotion through expressive vocals and rhythmic grooves. Includes Delta Blues, R&B, Motown, and Funk.",
-    "Classical & Stage": "Broadcasts high-art musical traditions, from grand orchestral symphonies to the dramatic storytelling of the stage. Includes Baroque, Opera, and Film/TV Themes.",
-    "Country & Folk": "Tuning in provides a storytelling journey through rural and traditional community cultures, emphasizing acoustic heritage. Includes Bluegrass, Americana, Celtic, and Zydeco.",
-    "Electronic & Dance": "A high-energy channel utilizing digital synthesis and pulsing beats designed for the club and the dancefloor. Includes House, Techno, EDM, and Trance.",
-    "Hip-Hop & Rap": "Focuses on the culture of beat-driven production and the art of stylized, rhythmic vocal delivery. Includes Trap, Drill, Grime, and Old School.",
-    "Jazz": "Features technical mastery and sophisticated improvisation, highlighting complex harmonies and swing rhythms. Includes Bebop, Fusion, Acid Jazz, and Modal Jazz.",
-    "Latin & Caribbean": "A vibrant station celebrating the percussive heat and rhythmic passion of Spanish, African, and Island traditions. Includes Reggae, Soca, Salsa, and Bossa Nova.",
-    "Pop": "Broadcasts the most accessible sounds of the moment, focusing on catchy melodies and mainstream global appeal. Includes Synthpop, K-Pop, J-Pop, and Hyperpop.",
-    "Rock & Metal": "The home of high-voltage energy, centered on the power of electric guitars, heavy drums, and a driving backbeat. Includes Alternative, Punk, Grunge, Heavy Metal, and Indie.",
-    "World & Regional": "A global broadcast hub offering a window into traditional and contemporary musical expressions from every corner of the map. Includes Afrobeat, Bhangra, Hindustani, and Klezmer."
+    "Atmospheric & Niche": "A curated experience focused on mood and environment, featuring non-traditional soundscapes for relaxation, focus, or humor. Includes Ambient, Lo-fi, New Age, Drone, Vaporwave, Dark Ambient, and Comedy.",
+    "Blues & Soul": "A station dedicated to the soulful roots of modern music, delivering raw emotion through expressive vocals and rhythmic grooves. Includes Delta Blues, R&B, Motown, Funk, Neo-Soul, Gospel, and Doo-Wop.",
+    "Classical & Stage": "Broadcasts high-art musical traditions, from grand orchestral symphonies to the dramatic storytelling of the stage. Includes Baroque, Opera, Film/TV Themes, Romantic, Minimalism, Modern Classical, and Musical Theatre.",
+    "Country & Folk": "A storytelling journey through rural and traditional community cultures, emphasizing acoustic heritage and lyricism. Includes Bluegrass, Americana, Celtic, Zydeco, Honky-Tink, Outlaw Country, and Contemporary Folk.",
+    "Electronic & Dance": "A high-energy channel utilizing digital synthesis and pulsing beats designed for the club and the dancefloor. Includes House, Techno, EDM, Trance, Drum & Bass, Dubstep, Hardstyle, and IDM.",
+    "Experimental & Avant-Garde": "Dedicated to the pioneers of sound who push the boundaries of structure and harmony through unconventional techniques. Includes Noise, Musique Concrète, Glitch, No Wave, Industrial, and Free Improvisation.",
+    "Hip-Hop & Rap": "Focuses on the culture of beat-driven production and the art of stylized, rhythmic vocal delivery. Includes Trap, Drill, Grime, Old School, Boom Bap, Conscious Rap, Cloud Rap, and G-Funk.",
+    "Jazz": "Features technical mastery and sophisticated improvisation, highlighting complex harmonies and swing rhythms. Includes Bebop, Fusion, Acid Jazz, Modal Jazz, Hard Bop, Gypsy Jazz, and Big Band/Swing.",
+    "Latin & Caribbean": "A vibrant station celebrating the percussive heat and rhythmic passion of Spanish, African, and Island traditions. Includes Reggae, Soca, Salsa, Bossa Nova, Reggaeton, Merengue, Bachata, and Dancehall.",
+    "Metal & Hardcore": "The heaviest spectrum of sound, defined by extreme distortion, aggressive vocals, and complex, high-speed arrangements. Includes Thrash, Death Metal, Black Metal, Metalcore, Doom Metal, and Grindcore.",
+    "Pop": "Broadcasts the most accessible sounds of the moment, focusing on catchy melodies and mainstream global appeal. Includes Synthpop, K-Pop, J-Pop, Hyperpop, Teen Pop, Dance-Pop, and Sophisti-pop.",
+    "Punk & Post-Punk": "Rooted in raw energy and DIY ethics, moving from rebellious fast-paced rock to moody, atmospheric experimentation. Includes Hardcore Punk, Ska-Punk, Post-Punk, Gothic Rock, New Wave, and Emo.",
+    "Rock": "The home of guitar-driven energy, ranging from vintage blues-rock to modern independent movements. Includes Alternative, Grunge, Indie, Psychedelic Rock, Shoegaze, Progressive Rock, and Garage Rock.",
+    "Spiritual & Devotional": "Music centered on faith, worship, and sacred traditions from various global cultures. Includes Southern Gospel, Christian Rock, Sufi Music, Gregorian Chant, Bhajan, and Contemporary Christian.",
+    "World & Regional": "A global broadcast hub offering a window into traditional and contemporary musical expressions from every corner of the map. Includes Afrobeat, Bhangra, Hindustani, Klezmer, Highlife, Enka, and Flamenco."
 }

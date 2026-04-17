@@ -23,13 +23,14 @@ from videoparser import VideoParser
 class Service(object):
     player  = PLAYER()
     monitor = MONITOR()
-    def _shutdown(self, wait=1.0) -> bool:
+    def _shutdown(self, wait=CPU_CYCLE) -> bool:
         return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
         return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
-    def _suspend(self, wait=1.0) -> bool:
+    def _suspend(self, wait=CPU_CYCLE) -> bool:
+        if wait > 0: self._sleep(wait)
         return PROPERTIES.isPendingSuspend()
-    def _sleep(self, wait=1.0):
+    def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
             else: wait -= CPU_CYCLE
@@ -48,6 +49,40 @@ class JSONRPC(object):
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
+
+    def requestURL(self, url, params={}, payload={}, header=HEADER, timeout=15, file=None, life=datetime.timedelta(minutes=15)):
+        def __error(result={}): return result
+        def __getCache():       return (self.cache.get('requestURL.%s'%(FileAccess._getMD5((url,params,payload,file)))) or {})
+        def __setCache():       return self.cache.set('requestURL.%s'%(FileAccess._getMD5((url,params,payload,file))), results, expiration=life)
+        def __setQueue(): 
+            if hasattr(self.service,'postQue'): 
+                self.service.postQue.add((url, params, payload, header, timeout, file, life))
+            
+        results = None
+        session = requests.Session()
+        retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
+        try:
+            headers = HEADER.copy()
+            headers.update(header)
+            if payload: response = session.post(url, json=payload, files=file, headers=headers, timeout=timeout)
+            else:       response = session.get(url, params=params, headers=headers, timeout=timeout)
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            content_type = response.headers.get('Content-Type', '').lower()
+            if 'application/json' in content_type: results = response.json()
+            else:                                  results = response.content
+            self.log("requestURL\nurl = %s, status = %s\nparams = %s\npayload = %s\nreturn type = %s"%(url,response.status_code,params,payload,type(results)))
+            if results: return __setCache()
+        except Exception as e: 
+            self.log("requestURL, failed! %s"%(e))
+            __getCache()
+        finally: #retry failed post
+            if results is None and payload: __setQueue()
+        return results 
+        
 
     def sendJSON(self, param):
         command = param
@@ -614,9 +649,8 @@ class JSONRPC(object):
         webURL =  '{0}://{1}{2}:{3}'.format(protocol,username,ip,port)
         PROPERTIES.setEXTProperty('%s.Local_Host'%(ADDON_ID),webURL)
         self.log("getLocalHost; returning %s"%(webURL))
-        return webURL
-            
-            
+
+
     def padItems(self, files, page=SETTINGS.getSettingInt('Page_Limit')):
         # Balance media limits, by filling with duplicates to meet min. pagination.
         self.log("padItems; files In = %s"%(len(files)))
@@ -656,7 +690,7 @@ class JSONRPC(object):
                 for result in results:
                     if result.get('label','').lower().startswith(dir.lower()):
                         self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
-                        channels, limits, errors = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=15))
+                        channels, limits, errors = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getProcessID(),expiration=datetime.timedelta(minutes=15))
                         for item in channels:
                             if item.get('label','').lower() == sysInfo.get('name','').lower() and Globals._decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
                                 self.log('[%s] getCallback: _matchJSON, found file = %s'%(sysInfo.get('chid'),item.get('file')))
@@ -707,11 +741,11 @@ class JSONRPC(object):
             return pvritem
             
         cacheName     = 'matchChannel.%s'%(FileAccess._getMD5('%s.%s.%s.%s'%(chname,id,radio,extend)))
-        cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID()) or {})
+        cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getProcessID()) or {})
         if not cacheResponse:
             pvrItem = __match()
             if pvrItem and extend: pvrItem = __extend(pvrItem)
-            cacheResponse = self.cache.set(cacheName, pvrItem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=15))
+            cacheResponse = self.cache.set(cacheName, pvrItem, checksum=PROPERTIES.getProcessID(), expiration=datetime.timedelta(seconds=15))
         return cacheResponse
         
         

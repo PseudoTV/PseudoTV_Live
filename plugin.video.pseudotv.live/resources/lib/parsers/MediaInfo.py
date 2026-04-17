@@ -24,15 +24,25 @@ class MediaInfo:
             from pymediainfo import MediaInfo
             dur = 0
             mi  = None
-            fileXML = filename.replace('.%s'%(filename.rsplit('.',1)[1]),'-mediainfo.xml')
-            if FileAccess.exists(fileXML):
-                log("MediaInfo: parsing XML %s"%(fileXML))
-                fle = FileAccess.open(fileXML, 'rb')
+            xml = None
+            fle = None
+            
+            if FileAccess.exists(filename.replace('.%s'%(filename.rsplit('.',1)[1]),'-mediainfo.xml')):
+                xml = filename.replace('.%s'%(filename.rsplit('.',1)[1]),'-mediainfo.xml')
+            elif FileAccess.exists(filename.replace('.%s'%(filename.rsplit('.',1)[1]),'.xml')):
+                xml = filename.replace('.%s'%(filename.rsplit('.',1)[1]),'.xml')
+            
+            try:
+                if xml is None: raise Exception('no xml found!, directly parsing file.')
+                log("MediaInfo: parsing XML %s"%(xml))
+                fle = FileAccess.open(xml, 'rb')
                 mi  = MediaInfo(fle.read())
-                fle.close()
-            else:
+            except Exception: 
                 log("MediaInfo: parsing %s"%(FileAccess.translatePath(filename)))
                 mi = MediaInfo.parse(FileAccess.translatePath(filename))
+            finally:
+                if hasattr(fle, 'close'): 
+                    fle.close()
                 
             if not mi is None and mi.tracks:
                 for track in mi.tracks:

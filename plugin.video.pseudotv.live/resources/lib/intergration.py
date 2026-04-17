@@ -26,8 +26,9 @@ HEADER = {"Authorization": "",
           "X-Reference"  : f"{ADDON_URL}",}
            
 class OpenRouter(object):
-    def __init__(self, cache=None):
-        self.cache = cache
+    def __init__(self, cache=None, jsonRPC=None):
+        self.jsonRPC = jsonRPC
+        self.cache   = cache
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -37,7 +38,8 @@ class OpenRouter(object):
     def _request(self, url, params={}, payload={}, header=HEADER, timeout=15):
         if SETTINGS.getSettingBool('Allow_Artificial_Intelligence'):
             header.update({"Authorization": f"Bearer {SETTINGS.getSetting('Open_Router_APIKEY')}"})
-            return Globals.requestURL(url, params, payload, header, timeout, cache={'cache':self.cache,'life':datetime.timedelta(days=MAX_GUIDEDAYS)})
+            if hasattr(self.jsonRPC,'requestURL'):
+                return self.jsonRPC.requestURL(url, params, payload, header, timeout)
 
 
     @cacheit()
@@ -94,7 +96,7 @@ class OpenRouter(object):
                 # if match:
                     # try:
                         # file_name = '%s.%s'%(chname,match.group('ext'))# '%s_%s.%s'%(chname,idx,match.group('ext'))
-                        # file_path = os.path.join(TEMP_IMAGE_LOC,file_name)
+                        # file_path = os.path.join(TEMP_LOC,file_name)
                         # with FileLock(file_path):
                             # with FileAccess.stream(file_path, "wb") as f:
                                 # f.write(base64.b64decode(match.group('data') + b"=="))
@@ -104,7 +106,7 @@ class OpenRouter(object):
         
         
     def _alphaImage(self, file_name, background_color=(0, 255, 0)):
-        # if SETTINGS.hasAddon('script.module.pil') and FileAccess.exists(os.path.join(TEMP_IMAGE_LOC,file_name)):
+        # if SETTINGS.hasAddon('script.module.pil') and FileAccess.exists(os.path.join(TEMP_LOC,file_name)):
             # def __nearest(color1, color2, tolerance=50):
                 # r1, g1, b1 = color1[:3]
                 # r2, g2, b2 = color2[:3]
@@ -112,7 +114,7 @@ class OpenRouter(object):
 
             # try:
                 # from PIL import Image
-                # fle = FileAccess.open(os.path.join(TEMP_IMAGE_LOC,file_name), "rb")
+                # fle = FileAccess.open(os.path.join(TEMP_LOC,file_name), "rb")
                 # img = Image.open(BytesIO(fle.readBytes())).convert("RGBA")# Ensure image has an alpha channel
                 # fle.close()
 
@@ -126,14 +128,14 @@ class OpenRouter(object):
                 # new_img.putdata(pixels)
                 # new_img.save(os.path.join(FileAccess.translatePath(LOGO_LOC),file_name), "PNG")  # Save as PNG to preserve transparency
                 # self.log(f"_alphaImage, Image saved with transparency at: {os.path.join(LOGO_LOC,file_name)}")
-            # except FileNotFoundError: self.log(f"_alphaImage, Error: Image not found at {os.path.join(TEMP_IMAGE_LOC,file_name)}")
+            # except FileNotFoundError: self.log(f"_alphaImage, Error: Image not found at {os.path.join(TEMP_LOC,file_name)}")
             # except Exception as e: self.log(f"_alphaImage, An error occurred: {e}")
 
         IMAGE_PATH = "/path/to/your/image.jpg" # Replace with the path to your image file
         OUTPUT_PATH = "image-no-bg.png" # Desired output file name
 
         response = requests.post('https://api.remove.bg/v1.0/removebg',
-             files={'image_file': open(os.path.join(TEMP_IMAGE_LOC,file_name), 'rb')}, data={'size': 'auto'}, headers={'X-Api-Key': SETTINGS.getSetting('Remove_BG_APIKEY')})
+             files={'image_file': open(os.path.join(TEMP_LOC,file_name), 'rb')}, data={'size': 'auto'}, headers={'X-Api-Key': SETTINGS.getSetting('Remove_BG_APIKEY')})
 
         if response.status_code == requests.codes.ok:
             with open(os.path.join(LOGO_LOC,file_name), 'wb') as out:

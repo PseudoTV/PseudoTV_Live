@@ -26,13 +26,14 @@ from fileaccess  import FileAccess, FileLock
 
 class Service(object):
     monitor = MONITOR()
-    def _shutdown(self, wait=1.0) -> bool:
-        return (self.monitor.waitForAbort(wait) | (Globals._getProperty('%s.pendingShutdown'%(ADDON_ID),False)))
+    def _shutdown(self, wait=CPU_CYCLE) -> bool:
+        return (self.monitor.waitForAbort(wait) | (Globals._getEXTProperty('%s.pendingShutdown'%(ADDON_ID),False)))
     def _interrupt(self) -> bool:
-        return (Globals._getProperty('%s.pendingShutdown'%(ADDON_ID),False) | Globals._getProperty('%s.pendingRestart'%(ADDON_ID),False) | Globals._getProperty('%s.pendingInterrupt'%(ADDON_ID),False))
-    def _suspend(self, wait=1.0) -> bool:
-        return Globals._getProperty('%s.pendingSuspend'%(ADDON_ID),False)
-    def _sleep(self, wait=1.0):
+        return (Globals._getEXTProperty('%s.pendingShutdown'%(ADDON_ID),False) | Globals._getEXTProperty('%s.pendingRestart'%(ADDON_ID),False) | Globals._getEXTProperty('%s.pendingInterrupt'%(ADDON_ID),False))
+    def _suspend(self, wait=CPU_CYCLE) -> bool:
+        if wait > 0: self._sleep(wait)
+        return Globals._getEXTProperty('%s.pendingSuspend'%(ADDON_ID),False)
+    def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
             else: wait -= CPU_CYCLE
@@ -68,7 +69,7 @@ class Cache(object):
         self.cache = _Cache(service=self.service)
         self.cache.enable_mem_cache = mem_cache
         # disable_cache is True if explicitly passed OR addon settings say so
-        self.disable_cache          = (disable_cache or REAL_SETTINGS.getSettingBool('Disable_Cache'))
+        self.disable_cache = (disable_cache or REAL_SETTINGS.getSettingBool('Disable_Cache'))
         self.log('__init__, mem_cache = %s, disable_cache = %s' % (mem_cache, disable_cache))
 
 
@@ -101,30 +102,12 @@ class Cache(object):
 
 
 class _Cache(object):
-    _cache_idx           = deque()
-    _busy_tasks          = []
-    enable_mem_cache     = False
-    window               = None
-    global_checksum      = ADDON_VERSION
-    _auto_clean_interval = datetime.timedelta(hours=int((REAL_SETTINGS.getSetting('Max_Days') or "3")))
-
-    def __init__(self, service=None, winID=10000):
-        self.max_bytes = _Cache._getFreeMEM()
-        self.service   = service
-        self.monitor   = service.monitor
-        self.window    = xbmcgui.Window(winID)
-        self.dbfile    = FileAccess.translatePath(os.path.join(REAL_SETTINGS.getSetting('User_Folder'),'cache.db'))
-        self.log('__init__, max_bytes = %s, winID = %s, dbfile = %s' % (self.max_bytes, winID, self.dbfile))
-        self.chkCleanup()
-
-
-    def __del__(self):
-        try: self.chkCleanup()
-        except Exception: pass
-
-
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s' % (self.__class__.__name__, msg), level)
+    _lock       = RLock() 
+    _exit       = False
+    _database   = None
+    _cache_idx  = deque()
+    global_checksum  = ADDON_VERSION
+    enable_mem_cache = False
 
 
     @staticmethod
@@ -134,72 +117,84 @@ class _Cache(object):
         return floor(free * (REAL_SETTINGS.getSettingInt('Cache_MEM_Limit') / 100)) * 1024 * 1024
         
         
+    def __init__(self, service=None, winID=10000):
+        self.service   = service
+        self.monitor   = service.monitor
+        self.window    = xbmcgui.Window(winID)
+        self.max_bytes = _Cache._getFreeMEM()
+        self.dbfile    = FileAccess.translatePath(os.path.join(REAL_SETTINGS.getSetting('User_Folder'), 'cache.db'))
+        self._auto_clean_interval = int(REAL_SETTINGS.getSetting('Max_Days') or "3") * 86400 
+        self.log('__init__, max_bytes = %s' % self.max_bytes)
+
+
+    def __del__(self):
+        if not self._exit:
+            self._close()
         
-    def chkCleanup(self):
-        cur_time     = datetime.datetime.now()
-        lastexecuted = Globals._getProperty("%s.cache.lastexecuted"%(ADDON_ID))
-        if not lastexecuted: Globals._setProperty("%s.cache.lastexecuted"%(ADDON_ID), repr(cur_time))
-        elif (eval(lastexecuted) + self._auto_clean_interval) < cur_time:
-            self._cleanUP()
+        
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log('%s: %s' % (self.__class__.__name__, msg), level)
+
+
+    def _open(self):
+        with self._lock:
+            retries = 0
+            while not self.monitor.abortRequested() and retries < LOCK_MAX_FILE_TIMEOUT:
+                try:
+                    _database = sqlite3.connect(self.dbfile, timeout=30, check_same_thread=False)
+                    _database.execute("PRAGMA journal_mode=WAL;")
+                    _database.execute("PRAGMA synchronous=NORMAL;")
+                    _database.execute("""
+                        CREATE TABLE IF NOT EXISTS cache(
+                            id TEXT UNIQUE, 
+                            expires INTEGER, 
+                            data BLOB, 
+                            checksum INTEGER
+                        )""")
+                    _database.commit()
+                    return _database
+                except sqlite3.OperationalError:
+                    if self.service._sleep(0.5): break
+                    retries += 1
+                except Exception as e: 
+                    self.log("_open failed: %s" % str(e), xbmc.LOGERROR)
+                    break
+                    
+
+    def _execute_sql(self, query, data=None):
+        with self._lock:
+            if self._database is None: self._database = self._open()
+            if self._database:
+                if isinstance(data, list): result = self._database.executemany(query, data)
+                elif data:                 result = self._database.execute(query, data)
+                else:                      result = self._database.execute(query)
+                self._database.commit()
+                return result
 
 
     def get(self, endpoint, checksum=""):
         checksum = self.getChecksum(checksum)
         cur_time = self.getTimestamp(datetime.datetime.now())
-        result   = None
-        if self.enable_mem_cache: result = self._getMEM(endpoint, checksum, cur_time)
-        if result is None:        result = self._getDB(endpoint, checksum, cur_time)
-        return result
+        with self._lock:
+            if self.enable_mem_cache:
+                result = self._getMEM(endpoint, checksum, cur_time)
+                if result: return result
+            return self._getDB(endpoint, checksum, cur_time)
 
 
     def set(self, endpoint, data, checksum="", expiration=datetime.timedelta(days=30)):
-        task_name = "set.%s" % endpoint
-        self._busy_tasks.append(task_name)
         checksum = self.getChecksum(checksum)
         expires  = self.getTimestamp(datetime.datetime.now() + expiration)
-        if self.enable_mem_cache: self._setMEM(endpoint, checksum, expires, data)
-        self._setDB(endpoint, checksum, expires, data)
-        self._busy_tasks.remove(task_name)
+        with self._lock:
+            if self.enable_mem_cache and not self._exit:
+                self._setMEM(endpoint, checksum, expires, data)
+            query = "INSERT OR REPLACE INTO cache(id, expires, data, checksum) VALUES (?, ?, ?, ?)"
+            self._execute_sql(query, (endpoint, expires, FileAccess.dumpPICKLE(data), checksum))
 
 
     def clr(self, endpoint, wait=15):
-        self._execute_sql('DELETE FROM cache WHERE id LIKE ?', (endpoint + '%',))
-
-
-    def _getMEM(self, endpoint, checksum, cur_time):
-        result = None
-        try: 
-            cachedata = FileAccess._decodeString(Globals._getProperty('%s.%s'%(ADDON_ID,endpoint)))
-            if cachedata[0] > cur_time and not checksum or checksum == cachedata[2]: result = cachedata[1]
-        except Exception as e: pass
-        return result
-
-
-    def _setMEM(self, endpoint, checksum, expires, data):
-        try: 
-            string_text = FileAccess._encodeString((expires, data, checksum))
-            string_size = sys.getsizeof(string_text)
-            if string_size > self.max_bytes: raise Exception(f"_setMEM, {endpoint} too large for cache limit {self.max_bytes}!")
-            else:
-                Globals._setProperty('%s.%s'%(ADDON_ID,endpoint), string_text)
-                self._cache_idx.append((endpoint, string_size))
-                self._trimMEM()
-        except Exception as e: self.log("_setMEM, failed! %s"%(e), xbmc.LOGERROR)
-
-
-    def _getSize(self):
-        return sum(size for _, size in self._cache_idx)
-
-
-    def _trimMEM(self):
-        # While current size exceeds limit, remove the oldest (leftmost) items
-        while not self.monitor.abortRequested() and self._getSize() > self.max_bytes:
-            try:
-                endpoint, removed_size = self._cache_idx.popleft().items()
-                Globals._clrProperty('%s.%s'%(ADDON_ID,endpoint))
-                self.log(f"_trimMEM, {endpoint} removed {removed_size} bytes from memory!")
-            except Exception as e: self.log("_trimMEM, failed! %s"%(e), xbmc.LOGERROR)
-        self.log(f'_trimMEM, {self._getSize()}/{self.max_bytes} available bytes')
+        query = "DELETE FROM cache WHERE id LIKE ?'"
+        self._execute_sql(query, (endpoint + '%',))
 
 
     def _getDB(self, endpoint, checksum, cur_time):
@@ -212,95 +207,89 @@ class _Cache(object):
                 if not checksum or cache_data[2] == checksum:
                     try: 
                         result = FileAccess.loadPICKLE(cache_data[1])
-                        if self.enable_mem_cache: self._setMEM(endpoint, checksum, cache_data[0], result)
+                        if self.enable_mem_cache and not self._exit: self._setMEM(endpoint, checksum, cache_data[0], result)
                     except Exception as e: self.log("_getDB, failed! %s"%(e), xbmc.LOGERROR)
         return result
 
 
-    def _setDB(self, endpoint, checksum, expires, data):
-        query = "INSERT OR REPLACE INTO cache( id, expires, data, checksum) VALUES (?, ?, ?, ?)"
-        try: self._execute_sql(query, (endpoint, expires, FileAccess.dumpPICKLE(data), checksum))
-        except Exception as e: self.log("_setDB, failed! %s"%(e), xbmc.LOGERROR)
+    def _getMEM(self, endpoint, checksum, cur_time):
+        result = None
+        try: 
+            cachedata = FileAccess._decodeString(Globals._getEXTProperty('%s.%s'%(ADDON_ID,endpoint)))
+            if cachedata[0] > cur_time and not checksum or checksum == cachedata[2]: 
+                result = cachedata[1]
+        except Exception as e: pass
+        return result
 
 
-    def _cleanUP(self):
-        self._busy_tasks.append(__name__)
+    def _setMEM(self, endpoint, checksum, expires, data):
+        """Thread-safe memory allocation with FIFO eviction."""
+        try:
+            encoded_data = FileAccess._encodeString((expires, data, checksum))
+            item_size = sys.getsizeof(encoded_data)
+            if item_size > self.max_bytes: return
+            with self._lock:
+                Globals._setEXTProperty('%s.%s' % (ADDON_ID, endpoint), encoded_data)
+                self._cache_idx.append((endpoint, item_size))
+                self._trimMEM()
+        except Exception as e:
+            self.log("_setMEM failed: %s" % e)
+
+
+    def _trimMEM(self):
+        """Evicts oldest items until memory usage is under max_bytes."""
+        current_total = sum(size for _, size in self._cache_idx)
+        while self.monitor.abortRequested() and current_total > self.max_bytes and self._cache_idx:
+            endpoint, size = self._cache_idx.popleft()
+            Globals._clrEXTProperty('%s.%s' % (ADDON_ID, endpoint))
+            current_total -= size
+            self.log("_trimMEM, %s to free %s bytes" % (endpoint, size))
+
+
+    def _clean(self):
         cur_time      = datetime.datetime.now()
         cur_timestamp = self.getTimestamp(cur_time)
-        self.log("_cleanUP, running _cleanUP...")
-        
-        if not Globals._getProperty("%s.cache.cleanbusy"%(ADDON_ID)):
-            Globals._setProperty("%s.cache.cleanbusy"%(ADDON_ID), "busy")
+        self.log("_clean, running...")
+        if not Globals._getEXTProperty("%s.cache.cleanbusy"%(ADDON_ID)):
+            Globals._setEXTProperty("%s.cache.cleanbusy"%(ADDON_ID), "busy")
             query = "SELECT id, expires FROM cache"
             for cache_data in self._execute_sql(query).fetchall():
                 if self.service._shutdown(CPU_CYCLE): break
                 else:
                     cache_id      = cache_data[0]
                     cache_expires = cache_data[1]
-                    Globals._clrProperty('%s.%s'%(ADDON_ID,cache_id))
+                    Globals._clrEXTProperty('%s.%s'%(ADDON_ID,cache_id))
                     if cache_expires < cur_timestamp:
                         query = 'DELETE FROM cache WHERE id = ?'
                         self._execute_sql(query, (cache_id,))
-                        self.log("_cleanUP, delete from db %s" % cache_id)
+                        self.log("_clean, delete from db %s" % cache_id)
 
             self._execute_sql("VACUUM")
-            self._busy_tasks.remove(__name__)
-            Globals._setProperty("%s.cache.lastexecuted"%(ADDON_ID), repr(cur_time))
-            Globals._clrProperty("%s.cache.cleanbusy"%(ADDON_ID))
-            self.log("_cleanUP, auto _cleanUP done")
+            Globals._setEXTProperty("%s.cache.lastexecuted"%(ADDON_ID), repr(cur_time))
+            Globals._clrEXTProperty("%s.cache.cleanbusy"%(ADDON_ID))
+            self.log("_clean, auto _cleanUP done")
 
 
-    def _execute_sql(self, query, data=None):
-        retries = 0
-        result  = None
-        if not FileAccess.exists(CACHE_LOC):
-            FileAccess.mkdirs(CACHE_LOC)
-        try:
-            connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
-            connection.execute('SELECT * FROM cache LIMIT 1')
-        except Exception as e:
-            if FileAccess.exists(self.dbfile):
-                FileAccess.delete(self.dbfile)
-            try:
-                connection = sqlite3.connect(self.dbfile, timeout=30, isolation_level=None)
-                connection.execute( """CREATE TABLE IF NOT EXISTS cache(id TEXT UNIQUE, expires INTEGER, data TEXT, checksum INTEGER)""")
-            except Exception as e:
-                self.log("_execute_sql, Failed! while initializing connection: %s" % str(e), xbmc.LOGWARNING)
-                return
-
-        while not self.service.monitor.abortRequested() and not retries == LOCK_MAX_FILE_TIMEOUT:
-            if self.service._shutdown(CPU_CYCLE): break
-            else:
+    def _close(self):
+        with self._lock:
+            self._exit = True
+            if self._database:
                 try:
-                    with FileLock(self.dbfile):
-                        if isinstance(data, list): result = connection.executemany(query, data)
-                        elif data:                 result = connection.execute(query, data)
-                        else:                      result = connection.execute(query)
-                        return result
-                except sqlite3.OperationalError as e:
-                    retries += 1
-                    self.log("_execute_sql, retrying DB commit...", xbmc.LOGWARNING)
-                    self.service._sleep(LOCK_MAX_FILE_DELAY)
-                except Exception:
-                    self.log("_execute_sql, connection ERROR ! -- %s" % str(e), xbmc.LOGERROR)
-                    break
+                    self._clean()
+                    self._database.commit()
+                    self._database.close()
+                except: pass
+                self._database = None
+            self._exit = False
+
                     
-        if connection:
-            connection.close()
-            del connection
-
-
     @staticmethod
     def getTimestamp(date_time):
-        try:
-            return int(date_time.timestamp())
-        except Exception:
-            return int(time.mktime(date_time.timetuple()))
+        try:              return int(date_time.timestamp())
+        except Exception: return int(time.mktime(date_time.timetuple()))
 
 
     def getChecksum(self, stringinput):
-        # return simple summed-ord checksum; include global checksum if present
         if not stringinput and not self.global_checksum: return 0
-        if self.global_checksum: combined = "%s-%s" % (self.global_checksum, stringinput)
-        else:                    combined = str(stringinput)
-        return sum(map(ord, combined))
+        combined = "%s-%s" % (self.global_checksum, stringinput) if self.global_checksum else str(stringinput)
+        return abs(hash(combined)) % (10**8)

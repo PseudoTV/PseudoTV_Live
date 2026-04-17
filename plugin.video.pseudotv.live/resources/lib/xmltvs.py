@@ -261,15 +261,17 @@ class XMLTVS(object):
         holiday = Seasonal().getHoliday()
         
         def __filterProgrammes(program):
-            citem    = Globals._decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
-            seasonal = citem.get('rules',{}).get(800,{}).get('values',{}).get(0,[{}])[0].get('holiday',{})
-            stopTime = program.get('stop',now).rstrip()
-            if seasonal and seasonal.get('name',str(random.random())) != holiday.get('name'):
-                self.log('[%s] cleanProgrammes, __filterProgrammes removing expired holiday (%s)'%(citem.get('id'),seasonal))
-                return None
-            elif strpTime(stopTime,DTFORMAT) < now: 
-                self.log('[%s] cleanProgrammes, __filterProgrammes removing expired programmes (%s)'%(citem.get('id'),stopTime))
-                return None  # remove expired content, todo ignore "recordings" ie. media=True
+            try:
+                citem    = Globals._decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
+                seasonal = citem.get('rules',{}).get(800,{}).get('values',{}).get(0,[{}])[0].get('holiday',{})
+                stopTime = program.get('stop',now).rstrip()
+                if seasonal and seasonal.get('name',str(random.random())) != holiday.get('name'):
+                    self.log('[%s] cleanProgrammes, __filterProgrammes removing expired holiday (%s)'%(citem.get('id'),seasonal))
+                    return None
+                elif strpTime(stopTime,DTFORMAT) < now: 
+                    self.log('[%s] cleanProgrammes, __filterProgrammes removing expired programmes (%s)'%(citem.get('id'),stopTime))
+                    return None  # remove expired content, todo ignore "recordings" ie. media=True
+            except Exception as e: self.log(f"__filterProgrammes, failed!\n{e}", xbmc.LOGWARNING)
             return program
             
         tmpProgrammes = [program for program in [__filterProgrammes(program) for program in programmes] if program is not None]
@@ -335,7 +337,7 @@ class XMLTVS(object):
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
         
-        item['thumb']                = Globals._getThumb(fItem,EPG_ARTWORK) #unify thumbnail by user preference 
+        item['thumb']                = Globals._getThumb(fItem,EPG_ARTWORK)            #unify thumbnail by user preference 
         fItem.get('art',{})['thumb'] = Globals._getThumb(fItem,{0:1,1:0}[EPG_ARTWORK]) #unify thumbnail artwork, opposite of EPG_Artwork
          
         if item['type'] == 'movie': item['date'] = (fItem.get('premiered')  or fItem.get('releasedate') or fItem.get('firstaired'))

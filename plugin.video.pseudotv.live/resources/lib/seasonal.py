@@ -121,7 +121,7 @@ class Seasonal(object):
         return FileAccess.getJSON(SEASONS).get(month,{})
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getInstanceID())
+    @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getProcessID())
     def getHoliday(self, nearest=SETTINGS.getSettingBool('Nearest_Holiday')):
         """
         Retrieves the current or nearest holiday based on user settings.

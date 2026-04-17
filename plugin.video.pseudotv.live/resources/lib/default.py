@@ -35,22 +35,28 @@ if __name__ == '__main__':
             except: 
                 sysARG  = ['plugin://plugin.video.pseudotv.live/', '1', sys.argv[1], 'resume:false']
                 sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-            log(f'Default: __main__, mode = {sysInfo.get('mode')}, argv = {sysARG}')
+            log(f'Default: __main__, mode = {sysInfo.get("mode")}, argv = {sysARG}')
             
             if sysInfo.get('mode') is None:
                 xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
-                if Globals._getProperty('has.Channels') == "true": Globals._openGuide()
-                else:                                              Globals._openSettings()
+                if Globals._getEXTProperty('%s.%s'%(ADDON_ID, 'has.Channels')) == "true":
+                    Globals._openGuide()
+                else:
+                    Globals._openSettings()
+                    
             elif any(item in sysARG[2] for item in ['{catchup-id}', '{utc}', '{duration}', '{utcend}']):
-                Globals._setProperty('chkPVRRefresh',"true")
+                Globals._notificationDialog(LANGUAGE(32129)%(ADDON_NAME,PVR_CLIENT_NAME))
+                Globals._setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
                 xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())
+                
             else:
                 try:    fitem, nitem = LISTITEMS.buildDictListItem(sys.listitem), {}
                 except: fitem, nitem = Globals._decodePlot(Globals._getInfoLabel('Plot')), Globals._decodePlot(Globals._getInfoLabel('NextPlot'))
                 chid, vid   = (sysInfo.get("chid")  or fitem.get('citem',{}).get('id')), FileAccess._decodeString(sysInfo.get("vid",""))
                 name, title = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ChannelName')), (Globals._unquoteString(sysInfo.get('title','')) or Globals._getInfoLabel('label'))
                 sysInfo.update({'mode':sysInfo.get('mode'),'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':vid,'name':name,'title':title,'radio':sysInfo.get('mode') == "radio"})
-                _run(sysInfo.get('mode'), sysInfo)
+                threadit(_run)(sysInfo.get('mode'), sysInfo)
+                
     except Exception as e: 
         log(f'Default: __main__, failed! {e}', xbmc.LOGERROR)
         Globals._notificationDialog(LANGUAGE(30079))

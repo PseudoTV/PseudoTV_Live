@@ -31,7 +31,7 @@ class FileAccess(object):
     def _getMD5(text):
         if not isinstance(text, (str, bytes, bytearray)): text = FileAccess.dumpPICKLE(text)
         if isinstance(text, str): text = text.encode(DEFAULT_ENCODING)
-        return hashlib.md5(text).hexdigest().upper()
+        return hashlib.md5(text).hexdigest()
 
 
     @staticmethod
@@ -141,6 +141,22 @@ class FileAccess(object):
 
 
     @staticmethod
+    def setURL(url, file):
+        try:
+            req = urllib.request.Request(url, headers=HEADER)
+            with urllib.request.urlopen(req) as response:
+                with FileAccess.stream(file, 'w') as f:
+                    while not MONITOR().abortRequested():
+                        chunk = response.read(8192)
+                        if not chunk: break
+                        f.write(chunk)
+            return True
+        except Exception as e:
+            log('FileAccess: setURL failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
+            return False
+
+
+    @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):
         # monitor    = MONITOR()
         # start_time = time.time()
@@ -236,6 +252,7 @@ class FileAccess(object):
 
     @staticmethod
     def move(orgfilename, newfilename):
+        if FileAccess.exists(newfilename): FileAccess.delete(newfilename)
         log('FileAccess: moving %s to %s'%(orgfilename,newfilename))
         if FileAccess.copy(orgfilename, newfilename):
             return FileAccess.delete(orgfilename)
@@ -249,16 +266,17 @@ class FileAccess(object):
         
     @staticmethod
     def exists(path):
-        if path.startswith('stack://'):
-            try: path = (path.split('stack://')[1].split(' , '))[0]
-            except Exception as e: log('FileAccess: exists failed! %s'%(e), xbmc.LOGERROR)
-        try:
-            root, ext = os.path.splitext(path)
-            if not ext and not path.endswith(("/","\\")): 
-                path = os.path.join(path,'')
-            exists = xbmcvfs.exists(path)
-        except UnicodeDecodeError:
-            exists = os.path.exists(xbmcvfs.translatePath(path))
+        filepath = path
+        if filepath.startswith('stack://'):
+            try: filepath = (filepath.split('stack://')[1].split(' , '))[0]
+            except Exception: pass
+        exists = xbmcvfs.exists(filepath)
+        if not exists and not filepath.endswith('\\'):
+            filepath = os.path.join(filepath,'')
+            exists = os.path.exists(filepath)
+            if not exists and not filepath.endswith('\\'):
+                filepath = xbmcvfs.translatePath(filepath)
+                exists = os.path.exists(filepath)
         log('FileAccess: path = %s, exists = %s'%(path,exists))
         return exists
 
@@ -469,22 +487,27 @@ class FileLock(object):
             start_time = time.time()
             while not self.monitor.abortRequested():
                 try:
-                    self.fd = FileAccess.open(self.lockfile, 'w')
-                    self.is_locked = True #moved to ensure tag only when locked
+                    if not self.is_locked and FileAccess.exists(self.lockfile):
+                        FileAccess.delete(self.lockfile)
+                    else:
+                        self.fd = FileAccess.open(self.lockfile, 'w')
+                        self.is_locked = True #moved to ensure tag only when locked
+                        break
+                except Exception as e: log("FileLock, Failed! %s"%(e), xbmc.LOGERROR)
+                if self.monitor.waitForAbort(self.delay): 
+                    self.log("FileLock: Could not acquire lock.")
                     break
-                except Exception as e:
-                    log("FileLock, Failed! %s"%(e), xbmc.LOGERROR)
-                    if self.timeout is None:                         raise Exception("FileLock: Could not acquire lock.\n%s"%(e))
-                    elif (time.time() - start_time) >= self.timeout: raise Exception("FileLock: Timeout occurred.\n%s"%(e))
-                    elif self.monitor.waitForAbort(self.delay):      break
+                elif (time.time() - start_time) >= self.timeout: 
+                    self.log("FileLock: Timeout occurred.")
+                    break
      
  
     def release(self):
-        if self.is_locked:
+        if self.is_locked: 
             if hasattr(self.fd, 'close'): 
                 self.fd.close()
             self.is_locked = False
-        FileAccess.delete(self.lockfile)
+            FileAccess.delete(self.lockfile)
  
  
     def __enter__(self):

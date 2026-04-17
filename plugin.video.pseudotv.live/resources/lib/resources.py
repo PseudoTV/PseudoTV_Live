@@ -24,7 +24,7 @@ from intergration import OpenRouter
 
 # Tunable: maximum number of entries to keep in the in-memory image cache.
 IMAGE_CACHE_MAX = CHANNEL_LIMIT
-LOCAL_FOLDERS   = [LOGO_LOC, IMAGE_LOC, TEMP_IMAGE_LOC]
+LOCAL_FOLDERS   = [LOGO_LOC, IMAGE_LOC, TEMP_LOC]
 
 # Precompile regexes used across calls
 _YEAR_RE      = re.compile(r'\b\d{4}\b')
@@ -34,16 +34,18 @@ _MULTI_WS_RE  = re.compile(r'\s+')
 
 class Service(object):
     from jsonrpc import JSONRPC
-    jsonRPC = JSONRPC()
-    player  = PLAYER()
-    monitor = MONITOR()
-    def _shutdown(self, wait=1.0) -> bool:
+    jsonRPC    = JSONRPC()
+    player     = PLAYER()
+    monitor    = MONITOR()
+    
+    def _shutdown(self, wait=CPU_CYCLE) -> bool:
         return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
         return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
-    def _suspend(self, wait=1.0) -> bool:
+    def _suspend(self, wait=CPU_CYCLE) -> bool:
+        # if wait > 0: self._sleep(wait)
         return PROPERTIES.isPendingSuspend()
-    def _sleep(self, wait=1.0):
+    def _sleep(self, wait=CPU_CYCLE):
         # use a small cpu-cycle sleep loop but avoid heavy operations inside
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
@@ -61,19 +63,16 @@ class Resources(object):
         self.seasonal    = Seasonal(cache=service.jsonRPC.cache)
         self.holiday     = self.seasonal.getHoliday()
         self.remoteHost  = PROPERTIES.getRemoteHost()
-        self.instanceID  = PROPERTIES.getInstanceID()
-        # self.openRouter  = OpenRouter(cache=service.jsonRPC.cache)
-        self.imageCache  = OrderedDict(SETTINGS.getCacheSetting('imageCache'  ) or {})
-        self.pruneCache()
+        self.processID  = PROPERTIES.getProcessID()
+        self.openRouter  = OpenRouter(cache=service.jsonRPC.cache, jsonRPC=service.jsonRPC)
         
-
-    def __del__(self):
         try:
-            SETTINGS.setCacheSetting('imageCache', dict(self.imageCache))
-            self.log(f'__del__, imageCache = {len(self.imageCache)}')
-        except: pass
-
-
+            self.imageCache  = service.imageCache 
+            self.pruneCache()
+        except:
+            self.imageCache = OrderedDict(SETTINGS.getCacheSetting('imageCache') or {})
+        
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -89,28 +88,32 @@ class Resources(object):
 
     def queueLogo(self, chname):
         if hasattr(self.service,'logoQue'):
-            try: self.service.logoQue.add(FileAccess.dumpJSON({'name': chname}))
-            except Exception as e: self.log(f'queueLogo failed: {e}', xbmc.LOGWARNING)
-        return 'http://%s/logos/%s?%s'%(self.remoteHost,Globals._quoteString(chname),self.instanceID) # host channel logos
+            try: self.service.logoQue.add(chname)
+            except Exception as e: self.log(f'queueLogo failed!\n{e}', xbmc.LOGWARNING)
+        return 'http://%s/logos/%s?%s'%(self.remoteHost,Globals._quoteString(chname),self.processID) # host channel logos
 
 
     def pruneCache(self):
         while not self.monitor.abortRequested() and len(self.imageCache) > IMAGE_CACHE_MAX:
             self.imageCache.popitem(last=False)
-        self.log(f'pruneCache, imageCache = {len(self.imageCache)}')
+            self.log(f'pruning imageCache = {len(self.imageCache)}')
 
 
     def getCache(self, chname, fallback=LOGO):
         # Use OrderedDict LRU behavior: move to end on access
-        image = self.imageCache.get(chname)
-        if image is not None:
-            try: self.imageCache.move_to_end(chname)
-            except Exception: pass
-        else: 
-            image = fallback
-            self.queueLogo(chname)
-        self.log('getCache, name = %s, image = %s'%(chname,image))
-        return image
+        try:
+            print('getCache image',type(image),image)
+            image = self.imageCache.get(chname)
+            if image is not None:
+                try: self.imageCache.move_to_end(chname)
+                except Exception: pass
+            else: 
+                image = fallback
+                self.queueLogo(chname)
+            self.log('getCache, name = %s, image = %s'%(chname,image))
+            return image
+        except Exception as e: 
+            print('getCache imageCache',type(self.imageCache),self.imageCache)
 
 
     def setCache(self, chname, image=None):
@@ -121,7 +124,7 @@ class Resources(object):
                 except Exception: pass
                 self.pruneCache()
                 self.log('setCache, name = %s, image = %s'%(chname,image))
-            except Exception as e: self.log(f'setCache failed: {e}', xbmc.LOGWARNING)
+            except Exception as e: self.log(f'setCache failed!\n{e}', xbmc.LOGWARNING)
         return image
 
 
@@ -191,7 +194,7 @@ class Resources(object):
             logos = []
             try: items = self.jsonRPC.getTVshows()
             except Exception as e:
-                self.log('getTVShowLogo: getTVshows failed: %s' % e, xbmc.LOGWARNING)
+                self.log(f'getTVShowLogo: getTVshows failed!\n{e}', xbmc.LOGWARNING)
                 return None
             
             names = self.getNames(chname, "TV Shows")
@@ -200,13 +203,11 @@ class Resources(object):
                     if name.casefold() == item.get('title','').casefold():
                         art = item.get('art', {})
                         for key in ['clearlogo','logo','logos','clearart','icon']:
-                            logo = art.get(key,'')
+                            logo = art.get(key,'').replace('image://DefaultFolder.png/','').rstrip('/')
                             if not logo: continue
-                            logo = logo.replace('image://DefaultFolder.png/','').rstrip('/')
-                            if logo:
-                                self.log('getTVShowLogo, found %s'%(logo))
-                                logos.append(logo)
-                                if not select: return self.cache.set(cacheName, logo, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                            self.log('getTVShowLogo, found %s'%(logo))
+                            logos.append(logo)
+                            if not select: return self.cache.set(cacheName, logo, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
             if logos: cacheResponse = self.cache.set(cacheName, logos, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
 
@@ -265,50 +266,47 @@ class Resources(object):
             font_size: Font size for the text (optional).
             text_color: Color of the text (optional).
         Returns:
-            Path to generated image in TEMP_IMAGE_LOC or None on failure.
+            Path to generated image in TEMP_LOC or None on failure.
         """
-        if not SETTINGS.hasAddon('script.module.pil'):
-            return None
-
-        try:
-            from PIL import Image, ImageDraw, ImageFont
-            fle = FileAccess.open(background, "rb")
-            try: bg_bytes = fle.readBytes()
-            finally:
-                try: fle.close()
-                except Exception: pass
-
-            img = Image.open(BytesIO(bg_bytes)).convert("RGBA")
-            draw = ImageDraw.Draw(img)
-            font = ImageFont.truetype(font_path, font_size)
-            # Use textbbox for accurate measurement including font offsets
-            bbox = draw.textbbox((0, 0), text, font=font)
-            text_width  = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
-            # Center the text; adjust by bbox origin so fonts with offsets are handled.
-            x = (img.width - text_width) // 2 - bbox[0]
-            y = (img.height - text_height) // 2 - bbox[1]
-            draw.text((x, y), text, font=font, fill=text_color)
-            # Sanitize text for filename and limit length
-            safe_name = re.sub(r'[^A-Za-z0-9_.-]', '_', text)[:200] or "image"
-            image_filename = f"{safe_name}.png"
-            image_path = os.path.join(FileAccess.translatePath(TEMP_IMAGE_LOC), image_filename)
-            # Save to a BytesIO then write using FileAccess to avoid PIL writing to paths that may not be writable directly
-            buf = BytesIO()
-            img.save(buf, format="PNG")
-            buf.seek(0)
-            out = FileAccess.open(image_path, "wb")
-            try: out.write(buf.read())
-            finally:
-                try: out.close()
-                except Exception: pass
-            return image_path
-        except Exception as e:
-            self.log(f'generateLocal failed!: {e}', xbmc.LOGWARNING)
-            return None
+        if SETTINGS.hasAddon('script.module.pil'):
+            try:
+                from PIL import Image, ImageDraw, ImageFont
+                fle = FileAccess.open(background, "rb")
+                try: bg_bytes = fle.readBytes()
+                finally:
+                    try: fle.close()
+                    except Exception: pass
+                img = Image.open(BytesIO(bg_bytes)).convert("RGBA")
+                draw = ImageDraw.Draw(img)
+                font = ImageFont.truetype(font_path, font_size)
+                # Use textbbox for accurate measurement including font offsets
+                bbox = draw.textbbox((0, 0), text, font=font)
+                text_width  = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+                # Center the text; adjust by bbox origin so fonts with offsets are handled.
+                x = (img.width - text_width) // 2 - bbox[0]
+                y = (img.height - text_height) // 2 - bbox[1]
+                draw.text((x, y), text, font=font, fill=text_color)
+                # Sanitize text for filename and limit length
+                safe_name = re.sub(r'[^A-Za-z0-9_.-]', '_', text)[:200] or "image"
+                image_filename = f"{safe_name}.png"
+                image_path = os.path.join(FileAccess.translatePath(TEMP_LOC), image_filename)
+                # Save to a BytesIO then write using FileAccess to avoid PIL writing to paths that may not be writable directly
+                buf = BytesIO()
+                img.save(buf, format="PNG")
+                buf.seek(0)
+                out = FileAccess.open(image_path, "wb")
+                try: out.write(buf.read())
+                finally:
+                    try: out.close()
+                    except Exception: pass
+                return image_path
+            except Exception as e:
+                self.log(f'generateLocal failed!\n{e}', xbmc.LOGERROR)
+                return None
 
 
     def generateOnline(self, citem, select=False):
         if self.openRouter:
             try: return self.openRouter.getImage(citem, 1, SETTINGS.getSetting('Generative_Image_Model'))
-            except Exception as e: self.log(f'generateOnline failed!: {e}', xbmc.LOGWARNING)
+            except Exception as e: self.log(f'generateOnline failed!: {e}', xbmc.LOGERROR)

@@ -99,20 +99,32 @@ def debounceit(wait=SERVICE_INTERVAL):
     def decorator(method):
         timer = None
         timer_lock = Lock()
+        monitor = MONITOR()
         @wraps(method)
         def wrapper(*args, **kwargs):
-            def __run():
-                try:
-                    with timeit(method):
-                        method(*args, **kwargs)
-                    log('%s, running %s'%(method.__qualname__.replace('.',': => -:'),timer.name))
-                except Exception as e:
-                    log('%s, failed! %s'%(method.__qualname__.replace('.',': '),e), xbmc.LOGERROR) 
             nonlocal timer
+            
+            def __run():
+                nonlocal timer
+                if monitor.abortRequested(): return
+                try:
+                    if not monitor.abortRequested():
+                        with timeit(method):
+                            method(*args, **kwargs)
+                        log('%s, running %s'%(method.__qualname__.replace('.',': => -:'),threading.current_thread().name))
+                except Exception as e: log('%s, failed! %s'%(method.__qualname__.replace('.',': '),e), xbmc.LOGERROR) 
+                finally:
+                    with timer_lock:
+                        if timer and threading.current_thread() == timer:
+                            timer = None
+            
             with timer_lock:
-                if timer is not None: timer.cancel()
+                if monitor.abortRequested(): return
+                if timer is not None:
+                    timer.cancel()           
+                            
                 timer = Timer(float(wait), __run)
-                timer.name = '%s.%s'%('debounceit',method.__qualname__.replace('.',': '))
+                timer.name = 'debounceit.%s' % (method.__qualname__.replace('.', ': '))
                 log('%s, starting %s waiting (%s)'%(method.__qualname__.replace('.',': => -:'),timer.name,wait))
                 timer.start()
         return wrapper
@@ -154,66 +166,86 @@ def executeit(method):
     return wrapper
     
 def threadit(method):
+    monitor = MONITOR()
     @wraps(method)
     def wrapper(*args, **kwargs):
+        existing_thread = None
         with wrapper._lock:
             if wrapper._active_thread and wrapper._active_thread.is_alive():
-                log('%s, joining existing Thread: %s' % (method.__qualname__.replace('.', ': '),wrapper._active_thread.name))
-                wrapper._active_thread.join(CPU_CYCLE)
+                existing_thread = wrapper._active_thread
 
-            def __run():
-                try:
+        if existing_thread:
+            log('%s, joining existing Thread: %s' % (method.__qualname__, existing_thread.name))
+            if not monitor.abortRequested():
+                existing_thread.join(CPU_CYCLE)
+
+        def __run():
+            if monitor.abortRequested(): return
+            try:
+                if not monitor.abortRequested():
                     with timeit(method):
                         method(*args, **kwargs)
                     log('%s, running %s' % (method.__qualname__.replace('.', ': => -:'), thread.name))
-                except Exception as e:
-                    log('%s, failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
-                finally:
-                    with wrapper._lock:
-                        if wrapper._active_thread == threading.current_thread():
-                            wrapper._active_thread = None
+            except Exception as e: log('%s, failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
+            finally:
+                with wrapper._lock:
+                    if wrapper._active_thread == threading.current_thread():
+                        wrapper._active_thread = None
 
-            thread = Thread(target=__run)
-            thread.name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
+        thread = Thread(target=__run)
+        thread.name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
+        thread.daemon = True
+        with wrapper._lock:
             wrapper._active_thread = thread
             thread.start()
-            log('%s, starting %s' % (method.__qualname__.replace('.', ': '), thread.name))
-            return thread 
-            
+        return thread
+
     wrapper._active_thread = None
     wrapper._lock = Lock()
     return wrapper
     
 def timerit(method):
+    monitor = MONITOR()
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
-        with wrapper._lock:  # Use wrapper's lock
-            if wrapper._active_timer is not None:
-                wrapper._active_timer.cancel()
-                log('%s, canceling existing Timer: %s' % (method.__qualname__.replace('.', ': '), wrapper._active_timer.name))
+        wrapper._session_id += 1
+        current_session = wrapper._session_id
 
-            def __run():
-                try:
+        def __run():
+            if monitor.abortRequested(): return
+            with wrapper._lock:
+                if wrapper._session_id != current_session:
+                    return
+            try:
+                if not monitor.abortRequested():
                     with timeit(method):
                         method(*args, **kwargs)
-                    log('%s, running %s' % (method.__qualname__.replace('.', ': => -:'), timer.name))
-                except Exception as e:
-                    log('%s, failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
-                finally:
-                    with wrapper._lock:
+                    log('%s, running %s' % (method.__qualname__.replace('.', ': => -:'), threading.current_thread().name))
+            except Exception as e: log('%s, failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
+            finally:
+                with wrapper._lock:
+                    if wrapper._session_id == current_session:
                         wrapper._active_timer = None
 
+        with wrapper._lock:
+            if wrapper._active_timer is not None:
+                wrapper._active_timer.cancel()
+                log('%s, canceling existing Timer' % method.__name__)
+
             timer = Timer(float(wait), __run)
-            timer.name = 'timerit.%s' % (method.__qualname__.replace('.', ': '))
+            timer.name   = 'timerit.%s'%(method.__qualname__.replace('.',': '))
+            timer.daemon = True
             wrapper._active_timer = timer
-            timer.start()
-            log('%s, starting %s wait = %s' % (method.__qualname__.replace('.', ': '), timer.name, wait))
+            if not monitor.abortRequested():
+                timer.start()
+                log('%s, starting %s wait = %s' % (method.__name__, timer.name, wait))
             return timer
 
     wrapper._active_timer = None
+    wrapper._session_id = 0
     wrapper._lock = Lock()
     return wrapper
-
+    
 def poolit(method):
     @wraps(method)
     def wrapper(items=None, wait=TIMEOUT_EXECUTORS, *args, **kwargs):

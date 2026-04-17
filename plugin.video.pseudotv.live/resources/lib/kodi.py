@@ -27,6 +27,7 @@ from cache               import Cache, cacheit
 from fileaccess          import FileAccess, FileLock
 from infotagger.listitem import ListItemInfoTag
 from json2html           import Json2Html
+from instances           import Instances
 from pool                import poolit, timerit, threadit, debounceit
 
 class Settings(object):
@@ -36,6 +37,7 @@ class Settings(object):
     
     def __init__(self):
         self.properties = Properties()
+        self.instances  = Instances(self)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -337,210 +339,80 @@ class Settings(object):
         return self.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned',state,life=datetime.timedelta(days=MAX_GUIDEDAYS)))
 
 
-    def hasWizardRun(self):
-        return self.properties.setProperty('has.wizardRun',self.getCacheSetting('has.wizardRun'))
+    def chkPVRBackend(self): 
+        self.log('chkPVRBackend')
+        if self.hasAddon(PVR_CLIENT_ID,notify=True):
+            self.instances.chkInstances(self.properties.getFriendlyName())
 
 
-    def setWizardRun(self, state=True):
-        return self.properties.setProperty('has.wizardRun',self.setCacheSetting('has.wizardRun',state))
-
-
-       
-    def _IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
-        return {'kodi_addon_instance_name'      :ADDON_NAME,
-                'kodi_addon_instance_enabled'   :'false',
-                'm3uPathType'                   :'0',
-                'm3uPath'                       :M3UFLEPATH,
-                'm3uUrl'                        :'',
-                'm3uCache'                      :'false',
-                'startNum'                      :'1',
-                'numberByOrder'                 :'false',
-                'm3uRefreshMode'                :'1',
-                'm3uRefreshIntervalMins'        :'%s'%(M3U_REFRESH),
-                'm3uRefreshHour'                :'0',
-                'connectioncheckinterval'       :'10',
-                'connectionchecktimeout'        :'20',
-                'defaultProviderName'           :ADDON_NAME,
-                'enableProviderMappings'      :'true',
-                # 'providerMappingFile'         :PROVIDERFLEPATH,#todo
-                # 'tvGroupMode'                 :'0',
-                # 'customTvGroupsFile'          :(TVGROUPFLE),#todo
-                # 'radioGroupMode'              :'0',
-                # 'customRadioGroupsFile'       :(RADIOGROUPFLE),#todo
-                'epgPathType'                   :'0',
-                'epgPath'                       :XMLTVFLEPATH,
-                'epgUrl'                        :'',
-                'epgCache'                      :'true',
-                'genresPathType'                :'0',
-                'genresPath'                    :GENREFLEPATH,
-                'genresUrl'                     :'',
-                'useEpgGenreText'               :'true',
-                'logoPathType'                  :'0',
-                'logoPath'                      :LOGO_LOC,
-                'logoBaseUrl'                   :'',
-                'logoFromEpg'                   :'2',
-                'mediaTitleSeasonEpisode'       :'true',
-                'timeshiftEnabled'              :'false',
-                'catchupEnabled'                :'true',
-                'catchupPlayEpgAsLive'          :'false',
-                'catchupWatchEpgEndBufferMins'  :'0',
-                'catchupWatchEpgBeginBufferMins':'0',
-                'useFFmpegReconnect'            :'false',
-                'useInputstreamAdaptiveforHls'  :'false',
-                'transformMulticastStreamUrls'  :'false',}
-
-
-    def setPVRPath(self, path, instance=ADDON_NAME, prompt=None):
-        settings  = self._IPTV_SIMPLE_SETTINGS()
-        nsettings = {'m3uPathType'                :'0',
-                     'm3uCache'                   :'false',
-                     'm3uPath'                    :os.path.join(path,M3UFLE),
-                     'epgPathType'                :'0',
-                     'epgCache'                   :'false',
-                     'epgPath'                    :os.path.join(path,XMLTVFLE),
-                     'genresPathType'             :'0',
-                     'genresPath'                 :os.path.join(path,GENREFLE),
-                     'logoPathType'               :'0',
-                     'logoPath'                   :os.path.join(path,'logos'),
-                     'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
-                     'kodi_addon_instance_enabled':'true'}
-        settings.update(nsettings)
-        self.log('[%s] setPVRRemote, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
-        return self.chkPluginSettings(settings, instance, prompt)
-        
-        
-    def setPVRRemote(self, host, instance=ADDON_NAME, prompt=None, cache=None):
-        if cache is None: cache = True if host != self.properties.getRemoteHost() else False
-        settings  = self._IPTV_SIMPLE_SETTINGS()
-        nsettings = {'m3uPathType'                :'1',
-                     'm3uCache'                   :'%s'%(str(cache).lower()),
-                     'm3uUrl'                     :'http://%s/%s'%(host,M3UFLE),
-                     'epgPathType'                :'1',
-                     'epgCache'                   :'%s'%(str(cache).lower()),
-                     'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
-                     'genresPathType'             :'1',
-                     'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
-                     'logoPathType'               :'1',
-                     'logoBaseUrl'                :'http://%s/logos'%(host),
-                     'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
-                     'kodi_addon_instance_enabled':'true'}
-        settings.update(nsettings)
-        self.log('[%s] setPVRRemote, %s settings = %s, cache = %s'%(PVR_CLIENT_ID, instance, nsettings, cache))
-        return self.chkPluginSettings(settings, instance, prompt)
-        
-        
     def hasPVRInstance(self, instance=ADDON_NAME):
-        instancePath = os.path.join(PVR_CLIENT_LOC,'instance-settings-%s.xml'%(self.gePVRInstance(instance)))
+        instancePath = self.instances.getPVRInstancePath(instance)
         if FileAccess.exists(instancePath):
             self.log('[%s] hasPVRInstance, instance = %s, path = %s'%(PVR_CLIENT_ID,instance, instancePath))
             return instancePath
         
-        
-    def gePVRInstance(self, instance=ADDON_NAME):
-        return int(re.sub("[^0-9]", "", FileAccess._getMD5(instance))) * 2
-        
-        
-    def findPVRInstance(self, instance=ADDON_NAME):
-        found = self.hasPVRInstance(instance)
-        if not found:
-            for file in [filename for filename in FileAccess.listdir(PVR_CLIENT_LOC)[1] if filename.endswith('.xml')]:
-                if file.startswith('instance-settings-'):
-                    try:
-                        xml = FileAccess.open(os.path.join(PVR_CLIENT_LOC,file), "r")
-                        txt = xml.read()
-                        xml.close()
-                    except Exception as e:
-                        self.log('[%s] findPVRInstance, path = %s, failed to open file = %s\n%s'%(PVR_CLIENT_ID,PVR_CLIENT_LOC,file,e))
-                        continue
-                            
-                    match = re.compile(r'<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(txt)
-                    try: name = match.group(1)
-                    except Exception:
-                        match = re.compile(r'<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(txt)
-                        try:    name = match.group(1)
-                        except Exception: name = None
-                        
-                    if instance.lower() == str(name).lower():
-                        if not found: found = os.path.join(PVR_CLIENT_LOC,file)
-                        else: #auto remove any duplicate entries with the same instance name.
-                            FileAccess.delete(os.path.join(PVR_CLIENT_LOC,file))
-                            self.log('[%s] findPVRInstance, removing duplicate entry %s'%(PVR_CLIENT_ID,file))
-                    self.log('[%s] findPVRInstance, found %s file = %s'%(PVR_CLIENT_ID,name,found))
-        return found
 
+    def setPVRPath(self, path, instance=ADDON_NAME, prompt=None):
+        settings  = self.instances.IPTV_SIMPLE_SETTINGS()
+        nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
+                     'kodi_addon_instance_enabled':'true',
+                     'm3uPathType'                :'0',
+                     'm3uPath'                    :os.path.join(path,M3UFLE),
+                     'm3uCache'                   :'false',
+                     'epgPathType'                :'0',
+                     'epgPath'                    :os.path.join(path,XMLTVFLE),
+                     'epgCache'                   :'false',
+                     'genresPathType'             :'0',
+                     'genresPath'                 :os.path.join(path,GENREFLE),
+                     'logoPathType'               :'0',
+                     'logoPath'                   :os.path.join(path,'logos')}
+        settings.update(nsettings)
+        self.log('[%s] setPVRPath, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
+        if self.chkPVRChanges(instance, settings):
+            return self.instances.setSettings(instance, settings)
+        
+        
+    def setPVRRemote(self, host, instance=ADDON_NAME, prompt=None):
+        settings  = self.instances.IPTV_SIMPLE_SETTINGS()
+        nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
+                     'kodi_addon_instance_enabled':'true',
+                     'm3uPathType'                :'1',
+                     'm3uUrl'                     :'http://%s/%s'%(host,M3UFLE),
+                     'm3uCache'                   :'true',
+                     'epgPathType'                :'1',
+                     'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
+                     'epgCache'                   :'true',
+                     'genresPathType'             :'1',
+                     'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
+                     'logoPathType'               :'1',
+                     'logoBaseUrl'                :'http://%s/logos'%(host)}
+        settings.update(nsettings)
+        self.log('[%s] setPVRRemote, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
+        if self.chkPVRChanges(instance, settings):
+            return self.instances.setSettings(instance, settings)
+        
 
-    def getPVRInstanceSettings(self, instance):
-        instanceConf = {}
-        instancePath = self.hasPVRInstance(instance)
-        self.log('[%s] getPVRInstanceSettings, instance = %s, path = %s'%(PVR_CLIENT_ID,instance,instancePath))
-        if instancePath:
-            fle = FileAccess.open(instancePath,'r')
-            lines = fle.readlines()
-            for line in lines:
-                if not 'id="' in line: continue
-                match = re.compile(r'<setting id=\"(.*)\" default=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
-                try: 
-                    instanceConf[match.group(1)] = match.group(3)
-                    self.log('[%s] getPVRInstanceSettings, setting = %s, value = %s'%(PVR_CLIENT_ID,match.group(1),match.group(3)))
-                except Exception:
-                    match = re.compile(r'<setting id=\"(.*)\">(.*?)\</setting>', re.IGNORECASE).search(line)
-                    try:
-                        instanceConf[match.group(1)] = match.group(2)
-                        self.log('[%s] getPVRInstanceSettings, setting = %s, value = %s'%(PVR_CLIENT_ID,match.group(1),match.group(2)))
-                    except Exception: pass
-            fle.close()
-        return instanceConf
-        
-        
-    def chkPluginSettings(self, nsettings, instance=ADDON_NAME, prompt=None):
+    def chkPVRChanges(self, instance=ADDON_NAME, nsettings={}, prompt=None):
         if prompt is None: prompt = not bool(self.getSettingBool('Enable_Kodi_Access'))
-        self.log('[%s] chkPluginSettings, instance = %s, prompt = %s'%(PVR_CLIENT_ID,instance,prompt))
-        addon = self.hasAddon(PVR_CLIENT_ID,notify=prompt)
-        if addon:
-            message   = []
-            osettings = self._IPTV_SIMPLE_SETTINGS()               # Default Configuration
-            osettings.update(self.getPVRInstanceSettings(instance))# User Configuration
-            for setting, nvalue in list(nsettings.items()):
-                ovalue = (osettings.get(setting) or '')
-                if str(nvalue).lower() != str(ovalue).lower(): 
-                    osettings[setting] = nvalue
-                    self.log('[%s] chkPluginSettings, setting = %s, current value = %s => %s'%(PVR_CLIENT_ID,setting,ovalue,nvalue))
-                    message.append('Modifying %s: [COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(setting,ovalue,nvalue))
-
-            if len(message) > 0:
-                if prompt:
-                    self.dialog.textviewer('%s\n\n%s'%(LANGUAGE(32035)%(addon.getAddonInfo('name')),'[CR]'.join(message)))
-                    if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon.getAddonInfo('name'))):
-                        self.dialog.notificationDialog(LANGUAGE(32046))
-                        return False
-                        
-                if self.setPVRInstanceSettings(instance, osettings):
-                    self.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
-                    return self.properties.setPropTimer('chkPVRRefresh')
-            self.log('[%s] chkPluginSettings, no changes detected!'%(PVR_CLIENT_ID))
-
-
-    def setPVRInstanceSettings(self, instance=ADDON_NAME, settings={}):
-        addon = self.hasAddon(PVR_CLIENT_ID)
-        if isinstance(addon, xbmcaddon.Addon):
-            for setting, value in list(settings.items()):
-                try:
-                    addon.setSetting(setting, value)
-                    self.log('[%s] setPVRInstanceSettings, %s = %s'%(PVR_CLIENT_ID,setting,value))
-                except Exception as e: log("[%s] setPVRInstanceSettings, failed! %s"%(PVR_CLIENT_ID,e), xbmc.LOGERROR)
-
-            # todo https://github.com/xbmc/xbmc/pull/23648
-            defaultFile = os.path.join(PVR_CLIENT_LOC,'settings.xml')
-            if FileAccess.exists(defaultFile):
-                instanceFile = os.path.join(PVR_CLIENT_LOC,'instance-settings-%s.xml'%(self.gePVRInstance(instance)))
-                if FileAccess.exists(instanceFile): FileAccess.delete(instanceFile)
-                self.log('[%s] setPVRInstanceSettings, creating %s'%(PVR_CLIENT_ID,instanceFile))
-                return FileAccess.move(defaultFile, instanceFile)
-        return False
+        xsettings = {}
+        if self.hasPVRInstance(instance):
+            xsettings.update(self.instances.getSettings(instance))
+            [nsettings.pop(setting) for setting, value in list(nsettings.items()) if value == xsettings.get(setting)]
         
-        
+        if len(nsettings) > 0:
+            if prompt:
+                changes = ['[COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(setting,xsettings.get(setting),value) for setting, value in list(nsettings.items())]
+                self.log('[%s] chkPVRChanges, instance = %s, prompt = %s, changes = %s'%(PVR_CLIENT_ID,instance,prompt,'\n'.join(changes)))
+                self.dialog.textviewer('%s\n\n%s'%(LANGUAGE(32035)%(PVR_CLIENT_NAME),'[CR]'.join(changes)))
+                if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon.getAddonInfo('name'))):
+                    self.dialog.notificationDialog(LANGUAGE(32046))
+                    return False
+            return True
+        self.log('[%s] chkPVRChanges, no changes detected!'%(PVR_CLIENT_ID))
+
+
     def getCurrentSettings(self):
-        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT']
+        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT','Autotune_Limit','Enable_Autotuned']
         return dict([(setting,self.getSetting(setting)) for setting in settings])
                
 
@@ -571,23 +443,23 @@ class Properties(object):
         log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getInstanceID(self):
-        instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
-        if not instanceID: instanceID = self.setInstanceID()
-        return instanceID
+    def getProcessID(self):
+        processID = self.getEXTProperty('%s.ProcessID'%(ADDON_ID))
+        if not processID: processID = self.setProcessID()
+        return processID
 
 
-    def setInstanceID(self):
-        self._clrTrash(self.getEXTProperty('%s.InstanceID'%(ADDON_ID),None))
-        return self.setEXTProperty('%s.InstanceID'%(ADDON_ID),FileAccess._getMD5(uuid4()))
+    def setProcessID(self):
+        self._clrTrash(self.getEXTProperty('%s.ProcessID'%(ADDON_ID),None))
+        return self.setEXTProperty('%s.ProcessID'%(ADDON_ID),FileAccess._getMD5(uuid4()))
 
 
-    def _clrTrash(self, instanceID=None): #clear abandoned properties after instanceID change
-        if instanceID:
+    def _clrTrash(self, processID=None): #clear abandoned properties after processID change
+        if processID:
             tmpDCT = self._getTrash()
-            if instanceID in tmpDCT:
-                self.log('_clrTrash, instanceID = %s'%(instanceID))
-                tmpLST = tmpDCT.pop(instanceID)
+            if processID in tmpDCT:
+                self.log('_clrTrash, processID = %s'%(processID))
+                tmpLST = tmpDCT.pop(processID)
                 for prop in tmpLST:
                     self.clrProperty(prop)
 
@@ -597,10 +469,10 @@ class Properties(object):
         except: return {}
 
 
-    def _setTrash(self, key, instanceID): #catalog instance properties that are abandoned
+    def _setTrash(self, key, processID): #catalog instance properties that are abandoned
         tmpDCT = self._getTrash()
-        if key not in tmpDCT.setdefault(instanceID,[]):
-            tmpDCT.setdefault(instanceID,[]).append(key)
+        if key not in tmpDCT.setdefault(processID,[]):
+            tmpDCT.setdefault(processID,[]).append(key)
             self.setEXTProperty('%s.TRASH'%(ADDON_ID),str(FileAccess._encodeString(tmpDCT)))
 
         
@@ -608,7 +480,7 @@ class Properties(object):
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID,key)
         if useInstance: 
             thid = threading.get_ident()
-            uuid = self.getInstanceID()
+            uuid = self.getProcessID()
             key  = '%s.%s.%s'%(key,uuid,thid)
             self._setTrash(key, uuid)
             return key, thid
@@ -617,16 +489,16 @@ class Properties(object):
 
     #GET
     def getProperty(self, key, default=''):
-        # try:
-        key, thid = self._getKey(key)
-        value = (self.window.getProperty(key) or default)
-        try: value = FileAccess._decodeString(value)
-        except (ValueError, SyntaxError): pass
-        self.log(f'[{self.winID}] getProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-        return value
-        # except Exception as e: 
-            # self.log(f"[{self.winID}] getProperty [{thid}], failed! {e} - key = [{key}]", xbmc.LOGERROR)
-            # return default
+        try:
+            key, thid = self._getKey(key)
+            value = (self.window.getProperty(key) or default)
+            try: value = FileAccess._decodeString(value)
+            except (ValueError, SyntaxError): pass
+            self.log(f'[{self.winID}] getProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+            return value
+        except Exception as e: 
+            self.log(f"[{self.winID}] getProperty [{thid}], failed! {e} - key = [{key}]", xbmc.LOGERROR)
+            return default
             
         
     def getEXTProperty(self, key, default=''):
@@ -683,6 +555,7 @@ class Properties(object):
         else:     self.clrEXTProperty('script.trakt.paused')
 
 
+    @debounceit(SERVICE_INTERVAL)
     def setPropTimer(self, key, state=True):
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
         return self.setEXTProperty(key,state)
@@ -993,7 +866,7 @@ class ListItems(object):
         except Exception as e: log("buildItemListItem, failed! %s\n%s"%(e,item), xbmc.LOGERROR)
             
                      
-    def buildMenuListItem(self, label="", label2="", icon=LOGO_COLOR, url="", info={}, art={}, props={}, offscreen=False, media='video'):
+    def buildMenuListItem(self, label="", label2="", icon=ICON, url="", info={}, art={}, props={}, offscreen=False, media='video'):
         if not art: art = {'thumb':icon,'logo':icon,'icon':icon}
         listitem = self.getListItem(label, label2, url, offscreen=offscreen)
         listitem.setIsFolder(True)
@@ -1239,7 +1112,7 @@ class Dialog(object):
             
 
     def doInfoMonitor(self):
-        self.properties.clrProperty('Kodi.montiorList')
+        self.properties.clrEXTProperty('%s.montiorList'%(ADDON_ID))
         while not self.monitor.abortRequested() and self.properties.isRunning('Kodi.toggleInfoMonitor'):
             if self.monitor.waitForAbort(float(self.settings.getSettingInt('RPC_Delay'))): break
             self.fillInfoMonitor()
@@ -1273,11 +1146,11 @@ class Dialog(object):
 
 
     def getInfoMonitor(self):
-        return self.properties.getProperty('Kodi.montiorList',{}).get('info',[])
+        return self.properties.getEXTProperty('%s.montiorList'%(ADDON_ID),{}).get('info',[])
     
     
     def setInfoMonitor(self, items):
-        return self.properties.setProperty('Kodi.montiorList',{'info':list(Globals._setDictLST(items))})
+        return self.properties.setEXTProperty('%s.montiorList'%(ADDON_ID),{'info':list(Globals._setDictLST(items))})
 
 
     def colorDialog(self, colorlist=[], preselect="", colorfile="", heading=ADDON_NAME):
@@ -1332,7 +1205,7 @@ class Dialog(object):
         if not self.properties.isRunning('Dialog.qrDialog'):
             with self.properties.chkRunning('Dialog.qrDialog'):
                 with self.builtin.busy_dialog():
-                    imagefile = os.path.join(FileAccess.translatePath(TEMP_IMAGE_LOC),'%s.png'%(FileAccess._getMD5(str(url.split('/')[-1]))))
+                    imagefile = os.path.join(FileAccess.translatePath(TEMP_LOC),'%s.png'%(FileAccess._getMD5(str(url.split('/')[-1]))))
                     if not FileAccess.exists(imagefile):
                         qrIMG = pyqrcode.create(url)
                         qrIMG.png(imagefile, scale=10)
@@ -1486,16 +1359,16 @@ class Dialog(object):
     def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=LOGO_COLOR, show=None, usethread=False):
         if show is None: show = self.settings.getSettingBool('Notify_While_Playing')
         self.log('notificationDialog: %s, show = %s'%(message,show))
-        if usethread: return self._notificationDialog(message, header, sound, time, icon, show)
+        if usethread: self._notificationDialog(message, header, sound, time, icon, show)
         else:
             ## - Builtin Icons:
             ## - xbmcgui.NOTIFICATION_INFO
             ## - xbmcgui.NOTIFICATION_WARNING
             ## - xbmcgui.NOTIFICATION_ERROR
             if show:
-                try:    self.dialog.notification(header, message, icon, time*1000, sound=False)
+                try: self.dialog.notification(header, message, icon, time*1000, sound=False)
                 except Exception: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time*1000, icon))
-            return True
+        return True
         
              
     def customSelect(self, items, header, preselect, useDetails, autoclose, multi): #todo
@@ -1661,7 +1534,7 @@ class Dialog(object):
                 npath  = None
                 lizLST = poolit(__buildListItem)(pathLST)
                 lizLST.insert(0,__buildListItem('',LANGUAGE(33113),icon=ICON,items={'key':'add','idx':0}))
-                if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,__buildListItem('',LANGUAGE(33114),icon=ICON,items={'key':'save'}))
+                if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(1,__buildListItem('[B]%s[/B]'%(LANGUAGE(32059)),LANGUAGE(33114),icon=ICON,items={'key':'save'}))
             
             select = self.selectDialog(lizLST, header, preselect=lastOPT, multi=False)
             if not select is None:

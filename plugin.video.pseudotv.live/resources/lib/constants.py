@@ -32,7 +32,7 @@ from collections           import Counter, OrderedDict, defaultdict, deque
 from ast                   import literal_eval
 from six.moves             import urllib 
 from io                    import StringIO, BytesIO
-from threading             import Lock, Thread, Event, Timer, BoundedSemaphore, enumerate as thread_enumerate
+from threading             import Lock, RLock, Thread, Event, Timer, BoundedSemaphore, enumerate as thread_enumerate
 from xml.dom.minidom       import parse, parseString, Document
 from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstringlist, fromstring, tostring, parse as ETparse
 from typing                import Dict, List, Union, Optional, Any
@@ -82,7 +82,7 @@ DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'
 BACKUP_TIME_FORMAT  = '%Y-%m-%d %I:%M %p'
 
-LOCK_MAX_FILE_TIMEOUT = 15
+LOCK_MAX_FILE_TIMEOUT = 30
 LOCK_MAX_FILE_DELAY   = 0.5
 
 LANG                = 'en' #todo parse kodi region settings
@@ -207,6 +207,7 @@ PTVL_REPO           = 'repository.pseudotv'
 PVR_CLIENT_ID       = 'pvr.iptvsimple'
 PVR_CLIENT_NAME     = 'IPTV Simple Client'
 PVR_CLIENT_LOC      = 'special://profile/addon_data/%s'%(PVR_CLIENT_ID)
+PVR_SETTINGS_XML    = os.path.join(PVR_CLIENT_LOC,'settings.xml')
 
 #docs
 README_FLE          = os.path.join(ADDON_PATH,'README.md')
@@ -214,7 +215,7 @@ CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
 #files
-M3UFLE              = 'pseudotv.m3u'
+M3UFLE              = 'pseudotv.m3u8'
 XMLTVFLE            = 'pseudotv.xml'
 GENREFLE            = 'genres.xml'
 BONJOURFLE          = 'bonjour.json'
@@ -241,18 +242,16 @@ IMG_EXTS            = ['.png','.jpg','.gif']
 TEXTURES            = 'Textures.xbt'
 
 #folders
+REMOTE_LOC          = os.path.join(ADDON_PATH,'remotes')
 IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
-REMOTE_LOC          = os.path.join(ADDON_PATH,'remotes')
 SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')
-BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
-CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
 TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
-TEMP_IMAGE_LOC      = os.path.join(TEMP_LOC,'logos')
-RESUME_LOC          = os.path.join(TEMP_LOC,'resume')
+BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
 
 #file paths
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
+YOUTUBE_COOKIES     = os.path.join(SETTINGS_LOC,'www.youtube.com_cookies.txt')
 CHANNELFLE_BACKUP   = os.path.join(BACKUP_LOC,CHANNELBACKUPFLE)
 CHANNELFLE_RESTORE  = os.path.join(BACKUP_LOC,CHANNELRESTOREFLE)
 CHANNELFLE_CHANGED  = os.path.join(BACKUP_LOC,CHANNELCHANGEDFLE)
@@ -272,6 +271,7 @@ LIBRARYFLE_DEFAULT  = os.path.join(REMOTE_LOC,LIBRARYFLE)
 CHANNELFLE_DEFAULT  = os.path.join(REMOTE_LOC,CHANNELFLE)
 GENREFLE_DEFAULT    = os.path.join(REMOTE_LOC,GENREFLE)
 PROVIDERFLE_DEFAULT = os.path.join(REMOTE_LOC,PROVIDERFLE)
+INSTANCEFLE_DEFAULT = os.path.join(REMOTE_LOC,'instance-settings-1.xml')
 
 #colors
 PRIMARY_BACKGROUND        = 'FF11375C'
@@ -307,7 +307,7 @@ LOGO_COLOR          = os.path.join(MEDIA_LOC,'logo.png')
 FANART_COLOR        = os.path.join(MEDIA_LOC,'fanart.jpg')
 LOGO_POSTER         = os.path.join(MEDIA_LOC,'poster.png')
 LOGO_LANDSCAPE      = os.path.join(MEDIA_LOC,'landscape.png')
-LOGO_SEASONAL       = os.path.join(IMAGE_LOC,'Seasonal.png')
+LOGO_SEASONAL       = os.path.join(MEDIA_LOC,'Seasonal.png')
 LOGO_HOST           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
 
 #skins
@@ -317,7 +317,6 @@ REPLAY_XML     = '%s.restart.xml'%(ADDON_ID)
 ONNEXT_XML      = '%s.onnext.xml'%(ADDON_ID)
 BACKGROUND_XML  = '%s.background.xml'%(ADDON_ID)
 MANAGER_XML     = '%s.manager.xml'%(ADDON_ID)
-WIZARD_XML      = '%s.wizard.xml'%(ADDON_ID)
 OVERLAYTOOL_XML = '%s.overlaytool.xml'%(ADDON_ID)
 DIALOG_SELECT   = '%s.dialogselect.xml'%(ADDON_ID)
 

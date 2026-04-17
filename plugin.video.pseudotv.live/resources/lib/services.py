@@ -24,6 +24,7 @@ from rules      import RulesList
 from tasks      import Tasks
 from jsonrpc    import JSONRPC
 
+
 class Player(xbmc.Player):
     pendingItem       = {}
     playingItem       = {}
@@ -279,9 +280,8 @@ class Player(xbmc.Player):
 
     def _onIdle(self):
         def __chkPlayback():
-            if self.pendingItem.get('invoked',-1) > 0:
-                if not BUILTIN.isBusyDialog() and (time.time() - self.pendingItem.get('invoked',-1)) > SETTINGS.getSettingInt('Playback_Timeout'):
-                    self.onPlayBackError()
+            if self.pendingItem.get('invoked',-1) > 0 and not BUILTIN.isBusyDialog() and (time.time() - self.pendingItem.get('invoked',-1)) > SETTINGS.getSettingInt('Playback_Timeout'):
+                self.onPlayBackError()
 
         def __chkCallback():
             if not self.playingItem.get('callback'):
@@ -291,7 +291,7 @@ class Player(xbmc.Player):
 
         def __chkBackground():
             remaining = floor(self.getRemainingTime())
-            if floor(remaining) <= (OSD_TIMER*2):
+            if remaining <= (OSD_TIMER*2):
                 self.log('__chkBackground, remaining = %s'%(remaining))
                 self.toggleBackground(self.enableOverlay)
 
@@ -306,8 +306,7 @@ class Player(xbmc.Player):
                     self.log('__chkResumeTime, resume = %s'%(self.playingItem.get('resume')))
 
         def __chkOverlay():
-            played = ceil(self.getPlayedTime())
-            if not self.playingItem.get('isfiller',True) and played > self.minDuration: 
+            if not self.playingItem.get('isfiller',True) and ceil(self.getPlayedTime()) > self.minDuration: 
                 self.toggleOverlay(self.enableOverlay)
 
         def __chkOnNext():
@@ -398,6 +397,10 @@ class Monitor(xbmc.Monitor):
 
     def chkIdle(self):
         self.idleThread = Thread(target=self._chkIdle)
+        if self.idleThread.is_alive():
+            if hasattr(self.idleThread, 'cancel'): self.idleThread.cancel()
+            try: self.idleThread.join(1.0)
+            except Exception: pass
         self.idleThread.daemon = True
         self.idleThread.start()
             
@@ -423,7 +426,7 @@ class Monitor(xbmc.Monitor):
         self.log("onNotification, sender %s - method: %s  - data: %s" % (sender, method, data))
             
 
-    @debounceit(15)
+    @debounceit(SERVICE_INTERVAL)
     def onSettingsChanged(self):
         self.log('onSettingsChanged') 
         self.service._que(self._updatePlayerSettings)
@@ -465,6 +468,8 @@ class Service(object):
     jsonQue          = set(SETTINGS.getCacheSetting('jsonQue') or [])
     postQue          = set(SETTINGS.getCacheSetting('postQue') or [])
     logoQue          = set(SETTINGS.getCacheSetting('logoQue') or [])
+    imageCache       = OrderedDict(SETTINGS.getCacheSetting('imageCache') or {})
+
 
     def __init__(self):
         self.jsonRPC     = JSONRPC(service=self)
@@ -479,9 +484,10 @@ class Service(object):
 
     def __del__(self):
         try:
-            SETTINGS.setCacheSetting('jsonQue', self.jsonQue)
-            SETTINGS.setCacheSetting('postQue', self.postQue)
-            SETTINGS.setCacheSetting('logoQue', self.logoQue)
+            SETTINGS.setCacheSetting('jsonQue'   , self.jsonQue)
+            SETTINGS.setCacheSetting('postQue'   , self.postQue)
+            SETTINGS.setCacheSetting('logoQue'   , self.logoQue)
+            SETTINGS.setCacheSetting('imageCache', self.imageCache)
         except Exception: pass
 
 
@@ -526,19 +532,20 @@ class Service(object):
         return self.pendingInterrupt
     
 
-    def _suspend(self, wait=0) -> bool: #tasks continue
+    def _suspend(self, wait=CPU_CYCLE) -> bool: #tasks continue
         pendingSuspend = any([BUILTIN.isSettingsOpened(), PROPERTIES.isPendingSuspend(),])
         if pendingSuspend != self.pendingSuspend:
             self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))
+        if wait > 0: self._sleep(wait)
         return self.pendingSuspend
         
 
-    def _sleep(self, wait=1.0): #waitForAbort replacement for tasks
+    def _sleep(self, wait=CPU_CYCLE): #waitForAbort replacement for tasks
         while not self.monitor.abortRequested() and wait > 0:
             if any([self.monitor.waitForAbort(CPU_CYCLE),self.pendingInterrupt]): return True
             else: wait -= CPU_CYCLE
-        if wait > 0: self.log('_wait, remaining = %s'%(wait))
+        if wait > 0: self.log('_sleep, remaining = %s'%(wait))
         return False
                     
 
@@ -556,9 +563,9 @@ class Service(object):
                 self.isScanning = BUILTIN.isScanning()
                 self.isPaused   = BUILTIN.isPaused()
                 self.isPlaying  = self.player.isPlaying()
-                if    self._shutdown() and self._interrupt() and self._sleep(): break
-                elif  self._restart()  and self._interrupt() and self._sleep(): break
-                else: self._tasks()
+                if       self._shutdown() and self._interrupt() and self._sleep(): break
+                elif     self._restart()  and self._interrupt() and self._sleep(): break
+                elif not self._isPlaying(): self._tasks()
             return self._stop(self.pendingRestart)
 
 
@@ -571,5 +578,5 @@ class Service(object):
                     try: thread.join(1.0)
                     except Exception: pass
                     self.log('_stop, closing %s...'%(thread.name))
-            PROPERTIES.setInstanceID() #clrTrash
+            PROPERTIES.setProcessID() #clrTrash
         return pendingRestart

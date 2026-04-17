@@ -42,28 +42,28 @@ class Channels(object):
 
 
     def _getCHANNELFLE(self):
-        if SETTINGS.getSettingBool('Enable_Autotuned_Channels'): return AUTOTUNEFLEPATH
+        if SETTINGS.getSettingBool('Enable_Autotuned'): return AUTOTUNEFLEPATH
         return CHANNELFLEPATH
         
         
     def _load(self) -> dict:
         channelDATA = FileAccess.getJSON(self.channelFile)
         self._setSetting()
-        self.log('_load, file = %s\nchannels = %s'%(self.channelFile,len(channelDATA.get('channels',[]))))
+        self.log('_load [%s] channels = %s'%(self.channelFile,len(channelDATA.get('channels',[]))))
         return channelDATA
     
         
     def _verify(self, channels: list=[]):
         for idx, citem in enumerate(self.channelDATA.get('channels',[])):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
-                self.log('_verify, in-valid citem [%s]\n%s'%(citem.get('id'),citem))
+                self.log('[%s] _verify in-valid\n%s'%(citem.get('id'),citem))
                 continue
             yield citem
                 
                 
     def _save(self) -> bool:
-        self.log('_save, writable = %s, file = %s\nchannels = %s'%(self.writable,self.channelFile,len(self.channelDATA['channels'])))
         if self.writable:
+            self.log('_save [%s] channels = %s'%(self.channelFile,len(self.channelDATA['channels'])))
             with PROPERTIES.interruptActivity():
                 if FileAccess.setJSON(self.channelFile,self.channelDATA):
                     self._setSetting()
@@ -80,6 +80,7 @@ class Channels(object):
         
         
     def getChannels(self) -> list:
+        self.log('getChannels [%s] channels = %s'%(self.channelFile,len(self.channelDATA.get('channels',[]))))
         return sorted(self.channelDATA['channels'], key=itemgetter('number'))
         
         
@@ -100,6 +101,7 @@ class Channels(object):
         if channels is None: channels = self.channelDATA['channels']
         self.channelDATA['uuid']     = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(channels)
+        self.log('setChannels [%s] channels = %s'%(self.channelFile,len(self.channelDATA.get('channels',[]))))
         PROPERTIES.setHasChannels(len(channels)>0)
         return self._save()
         
@@ -121,7 +123,7 @@ class Channels(object):
         if isinstance(citem,list): return any([self.delChannel(channel) for channel in citem])
         try: 
             self.channelDATA['channels'].pop(self.findChannel(citem)[0])
-            self.log('[%s] delChannel, channel deleted!'%(citem['id']), xbmc.LOGINFO)
+            self.log('[%s] delChannel channel deleted!'%(citem['id']), xbmc.LOGINFO)
             return True
         except Exception: pass
     
@@ -129,7 +131,7 @@ class Channels(object):
     def addChannel(self, citem: dict={}) -> bool:
         if isinstance(citem,list): return any([self.addChannel(channel) for channel in citem])
         self.delChannel(citem)
-        self.log('addChannel, [%s] adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
+        self.log('[%s] addChannel adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
         self.channelDATA.setdefault('channels',[]).append(Globals._cleanGroups(citem))
         return True
         

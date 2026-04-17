@@ -222,7 +222,6 @@ Language IDS not found in py files, possibly only in xml: {
     "32113": "Recovering Channel",
     "32115": "Running as a client.",
     "32128": "Rebuilding Autotuned Channels",
-    "32129": "%s is missing guide data for this channel\\nPlease wait for Kodi and %s to finish updating.",
     "32130": "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled\\nIt's recommended you re-enable when finished debugging",
     "32133": "[COLOR=yellow][B]Notice!! [/B][/COLOR] Something went wrong, Please double check your PVR configurations and reboot Kodi.",
     "32134": "Playback failed! This maybe because %s is building this channel.\\nPlease check your channel settings.",

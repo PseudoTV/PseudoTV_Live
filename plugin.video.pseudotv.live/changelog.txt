@@ -1,7 +1,13 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
 v.0.7.3+nightly
+- Tweaked Image hosting.
+- Improved Kodi PVR Instance support.
 - Added Network hosted channel manger (W.I.P).
-
+- Improved MP4 duration parsing.
+- Added Support for YouTube cookies required for YouTube duration parsing.
+  1. Install a cookie saving utility to your PC browser. Ex. https://chromewebstore.google.com/detail/get-cookiestxt-locally
+  2. Log In to Youtube, then save the cookie file to '/userdata/addon_data/plugin.video.pseudotv.live/www.youtube.com_cookies.txt'.
+  
 v.0.7.2+nightly
 - Improved Channel logo detection, and logo resource selection in settings.
 - Improved A.I. Integration.
@@ -23,13 +29,13 @@ v.0.7.0+nightly
 - Improved Media duration parsing.
 - Removed Support for Lazy "Mixed" Smartplaylists as "TV/Movie" Playlists. Achieve mixed content channels via the Channel Manager.
 
-v.0.6.9-wizard
+v.0.6.9+nightly
 - Improved Asynchronous Executors.
 - Auto-tuning available in the channel manager, when no channels are configured. 
 - Channel Recovery available in the channel manager, when no channels are configured.
 - Automatic Channel backup after channel manager changes.
 
-v.0.6.8-wizard
+v.0.6.8+nightly
 - Added Kodi trailers cache to improve trailer fillers.
 - Refactored Channel building, changes impact content aggregation; see wiki for details.
 - Added "Folder Depth" to global/Adv. rules. Sets the max recursive parsing depth during folder parsing.
@@ -45,17 +51,17 @@ v.0.6.8-wizard
 - Added Artwork hosting/caching for all local logos.
 - Refactored Channel logo parsing.
 
-v.0.6.7-wizard
+v.0.6.7+nightly
 - Introduced groundwork for Artificial Intelligence Integration (Currently Unavailable). 
 
-v.0.6.6-wizard
+v.0.6.6+nightly
 - Improved Channel Manager Controls
 
 
-v.0.6.5-wizard
+v.0.6.5+nightly
 - Improved HTTP server, strengthen gzip compression support.
 
-v.0.6.4-wizard
+v.0.6.4+nightly
 - Advanced channel rules tweaked to include default values when channel rules are incorrectly configured.
 - Advanced channel rule "Quota" (498) and "PageLimit" (499) merged into a single rule "PageLimit & Padding".
 - Introduced a "Client Only" setting in "Options". This mode restricts background services to bare essentials (for PseudoTV instances not hosting channels).
@@ -64,7 +70,7 @@ v.0.6.4-wizard
 - Overhauled threading and queue management for improved efficiency.
 - Miscellaneous tweaks and enhancements.
 
-v.0.6.3-wizard
+v.0.6.3+nightly
 - Eliminated the "AutoTune" tab to be replaced it with an "Auto Tuning" wizard in "Channels" (Work In Progress).
 - Added an interleaving toggle for both "Global" and "Advanced Rules", allowing round-robin channel interleaving; see the wiki for more info.
 - Enhanced Bonjour multi-room detection.

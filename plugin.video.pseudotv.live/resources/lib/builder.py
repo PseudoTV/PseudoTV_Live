@@ -34,13 +34,14 @@ class Service(object):
     jsonRPC = JSONRPC()
     player  = PLAYER()
     monitor = MONITOR()
-    def _shutdown(self, wait=1.0) -> bool:
+    def _shutdown(self, wait=CPU_CYCLE) -> bool:
         return (self.monitor.waitForAbort(wait) or PROPERTIES.isPendingShutdown())
     def _interrupt(self) -> bool:
         return (PROPERTIES.isPendingShutdown() or PROPERTIES.isPendingRestart() or PROPERTIES.isPendingInterrupt())
-    def _suspend(self, wait=1.0) -> bool:
+    def _suspend(self, wait=CPU_CYCLE) -> bool:
+        if wait > 0: self._sleep(wait)
         return PROPERTIES.isPendingSuspend()
-    def _sleep(self, wait=1.0):
+    def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
             if (self.monitor.waitForAbort(CPU_CYCLE) or self._interrupt()): return True
             else: wait -= CPU_CYCLE
@@ -50,7 +51,6 @@ class Builder(object):
     xsp      = XSP()
     m3u      = M3U(writable=True)
     xmltv    = XMLTVS(writable=True, m3u=m3u)
-    channels = Channels(writable=True)
     seasonal = Seasonal()
     loopback = None
     
@@ -62,6 +62,7 @@ class Builder(object):
         self.monitor  = service.monitor
         self.jsonRPC  = service.jsonRPC
         self.cache    = service.jsonRPC.cache
+        self.channels = Channels(writable=True)
         self.holiday  = self.seasonal.getHoliday()
         
         #global dialog
@@ -171,11 +172,10 @@ class Builder(object):
     def buildChannels(self, channels: list=[], preview=False, silent=False):
         enableChanged = SETTINGS.getSettingBool('Enable_Changed')
         self.log('buildChannels, channels = %s'%(len(channels)))
-        if channels is None: channels = []
         def __needsUpdate(citem, now, fallback, state=True):
             #max guidedata days to seconds, minus fill buffer (12hrs) in seconds.
             last_stop = dict(self.xmltv.loadStopTimes([citem], fallback=fallback)).get(citem['id']) #check last stop times 
-            if last_stop > (now + ((MAX_GUIDEDAYS * 86400) - 43200)): state = False
+            if last_stop > (now + ((MAX_GUIDEDAYS * 86400) - 10800)): state = False
             self.log('[%s] buildChannels, __needsUpdate = %s, last_stop = %s'%(citem['id'],state, last_stop))
             return state, last_stop
             
@@ -238,13 +238,14 @@ class Builder(object):
                     self.pName   = ''
                     self.pHeader = ''
                     self.pErrors = []
+                    self.pCount  = 0
                     for idx, citem in enumerate(channels):
                         try:
                             updated      = set()
-                            self.pCount  = int(idx+1*100)//len(channels)
                             self.pMSG    = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
                             self.pHeader = ADDON_NAME
                             self.pName   = citem['name']
+                            self.pCount  = int(idx*100)//len(channels)
                             citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, Globals._cleanGroups(citem), inherited=self) #inject temporary citem changes here
                             _update, start = __needsUpdate(citem, now, fallback)
                             _changed = __hasChanged(citem, enableChanged) 

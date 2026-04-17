@@ -38,6 +38,7 @@ class Discovery(Thread):
             self.zServers  = {}
             self.zeroconf  = Zeroconf()
             self.multiroom = multiroom
+            self.jsonRPC   = multiroom.jsonRPC
 
         def log(self, msg, level=xbmc.LOGDEBUG):
             return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -48,11 +49,14 @@ class Discovery(Thread):
         def addService(self, zeroconf, type, name):
             INFO = self.zeroconf.getServiceInfo(type, name)
             if INFO:
-                server = INFO.getServer()
-                ip     = socket.inet_ntoa(INFO.getAddress())
+                server  = INFO.getServer()
+                address = INFO.getAddress()
+                if not isinstance(address, bytes):
+                    address = bytes(address)
+                ip = socket.inet_ntop(socket.AF_INET, address)
                 self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(ip,INFO.getPort()),'bonjour':'http://%s:%s/api/%s'%(ip,SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
                 self.log("addService, found zeroconf %s @ %s using bonjour %s"%(server,self.zServers[server]['host'],self.zServers[server]['bonjour']))
-                self.multiroom.addServer(Globals.requestURL(self.zServers[server]['bonjour'],cache={'cache':SETTINGS.cache, "life": datetime.timedelta(seconds=300)}))
+                self.multiroom.addServer(self.jsonRPC.requestURL(self.zServers[server]['bonjour']))
             
     def __init__(self, service=None, multiroom=None):
         Thread.__init__(self)
@@ -185,7 +189,7 @@ class MyHandler(BaseHTTPRequestHandler):
             use_compression = "gzip" in accept_encoding
             if self.path.startswith('/logos/'): # 302 Temporary Redirect
                 self.send_response(302)
-                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getCache(Globals._unquoteString(self.path.split('/logos/')[1])))}')
+                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getCache(Globals._unquoteString(self.path.split("/logos/")[1])))}')
                 self.log(f'do_GET, redirecting to http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(image)}')
                 self.end_headers()
             else: # 200 OK
@@ -194,13 +198,13 @@ class MyHandler(BaseHTTPRequestHandler):
                 elif self.path.lower() == f'/{M3UFLE.lower()}':     __sendFile(M3UFLEPATH, use_compression)
                 elif self.path.lower() == f'/{GENREFLE.lower()}':   __sendFile(GENREFLEPATH, use_compression)
                 elif self.path.lower() == f'/{XMLTVFLE.lower()}':   __sendFile(XMLTVFLEPATH, use_compression)
-                elif self.path.startswith('/images/'):              __sendFile(Globals._unquoteString(self.path.split('/images/')[1]), False)
+                elif self.path.startswith('/image/'):               __sendFile(self.path.split('/image/')[1], False)
                 else:
                     use_compression = False if self.path.endswith('.html') else use_compression
                     if self.path.lower().endswith('.json'):
                         if   self.path.lower() == f'/api/{BONJOURFLE.lower()}': __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.getBonjour(),idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
                         elif self.path.lower() == f'/api/{DBLOGSFLE.lower()}':  __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.cache.get('log.%s'%(ADDON_ID),checksum=ADDON_VERSION),idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
-                        elif self.path.lower().startswith('/api'):              __sendChunk(self.path, FileAccess.dumpJSON(FileAccess.getJSON(os.path.join(USER_LOC, self.path.replace('/api/','')))).encode(encoding=DEFAULT_ENCODING), use_compression)
+                        elif self.path.lower().startswith('/api'):              __sendChunk(self.path, FileAccess.dumpJSON(FileAccess.getJSON(os.path.join(CACHE_LOC, self.path.replace('/api/','')))).encode(encoding=DEFAULT_ENCODING), use_compression)
                         elif self.path.lower().startswith('/filelist'):         __sendChunk(self.path, FileAccess.dumpJSON(FileAccess.getJSON((os.path.join(RESUME_LOC, self.path.replace('/filelist/',''))))).encode(encoding=DEFAULT_ENCODING), use_compression)
                     elif self.path.lower().endswith('.html'):
                         if self.path.lower() == f'/{MANAGERFLE.lower()}':       __sendChunk(self.path, Channels()._channelManager(), use_compression)

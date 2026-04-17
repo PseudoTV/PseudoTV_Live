@@ -29,34 +29,45 @@ OSD_TIMER           = int((REAL_SETTINGS.getSetting('OSD_Timer')   or "5"))
 EPG_ARTWORK         = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
 
 #file paths
-USER_LOC            = REAL_SETTINGS.getSetting('User_Folder')
-LOGO_LOC            = os.path.join(USER_LOC,'logos')
-FILLER_LOC          = os.path.join(USER_LOC,'fillers')
-M3UFLEPATH          = os.path.join(USER_LOC,M3UFLE)
-XMLTVFLEPATH        = os.path.join(USER_LOC,XMLTVFLE)
-GENREFLEPATH        = os.path.join(USER_LOC,GENREFLE)
-PROVIDERFLEPATH     = os.path.join(USER_LOC,PROVIDERFLE)
-CHANNELFLEPATH      = os.path.join(USER_LOC,CHANNELFLE)
-LIBRARYFLEPATH      = os.path.join(USER_LOC,LIBRARYFLE) 
-SERVERFLEPATH       = os.path.join(USER_LOC,SERVERFLE)
-AUTOTUNEFLEPATH     = os.path.join(USER_LOC,AUTOTUNEFLE)
+CACHE_LOC           = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
+LOGO_LOC            = os.path.join(CACHE_LOC,'logos')
+FILLER_LOC          = os.path.join(CACHE_LOC,'fillers')
+RESUME_LOC          = os.path.join(CACHE_LOC,'resume')
+M3UFLEPATH          = os.path.join(CACHE_LOC,M3UFLE)
+XMLTVFLEPATH        = os.path.join(CACHE_LOC,XMLTVFLE)
+GENREFLEPATH        = os.path.join(CACHE_LOC,GENREFLE)
+PROVIDERFLEPATH     = os.path.join(CACHE_LOC,PROVIDERFLE)
+CHANNELFLEPATH      = os.path.join(CACHE_LOC,CHANNELFLE)
+LIBRARYFLEPATH      = os.path.join(CACHE_LOC,LIBRARYFLE) 
+SERVERFLEPATH       = os.path.join(CACHE_LOC,SERVERFLE)
+AUTOTUNEFLEPATH     = os.path.join(CACHE_LOC,AUTOTUNEFLE)
+
+
 
 class Globals:
     @staticmethod
-    def _getProperty(key, default=''):
-        value = (xbmcgui.Window(10000).getProperty('%s.%s'%(ADDON_ID, key)) or default)
-        log(f'Globals: [10000] _getProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-        return value 
+    def _getEXTProperty(key, default=''):
+        try:
+            value = (xbmcgui.Window(10000).getProperty(key) or default)
+            try: value = literal_eval(value)
+            except (ValueError, SyntaxError): pass
+            if not '.TRASH' in key: log(f'Globals: [10000] _getEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+            return value 
+        except Exception as e: 
+            log(f'Globals: [10000] _getEXTProperty, failed! key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}\n{e}')
+            return default
 
     @staticmethod
-    def _setProperty(key, value):
-        xbmcgui.Window(10000).setProperty('%s.%s'%(ADDON_ID, key), value)
-        log(f'Globals: [10000] _setProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+    def _setEXTProperty(key, value):
+        if not value is None: 
+            xbmcgui.Window(10000).setProperty(key, value)
+            if not '.TRASH' in key: log(f'Globals: [10000] _setEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return value
 
     @staticmethod
-    def _clrProperty(key):
-        return xbmcgui.Window(10000).clearProperty('%s.%s'%(ADDON_ID, key))
+    def _clrEXTProperty(key):
+        log(f'Globals: [10000] _clrEXTProperty, key = {key}')
+        return xbmcgui.Window(10000).clearProperty(key)
 
     @staticmethod
     def _encodePlot(plot, text):
@@ -148,24 +159,27 @@ class Globals:
                    item.get('art',{}).get('tvshow.%s'%(key))      or 
                    item.get('art',{}).get(key)                    or
                    item.get(key))
-        return Globals._buildWebImage(art, {0:LOGO_LANDSCAPE,1:LOGO_POSTER}[opt])
+            if art: return art
+        return {0:LOGO_LANDSCAPE,1:LOGO_POSTER}[opt]
 
     @staticmethod  
     def _buildWebImage(image=None, fallback=LOGO):
         image = Globals._cleanImage(image)
         if not image: return fallback
-        elif   image.startswith('image://'): image = '%s/image/%s'%(Globals._getProperty('%s.Local_Host'%(ADDON_ID)),Globals._quoteString(image))
-        elif   image.startswith('http'):     image = 'http://%s/images/%s'%(Globals._getProperty('%s.Remote_Host'%(ADDON_ID)),Globals._quoteString(image))
+        elif image.startswith(('image://',)):
+            image = f'{Globals._getEXTProperty('%s.Local_Host'%(ADDON_ID))}/image/{Globals._quoteString(image)}'
+        elif not image.startswith(('http','resource')):
+            image = f'http://{Globals._getEXTProperty('%s.Remote_Host'%(ADDON_ID))}/image/{FileAccess._encodeString(image)}'
         return image
-
+        
     @staticmethod
     def _getDummyIcon(text, background=COLOR_BACKGROUND, color=COLOR_TEXT):
         if not isinstance(text, (str,bytes)): text = str(text)
         url  = f'https://dummyimage.com/512x512/{background}/{color}.png&text={Globals._quoteString(text)}'
-        file = os.path.join(TEMP_IMAGE_LOC,f'{FileAccess._getMD5(url)}.png')
-        if   FileAccess.exists(file):   return file
-        elif Globals.setURL(url, file): return file
-        return LOGO_COLOR
+        file = os.path.join(TEMP_LOC,f'{FileAccess._getMD5(url)}.png')
+        if   FileAccess.exists(file):      return file
+        elif FileAccess.setURL(url, file): return file
+        return ICON
           
     @staticmethod
     def _cleanImage(image=''):
@@ -256,58 +270,3 @@ class Globals:
             if items and len(items) >= x: return random.sample(items, x)
             else:               return random.sample(items, len(items))
         return items
-        
-    @staticmethod
-    def setURL(url, file):
-        with FileLock(file):
-            try:
-                fle = FileAccess.open(file, 'w')
-                fle.write(Globals.requestURL(url))
-            except Exception as e: log('Globals: setURL failed! %s\nurl = %s'%(e,url), xbmc.LOGERROR)
-            finally:
-                if hasattr(fle, 'close'): fle.close()
-        return FileAccess.exists(file)
-        
-    @staticmethod
-    def requestURL(url, params={}, payload={}, header=HEADER, timeout=15, cache=None, file=None):
-        #cache = {"cache":None, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)}
-        def __error(result={}):                              return result
-        def __getCache(key, cache, checksum):                return (cache.get('requestURL.%s'%(FileAccess._getMD5(key)), checksum) or __error())
-        def __setCache(key, results, cache, checksum, life): return cache.set('requestURL.%s'%(FileAccess._getMD5(key)), results, checksum, life)
-            
-        results = None
-        session = requests.Session()
-        retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-        adapter = HTTPAdapter(max_retries=retries)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-
-        try:
-            headers = HEADER.copy()
-            headers.update(header)
-            if payload: response = session.post(url, json=payload, files=file, headers=headers, timeout=timeout)
-            else:       response = session.get(url, params=params, headers=headers, timeout=timeout)
-            response.raise_for_status()  # Raise an exception for HTTP errors
-            content_type = response.headers.get('Content-Type', '').lower()
-            if 'application/json' in content_type: results = response.json()
-            else: results = response.content
-            log("Globals: requestURL\nurl = %s, status = %s\nparams = %s\npayload = %s\nreturn type = %s"%(url,response.status_code,params,payload,type(results)))
-            
-            if results and not cache is None: 
-                return __setCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
-                                  results, cache["cache"], cache.get("checksum",ADDON_VERSION), cache.get("life",datetime.timedelta(minutes=15)))
-            return results 
-        except Exception as e: 
-            log("Globals: requestURL, failed! %s, An error occurred: %s"%('Returning cache' if cache else 'No Response', e))
-            return __getCache('.'.join([url,FileAccess.dumpJSON(params),FileAccess.dumpJSON(payload),FileAccess.dumpJSON(header)]), 
-                              cache["cache"], cache.get("checksum",ADDON_VERSION)) if cache else __error()
-        # finally: #retry failed post
-            # if results is None and payload:
-                # Globals.queuePost(url, params, payload, header, timeout, None, file)
-        
-    # @staticmethod
-    # def queuePost(url, params, payload, header, timeout, None, file):
-        ...
-        # posts = set(SETTINGS.getCacheSetting('postQue', revive=True) or [])
-        # posts.add()
-        # SETTINGS.setCacheSetting('postQue', list(posts), checksum=ADDON_VERSION)

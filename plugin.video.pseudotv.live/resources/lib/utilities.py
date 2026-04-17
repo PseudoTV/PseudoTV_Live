@@ -140,7 +140,7 @@ class Utilities(object):
     def _runIOBench():
         with BUILTIN.busy_dialog():
             if SETTINGS.hasAddon('script.io.benchmark', notify=True):
-                return BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(Gloabls._escapeString(f'path={USER_LOC}')))
+                return BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(Gloabls._escapeString(f'path={CACHE_LOC}')))
         
     @staticmethod
     def _runLogger():
@@ -188,14 +188,14 @@ class Utilities(object):
     @staticmethod
     def buildMenu(select=None):
         items = [
-                 {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':LOGO_COLOR,'func':_runCleanup  , 'hide':True ,'args':(False,)}, #"Rebuild M3U/XMLTV"
-                 {'label':LANGUAGE(32118)                  ,'label2':LANGUAGE(32119),'icon':LOGO_COLOR,'func':_runCleanup  , 'hide':True ,'args':(True,)}, #"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':LOGO_COLOR,'func':_runReload   , 'hide':False},#"Force PVR reload"
-                 {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':LOGO_COLOR,'func':_runRestart  , 'hide':False},#"Force PTVL reload"
-                 {'label':LANGUAGE(32159)                  ,'label2':LANGUAGE(33159),'icon':LOGO_COLOR,'func':_runLibrary  , 'hide':False},
-                 {'label':LANGUAGE(32180)                  ,'label2':LANGUAGE(33180),'icon':LOGO_COLOR,'func':_runFillers  , 'hide':False},
-                 {'label':LANGUAGE(30205)                  ,'label2':LANGUAGE(30205),'icon':LOGO_COLOR,'func':_runCPUBench , 'hide':False},
-                 {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':LOGO_COLOR,'func':_runIOBench  , 'hide':False},
+                 {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':ICON,'func':_runCleanup  , 'hide':True ,'args':(False,)}, #"Rebuild M3U/XMLTV"
+                 {'label':LANGUAGE(32118)                  ,'label2':LANGUAGE(32119),'icon':ICON,'func':_runCleanup  , 'hide':True ,'args':(True,)}, #"Clean Start"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':ICON,'func':_runReload   , 'hide':False},#"Force PVR reload"
+                 {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':ICON,'func':_runRestart  , 'hide':False},#"Force PTVL reload"
+                 {'label':LANGUAGE(32159)                  ,'label2':LANGUAGE(33159),'icon':ICON,'func':_runLibrary  , 'hide':False},
+                 {'label':LANGUAGE(32180)                  ,'label2':LANGUAGE(33180),'icon':ICON,'func':_runFillers  , 'hide':False},
+                 {'label':LANGUAGE(30205)                  ,'label2':LANGUAGE(30205),'icon':ICON,'func':_runCPUBench , 'hide':False},
+                 {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':ICON,'func':_runIOBench  , 'hide':False},
                  ]
 
         with BUILTIN.busy_dialog():

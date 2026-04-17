@@ -263,12 +263,16 @@ class Overlay(object):
                     self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
                     self._addControl(self.channelBug)
                     
+                    id   = self.channelBug.getId()
                     logo = self.citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
+                    wait = 900 #15mins todo add user settings
                     if   self.forceBugDiffuse:        self.channelBug.setColorDiffuse(self.channelBugColor)
                     elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
                     self.channelBug.setImage(logo)
-                    self.channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=Control.IsVisible(%i) reversible=false'%(self.channelBug.getId())),
-                                                   ('Conditional', 'effect=fade start=100 end=%i time=1000 delay=3000 condition=Control.IsVisible(%i) reversible=false'%(self.channelBugFade,self.channelBug.getId()))])
+                    self.channelBug.setAnimations([('Conditional', f'effect=fade start=0 end=100 time=2000 delay=1000 condition=Control.IsVisible({id}) reversible=false'),
+                                                   ('Conditional', f'effect=fade start=100 end={self.channelBugFade} time=1000 delay=3000 condition=Control.IsVisible({id}) reversible=false'),
+                                                   ('Conditional', f'effect=fade start={self.channelBugFade} end=0 time=2000 delay={7000+wait} loop="true" condition=Control.IsVisible({id})'),
+                                                   ('Conditional', f'effect=fade start=0 end={self.channelBugFade} time=2000 delay={7000+wait+wait} loop="true" condition=Control.IsVisible({id})')])
                     self.log('enableChannelBug, logo = %s, channelBugColor = %s, window = (%s,%s)'%(logo,self.channelBugColor,self.window_h, self.window_w))
             else: self.close()
         

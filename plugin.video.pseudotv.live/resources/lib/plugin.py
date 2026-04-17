@@ -56,12 +56,11 @@ class Plugin(object):
     def _updateSysInfo(self):
         self.log('[%s] _updateSysInfo'%(self.sysInfo.get('chid')))
         if not self.player.isPlaying(): DIALOG.notificationDialog(f'{LANGUAGE(32248)} {LANGUAGE(30223)}\n{LANGUAGE(32140)}')
-        with PROPERTIES.suspendActivity():
-            pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
-            if pvritem:
-                self.sysInfo['fitem'] = Globals._decodePlot(pvritem.get('broadcastnow',{}).get('plot',''))
-                self.sysInfo['nitem'] = Globals._decodePlot(pvritem.get('broadcastnext',[{}])[0].get('plot',''))
-            else: DIALOG.notificationDialog(LANGUAGE(32000))
+        pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
+        if pvritem:
+            self.sysInfo['fitem'] = Globals._decodePlot(pvritem.get('broadcastnow',{}).get('plot',''))
+            self.sysInfo['nitem'] = Globals._decodePlot(pvritem.get('broadcastnext',[{}])[0].get('plot',''))
+        else: DIALOG.notificationDialog(LANGUAGE(32000))
                 
             
     def _quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=None):
@@ -116,8 +115,7 @@ class Plugin(object):
             return items
             
         self.log('[%s] _getPVRItems'%(self.sysInfo.get('chid')))
-        with PROPERTIES.suspendActivity():
-            pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=True)
+        pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=True)
         
         if pvritem:
             pastItems = pvritem.get('broadcastpast',[]) # past items
@@ -146,27 +144,26 @@ class Plugin(object):
     @threadit
     def playLive(self):
         self.log('[%s] playLive, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
-        with PROPERTIES.suspendActivity():
-            #VOD called from Guide not live! / break PVR bind for correct meta.
-            if self.sysInfo['isVOD'] or self.sysInfo['isSTRM']:
-                if self.sysInfo['isVOD']:
-                    self.sysInfo['mode'] = 'vod'
-                    self.sysInfo["seek"] = -1
-                    self.sysInfo["progresspercentage"] = -1
-                    self.sysInfo['name'] = self.sysInfo['fitem'].get('label')
-                    self.sysInfo['vid']  = self.sysInfo['fitem'].get('file')
-                    DIALOG.notificationDialog(f'{LANGUAGE(32185)}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
-                    listitem = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
-                else:
-                    #STRM called from Guide, presumably live; workaround for Kodi bug w/strm handling in setResolvedUrl.
-                    listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-                listitem.setProperty('sysInfo',Globals._encodeString(self.sysInfo))
-                self._play(listitem.getPath(),listitem)
-            else:#LIVE called from Guide/Channels.
+        #VOD called from Guide not live! / break PVR bind for correct meta.
+        if self.sysInfo['isVOD'] or self.sysInfo['isSTRM']:
+            if self.sysInfo['isVOD']:
+                self.sysInfo['mode'] = 'vod'
+                self.sysInfo["seek"] = -1
+                self.sysInfo["progresspercentage"] = -1
+                self.sysInfo['name'] = self.sysInfo['fitem'].get('label')
+                self.sysInfo['vid']  = self.sysInfo['fitem'].get('file')
+                DIALOG.notificationDialog(f"{LANGUAGE(32185)}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
+                listitem = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+            else:
+                #STRM called from Guide, presumably live; workaround for Kodi bug w/strm handling in setResolvedUrl.
                 listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-                listitem.setProperty('sysInfo',FileAccess._encodeString(self.sysInfo))
-                self._resolveURL(True, listitem)
-        
+            listitem.setProperty('sysInfo',Globals._encodeString(self.sysInfo))
+            self._play(listitem.getPath(),listitem)
+        else:#LIVE called from Guide/Channels.
+            listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+            listitem.setProperty('sysInfo',FileAccess._encodeString(self.sysInfo))
+            self._resolveURL(True, listitem)
+    
             
     @threadit
     def playRadio(self, limit=RADIO_ITEM_LIMIT):
@@ -178,13 +175,11 @@ class Plugin(object):
             return listitem
             
         def __buildPlaylist(chid, name):
-            with PROPERTIES.suspendActivity():
-                return Globals._randomShuffle(interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in self.sysInfo.get('vid').split('|')], SETTINGS.getSettingInt('Interleave_Set'), SETTINGS.getSettingBool('Interleave_Repeat')))
+            return Globals._randomShuffle(interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in self.sysInfo.get('vid').split('|')], SETTINGS.getSettingInt('Interleave_Set'), SETTINGS.getSettingBool('Interleave_Repeat')))
         
         self.log('[%s] playRadio, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
-        with PROPERTIES.suspendActivity():
-            listitems = poolit(__buildfItem)(__buildPlaylist(self.sysInfo.get('chid'),self.sysInfo.get('name')))
-            self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True)))
+        listitems = poolit(__buildfItem)(__buildPlaylist(self.sysInfo.get('chid'),self.sysInfo.get('name')))
+        self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True)))
                
                       
     @threadit         
@@ -216,19 +211,17 @@ class Plugin(object):
             return []
         
         self.log('[%s] playPaused, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
-        with PROPERTIES.suspendActivity():
-            listitems = self.__buildPlaylist(self.sysInfo.get('chid'), self.sysInfo.get('name'))
-            self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
+        listitems = self.__buildPlaylist(self.sysInfo.get('chid'), self.sysInfo.get('name'))
+        self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
             
             
     @threadit         
     def playVOD(self):
         self.log('[%s] playVOD, vid = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('vid')))
-        with PROPERTIES.suspendActivity():
-            self.sysInfo["seek"] = -1
-            self.sysInfo["progresspercentage"] = -1
-            DIALOG.notificationDialog(f'{LANGUAGE(32185)%('VOD')}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
-            self._resolveURL(True, LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+        self.sysInfo["seek"] = -1
+        self.sysInfo["progresspercentage"] = -1
+        DIALOG.notificationDialog(f"{LANGUAGE(32185)%('VOD')}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
+        self._resolveURL(True, LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
             
             
     @threadit
@@ -247,12 +240,11 @@ class Plugin(object):
                 return listitem
             
         self.log('[%s] playPlaylist, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
-        with PROPERTIES.suspendActivity():
-            DIALOG.notificationDialog(f'{LANGUAGE(32185)%('Queue')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem']['label']}')
-            nextitems = self._getPVRItems()
-            listitems = poolit(__buildfItem)(nextitems)
-            self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
-            
+        DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Queue')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem']['label']}")
+        nextitems = self._getPVRItems()
+        listitems = poolit(__buildfItem)(nextitems)
+        self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
+        
             
     def _playCheck(self, path, found, listitem=None):
         def __findMissing(listitem):
@@ -262,11 +254,9 @@ class Plugin(object):
             else:
                 folder, filename  = os.path.split(file)
                 oSeason, oEpisode = parseSE(filename)
-                self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {label}: {filename} in {folder}')
-                
-                with PROPERTIES.suspendActivity():
-                    DIALOG.notificationDialog(f'Missing: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
-                    items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
+                self.log(f"[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {label}: {filename} in {folder}")
+                DIALOG.notificationDialog(f"Missing: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
+                items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
                     
                 found = False
                 for item in items:
@@ -281,8 +271,8 @@ class Plugin(object):
                 if found: 
                     combineDicts(self.sysInfo['fitem'],item)
                     listitem.setPath(self.sysInfo['fitem']['file'])
-                    self.log(f'[{self.sysInfo.get('chid')}] _playCheck, __findMissing found {self.sysInfo['fitem']['file']}')
-                    DIALOG.notificationDialog(f'Found: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}')
+                    self.log(f"[{self.sysInfo.get('chid')}] _playCheck, __findMissing found {self.sysInfo['fitem']['file']}")
+                    DIALOG.notificationDialog(f"Found: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
                 #else: listitem.setPath(insert missing media placeholder)
             return found, listitem
             
@@ -306,7 +296,7 @@ class Plugin(object):
         timerit(self.player.play)(1.0,*(file,listitem))
         self._resolveURL(False, listitem)
         #Playlist don't always gain screen focus depending on user Kodi configuration. Force fullscreen.
-        self.log(f'[{self.sysInfo.get('chid')}] _play, found = {found}, playlist = {self.sysInfo['isPlaylist']}')
+        self.log(f"[{self.sysInfo.get('chid')}] _play, found = {found}, playlist = {self.sysInfo['isPlaylist']}")
         
         while not self.monitor.abortRequested() and not self.player.isPlaying():
             if self.monitor.waitForAbort(0.5) or wait < 1: return
@@ -318,7 +308,7 @@ class Plugin(object):
 
 
     def _resolveURL(self, found=False, listitem=None):
-        self.log(f'[{self.sysInfo.get('chid')}] _resolveURL, found = {found}: {listitem.getPath()}')
+        self.log(f"[{self.sysInfo.get('chid')}] _resolveURL, found = {found}: {listitem.getPath()}")
         if listitem is None: listitem = xbmcgui.ListItem()
         else: _, found, listitem = self._playCheck(listitem.getPath(), found, listitem)
         xbmcplugin.setResolvedUrl(int(self.sysInfo['sysARG'][1]), found, listitem)
