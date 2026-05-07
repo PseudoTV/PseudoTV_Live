@@ -1,5 +1,5 @@
 #   Copyright (C) 2011 Jason Anderson
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.

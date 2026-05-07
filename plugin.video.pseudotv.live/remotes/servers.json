@@ -1,5 +1,7 @@
 {
-    "servers": {
+    
+    "version": "1.0.0",
+	"servers": {
         "friendly": {
             "id": "",
             "version": "",
@@ -12,7 +14,7 @@
             },
             "enabled": false,
             "online": false,
-            "updated": null
+            "updated": ""
         }
-    }
+	}
 }

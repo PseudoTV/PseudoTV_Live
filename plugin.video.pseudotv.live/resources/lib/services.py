@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -113,6 +113,7 @@ class Player(xbmc.Player):
 
     def getplayingItem(self):
         playingItem = FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo'))
+        print('playingItem',type(playingItem),playingItem)
         if '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid',''):
             playingItem['isPseudoTV'] = True
             playingItem['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
@@ -122,7 +123,7 @@ class Player(xbmc.Player):
             #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
             playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')))})
             playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')))})
-            playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.channels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
+            playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.curchannels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
             playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
             PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(playingItem))
         return playingItem
@@ -336,10 +337,10 @@ class Player(xbmc.Player):
             
                 
     def toggleBackground(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
-        if state and self.service.monitor.isIdle and self.background is None:
+        if state and self.monitor.isIdle and self.background is None:
             if not self.overlay is None: self.toggleOverlay(False)
             BUILTIN.executebuiltin("Dialog.Close(all)")
-            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", player=self)
+            self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", service=self.service)
             self.background.show()
         elif not state and hasattr(self.background,'close'):
             self.background = self.background.close()
@@ -349,7 +350,7 @@ class Player(xbmc.Player):
 
     def toggleOverlay(self, state: bool=SETTINGS.getSettingBool('Overlay_Enable')):
         if state and self.isPlayingPseudoTV() and self.overlay is None:
-            self.overlay = Overlay(player=self)
+            self.overlay = Overlay(service=self.service)
             self.overlay.open()
         elif not state and hasattr(self.overlay,'close'):
             self.overlay = self.overlay.close()
@@ -360,7 +361,7 @@ class Player(xbmc.Player):
     @debounceit(OSD_TIMER)
     def toggleReplay(self, state: bool=bool(SETTINGS.getSettingInt('Replay_Percentage'))):
         if state and self.isPlayingPseudoTV() and not self.playingItem.get('isfiller',True) and self.replay is None:
-            self.replay = Replay(REPLAY_XML, ADDON_PATH, "default", "1080i", player=self)
+            self.replay = Replay(REPLAY_XML, ADDON_PATH, "default", "1080i", service=self.service)
         elif not state and hasattr(self.replay,'onClose'):
             self.replay = self.replay.onClose()
         else: return
@@ -435,8 +436,8 @@ class Monitor(xbmc.Monitor):
             
     def _updateServiceSettings(self):
         self.log('_updateServiceSettings')
-        self.service.channels = self.service.tasks.getChannels()
-        self.service.settings = self.service.tasks.chkSettingsChange(self.service.settings) #check for settings change, take action if needed
+        self.service.curchannels = self.service.tasks.getChannels()
+        self.service.cursettings = self.service.tasks.chkSettingsChange(self.service.cursettings) #check for settings change, take action if needed
         
         
     def _updatePlayerSettings(self):
@@ -472,14 +473,14 @@ class Service(object):
 
 
     def __init__(self):
-        self.jsonRPC     = JSONRPC(service=self)
-        self.monitor     = Monitor(service=self)
-        self.player      = self.monitor.player
-        self.tasks       = Tasks(service=self)
-        self.channels    = self.tasks.getChannels()
-        self.settings    = SETTINGS.getCurrentSettings()
-        self.isClient    = SETTINGS.getSettingBool('Enable_Client')
-        self.priorityQUE = CustomQueue(priority=True, service=self)
+        self.jsonRPC       = JSONRPC(service=self)
+        self.monitor       = Monitor(service=self)
+        self.player        = self.monitor.player
+        self.tasks         = Tasks(service=self)
+        self.curchannels   = self.tasks.getChannels()
+        self.cursettings   = SETTINGS.getCurrentSettings()
+        self.isClient      = SETTINGS.getSettingBool('Enable_Client')
+        self.priorityQUE   = CustomQueue(priority=True, service=self)
     
 
     def __del__(self):
@@ -509,7 +510,7 @@ class Service(object):
     
     
     def _shutdown(self, wait=SERVICE_INTERVAL) -> bool: #service break
-        pendingShutdown = any([self.monitor.waitForAbort(wait),PROPERTIES.isPendingShutdown()])
+        pendingShutdown = any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
         if self.pendingShutdown != pendingShutdown:
             self.pendingShutdown = pendingShutdown
             self.log('_shutdown, pendingShutdown = %s, wait = %s'%(self.pendingShutdown,wait))
@@ -525,25 +526,24 @@ class Service(object):
          
         
     def _interrupt(self) -> bool: #tasks break
-        pendingInterrupt = any([self.pendingShutdown, self.pendingRestart, self.isScanning, self._isPlaying(), PROPERTIES.isPendingInterrupt()])
+        pendingInterrupt = any([PROPERTIES.isPendingInterrupt(), self.pendingShutdown, self.pendingRestart, self.isScanning, self._isPlaying()])
         if pendingInterrupt != self.pendingInterrupt:
             self.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
             self.log('_interrupt, pendingInterrupt = %s'%(self.pendingInterrupt))
         return self.pendingInterrupt
     
 
-    def _suspend(self, wait=CPU_CYCLE) -> bool: #tasks continue
-        pendingSuspend = any([BUILTIN.isSettingsOpened(), PROPERTIES.isPendingSuspend(),])
+    def _suspend(self) -> bool: #tasks continue
+        pendingSuspend = any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
         if pendingSuspend != self.pendingSuspend:
             self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))
-        if wait > 0: self._sleep(wait)
         return self.pendingSuspend
         
 
     def _sleep(self, wait=CPU_CYCLE): #waitForAbort replacement for tasks
         while not self.monitor.abortRequested() and wait > 0:
-            if any([self.monitor.waitForAbort(CPU_CYCLE),self.pendingInterrupt]): return True
+            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
             else: wait -= CPU_CYCLE
         if wait > 0: self.log('_sleep, remaining = %s'%(wait))
         return False
@@ -571,6 +571,7 @@ class Service(object):
 
     def _stop(self, pendingRestart: bool=False):
         if self.player.isPlayingPseudoTV(): self.player.onPlayBackStopped()
+        SETTINGS.cache.cache.shutdown()
         with PROPERTIES.interruptActivity():
             for thread in thread_enumerate():
                 if thread.name != "MainThread" and thread.is_alive():

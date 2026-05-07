@@ -20,12 +20,12 @@
                 </setting>
             </group>
             <group id="2" label="30161">
-                <setting id="Enable_Autotuned" type="boolean" label="30230" help="33311">
+                <setting id="Enable_Autotune" type="boolean" label="30230" help="33311">
                     <level>0</level>
                     <default>false</default>
                     <control type="toggle"/>
                 </setting>
-                <setting id="Autotune_Limit" type="integer" label="32064" help="33181" parent="Enable_Autotuned">
+                <setting id="Autotune_Limit" type="integer" label="32064" help="33181" parent="Enable_Autotune">
                     <level>1</level>
                     <default>5</default>
                     <constraints>
@@ -35,7 +35,7 @@
                     </constraints>
                     <dependencies>
                         <dependency type="visible">
-							<condition operator="is" setting="Enable_Autotuned">true</condition>
+							<condition operator="is" setting="Enable_Autotune">true</condition>
                         </dependency>
                     </dependencies>
                     <control type="slider" format="integer">
@@ -49,7 +49,7 @@
                     </constraints>
                     <dependencies>
                         <dependency type="visible">
-							<condition operator="is" setting="Enable_Autotuned">false</condition>
+							<condition operator="is" setting="Enable_Autotune">false</condition>
                         </dependency>
                     </dependencies>
                     <control type="button" format="action">
@@ -66,7 +66,7 @@
                     <dependencies>
                         <dependency type="visible">
 							<and>
-								<condition operator="is" setting="Enable_Autotuned">false</condition>
+								<condition operator="is" setting="Enable_Autotune">false</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Enabled_Servers),true)</condition>
 							</and>
                         </dependency>
@@ -1120,12 +1120,12 @@
             <group id="3" label="30072">
                 <setting id="Debug_Enable" type="boolean" label="30001" help="33001">
                     <level>0</level>
-                    <default>false</default>
+                    <default>true</default>
                     <control type="toggle"/>
                 </setting>
                 <setting id="Debug_Level" type="integer" label="30002" help="33202" parent="Debug_Enable">
                     <level>3</level>
-                    <default>3</default>
+                    <default>0</default>
                     <constraints>
                         <options>
                             <option label="30003">0</option>

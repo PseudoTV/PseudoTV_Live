@@ -31,9 +31,8 @@ from instances           import Instances
 from pool                import poolit, timerit, threadit, debounceit
 
 class Settings(object):
-    monitor    = MONITOR()
-    cacheDB    = Cache()
-    cache      = Cache(mem_cache=True)
+    monitor = MONITOR()
+    cache   = Cache(mem_cache=True)
     
     def __init__(self):
         self.properties = Properties()
@@ -106,10 +105,9 @@ class Settings(object):
         return FileAccess._decodeString(self.getSetting(key))
     
     
-    def getCacheSetting(self, key, checksum=ADDON_VERSION, revive=False):
-        value = self.cacheDB.get(key, checksum)
+    def getCacheSetting(self, key, checksum=ADDON_VERSION):
+        value = self.cache.get(key, checksum)
         self.log(f'[{ADDON_ID}] getCacheSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-        if value and revive: self.setCacheSetting(key, value, checksum)
         return value
         
         
@@ -177,11 +175,11 @@ class Settings(object):
         return self.setSetting(key,FileAccess._encodeString(values))
             
             
-    def setCacheSetting(self, key, value=None, checksum=ADDON_VERSION, life=datetime.timedelta(days=84)):
+    def setCacheSetting(self, key, value=None, checksum=ADDON_VERSION, life=datetime.timedelta(days=28)):
         self.log(f'[{ADDON_ID}] setCacheSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-        return self.cacheDB.set(key, value, checksum, life)
-            
-
+        return self.cache.set(key, value, checksum, life)
+  
+  
     def setEXTSetting(self, id, key, value):
         self.log(f'[{ADDON_ID}] setEXTSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return xbmcaddon.Addon(id).setSetting(key,value)
@@ -206,7 +204,7 @@ class Settings(object):
         def __hasADDON(id):
             hasAddon  = self.builtin.getInfoBool('HasAddon(%s)'%(id),'System')
             isEnabled = self.builtin.getInfoBool('AddonIsEnabled(%s)'%(id),'System')
-            self.log(f'[{id}] hasAddon = {hasAddon}, isEnabled = {isEnabled}, Kodi Override Enabled = {bypass}')
+            self.log(f'[{id}] hasAddon = {hasAddon}, isEnabled = {isEnabled}, Kodi Override = {bypass}')
             if hasAddon:
                 if isEnabled: return True
                 elif enable:
@@ -252,7 +250,7 @@ class Settings(object):
             return str(uuid1(clock_seq=70420))
             
         friendly = self.properties.getFriendlyName()
-        uuid = self.getCacheSetting('MY_UUID', checksum=friendly, revive=True)
+        uuid = self.getCacheSetting('MY_UUID', checksum=friendly)
         if not uuid: uuid = self.setCacheSetting('MY_UUID', __genUUID(seed=self.properties.getFriendlyName()), checksum=friendly)
         return uuid
 
@@ -260,8 +258,8 @@ class Settings(object):
     @cacheit(expiration=datetime.timedelta(minutes=5))
     def getBonjour(self):
         def __getResumeURLs(remote):
-            files = FileAccess.listdir(RESUME_LOC)[1]
-            return ['http://%s/filelist/%s'%(remote,file) for file in files]
+            keys = (self.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX)) or {})
+            return ['http://%s/filelist/%s'%(remote,key) for key in keys]
             
         def __getChannels():
             from channels import Channels
@@ -281,9 +279,10 @@ class Settings(object):
                                  'xmltv'   :'http://%s/%s'%(host,XMLTVFLE),
                                  'genre'   :'http://%s/%s'%(host,GENREFLE),
                                  'bonjour' :'http://%s/api/%s'%(host,BONJOURFLE),
-                                 'logs'    :'http://%s/api/%s'%(host,DBLOGSFLE),
                                  'servers' :'http://%s/api/%s'%(host,SERVERFLE),
+                                 'library' :'http://%s/api/%s'%(host,LIBRARYFLE),
                                  'channels':'http://%s/api/%s'%(host,CHANNELFLE),
+                                 'logs'    :'http://%s/api/%s'%(host,LOGSFLE),
                                  'resume'  : __getResumeURLs(host)},
                    'settings' : {'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
                                  'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
@@ -315,13 +314,13 @@ class Settings(object):
                                   # 'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in recordings], 
                                   # 'programmes':[{'id':key,'end-time':epochTime(time.time(),tz=False).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
             # payload['library'] = Library().getLibrary()
-            # payload['servers'] = Multiroom().getDiscovery()
+            # payload['servers'] = Multiroom().getServers()
             # del xmltv
             # return payload
 
         # payload = __getMeta(self.getBonjour())
         # if inclDebug: payload['debug'] = FileAccess.loadJSON(self.property.getProperty('debug.log')).get('DEBUG',{})
-        # payload['updated']   = epochTime(time.time(),tz=False).strftime(DTFORMAT)
+        # payload['updated']   = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         # payload['md5']       = FileAccess._getMD5(FileAccess.dumpJSON(payload))
         # return payload
 
@@ -336,7 +335,7 @@ class Settings(object):
         
         
     def setAutotuned(self, state=True):
-        return self.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned',state,life=datetime.timedelta(days=MAX_GUIDEDAYS)))
+        return self.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned', state, life=datetime.timedelta(days=MAX_GUIDEDAYS)))
 
 
     def chkPVRBackend(self): 
@@ -353,7 +352,7 @@ class Settings(object):
         
 
     def setPVRPath(self, path, instance=ADDON_NAME, prompt=None):
-        settings  = self.instances.IPTV_SIMPLE_SETTINGS()
+        settings  = self.instances.getSettings(instance)
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
                      'kodi_addon_instance_enabled':'true',
                      'm3uPathType'                :'0',
@@ -367,13 +366,13 @@ class Settings(object):
                      'logoPathType'               :'0',
                      'logoPath'                   :os.path.join(path,'logos')}
         settings.update(nsettings)
-        self.log('[%s] setPVRPath, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
-        if self.chkPVRChanges(instance, settings):
+        if self.chkPVRChanges(instance, settings.copy()):
+            self.log('[%s] setPVRPath, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
             return self.instances.setSettings(instance, settings)
         
         
     def setPVRRemote(self, host, instance=ADDON_NAME, prompt=None):
-        settings  = self.instances.IPTV_SIMPLE_SETTINGS()
+        settings  = self.instances.getSettings(instance)
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
                      'kodi_addon_instance_enabled':'true',
                      'm3uPathType'                :'1',
@@ -387,32 +386,34 @@ class Settings(object):
                      'logoPathType'               :'1',
                      'logoBaseUrl'                :'http://%s/logos'%(host)}
         settings.update(nsettings)
-        self.log('[%s] setPVRRemote, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
-        if self.chkPVRChanges(instance, settings):
+        if self.chkPVRChanges(instance, settings.copy()):
+            self.log('[%s] setPVRRemote, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
             return self.instances.setSettings(instance, settings)
         
 
     def chkPVRChanges(self, instance=ADDON_NAME, nsettings={}, prompt=None):
         if prompt is None: prompt = not bool(self.getSettingBool('Enable_Kodi_Access'))
-        xsettings = {}
+        changes = []
         if self.hasPVRInstance(instance):
-            xsettings.update(self.instances.getSettings(instance))
-            [nsettings.pop(setting) for setting, value in list(nsettings.items()) if value == xsettings.get(setting)]
-        
+            xsettings = self.instances.getSettings(instance)
+            for setting, value in list(nsettings.items()):
+                if    str(value).lower() == str(xsettings.get(setting,'')).lower(): nsettings.pop(setting)
+                else: changes.append('%s: [COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(setting,str(xsettings.get(setting)),str(value)))
+
         if len(nsettings) > 0:
             if prompt:
-                changes = ['[COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(setting,xsettings.get(setting),value) for setting, value in list(nsettings.items())]
-                self.log('[%s] chkPVRChanges, instance = %s, prompt = %s, changes = %s'%(PVR_CLIENT_ID,instance,prompt,'\n'.join(changes)))
                 self.dialog.textviewer('%s\n\n%s'%(LANGUAGE(32035)%(PVR_CLIENT_NAME),'[CR]'.join(changes)))
                 if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon.getAddonInfo('name'))):
                     self.dialog.notificationDialog(LANGUAGE(32046))
                     return False
+            self.log('[%s] chkPVRChanges, instance = %s, prompt = %s, changes = %s'%(PVR_CLIENT_ID,instance,prompt,nsettings))
             return True
         self.log('[%s] chkPVRChanges, no changes detected!'%(PVR_CLIENT_ID))
-
+        return False
+        
 
     def getCurrentSettings(self):
-        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT','Autotune_Limit','Enable_Autotuned']
+        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT','Autotune_Limit','Enable_Autotune']
         return dict([(setting,self.getSetting(setting)) for setting in settings])
                
 
@@ -426,13 +427,25 @@ class Settings(object):
         finally:
             fle.close()
         name  = 'getFileCRC.%s'%(FileAccess._getMD5(file))
-        cache = self.getCacheSetting(name, checksum=crc, revive=True)
+        cache = self.getCacheSetting(name, checksum=crc)
         if not cache or cache != crc:
             self.setCacheSetting(name, crc, checksum=crc)
             return True
         return False
+            
+            
+    def getLogs(self, time=None):
+        if time is None: time = datetime.datetime.fromtimestamp(time.time())
+        return (self.getCacheSetting('LOGS', FileAccess._getMD5(time.strftime('%Y%m%d'))) or {})
         
         
+    def setLogs(self, key, event):
+        time = datetime.datetime.fromtimestamp(time.time())
+        logs = self.getLogs(time)
+        logs.setdefault(key,[]).append(f'{time.strftime(DTFORMAT)} - {event}')
+        self.setCacheSetting('LOGS', logs, FileAccess._getMD5(time.strftime('%Y%m%d')), datetime.timedelta(days=2))
+            
+            
 class Properties(object):
     def __init__(self, winID=10131):
         self.winID  = winID
@@ -576,24 +589,46 @@ class Properties(object):
         return remote
 
 
-    def setHasChannels(self, state=True):
-        return self.setEXTProperty('%s.has.Channels'%(ADDON_ID),state)
+    def setHasChannels(self, key=None, channelDATA=None):
+        if key is None: key = CHANNELAUTOTUNE_KEY if Settings().getSettingBool('Enable_Autotune') else CHANNEL_KEY
+        if channelDATA is None: channelDATA = Channels(key).channelDATA
+        chanLST = (self.settings.getCacheSetting('%s.has.Channels'%(ADDON_ID)) or {})
+        if len(channelDATA.get('channels',[])) > 0: 
+            channelDATA.update({'updated': datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)})
+            chanLST.setdefault(key,{}).update(channelDATA)
+        elif key in chanLST: chanLST.pop(key)
+        return self.settings.setCacheSetting('%s.has.Channels'%(ADDON_ID),chanLST,life=-1).get(key)
+        
+        
+    def hasChannels(self, key=None, path=None):
+        if key is None: key = CHANNELAUTOTUNE_KEY if Settings().getSettingBool('Enable_Autotune') else CHANNEL_KEY
+        if not path is None: 
+            if FileAccess.exists(path): channelDATA = FileAccess.getJSON(path)
+        else:                           channelDATA = (self.settings.getCacheSetting('%s.has.Channels'%(ADDON_ID)) or {}).get(key,{})
+        return len(channelDATA.get('channels',[])) > 0
+        
+
+    def setBackup(self, key=CHANNELBACKUP_KEY, channels=None):
+        backups = (self.settings.getCacheSetting('%s.has.backups'%(ADDON_ID)) or {})
+        if channels is None: channels = Channels(key).getChannels()
+        if len(channels) > 0: backups.setdefault(key,{}).update({'name':key, 'channels': channels, 'updated':(backups.get(key,{}).get('updated') or datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT))})
+        elif key in backups:  backups.pop(key)
+        return self.settings.setCacheSetting('%s.has.backups'%(ADDON_ID),backups,life=-1).get(key)
 
 
-    def hasChannels(self):
-        return (self.getEXTProperty('%s.has.Channels'%(ADDON_ID)))
+    def hasBackup(self, key=CHANNELBACKUP_KEY, path=None):
+        if not path is None: 
+            if FileAccess.exists(path): return FileAccess.getJSON(path)
+        else:                           return (self.settings.getCacheSetting('%s.has.backups'%(ADDON_ID)) or {}).get(key)
 
 
-    def setBackup(self, state=True):
-        return self.setEXTProperty('%s.has.Backup'%(ADDON_ID),state)
+    def hasBackups(self):
+        return len(list((self.settings.getCacheSetting('%s.has.backups'%(ADDON_ID)) or {}).keys())) > 0
 
 
-    def hasBackup(self):
-        return self.getEXTProperty('%s.has.Backup'%(ADDON_ID),False)
-
-
-    def hasLibrary(self, type):
-        return self.getEXTProperty('%s.has.%s'%(ADDON_ID,type),False)
+    def hasLibrary(self, type=None):
+        if not type is None: return self.getEXTProperty('%s.has.%s'%(ADDON_ID,type),False)
+        return any([self.getEXTProperty('%s.has.%s'%(ADDON_ID,t),False) for t in AUTOTUNE_TYPES])
         
         
     def setLibrary(self, type, state=True):
@@ -1021,7 +1056,7 @@ class Builtin(object):
             try: 
                 if self.busy is None:
                     from overlay import Busy 
-                    try:     self.busy = Busy(BUSY_XML, ADDON_PATH, "default", lock=lock)
+                    try:               self.busy = Busy(BUSY_XML, ADDON_PATH, "default", lock=lock)
                     except Exception:  self.busy = None
                     finally: self.busy.show()
                 elif cancel and hasattr(self.busy, 'close'):
@@ -1091,14 +1126,15 @@ class Dialog(object):
     dialog     = xbmcgui.Dialog()
     
     def __init__(self):
-        self.settings.monitor   = self.monitor
-        self.settings.property  = self.properties
-        self.settings.builtin   = self.builtin
-        self.properties.monitor = self.monitor
-        self.builtin.monitor    = self.monitor
-        self.builtin.properties = self.properties
-        self.builtin.settings   = self.settings
-        self.settings.dialog    = self
+        self.settings.monitor    = self.monitor
+        self.settings.property   = self.properties
+        self.settings.builtin    = self.builtin
+        self.properties.monitor  = self.monitor
+        self.properties.settings = self.settings
+        self.builtin.monitor     = self.monitor
+        self.builtin.properties  = self.properties
+        self.builtin.settings    = self.settings
+        self.settings.dialog     = self
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -1475,7 +1511,7 @@ class Dialog(object):
                     {"idx":12, "label":LANGUAGE(32191)                    , "label2":"special://profile/playlists/video/"    , "default":"special://profile/playlists/video/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
                     {"idx":13, "label":LANGUAGE(32192)                    , "label2":"special://profile/playlists/music/"    , "default":"special://profile/playlists/music/" , "shares":""        , "mask":".xsp"                            , "type":1    , "multi":False},
                     {"idx":15, "label":LANGUAGE(32195)                    , "label2":"Dynamic SmartPlaylists"                , "default":""                                   , "shares":""        , "mask":""                                , "type":1    , "multi":False},
-                    {"idx":16, "label":LANGUAGE(32194)                    , "label2":"Import paths from STRM file"           , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
+                    {"idx":16, "label":'STRM %s'%(LANGUAGE(32194))        , "label2":"Import paths from STRM file"           , "default":""                                   , "shares":"files"   , "mask":".strm"                           , "type":1    , "multi":False},
                     {"idx":17, "label":LANGUAGE(32206)                    , "label2":"Import files from Basic Playlist"      , "default":""                                   , "shares":""        , "mask":"|".join(BASIC_PLAYLISTS)         , "type":1    , "multi":False},
                     {"idx":18, "label":'%s %s'%(LANGUAGE(32198),optlabel) , "label2":""                                      , "default":""                                   , "shares":"files"   , "mask":mask                              , "type":type , "multi":multi},
                     {"idx":19, "label":'%s %s'%(LANGUAGE(32199),optlabel) , "label2":""                                      , "default":""                                   , "shares":"local"   , "mask":mask                              , "type":type , "multi":multi},

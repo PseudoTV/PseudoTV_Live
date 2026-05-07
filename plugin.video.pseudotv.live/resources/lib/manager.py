@@ -1,4 +1,4 @@
-  # Copyright (C) 2025 Lunatixz
+  # Copyright (C) 2026 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -72,7 +72,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                                                        icon=Globals._getDummyIcon(str(servers.index(server)+1)))
                 
                 lizLST  = []
-                serLST  = Multiroom().getDiscovery()
+                serLST  = Multiroom().getServers()
                 servers = [value for key, value in list(serLST.items()) if value.get('online',False)]
                 if servers: lizLST.extend(poolit(__buildItem)(servers))
                 lizLST.insert(0,LISTITEMS.buildMenuListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(self.oldChannels)),icon=ICON))
@@ -80,7 +80,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if not select is None: return __loadChannels(lizLST[select].getLabel())
                 else:                  return
             elif name:
-                self.server = Multiroom().getDiscovery().get(name,{})
+                self.server = Multiroom().getServers().get(name,{})
                 return self.server.get('channels',[])
             return self.oldChannels
 
@@ -101,8 +101,8 @@ class Manager(xbmcgui.WindowXMLDialog):
 
             self.host           = PROPERTIES.getRemoteHost()
             self.friendly       = PROPERTIES.getFriendlyName()
+            self.hasBackups     = PROPERTIES.hasBackups()
             self.newChannel     = self.channels.getTemplate()
-            self.recoveryFile   = self.backup.hasBackup(file=None)
             
         try:
             with BUILTIN.busy_dialog(lock=True):
@@ -138,6 +138,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.right_button3 = self.getControl(9003)
             self.right_button4 = self.getControl(9004)
             self.fillChanList(self.newChannels,focus=self.focusIndex,channel=self.openChannel)
+            self.log("onInit, backup latest = %s"%(self.backup.backupChannels(CHANNELLATEST_KEY,silent=True)))
         except Exception as e: 
             log("onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.closeManager()
@@ -269,7 +270,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         self.setEnableCondition(self.right_button2,'[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                     #3
                     if len(self.oldChannels) == 0: #no configured channels
-                        if self.recoveryFile: self.setLabels(self.right_button3,LANGUAGE(32112))#Recover
+                        if self.hasBackups: self.setLabels(self.right_button3,LANGUAGE(32112))#Recover
                         self.setEnableCondition(self.right_button3,'[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                     else: 
                         self.setLabels(self.right_button3,LANGUAGE(32136))#Move
@@ -314,8 +315,7 @@ class Manager(xbmcgui.WindowXMLDialog):
            
     def selItem(self, cntrl, focus=0):
         try: cntrl.selectItem(focus)
-        except Exception as e:
-            self.log("selItem, failed! %s"%(e), xbmc.LOGERROR)
+        except Exception as e: pass
            
            
     def getRuleAbbr(self, citem, myId, optionindex):
@@ -684,17 +684,18 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def autoRecovery(self):
         self.log('autoRecovery')
-        if DIALOG.yesnoDialog("Would you like to Recover from the latest backup?"):
+        if DIALOG.yesnoDialog(LANGUAGE(32101)):
             with BUILTIN.busy_dialog():
-                channels = self.backup.getChannels(self.recoveryFile)
-                self.log('autoRecovery, file = %s, channels = %s'%(self.recoveryFile, len(channels)))
+                key = self.backup.selectBackups()
+                channels = self.backup.recoverChannels(key)
+                self.log('autoRecovery, file = %s, channels = %s'%(key, len(channels)))
                 number = 1
                 for channel in channels:
                     number = channel.get('number',0)
                     if number > 0: 
                         self.madeChanges = True
                         self.newChannels.insert(number-1,channel)
-                if self.madeChanges: self.fillChanList(self.newChannels,True,focus=(number-1))
+                if self.madeChanges and self.launchManager: self.fillChanList(self.newChannels,True,focus=(number-1))
 
 
     def getLibrary(self, type=None):
@@ -708,10 +709,10 @@ class Manager(xbmcgui.WindowXMLDialog):
     def autoTune(self, start=1):
         with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
             try:
-                if DIALOG.yesnoDialog("Would you like to AutoTune sample channels?"):   
+                if DIALOG.yesnoDialog(LANGUAGE(32100)):   
                     SETTINGS.setAutotuned(True)
                     items = []
-                    count = max(1, min(int(DIALOG.inputDialog(f"How many channels per AutoTune Type? [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", default = str(SETTINGS.getSettingInt('Autotune_Limit')) , key=xbmcgui.INPUT_NUMERIC)), AUTOTUNE_CHANNEL_LIMIT))
+                    count = max(1, min(int(DIALOG.inputDialog(f"{LANGUAGE(32099)} [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", default = str(SETTINGS.getSettingInt('Autotune_Limit')) , key=xbmcgui.INPUT_NUMERIC)), AUTOTUNE_CHANNEL_LIMIT))
                     DIALOG.notificationDialog(f'Input [B]{count}[/B] Valid!\n{LANGUAGE(32140)}')
                     for idx, type in enumerate(AUTOTUNE_TYPES):
                         try:
@@ -874,7 +875,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.madeChanges = True
             channelData['logo'] = chlogo
             self.newChannels[channelPOS] = channelData
-            self.fillChanList(self.newChannels,refresh=True,focus=channelPOS)
+            if self.launchManager: 
+                self.fillChanList(self.newChannels,refresh=True,focus=channelPOS)
 
 
     def getControlID(self, cntrl):
@@ -982,7 +984,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.madeItemchange = False
                 citem['changed'] = True
                 self.newChannels[citem['number'] - 1] = citem
-        self.fillChanList(self.newChannels,True,(citem['number'] - 1),citem if open else None)
+        if self.launchManager:
+            self.fillChanList(self.newChannels,True,(citem['number'] - 1),citem if open else None)
         return citem
     
    
@@ -1003,7 +1006,6 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         if self.madeChanges:
             if __yesno():
-                self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELFLE_CHANGED,silent=True)))
                 with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                     channels = __validateChannels(self.newChannels)
                     self.log("saveChanges, channels = %s"%(len(channels)))
@@ -1013,9 +1015,10 @@ class Manager(xbmcgui.WindowXMLDialog):
                     else: #local save
                         if self.channels.setChannels(channels):
                             self.madeChanges = False
-                            self.log("saveChanges, backup latest = %s"%(self.backup.backupChannels(CHANNELFLE_LATEST,silent=True)))
+                            self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELCHANGED_KEY,silent=True)))
                             PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
-                            self.fillChanList(self.newChannels,True,focus=start)
+                            if self.launchManager: 
+                                self.fillChanList(self.newChannels,True,focus=start)
             else: self.madeChanges = False
         if close: self.closeManager()
             

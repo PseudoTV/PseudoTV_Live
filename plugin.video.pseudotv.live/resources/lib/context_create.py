@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 from globals    import *
 from manager    import Manager
+from backup     import Backup
 
 @threadit
 def _open(fitem={}):
@@ -62,48 +63,54 @@ def _add(sysARG, listitem: dict={}):
                 PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
                 return DIALOG.notificationDialog("%s [B]%s[/B]: [B]%s[/B]\nAdded!"%(LANGUAGE(30223),citem['number'],citem['name']))
 
-def _auto(start=1, count=-1):
-    if count <= 0: count = min(max(SETTINGS.getSettingInt('Autotune_Limit'), AUTOTUNE_CHANNEL_DEFAULT), AUTOTUNE_CHANNEL_LIMIT)
-    autoChannels = SETTINGS.getSettingBool('Enable_Autotuned')
-    if not autoChannels:
-        hasLibrary  = any([PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES])
+def _autotune(start=1, count=-1, automatic=False):
+    if not automatic:
+        hasLibrary  = PROPERTIES.hasLibrary()
         hasChannels = PROPERTIES.hasChannels()
-        log(f'Create: _auto, Count = {count}, hasLibrary = {hasLibrary}, hasChannels = {hasChannels}')
-        
+        log(f'Create: _autotune, hasLibrary = {hasLibrary}, hasChannels = {hasChannels}')
+        run_time = time.time()
         if not hasChannels and hasLibrary:
-            hasBackup  = PROPERTIES.hasBackup()
+            hasImports = Backup().hasImports()
+            hasBackups = PROPERTIES.hasBackups() 
             hasServers = PROPERTIES.hasServers()
-            log(f'Create: _auto, hasBackup = {hasBackup}, hasServers = {hasServers}')
+            log(f'Create: _autotune, hasImport = {hasImports}, hasBackups = {hasBackups}, hasServers = {hasServers}')
             while not MONITOR().abortRequested():
                 retval = DIALOG.yesnoDialog(message='%s\n%s'%(LANGUAGE(32042)%(ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254))
-                if   retval == 0: return True #No
-                elif retval == 1:
-                    SETTINGS.setSettingBool('Enable_Autotuned',True)
-                    break #Yes  
+                if retval == 0: #No 
+                    SETTINGS.setSettingBool('Enable_Autotune',False)
+                    return False if time.time() >= (run_time + AUTOCLOSE_DELAY) else True #return True if autoclose
+                elif retval == 1:#Yes  
+                    SETTINGS.setSettingBool('Enable_Autotune',True)
+                    SETTINGS.setSettingInt('Autotune_Limit',max(1, min(int(DIALOG.inputDialog(f"{LANGUAGE(32099)} [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", default = str(SETTINGS.getSettingInt('Autotune_Limit')) , key=xbmcgui.INPUT_NUMERIC, close=60000)), AUTOTUNE_CHANNEL_LIMIT)))
+                    break
                 elif retval == 2: #Custom
                     def __manager():  return _open()
                     def __settings(): return Globals._openSettings()
-                    def __recover():  return BUILTIN.executebuiltin(f'RunScript(special://home/addons/{ADDON_ID}/resources/lib/backup.py, Recover_Backup)')
-                    def __server():   return BUILTIN.executebuiltin(f'RunScript(special://home/addons/{ADDON_ID}/resources/lib/multiroom.py, Select_Server_Client)')
+                    def __import():   return BUILTIN.executebuiltin(f'RunScript(special://home/addons/{ADDON_ID}/resources/lib/backup.py, Select_Imports)')
+                    def __backup():   return BUILTIN.executebuiltin(f'RunScript(special://home/addons/{ADDON_ID}/resources/lib/backup.py, Select_Backups)')
+                    def __server():   return BUILTIN.executebuiltin(f'RunScript(special://home/addons/{ADDON_ID}/resources/lib/multiroom.py, Select_Servers)')
                         
                     with BUILTIN.busy_dialog():
                         menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),url='__manager'),
                                 LISTITEMS.buildMenuListItem(LANGUAGE(33310),url='__settings')]
-                        if hasBackup:  menu.append(LISTITEMS.buildMenuListItem('%s %s'%(LANGUAGE(32112),LANGUAGE(30108)),LANGUAGE(32111),url='__recover'))
+                        if hasImports: menu.append(LISTITEMS.buildMenuListItem('%s %s'%(LANGUAGE(32194),LANGUAGE(30108)),LANGUAGE(32111),url='__import'))
+                        if getBackups: menu.append(LISTITEMS.buildMenuListItem('%s %s'%(LANGUAGE(32112),LANGUAGE(30108)),LANGUAGE(32111),url='__backup'))
                         if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='__server'))
                     select = DIALOG.selectDialog(menu,multi=False)
                     if not select is None: 
                         try: return eval(menu[select].getPath())()
-                        except Exception: log("Create: _auto, failed! %s"%(e), xbmc.LOGERROR)
+                        except Exception: log("Create: _autotune, failed! %s"%(e), xbmc.LOGERROR)
                 return False #Cancel
-        else: return True #Has Channnels / No Kodi Library
+        else: return True #Has No Channnels / No Kodi Library
         
     with DIALOG._progressDialog("", LANGUAGE(30038)) as pDialog:
         items   = []
         manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
+        if count <= 0: count = min(max(SETTINGS.getSettingInt('Autotune_Limit'), AUTOTUNE_CHANNEL_DEFAULT), AUTOTUNE_CHANNEL_LIMIT)
         for idx, type in enumerate(AUTOTUNE_TYPES):
+            
             pDialog = DIALOG._updateProgress(pDialog, int(idx*100//len(AUTOTUNE_TYPES)), type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
-            samples = manager.getLibrary(type)
+            samples = Globals._randomSamples(manager.getLibrary(type), count)
             items.extend([s for s in samples if s])
         manager._addChannels(start, Globals._randomShuffle(items))
         manager.closeManager()

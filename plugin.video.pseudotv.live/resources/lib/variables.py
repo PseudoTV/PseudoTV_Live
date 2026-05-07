@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -32,17 +32,11 @@ EPG_ARTWORK         = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
 CACHE_LOC           = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
 LOGO_LOC            = os.path.join(CACHE_LOC,'logos')
 FILLER_LOC          = os.path.join(CACHE_LOC,'fillers')
-RESUME_LOC          = os.path.join(CACHE_LOC,'resume')
 M3UFLEPATH          = os.path.join(CACHE_LOC,M3UFLE)
 XMLTVFLEPATH        = os.path.join(CACHE_LOC,XMLTVFLE)
 GENREFLEPATH        = os.path.join(CACHE_LOC,GENREFLE)
 PROVIDERFLEPATH     = os.path.join(CACHE_LOC,PROVIDERFLE)
 CHANNELFLEPATH      = os.path.join(CACHE_LOC,CHANNELFLE)
-LIBRARYFLEPATH      = os.path.join(CACHE_LOC,LIBRARYFLE) 
-SERVERFLEPATH       = os.path.join(CACHE_LOC,SERVERFLE)
-AUTOTUNEFLEPATH     = os.path.join(CACHE_LOC,AUTOTUNEFLE)
-
-
 
 class Globals:
     @staticmethod
@@ -163,13 +157,16 @@ class Globals:
         return {0:LOGO_LANDSCAPE,1:LOGO_POSTER}[opt]
 
     @staticmethod  
-    def _buildWebImage(image=None, fallback=LOGO):
+    def _buildWebImage(name, image=None, fallback=LOGO):
         image = Globals._cleanImage(image)
-        if not image: return fallback
-        elif image.startswith(('image://',)):
+        if name and image is None: 
+            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache') or {}).get(name), f'http://{Globals._getEXTProperty('%s.Remote_Host'%(ADDON_ID))}/logo/{Globals._quoteString(name)}')
+        elif image.startswith(('image://')):
             image = f'{Globals._getEXTProperty('%s.Local_Host'%(ADDON_ID))}/image/{Globals._quoteString(image)}'
         elif not image.startswith(('http','resource')):
-            image = f'http://{Globals._getEXTProperty('%s.Remote_Host'%(ADDON_ID))}/image/{FileAccess._encodeString(image)}'
+            image = f'http://{Globals._getEXTProperty('%s.Remote_Host'%(ADDON_ID))}/image/{Globals._quoteString(image)}'
+        elif fallback:
+            image = fallback
         return image
         
     @staticmethod
@@ -268,5 +265,18 @@ class Globals:
     def _randomSamples(items=[], x=-1):
         if isinstance(items, list):
             if items and len(items) >= x: return random.sample(items, x)
-            else:               return random.sample(items, len(items))
+            else:                         return random.sample(items, len(items))
         return items
+        
+    @staticmethod
+    def double_urlencode(text):
+        text = Globals.single_urlencode(text)
+        text = Globals.single_urlencode(text)
+        return text
+
+    @staticmethod  
+    def single_urlencode(text):
+        text = urllib.parse.urlencode({'blahblahblah':text})
+        text = text[13:]
+        return text
+        

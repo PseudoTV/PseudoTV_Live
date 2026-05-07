@@ -1,4 +1,4 @@
-  # Copyright (C) 2025 Lunatixz
+  # Copyright (C) 2026 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -45,10 +45,11 @@ class Busy(xbmcgui.WindowXMLDialog):
 class Background(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.player = kwargs.get('player', None)
-        self.citem  = self.player.playingItem.get('citem',{})
-        self.fitem  = self.player.playingItem.get('fitem',{})
-        self.nitem  = self.player.playingItem.get('nitem',{})
+        self.service = kwargs.get('service', None)
+        self.player  = self.service.player
+        self.citem   = self.player.playingItem.get('citem',{})
+        self.fitem   = self.player.playingItem.get('fitem',{})
+        self.nitem   = self.player.playingItem.get('nitem',{})
       
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -93,8 +94,9 @@ class Replay(xbmcgui.WindowXMLDialog):
     
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.player  = kwargs.get('player', None)
-        self.monitor = self.player.service.monitor
+        self.service = kwargs.get('service', None)
+        self.monitor = self.service.monitor
+        self.player  = self.service.player
         self.citem   = self.player.playingItem.get('citem',{})
         self.fitem   = self.player.playingItem.get('fitem',{})
         
@@ -173,8 +175,8 @@ class Overlay(object):
     cntrlManager = {}
     
     def __init__(self, *args, **kwargs):
-        self.player     = kwargs.get('player', None)
-        self.service    = self.player.service
+        self.service    = kwargs.get('service', None)
+        self.player     = self.service.player
         self.jsonRPC    = self.player.jsonRPC
         self.runActions = self.player.runActions
         self.citem      = self.player.playingItem.get('citem',{})
@@ -270,16 +272,16 @@ class Overlay(object):
                     elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
                     self.channelBug.setImage(logo)
                     self.channelBug.setAnimations([('Conditional', f'effect=fade start=0 end=100 time=2000 delay=1000 condition=Control.IsVisible({id}) reversible=false'),
-                                                   ('Conditional', f'effect=fade start=100 end={self.channelBugFade} time=1000 delay=3000 condition=Control.IsVisible({id}) reversible=false'),
-                                                   ('Conditional', f'effect=fade start={self.channelBugFade} end=0 time=2000 delay={7000+wait} loop="true" condition=Control.IsVisible({id})'),
-                                                   ('Conditional', f'effect=fade start=0 end={self.channelBugFade} time=2000 delay={7000+wait+wait} loop="true" condition=Control.IsVisible({id})')])
+                                                   ('Conditional', f'effect=fade start=100 end={self.channelBugFade} time=1000 delay=3000 condition=Control.IsVisible({id}) reversible=false')])
+                                                   # ('Conditional', f'effect=fade start={self.channelBugFade} end=0 time=2000 delay={7000+wait} loop="true" condition=Control.IsVisible({id})'),
+                                                   # ('Conditional', f'effect=fade start=0 end={self.channelBugFade} time=2000 delay={7000+wait+wait} loop="true" condition=Control.IsVisible({id})')])
                     self.log('enableChannelBug, logo = %s, channelBugColor = %s, window = (%s,%s)'%(logo,self.channelBugColor,self.window_h, self.window_w))
             else: self.close()
         
         
     def toggleOnNext(self, state: bool=bool(SETTINGS.getSettingInt('OnNext_Mode'))):
         if state and self.onnext is None:
-            self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", player=self, mode=self.player.OnNextMode, position=self.player.onNextPosition, next=self.jsonRPC.getNextItem(self.citem,self.nitem))
+            self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", service=self.service, mode=self.player.OnNextMode, position=self.player.onNextPosition, next=self.jsonRPC.getNextItem(self.citem,self.nitem))
         elif not state and hasattr(self.onnext,'onClose'):
             self.onnext = self.onnext.onClose()
         else: return
@@ -305,14 +307,14 @@ class OnNext(xbmcgui.WindowXMLDialog):
     
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.player         = kwargs.get('player'  , None)
+        self.service        = kwargs.get('service' , None)
         self.nitem          = kwargs.get('next'    , {})
         self.onNextMode     = kwargs.get('mode'    , SETTINGS.getSettingInt('OnNext_Mode'))
         self.onNextPosition = kwargs.get('position', SETTINGS.getSetting("OnNext_Position_XY"))
         
-        self.service    = self.player.service
+        self.monitor    = self.service.monitor
+        self.player     = self.service.player
         self.jsonRPC    = self.player.jsonRPC
-        self.monitor    = self.player.monitor
         
         self.citem      = self.player.playingItem.get('citem',{})
         self.fitem      = self.player.playingItem.get('fitem',{})

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PseudoTV Live | Multi-Server Manager</title>
+    <style>
+        :root {
+            --pstv-bg-dark: #002b4d; --pstv-bg-light: #005a92; --pstv-accent: #ffffff;
+            --pstv-input-bg: #1a4a70; --pstv-border: rgba(255, 255, 255, 0.3);
+            --pstv-focus: #5dade2; --pstv-dim: rgba(255, 255, 255, 0.4);
+            --pstv-epg-bg: #001a2d; --pstv-epg-prog: #003d66;
+            --hour-width: 340px; --slot-width: 170px; --channel-col-width: 240px;
+        }
+
+        body {
+            background: radial-gradient(circle, var(--pstv-bg-light) 0%, var(--pstv-bg-dark) 100%);
+            background-attachment: fixed; color: var(--pstv-accent);
+            font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center;
+        }
+
+        .banner { width: 100%; padding: 20px 0; text-align: center; }
+        .banner img { max-width: 300px; filter: drop-shadow(0px 8px 15px rgba(0,0,0,0.4)); }
+
+        .global-header {
+            width: 95%; max-width: 1200px; background: rgba(0, 0, 0, 0.5); 
+            padding: 15px 25px; border-radius: 12px; border: 1px solid var(--pstv-border);
+            margin-bottom: 20px; display: flex; align-items: center; gap: 20px; box-sizing: border-box;
+            backdrop-filter: blur(10px);
+        }
+
+        .tab-bar { display: flex; gap: 5px; width: 95%; max-width: 1200px; }
+        .tab {
+            padding: 12px 25px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--pstv-border);
+            border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer;
+            font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--pstv-dim);
+        }
+        .tab.active { background: rgba(0, 0, 0, 0.2); color: var(--pstv-accent); border-top: 2px solid var(--pstv-focus); backdrop-filter: blur(12px); }
+
+        .container {
+            width: 95%; max-width: 1200px; background: rgba(0, 0, 0, 0.35); backdrop-filter: blur(12px);
+            border: 1px solid var(--pstv-border); border-radius: 0 12px 12px 12px;
+            padding: 25px; margin-bottom: 50px; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        }
+
+        .tab-content { display: none; min-height: 400px; }
+        .tab-content.active { display: block; }
+
+        select, input { width: 100%; padding: 12px; background: var(--pstv-input-bg); border: 1px solid var(--pstv-border); border-radius: 4px; color: white; box-sizing: border-box; font-family: inherit; }
+        input[readonly] { background: rgba(0,0,0,0.3); color: #888; border-color: transparent; cursor: not-allowed; }
+
+        .editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .editor-field label { display: block; font-size: 0.65rem; text-transform: uppercase; margin-bottom: 6px; opacity: 0.8; color: var(--pstv-focus); }
+        
+        .input-with-action { display: flex; gap: 8px; }
+        .btn-action { background: var(--pstv-bg-light); color: white; border: 1px solid var(--pstv-border); padding: 0 18px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: bold; transition: all 0.2s; white-space: nowrap; }
+        .btn-action:hover { background: var(--pstv-focus); }
+        
+        .toggle-row { grid-column: span 2; display: flex; flex-wrap: wrap; gap: 30px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; border: 1px solid var(--pstv-border); margin-top: 20px; }
+        .toggle-group { display: flex; align-items: center; gap: 12px; }
+        .toggle-label { font-size: 0.7rem; text-transform: uppercase; color: var(--pstv-accent); font-weight: bold; }
+        
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--pstv-focus); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .guide-container { width: 100%; overflow-x: auto; background: var(--pstv-epg-bg); border: 1px solid var(--pstv-border); border-radius: 8px; }
+        .guide-table { border-collapse: collapse; min-width: 100%; table-layout: fixed; }
+        .guide-row { border-bottom: 1px solid rgba(255,255,255,0.05); height: 50px; }
+        .guide-channel-col { width: var(--channel-col-width); background: rgba(0,0,0,0.3); padding: 10px; position: sticky; left: 0; z-index: 2; font-weight: bold; font-size: 0.8rem; border-right: 2px solid var(--pstv-focus); }
+        .guide-program { background: var(--pstv-epg-prog); border-right: 1px solid rgba(255,255,255,0.1); padding: 10px; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+
+        .save-bar { margin-top: 35px; padding-top: 25px; border-top: 1px solid var(--pstv-border); text-align: right; }
+        .btn-save { background: #27ae60; color: white; border: none; padding: 14px 40px; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+
+        input[type=number]::-webkit-inner-spin-button { opacity: 1; height: 30px; }
+    </style>
+</head>
+<body>
+
+    <div class="banner"><img src="http://{{ remote_host }}/images/{{ media_loc }}/splashtext.png"></div>
+
+    <div class="global-header">
+        <div style="width: 300px;">
+            <label style="display:block; font-size: 0.65rem; margin-bottom: 5px; opacity: 0.7; text-transform: uppercase;">Source Server</label>
+            <select id="serverSelector" onchange="onServerChange()"></select>
+        </div>
+    </div>
+
+    <div class="tab-bar">
+        <div id="btn-channels" class="tab active" onclick="navigateTab('channels')">Manager</div>
+        <div id="btn-guide" class="tab" onclick="navigateTab('guide')">Live Guide</div>
+        <div id="btn-info" class="tab" onclick="navigateTab('info')">System Info</div>
+    </div>
+
+    <div class="container">
+        <div id="tab-channels" class="tab-content active">
+            <div id="noServerMsg" style="text-align:center; padding:60px; opacity:0.5;">Select a server to manage channels.</div>
+            <div id="channelManagerUI" style="display:none;">
+                <div style="margin-bottom: 25px; max-width: 400px;">
+                    <label style="display:block; font-size: 0.65rem; margin-bottom: 5px; opacity: 0.7; text-transform: uppercase;">Channel Editor</label>
+                    <select id="channelSelector" onchange="loadChannelForm()"></select>
+                </div>
+                <div id="channelConfigArea"></div>
+            </div>
+        </div>
+
+        <div id="tab-guide" class="tab-content">
+            <div class="guide-container">
+                <table class="guide-table" id="epgTable">
+                    <tr class="guide-row"><td style="padding:40px; text-align:center; opacity:0.5;">Select a server to view the TV guide.</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-info" class="tab-content">
+            <div id="info-grid" class="editor-grid">
+                <div class="editor-field"><label>Remote Host</label><input type="text" value="{{ remote_host }}" readonly></div>
+                <div class="editor-field"><label>Channel Limit</label><input type="text" value="{{ channel_limit }}" readonly></div>
+                <div class="editor-field"><label>Media Location</label><input type="text" value="{{ media_loc }}" readonly></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let serverData = {}; 
+    let currentServerKey = "";
+    
+    const CHANNEL_LIMIT = parseInt("{{ channel_limit }}") || 999;
+    const REMOTE_HOST = "{{ remote_host }}";
+
+    async function init() {
+        try {
+            const res = await fetch(`http://${REMOTE_HOST}/api/servers.json`);
+            const json = await res.json();
+            serverData = json.servers;
+            const sSelect = document.getElementById('serverSelector');
+            sSelect.innerHTML = '<option value="">-- Choose Server --</option>';
+            Object.keys(serverData).forEach(k => sSelect.add(new Option(k, k)));
+        } catch (e) { console.error("Init Error:", e); }
+    }
+
+    function onServerChange() {
+        currentServerKey = document.getElementById('serverSelector').value;
+        const server = serverData[currentServerKey];
+        document.getElementById('channelManagerUI').style.display = server ? 'block' : 'none';
+        document.getElementById('noServerMsg').style.display = server ? 'none' : 'block';
+        document.getElementById('channelConfigArea').innerHTML = '';
+        if (!server) return;
+
+        const cSelect = document.getElementById('channelSelector');
+        cSelect.innerHTML = '<option value="">-- Choose Channel --</option>';
+        server.channels.forEach((ch, i) => cSelect.add(new Option(`[${ch.number}] ${ch.name}`, i)));
+
+        const epg = document.getElementById('epgTable');
+        epg.innerHTML = server.channels.map(ch => `
+            <tr class="guide-row">
+                <td class="guide-channel-col">${ch.number} - ${ch.name}</td>
+                <td class="guide-program" style="width: 400px;">Current Program Data...</td>
+                <td class="guide-program" style="width: 400px;">Upcoming Program...</td>
+            </tr>
+        `).join('');
+    }
+
+    function loadChannelForm() {
+        const server = serverData[currentServerKey];
+        const idx = document.getElementById('channelSelector').value;
+        const area = document.getElementById('channelConfigArea');
+        if (idx === "") { area.innerHTML = ''; return; }
+
+        const channel = server.channels[idx];
+        let html = `<div class="editor-grid">`;
+
+        // Fixed Top Row
+        html += `<div class="editor-field"><label>Channel Number</label><input type="number" id="edit-number" value="${channel.number}" min="1" max="${CHANNEL_LIMIT}"></div>`;
+        html += `<div class="editor-field"><label>Channel ID</label><input type="text" id="edit-id" value="${channel.id || ''}" readonly></div>`;
+
+        let boolsHtml = ""; 
+
+        // Sorting logic: ensure "path" fields appear early near "logo"
+        const sortedEntries = Object.entries(channel).sort((a, b) => {
+            const priority = ['logo', 'path', 'url', 'icon'];
+            let aScore = priority.findIndex(p => a[0].toLowerCase().includes(p));
+            let bScore = priority.findIndex(p => b[0].toLowerCase().includes(p));
+            return (bScore === -1 ? 0 : bScore) - (aScore === -1 ? 0 : aScore);
+        });
+
+        sortedEntries.forEach(([key, val]) => {
+            if (['number', 'id', 'catchup'].includes(key) || typeof val === 'object') return;
+
+            if (typeof val === 'boolean') {
+                boolsHtml += `<div class="toggle-group">
+                                <span class="toggle-label">${key.replace(/_/g, ' ')}</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="edit-${key}" ${val ? 'checked' : ''}>
+                                    <span class="slider"></span>
+                                </label>
+                             </div>`;
+            } 
+            else if (key.toLowerCase().includes('path') || key.toLowerCase().includes('logo') || key.toLowerCase().includes('icon')) {
+                html += `<div class="editor-field"><label>${key.replace(/_/g, ' ')}</label>
+                            <div class="input-with-action">
+                                <input type="text" id="edit-${key}" value="${val || ''}">
+                                <button class="btn-action" onclick="triggerBrowser('${key}')">SELECT</button>
+                            </div></div>`;
+            }
+            else {
+                html += `<div class="editor-field"><label>${key.replace(/_/g, ' ')}</label>
+                         <input type="text" id="edit-${key}" value="${val || ''}"></div>`;
+            }
+        });
+
+        if (boolsHtml !== "") html += `<div class="toggle-row">${boolsHtml}</div>`;
+
+        html += `</div><div class="save-bar"><button class="btn-save" onclick="saveChannel(${idx})">UPDATE CHANNEL</button></div>`;
+        area.innerHTML = html;
+    }
+
+    function navigateTab(t) {
+        document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('btn-'+t).classList.add('active');
+        document.getElementById('tab-'+t).classList.add('active');
+    }
+
+    function triggerBrowser(field) { alert(`Opening picker for ${field}`); }
+    function saveChannel(idx) { alert("Channel Staged."); }
+
+    window.onload = init;
+</script>
+</body>
+</html>

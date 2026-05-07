@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -169,8 +169,12 @@ class CustomQueue(object):
                     self.head = node
                     self.tail = node
                 self.log(f"_push, func = {package[0].__name__}, timer = {timer}")
-        if not self.popThread.is_alive(): self._run()
-                
+        
+        if self.service._shutdown(CPU_CYCLE): 
+            self._stop()
+        elif not (self.service._interrupt() or self.service._suspend()) and not self.popThread.is_alive(): 
+            self._run()
+            
 
     def _process(self, node, fifo=True):
         package = node.package

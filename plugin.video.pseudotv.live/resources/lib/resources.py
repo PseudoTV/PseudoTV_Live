@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -34,21 +34,20 @@ _MULTI_WS_RE  = re.compile(r'\s+')
 
 class Service(object):
     from jsonrpc import JSONRPC
-    jsonRPC    = JSONRPC()
-    player     = PLAYER()
-    monitor    = MONITOR()
-    
+    jsonRPC = JSONRPC()
+    player  = PLAYER()
+    monitor = MONITOR()
     def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
+        return any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+    def _restart(self) -> bool:
+        return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
-    def _suspend(self, wait=CPU_CYCLE) -> bool:
-        # if wait > 0: self._sleep(wait)
-        return PROPERTIES.isPendingSuspend()
+        return any([PROPERTIES.isPendingInterrupt(),self._shutdown(),self._restart(),BUILTIN.isScanning()])
+    def _suspend(self) -> bool:
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _sleep(self, wait=CPU_CYCLE):
-        # use a small cpu-cycle sleep loop but avoid heavy operations inside
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
+            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
             else: wait -= CPU_CYCLE
         return False
 
@@ -102,7 +101,6 @@ class Resources(object):
     def getCache(self, chname, fallback=LOGO):
         # Use OrderedDict LRU behavior: move to end on access
         try:
-            print('getCache image',type(image),image)
             image = self.imageCache.get(chname)
             if image is not None:
                 try: self.imageCache.move_to_end(chname)
@@ -112,8 +110,7 @@ class Resources(object):
                 self.queueLogo(chname)
             self.log('getCache, name = %s, image = %s'%(chname,image))
             return image
-        except Exception as e: 
-            print('getCache imageCache',type(self.imageCache),self.imageCache)
+        except Exception as e: pass
 
 
     def setCache(self, chname, image=None):
@@ -129,18 +126,21 @@ class Resources(object):
 
 
     def getLogo(self, citem: dict, fallback=LOGO, lookup=False) -> str:
-        logo = None
-        if not logo and citem.get('name') == LANGUAGE(32002): logo = self.holiday.get('logo')                  # seasonal
-        if not logo and not lookup:                           logo = self.getCache(citem.get('name'),fallback) # cache
-        if not logo and lookup: # perform progressively heavier lookups only when lookup=True
-            logo = self.getLocalLogo(citem.get('name'))                # local
-            if not logo: logo = self.getLogoResources(citem)           # resources
-            if not logo: logo = self.getTVShowLogo(citem.get('name'))  # tvshow
-            # if not logo: logo = self.generateOnline(citem.get('name')) # generative (online)
-            if not logo: logo = self.generateLocal(citem.get('name'))  # generative (local)
-            if logo: self.setCache(citem.get('name'), logo)            # cache
-        self.log('[%s] getLogo, name = %s, lookup = %s, logo = %s'%(citem.get('id'),citem.get('name'),lookup,logo))
-        return Globals._buildWebImage(logo, fallback)
+        try:
+            logo = None
+            if not logo and citem.get('name') == LANGUAGE(32002): logo = self.holiday.get('logo')                  # seasonal
+            if not logo and not lookup:                           logo = self.getCache(citem.get('name'),fallback) # cache
+            if not logo and lookup: # perform progressively heavier lookups only when lookup=True
+                logo = self.getLocalLogo(citem.get('name'))                  # local
+                if not logo: logo = self.getLogoResources(citem)             # resources
+                if not logo: logo = self.getTVShowLogo(citem.get('name'))    # tvshow
+                # if not logo: logo = self.generateOnline(citem.get('name')) # generative (online)
+                if not logo: logo = self.generateLocal(citem.get('name'))    # generative (local)
+                if logo: self.setCache(citem.get('name'), logo)              # cache
+            self.log('[%s] getLogo, name = %s, lookup = %s, logo = %s'%(citem.get('id'),citem.get('name'),lookup,logo))
+            return Globals._buildWebImage(citem.get('name'), logo, fallback)
+        except Exception as e: self.log(f'getLogo failed!\n{e}\n{citem}', xbmc.LOGERROR)
+        return LOGO
 
 
     @cacheit(expiration=datetime.timedelta(minutes=5))
@@ -254,7 +254,7 @@ class Resources(object):
 
 
     def generateLocal(self, text, background=os.path.join(MEDIA_LOC,'blank.png'),
-                      font_path=FileAccess.translatePath(os.path.join('special://skin','fonts','arial.ttf')),
+                      font_path=FileAccess.translatePath(os.path.join('special://skin/fonts','arial.ttf')),
                       font_size=120, text_color=(255,255,255,255)):
         """
         Generates a placeholder image with text on a background image.
@@ -268,18 +268,19 @@ class Resources(object):
         Returns:
             Path to generated image in TEMP_LOC or None on failure.
         """
-        if SETTINGS.hasAddon('script.module.pil'):
+        if not text is None and SETTINGS.hasAddon('script.module.pil'):
             try:
                 from PIL import Image, ImageDraw, ImageFont
-                fle = FileAccess.open(background, "rb")
-                try: bg_bytes = fle.readBytes()
+                try: 
+                    fle = FileAccess.open(background, "rb")
+                    bg_bytes = fle.readBytes()
+                except Exception as e: self.log(f'generateLocal failed!\n{e}', xbmc.LOGERROR)
                 finally:
-                    try: fle.close()
-                    except Exception: pass
-                img = Image.open(BytesIO(bg_bytes)).convert("RGBA")
+                    if hasattr(fle,'close'): fle.close()
+                        
+                img  = Image.open(BytesIO(bg_bytes)).convert("RGBA")
                 draw = ImageDraw.Draw(img)
                 font = ImageFont.truetype(font_path, font_size)
-                # Use textbbox for accurate measurement including font offsets
                 bbox = draw.textbbox((0, 0), text, font=font)
                 text_width  = bbox[2] - bbox[0]
                 text_height = bbox[3] - bbox[1]
@@ -287,26 +288,41 @@ class Resources(object):
                 x = (img.width - text_width) // 2 - bbox[0]
                 y = (img.height - text_height) // 2 - bbox[1]
                 draw.text((x, y), text, font=font, fill=text_color)
-                # Sanitize text for filename and limit length
-                safe_name = re.sub(r'[^A-Za-z0-9_.-]', '_', text)[:200] or "image"
-                image_filename = f"{safe_name}.png"
-                image_path = os.path.join(FileAccess.translatePath(TEMP_LOC), image_filename)
+                
                 # Save to a BytesIO then write using FileAccess to avoid PIL writing to paths that may not be writable directly
+                filepath = os.path.join(TEMP_LOC, f"{text}.png")
                 buf = BytesIO()
                 img.save(buf, format="PNG")
                 buf.seek(0)
-                out = FileAccess.open(image_path, "wb")
-                try: out.write(buf.read())
+                try: 
+                    out = FileAccess.open(filepath, "wb")
+                    out.write(buf.read())
+                except Exception as e: self.log(f'generateLocal failed!\n{e}', xbmc.LOGERROR)
                 finally:
-                    try: out.close()
-                    except Exception: pass
-                return image_path
-            except Exception as e:
-                self.log(f'generateLocal failed!\n{e}', xbmc.LOGERROR)
-                return None
+                    if hasattr(out,'close'): out.close()
+                if FileAccess.exists(filepath): return filepath
+            except Exception as e: self.log(f'generateLocal failed!\n{e}', xbmc.LOGERROR)
 
 
     def generateOnline(self, citem, select=False):
         if self.openRouter:
             try: return self.openRouter.getImage(citem, 1, SETTINGS.getSetting('Generative_Image_Model'))
             except Exception as e: self.log(f'generateOnline failed!: {e}', xbmc.LOGERROR)
+                
+                
+    @cacheit(expiration=datetime.timedelta(minutes=15))
+    def getTexture(self, url):
+        textures = self.jsonRPC.getTextures()
+        image = next((texture for texture in textures if texture.get('cachedurl','').lower() == url.lower()),None)
+        self.log('getTexture, url = %s\nimage = %s'%(url,image))
+        if not image is None: return f'special://userdata/Thumbnails/{image}'
+        
+
+    def setTexture(self, url):
+        image = f'{Globals._getEXTProperty('%s.Local_Host'%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'
+        self.log('setTexture, url = %s\nimage = %s'%(url,image))
+        self.jsonRPC.requestURL(image)
+        return image
+        
+        
+        

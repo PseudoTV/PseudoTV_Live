@@ -42,7 +42,7 @@ class OpenRouter(object):
                 return self.jsonRPC.requestURL(url, params, payload, header, timeout)
 
 
-    @cacheit()
+    @cacheit(expiration=datetime.timedelta(minutes=15))
     def _getModels(self):
         response = self._request("https://openrouter.ai/api/v1/models")
         print(response)
@@ -152,8 +152,8 @@ class OpenRouter(object):
             try:              param = sysARG[1]
             except Exception: param = None
             log('OpenRouter: param = %s'%(param))
-            if param == 'getImageModels':   OpenRouter(cache=SETTINGS.cacheDB)._getImageModels()
-            if param == 'getContextModels': OpenRouter(cache=SETTINGS.cacheDB)._getContextModels()
+            if param == 'getImageModels':   OpenRouter(cache=SETTINGS.cache)._getImageModels()
+            if param == 'getContextModels': OpenRouter(cache=SETTINGS.cache)._getContextModels()
             return Globals._openSettings(ctl)
 
 if __name__ == '__main__': OpenRouter()._run(sys.argv)

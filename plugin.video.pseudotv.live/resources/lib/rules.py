@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -1644,11 +1644,30 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         
         
     def _getURL(self, id):
-        return 'http://%s/filelist/%s.json'%(PROPERTIES.getRemoteHost(),FileAccess._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id)))
+        return 'http://%s/filelist/%s'%(PROPERTIES.getRemoteHost(),self._getKey(id))
         
         
-    def _getPath(self, id):
-        return os.path.join(RESUME_LOC,'%s.json'%(FileAccess._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id))))
+    def _addIDX(self, key):
+        keys = set(SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX)) or [])
+        keys.add(key)
+        return SETTINGS.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
+        
+        
+    def _delIDX(self, key):
+        keys = set(SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX)) or [])
+        if key in list(keys): keys.pop(key)
+        return SETTINGS.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
+        
+        
+    def _chkIDX(self):
+        keys = set(SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX)) or [])
+        for key in list(keys):
+            if not SETTINGS.getCacheSetting(key, FileAccess._getMD5(key)): keys.pop(key)
+        return SETTINGS.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
+        
+        
+    def _getKey(self, id):
+        return '%s.json'%(FileAccess._getMD5('%s.%s'%(PROPERTIES.getFriendlyName(),id)))
         
         
     def _getTotDuration(self, id, filelist=[]):
@@ -1667,28 +1686,28 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
                                         "art":{"thumb":citem.get('logo',LOGO_COLOR),"fanart":FANART,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
 
             
-    def _set(self, id, filelist=[], resume={"idx":0,"position":0.0,"total":0.0,"file":"","updated":{"instance":"","time":-1}}):
-        self.log("[%s] runAction, _set: filelist = %s, resume = %s, url = %s"%(id,len(filelist),resume,self.optionValues[1]))
+    def _setResume(self, id, filelist=[], resume={"idx":0,"position":0.0,"total":0.0,"file":"","updated":{"instance":"","time":-1}}):
+        key = self._getKey(id)
+        self._addIDX(key)
+        self.log("[%s] runAction, _setResume: filelist = %s, resume = %s, key = %s, url = %s"%(id,len(filelist),resume,key,self.optionValues[1]))
         friendly = PROPERTIES.getFriendlyName()
-        if resume.get('updated',{}).get('instance') == friendly: #local
-            return FileAccess.setJSON(self._getPath(id),{'resume':resume,'filelist':filelist})
-        elif self.optionValues[1]:#remote
-            return builder.jsonRPC.requestURL(self.optionValues[1],payload={'uuid':SETTINGS.getMYUUID(),'name':friendly,'payload':{'resume':resume,'filelist':filelist}},
-                              cache={"cache":SETTINGS.cacheDB, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
-            
-        
-    def _get(self, id):
-        self.log("[%s] runAction, _get: url = %s"%(id,self.optionValues[1]))
+        if resume.get('updated',{}).get('instance') == friendly: return SETTINGS.setCacheSetting(key, {'resume':resume,'filelist':filelist}, FileAccess._getMD5(key), datetime.timedelta(days=84))
+        elif self.optionValues[1]:                               return builder.jsonRPC.requestURL(self.optionValues[1],payload={'uuid':SETTINGS.getMYUUID(),'name':friendly,'payload':{'resume':resume,'filelist':filelist}},
+                                                                                                   cache={"cache":SETTINGS.cache, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
+
+    def _getResume(self, id):
+        key = self._getKey(id)
+        self.log("[%s] runAction, _getResume: key = %s, url = %s"%(id,key,self.optionValues[1]))
         if self.optionValues[1]: return builder.jsonRPC.requestURL(self.optionValues[1])
-        else:                    return FileAccess.getJSON(self._getPath(id))
+        else:                    return (SETTINGS.getCacheSetting(key, FileAccess._getMD5(key)) or {})
 
 
     def _getResume(self, id):
-        return (self._get(id).get('resume') or {"idx":0,"position":0.0,"total":0.0,"file":"","updated":{"instance":"","time":-1}})
+        return (self._getResume(id).get('resume') or {"idx":0,"position":0.0,"total":0.0,"file":"","updated":{"instance":"","time":-1}})
         
         
     def _getFilelist(self, id):
-        return (self._get(id).get('filelist') or [])
+        return (self._getResume(id).get('filelist') or [])
         
 
     def _getPlaylist(self, id):
@@ -1700,7 +1719,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
                     resume.update({'idx':0})
                     item['resume'] = resume
                     filelist = filelist[idx:]
-                    if self._set(id, filelist, resume): break
+                    if self._setResume(id, filelist, resume): break
         self.log('[%s] runAction, _getPlaylist: filelist = %s, resume = %s'%(id,len(filelist),resume))
         return filelist
         
@@ -1708,6 +1727,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
     def runAction(self, actionid, citem, parameter, inherited):
         self.log('[%s] runAction, actionid = %s,'%(citem.get('id'),actionid))
         if actionid == RULES_ACTION_CHANNEL_START:
+            self._chkIDX()
             self.storedValues[0]    = inherited.padScheduling
             self.storedValues[1]    = self._getFilelist(citem.get('id'))
             inherited.padScheduling = False #disable guide padding with duplicates to fill quota.
@@ -1736,7 +1756,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
             if self.storedValues[2] and len(parameter) > 0:
                 self.log("[%s] runAction, updating fileList (%s) extending by (%s)"%(citem.get('id'),len(self.storedValues[1]),len(parameter)))
                 self.storedValues[1].extend(parameter)
-                self._set(citem.get('id'), self.storedValues[1], self._getResume(citem.get('id')))
+                self._setResume(citem.get('id'), self.storedValues[1], self._getResume(citem.get('id')))
                 
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN:
             if parameter: 
@@ -1761,7 +1781,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         elif actionid in [RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP]:
             if parameter.get('resume').get('updated'):
                 self.log("[%s] runAction, updating resume = %s"%(citem.get('id'),parameter.get('resume')))
-                self._set(citem.get('id'),self.storedValues[1],parameter.get('resume'))
+                self._setResume(citem.get('id'),self.storedValues[1],parameter.get('resume'))
                 
         return parameter
        

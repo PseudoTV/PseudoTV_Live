@@ -24,7 +24,8 @@ from pool       import threadit, debounceit
 
 @debounceit(int(REAL_SETTINGS.getSetting('RPC_Delay')))
 def _run(mode, sysInfo={}):
-    Plugin(mode, sysInfo)
+    log(f'Default: _run, mode = {mode}, sysInfo = {sysInfo}')
+    threadit(Plugin)(mode, sysInfo)
     
 if __name__ == '__main__':
     try:
@@ -35,7 +36,6 @@ if __name__ == '__main__':
             except: 
                 sysARG  = ['plugin://plugin.video.pseudotv.live/', '1', sys.argv[1], 'resume:false']
                 sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-            log(f'Default: __main__, mode = {sysInfo.get("mode")}, argv = {sysARG}')
             
             if sysInfo.get('mode') is None:
                 xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
@@ -45,7 +45,7 @@ if __name__ == '__main__':
                     Globals._openSettings()
                     
             elif any(item in sysARG[2] for item in ['{catchup-id}', '{utc}', '{duration}', '{utcend}']):
-                Globals._notificationDialog(LANGUAGE(32129)%(ADDON_NAME,PVR_CLIENT_NAME))
+                Globals._notificationDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
                 Globals._setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
                 xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())
                 

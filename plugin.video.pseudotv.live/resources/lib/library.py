@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -29,17 +29,19 @@ REG_KEY = 'PseudoTV_Recommended.%s'
 class Service(object):
     from jsonrpc import JSONRPC
     jsonRPC = JSONRPC()
+    player  = PLAYER()
     monitor = MONITOR()
     def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
+        return any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+    def _restart(self) -> bool:
+        return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
-    def _suspend(self, wait=CPU_CYCLE) -> bool:
-        if wait > 0: self._sleep(wait)
-        return PROPERTIES.isPendingSuspend()
+        return any([PROPERTIES.isPendingInterrupt(),self._shutdown(),self._restart(),BUILTIN.isScanning()])
+    def _suspend(self) -> bool:
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
+            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
             else: wait -= CPU_CYCLE
         return False
         
@@ -47,35 +49,36 @@ class Library(object):
     channels   = Channels()
     predefined = Predefined()
     
-    def __init__(self, service=None, file=LIBRARYFLEPATH, writable=False):
+    def __init__(self, service=None, writable=False):
         if service is None: service = Service()
-        self.writable  = writable
-        self.service   = service
-        self.jsonRPC   = service.jsonRPC
-        self.cache     = service.jsonRPC.cache
-        self.resources = Resources(service=self.service)
+        self.writable    = writable
+        self.service     = service
+        self.jsonRPC     = service.jsonRPC
+        self.cache       = service.jsonRPC.cache
+        self.resources   = Resources(service=self.service)
         
-        self.pCount  = 0
-        self.pDialog = None
-        self.pMSG    = ''
-        self.pHeader = ''
+        self.pCount      = 0
+        self.pDialog     = None
+        self.pMSG        = ''
+        self.pHeader     = ''
         
-        self.libraryFile = file
         self.libraryDATA = FileAccess.getJSON(LIBRARYFLE_DEFAULT)
+        self.libraryKEY  = f'Library.{self.libraryDATA.get('version',ADDON_VERSION)}'
         self.libraryTEMP = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
-        self.AUTOTUNE = {"Playlists"    :{'func':self.getPlaylists   ,'life':datetime.timedelta(minutes=15)},
-                         "TV Networks"  :{'func':self.getNetworks    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                         "TV Shows"     :{'func':self.getTVShows     ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
-                         "TV Genres"    :{'func':self.getTVGenres    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                         "Movie Genres" :{'func':self.getMovieGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                         "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                         "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                         "Mixed Video"  :{'func':self.getMixedVideo  ,'life':datetime.timedelta(minutes=15)},
-                         "Mixed Music"  :{'func':self.getMixedMusic  ,'life':datetime.timedelta(minutes=15)},
-                         "Recommended"  :{'func':self.getRecommend   ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
-                         "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
-                         "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)}}
+        
+        self.AUTOTUNE    = {"Playlists"    :{'func':self.getPlaylists   ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
+                            "TV Networks"  :{'func':self.getNetworks    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                            "TV Shows"     :{'func':self.getTVShows     ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                            "TV Genres"    :{'func':self.getTVGenres    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                            "Movie Genres" :{'func':self.getMovieGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                            "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                            "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                            "Mixed Video"  :{'func':self.getMixedVideo  ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
+                            "Mixed Music"  :{'func':self.getMixedMusic  ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
+                            "Recommended"  :{'func':self.getRecommend   ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                            "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                            "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)}}
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -83,14 +86,13 @@ class Library(object):
         
 
     def _load(self):
-        return FileAccess.getJSON(self.libraryFile)
+        return (SETTINGS.getCacheSetting(self.libraryKEY, FileAccess._getMD5(self.libraryKEY)) or {})
     
     
     def _save(self):
-        self.log('_save, writable = %s, file = %s'%(self.writable,self.libraryFile))
         if self.writable:
-            with PROPERTIES.interruptActivity():
-                return FileAccess.setJSON(self.libraryFile, self.libraryDATA)
+            self.log('_save, writable = %s'%(self.writable))
+            return SETTINGS.setCacheSetting(self.libraryKEY, self.libraryDATA, FileAccess._getMD5(self.libraryKEY), -1)
         
   
     def getLibrary(self, type=None):
@@ -111,7 +113,8 @@ class Library(object):
         return len(self.libraryDATA['library'].get(type,[])) > 0
         
         
-    def updateLibrary(self, types, silent=False, complete=False):
+    def updateLibrary(self, types, silent=None, complete=False):
+        if silent is None: silent = BUILTIN.isPlaying()
         if not PROPERTIES.isRunning('Library.updateLibrary'):
             with PROPERTIES.chkRunning('Library.updateLibrary'):
                 for type in types:
@@ -136,6 +139,7 @@ class Library(object):
             self.cache.clr("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__),wait=5)
 
 
+    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getPlaylists(self):
         PlayList = []
         types = ['video','music']#,'mixed'
@@ -152,7 +156,7 @@ class Library(object):
                 elif not result.get('label'): continue
                 else:
                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s (%s): %s%%'%(self.pMSG,type.title(),int((idx)*100//len(results))), header=self.pHeader)
-                    nPlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':self.resources.getLogo({'name':result.get('label'),'type':"Custom"},fallback=result.get('thumbnail'))})
+                    nPlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':self.resources.getLogo({'name':result.get('label'),'type':"Custom"},fallback=result.get('thumbnail',LOGO))})
             self.log('getPlaylists, type = %s, PlayList = %s'%(type,len(nPlayList)))
             PlayList.extend(nPlayList)
         PlayList = sorted(PlayList,key=itemgetter('name'))
@@ -160,37 +164,37 @@ class Library(object):
         return PlayList
 
     
-    @cacheit(expiration=datetime.timedelta(minutes=15))
+    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
     def getNetworks(self):
         try:    return self.getTVInfo().get('studios',[])
         except Exception: return []
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=15))
+    @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
     def getTVShows(self):
         try:    return self.getTVInfo().get('shows',[])
         except Exception: return []
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=15))
+    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
     def getTVGenres(self):
         try:    return self.getTVInfo().get('genres',[])
         except Exception: return []
  
        
-    @cacheit(expiration=datetime.timedelta(minutes=15))
+    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
     def getMovieGenres(self):
         try:    return self.getMovieInfo().get('genres',[])
         except Exception: return []
               
            
-    @cacheit(expiration=datetime.timedelta(minutes=15))  
+    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))  
     def getMovieStudios(self):
         try:    return self.getMovieInfo().get('studios',[])
         except Exception: return []
         
          
-    @cacheit(expiration=datetime.timedelta(minutes=15))
+    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
     def getMixedGenres(self):
         MixedGenreList = []
         tvGenres    = self.getTVGenres()
@@ -201,6 +205,7 @@ class Library(object):
         return sorted(MixedGenreList,key=itemgetter('name'))
     
 
+    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getMixedVideo(self):
         MixedList = []
         MixedList.append({'name':'%s Video'%(LANGUAGE(32001)), 'type':"Mixed Video",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Video"})}) #"Recently Added"
@@ -211,6 +216,7 @@ class Library(object):
         return sorted(MixedList,key=itemgetter('name'))
 
 
+    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getMixedMusic(self):
         MixedList = []
         MixedList.append({'name':'%s Music'%(LANGUAGE(32001)), 'type':"Mixed Music",'path':self.predefined.createMusicRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Music"})}) #"Recently Added"
@@ -218,6 +224,7 @@ class Library(object):
         return sorted(MixedList,key=itemgetter('name'))
 
 
+    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getRecommend(self):
         self.log('getRecommend')
         return []
@@ -239,16 +246,19 @@ class Library(object):
         # return PluginList
             
 
+    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getServices(self):
         self.log('getServices')
         return []
 
 
+    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
     def getMusicGenres(self):
         try: return self.getMusicInfo().get('genres',[])
         except Exception: return []
  
  
+    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getPVRRecordings(self):
         recordList    = []
         self.pDialog  = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
@@ -259,6 +269,7 @@ class Library(object):
         return sorted(recordList,key=itemgetter('name'))
 
 
+    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getPVRSearches(self):
         searchList = []
         json_response = self.jsonRPC.getPVRSearches()

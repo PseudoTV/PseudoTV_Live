@@ -1,8 +1,6 @@
 Language IDS w\empty strings: {
     "32033": "",
-    "32099": "",
-    "32100": "",
-    "32101": "",
+    "32166": "",
     "33130": ""
 }
 
@@ -188,6 +186,7 @@ Language IDS not found in py files, possibly only in xml: {
     "30213": "Client Only",
     "30214": "Detect Playlist Changes",
     "30215": "Integrations",
+    "30216": "Artificial Intelligence",
     "30217": "Open-router API-Key",
     "30218": "Use generative artwork",
     "30219": "Allow A.I. Integration",
@@ -216,9 +215,6 @@ Language IDS not found in py files, possibly only in xml: {
     "32074": "Adding Channel",
     "32075": "Saving...",
     "32082": "Clear this Channels Configurations",
-    "32099": "",
-    "32100": "",
-    "32101": "",
     "32113": "Recovering Channel",
     "32115": "Running as a client.",
     "32128": "Rebuilding Autotuned Channels",
@@ -242,7 +238,7 @@ Language IDS not found in py files, possibly only in xml: {
     "32162": "Looking for multi-room instances (%ss)",
     "32163": "Announcing [B]%s[/B]\\nDialog will close when paired: Timeout in %s seconds.",
     "32165": "No Changes Applied!",
-    "32166": "Playback Unavailable! Guide data is updating\\nTry again later...",
+    "32166": "",
     "32167": "Playback Failed!",
     "32170": "- Delete Path",
     "32171": "%s in-use, Try Again...",

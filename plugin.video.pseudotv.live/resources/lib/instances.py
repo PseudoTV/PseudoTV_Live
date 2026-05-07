@@ -28,25 +28,35 @@ class Instances(object):
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
-        
+
     def _load(self, file=INSTANCEFLE_DEFAULT):
+        settings = self.IPTV_SIMPLE_SETTINGS()
         if FileAccess.exists(file): 
             try:
                 self.log(f"_load {file}")
-                xml = FileAccess.open(file, "r")
-                dom = parse(xml)
-                xml.close()
-                return {s.getAttribute('id'): (s.firstChild.data if s.firstChild and s.firstChild.nodeType == s.TEXT_NODE else "") for s in dom.getElementsByTagName('setting')}
+                xml  = FileAccess.open(file, "r")
+                root = ETparse(xml).getroot()
+                for s in root.findall('setting'):
+                    # val = (s.text or "").strip() or s.get('default')
+                    val = (s.text or "").strip()
+                    settings[s.get('id')] = val if val != "" else None
             except Exception as e: self.log(f"_load {file}, failed!\n{e}")
-        return {}
+            finally: 
+                if hasattr(xml,'close'): xml.close()
+        return settings
             
             
-    def _save(self, file, settings={}):
+    def _save(self, file, nsettings={}):
         self.log(f"_save {file}")
+        
         doc  = Document()
         root = doc.createElement('settings')
         root.setAttribute('version', '2')
         doc.appendChild(root)
+        
+        settings = self._load()
+        settings.update(nsettings)
+        
         for setting_id, value in settings.items():
             setting_node = doc.createElement('setting')
             setting_node.setAttribute('id', setting_id)
@@ -55,9 +65,9 @@ class Instances(object):
                 text_node = doc.createTextNode(str(value))
                 setting_node.appendChild(text_node)
             root.appendChild(setting_node)
-        xml_str = doc.toprettyxml(indent="    ", encoding="utf-8")
+            
         with FileAccess.stream(file, 'w') as fle:
-            fle.write(xml_str)
+            fle.write(doc.toprettyxml(indent="    ", encoding="utf-8"))
         return True
         
         
@@ -67,30 +77,39 @@ class Instances(object):
         
         
     def setSettings(self, instance=ADDON_NAME, settings={}):
-        # todo https://github.com/xbmc/xbmc/pull/23648
+        # https://github.com/xbmc/xbmc/pull/23648 todo proper instance api support when merged.
+        ### kodi api hack | unreliable in piers
+        # if isinstance(addon, xbmcaddon.Addon):
+            # if FileAccess.exists(PVR_SETTINGS_XML): 
+                # FileAccess.delete(PVR_SETTINGS_XML)
+                
+            # for setting, value in list(settings.items()): 
+                # try: 
+                    # addon.setSetting(setting,value)
+                    # self.log('[%s] setSettings, %s = %s'%(PVR_CLIENT_ID,setting,value))
+                # except Exception as e: self.log(f'setSettings failed! {setting}:{value}')
+                
+            # if FileAccess.exists(PVR_SETTINGS_XML):
+                # instancePath = self.getPVRInstancePath(self.properties.getFriendlyName())
+                # if FileAccess.exists(instancePath): FileAccess.delete(instancePath)
+                # if FileAccess.move(PVR_SETTINGS_XML, instancePath):
+                    # self.settings.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
+                    # self.properties.setPropTimer('chkPVRRefresh')
+        ###
         addon = self.settings.hasAddon(PVR_CLIENT_ID,notify=True)
-        if isinstance(addon, xbmcaddon.Addon):
-            if FileAccess.exists(PVR_SETTINGS_XML): 
-                FileAccess.delete(PVR_SETTINGS_XML)
-                
-            for setting, value in list(settings.items()): 
-                try: 
-                    addon.setSetting(setting,value)
-                    self.log('[%s] setSettings, %s = %s'%(PVR_CLIENT_ID,setting,value))
-                except Exception as e: self.log(f'setSettings failed! {setting}:{value}')
-                
-            if FileAccess.exists(PVR_SETTINGS_XML):
-                if FileAccess.move(PVR_SETTINGS_XML, self.getPVRInstancePath(self.properties.getFriendlyName())):
-                    self.settings.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
-                    self.properties.setPropTimer('chkPVRRefresh')
-            
-            
+        if self._save(self.getPVRInstancePath(instance),settings):
+            self.settings.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
+            self.properties.setPropTimer('chkPVRRefresh')
+        
+
     def getPVRInstanceID(self, instance=ADDON_NAME):
         return zlib.crc32(instance.encode('utf-8')) % 2147483648
         
         
     def getPVRInstancePath(self, instance=ADDON_NAME):
-        return os.path.join(PVR_CLIENT_LOC,f'instance-settings-{self.getPVRInstanceID(instance)}.xml')
+        path = os.path.join(PVR_CLIENT_LOC,f'instance-settings-{self.getPVRInstanceID(instance)}.xml')
+        self.log(f"getPVRInstancePath {instance} => {path}")
+        return path
         
         
     def chkInstances(self, instance=ADDON_NAME):
@@ -101,8 +120,9 @@ class Instances(object):
             for file in files:
                 if file.startswith('instance-settings-'):
                     try:
-                        fle   = FileAccess.open(os.path.join(PVR_CLIENT_LOC,file), "r")
-                        xml   = fle.read()
+                        fle = FileAccess.open(os.path.join(PVR_CLIENT_LOC,file), "r")
+                        xml = fle.read()
+                        fle.close()
                         match = re.compile(r'<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(xml)
                         try: name = match.group(1)
                         except Exception:
@@ -117,26 +137,18 @@ class Instances(object):
                     except Exception as e:
                         self.log('[%s] chkInstances, path = %s, failed to open file = %s\n%s'%(PVR_CLIENT_ID,PVR_CLIENT_LOC,file,e))
                         continue
-                    finally:
-                        fle.close()
         #create new configuration.
         self.settings.setPVRRemote(self.properties.getRemoteHost(), instance)
 
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
-        return {'kodi_addon_instance_name'      :'ADDON_NAME',
-                'kodi_addon_instance_enabled'   :'false',
-                'm3uPathType'                   :'0',
-                'm3uPath'                       :M3UFLEPATH,
-                'm3uCache'                      :'false',
-                'm3uUrl'                        :'',
-                'startNum'                      :'1',
+        return {'startNum'                      :'1',
                 'numberByOrder'                 :'false',
                 'm3uRefreshMode'                :'1',
-                'm3uRefreshIntervalMins'        :'%s'%(M3U_REFRESH*2),
+                'm3uRefreshIntervalMins'        :'%s'%(M3U_REFRESH),
                 'm3uRefreshHour'                :'0',
-                'connectioncheckinterval'       :'%s'%(M3U_REFRESH*4),
-                'connectionchecktimeout'        :'30',
+                'connectioncheckinterval'       :'%s'%(M3U_REFRESH*2),
+                'connectionchecktimeout'        :'%s'%(M3U_REFRESH*4),
                 'defaultProviderName'           :ADDON_NAME,
                 'enableProviderMappings'      :'true',
                 # 'providerMappingFile'         :PROVIDERFLEPATH,#todo
@@ -144,17 +156,7 @@ class Instances(object):
                 # 'customTvGroupsFile'          :(TVGROUPFLE),#todo
                 # 'radioGroupMode'              :'0',
                 # 'customRadioGroupsFile'       :(RADIOGROUPFLE),#todo
-                'epgPathType'                   :'0',
-                'epgPath'                       :XMLTVFLEPATH,
-                'epgCache'                      :'false',
-                'epgUrl'                        :'',
-                'genresPathType'                :'0',
-                'genresPath'                    :GENREFLEPATH,
-                'genresUrl'                     :'',
                 'useEpgGenreText'               :'true',
-                'logoPathType'                  :'0',
-                'logoPath'                      :LOGO_LOC,
-                'logoBaseUrl'                   :'',
                 'logoFromEpg'                   :'2',
                 'mediaTitleSeasonEpisode'       :'true',
                 'timeshiftEnabled'              :'false',

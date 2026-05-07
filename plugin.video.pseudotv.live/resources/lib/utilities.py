@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -153,10 +153,7 @@ class Utilities(object):
         log('Utilities: _runCleanup, full = %s'%(full))
         files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
                  LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
-                 LANGUAGE(30096):GENREFLEPATH,  #"Genre"
-                 LANGUAGE(30108):CHANNELFLEPATH,#"Channels"
-                 LANGUAGE(30038):AUTOTUNEFLEPATH,#"Autotune"
-                 LANGUAGE(32041):LIBRARYFLEPATH}#"Library"
+                 LANGUAGE(30096):GENREFLEPATH}  #"Genre"
 
         keys = list(files.keys())
         if not full: keys = keys[:2]
@@ -225,9 +222,9 @@ class Utilities(object):
                 except Exception as e: log("Utilities: openPositionUtil, failed! %s"%(e), xbmc.LOGERROR)
                 finally: del overlaytool
             
-    # @threadit
-    @staticmethod
-    def _run(sysARG):
+            
+    @threadit
+    def _run(self, sysARG):
         with BUILTIN.busy_dialog():
             ctl = (0,1)
             try:              param = sysARG[1]
@@ -236,29 +233,27 @@ class Utilities(object):
 
             if param == 'Show_Menu':
                 ctl = (6,1)
-                return Utilities().buildMenu()
+                return self.buildMenu()
             elif param == 'Show_Wiki_QR':
                 ctl = (6,4)
-                return Utilities().qrWiki()
+                return self.qrWiki()
             elif param == 'Show_Support_QR':
                 ctl = (6,5)
-                return Utilities().qrSupport()
+                return self.qrSupport()
             elif param == 'Show_Remote_UI':
                 ctl = (6,6)
-                return Utilities().qrRemote()
+                return self.qrRemote()
             elif param == 'Show_Changelog':
                 ctl = (6,8)
-                return Utilities().showChangelog()
+                return self.showChangelog()
                 
-
-
             #Globals
             if param.startswith('Move_Channelbug'):
                 ctl = (3,15)
-                Utilities().openPositionUtil(1)
+                self.openPositionUtil(1)
             elif param.startswith('Move_OnNext'):
                 ctl = (3,15)
-                Utilities().openPositionUtil(2)
+                self.openPositionUtil(2)
                 
             #Multi-Room
             elif param == 'Show_ZeroConf_QR':
@@ -267,13 +262,12 @@ class Utilities(object):
                 
             #Misc. Scripts
             elif param == 'CPU_Bench':
-                Utilities()._runCPUBench()
+                self._runCPUBench()
             elif param == 'IO_Bench':
-                Utilities()._runIOBench()
+                self._runIOBench()
             elif param == 'Logger':
-                Utilities()._runLogger()
+                self._runLogger()
                 
-            
             #Misc. Debug
             elif param == 'Debug_QR':
                 ctl = (6,1)

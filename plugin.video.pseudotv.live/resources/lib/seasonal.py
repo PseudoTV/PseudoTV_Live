@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -35,7 +35,7 @@ MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMov
 
 class Seasonal(object):
     def __init__(self, cache=None):
-        if cache is None: cache = SETTINGS.cacheDB
+        if cache is None: cache = SETTINGS.cache
         self.cache = cache
     
     

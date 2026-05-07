@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -19,7 +19,7 @@
 # -*- coding: utf-8 -*-
 import traceback
 
-from constants   import *
+from constants     import *
 
 def log(event, level=xbmc.LOGDEBUG):
     """
@@ -64,3 +64,4 @@ def log(event, level=xbmc.LOGDEBUG):
         event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
         if level >= DEBUG_LEVEL:
             xbmc.log(event, level)
+            

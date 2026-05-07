@@ -1,5 +1,8 @@
 {
+    "name": "",
     "uuid": "",
+	"updated":"",
+	"version": "1.0.0",
     "channels": [
         {
             "id": "",
@@ -30,7 +33,7 @@
             "enabled": true
         }
     ],
-    "imports": [
+    "plugins": [
         {
             "vod": [
                 {

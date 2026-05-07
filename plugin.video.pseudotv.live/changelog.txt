@@ -1,12 +1,14 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
+
 v.0.7.3+nightly
+- Improved Internal backups and channel export utilities.
+- Moved Library, Channels, Server json files to internal database.
+- Improved Automatic Auto-tuning, new channels if available are added based on your max future guidedata value.
 - Tweaked Image hosting.
 - Improved Kodi PVR Instance support.
 - Added Network hosted channel manger (W.I.P).
 - Improved MP4 duration parsing.
-- Added Support for YouTube cookies required for YouTube duration parsing.
-  1. Install a cookie saving utility to your PC browser. Ex. https://chromewebstore.google.com/detail/get-cookiestxt-locally
-  2. Log In to Youtube, then save the cookie file to '/userdata/addon_data/plugin.video.pseudotv.live/www.youtube.com_cookies.txt'.
+- Added Support for YouTube cookies required for YouTube duration parsing; see wiki for details.
   
 v.0.7.2+nightly
 - Improved Channel logo detection, and logo resource selection in settings.

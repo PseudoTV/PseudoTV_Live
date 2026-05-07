@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -24,21 +24,22 @@ class Service(object):
     player  = PLAYER()
     monitor = MONITOR()
     def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
+        return any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+    def _restart(self) -> bool:
+        return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
-    def _suspend(self, wait=CPU_CYCLE) -> bool:
-        if wait > 0: self._sleep(wait)
-        return PROPERTIES.isPendingSuspend()
+        return any([PROPERTIES.isPendingInterrupt(),self._shutdown(),self._restart(),BUILTIN.isScanning()])
+    def _suspend(self) -> bool:
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
+            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
             else: wait -= CPU_CYCLE
         return False
     
     
 class JSONRPC(object):
-    cache       = SETTINGS.cacheDB
+    cache       = SETTINGS.cache
     videoParser = VideoParser()
     
     def __init__(self, service=None):
@@ -90,9 +91,8 @@ class JSONRPC(object):
         command["id"] = ADDON_ID
         response = FileAccess.loadJSON(BUILTIN.executeJSONRPC(FileAccess.dumpJSON(command)))
         self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')))
-        self.log('sendJSON, response received')
         if response and response.get('error'):
-            self.log('sendJSON, failed! error = %s' % FileAccess.dumpJSON(response.get('error')), xbmc.LOGWARNING)
+            self.log('sendJSON, failed! error = %s\n%s'%(FileAccess.dumpJSON(response.get('error')),param), xbmc.LOGWARNING)
             response.setdefault('result',{})['error'] = response.pop('error')
         return response
 
@@ -300,6 +300,12 @@ class JSONRPC(object):
         else:     return self.sendJSON(param).get('result',{}).get('genres', [])
 
 
+    def getTextures(self, cache=True):
+        param = {"method":"Textures.GetTextures","params":{"properties":self.getEnums("Textures.Fields.Texture", type='items')}}
+        if cache: return self.cacheJSON(param).get('result',{}).get('textures', [])
+        else:     return self.sendJSON(param).get('result',{}).get('textures', [])
+            
+        
     def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         param["properties"] = self.getEnums("List.Fields.Files", type='items') #todo change enums from files to media specific? 
         param = {"method":"Files.GetDirectory","params":param}

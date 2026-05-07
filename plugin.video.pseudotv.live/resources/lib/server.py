@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -22,6 +22,7 @@ import gzip, mimetypes, socket, errno
 from zeroconf                  import *
 from globals                   import *
 from channels                  import Channels
+from library                   import Library
 from resources                 import Resources
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
@@ -121,43 +122,27 @@ class MyHandler(BaseHTTPRequestHandler):
             if uuid == SETTINGS.getMYUUID(): return True
             else:
                 from multiroom  import Multiroom
-                for server in list(Multiroom().getDiscovery().values()):
+                for server in list(Multiroom().getServers().values()):
                     if server.get('uuid') == uuid: return True
 
-        if self.path.lower().endswith('.json'):
-            try:    incoming = FileAccess.loadJSON(self.rfile.read(int(self.headers['content-length'])).decode())
-            except Exception: incoming = {}
-            
-            if __verifyUUID(incoming.get('uuid')):
-                self.log('do_POST incoming uuid [%s] verified!'%(incoming.get('uuid')))
-                #channels - channel manager save
-                if self.path.lower() == '/%s'%(CHANNELFLE.lower()) and incoming.get('payload'):
+        try:              incoming = FileAccess.loadJSON(self.rfile.read(int(self.headers['content-length'])).decode())
+        except Exception: incoming = {}
+        
+        if __verifyUUID(incoming.get('uuid')) and incoming.get('payload'):
+            self.log('do_POST incoming uuid [%s] verified!'%(incoming.get('uuid')))
+            if self.path.startswith('/api/'):
+                if self.path == f'/api/{CHANNELFLE}':
                     channels = Channels(writable=True)
                     if channels.setChannels(list(channels._verify(incoming.get('payload')))):
                         DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30108),incoming.get('name',ADDON_NAME)))
                     del channels
                     self.send_response(200, "OK")
+            elif self.path.startswith('/filelist/'):
                 #filelist w/resume - paused channel rule
-                elif self.path.lower().startswith('/filelist') and incoming.get('payload'):
-                    if FileAccess.setJSON(os.path.join(RESUME_LOC,self.path.replace('/filelist/','')),incoming.get('payload')):
-                        DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30060),incoming.get('name',ADDON_NAME)))
+                if SETTINGS.setCacheSetting(self.path.replace('/filelist/',''), incoming.get('payload'), FileAccess._getMD5(self.path.replace('/filelist/','')), datetime.timedelta(days=84)):
+                    DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30060),incoming.get('name',ADDON_NAME)))
                     self.send_response(200, "OK")
-                elif self.path.startswith(('/manager','/wizard')) and self.path.lower().endswith('form.html'):
-                    try:
-                        # Prefer a hypothetical SETTINGS.setPayload if it exists
-                        if hasattr(SETTINGS, 'setPayload'):
-                            SETTINGS.setPayload(incoming.get('payload'))
-                        else:
-                            # Fallback: write to resume location as remote_payload.json
-                            FileAccess.setJSON(os.path.join(RESUME_LOC, 'remote_payload.json'), incoming.get('payload'))
-                        DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30108),incoming.get('name',ADDON_NAME)))
-                        self.send_response(200, "OK")
-                    except Exception as e:
-                        self.log('do_POST, failed to save remote payload: %s'%(e), xbmc.LOGERROR)
-                        self.send_error(500, "Failed to save payload")
-                else: self.send_error(401, "Path Not found")
-            else: self.send_error(401, "UUID Not verified!")
-        else: return self.do_GET()
+            else: return self.do_GET()
                     
     
     def do_GET(self):
@@ -192,25 +177,34 @@ class MyHandler(BaseHTTPRequestHandler):
                 self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getCache(Globals._unquoteString(self.path.split("/logos/")[1])))}')
                 self.log(f'do_GET, redirecting to http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(image)}')
                 self.end_headers()
+                return
             else: # 200 OK
                 self.send_response(200)
-                if   self.path.lower() == '/favicon.ico':           __sendFile(os.path.join(MEDIA_LOC,'logo.ico'), use_compression)
-                elif self.path.lower() == f'/{M3UFLE.lower()}':     __sendFile(M3UFLEPATH, use_compression)
-                elif self.path.lower() == f'/{GENREFLE.lower()}':   __sendFile(GENREFLEPATH, use_compression)
-                elif self.path.lower() == f'/{XMLTVFLE.lower()}':   __sendFile(XMLTVFLEPATH, use_compression)
-                elif self.path.startswith('/image/'):               __sendFile(self.path.split('/image/')[1], False)
-                else:
-                    use_compression = False if self.path.endswith('.html') else use_compression
-                    if self.path.lower().endswith('.json'):
-                        if   self.path.lower() == f'/api/{BONJOURFLE.lower()}': __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.getBonjour(),idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
-                        elif self.path.lower() == f'/api/{DBLOGSFLE.lower()}':  __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.cache.get('log.%s'%(ADDON_ID),checksum=ADDON_VERSION),idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
-                        elif self.path.lower().startswith('/api'):              __sendChunk(self.path, FileAccess.dumpJSON(FileAccess.getJSON(os.path.join(CACHE_LOC, self.path.replace('/api/','')))).encode(encoding=DEFAULT_ENCODING), use_compression)
-                        elif self.path.lower().startswith('/filelist'):         __sendChunk(self.path, FileAccess.dumpJSON(FileAccess.getJSON((os.path.join(RESUME_LOC, self.path.replace('/filelist/',''))))).encode(encoding=DEFAULT_ENCODING), use_compression)
-                    elif self.path.lower().endswith('.html'):
-                        if self.path.lower() == f'/{MANAGERFLE.lower()}':       __sendChunk(self.path, Channels()._channelManager(), use_compression)
-                    else: return self.send_error(404, "File Not Found [%s]" % self.path)
+                if   self.path == '/favicon.ico':         return __sendFile(ICON_WEB, use_compression)
+                elif self.path == f'/{M3UFLE.lower()}':   return __sendFile(M3UFLEPATH, use_compression)
+                elif self.path == f'/{GENREFLE.lower()}': return __sendFile(GENREFLEPATH, use_compression)
+                elif self.path == f'/{XMLTVFLE.lower()}': return __sendFile(XMLTVFLEPATH, use_compression)
+                elif self.path.startswith('/filelist/'):  return __sendChunk(self.path, FileAccess.dumpJSON((SETTINGS.getCacheSetting(self.path.replace('/filelist/',''), FileAccess._getMD5(self.path.replace('/filelist/',''))) or [])).encode(encoding=DEFAULT_ENCODING), use_compression)
+                elif self.path.startswith('/image/'):     return __sendFile(Globals._unquoteString(self.path.split('/image/')[1]), False)
+                elif self.path.startswith('/api/'):
+                    data = None
+                    if   self.path == f'/api/{BONJOURFLE}': data = SETTINGS.getBonjour()
+                    elif self.path == f'/api/{SERVERFLE}' : data = self.service.tasks.Multiroom(service=self.service).getServers()
+                    elif self.path == f'/api/{LIBRARYFLE}': data = Library(self.service).getLibrary()
+                    elif self.path == f'/api/{CHANNELFLE}': data = Channels().getChannels()
+                    elif self.path == f'/api/{LOGSFLE}'   : data = (SETTINGS.getCacheSetting('LOGS', FileAccess._getMD5(datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d'))) or {})
+                    if not data is None:
+                        return __sendChunk(self.path, FileAccess.dumpJSON(data,idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
+                elif self.path.endswith('.html'):
+                    data = None
+                    if self.path.lower() == f'/{MANAGERFLE.lower()}': data = Channels()._channelManager()
+                    if not data is None: 
+                        return __sendChunk(self.path, data, False)
+            return self.send_error(404, "File Not Found [%s]" % self.path)
         except FileNotFoundError: self.send_error(404, "File Not Found [%s]" % self.path)
-        except Exception as e: self.send_error(500, "Internal Server Error")
+        except Exception as e: 
+            self.send_error(500, "Internal Server Error")
+            self.log("do_GET, failed!\n%s"%(e), xbmc.LOGERROR)
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -267,7 +261,7 @@ class HTTP(Thread):
             if not silent: DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
             SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
 
-        def __cancel(wait=15):
+        def __cancel(wait=M3U_REFRESH):
             try:
                 if self.httpd.is_alive():
                     if hasattr(self.httpd, 'cancel'): self.httpd.cancel()
@@ -305,14 +299,15 @@ class HTTP(Thread):
                     except Exception as e:
                         self.log("run, http server failed! %s"%(e), xbmc.LOGERROR)
                         break
-                elif self.service._shutdown(15) or pendingRestart: 
+                elif self.service._shutdown(M3U_REFRESH) or pendingRestart: 
                     self.log("run, _shutdown/pendingRestart", xbmc.LOGERROR)
                     break
                     
             try: self._server.shutdown()
             except Exception: pass
             self.log('run, http server shutdown, pendingRestart = %s, isAlive = %s'%(pendingRestart,__cancel()), xbmc.LOGINFO)
-            if pendingRestart: timerit(self.service._que)(M3U_REFRESH,*(self.service.tasks.chkHTTP,1))
+            if pendingRestart: 
+                timerit(self.service._que)(M3U_REFRESH,*(self.service.tasks.chkHTTP,1))
             __update(pendingRestart)
             PROPERTIES.setRunning('HTTP.run',False)
             PROPERTIES.setRunning('HTTP.start',False)

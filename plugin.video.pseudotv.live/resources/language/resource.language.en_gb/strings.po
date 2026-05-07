@@ -1130,7 +1130,7 @@ msgid "Library"
 msgstr ""
 
 msgctxt "#32042"
-msgid "[B]Welcome to %s![/B]\n[B]No[/B] Channels found, Would you like enable Autotuned Channels for automatic channel creation?"
+msgid "[B]Welcome to %s[/B]\n[B]No[/B] Channels found! Would you like to enable Autotuned Channels?"
 msgstr ""
 
 msgctxt "#32043"
@@ -1358,15 +1358,15 @@ msgid "Validating"
 msgstr ""
 
 msgctxt "#32099"
-msgid ""
+msgid "How many channels per AutoTune Type?"
 msgstr ""
 
 msgctxt "#32100"
-msgid ""
+msgid "Would you like to AutoTune sample channels?"
 msgstr ""
 
 msgctxt "#32101"
-msgid ""
+msgid "Would you like to Recover from the latest backup?"
 msgstr ""
 
 msgctxt "#32102"
@@ -1398,7 +1398,7 @@ msgid "Replace existing Backup from"
 msgstr ""
 
 msgctxt "#32109"
-msgid "Replace existing channels with %s\n%s"
+msgid "Replace %s Channels with %s Channels from:\n%s"
 msgstr ""
 
 msgctxt "#32110"
@@ -1474,7 +1474,7 @@ msgid "Rebuilding Autotuned Channels"
 msgstr ""
 
 msgctxt "#32129"
-msgid "%s is missing guide data for this channel\nPlease wait for Kodi and %s to finish."
+msgid "%s is busy, Try again later..."
 msgstr ""
 
 msgctxt "#32130"
@@ -1623,7 +1623,7 @@ msgid "No Changes Applied!"
 msgstr ""
 
 msgctxt "#32166"
-msgid "Playback Unavailable! Guide data is updating\nTry again later..."
+msgid ""
 msgstr ""
 
 msgctxt "#32167"
@@ -1735,7 +1735,7 @@ msgid "Mixed SmartPlaylist"
 msgstr ""
 
 msgctxt "#32194"
-msgid "STRM Import"
+msgid "Import"
 msgstr ""
 
 msgctxt "#32195"

@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -35,15 +35,16 @@ class Service(object):
     player  = PLAYER()
     monitor = MONITOR()
     def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return (self.monitor.waitForAbort(wait) or PROPERTIES.isPendingShutdown())
+        return any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+    def _restart(self) -> bool:
+        return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        return (PROPERTIES.isPendingShutdown() or PROPERTIES.isPendingRestart() or PROPERTIES.isPendingInterrupt())
-    def _suspend(self, wait=CPU_CYCLE) -> bool:
-        if wait > 0: self._sleep(wait)
-        return PROPERTIES.isPendingSuspend()
+        return any([PROPERTIES.isPendingInterrupt(),self._shutdown(),self._restart(),BUILTIN.isScanning()])
+    def _suspend(self) -> bool:
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) or self._interrupt()): return True
+            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
             else: wait -= CPU_CYCLE
         return False
 
@@ -62,12 +63,13 @@ class Builder(object):
         self.monitor  = service.monitor
         self.jsonRPC  = service.jsonRPC
         self.cache    = service.jsonRPC.cache
-        self.channels = Channels(writable=True)
         self.holiday  = self.seasonal.getHoliday()
+        self.channels = Channels(writable=True)
         
         #global dialog
         self.fCount  = 0
         self.pCount  = 0
+        self.cCount  = 0
         self.pDialog = None
         self.pMSG    = ''
         self.pName   = ''
@@ -239,13 +241,14 @@ class Builder(object):
                     self.pHeader = ''
                     self.pErrors = []
                     self.pCount  = 0
+                    self.cCount  = len(channels)
                     for idx, citem in enumerate(channels):
                         try:
                             updated      = set()
                             self.pMSG    = '%s: %s'%(LANGUAGE(32144),LANGUAGE(32212))
                             self.pHeader = ADDON_NAME
                             self.pName   = citem['name']
-                            self.pCount  = int(idx*100)//len(channels)
+                            self.pCount  = int(idx*100)//self.cCount
                             citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, Globals._cleanGroups(citem), inherited=self) #inject temporary citem changes here
                             _update, start = __needsUpdate(citem, now, fallback)
                             _changed = __hasChanged(citem, enableChanged) 
@@ -255,8 +258,9 @@ class Builder(object):
                                 self.pErrors = [LANGUAGE(32160)]
                                 if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,*(channels[idx:],silent))
                                 break
-                            elif self.service._suspend(CPU_CYCLE):
+                            elif self.service._suspend():
                                 self.log("[%s] buildChannels, _suspend"%(citem['id']))
+                                if self.service._sleep(CPU_CYCLE): break
                                 continue
                             elif _update or _changed:                       
                                 if    preview:           self.pMSG = LANGUAGE(32236)                           #Preview
@@ -338,19 +342,27 @@ class Builder(object):
                     self.log("[%s] buildVideo, _interrupt"%(citem['id']))
                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32213)),header=self.pHeader)
                     return []
-                elif self.service._suspend(CPU_CYCLE):
+                elif self.service._suspend():
                     self.log("[%s] buildVideo, _suspend"%(citem['id']))
+                    if self.service._sleep(CPU_CYCLE): break
                     continue
                 else:
-                    if   self.xsp.isXSP(paths):           paths = self.xsp.parseXSP(citem['id'], paths)# smartplaylist - convert tvshows types to multi-path, apply sort methods
-                    elif isinstance(paths,(str,bytes)): paths = [paths]
+                    if len(citem.get('path',[])) > 1:
+                        self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
+                        
+                    if   self.xsp.isXSP(paths):
+                        paths = self.xsp.parseXSP(citem['id'], paths)# smartplaylist - convert tvshows types to multi-path, apply sort methods
+                    elif isinstance(paths,(str,bytes)):
+                        paths = [paths]
                     
                     if self.sort.get("method","") == 'random':
                         self.log("[%s] buildVideo, random shuffling [%s/%s]"%(citem['id'],idx,len(paths)))
                         paths = Globals._randomShuffle(paths)               
 
                     for cnt, path in enumerate(paths):
-                        if len(paths) > 1: self.pName = '%s %s/%s'%(citem['name'],cnt+1,len(paths))
+                        if len(paths) > 1:
+                            self.pName = '%s\n%s/%s'%('%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[]))),cnt+1,len(paths))
+                            
                         self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}',header=self.pHeader)
                         fileList = self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, path, inherited=self), 'video', self.limit, self.sort, self.limits, self.query)
                         if isinstance(fileList,list): fileArray.append(fileList)
@@ -404,6 +416,7 @@ class Builder(object):
             elif self.service._suspend():
                 self.log("[%s] buildFileList, _suspend"%(citem['id']))
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=self.pHeader)
+                if self.service._sleep(CPU_CYCLE): break
                 continue
             elif len(dirList) == 0 or dirCount >= self.recursiveLimit:
                 if self.padFilelist and len(fileList) > 0 and len(fileList) < page: fileList = __padFileList(fileList,page)

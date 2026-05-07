@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -26,15 +26,16 @@ class Service(object):
     player  = PLAYER()
     monitor = MONITOR()
     def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
+        return any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+    def _restart(self) -> bool:
+        return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
-    def _suspend(self, wait=CPU_CYCLE) -> bool:
-        # if wait > 0: self._sleep(wait)
-        return PROPERTIES.isPendingSuspend()
+        return any([PROPERTIES.isPendingInterrupt(),self._shutdown(),self._restart(),BUILTIN.isScanning()])
+    def _suspend(self) -> bool:
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if (self.monitor.waitForAbort(CPU_CYCLE) | self._interrupt()): return True
+            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
             else: wait -= CPU_CYCLE
         return False
         
@@ -43,10 +44,14 @@ class Multiroom(object):
     def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = %s'%(sysARG))
         if service is None: service = Service()
-        self.sysARG  = sysARG
-        self.service = service
-        self.jsonRPC = service.jsonRPC
-        self.cache   = service.jsonRPC.cache
+        self.sysARG     = sysARG
+        self.service    = service
+        self.jsonRPC    = service.jsonRPC
+        self.cache      = service.jsonRPC.cache
+        self.serverData = FileAccess.getJSON(SERVERFLE_DEFAULT)
+        self.serverTEMP = self.serverData.get('servers',[{}]).pop("friendly")
+        self.serverKEY  = f'Servers.{self.serverData.get('version',ADDON_VERSION)}'
+        self.serverData.update(self._load())
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -58,23 +63,34 @@ class Multiroom(object):
         return self.jsonRPC.getSettingValue("services.zeroconf",default=False,cache=True)
 
 
-    def getDiscovery(self):
-        servers = (FileAccess.getJSON(SERVERFLEPATH).get('servers') or {})
-        PROPERTIES.setServers(len(servers) > 0)
-        SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
-        self.log('getDiscovery, servers = %s'%(len(servers)))
+    def _load(self) -> dict:
+        servers = (SETTINGS.getCacheSetting(self.serverKEY, FileAccess._getMD5(self.serverKEY)) or {})
+        PROPERTIES.setServers(len(servers.get('servers',{})) > 0)
+        SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers.get('servers',{}))]))
+        self.log('_load, servers = %s'%(len(servers.get('servers',{}))))
         return servers
 
+       
+    def _save(self) -> bool:
+        self.log('_save, servers = %s'%(len(self.serverData.get('servers',{}))))
+        return SETTINGS.setCacheSetting(self.serverKEY, self.serverData, FileAccess._getMD5(self.serverKEY), -1)
+            
+            
+    def getServers(self):
+        return self.serverData.get('servers',{})
 
-    def setDiscovery(self, servers={}):
-        self.log('setDiscovery, servers = %s'%(len(servers)))
+
+    def _setServers(self, servers=None):
+        if servers is None: servers = self.serverData['servers']
+        self.serverData["servers"] = servers
         PROPERTIES.setServers(len(servers) > 0)
         SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
-        return FileAccess.setJSON(SERVERFLEPATH,{"servers":servers})
+        self.log('_setServers, servers = %s'%(len(servers)))
+        return self._save()
             
             
     def getEnabled(self, servers=None):
-        if servers is None: servers = self.getDiscovery()
+        if servers is None: servers = self.getServers()
         enabled = [server for server in list(servers.values()) if server.get('enabled',False)]
         PROPERTIES.setEnabledServers(len(enabled) > 0)
         self.log('getEnabled = %s'%(len(enabled)))
@@ -89,16 +105,16 @@ class Multiroom(object):
     def addServer(self, payload={}):
         if isinstance(payload,dict) and payload.get('name') and payload.get('host'):
             payload['online'] = True
-            servers = self.getDiscovery()
+            servers = self.getServers()
             server  = servers.get(payload.get('name'),{})
             if not server: 
                 payload['enabled'] = True
                 servers[payload['name']] = payload
                 self.log('addServer, adding server = %s'%(payload))
-                DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
-                if payload.get('host') != PROPERTIES.getRemoteHost():
+                if payload.get('host') != PROPERTIES.getRemoteHost(): 
+                    DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
                     SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add IPTV Simple config
-                self.setDiscovery(servers)
+                self._setServers(servers)
             else:
                 payload['enabled'] = server.get('enabled',False)
                 if payload.get('md5') != server.get('md5',str(random.random())):#something changed!
@@ -114,7 +130,7 @@ class Multiroom(object):
                     else: FileAccess.delete(SETTINGS.hasPVRInstance(server.get('name'))) #del IPTV Simple config
                     servers[payload['name']] = payload
                     self.log('addServer, updating server = %s'%(payload))
-                    self.setDiscovery(servers)
+                    self._setServers(servers)
 
 
     def _delServer(self, servers={}):
@@ -124,7 +140,7 @@ class Multiroom(object):
             return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=Globals._getDummyIcon(str(idx+1)),url=FileAccess.dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
-            if not servers: servers = self.getDiscovery()
+            if not servers: servers = self.getServers()
             lizLST = []
             lizLST.extend(poolit(__buildMenuItem)(list(servers.values())))
 
@@ -141,7 +157,7 @@ class Multiroom(object):
             return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=Globals._getDummyIcon(str(list(servers.values()).index(payload)+1)),url=FileAccess.dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
-            servers = self.getDiscovery()
+            servers = self.getServers()
             lizLST = []
             lizLST.extend(poolit(__buildMenuItem)(list(servers.values())))
             if len(lizLST) > 0: lizLST.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]- %s[/B][/COLOR]'%(LANGUAGE(30046)),LANGUAGE(33046))) #remove server menu item
@@ -188,6 +204,7 @@ class Multiroom(object):
                     
             
     @threadit
+    @staticmethod
     def _run(self):
         try:    param = self.sysARG[1]
         except Exception: param = None
@@ -197,7 +214,7 @@ class Multiroom(object):
         elif param == 'Select_Server': 
             ctl = (5,11)
             self._selServer()
-        elif param == 'Select_Server_Client': 
+        elif param == 'Select_Servers': 
             ctl = (5,11)
             SETTINGS.setSettingBool('Enable_Client',True)
             self._selServer()

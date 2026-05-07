@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PseudoTV Live | Multi-Server Manager</title>
     <style>
         :root {
             --pstv-bg-dark: #002b4d; --pstv-bg-light: #005a92; --pstv-accent: #ffffff;
             --pstv-input-bg: #1a4a70; --pstv-border: rgba(255, 255, 255, 0.3);
             --pstv-focus: #5dade2; --pstv-dim: rgba(255, 255, 255, 0.4);
-            --pstv-epg-bg: #001a2d; --pstv-epg-prog: #003d66;
-            --hour-width: 340px; --slot-width: 170px; --channel-col-width: 240px;
+            --pstv-success: #27ae60; --pstv-epg-bg: #001a2d; --pstv-epg-prog: #003d66;
+            --hour-width: 340px; --slot-width: 170px; --channel-col-width: 180px; --header-height: 35px;
         }
 
         body {
@@ -18,17 +19,19 @@
             font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center;
         }
 
+        /* BUSY SPINNER & OVERLAY */
+        #busy-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
+            display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .spinner { width: 80px; height: 80px; animation: rotate-spinner 1.2s linear infinite; }
+        @keyframes rotate-spinner { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
         .banner { width: 100%; padding: 20px 0; text-align: center; }
         .banner img { max-width: 300px; filter: drop-shadow(0px 8px 15px rgba(0,0,0,0.4)); }
 
-        .global-header {
-            width: 95%; max-width: 1200px; background: rgba(0, 0, 0, 0.5); 
-            padding: 15px 25px; border-radius: 12px; border: 1px solid var(--pstv-border);
-            margin-bottom: 20px; display: flex; align-items: center; gap: 20px; box-sizing: border-box;
-            backdrop-filter: blur(10px);
-        }
-
-        .tab-bar { display: flex; gap: 5px; width: 95%; max-width: 1200px; }
+        .tab-bar { display: flex; gap: 5px; width: 95%; max-width: 1200px; z-index: 2; }
         .tab {
             padding: 12px 25px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--pstv-border);
             border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer;
@@ -43,50 +46,52 @@
         }
 
         .tab-content { display: none; min-height: 400px; }
-        .tab-content.active { display: block; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        select, input { width: 100%; padding: 12px; background: var(--pstv-input-bg); border: 1px solid var(--pstv-border); border-radius: 4px; color: white; box-sizing: border-box; font-family: inherit; }
-        input[readonly] { background: rgba(0,0,0,0.3); color: #888; border-color: transparent; cursor: not-allowed; }
-
-        .editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-        .editor-field label { display: block; font-size: 0.65rem; text-transform: uppercase; margin-bottom: 6px; opacity: 0.8; color: var(--pstv-focus); }
+        /* EPG GRID */
+        .epg-outer-wrapper { position: relative; border: 1px solid var(--pstv-border); border-radius: 8px; height: 600px; overflow: auto; background: var(--pstv-epg-bg); }
+        .epg-table { display: flex; flex-direction: column; width: fit-content; min-width: 100%; }
+        .epg-header-row { display: flex; position: sticky; top: 0; z-index: 100; background: #003355; height: var(--header-height); }
+        .epg-corner { width: var(--channel-col-width); flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--pstv-focus); position: sticky; left: 0; z-index: 101; }
+        .time-slots-container { display: flex; }
+        .time-slot { width: var(--slot-width); min-width: var(--slot-width); border-right: 1px solid var(--pstv-border); font-size: 0.7rem; display: flex; align-items: center; padding-left: 10px; color: var(--pstv-focus); box-sizing: border-box; }
         
-        .input-with-action { display: flex; gap: 8px; }
-        .btn-action { background: var(--pstv-bg-light); color: white; border: 1px solid var(--pstv-border); padding: 0 18px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: bold; transition: all 0.2s; white-space: nowrap; }
-        .btn-action:hover { background: var(--pstv-focus); }
+        .epg-data-row { display: flex; height: 60px; border-bottom: 1px solid var(--pstv-border); }
+        .epg-channel-name { width: var(--channel-col-width); flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--pstv-focus); position: sticky; left: 0; z-index: 50; display: flex; align-items: center; padding: 0 10px; font-size: 0.75rem; font-weight: bold; box-sizing: border-box; }
+        .epg-programs-container { position: relative; width: calc(var(--slot-width) * 48); height: 100%; }
         
-        .toggle-row { grid-column: span 2; display: flex; flex-wrap: wrap; gap: 30px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; border: 1px solid var(--pstv-border); margin-top: 20px; }
-        .toggle-group { display: flex; align-items: center; gap: 12px; }
-        .toggle-label { font-size: 0.7rem; text-transform: uppercase; color: var(--pstv-accent); font-weight: bold; }
-        
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 22px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--pstv-focus); }
-        input:checked + .slider:before { transform: translateX(22px); }
+        .epg-program { 
+            position: absolute; height: 84%; top: 8%; 
+            background: var(--pstv-epg-prog); 
+            border-right: 1px solid rgba(0,0,0,0.3); padding: 5px; box-sizing: border-box; 
+            font-size: 0.65rem; overflow: hidden; border-radius: 3px; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+            color: white;
+        }
 
-        .guide-container { width: 100%; overflow-x: auto; background: var(--pstv-epg-bg); border: 1px solid var(--pstv-border); border-radius: 8px; }
-        .guide-table { border-collapse: collapse; min-width: 100%; table-layout: fixed; }
-        .guide-row { border-bottom: 1px solid rgba(255,255,255,0.05); height: 50px; }
-        .guide-channel-col { width: var(--channel-col-width); background: rgba(0,0,0,0.3); padding: 10px; position: sticky; left: 0; z-index: 2; font-weight: bold; font-size: 0.8rem; border-right: 2px solid var(--pstv-focus); }
-        .guide-program { background: var(--pstv-epg-prog); border-right: 1px solid rgba(255,255,255,0.1); padding: 10px; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-
-        .save-bar { margin-top: 35px; padding-top: 25px; border-top: 1px solid var(--pstv-border); text-align: right; }
-        .btn-save { background: #27ae60; color: white; border: none; padding: 14px 40px; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-
-        input[type=number]::-webkit-inner-spin-button { opacity: 1; height: 30px; }
+        .config-header { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--pstv-border); }
+        .field-half { flex: 1; min-width: 280px; }
+        input, select { width: 100%; padding: 10px; background: var(--pstv-input-bg); border: 1px solid var(--pstv-border); border-radius: 4px; color: white; font-size: 0.9rem; }
+        label { display: block; font-size: 0.65rem; margin-bottom: 5px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-save { background: var(--pstv-success); color: white; padding: 12px; width: 100%; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .info-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+        .info-card h4 { margin: 0 0 5px 0; font-size: 0.65rem; text-transform: uppercase; color: var(--pstv-focus); }
+        .settings-tag { display: inline-block; background: var(--pstv-input-bg); padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; margin: 0 5px 5px 0; border: 1px solid var(--pstv-border); }
+        .logo-preview { height: 40px; margin-top: 5px; border-radius: 4px; background: rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
-    <div class="banner"><img src="http://{{ remote_host }}/images/{{ media_loc }}/splashtext.png"></div>
+    <div id="busy-overlay">
+        <img src="http://{{ remote_host }}/image/{{ media_loc }}/spinner.png" class="spinner" alt="Loading...">
+        <p id="busy-text" style="margin-top:20px; font-weight:bold; letter-spacing:1px;">SYNCHRONIZING...</p>
+    </div>
 
-    <div class="global-header">
-        <div style="width: 300px;">
-            <label style="display:block; font-size: 0.65rem; margin-bottom: 5px; opacity: 0.7; text-transform: uppercase;">Source Server</label>
-            <select id="serverSelector" onchange="onServerChange()"></select>
-        </div>
+    <div class="banner">
+        <img src="http://{{ remote_host }}/image/{{ media_loc }}/splashtext.png" alt="PseudoTV">
     </div>
 
     <div class="tab-bar">
@@ -96,30 +101,46 @@
     </div>
 
     <div class="container">
-        <div id="tab-channels" class="tab-content active">
-            <div id="noServerMsg" style="text-align:center; padding:60px; opacity:0.5;">Select a server to manage channels.</div>
-            <div id="channelManagerUI" style="display:none;">
-                <div style="margin-bottom: 25px; max-width: 400px;">
-                    <label style="display:block; font-size: 0.65rem; margin-bottom: 5px; opacity: 0.7; text-transform: uppercase;">Channel Editor</label>
-                    <select id="channelSelector" onchange="loadChannelForm()"></select>
-                </div>
-                <div id="channelConfigArea"></div>
+        <div class="config-header">
+            <div class="field-half">
+                <label>Configuration Source</label>
+                <select id="serverSelector" onchange="onServerChange()"></select>
+            </div>
+            <div class="field-half">
+                <label>Selected Channel</label>
+                <select id="channelSelector" onchange="loadChannelForm()"></select>
             </div>
         </div>
 
+        <div id="tab-channels" class="tab-content active">
+            <form id="channelForm" style="display:none;" onsubmit="saveChannel(event)">
+                <div id="fieldsContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"></div>
+                <button type="submit" class="btn-save">Save Changes</button>
+            </form>
+            <div id="noChannelMsg" style="text-align:center; padding:40px; opacity:0.5;">Select a server and channel to begin.</div>
+        </div>
+
         <div id="tab-guide" class="tab-content">
-            <div class="guide-container">
-                <table class="guide-table" id="epgTable">
-                    <tr class="guide-row"><td style="padding:40px; text-align:center; opacity:0.5;">Select a server to view the TV guide.</td></tr>
-                </table>
+            <div class="epg-outer-wrapper" id="epgUI" style="display:none;">
+                <div class="epg-table">
+                    <div class="epg-header-row">
+                        <div class="epg-corner"></div>
+                        <div class="time-slots-container" id="epg-time-header"></div>
+                    </div>
+                    <div id="epg-rows-container"></div>
+                </div>
             </div>
         </div>
 
         <div id="tab-info" class="tab-content">
-            <div id="info-grid" class="editor-grid">
-                <div class="editor-field"><label>Remote Host</label><input type="text" value="{{ remote_host }}" readonly></div>
-                <div class="editor-field"><label>Channel Limit</label><input type="text" value="{{ channel_limit }}" readonly></div>
-                <div class="editor-field"><label>Media Location</label><input type="text" value="{{ media_loc }}" readonly></div>
+            <div id="noInfoMsg" style="text-align:center; padding:40px; opacity:0.5;">Select a server to view system details.</div>
+            <div id="infoDisplay" style="display:none;">
+                <h3 id="infoServerName" style="margin-top:0;">Server Details</h3>
+                <div class="info-grid" id="infoGrid"></div>
+                <div style="border-top:1px solid var(--pstv-border); padding-top:20px;">
+                    <h3>Active Resources</h3>
+                    <div id="settingsDisplay"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -127,105 +148,221 @@
 <script>
     let serverData = {}; 
     let currentServerKey = "";
-    
-    const CHANNEL_LIMIT = parseInt("{{ channel_limit }}") || 999;
-    const REMOTE_HOST = "{{ remote_host }}";
+    let genreColorMap = {}; // Key: Genre String (Title), Value: CSS Color
+
+    // DVB/ETSI Standard Genre Color Palette
+    const genrePalette = {
+        "0x00": "#555555", // Undefined (Grey)
+        "0x10": "#1a5276", // Movie/Drama (Blue)
+        "0x20": "#7b241c", // News/Current Affairs (Brown)
+        "0x30": "#1d8348", // Show/Game Show (Green)
+        "0x40": "#2874a6", // Sports (Light Blue)
+        "0x50": "#af601a", // Children/Youth (Orange)
+        "0x60": "#633974", // Music/Ballet (Purple)
+        "0x70": "#a04000", // Arts/Culture (Rust)
+        "0x80": "#117864", // Social/Political (Teal)
+        "0x90": "#935116", // Education/Science (Tan)
+        "0xa0": "#1b4f72", // Leisure/Hobbies (Navy)
+        "0xb0": "#1a5276"  // Special Characteristics
+    };
+
+    function setBusy(isBusy, text = "SYNCHRONIZING...") {
+        document.getElementById('busy-text').innerText = text;
+        document.getElementById('busy-overlay').style.display = isBusy ? 'flex' : 'none';
+    }
 
     async function init() {
+        setBusy(true);
         try {
-            const res = await fetch(`http://${REMOTE_HOST}/api/servers.json`);
-            const json = await res.json();
+            const response = await fetch("http://{{ remote_host }}/api/servers.json");
+            const json = await response.json();
             serverData = json.servers;
             const sSelect = document.getElementById('serverSelector');
-            sSelect.innerHTML = '<option value="">-- Choose Server --</option>';
-            Object.keys(serverData).forEach(k => sSelect.add(new Option(k, k)));
-        } catch (e) { console.error("Init Error:", e); }
+            sSelect.add(new Option("-- Choose Server --", ""));
+            Object.keys(serverData).forEach(key => sSelect.add(new Option(key, key)));
+        } catch (e) { console.error(e); }
+        finally { setBusy(false); }
     }
 
     function onServerChange() {
         currentServerKey = document.getElementById('serverSelector').value;
-        const server = serverData[currentServerKey];
-        document.getElementById('channelManagerUI').style.display = server ? 'block' : 'none';
-        document.getElementById('noServerMsg').style.display = server ? 'none' : 'block';
-        document.getElementById('channelConfigArea').innerHTML = '';
-        if (!server) return;
-
+        genreColorMap = {}; 
         const cSelect = document.getElementById('channelSelector');
         cSelect.innerHTML = '<option value="">-- Choose Channel --</option>';
-        server.channels.forEach((ch, i) => cSelect.add(new Option(`[${ch.number}] ${ch.name}`, i)));
+        document.getElementById('channelForm').style.display = 'none';
+        document.getElementById('noChannelMsg').style.display = 'block';
+        document.getElementById('epgUI').style.display = 'none';
 
-        const epg = document.getElementById('epgTable');
-        epg.innerHTML = server.channels.map(ch => `
-            <tr class="guide-row">
-                <td class="guide-channel-col">${ch.number} - ${ch.name}</td>
-                <td class="guide-program" style="width: 400px;">Current Program Data...</td>
-                <td class="guide-program" style="width: 400px;">Upcoming Program...</td>
-            </tr>
-        `).join('');
+        if (!currentServerKey) return;
+        const server = serverData[currentServerKey];
+        server.channels.forEach((ch, i) => cSelect.add(new Option(`[${ch.number}] ${ch.name}`, i)));
+        updateInfoTab(server);
     }
 
-    function loadChannelForm() {
+    async function loadGuide() {
+        if (!currentServerKey) return;
+        setBusy(true, "MAPPING GENRES & GUIDE...");
         const server = serverData[currentServerKey];
-        const idx = document.getElementById('channelSelector').value;
-        const area = document.getElementById('channelConfigArea');
-        if (idx === "") { area.innerHTML = ''; return; }
-
-        const channel = server.channels[idx];
-        let html = `<div class="editor-grid">`;
-
-        // Fixed Top Row
-        html += `<div class="editor-field"><label>Channel Number</label><input type="number" id="edit-number" value="${channel.number}" min="1" max="${CHANNEL_LIMIT}"></div>`;
-        html += `<div class="editor-field"><label>Channel ID</label><input type="text" id="edit-id" value="${channel.id || ''}" readonly></div>`;
-
-        let boolsHtml = ""; 
-
-        // Sorting logic: ensure "path" fields appear early near "logo"
-        const sortedEntries = Object.entries(channel).sort((a, b) => {
-            const priority = ['logo', 'path', 'url', 'icon'];
-            let aScore = priority.findIndex(p => a[0].toLowerCase().includes(p));
-            let bScore = priority.findIndex(p => b[0].toLowerCase().includes(p));
-            return (bScore === -1 ? 0 : bScore) - (aScore === -1 ? 0 : aScore);
-        });
-
-        sortedEntries.forEach(([key, val]) => {
-            if (['number', 'id', 'catchup'].includes(key) || typeof val === 'object') return;
-
-            if (typeof val === 'boolean') {
-                boolsHtml += `<div class="toggle-group">
-                                <span class="toggle-label">${key.replace(/_/g, ' ')}</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="edit-${key}" ${val ? 'checked' : ''}>
-                                    <span class="slider"></span>
-                                </label>
-                             </div>`;
-            } 
-            else if (key.toLowerCase().includes('path') || key.toLowerCase().includes('logo') || key.toLowerCase().includes('icon')) {
-                html += `<div class="editor-field"><label>${key.replace(/_/g, ' ')}</label>
-                            <div class="input-with-action">
-                                <input type="text" id="edit-${key}" value="${val || ''}">
-                                <button class="btn-action" onclick="triggerBrowser('${key}')">SELECT</button>
-                            </div></div>`;
+        
+        try {
+            // 1. Fetch Genre Map XML
+            if (server.remotes.genre) {
+                const gRes = await fetch(server.remotes.genre);
+                const gText = await gRes.text();
+                const gDoc = new DOMParser().parseFromString(gText, "text/xml");
+                gDoc.querySelectorAll('genre').forEach(g => {
+                    const fullId = g.getAttribute('genreId'); // e.g. "0x10"
+                    const genreTitle = g.textContent.trim().toLowerCase();
+                    // Get base genre (the high nibble, e.g. 0x10)
+                    if (fullId) {
+                        const baseId = fullId.substring(0, 3) + "0"; 
+                        if (genrePalette[baseId]) {
+                            genreColorMap[genreTitle] = genrePalette[baseId];
+                        }
+                    }
+                });
             }
-            else {
-                html += `<div class="editor-field"><label>${key.replace(/_/g, ' ')}</label>
-                         <input type="text" id="edit-${key}" value="${val || ''}"></div>`;
-            }
+
+            // 2. Fetch XMLTV
+            const response = await fetch(server.remotes.xmltv);
+            const xmlText = await response.text();
+            const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
+            
+            buildEPG(xmlDoc);
+            document.getElementById('epgUI').style.display = 'block';
+            
+            const now = new Date();
+            const minSinceMidnight = (now.getHours() * 60) + now.getMinutes();
+            document.getElementById('epgUI').scrollLeft = (minSinceMidnight * (340/60)) - 100;
+        } catch (e) { console.error("Guide Load Error:", e); }
+        finally { setBusy(false); }
+    }
+
+    function buildEPG(xml) {
+        const header = document.getElementById('epg-time-header');
+        const rowsCont = document.getElementById('epg-rows-container');
+        header.innerHTML = ''; rowsCont.innerHTML = '';
+        const dayStart = new Date(); dayStart.setHours(0,0,0,0);
+        
+        for (let i = 0; i < 48; i++) {
+            const t = new Date(dayStart.getTime() + (i * 30 * 60000));
+            header.innerHTML += `<div class="time-slot">${t.getHours() % 12 || 12}:${t.getMinutes() === 0 ? '00' : '30'} ${t.getHours() >= 12 ? 'PM' : 'AM'}</div>`;
+        }
+
+        xml.querySelectorAll('channel').forEach(ch => {
+            const id = ch.getAttribute('id');
+            const row = document.createElement('div');
+            row.className = 'epg-data-row';
+            row.innerHTML = `<div class="epg-channel-name">${ch.querySelector('display-name').textContent}</div>`;
+            const progCont = document.createElement('div');
+            progCont.className = 'epg-programs-container';
+
+            xml.querySelectorAll(`programme[channel="${id}"]`).forEach(p => {
+                const start = parseXMLDate(p.getAttribute('start'));
+                const stop = parseXMLDate(p.getAttribute('stop'));
+                const offset = (start - dayStart) / 60000;
+                const duration = (stop - start) / 60000;
+                const pxPerMin = 340 / 60;
+
+                if (offset < 1440 && (offset + duration) > 0) {
+                    const div = document.createElement('div');
+                    div.className = 'epg-program';
+                    div.style.left = (offset * pxPerMin) + 'px';
+                    div.style.width = (duration * pxPerMin) + 'px';
+                    
+                    // Match Genre Color by finding matching category text
+                    const categories = p.querySelectorAll('category');
+                    categories.forEach(cat => {
+                        const txt = cat.textContent.trim().toLowerCase();
+                        // Direct match or partial match for strings like "Movie / Drama"
+                        for (let [title, color] of Object.entries(genreColorMap)) {
+                            if (txt.includes(title) || title.includes(txt)) {
+                                div.style.backgroundColor = color;
+                                break;
+                            }
+                        }
+                    });
+
+                    div.innerHTML = `<b>${p.querySelector('title').textContent}</b>`;
+                    progCont.appendChild(div);
+                }
+            });
+            row.appendChild(progCont);
+            rowsCont.appendChild(row);
         });
+    }
 
-        if (boolsHtml !== "") html += `<div class="toggle-row">${boolsHtml}</div>`;
-
-        html += `</div><div class="save-bar"><button class="btn-save" onclick="saveChannel(${idx})">UPDATE CHANNEL</button></div>`;
-        area.innerHTML = html;
+    function parseXMLDate(s) {
+        if(!s) return new Date();
+        return new Date(s.substring(0,4), s.substring(4,6)-1, s.substring(6,8), s.substring(8,10), s.substring(10,12));
     }
 
     function navigateTab(t) {
         document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById('btn-'+t).classList.add('active');
         document.getElementById('tab-'+t).classList.add('active');
+        if (t === 'guide') loadGuide();
     }
 
-    function triggerBrowser(field) { alert(`Opening picker for ${field}`); }
-    function saveChannel(idx) { alert("Channel Staged."); }
+    function updateInfoTab(server) {
+        document.getElementById('noInfoMsg').style.display = 'none';
+        document.getElementById('infoDisplay').style.display = 'block';
+        document.getElementById('infoServerName').innerText = server.name || currentServerKey;
+        const grid = document.getElementById('infoGrid');
+        grid.innerHTML = '';
+        ['uuid', 'host', 'version', 'python', 'machine', 'platform', 'build', 'updated'].forEach(key => {
+            if (server[key]) grid.innerHTML += `<div class="info-card"><h4>${key}</h4><p>${server[key]}</p></div>`;
+        });
+        const settingsDiv = document.getElementById('settingsDisplay');
+        settingsDiv.innerHTML = '';
+        if (server.settings) {
+            for (const [key, list] of Object.entries(server.settings)) {
+                let html = `<div style="margin-bottom:15px;"><label>${key.replace('_', ' ')}</label>`;
+                if (Array.isArray(list)) list.forEach(item => { if(item) html += `<span class="settings-tag">${item}</span>`; });
+                settingsDiv.innerHTML += html + `</div>`;
+            }
+        }
+    }
+
+    function loadChannelForm() {
+        const idx = document.getElementById('channelSelector').value;
+        if (idx === "") return;
+        document.getElementById('noChannelMsg').style.display = 'none';
+        const form = document.getElementById('channelForm');
+        form.style.display = 'block';
+        const container = document.getElementById('fieldsContainer');
+        container.innerHTML = '';
+        const channel = serverData[currentServerKey].channels[idx];
+        for (const [key, value] of Object.entries(channel)) {
+            if (key === 'rules' || key === 'holiday') continue; 
+            const div = document.createElement('div');
+            div.innerHTML = `<label>${key}</label>`;
+            if (typeof value === 'boolean') {
+                const sel = document.createElement('select');
+                sel.name = key;
+                sel.add(new Option("True", "true", value, value));
+                sel.add(new Option("False", "false", !value, !value));
+                div.appendChild(sel);
+            } else {
+                const input = document.createElement('input');
+                input.name = key;
+                input.value = Array.isArray(value) ? value.join(', ') : value;
+                div.appendChild(input);
+                if(key === 'logo') {
+                    const img = document.createElement('img');
+                    img.src = value; img.className = 'logo-preview';
+                    div.appendChild(img);
+                }
+            }
+            container.appendChild(div);
+        }
+    }
+
+    async function saveChannel(e) {
+        e.preventDefault();
+        setBusy(true);
+        setTimeout(() => { setBusy(false); alert("Channel updated!"); }, 800);
+    }
 
     window.onload = init;
 </script>

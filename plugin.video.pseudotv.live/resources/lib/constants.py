@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -215,24 +215,25 @@ CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
 #files
-M3UFLE              = 'pseudotv.m3u8'
+MANAGERFLE          = 'manager.html'
+M3UFLE              = 'pseudotv.m3u'
 XMLTVFLE            = 'pseudotv.xml'
 GENREFLE            = 'genres.xml'
 BONJOURFLE          = 'bonjour.json'
-DBLOGSFLE           = 'logs.json'
+LOGSFLE             = 'logs.json'
 SERVERFLE           = 'servers.json'
 CHANNELFLE          = 'channels.json'
-AUTOTUNEFLE         = 'autotune.json'
 LIBRARYFLE          = 'library.json'
 TVGROUPFLE          = 'tv_groups.xml'
 RADIOGROUPFLE       = 'radio_groups.xml'
 PROVIDERFLE         = 'providers.xml'
-CHANNELBACKUPFLE    = 'channels.backup'
-CHANNELRESTOREFLE   = 'channels.restore'
-CHANNELCHANGEDFLE   = 'channels.changed'
-CHANNELLATESTFLE    = 'channels.latest'
-CHANNELAUTOFLE      = 'channels.auto'
-MANAGERFLE          = 'manager.html'
+
+CHANNEL_KEY         = 'Channels'
+CHANNELBACKUP_KEY   = f'{CHANNEL_KEY}.Backup'
+CHANNELCHANGED_KEY  = f'{CHANNEL_KEY}.Changed'
+CHANNELLATEST_KEY   = f'{CHANNEL_KEY}.Latest'
+CHANNELAUTOTUNE_KEY = f'{CHANNEL_KEY}.Autotune'
+RESUME_INDEX        = 'Resume.Filelist.Index'
 
 #exts
 VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')[:-1]
@@ -250,12 +251,9 @@ TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
 
 #file paths
+CHANNEL_BACKUP_FLE  = os.path.join(BACKUP_LOC,'%s.json'%(CHANNELBACKUP_KEY.lower()))
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 YOUTUBE_COOKIES     = os.path.join(SETTINGS_LOC,'www.youtube.com_cookies.txt')
-CHANNELFLE_BACKUP   = os.path.join(BACKUP_LOC,CHANNELBACKUPFLE)
-CHANNELFLE_RESTORE  = os.path.join(BACKUP_LOC,CHANNELRESTOREFLE)
-CHANNELFLE_CHANGED  = os.path.join(BACKUP_LOC,CHANNELCHANGEDFLE)
-CHANNELFLE_LATEST   = os.path.join(BACKUP_LOC,CHANNELLATESTFLE)
 
 #sfx
 BING_WAV            = os.path.join(SFX_LOC,'bing.wav')
@@ -267,8 +265,9 @@ SEASONS             = os.path.join(REMOTE_LOC,'seasons.json')
 HOLIDAYS            = os.path.join(REMOTE_LOC,'holidays.json')
 GROUPFLE_DEFAULT    = os.path.join(REMOTE_LOC,'groups.xml')
 MANAGERPATH         = os.path.join(REMOTE_LOC,MANAGERFLE)
-LIBRARYFLE_DEFAULT  = os.path.join(REMOTE_LOC,LIBRARYFLE)
 CHANNELFLE_DEFAULT  = os.path.join(REMOTE_LOC,CHANNELFLE)
+SERVERFLE_DEFAULT   = os.path.join(REMOTE_LOC,SERVERFLE)
+LIBRARYFLE_DEFAULT  = os.path.join(REMOTE_LOC,LIBRARYFLE)
 GENREFLE_DEFAULT    = os.path.join(REMOTE_LOC,GENREFLE)
 PROVIDERFLE_DEFAULT = os.path.join(REMOTE_LOC,PROVIDERFLE)
 INSTANCEFLE_DEFAULT = os.path.join(REMOTE_LOC,'instance-settings-1.xml')
@@ -308,6 +307,7 @@ FANART_COLOR        = os.path.join(MEDIA_LOC,'fanart.jpg')
 LOGO_POSTER         = os.path.join(MEDIA_LOC,'poster.png')
 LOGO_LANDSCAPE      = os.path.join(MEDIA_LOC,'landscape.png')
 LOGO_SEASONAL       = os.path.join(MEDIA_LOC,'Seasonal.png')
+ICON_WEB            = os.path.join(MEDIA_LOC,'logo.ico')
 LOGO_HOST           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
 
 #skins

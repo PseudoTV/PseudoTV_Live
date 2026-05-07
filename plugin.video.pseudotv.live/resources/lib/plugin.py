@@ -42,11 +42,12 @@ class Plugin(object):
         mode = 'playlist' if any([self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist']]) else sysInfo.get('mode')
         self.log(f'__init__, mode = {mode}, sysInfo = {self.sysInfo}')
         
-        if   mode == 'live':                    self.playLive()
-        elif mode == 'radio':                   self.playRadio()
-        elif mode == 'resume':                  self.playPaused()
-        elif mode in ['vod','dvr']:             self.playVOD()
-        elif mode in ['playlist','broadcast']:  self.playPlaylist()
+        with BUILTIN.busy_dialog():
+            if   mode == 'live':                    self.playLive()
+            elif mode == 'radio':                   self.playRadio()
+            elif mode == 'resume':                  self.playPaused()
+            elif mode in ['vod','dvr']:             self.playVOD()
+            elif mode in ['playlist','broadcast']:  self.playPlaylist()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -56,7 +57,8 @@ class Plugin(object):
     def _updateSysInfo(self):
         self.log('[%s] _updateSysInfo'%(self.sysInfo.get('chid')))
         if not self.player.isPlaying(): DIALOG.notificationDialog(f'{LANGUAGE(32248)} {LANGUAGE(30223)}\n{LANGUAGE(32140)}')
-        pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
+        with PROPERTIES.suspendActivity():
+            pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
         if pvritem:
             self.sysInfo['fitem'] = Globals._decodePlot(pvritem.get('broadcastnow',{}).get('plot',''))
             self.sysInfo['nitem'] = Globals._decodePlot(pvritem.get('broadcastnext',[{}])[0].get('plot',''))
@@ -86,8 +88,7 @@ class Plugin(object):
         def __findCurrent(items, byFile=True, found=-1):
             for pos, nextitem in enumerate(items):
                 fitem = Globals._decodePlot(nextitem.get('plot',{}))
-                file  = self.sysInfo.get('fitem',{}).get('file')
-                if byFile and file.lower() == fitem.get('file','').lower(): found = pos
+                if byFile and self.sysInfo.get('fitem',{}).get('file').lower() == fitem.get('file','').lower(): found = pos
                 elif not byFile and ntime >= strpTime(nextitem.get('starttime')) and ntime < strpTime(nextitem.get('endtime')) and self.sysInfo.get('chid') == fitem.get('citem',{}).get('id',str(random.random())): found = pos
                 if found >= 0:
                     self.log('[%s] __buildPlaylist __findCurrent found match!'%(self.sysInfo.get('chid')))
@@ -107,7 +108,8 @@ class Plugin(object):
                         self.log('[%s] __buildPlaylist, __findCurrent progress start at the beginning'%(self.sysInfo.get('chid')))
                         nowitem['progress']           = 0
                         nowitem['progresspercentage'] = 0
-                    self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
+                    with PROPERTIES.suspendActivity():
+                        self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
                     items = items[:SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
                     items.insert(0,nowitem)
                 combineDicts(self.sysInfo['fitem'],items[0].get('fitem',{}))
@@ -115,7 +117,8 @@ class Plugin(object):
             return items
             
         self.log('[%s] _getPVRItems'%(self.sysInfo.get('chid')))
-        pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=True)
+        with PROPERTIES.suspendActivity():
+            pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=True)
         
         if pvritem:
             pastItems = pvritem.get('broadcastpast',[]) # past items
@@ -175,7 +178,8 @@ class Plugin(object):
             return listitem
             
         def __buildPlaylist(chid, name):
-            return Globals._randomShuffle(interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in self.sysInfo.get('vid').split('|')], SETTINGS.getSettingInt('Interleave_Set'), SETTINGS.getSettingBool('Interleave_Repeat')))
+            with PROPERTIES.suspendActivity():
+                return Globals._randomShuffle(interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in self.sysInfo.get('vid').split('|')], SETTINGS.getSettingInt('Interleave_Set'), SETTINGS.getSettingBool('Interleave_Repeat')))
         
         self.log('[%s] playRadio, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
         listitems = poolit(__buildfItem)(__buildPlaylist(self.sysInfo.get('chid'),self.sysInfo.get('name')))
@@ -256,7 +260,8 @@ class Plugin(object):
                 oSeason, oEpisode = parseSE(filename)
                 self.log(f"[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {label}: {filename} in {folder}")
                 DIALOG.notificationDialog(f"Missing: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
-                items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
+                with PROPERTIES.suspendActivity():
+                    items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
                     
                 found = False
                 for item in items:

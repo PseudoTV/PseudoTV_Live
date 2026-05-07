@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -35,85 +35,75 @@ class FileAccess(object):
 
 
     @staticmethod
-    def _encodeString(text, encoding=DEFAULT_ENCODING):
+    def _encodeString(text='', encoding=DEFAULT_ENCODING):
         try:
             if not text: return ""
-            if isinstance(text, str): data = text.encode(encoding)
-            else:                     data = FileAccess.dumpPICKLE(text)
-            return urllib.parse.quote(base64.b64encode(zlib.compress(data, level=1)).decode('ascii'))
-        except Exception as e:
-            log(f"_encodeString failed! {e}", xbmc.LOGERROR)
-            return ""
+            elif isinstance(text, str): data = text.encode(encoding)
+            else:                       data = FileAccess.dumpPICKLE(text)
+            if not data: return ""
+            else:        return urllib.parse.quote(base64.b64encode(zlib.compress(data, level=1)).decode('ascii'))
+        except Exception as e: log(f"_encodeString failed! {e}", xbmc.LOGERROR)
+        return ""
 
 
     @staticmethod
     def _decodeString(text='', encoding=DEFAULT_ENCODING):
         try:
             if not text: return ""
-            if isinstance(text, str) and '%' in text: text = urllib.parse.unquote(text)
-            if isinstance(text, str):                 text = text.encode('ascii')
+            elif isinstance(text, str) and '%' in text: text = urllib.parse.unquote(text)
+            if isinstance(text, str):                   text = text.encode('ascii')
             missing_padding = len(text) % 4
             if missing_padding: text += b'=' * (4 - missing_padding)
             decompressed = zlib.decompress(base64.b64decode(text))
             if decompressed.startswith(b'\x80'): return FileAccess.loadPICKLE(decompressed)
             return decompressed.decode(encoding)
-        except (UnicodeDecodeError, zlib.error, base64.binascii.Error) as e:
-            log(f"_decodeString failed to decompress/decode! {e}", xbmc.LOGERROR)
-            return "" # Return empty so the addon can overwrite the bad data
-        except Exception as e:
-            log(f"_decodeString failed! {e}", xbmc.LOGERROR)
-            return ""
+        except Exception as e: log(f"_decodeString failed! {e}", xbmc.LOGERROR)
+        return ""
             
             
     @staticmethod
-    def dumpPICKLE(item={}, fle=None):
+    def dumpPICKLE(item={}):
         try:
-            if fle and hasattr(item,'write'):        
-                pickle.dump(item, fle)
-                return True
-            if isinstance(item, (bytes, bytearray)): return item
-            return pickle.dumps(item)
-        except Exception as e:
-            log('FileAccess: dumpPICKLE failed! %s'%(e), xbmc.LOGERROR)
-            return None
+            if   not item:                             return b""
+            elif hasattr(item,'write'):                return pickle.dump(None, item)
+            elif isinstance(item, (bytes, bytearray)): return item
+            return pickle.dumps(item, protocol=4)
+        except Exception as e: log('FileAccess: dumpPICKLE failed! %s'%(e), xbmc.LOGERROR)
+        return b""
         
         
     @staticmethod
-    def loadPICKLE(item="", encoding=DEFAULT_ENCODING):
+    def loadPICKLE(item=""):
         try:        
-            if not item:              return None
-            if hasattr(item,'read'):  return pickle.load(item)
-            if isinstance(item, str): item = item.encode('latin-1')
+            if   not item:              return None
+            elif hasattr(item,'read'):  return pickle.load(item)
+            elif isinstance(item, str): item = item.encode('latin-1')
             return pickle.loads(item)
         except pickle.UnpicklingError: pass
-        except Exception as e:
-            log('FileAccess: loadPICKLE failed! %s'%(e), xbmc.LOGERROR)
-            return None
+        except Exception as e: log('FileAccess: loadPICKLE failed! %s'%(e), xbmc.LOGERROR)
+        return None
         
         
     @staticmethod
-    def dumpJSON(item={}, fle=None, idnt=None, sortkey=False, separators=(',', ':')):
+    def dumpJSON(item={}, idnt=None, sortkey=False, separators=(',', ':')):
         try:
-            if fle and hasattr(item,'write'):    
-                json.dump(item, fle, indent=idnt, sort_keys=sortkey, separators=separators)
-                return True
-            if isinstance(item, (str, bytes)): return item
-            return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
-        except Exception as e:
-            log('FileAccess: dumpJSON failed! %s'%(e), xbmc.LOGERROR)
-            return ''
+            if   item is None:                   return ''
+            elif hasattr(item,'write'):          return json.dump(None, item, indent=idnt, sort_keys=sortkey, separators=separators)
+            elif isinstance(item, (str, bytes)): return item
+            elif isinstance(item, (dict, list)): return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
+        except Exception as e: log('FileAccess: dumpJSON failed! %s'%(e), xbmc.LOGERROR)
+        return ''
             
         
     @staticmethod
     def loadJSON(item=""):
         try:
-            if not item: return {}
-            if isinstance(item, (dict, list)): return item
-            if hasattr(item, 'read'):          return json.load(item)
-            if isinstance(item, (str, bytes)): return json.loads(item)
-        except Exception as e:
-            log('FileAccess: loadJSON failed! %s'%(e), xbmc.LOGERROR)
-            return {}
+            if   item is None:                   return {}
+            elif hasattr(item, 'read'):          return json.load(item)
+            elif isinstance(item, (dict, list)): return item
+            elif isinstance(item, (str, bytes)): return json.loads(item)
+        except Exception as e: log('FileAccess: loadJSON failed! %s' % (e), xbmc.LOGERROR)
+        return {}
         
         
     @staticmethod
@@ -151,9 +141,8 @@ class FileAccess(object):
                         if not chunk: break
                         f.write(chunk)
             return True
-        except Exception as e:
-            log('FileAccess: setURL failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
-            return False
+        except Exception as e: log('FileAccess: setURL failed! %s\nfile = %s'%(e,file), xbmc.LOGERROR)
+        return False
 
 
     @staticmethod
@@ -245,6 +234,9 @@ class FileAccess(object):
     @staticmethod
     def copy(orgfilename, newfilename):
         log('FileAccess: copying %s to %s'%(orgfilename,newfilename))
+        #todo prompt to delete existing.
+        if not FileAccess.exists(orgfilename): return False
+        elif   FileAccess.exists(newfilename): return False
         dir, file = os.path.split(newfilename)
         if not FileAccess.exists(dir): FileAccess.makedirs(dir)
         return xbmcvfs.copy(orgfilename, newfilename)
@@ -252,7 +244,6 @@ class FileAccess(object):
 
     @staticmethod
     def move(orgfilename, newfilename):
-        if FileAccess.exists(newfilename): FileAccess.delete(newfilename)
         log('FileAccess: moving %s to %s'%(orgfilename,newfilename))
         if FileAccess.copy(orgfilename, newfilename):
             return FileAccess.delete(orgfilename)
@@ -302,18 +293,16 @@ class FileAccess(object):
     @staticmethod
     def rename(path, newpath):       
         log("FileAccess: rename %s to %s"%(path,newpath))
-        if not FileAccess.exists(path):
-            return False
-        
+        #todo prompt to delete existing.
+        if not FileAccess.exists(path):    return False
+        elif   FileAccess.exists(newpath): return False
         try:
-            if xbmcvfs.rename(path, newpath):
-                return True
+            if xbmcvfs.rename(path, newpath): return True
         except Exception as e: 
             log("FileAccess: rename, failed! %s"%(e), xbmc.LOGERROR)
 
         try:
-            if FileAccess.move(path, newpath):
-                return True
+            if FileAccess.move(path, newpath): return True
         except Exception as e: 
             log("FileAccess: move, failed! %s"%(e), xbmc.LOGERROR)
            
@@ -326,25 +315,24 @@ class FileAccess(object):
                 if newpath[0:6].lower() == 'smb://':
                     newpath = '\\\\' + newpath[6:]        
         
-        if not os.path.exist(xbmcvfs.translatePath(path)):
+        if not os.path.exist(xbmcvfs.translatePath(path)): 
             return False
-        
-        try:
-            log("FileAccess: os.rename")
-            os.rename(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
-            return True
-        except Exception as e: 
-            log("FileAccess: os.rename, failed! %s"%(e), xbmc.LOGERROR)
- 
-        try:
-            log("FileAccess: shutil.move")
-            shutil.move(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
-            return True
-        except Exception as e: 
-            log("FileAccess: shutil.move, failed! %s"%(e), xbmc.LOGERROR)
-
+        else:
+            try:
+                log("FileAccess: os.rename")
+                os.rename(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
+                return True
+            except Exception as e: 
+                log("FileAccess: os.rename, failed! %s"%(e), xbmc.LOGERROR)
+     
+            try:
+                log("FileAccess: shutil.move")
+                shutil.move(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
+                return True
+            except Exception as e: 
+                log("FileAccess: shutil.move, failed! %s"%(e), xbmc.LOGERROR)
         log("FileAccess: OSError")
-        raise OSError()
+        raise False
 
 
     @staticmethod

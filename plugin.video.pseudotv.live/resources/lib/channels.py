@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -25,11 +25,11 @@ from multiroom  import Multiroom
 # https://pypi.org/project/dataclasses-json/
 class Channels(object):
     
-    def __init__(self, file=None, writable=False):
-        if file is None: file = self._getCHANNELFLE()
+    def __init__(self, key=None, writable=False):
+        if key is None: key = CHANNELAUTOTUNE_KEY if SETTINGS.getSettingBool('Enable_Autotune') else CHANNEL_KEY
         self.writable    = writable
-        self.channelFile = file
         self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
+        self.channelKEY  = f'{key}.{self.channelDATA.get('version',ADDON_VERSION)}'
         self.channelTEMP = self.channelDATA.get('channels',[{}]).pop(0)
         self.channelRULE = self.channelTEMP.pop('rules')
         self.channelTEMP['rules'] = {}
@@ -38,18 +38,13 @@ class Channels(object):
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log('%s: [%s] %s'%(self.__class__.__name__,self.channelKEY,msg),level)
 
 
-    def _getCHANNELFLE(self):
-        if SETTINGS.getSettingBool('Enable_Autotuned'): return AUTOTUNEFLEPATH
-        return CHANNELFLEPATH
-        
-        
     def _load(self) -> dict:
-        channelDATA = FileAccess.getJSON(self.channelFile)
-        self._setSetting()
-        self.log('_load [%s] channels = %s'%(self.channelFile,len(channelDATA.get('channels',[]))))
+        channelDATA = (SETTINGS.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY)) or {})
+        if CHANNELAUTOTUNE_KEY not in self.channelKEY: SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
+        self.log('_load channels = %s'%(len(channelDATA.get('channels',[]))))
         return channelDATA
     
         
@@ -61,26 +56,20 @@ class Channels(object):
             yield citem
                 
                 
-    def _save(self) -> bool:
+    def _save(self, expiration=-1) -> bool:
         if self.writable:
-            self.log('_save [%s] channels = %s'%(self.channelFile,len(self.channelDATA['channels'])))
-            with PROPERTIES.interruptActivity():
-                if FileAccess.setJSON(self.channelFile,self.channelDATA):
-                    self._setSetting()
-                    return True
-        
-        
-    def _setSetting(self):
-        if self.channelFile == CHANNELFLEPATH:
-            SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
-        
-        
+            PROPERTIES.setHasChannels(self.channelKEY, self.channelDATA)
+            if CHANNELAUTOTUNE_KEY in self.channelKEY: expiration = datetime.timedelta(days=MAX_GUIDEDAYS)
+            self.log('_save channels = %s, expiration = %s'%(len(self.channelDATA['channels']),expiration))
+            return SETTINGS.setCacheSetting(self.channelKEY, self.channelDATA, FileAccess._getMD5(self.channelKEY), expiration)
+            
+
     def getTemplate(self) -> dict: 
         return self.channelTEMP.copy()
         
         
     def getChannels(self) -> list:
-        self.log('getChannels [%s] channels = %s'%(self.channelFile,len(self.channelDATA.get('channels',[]))))
+        self.log('getChannels channels = %s'%(len(self.channelDATA.get('channels',[]))))
         return sorted(self.channelDATA['channels'], key=itemgetter('number'))
         
         
@@ -99,19 +88,20 @@ class Channels(object):
     
     def setChannels(self, channels=None) -> bool:
         if channels is None: channels = self.channelDATA['channels']
+        self.channelDATA['name']     = PROPERTIES.getFriendlyName()
         self.channelDATA['uuid']     = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(channels)
-        self.log('setChannels [%s] channels = %s'%(self.channelFile,len(self.channelDATA.get('channels',[]))))
-        PROPERTIES.setHasChannels(len(channels)>0)
+        if CHANNELAUTOTUNE_KEY not in self.channelKEY: SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
+        self.log('setChannels channels = %s'%(len(self.channelDATA.get('channels',[]))))
         return self._save()
         
 
-    def getImports(self) -> list:
-        return self.channelDATA.get('imports',[])
+    def getImportPlugins(self) -> list:
+        return self.channelDATA.get('plugins',[])
         
         
-    def setImports(self, data: list=[]) -> bool:
-        self.channelDATA['imports'] = data
+    def setImportPlugins(self, data: list=[]) -> bool:
+        self.channelDATA['plugins'] = data
         return self._save()
          
          

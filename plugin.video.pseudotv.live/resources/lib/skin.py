@@ -1,4 +1,4 @@
-#   Copyright (C) 2025 Lunatixz
+#   Copyright (C) 2026 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -21,20 +21,22 @@
 
 # class Service(object):
     # from jsonrpc import JSONRPC
-    # monitor = MONITOR()
     # jsonRPC = JSONRPC()
-    # def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        # return (self.monitor.waitForAbort(wait) | PROPERTIES.isPendingShutdown())
-    # def _interrupt(self) -> bool:
-        # return (PROPERTIES.isPendingShutdown() | PROPERTIES.isPendingRestart() | PROPERTIES.isPendingInterrupt())
-    # def _suspend(self, wait=CPU_CYCLE) -> bool:
-        # if wait > 0: self._sleep(wait)
-        # return PROPERTIES.isPendingSuspend()
-    # def _sleep(self, wait=CPU_CYCLE):
-        # while not self.monitor.abortRequested() and wait > 0:
-            # if (self.monitor.waitForAbort(0.5) | self._interrupt()): return True
-            # else: wait -= 0.5
-        # return False
+    player  = PLAYER()
+    monitor = MONITOR()
+    def _shutdown(self, wait=CPU_CYCLE) -> bool:
+        return any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+    def _restart(self) -> bool:
+        return PROPERTIES.isPendingRestart()
+    def _interrupt(self) -> bool:
+        return any([PROPERTIES.isPendingInterrupt(),self._shutdown(),self._restart(),BUILTIN.isScanning()])
+    def _suspend(self) -> bool:
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
+    def _sleep(self, wait=CPU_CYCLE):
+        while not self.monitor.abortRequested() and wait > 0:
+            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
+            else: wait -= CPU_CYCLE
+        return False
         
 # class Skin(object):
     # def __init__(self, service=None):

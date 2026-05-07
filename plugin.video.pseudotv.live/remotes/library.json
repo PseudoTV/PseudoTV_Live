@@ -1,5 +1,7 @@
 {
-    "uuid": "",
+    
+	"version": "1.0.0",
+	"uuid": "",
     "library": {
         "Item": {
             "type": "",
