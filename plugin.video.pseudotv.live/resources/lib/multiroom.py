@@ -65,7 +65,7 @@ class Multiroom(object):
 
     def _load(self) -> dict:
         servers = (SETTINGS.getCacheSetting(self.serverKEY, FileAccess._getMD5(self.serverKEY)) or {})
-        PROPERTIES.setServers(len(servers.get('servers',{})) > 0)
+        PROPERTIES.setHasServers(len(servers.get('servers',{})) > 0)
         SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers.get('servers',{}))]))
         self.log('_load, servers = %s'%(len(servers.get('servers',{}))))
         return servers
@@ -83,7 +83,7 @@ class Multiroom(object):
     def _setServers(self, servers=None):
         if servers is None: servers = self.serverData['servers']
         self.serverData["servers"] = servers
-        PROPERTIES.setServers(len(servers) > 0)
+        PROPERTIES.setHasServers(len(servers) > 0)
         SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
         self.log('_setServers, servers = %s'%(len(servers)))
         return self._save()
@@ -157,7 +157,9 @@ class Multiroom(object):
             return LISTITEMS.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=Globals._getDummyIcon(str(list(servers.values()).index(payload)+1)),url=FileAccess.dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
-            servers = self.getServers()
+            friendly = PROPERTIES.getFriendlyName()
+            servers  = self.getServers()
+            if friendly in servers: servers.pop(friendly)
             lizLST = []
             lizLST.extend(poolit(__buildMenuItem)(list(servers.values())))
             if len(lizLST) > 0: lizLST.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]- %s[/B][/COLOR]'%(LANGUAGE(30046)),LANGUAGE(33046))) #remove server menu item

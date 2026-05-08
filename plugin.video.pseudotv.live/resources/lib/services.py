@@ -112,28 +112,33 @@ class Player(xbmc.Player):
 
 
     def getplayingItem(self):
-        playingItem = FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo'))
-        print('playingItem',type(playingItem),playingItem)
-        if '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid',''):
-            playingItem['isPseudoTV'] = True
-            playingItem['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
-            playingItem['chfolder']   = BUILTIN.getInfoLabel('Folderpath','Player')
-            playingItem['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
-            playingItem['isfiller']   = self.isPlayingFiller()
-            #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
-            playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')))})
-            playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')))})
-            playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.curchannels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
-            playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
-            PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(playingItem))
-        return playingItem
-      
+        try: 
+            playingItem = FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo'))
+            if '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid',''):
+                playingItem['isPseudoTV'] = True
+                playingItem['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
+                playingItem['chfolder']   = BUILTIN.getInfoLabel('Folderpath','Player')
+                playingItem['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
+                playingItem['isfiller']   = self.isPlayingFiller()
+                #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
+                playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')))})
+                playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')))})
+                playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.curchannels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
+                playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
+                PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(playingItem))
+            return playingItem
+        except Exception as e: 
+            self.log('getplayingItem: failed! %s'%(e), xbmc.LOGERROR)
+            
         
     def getPlayerItem(self):
-        try: return self.getPlayingItem()
+        try:
+            if not self.isPlaying(): 
+                raise Exception('Not Playing')
+            return self.getPlayingItem()
         except Exception:
+            self.monitor.waitForAbort(OSD_TIMER) 
             if not self.isPlaying(): return xbmcgui.ListItem()
-            self.monitor.waitForAbort(1.0) 
             return self.getPlayerItem()
         
         

@@ -36,7 +36,7 @@ class Settings(object):
     
     def __init__(self):
         self.properties = Properties()
-        self.instances  = Instances(self)
+        self.instances  = Instances(settings=self)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -351,7 +351,7 @@ class Settings(object):
             return instancePath
         
 
-    def setPVRPath(self, path, instance=ADDON_NAME, prompt=None):
+    def setPVRPath(self, path, instance=ADDON_NAME, silent=True):
         settings  = self.instances.getSettings(instance)
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
                      'kodi_addon_instance_enabled':'true',
@@ -368,6 +368,28 @@ class Settings(object):
         settings.update(nsettings)
         if self.chkPVRChanges(instance, settings.copy()):
             self.log('[%s] setPVRPath, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
+            return self.instances.setSettings(instance, settings)
+        
+        
+    def setPVRLocal(self, instance, pid=None, silent=True):
+        if pid is None: pid = self.properties.getProcessID()
+        host      = self.properties.getRemoteHost()
+        settings  = self.instances.getSettings(instance)
+        nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
+                     'kodi_addon_instance_enabled':'true',
+                     'm3uPathType'                :'1',
+                     'm3uUrl'                     :'http://%s/%s/%s'%(host,pid,M3UFLE),
+                     'm3uCache'                   :'true',
+                     'epgPathType'                :'1',
+                     'epgUrl'                     :'http://%s/%s/%s'%(host,pid,XMLTVFLE),
+                     'epgCache'                   :'true',
+                     'genresPathType'             :'1',
+                     'genresUrl'                  :'http://%s/%s/%s'%(host,pid,GENREFLE),
+                     'logoPathType'               :'1',
+                     'logoBaseUrl'                :'http://%s/logos'%(host)}
+        settings.update(nsettings)
+        if self.chkPVRChanges(instance, settings.copy()):
+            self.log('[%s] setPVRLocal, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
             return self.instances.setSettings(instance, settings)
         
         
@@ -465,7 +487,7 @@ class Properties(object):
     def setProcessID(self):
         self._clrTrash(self.getEXTProperty('%s.ProcessID'%(ADDON_ID),None))
         return self.setEXTProperty('%s.ProcessID'%(ADDON_ID),FileAccess._getMD5(uuid4()))
-
+        
 
     def _clrTrash(self, processID=None): #clear abandoned properties after processID change
         if processID:
@@ -493,9 +515,9 @@ class Properties(object):
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID,key)
         if useInstance: 
             thid = threading.get_ident()
-            uuid = self.getProcessID()
-            key  = '%s.%s.%s'%(key,uuid,thid)
-            self._setTrash(key, uuid)
+            pid  = self.getProcessID()
+            key  = '%s.%s.%s'%(key,pid,thid)
+            self._setTrash(key, pid)
             return key, thid
         return key, '-1'
 
@@ -631,11 +653,11 @@ class Properties(object):
         return any([self.getEXTProperty('%s.has.%s'%(ADDON_ID,t),False) for t in AUTOTUNE_TYPES])
         
         
-    def setLibrary(self, type, state=True):
+    def setHasLibrary(self, type, state=True):
         return self.setEXTProperty('%s.has.%s'%(ADDON_ID,type),state)
         
         
-    def setServers(self, state=True):
+    def setHasServers(self, state=True):
         return self.setEXTProperty('%s.has.Servers'%(ADDON_ID),state)
         
 

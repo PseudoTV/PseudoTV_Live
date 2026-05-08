@@ -142,7 +142,7 @@ class Builder(object):
             if not citem.get('name') or len(citem.get('path',[])) == 0 or not citem.get('number'):
                 self.log('[%s] SKIPPING - missing necessary channel meta\n%s'%(citem.get('id'),citem),xbmc.LOGINFO)
                 continue
-            elif not citem.get('enabled',True):
+            elif not citem.get('enable',True):
                 self.log('[%s] SKIPPING - disabled channel\n%s'%(citem.get('id'),citem),xbmc.LOGINFO)
                 continue
             else:

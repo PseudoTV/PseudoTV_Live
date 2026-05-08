@@ -97,7 +97,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.rule           = RulesList()
             self.jsonRPC        = JSONRPC()
             self.resources      = Resources()
-            self.backup         = Backup()
+            self.backup         = Backup(channels=self.channels)
 
             self.host           = PROPERTIES.getRemoteHost()
             self.friendly       = PROPERTIES.getFriendlyName()
@@ -138,7 +138,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.right_button3 = self.getControl(9003)
             self.right_button4 = self.getControl(9004)
             self.fillChanList(self.newChannels,focus=self.focusIndex,channel=self.openChannel)
-            self.log("onInit, backup latest = %s"%(self.backup.backupChannels(CHANNELLATEST_KEY,silent=True)))
+            self.log(f"onInit, backup {CHANNELLATEST_KEY} = {self.backup.backupChannels(CHANNELLATEST_KEY,silent=True)}")
         except Exception as e: 
             log("onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.closeManager()
@@ -354,7 +354,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                  'rules'   : LANGUAGE(32095),
                  'radio'   : LANGUAGE(32091),
                  'favorite': LANGUAGE(32090),
-                 'enabled' : LANGUAGE(30184),
+                 'enable'  : LANGUAGE(30184),
                  'changed' : LANGUAGE(32259)}
                  
         DESC = {'name'    : LANGUAGE(32085),
@@ -363,7 +363,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 'rules'   : LANGUAGE(32088),
                 'radio'   : LANGUAGE(32084),
                 'favorite': LANGUAGE(32083),
-                'enabled' : LANGUAGE(33184),
+                'enable'  : LANGUAGE(33184),
                 'changed' : LANGUAGE(33259)}
 
         lizLST = []
@@ -410,7 +410,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                      "rules"    : {'func':__getRule  , 'kwargs':{'citem':citem, 'rules' :self.rule.loadRules([citem]).get(citem['id'],{})}},
                      "radio"    : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('radio',False)}},
                      "favorite" : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('favorite',False)}},
-                     "enabled"  : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('enabled',False)}},
+                     "enable"   : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('enable',False)}},
                      "changed"  : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('changed',False)}}}
               
         action = KEY_INPUT.get(key) 
@@ -763,7 +763,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                                   "rules"   : item.get('rules',{}),
                                   "catchup" : ('vod' if not radio else ''),
                                   "changed" : True,
-                                  "enabled" : True,
+                                  "enable"  : True,
                                   "radio"   : radio,
                                   "favorite": False})
                     self.newChannels[number-1] = citem
@@ -991,9 +991,8 @@ class Manager(xbmcgui.WindowXMLDialog):
    
     def saveChanges(self, start=1, close=True):
         def __yesno():
-            if self.launchManager:
-                return DIALOG.yesnoDialog(LANGUAGE(32076))
-            elif not self.server: return True
+            if   self.launchManager: return DIALOG.yesnoDialog(LANGUAGE(32076))
+            elif not self.server:    return True
                 
         self.log("saveChanges")
         def __validateChannels(newChannels):
@@ -1015,7 +1014,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     else: #local save
                         if self.channels.setChannels(channels):
                             self.madeChanges = False
-                            self.log("saveChanges, backup changed = %s"%(self.backup.backupChannels(CHANNELCHANGED_KEY,silent=True)))
+                            self.log(f"saveChanges, backup {CHANNELCHANGED_KEY} = {self.backup.backupChannels(CHANNELCHANGED_KEY,silent=True)}")
                             PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
                             if self.launchManager: 
                                 self.fillChanList(self.newChannels,True,focus=start)

@@ -310,7 +310,7 @@ msgid "Debugging"
 msgstr ""
 
 msgctxt "#30073"
-msgid "Version: [B]%s[/B]"
+msgid "Updated Available!\nVersion: [B]%s[/B]"
 msgstr ""
 
 msgctxt "#30074"

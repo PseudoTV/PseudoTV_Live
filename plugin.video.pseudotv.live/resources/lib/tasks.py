@@ -137,27 +137,21 @@ class Tasks(object):
             self.log('_chkPropTimer, key = %s'%(key))
             PROPERTIES.clrEXTProperty(key)
             self.service._que(func, priority, *args, **kwargs)
-            
 
-    @cacheit(expiration=datetime.timedelta(minutes=15))
-    def getOnlineVersion(self):
+ 
+    def chkVersion(self):
         try:              ONLINE_VERSION = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(self.jsonRPC.requestURL(ADDON_URL)))[0]
         except Exception: ONLINE_VERSION = ADDON_VERSION
-        self.log('getOnlineVersion, version = %s'%(ONLINE_VERSION))
-        return ONLINE_VERSION
-        
-        
-    def chkVersion(self):
-        update = False
-        ONLINE_VERSION = self.getOnlineVersion()
-        if ADDON_VERSION < ONLINE_VERSION: 
-            update = True
+        UPDATE_AVAILABLE = False
+        LAST_VERSION = (SETTINGS.getCacheSetting('chkVersion.LAST_VERSION') or '0.0.0')
+        if ADDON_VERSION < ONLINE_VERSION:
+            UPDATE_AVAILABLE = True
             DIALOG.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
-        elif ADDON_VERSION != (SETTINGS.getCacheSetting('lastVersion', checksum=ADDON_VERSION) or '0.0.0'):
-            SETTINGS.setCacheSetting('lastVersion', ADDON_VERSION, checksum=ADDON_VERSION)
+        elif ADDON_VERSION != LAST_VERSION:
+            SETTINGS.setCacheSetting('chkVersion.LAST_VERSION', ADDON_VERSION)
             BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
-        self.log('chkVersion, update = %s, installed version = %s, online version = %s'%(update,ADDON_VERSION,ONLINE_VERSION))
-        SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':'None'}[str(update)])
+        SETTINGS.setSetting('Update_Status',{True:'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),False:'None'}[UPDATE_AVAILABLE])
+        self.log('chkVersion, installed version = %s, online version = %s, last version = %s'%(ADDON_VERSION,ONLINE_VERSION,LAST_VERSION))
 
 
     def chkKodiSettings(self):

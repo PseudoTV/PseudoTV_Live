@@ -62,7 +62,8 @@ class Plugin(object):
         if pvritem:
             self.sysInfo['fitem'] = Globals._decodePlot(pvritem.get('broadcastnow',{}).get('plot',''))
             self.sysInfo['nitem'] = Globals._decodePlot(pvritem.get('broadcastnext',[{}])[0].get('plot',''))
-        else: DIALOG.notificationDialog(LANGUAGE(32000))
+        else:
+            DIALOG.notificationDialog(LANGUAGE(32000))
                 
             
     def _quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=None):

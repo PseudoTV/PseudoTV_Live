@@ -25,7 +25,7 @@ from pool       import threadit, debounceit
 @debounceit(int(REAL_SETTINGS.getSetting('RPC_Delay')))
 def _run(mode, sysInfo={}):
     log(f'Default: _run, mode = {mode}, sysInfo = {sysInfo}')
-    threadit(Plugin)(mode, sysInfo)
+    Plugin(mode, sysInfo)
     
 if __name__ == '__main__':
     try:
@@ -55,8 +55,7 @@ if __name__ == '__main__':
                 chid, vid   = (sysInfo.get("chid")  or fitem.get('citem',{}).get('id')), FileAccess._decodeString(sysInfo.get("vid",""))
                 name, title = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ChannelName')), (Globals._unquoteString(sysInfo.get('title','')) or Globals._getInfoLabel('label'))
                 sysInfo.update({'mode':sysInfo.get('mode'),'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':vid,'name':name,'title':title,'radio':sysInfo.get('mode') == "radio"})
-                threadit(_run)(sysInfo.get('mode'), sysInfo)
-                
+                _run(sysInfo.get('mode'), sysInfo)
     except Exception as e: 
         log(f'Default: __main__, failed! {e}', xbmc.LOGERROR)
         Globals._notificationDialog(LANGUAGE(30079))

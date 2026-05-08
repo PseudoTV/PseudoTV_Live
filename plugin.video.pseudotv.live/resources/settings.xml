@@ -76,37 +76,37 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <!-- <setting id="Backup_Channels" type="string" label="32110" help="33110" parent="Open_Manager"> -->
-                    <!-- <level>2</level> -->
-                    <!-- <constraints> -->
-                        <!-- <allowempty>true</allowempty> -->
-                    <!-- </constraints> -->
-                    <!-- <dependencies> -->
-                        <!-- <dependency type="visible"> -->
-                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Channels),true)</condition> -->
-                        <!-- </dependency> -->
-                    <!-- </dependencies> -->
-                    <!-- <control type="button" format="action"> -->
-                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/backup.py, Backup_Channels)</data> -->
-                        <!-- <close>true</close> -->
-                    <!-- </control> -->
-                <!-- </setting> -->
-                <!-- <setting id="Recover_Backup" type="string" label="32107" help="33107" parent="Backup_Channels"> -->
-                    <!-- <level>2</level> -->
-                    <!-- <default/> -->
-                    <!-- <constraints> -->
-                        <!-- <allowempty>true</allowempty> -->
-                    <!-- </constraints> -->
-                    <!-- <dependencies> -->
-                        <!-- <dependency type="visible"> -->
-                            <!-- <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Backup),true)</condition> -->
-                        <!-- </dependency> -->
-                    <!-- </dependencies> -->
-                    <!-- <control type="button" format="action"> -->
-                        <!-- <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/backup.py, Recover_Backup)</data> -->
-                        <!-- <close>true</close> -->
-                    <!-- </control> -->
-                <!-- </setting> -->
+                <setting id="Export_Channels" type="string" label="32110" help="33110" parent="Open_Manager">
+                    <level>2</level>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Channels),true)</condition>
+                        </dependency>
+                    </dependencies>
+                    <control type="button" format="action">
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/backup.py, Export_Channels)</data>
+                        <close>true</close>
+                    </control>
+                </setting>
+                <setting id="Import_Channels" type="string" label="32107" help="33107" parent="Backup_Channels">
+                    <level>2</level>
+                    <default/>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Backup),true)</condition>
+                        </dependency>
+                    </dependencies>
+                    <control type="button" format="action">
+                        <data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/backup.py, Import_Channels)</data>
+                        <close>true</close>
+                    </control>
+                </setting>
             </group>
             <group id="3" label="30160">
                 <setting id="Launch_SmartplaylistEditor" type="string" label="30138" help="33138" parent="33138">

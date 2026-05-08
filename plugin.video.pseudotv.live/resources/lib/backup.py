@@ -23,9 +23,10 @@ from library    import Library
 from channels   import Channels
 
 class Backup(object):
-    def __init__(self, sysARG=sys.argv):
+    def __init__(self, channels=None, sysARG=sys.argv):
         self.log('__init__, sysARG = %s'%(sysARG))
-        self.sysARG      = sysARG
+        self.channels = channels
+        self.sysARG   = sysARG
         
     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -34,31 +35,33 @@ class Backup(object):
 
     def getBackups(self):
         keys = [CHANNELBACKUP_KEY,CHANNELCHANGED_KEY,CHANNELLATEST_KEY]
-        return list(filter(None,[PROPERTIES.setBackup(key, Channels(key).getChannels()) for key in keys]))
+        return list(filter(None,[PROPERTIES.setBackup(key, self.getChannels(key)) for key in keys]))
         
         
     def backupChannels(self, key: str=CHANNELBACKUP_KEY, silent=True) -> bool:
-        channels = Channels(CHANNEL_KEY).getChannels()
+        channels = self.getChannels()
         if len(channels) > 0:
             self.log('backupChannels, key = %s, channels = %s'%(key, len(channels)))
             with BUILTIN.busy_dialog(silent):
                 if SETTINGS.setCacheSetting(key, self._setChannels(channels), FileAccess._getMD5(key)):
-                    DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32110),LANGUAGE(32025), key))
+                    if not silent: DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32110),LANGUAGE(32025), key))
                     PROPERTIES.setBackup(key, channels)
                     return True
+        return False
                     
             
     def recoverChannels(self, key: str=CHANNELBACKUP_KEY) -> bool:
         channels = Channels(key).getChannels()
         if len(channels) > 0:
             self.log('recoverChannels, key = %s, channels = %s'%(key, len(channels)))
-            if DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(len(Channels(CHANNEL_KEY).getChannels()),len(channels),key))): 
+            if DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(len(self.getChannels()),len(channels),key))): 
                 with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                     if SETTINGS.setCacheSetting(CHANNEL_KEY, self._setChannels(channels), FileAccess._getMD5(CHANNEL_KEY), -1):
                         DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32112),LANGUAGE(32025), key))
                         PROPERTIES.setPendingRestart()
                         PROPERTIES.setBackup(key, channels)
                         return True
+        return False
             
             
     def _getImport(self, file=CHANNEL_BACKUP_FLE):
@@ -77,7 +80,7 @@ class Backup(object):
             
     def exportChannels(self, file=CHANNEL_BACKUP_FLE):
         with BUILTIN.busy_dialog():
-            if FileAccess.setJSON(file, self._setChannels(Channels(CHANNEL_KEY).getChannels())):
+            if FileAccess.setJSON(file, self._setChannels(self.getChannels())):
                 DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32110),LANGUAGE(32025),file))
         
         
@@ -87,13 +90,14 @@ class Backup(object):
             channels = FileAccess.getJSON(file).get('channels',[])
             if len(channels) > 0:
                 self.log('importChannels, file = %s, channels = %s'%(file, len(channels)))
-                if DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(len(Channels(CHANNEL_KEY).getChannels()),len(channels),file))): 
+                if DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(len(self.getChannels()),len(channels),file))): 
                     with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
                         if SETTINGS.setCacheSetting(CHANNEL_KEY, self._setChannels(channels), FileAccess._getMD5(CHANNEL_KEY), -1):
                             DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32112),LANGUAGE(32025),file))
                             PROPERTIES.setPendingRestart()
                             PROPERTIES.setBackup(CHANNEL_KEY, channels)
                             return True
+        return False
 
                 # if not DIALOG.yesnoDialog('%s\n%s?'%(LANGUAGE(32108),SETTINGS.getSetting('Backup_Channels'))): 
                         # SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
@@ -141,6 +145,11 @@ class Backup(object):
         except Exception: return False
             
             
+    def getChannels(self, key=CHANNEL_KEY):
+        if not self.channels is None: return self.channels.getChannels()
+        return Channels(key).getChannels()
+        
+        
     @threadit
     def run(self):  
         with BUILTIN.busy_dialog():

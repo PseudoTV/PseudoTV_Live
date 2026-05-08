@@ -35,6 +35,7 @@ class Channels(object):
         self.channelTEMP['rules'] = {}
         self.channelDATA.update(self._load())
         self.channelDATA_OLD = self.channelDATA.copy()
+        self.log(f'__init__ channelKEY = {self.channelKEY}')
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -49,7 +50,7 @@ class Channels(object):
     
         
     def _verify(self, channels: list=[]):
-        for idx, citem in enumerate(self.channelDATA.get('channels',[])):
+        for idx, citem in enumerate(channels):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
                 self.log('[%s] _verify in-valid\n%s'%(citem.get('id'),citem))
                 continue
@@ -58,7 +59,6 @@ class Channels(object):
                 
     def _save(self, expiration=-1) -> bool:
         if self.writable:
-            PROPERTIES.setHasChannels(self.channelKEY, self.channelDATA)
             if CHANNELAUTOTUNE_KEY in self.channelKEY: expiration = datetime.timedelta(days=MAX_GUIDEDAYS)
             self.log('_save channels = %s, expiration = %s'%(len(self.channelDATA['channels']),expiration))
             return SETTINGS.setCacheSetting(self.channelKEY, self.channelDATA, FileAccess._getMD5(self.channelKEY), expiration)
@@ -90,7 +90,8 @@ class Channels(object):
         if channels is None: channels = self.channelDATA['channels']
         self.channelDATA['name']     = PROPERTIES.getFriendlyName()
         self.channelDATA['uuid']     = SETTINGS.getMYUUID()
-        self.channelDATA['channels'] = self.sortChannels(channels)
+        self.channelDATA['channels'] = self.sortChannels(list(self._verify(channels)))
+        if len(self.channelDATA['channels']) > 0: PROPERTIES.setHasChannels(self.channelKEY, self.channelDATA)
         if CHANNELAUTOTUNE_KEY not in self.channelKEY: SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
         self.log('setChannels channels = %s'%(len(self.channelDATA.get('channels',[]))))
         return self._save()

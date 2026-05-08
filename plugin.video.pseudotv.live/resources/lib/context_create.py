@@ -24,7 +24,7 @@ from backup     import Backup
 @threadit
 def _open(fitem={}):
     log('Create: open')
-    if not PROPERTIES.isRunning('Create.open') and SETTINGS.hasAutotuned():
+    if not PROPERTIES.isRunning('Create.open'):
         with PROPERTIES.interruptActivity(), PROPERTIES.chkRunning('Create.open'), BUILTIN.busy_dialog(cancel=PROPERTIES.isRunning('Manager'), lock=True):
             try: manager = Manager(MANAGER_XML, ADDON_PATH, "default", channel=fitem.get('citem',{}).get('number',1))
             except Exception as e:

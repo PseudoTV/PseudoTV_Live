@@ -30,7 +30,7 @@
             "radio": false,
             "favorite": false,
             "changed": false,
-            "enabled": true
+            "enable": true
         }
     ],
     "plugins": [

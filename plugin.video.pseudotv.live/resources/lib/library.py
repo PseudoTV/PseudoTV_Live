@@ -105,7 +105,7 @@ class Library(object):
         self.log('setLibrary, type = %s, items = %s'%(type,len(items)))
         self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
         self.libraryDATA['library'][type] = items
-        PROPERTIES.setLibrary(type,len(items) > 0)
+        PROPERTIES.setHasLibrary(type,len(items) > 0)
         return self._save()
 
 

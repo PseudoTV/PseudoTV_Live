@@ -76,7 +76,7 @@ class Instances(object):
         return self._load(self.getPVRInstancePath(instance))
         
         
-    def setSettings(self, instance=ADDON_NAME, settings={}):
+    def setSettings(self, instance=ADDON_NAME, settings={}, silent=None):
         # https://github.com/xbmc/xbmc/pull/23648 todo proper instance api support when merged.
         ### kodi api hack | unreliable in piers
         # if isinstance(addon, xbmcaddon.Addon):
@@ -96,9 +96,11 @@ class Instances(object):
                     # self.settings.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
                     # self.properties.setPropTimer('chkPVRRefresh')
         ###
+        if silent is None: silent = self.settings.getSettingBool('Enable_Kodi_Access')
         addon = self.settings.hasAddon(PVR_CLIENT_ID,notify=True)
         if self._save(self.getPVRInstancePath(instance),settings):
-            self.settings.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
+            if not silent: 
+                self.settings.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
             self.properties.setPropTimer('chkPVRRefresh')
         
 
@@ -138,7 +140,7 @@ class Instances(object):
                         self.log('[%s] chkInstances, path = %s, failed to open file = %s\n%s'%(PVR_CLIENT_ID,PVR_CLIENT_LOC,file,e))
                         continue
         #create new configuration.
-        self.settings.setPVRRemote(self.properties.getRemoteHost(), instance)
+        self.settings.setPVRLocal(instance)
 
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
