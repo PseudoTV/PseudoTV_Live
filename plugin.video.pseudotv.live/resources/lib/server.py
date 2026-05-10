@@ -261,7 +261,7 @@ class HTTP(Thread):
             if not silent: DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
             SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
 
-        def __cancel(wait=M3U_REFRESH):
+        def __cancel(wait=1.0):
             try:
                 if self.httpd.is_alive():
                     if hasattr(self.httpd, 'cancel'): self.httpd.cancel()

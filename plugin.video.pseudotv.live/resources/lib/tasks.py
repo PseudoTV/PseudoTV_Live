@@ -151,7 +151,7 @@ class Tasks(object):
             SETTINGS.setCacheSetting('chkVersion.LAST_VERSION', ADDON_VERSION)
             BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
         SETTINGS.setSetting('Update_Status',{True:'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),False:'None'}[UPDATE_AVAILABLE])
-        self.log('chkVersion, installed version = %s, online version = %s, last version = %s'%(ADDON_VERSION,ONLINE_VERSION,LAST_VERSION))
+        self.log('chkVersion, installed = %s, online = %s, last = %s'%(ADDON_VERSION,ONLINE_VERSION,LAST_VERSION))
 
 
     def chkKodiSettings(self):
@@ -249,7 +249,7 @@ class Tasks(object):
             elif PROPERTIES.hasEnabledServers():                         PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
 
 
-    @debounceit(M3U_REFRESH)
+    @debounceit(M3U_INTERVAL)
     def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):
         self.log('chkPVRRefresh')
         def __toggle(state=True):

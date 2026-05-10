@@ -45,8 +45,7 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
     def internal(method):
         @wraps(method)
         def wrapper(*args, **kwargs):
-            # Build safe, truncated key to avoid huge key strings (which can blow memory)
-            instance = args[0]
+            instance  = args[0]
             cacheName = "%s.%s" % (instance.__class__.__name__, method.__name__)
             for item in args[1:]:
                 cacheName += u".%s"%(FileAccess._getMD5(item))

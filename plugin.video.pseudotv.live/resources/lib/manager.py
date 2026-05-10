@@ -766,7 +766,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                                   "enable"  : True,
                                   "radio"   : radio,
                                   "favorite": False})
-                    self.newChannels[number-1] = citem
+                    self.newChannels[number-1] = Globals._cleanGroups(citem)
             if self.madeChanges and self.launchManager: self.fillChanList(self.newChannels,True,focus=number)
             return True
                 

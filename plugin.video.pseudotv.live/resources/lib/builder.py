@@ -149,12 +149,11 @@ class Builder(object):
                 if not citem.get('id'): citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'],SETTINGS.getMYUUID()) #generate new channelid
                 citem['logo'] = self.resources.getLogo(citem,fallback=self.resources.getCache(citem['name']),lookup=True)
                 self.log('[%s] VERIFIED - channel %s: %s changed = %s'%(citem['id'],citem['number'],citem['name'],citem.get('changed',False)),xbmc.LOGINFO)
-                yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self) #inject persistent citem changes here
+                yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, Globals._cleanGroups(citem), inherited=self) #inject persistent citem changes here
 
              
-    def buildCells(self, citem: dict, duration: int=10800, type: str='video', entries: int=3, info=None) -> list:
-        if info is None: info = {}
-        tmpItem  = {'label'       : (info.get('title')        or citem['name']),
+    def buildCells(self, citem: dict, duration: int=10800, type: str='video', entries: int=3, info={}) -> list:
+        info.update({'label'       : (info.get('title')        or citem['name']),
                     'episodetitle': (info.get('episodetitle') or '|'.join(citem.get('group',[]))),
                     'plot'        : (info.get('plot')         or LANGUAGE(32020)),
                     'genre'       : (info.get('genre')        or ['Undefined']),
@@ -163,12 +162,8 @@ class Builder(object):
                     'type'        : type,
                     'duration'    : duration,
                     'start'       : 0,
-                    'stop'        : 0}
-        info.update(tmpItem)
-        out = []
-        for _ in range(entries):
-            out.append(info.copy())
-        return out
+                    'stop'        : 0})
+        return [info.copy() for _ in range(entries)]
 
 
     def buildChannels(self, channels: list=[], preview=False, silent=False):
@@ -249,7 +244,7 @@ class Builder(object):
                             self.pHeader = ADDON_NAME
                             self.pName   = citem['name']
                             self.pCount  = int(idx*100)//self.cCount
-                            citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, Globals._cleanGroups(citem), inherited=self) #inject temporary citem changes here
+                            citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self) #inject temporary citem changes here
                             _update, start = __needsUpdate(citem, now, fallback)
                             _changed = __hasChanged(citem, enableChanged) 
                             self.log('[%s] buildChannels, preview = %s, rules = %s, _update = %s'%(citem['id'],preview,citem.get('rules',{}),_update))
@@ -260,8 +255,7 @@ class Builder(object):
                                 break
                             elif self.service._suspend():
                                 self.log("[%s] buildChannels, _suspend"%(citem['id']))
-                                if self.service._sleep(CPU_CYCLE): break
-                                continue
+                                if not self.service._sleep(CPU_CYCLE): continue
                             elif _update or _changed:                       
                                 if    preview:           self.pMSG = LANGUAGE(32236)                           #Preview
                                 elif  start == fallback: self.pMSG = '%s %s'%(LANGUAGE(30014),LANGUAGE(30223)) #Building
@@ -313,7 +307,7 @@ class Builder(object):
             
         def _injectFillers(citem, fileList, enable=False):#todo refactor
             self.log("[%s] buildVideo: _injectFillers, enable = %s, fileList = %s"%(citem['id'],enable,len(fileList)))
-            if enable: return  Fillers(citem,self).injectBCTs(fileList)
+            if enable: return Fillers(citem,self).injectBCTs(fileList)
             return fileList
           
         def _injectRules(citem):
@@ -344,8 +338,7 @@ class Builder(object):
                     return []
                 elif self.service._suspend():
                     self.log("[%s] buildVideo, _suspend"%(citem['id']))
-                    if self.service._sleep(CPU_CYCLE): break
-                    continue
+                    if not self.service._sleep(CPU_CYCLE): continue
                 else:
                     if len(citem.get('path',[])) > 1:
                         self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
@@ -416,8 +409,7 @@ class Builder(object):
             elif self.service._suspend():
                 self.log("[%s] buildFileList, _suspend"%(citem['id']))
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(LANGUAGE(32144),LANGUAGE(32145)), header=self.pHeader)
-                if self.service._sleep(CPU_CYCLE): break
-                continue
+                if not self.service._sleep(CPU_CYCLE): continue
             elif len(dirList) == 0 or dirCount >= self.recursiveLimit:
                 if self.padFilelist and len(fileList) > 0 and len(fileList) < page: fileList = __padFileList(fileList,page)
                 elif len(fileList) < page and len(dirList) > dirCount: self.pErrors.append(LANGUAGE(32262))
@@ -598,7 +590,7 @@ class Builder(object):
         self.log("[%s] addScheduling, OUT fileList = %s"%(citem['id'],len(fileList)))
         return fileList
 
-
+ 
     def is3D(self, item: dict) -> bool:
         if 'is3D' in item: return item['is3D']
         elif not item.get('streamdetails',{}).get('video',[]) and not item.get('file','').startswith(tuple(VFS_TYPES)):
@@ -610,14 +602,18 @@ class Builder(object):
 
 
     def setTrailers(self, item):
-        dur = self.jsonRPC.getDuration(item.get('trailer'), accurate=True, save=False)
+        dur = self.jsonRPC.getDuration(item.get('trailer'), self.jsonRPC.removeDuration(item.copy()), accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=False)
         if dur > 0:
-            item.update({'label':'%s - %s'%(item.get("label",""),LANGUAGE(30187)),'episodetitle':'%s - %s'%(item.get("episodetitle",""),LANGUAGE(30187)),'episodelabel':'%s - %s'%(item.get("episodelabel",""),LANGUAGE(30187)),'duration':dur, 'runtime':dur, 'file':item.get('trailer'), 'streamdetails':{}})
+            item.update({'label':'%s - %s'%(item.get("label",""),LANGUAGE(30187)),
+                         'episodetitle':'%s - %s'%(item.get("episodetitle",""),LANGUAGE(30187)),
+                         'episodelabel':'%s - %s'%(item.get("episodelabel",""),LANGUAGE(30187)),
+                         'duration':dur, 
+                         'file':item.get('trailer')})
             for genre in (item.get('genre',[]) or ['resources']): self.trailerCache.setdefault(genre.lower(),[]).append(item)
                         
                         
-    def getTrailers(self, genre=None) -> dict:
-        if genre: return self.trailerCache.get(genre,[]) #return genre
+    def getTrailers(self, genre=None):
+        if not genre is None: return self.trailerCache.get(genre,[])
         return self.trailerCache #return all
 
 

@@ -233,6 +233,7 @@ class Settings(object):
     @cacheit(expiration=datetime.timedelta(minutes=15))
     def getAddonDetails(self, id=ADDON_ID):
         try:
+            if not id: raise Exception("Missing ID")
             addon = xbmcaddon.Addon(id)
             properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
             return dict([(property,addon.getAddonInfo(property)) for property in properties])
@@ -344,16 +345,16 @@ class Settings(object):
             self.instances.chkInstances(self.properties.getFriendlyName())
 
 
-    def hasPVRInstance(self, instance=ADDON_NAME):
-        instancePath = self.instances.getPVRInstancePath(instance)
+    def hasPVRInstance(self, instanceName=ADDON_NAME):
+        instancePath = self.instances.getPVRInstancePath(instanceName)
         if FileAccess.exists(instancePath):
-            self.log('[%s] hasPVRInstance, instance = %s, path = %s'%(PVR_CLIENT_ID,instance, instancePath))
+            self.log('[%s] hasPVRInstance, instanceName = %s, path = %s'%(PVR_CLIENT_ID,instanceName, instancePath))
             return instancePath
         
 
-    def setPVRPath(self, path, instance=ADDON_NAME, silent=True):
-        settings  = self.instances.getSettings(instance)
-        nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
+    def setPVRPath(self, path, instanceName=ADDON_NAME):
+        settings  = self.instances.getSettings(instanceName)
+        nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
                      'kodi_addon_instance_enabled':'true',
                      'm3uPathType'                :'0',
                      'm3uPath'                    :os.path.join(path,M3UFLE),
@@ -366,58 +367,36 @@ class Settings(object):
                      'logoPathType'               :'0',
                      'logoPath'                   :os.path.join(path,'logos')}
         settings.update(nsettings)
-        if self.chkPVRChanges(instance, settings.copy()):
-            self.log('[%s] setPVRPath, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
-            return self.instances.setSettings(instance, settings)
+        if self.chkPVRChanges(instanceName, settings.copy()):
+            self.log('[%s] setPVRPath, %s settings = %s'%(PVR_CLIENT_ID, instanceName, nsettings))
+            return self.instances.setSettings(instanceName, settings)
         
         
-    def setPVRLocal(self, instance, pid=None, silent=True):
-        if pid is None: pid = self.properties.getProcessID()
-        host      = self.properties.getRemoteHost()
-        settings  = self.instances.getSettings(instance)
-        nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
-                     'kodi_addon_instance_enabled':'true',
-                     'm3uPathType'                :'1',
-                     'm3uUrl'                     :'http://%s/%s/%s'%(host,pid,M3UFLE),
-                     'm3uCache'                   :'true',
-                     'epgPathType'                :'1',
-                     'epgUrl'                     :'http://%s/%s/%s'%(host,pid,XMLTVFLE),
-                     'epgCache'                   :'true',
-                     'genresPathType'             :'1',
-                     'genresUrl'                  :'http://%s/%s/%s'%(host,pid,GENREFLE),
-                     'logoPathType'               :'1',
-                     'logoBaseUrl'                :'http://%s/logos'%(host)}
-        settings.update(nsettings)
-        if self.chkPVRChanges(instance, settings.copy()):
-            self.log('[%s] setPVRLocal, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
-            return self.instances.setSettings(instance, settings)
-        
-        
-    def setPVRRemote(self, host, instance=ADDON_NAME, prompt=None):
-        settings  = self.instances.getSettings(instance)
-        nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
+    def setPVRRemote(self, host, instanceName=ADDON_NAME, cache=True):
+        settings  = self.instances.getSettings(instanceName)
+        nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
                      'kodi_addon_instance_enabled':'true',
                      'm3uPathType'                :'1',
                      'm3uUrl'                     :'http://%s/%s'%(host,M3UFLE),
-                     'm3uCache'                   :'true',
+                     'm3uCache'                   :'%s'%(str(cache).lower()),
                      'epgPathType'                :'1',
                      'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
-                     'epgCache'                   :'true',
+                     'epgCache'                   :'%s'%(str(cache).lower()),
                      'genresPathType'             :'1',
                      'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
                      'logoPathType'               :'1',
                      'logoBaseUrl'                :'http://%s/logos'%(host)}
         settings.update(nsettings)
-        if self.chkPVRChanges(instance, settings.copy()):
-            self.log('[%s] setPVRRemote, %s settings = %s'%(PVR_CLIENT_ID, instance, nsettings))
-            return self.instances.setSettings(instance, settings)
+        if self.chkPVRChanges(instanceName, settings.copy()):
+            self.log('[%s] setPVRRemote, %s settings = %s'%(PVR_CLIENT_ID, instanceName, nsettings))
+            return self.instances.setSettings(instanceName, settings)
         
 
-    def chkPVRChanges(self, instance=ADDON_NAME, nsettings={}, prompt=None):
+    def chkPVRChanges(self, instanceName=ADDON_NAME, nsettings={}, prompt=None):
         if prompt is None: prompt = not bool(self.getSettingBool('Enable_Kodi_Access'))
         changes = []
-        if self.hasPVRInstance(instance):
-            xsettings = self.instances.getSettings(instance)
+        if self.hasPVRInstance(instanceName):
+            xsettings = self.instances.getSettings(instanceName)
             for setting, value in list(nsettings.items()):
                 if    str(value).lower() == str(xsettings.get(setting,'')).lower(): nsettings.pop(setting)
                 else: changes.append('%s: [COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(setting,str(xsettings.get(setting)),str(value)))
@@ -428,7 +407,7 @@ class Settings(object):
                 if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon.getAddonInfo('name'))):
                     self.dialog.notificationDialog(LANGUAGE(32046))
                     return False
-            self.log('[%s] chkPVRChanges, instance = %s, prompt = %s, changes = %s'%(PVR_CLIENT_ID,instance,prompt,nsettings))
+            self.log('[%s] chkPVRChanges, instanceName = %s, prompt = %s, changes = %s'%(PVR_CLIENT_ID,instanceName,prompt,nsettings))
             return True
         self.log('[%s] chkPVRChanges, no changes detected!'%(PVR_CLIENT_ID))
         return False

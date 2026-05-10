@@ -433,7 +433,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             data.update(next_episode)
 
         except Exception: pass
-        if data: timerit(self.jsonRPC.notifyAll)(0.5,*('upnext_data', binascii.hexlify(FileAccess.dumpJSON(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)))
+        if data: timerit(self.jsonRPC.notifyAll)(0.5,*('upnext_data', binascii.hexlify(FileAccess.dumpJSON(data).encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING), '%s.SIGNAL'%(ADDON_ID)))
         
         
     def onAction(self, act):

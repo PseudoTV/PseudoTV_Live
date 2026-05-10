@@ -80,6 +80,7 @@ class XMLTVS(object):
                 
             for program in self.XMLTVDATA['programmes']:
                 writer.addProgramme(program)
+                
             try:
                 with FileLock(self.XMLTVFile):
                     try:

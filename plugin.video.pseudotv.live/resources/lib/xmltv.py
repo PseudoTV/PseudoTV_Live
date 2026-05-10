@@ -36,7 +36,7 @@ with this software; if not, see <http://www.gnu.org/licenses/>.
 """
 # https://github.com/kodi-pvr/pvr.iptvsimple#supported-m3u-and-xmltv-elements
 
-from globals               import *
+from globals import *
 
 # The Python-XMLTV version
 VERSION = "1.4.4_PSEUDOTV"

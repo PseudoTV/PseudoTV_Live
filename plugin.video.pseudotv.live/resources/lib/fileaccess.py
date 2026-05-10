@@ -28,35 +28,40 @@ DEFAULT_ENCODING = "utf-8"
 class FileAccess(object):
     
     @staticmethod
-    def _getMD5(text):
-        if not isinstance(text, (str, bytes, bytearray)): text = FileAccess.dumpPICKLE(text)
-        if isinstance(text, str): text = text.encode(DEFAULT_ENCODING)
-        return hashlib.md5(text).hexdigest()
+    def _getMD5(data):
+        if not isinstance(data, (str, bytes, bytearray)):
+            data = FileAccess.dumpJSON(data, sortkey=True)
+        if isinstance(data, str): data = data.encode(DEFAULT_ENCODING)
+        return hashlib.md5(data).hexdigest()
 
 
     @staticmethod
-    def _encodeString(text='', encoding=DEFAULT_ENCODING):
+    def _encodeString(data=''):
         try:
-            if not text: return ""
-            elif isinstance(text, str): data = text.encode(encoding)
-            else:                       data = FileAccess.dumpPICKLE(text)
-            if not data: return ""
-            else:        return urllib.parse.quote(base64.b64encode(zlib.compress(data, level=1)).decode('ascii'))
+            if   not data: return ""
+            elif not isinstance(data, (str, bytes, bytearray)):
+                data = FileAccess.dumpJSON(data, sortkey=True)
+            if isinstance(data, str): data = data.encode(DEFAULT_ENCODING)
+            compressed  = zlib.compress(data, level=1)
+            encoded_b64 = base64.b64encode(compressed).decode('ascii')
+            return urllib.parse.quote(encoded_b64)
         except Exception as e: log(f"_encodeString failed! {e}", xbmc.LOGERROR)
         return ""
 
 
     @staticmethod
-    def _decodeString(text='', encoding=DEFAULT_ENCODING):
+    def _decodeString(data=''):
         try:
-            if not text: return ""
-            elif isinstance(text, str) and '%' in text: text = urllib.parse.unquote(text)
-            if isinstance(text, str):                   text = text.encode('ascii')
-            missing_padding = len(text) % 4
-            if missing_padding: text += b'=' * (4 - missing_padding)
-            decompressed = zlib.decompress(base64.b64decode(text))
-            if decompressed.startswith(b'\x80'): return FileAccess.loadPICKLE(decompressed)
-            return decompressed.decode(encoding)
+            if not data: return ""
+            data = urllib.parse.unquote(data)
+            missing_padding = len(data) % 4
+            if missing_padding: data += '=' * (4 - missing_padding)
+            raw_bytes    = base64.b64decode(data)
+            decompressed = zlib.decompress(raw_bytes)
+            try: 
+                return FileAccess.loadJSON(decompressed.decode(DEFAULT_ENCODING))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                return decompressed.decode(DEFAULT_ENCODING)
         except Exception as e: log(f"_decodeString failed! {e}", xbmc.LOGERROR)
         return ""
             
@@ -101,7 +106,9 @@ class FileAccess(object):
             if   item is None:                   return {}
             elif hasattr(item, 'read'):          return json.load(item)
             elif isinstance(item, (dict, list)): return item
-            elif isinstance(item, (str, bytes)): return json.loads(item)
+            elif isinstance(item, (str, bytes)): 
+                if not item or (isinstance(item, str) and not item.strip()): return {}
+                return json.loads(item)
         except Exception as e: log('FileAccess: loadJSON failed! %s' % (e), xbmc.LOGERROR)
         return {}
         

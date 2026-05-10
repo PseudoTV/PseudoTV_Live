@@ -36,6 +36,8 @@ import traceback
 from functools import reduce
 from kodi_six import xbmc
 
+DEFAULT_ENCODING = "utf-8"
+
 monitor = xbmc.Monitor()
 pythree = (sys.version_info[0] >= 3)
 
@@ -454,7 +456,7 @@ class DNSIncoming(object):
         self.offset += 1
         s = self.readString(length)
         if pythree:
-            s = s.decode('utf-8')
+            s = s.decode(DEFAULT_ENCODING)
         return s
 
     def readString(self, length):
@@ -512,7 +514,7 @@ class DNSIncoming(object):
 
     def readUTF(self, offset, length):
         """Reads a UTF-8 string of a given length from the packet"""
-        return self.data[offset:offset+length].decode('utf-8', 'replace')
+        return self.data[offset:offset+length].decode(DEFAULT_ENCODING, 'replace')
 
     def readName(self):
         """Reads a domain name from the packet"""
@@ -613,13 +615,13 @@ class DNSOutgoing(object):
     def writeString(self, value):
         """Writes a string to the packet"""
         if bytes != type(value):
-            value = value.encode('utf-8')
+            value = value.encode(DEFAULT_ENCODING)
         self.data += value
         self.size += len(value)
 
     def writeUTF(self, s):
         """Writes a UTF-8 string of a given length to the packet"""
-        utfstr = s.encode('utf-8')
+        utfstr = s.encode(DEFAULT_ENCODING)
         length = len(utfstr)
         if length > 64:
             raise NamePartTooLongException
@@ -1019,7 +1021,7 @@ class ServiceInfo(object):
                 list.append('='.join((key, suffix)))
             for item in list:
                 if bytes != type(item):
-                    item = item.encode('utf-8')
+                    item = item.encode(DEFAULT_ENCODING)
                 result += putByte(len(item))
                 result += item
             self.text = result
@@ -1039,7 +1041,7 @@ class ServiceInfo(object):
                 index += 1
                 val = text[index:index+length]
                 if pythree:
-                    val = val.decode('utf-8')
+                    val = val.decode(DEFAULT_ENCODING)
                 strs.append(val)
                 index += length
 

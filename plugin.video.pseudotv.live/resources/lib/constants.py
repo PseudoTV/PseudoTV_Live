@@ -96,6 +96,8 @@ AUTOTUNE_CHANNEL_LIMIT = 25
 AUTOTUNE_CHANNEL_DEFAULT = 2
 FILLER_LIMIT        = 250
 M3U_REFRESH         = 15
+M3U_INTERVAL        = 30
+M3U_TIMEOUT         = 60
 
 PRE_POST_ROLL_TYPES = ['Pre-Roll',
                        'Post-Roll']
