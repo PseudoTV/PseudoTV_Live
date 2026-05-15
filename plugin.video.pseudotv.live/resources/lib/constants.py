@@ -253,6 +253,7 @@ TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
 
 #file paths
+CHANNEL_EXPORT_FLE  = os.path.join(BACKUP_LOC,CHANNELFLE)
 CHANNEL_BACKUP_FLE  = os.path.join(BACKUP_LOC,'%s.json'%(CHANNELBACKUP_KEY.lower()))
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 YOUTUBE_COOKIES     = os.path.join(SETTINGS_LOC,'www.youtube.com_cookies.txt')

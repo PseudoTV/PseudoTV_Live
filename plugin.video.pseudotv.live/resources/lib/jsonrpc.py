@@ -165,7 +165,7 @@ class JSONRPC(object):
         walk = {}
         path = path.replace('\\','/')
         subs, files = self.getListDirectory(path,checksum,expiration)
-        self.log(f'walkListDirectory, walking {path}, found = ({len(subs)},{len(files)}), depth = {depth}, append = {append}')
+        self.log('walkListDirectory, walking %s, found = (%s,%s), depth = %s, append = %s'%(path,len(subs),len(files),depth,append))
         items = [__(path, _f) for _f in files if _f]
         if items: walk.setdefault(path,[]).extend([_i for _i in items if _i])
         for sub in subs:
@@ -190,13 +190,13 @@ class JSONRPC(object):
 
     def getIntrospect(self, id):
         param = {"method":"JSONRPC.Introspect","params":{"filter":{"id":id,"type":"method"}}}
-        return self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('BuildVersion','System')).get('result',{})
+        return self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('System.BuildVersion')).get('result',{})
 
 
     def getEnums(self, id, type='', key='enums'):
         self.log('getEnums id = %s, type = %s, key = %s' % (id, type, key))
         param = {"method":"JSONRPC.Introspect","params":{"getmetadata":True,"filterbytransport":True,"filter":{"getreferences":False,"id":id,"type":"type"}}}
-        json_response = self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('BuildVersion','System')).get('result',{}).get('types',{}).get(id,{})
+        json_response = self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('System.BuildVersion')).get('result',{}).get('types',{}).get(id,{})
         return (json_response.get('properties',{}).get(type,{}).get(key) or json_response.get(type,{}).get(key) or json_response.get(key,[]))
 
 
@@ -475,22 +475,12 @@ class JSONRPC(object):
         return round(self.cache.get('getDuration.%s'%(FileAccess._getMD5(path)), checksum=FileAccess._getMD5(path)) or self._getRuntime({'file':path}))
 
 
-    def removeDuration(self, item):
-        if 'resume' in item:        item.pop('resume')
-        if 'runtime' in item:       item.pop('runtime')
-        if 'duration' in item:      item.pop('duration')
-        if 'streamdetails' in item: item.pop('streamdetails')
-        return item
-
-
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')): 
         def __parseDuration(runtime, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
-            self.log("getDuration, __parseDuration, runtime = %s, path = %s, save = %s" % (runtime, path, save))
             duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
             if   runtime == 0: runtime = duration
             elif round(percentDiff(runtime, duration)) <= RUNTIME_THRESHOLD: runtime = duration
             if save and duration != runtime: self.queDuration(item, runtime)
-            self.log(f"getDuration, __parseDuration [{runtime}] {path}, save = {save}")
             return runtime
             
         if not item: item = {'file':path}
@@ -501,7 +491,7 @@ class JSONRPC(object):
                 for file in splitStacks(path): duration += __parseDuration(runtime, file)
             else: duration = __parseDuration(runtime, path, item, save)
             if duration > 0: runtime = duration
-        self.log(f"getDuration [{runtime}] {path}, accurate = {accurate}, save ={save}")
+        self.log(f"getDuration [{runtime}], {path}, accurate = {accurate}, save ={save}")
         return runtime
 
 

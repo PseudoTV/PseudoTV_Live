@@ -43,7 +43,7 @@ class Channels(object):
 
 
     def _load(self) -> dict:
-        channelDATA = (SETTINGS.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY)) or {})
+        channelDATA = SETTINGS.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY), default={})
         if CHANNELAUTOTUNE_KEY not in self.channelKEY: SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
         self.log('_load channels = %s'%(len(channelDATA.get('channels',[]))))
         return channelDATA
@@ -59,7 +59,9 @@ class Channels(object):
                 
     def _save(self, expiration=-1) -> bool:
         if self.writable:
-            if CHANNELAUTOTUNE_KEY in self.channelKEY: expiration = datetime.timedelta(days=MAX_GUIDEDAYS)
+            if CHANNELAUTOTUNE_KEY in self.channelKEY:
+                expiration = datetime.timedelta(days=MAX_GUIDEDAYS)
+                FileAccess.setJSON(CHANNEL_EXPORT_FLE,self.channelDATA)
             self.log('_save channels = %s, expiration = %s'%(len(self.channelDATA['channels']),expiration))
             return SETTINGS.setCacheSetting(self.channelKEY, self.channelDATA, FileAccess._getMD5(self.channelKEY), expiration)
             

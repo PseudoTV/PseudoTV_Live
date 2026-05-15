@@ -86,7 +86,7 @@ class Library(object):
         
 
     def _load(self):
-        return (SETTINGS.getCacheSetting(self.libraryKEY, FileAccess._getMD5(self.libraryKEY)) or {})
+        return SETTINGS.getCacheSetting(self.libraryKEY, FileAccess._getMD5(self.libraryKEY), default={})
     
     
     def _save(self):

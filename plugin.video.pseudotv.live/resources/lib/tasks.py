@@ -54,18 +54,19 @@ class Tasks(object):
         
     def _host(self):
         self._client()
-        self.migrate() #temp, remove in v.0.7.5.
+        self._migrateChannels() #temp, remove in v.0.7.5.
         self.service._que(self.chkDirs,1)
         self.service._que(self.chkCrash,1)
         self.log('_initialize, _host...')
     
     
-    def migrate(self):
-        if FileAccess.exists(CHANNELFLEPATH):
-            self.log('migrate, importing...')
-            if Backup().importChannels(CHANNELFLEPATH):
-                FileAccess.move(CHANNELFLEPATH,CHANNEL_BACKUP_FLE)
-                PROPERTIES.setPendingRestart()
+    def _migrateChannels(self, old=CACHE_LOC, new=BACKUP_LOC):
+        old_path = os.path.join(old,CHANNELFLE)
+        if FileAccess.exists(old_path):
+            self.log('migrate, importing %s...'%(old_path))
+            if Backup().importChannels(old_path):
+                FileAccess.move(os.path.join(new,CHANNELFLE))
+                self.service._que(self.chkChannels,3)
     
     
     def chkHTTP(self):
@@ -91,7 +92,7 @@ class Tasks(object):
          
 
     def chkCrash(self):
-        citem = (SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM') or {})
+        citem = SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM', default={})
         SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
         if citem:
             self.log('chkCrash\n%s'%(citem))
@@ -143,7 +144,7 @@ class Tasks(object):
         try:              ONLINE_VERSION = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(self.jsonRPC.requestURL(ADDON_URL)))[0]
         except Exception: ONLINE_VERSION = ADDON_VERSION
         UPDATE_AVAILABLE = False
-        LAST_VERSION = (SETTINGS.getCacheSetting('chkVersion.LAST_VERSION') or '0.0.0')
+        LAST_VERSION = SETTINGS.getCacheSetting('chkVersion.LAST_VERSION', default='0.0.0')
         if ADDON_VERSION < ONLINE_VERSION:
             UPDATE_AVAILABLE = True
             DIALOG.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
@@ -245,6 +246,7 @@ class Tasks(object):
         else:
             self.log('chkChannels, No Channels Configured!')
             if autotune or not SETTINGS.hasAutotuned():
+                self.log('chkChannels, Auto-tuning Channels.')
                 if SETTINGS.setAutotuned(_autotune(automatic=autotune)): PROPERTIES.setPropTimer('chkChanged')
             elif PROPERTIES.hasEnabledServers():                         PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
 
@@ -260,7 +262,7 @@ class Tasks(object):
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
                 if brute:
-                    if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
+                    if not self.service.player.isPlaying() and BUILTIN.getInfoBool('System.AddonIsEnabled(%s)'%(PVR_CLIENT_ID)):
                         DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
                         BUILTIN.executewindow('ActivateWindow(home)')
                         __toggle(False), self.service._sleep(M3U_REFRESH), __toggle(True)

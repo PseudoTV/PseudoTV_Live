@@ -1398,7 +1398,7 @@ msgid "Replace existing Backup from"
 msgstr ""
 
 msgctxt "#32109"
-msgid "Replace %s Channels with %s Channels from:\n%s"
+msgid "Replace [%s] Channels\nWith [%s] Channels\nFrom: %s"
 msgstr ""
 
 msgctxt "#32110"

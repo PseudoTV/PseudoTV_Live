@@ -36,7 +36,6 @@ M3UFLEPATH          = os.path.join(CACHE_LOC,M3UFLE)
 XMLTVFLEPATH        = os.path.join(CACHE_LOC,XMLTVFLE)
 GENREFLEPATH        = os.path.join(CACHE_LOC,GENREFLE)
 PROVIDERFLEPATH     = os.path.join(CACHE_LOC,PROVIDERFLE)
-CHANNELFLEPATH      = os.path.join(CACHE_LOC,CHANNELFLE)
 
 
 class Globals:
@@ -115,8 +114,8 @@ class Globals:
         return (xbmc.getCondVisibility('%s.%s'%(param,key)) or False)
         
     @staticmethod
-    def _getInfoLabel(key, param='ListItem', default=''):
-        return (xbmc.getInfoLabel('%s.%s'%(param,key)) or "")
+    def _getInfoLabel(key, default=''):
+        return (xbmc.getInfoLabel(key) or default)
         
     @staticmethod
     def _openSettings(ctl=(0,1), id=ADDON_ID):
@@ -161,7 +160,7 @@ class Globals:
     def _buildWebImage(name, image=None, fallback=LOGO):
         image = Globals._cleanImage(image)
         if name and image is None: 
-            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache') or {}).get(name), f'http://{Globals._getEXTProperty('%s.Remote_Host'%(ADDON_ID))}/logo/{Globals._quoteString(name)}')
+            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache', default={})).get(name), f'http://{Globals._getEXTProperty('%s.Remote_Host'%(ADDON_ID))}/logo/{Globals._quoteString(name)}')
         elif image.startswith(('image://')):
             image = f'{Globals._getEXTProperty('%s.Local_Host'%(ADDON_ID))}/image/{Globals._quoteString(image)}'
         elif not image.startswith(('http','resource')):

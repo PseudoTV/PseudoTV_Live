@@ -69,7 +69,7 @@ class Resources(object):
             self.imageCache  = service.imageCache 
             self.pruneCache()
         except:
-            self.imageCache = OrderedDict(SETTINGS.getCacheSetting('imageCache') or {})
+            self.imageCache = OrderedDict(SETTINGS.getCacheSetting('imageCache',default={}))
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):

@@ -1648,21 +1648,21 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         
         
     def _addIDX(self, key):
-        keys = set(SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX)) or [])
+        keys = set(SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
         keys.add(key)
         return SETTINGS.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
         
         
     def _delIDX(self, key):
-        keys = set(SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX)) or [])
+        keys = set(SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
         if key in list(keys): keys.pop(key)
         return SETTINGS.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
         
         
     def _chkIDX(self):
-        keys = set(SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX)) or [])
+        keys = set(SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
         for key in list(keys):
-            if not SETTINGS.getCacheSetting(key, FileAccess._getMD5(key)): keys.pop(key)
+            if not SETTINGS.getCacheSetting(key, FileAccess._getMD5(key), default={}): keys.pop(key)
         return SETTINGS.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
         
         
@@ -1699,7 +1699,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         key = self._getKey(id)
         self.log("[%s] runAction, _getResume: key = %s, url = %s"%(id,key,self.optionValues[1]))
         if self.optionValues[1]: return builder.jsonRPC.requestURL(self.optionValues[1])
-        else:                    return (SETTINGS.getCacheSetting(key, FileAccess._getMD5(key)) or {})
+        else:                    return SETTINGS.getCacheSetting(key, FileAccess._getMD5(key), default={})
 
 
     def _getResume(self, id):

@@ -105,10 +105,10 @@ class Settings(object):
         return FileAccess._decodeString(self.getSetting(key))
     
     
-    def getCacheSetting(self, key, checksum=ADDON_VERSION):
+    def getCacheSetting(self, key, checksum=ADDON_VERSION, default=None):
         value = self.cache.get(key, checksum)
         self.log(f'[{ADDON_ID}] getCacheSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-        return value
+        return (value or default)
         
         
     def getEXTSetting(self, id, key):
@@ -202,8 +202,8 @@ class Settings(object):
             return url
             
         def __hasADDON(id):
-            hasAddon  = self.builtin.getInfoBool('HasAddon(%s)'%(id),'System')
-            isEnabled = self.builtin.getInfoBool('AddonIsEnabled(%s)'%(id),'System')
+            hasAddon  = self.builtin.getInfoBool('System.HasAddon(%s)'%(id))
+            isEnabled = self.builtin.getInfoBool('System.AddonIsEnabled(%s)'%(id))
             self.log(f'[{id}] hasAddon = {hasAddon}, isEnabled = {isEnabled}, Kodi Override = {bypass}')
             if hasAddon:
                 if isEnabled: return True
@@ -216,7 +216,7 @@ class Settings(object):
                 elif notify: self.dialog.notificationDialog(LANGUAGE(32264)%(id))
             elif install: self.builtin.executebuiltin('InstallAddon(%s)'%(id),wait=True)
             elif notify:  self.dialog.notificationDialog(LANGUAGE(32034)%(id))
-            return self.builtin.getInfoBool('HasAddon(%s)'%(id),'System')
+            return self.builtin.getInfoBool('System.HasAddon(%s)'%(id))
         
         bypass = self.getSettingBool('Enable_Kodi_Access')
         if install is None: install = bypass
@@ -251,7 +251,7 @@ class Settings(object):
             return str(uuid1(clock_seq=70420))
             
         friendly = self.properties.getFriendlyName()
-        uuid = self.getCacheSetting('MY_UUID', checksum=friendly)
+        uuid = self.getCacheSetting('MY_UUID', checksum=friendly, default=None)
         if not uuid: uuid = self.setCacheSetting('MY_UUID', __genUUID(seed=self.properties.getFriendlyName()), checksum=friendly)
         return uuid
 
@@ -259,7 +259,7 @@ class Settings(object):
     @cacheit(expiration=datetime.timedelta(minutes=5))
     def getBonjour(self):
         def __getResumeURLs(remote):
-            keys = (self.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX)) or {})
+            keys = self.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={})
             return ['http://%s/filelist/%s'%(remote,key) for key in keys]
             
         def __getChannels():
@@ -273,8 +273,8 @@ class Settings(object):
                    'name'     :self.properties.getFriendlyName(),
                    'version'  :ADDON_VERSION,
                    'machine'  :platform.machine(),
-                   'platform' :self.builtin.getInfoLabel('OSVersionInfo','System'),
-                   'build'    :self.builtin.getInfoLabel('BuildVersion','System'),
+                   'platform' :self.builtin.getInfoLabel('System.OSVersionInfo'),
+                   'build'    :self.builtin.getInfoLabel('System.BuildVersion'),
                    'python'   :platform.python_version(),
                    'remotes'  : {'m3u'     :'http://%s/%s'%(host,M3UFLE),
                                  'xmltv'   :'http://%s/%s'%(host,XMLTVFLE),
@@ -332,7 +332,7 @@ class Settings(object):
 
 
     def hasAutotuned(self):
-        return self.properties.setProperty('has.Autotuned',self.getCacheSetting('has.Autotuned'))
+        return self.properties.setProperty('has.Autotuned',self.getCacheSetting('has.Autotuned', default=False))
         
         
     def setAutotuned(self, state=True):
@@ -437,7 +437,7 @@ class Settings(object):
             
     def getLogs(self, time=None):
         if time is None: time = datetime.datetime.fromtimestamp(time.time())
-        return (self.getCacheSetting('LOGS', FileAccess._getMD5(time.strftime('%Y%m%d'))) or {})
+        return self.getCacheSetting('LOGS', FileAccess._getMD5(time.strftime('%Y%m%d')), default={})
         
         
     def setLogs(self, key, event):
@@ -593,7 +593,7 @@ class Properties(object):
     def setHasChannels(self, key=None, channelDATA=None):
         if key is None: key = CHANNELAUTOTUNE_KEY if Settings().getSettingBool('Enable_Autotune') else CHANNEL_KEY
         if channelDATA is None: channelDATA = Channels(key).channelDATA
-        chanLST = (self.settings.getCacheSetting('%s.has.Channels'%(ADDON_ID)) or {})
+        chanLST = self.settings.getCacheSetting('%s.has.Channels'%(ADDON_ID), default={})
         if len(channelDATA.get('channels',[])) > 0: 
             channelDATA.update({'updated': datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)})
             chanLST.setdefault(key,{}).update(channelDATA)
@@ -605,12 +605,12 @@ class Properties(object):
         if key is None: key = CHANNELAUTOTUNE_KEY if Settings().getSettingBool('Enable_Autotune') else CHANNEL_KEY
         if not path is None: 
             if FileAccess.exists(path): channelDATA = FileAccess.getJSON(path)
-        else:                           channelDATA = (self.settings.getCacheSetting('%s.has.Channels'%(ADDON_ID)) or {}).get(key,{})
+        else:                           channelDATA = self.settings.getCacheSetting('%s.has.Channels'%(ADDON_ID), default={}).get(key,{})
         return len(channelDATA.get('channels',[])) > 0
         
 
     def setBackup(self, key=CHANNELBACKUP_KEY, channels=None):
-        backups = (self.settings.getCacheSetting('%s.has.backups'%(ADDON_ID)) or {})
+        backups = self.settings.getCacheSetting('%s.has.backups'%(ADDON_ID), default={})
         if channels is None: channels = Channels(key).getChannels()
         if len(channels) > 0: backups.setdefault(key,{}).update({'name':key, 'channels': channels, 'updated':(backups.get(key,{}).get('updated') or datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT))})
         elif key in backups:  backups.pop(key)
@@ -620,11 +620,11 @@ class Properties(object):
     def hasBackup(self, key=CHANNELBACKUP_KEY, path=None):
         if not path is None: 
             if FileAccess.exists(path): return FileAccess.getJSON(path)
-        else:                           return (self.settings.getCacheSetting('%s.has.backups'%(ADDON_ID)) or {}).get(key)
+        else:                           return self.settings.getCacheSetting('%s.has.backups'%(ADDON_ID), default={}).get(key)
 
 
     def hasBackups(self):
-        return len(list((self.settings.getCacheSetting('%s.has.backups'%(ADDON_ID)) or {}).keys())) > 0
+        return len(list(self.settings.getCacheSetting('%s.has.backups'%(ADDON_ID), default={}).keys())) > 0
 
 
     def hasLibrary(self, type=None):
@@ -963,91 +963,91 @@ class Builtin(object):
                
      
     def hasPVR(self):
-        return self.getInfoBool('HasTVChannels','Pvr')
+        return self.getInfoBool('Pvr.HasTVChannels')
         
         
     def hasRadio(self):
-        return self.getInfoBool('HasRadioChannels','Pvr')
+        return self.getInfoBool('Pvr.HasRadioChannels')
 
 
     def hasMusic(self):
-        return self.getInfoBool('HasContent(Music)','Library')
+        return self.getInfoBool('Library.HasContent(Music)')
         
         
     def hasTV(self):
-        return self.getInfoBool('HasContent(TVShows)','Library')
+        return self.getInfoBool('Library.HasContent(TVShows)')
         
         
     def hasMovie(self):
-        return self.getInfoBool('HasContent(Movies)','Library')
+        return self.getInfoBool('Library.HasContent(Movies)')
                 
 
     def hasMedia(self) -> bool:
-        return self.getInfoBool('hasMedia','Player')
+        return self.getInfoBool('Player.hasMedia')
 
 
     def hasGame(self) -> bool:
-        return self.getInfoBool('HasGame','Player')
+        return self.getInfoBool('Player.HasGame')
 
 
     def hasDuration(self) -> bool:
-        return self.getInfoBool('HasDuration','Player')
+        return self.getInfoBool('Player.HasDuration')
 
 
     def hasEPG(self) -> bool:
-        return self.getInfoBool('HasEpg','VideoPlayer')
+        return self.getInfoBool('VideoPlayer.HasEpg','')
 
   
     def hasSubtitle(self):
-        return self.getInfoBool('HasSubtitles','VideoPlayer')
+        return self.getInfoBool('VideoPlayer.HasSubtitles')
 
 
     def isSubtitle(self):
-        return self.getInfoBool('SubtitlesEnabled','VideoPlayer')
+        return self.getInfoBool('VideoPlayer.SubtitlesEnabled')
 
 
     def isPlaylistRandom(self):
-        return self.getInfoLabel('Random','Playlist').lower() == 'on' # Disable auto playlist shuffling if it's on
+        return self.getInfoLabel('Playlist.Random').lower() == 'on' # Disable auto playlist shuffling if it's on
         
         
     def isPlaylistRepeat(self):
-        return self.getInfoLabel('IsRepeat','Playlist').lower() == 'true' # Disable auto playlist repeat if it's on #todo
+        return self.getInfoLabel('Playlist.IsRepeat').lower() == 'true' # Disable auto playlist repeat if it's on #todo
 
 
     def isPaused(self):
-        return self.getInfoBool('Paused','Player')
+        return self.getInfoBool('Player.Paused')
                 
                 
     def isRecording(self):
-        return self.getInfoBool('IsRecording','Pvr')
+        return self.getInfoBool('Pvr.IsRecording')
         
         
     def isScanning(self):
-        return (self.getInfoBool('IsScanningVideo','Library') & self.getInfoBool('IsScanningMusic','Library'))
+        return (self.getInfoBool('Library.IsScanningVideo') & self.getInfoBool('Library.IsScanningMusic'))
           
                       
     def isSettingsOpened(self) -> bool:
-        return any([self.getInfoBool('IsVisible(addonsettings)','Window'),self.getInfoBool('IsVisible(selectdialog)' ,'Window')])
+        return any([self.getInfoBool('Window.IsVisible(addonsettings)'),self.getInfoBool('Window.IsVisible(selectdialog)')])
 
 
     def isPlaying(self):
-        return self.getInfoBool('Playing','Player')
+        return self.getInfoBool('Player.Playing')
 
 
     def isPVRPlaying(self) -> bool:
-        return any([self.getInfoBool('IsPlayingTv','Pvr'),self.getInfoBool('IsPlayingRadio','Pvr'),self.getInfoBool('IsPlayingRecording','Pvr'),self.getInfoBool('IsPlayingActiveRecording','Pvr')])
+        return any([self.getInfoBool('Pvr.IsPlayingTv'),self.getInfoBool('Pvr.IsPlayingRadio'),self.getInfoBool('Pvr.IsPlayingRecording'),self.getInfoBool('Pvr.IsPlayingActiveRecording')])
 
 
     def isBusyDialog(self):
-        return any([self.properties.isRunning('BUSY_OVERLAY'),self.getInfoBool('IsActive(busydialognocancel)','Window'),self.getInfoBool('IsActive(busydialog)','Window')])
+        return any([self.properties.isRunning('BUSY_OVERLAY'),self.getInfoBool('Window.IsActive(busydialognocancel)'),self.getInfoBool('Window.IsActive(busydialog)')])
 
 
     def closeBusyDialog(self):
         if hasattr(self.busy, 'close'):
             self.busy = self.busy.close()
-        elif self.getInfoBool('IsActive(busydialognocancel)','Window'):
+        elif self.getInfoBool('Window.IsActive(busydialognocancel)'):
             self.executebuiltin('Dialog.Close(busydialognocancel)')
-        elif self.getInfoBool('IsActive(busydialog)','Window'):
+        elif self.getInfoBool('Window.IsActive(busydialog)'):
             self.executebuiltin('Dialog.Close(busydialog)')
 
 
@@ -1074,17 +1074,25 @@ class Builtin(object):
         except Exception: return 0
             
 
-    def getInfoLabel(self, key, param='ListItem', default=''):
-        value = xbmc.getInfoLabel('%s.%s'%(param,key))
-        if value == "Busy": 
-            if not self.monitor.waitForAbort(0.5): return self.getInfoLabel(key,param,default)
-        self.log('getInfoLabel, key = %s.%s, value = %s'%(param,key,value))
+    def getInfoLabel(self, key, default=''):
+        value   = None
+        pattern = r"^[a-zA-Z0-9]+\.[a-zA-Z0-9]+(?:\(.*\))?$"
+        if re.match(pattern, key):
+            value = xbmc.getInfoLabel(key)
+            if value == "Busy": 
+                if not self.monitor.waitForAbort(0.5): return self.getInfoLabel(key,default)
+            self.log('getInfoLabel, key = %s, value = %s'%(key,value))
+        else: self.log('getInfoLabel failed!, key = %s'%(key))
         return (value or default)
 
 
     def getInfoBool(self, key, param='Library'):
-        value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or False)
-        self.log('getInfoBool, key = %s.%s, value = %s'%(param,key,value))
+        value   = False
+        pattern = r"^[a-zA-Z0-9]+\.[a-zA-Z0-9]+(?:\(.*\))?$"
+        if re.match(pattern, key):
+            value = (xbmc.getCondVisibility(key) or False)
+            self.log('getInfoBool, key = %s.%s, value = %s'%(param,key,value))
+        else: self.log('getInfoBool failed!, key = %s'%(key))
         return value
         
         
@@ -1114,7 +1122,7 @@ class Builtin(object):
         
 
     def getResolution(self):
-        WH, WIN = self.getInfoLabel('ScreenResolution','System').split(' - ')
+        WH, WIN = self.getInfoLabel('System.ScreenResolution').split(' - ')
         return (1920,1080), WIN #tuple(int(x) for x in WH.split('x')), WIN
 
 
@@ -1157,24 +1165,22 @@ class Dialog(object):
 
     def fillInfoMonitor(self, type='ListItem'):
         try:
-            item = {'label'       :self.builtin.getInfoLabel('Label'       ,type),
-                    'label2'      :self.builtin.getInfoLabel('Label2'      ,type),
-                    'set'         :self.builtin.getInfoLabel('Set'         ,type),
-                    'path'        :self.builtin.getInfoLabel('Path'        ,type),
-                    'genre'       :self.builtin.getInfoLabel('Genre'       ,type),
-                    'studio'      :self.builtin.getInfoLabel('Studio'      ,type),
-                    'title'       :self.builtin.getInfoLabel('Title'       ,type),
-                    'tvshowtitle' :self.builtin.getInfoLabel('TVShowTitle' ,type),
-                    'plot'        :self.builtin.getInfoLabel('Plot'        ,type),
-                    'addonname'   :self.builtin.getInfoLabel('AddonName'   ,type),
-                    'artist'      :self.builtin.getInfoLabel('Artist'      ,type),
-                    'album'       :self.builtin.getInfoLabel('Album'       ,type),
-                    'albumartist' :self.builtin.getInfoLabel('AlbumArtist' ,type),
-                    'foldername'  :self.builtin.getInfoLabel('FolderName'  ,type),
-                    'logo'        :(self.builtin.getInfoLabel('Art(tvshow.clearlogo)',type) or 
-                                    self.builtin.getInfoLabel('Art(clearlogo)'       ,type) or
-                                    self.builtin.getInfoLabel('Icon'                 ,type) or
-                                    self.builtin.getInfoLabel('Thumb'                ,type))}
+            item = {'label'       :self.builtin.getInfoLabel('%s.Label'%type),
+                    'label2'      :self.builtin.getInfoLabel('%s.Label2'%type),
+                    'set'         :self.builtin.getInfoLabel('%s.Set'%type),
+                    'path'        :self.builtin.getInfoLabel('%s.Path'%type),
+                    'genre'       :self.builtin.getInfoLabel('%s.Genre'%type),
+                    'studio'      :self.builtin.getInfoLabel('%s.Studio'%type),
+                    'title'       :self.builtin.getInfoLabel('%s.Title'%type),
+                    'tvshowtitle' :self.builtin.getInfoLabel('%s.TVShowTitle'%type),
+                    'plot'        :self.builtin.getInfoLabel('%s.Plot'%type),
+                    'addonname'   :self.builtin.getInfoLabel('%s.AddonName'%type),
+                    'artist'      :self.builtin.getInfoLabel('%s.Artist'%type),
+                    'album'       :self.builtin.getInfoLabel('%s.Album'%type),
+                    'albumartist' :self.builtin.getInfoLabel('%s.AlbumArtist'%type),
+                    'foldername'  :self.builtin.getInfoLabel('%s.FolderName'%type),
+                    'logo'        :(self.builtin.getInfoLabel('%s.Art(tvshow.clearlogo)'%type) or  self.builtin.getInfoLabel('%s.Art(clearlogo)'%type) or
+                                    self.builtin.getInfoLabel('%s.Icon'%type) or self.builtin.getInfoLabel('%s.Thumb'%type))}
             if item.get('label'):
                 montiorList = self.getInfoMonitor()
                 if item.get('label') not in montiorList: montiorList.insert(0,item)
@@ -1195,7 +1201,7 @@ class Dialog(object):
     
     
     def _closeOkDialog(self):
-        if self.builtin.getInfoBool('IsActive(okdialog)','Window'):
+        if self.builtin.getInfoBool('Window.IsActive(okdialog)'):
             self.builtin.executebuiltin('Dialog.Close(okdialog)')
         
         
@@ -1254,7 +1260,7 @@ class Dialog(object):
 
         
     def _closeTextViewer(self):
-        if self.builtin.getInfoBool('IsActive(textviewer)','Window'):
+        if self.builtin.getInfoBool('Window.IsActive(textviewer)'):
             self.builtin.executebuiltin('Dialog.Close(textviewer)')
         
         

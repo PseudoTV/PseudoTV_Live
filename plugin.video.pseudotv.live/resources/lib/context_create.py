@@ -138,7 +138,7 @@ if __name__ == '__main__':
     except Exception: mode = ''
     try:
         if   mode == 'add':          _add(sys.argv,sys.listitem)
-        elif mode == 'open_manager': _open(Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
+        elif mode == 'open_manager': _open(Globals._decodePlot(BUILTIN.getInfoLabel('ListItem.Plot')))
     except Exception as e: 
         log('Create: __main__, failed! %s' % e, xbmc.LOGERROR)
         Globals._notificationDialog(LANGUAGE(30079))

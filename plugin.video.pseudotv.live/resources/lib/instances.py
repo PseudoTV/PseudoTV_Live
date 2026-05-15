@@ -140,8 +140,6 @@ class Instances(object):
                     except Exception as e:
                         self.log('[%s] chkInstances, path = %s, failed to open file = %s\n%s'%(PVR_CLIENT_ID,PVR_CLIENT_LOC,file,e))
                         continue
-        #create new configuration.
-        self.settings.setPVRRemote(instanceName, cache=False)
 
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings

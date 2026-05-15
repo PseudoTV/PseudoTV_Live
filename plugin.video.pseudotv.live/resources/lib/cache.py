@@ -111,7 +111,7 @@ class _Cache(object):
 
     @staticmethod
     def _getFreeMEM():
-        try:              free = int("".join(re.findall(r"\d", BUILTIN.getInfoLabel('FreeMemory','System'))))
+        try:              free = int("".join(re.findall(r"\d", BUILTIN.getInfoLabel('System.FreeMemory'))))
         except Exception: free = 1024 #1GB
         return floor(free * (REAL_SETTINGS.getSettingInt('Cache_MEM_Limit') / 100)) * 1024 * 1024
         

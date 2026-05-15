@@ -70,14 +70,14 @@ class Backup(object):
         
             
     def getImports(self):
-        keys = [CHANNELFLEPATH,CHANNEL_BACKUP_FLE]
+        keys = [CHANNEL_EXPORT_FLE,CHANNEL_BACKUP_FLE]
         return list(filter(None,[self._getImport(key) for key in keys]))
         
             
     def hasImports(self):
         return len(self.getImports()) > 0
-            
-            
+     
+     
     def exportChannels(self, file=CHANNEL_BACKUP_FLE):
         with BUILTIN.busy_dialog():
             if FileAccess.setJSON(file, self._setChannels(self.getChannels())):
@@ -86,7 +86,7 @@ class Backup(object):
         
     def importChannels(self, file=CHANNEL_BACKUP_FLE):
         if file is None: file = DIALOG.browseSources(1,default=file,mask="files")
-        if self.hasImport(file):
+        if FileAccess.exists(file):
             channels = FileAccess.getJSON(file).get('channels',[])
             if len(channels) > 0:
                 self.log('importChannels, file = %s, channels = %s'%(file, len(channels)))

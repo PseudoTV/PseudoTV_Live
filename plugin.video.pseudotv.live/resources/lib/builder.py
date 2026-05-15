@@ -114,7 +114,7 @@ class Builder(object):
 
         self.resources    = Resources(service=self.service)
         self.runActions   = RulesList(self.channels.getChannels()).runActions
-        self.trailerCache = (SETTINGS.getCacheSetting('trailerCache') or {})
+        self.trailerCache = SETTINGS.getCacheSetting('trailerCache', default={})
         self.log(f'__init__, trailerCache = {len(self.trailerCache)}')
 
 
@@ -153,7 +153,7 @@ class Builder(object):
 
              
     def buildCells(self, citem: dict, duration: int=10800, type: str='video', entries: int=3, info={}) -> list:
-        info.update({'label'       : (info.get('title')        or citem['name']),
+        info.update({'label'      : (info.get('title')        or citem['name']),
                     'episodetitle': (info.get('episodetitle') or '|'.join(citem.get('group',[]))),
                     'plot'        : (info.get('plot')         or LANGUAGE(32020)),
                     'genre'       : (info.get('genre')        or ['Undefined']),
@@ -186,7 +186,7 @@ class Builder(object):
                     self.log('[%s] buildChannels, __hasChanged cleared channel meta'%(citem['id']))
                     citem['changed'] = False
                 changes.add(self.channels.addChannel(citem))
-            return state
+            return state, citem
                     
         def __hasProgrammes(citem: dict) -> bool:
             try:    state = dict(self.xmltv.hasProgrammes([citem])).get(citem['id'],False)
@@ -220,6 +220,24 @@ class Builder(object):
             self.log('[%s] buildChannels, __setStation = %s'%(citem['id'],state))
             return state
             
+        def __addScheduling(citem: dict, fileList: list, now: int, start: int) -> list: #quota meet MIN_EPG_DURATION requirements. 
+            self.log("[%s] __addScheduling, IN fileList = %s, now = %s, start = %s"%(citem['id'],len(fileList),now,start))
+            fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList.copy(), inherited=self)
+            for idx, item in enumerate(fileList):
+                item["idx"]   = idx
+                item['start'] = start
+                item['stop']  = start + item['duration']
+                start = item['stop']
+            fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, fileList.copy(), inherited=self) #adv. scheduling second pass and cleanup.
+            self.log("[%s] buildChannels, __addScheduling, OUT fileList = %s"%(citem['id'],len(fileList)))
+            return fileList
+        
+        def __addFillers(citem, fileList, enable=False):
+            self.log("[%s] buildChannels, __addFillers, enable = %s, fileList = %s"%(citem['id'],enable,len(fileList)))
+            if enable: return Fillers(citem,self).injectFillers(fileList)
+            return fileList
+                         
+            
         if not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.legacy(), PROPERTIES.chkRunning('Builder.buildChannels'):
                 channels = self.getVerifiedChannels(channels)
@@ -245,8 +263,8 @@ class Builder(object):
                             self.pName   = citem['name']
                             self.pCount  = int(idx*100)//self.cCount
                             citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self) #inject temporary citem changes here
-                            _update, start = __needsUpdate(citem, now, fallback)
-                            _changed = __hasChanged(citem, enableChanged) 
+                            _update, start  = __needsUpdate(citem, now, fallback)
+                            _changed, citem = __hasChanged(citem, enableChanged) 
                             self.log('[%s] buildChannels, preview = %s, rules = %s, _update = %s'%(citem['id'],preview,citem.get('rules',{}),_update))
                             if self.service._interrupt():
                                 self.log("[%s] buildChannels, _interrupt"%(citem['id']))
@@ -271,7 +289,8 @@ class Builder(object):
                                         else:                        fileList = self.buildVideo(citem)
                                         #fileList = {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                                         if isinstance(fileList,list):
-                                            fileList = sorted(self.addScheduling(citem, fileList, now, start), key=itemgetter('start'))
+                                            fileList = sorted(__addScheduling(citem, fileList, now, start), key=itemgetter('start'))
+                                            fileList = sorted(__addFillers(citem, fileList, self.enableBCTs), key=itemgetter('start'))
                                             if not preview and __hasFileList(fileList):
                                                 updated.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
                                         elif not fileList:
@@ -305,11 +324,6 @@ class Builder(object):
         def _validFileList(fileArray):
             return any(len(fileList) > 0 for fileList in fileArray)
             
-        def _injectFillers(citem, fileList, enable=False):#todo refactor
-            self.log("[%s] buildVideo: _injectFillers, enable = %s, fileList = %s"%(citem['id'],enable,len(fileList)))
-            if enable: return Fillers(citem,self).injectBCTs(fileList)
-            return fileList
-          
         def _injectRules(citem):
             tmpCitem = citem.copy()
             #"Seasonal Content"
@@ -369,11 +383,9 @@ class Builder(object):
             if not _validFileList(fileArray):#check that at least one fileList in array contains meta
                 self.log("[%s] buildVideo, channel fileArray In-Valid!"%(citem['id']),xbmc.LOGINFO)
                 return False
-            # self.log("[%s] buildVideo, fileArray = %s"%(citem['id'],','.join(['[%s]'%(len(fileList)) for fileList in fileArray])))
             fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, interleave(fileArray, self.interleaveSet, self.interleaveRepeat), inherited=self)
             self.log('[%s] buildVideo, pre fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
             fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, fileList, inherited=self)
-            fileList = _injectFillers(citem, fileList, self.enableBCTs)
             self.log('[%s] buildVideo, post fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
         else:
             fileList = fileArray
@@ -578,19 +590,6 @@ class Builder(object):
         return fileList, dirList
 
 
-    def addScheduling(self, citem: dict, fileList: list, now: int, start: int) -> list: #quota meet MIN_EPG_DURATION requirements. 
-        self.log("[%s] addScheduling, IN fileList = %s, now = %s, start = %s"%(citem['id'],len(fileList),now,start))
-        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList.copy(), inherited=self)
-        for idx, item in enumerate(fileList):
-            item["idx"]   = idx
-            item['start'] = start
-            item['stop']  = start + item['duration']
-            start = item['stop']
-        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, fileList.copy(), inherited=self) #adv. scheduling second pass and cleanup.
-        self.log("[%s] addScheduling, OUT fileList = %s"%(citem['id'],len(fileList)))
-        return fileList
-
- 
     def is3D(self, item: dict) -> bool:
         if 'is3D' in item: return item['is3D']
         elif not item.get('streamdetails',{}).get('video',[]) and not item.get('file','').startswith(tuple(VFS_TYPES)):
@@ -602,14 +601,15 @@ class Builder(object):
 
 
     def setTrailers(self, item):
-        dur = self.jsonRPC.getDuration(item.get('trailer'), self.jsonRPC.removeDuration(item.copy()), accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=False)
+        dur = self.jsonRPC.getDuration(item.get('trailer'), accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=False)
         if dur > 0:
             item.update({'label':'%s - %s'%(item.get("label",""),LANGUAGE(30187)),
                          'episodetitle':'%s - %s'%(item.get("episodetitle",""),LANGUAGE(30187)),
                          'episodelabel':'%s - %s'%(item.get("episodelabel",""),LANGUAGE(30187)),
                          'duration':dur, 
                          'file':item.get('trailer')})
-            for genre in (item.get('genre',[]) or ['resources']): self.trailerCache.setdefault(genre.lower(),[]).append(item)
+            for genre in (item.get('genre',[]) or ['resources']):
+                self.trailerCache.setdefault(genre.lower(),[]).append(item)
                         
                         
     def getTrailers(self, genre=None):
