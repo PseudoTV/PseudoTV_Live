@@ -319,7 +319,7 @@ class Resources(object):
         
 
     def setTexture(self, url):
-        image = f'{Globals._getEXTProperty('%s.Local_Host'%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'
+        image = f'{Globals._getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'
         self.log('setTexture, url = %s\nimage = %s'%(url,image))
         self.jsonRPC.requestURL(image)
         return image

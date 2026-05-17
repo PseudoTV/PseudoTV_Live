@@ -160,11 +160,11 @@ class Globals:
     def _buildWebImage(name, image=None, fallback=LOGO):
         image = Globals._cleanImage(image)
         if name and image is None: 
-            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache') or {}).get(name), f'http://{Globals._getEXTProperty('%s.Remote_Host'%(ADDON_ID))}/logo/{Globals._quoteString(name)}')
+            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache') or {}).get(name), f'http://{Globals._getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logo/{Globals._quoteString(name)}')
         elif image.startswith(('image://')):
-            image = f'{Globals._getEXTProperty('%s.Local_Host'%(ADDON_ID))}/image/{Globals._quoteString(image)}'
+            image = f'{Globals._getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
         elif not image.startswith(('http','resource')):
-            image = f'http://{Globals._getEXTProperty('%s.Remote_Host'%(ADDON_ID))}/image/{Globals._quoteString(image)}'
+            image = f'http://{Globals._getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
         elif fallback:
             image = fallback
         return image
