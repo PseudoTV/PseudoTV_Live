@@ -39,7 +39,7 @@ def stripRegion(s):
     except Exception: return s
     
 def chanceBool(percent=25):
-    return random.randrange(100) <= percent
+    return random.randrange(100) < percent
 
 def getChannelID(name, path, number, uuid=None):
     if uuid is None: uuid = SETTINGS.getMYUUID()

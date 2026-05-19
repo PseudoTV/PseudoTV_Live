@@ -1,7 +1,7 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
 v.0.7.4+nightly
 - Moved Library, Channels, Server json files to internal database.
-- Improved Fillers.
+- Improved Fillers, added Extras/Specials to post-roll options.
 
 v.0.7.3+nightly
 - Improved Internal backups and channel export utilities.

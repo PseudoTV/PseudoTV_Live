@@ -265,8 +265,10 @@ class JSONRPC(object):
         else:     return self.sendJSON(param).get('result',{}).get('albums', [])
 
      
-    def getEpisode(self, tvshowid, season, episode, cache=True):
-        param = {"method":"VideoLibrary.GetEpisodes","params":{"tvshowid":tvshowid,"season":season,"properties":self.getEnums("Video.Fields.Episode", type='items'),"filter":{"field":"episode","operator":"is","value":str(episode)}}}
+    def getEpisode(self, tvshowid, season, episode=None, cache=True):
+        if not episode is None: filter = {"field":"episode","operator":"is","value":str(episode)}
+        else:                   filter = {}
+        param = {"method":"VideoLibrary.GetEpisodes","params":{"tvshowid":tvshowid,"season":season,"properties":self.getEnums("Video.Fields.Episode", type='items'),"filter":filter}}
         if cache: return self.cacheJSON(param).get('result',{}).get('episodes', [])
         else:     return self.sendJSON(param).get('result',{}).get('episodes', [])
   
@@ -776,3 +778,37 @@ class JSONRPC(object):
         self.log('toggleShowLog, state = %s'%(state))
         if self.getSettingValue("debug.showloginfo") != state:
             self.setSettingValue("debug.showloginfo",state,queue=False)
+
+
+    def addTrailer(self, item, trailers={}):
+        if   'movieid' in item: key = 'movies'
+        elif 'tvshowid'in item: key = 'tvshows'
+        else: return trailers
+        fitem = item.copy()
+        dur = self.getDuration(fitem.get('trailer'), accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=False)
+        if dur > 0:
+            if 'streamdetails' in fitem: fitem.pop('streamdetails')
+            fitem.update({'label':'%s - %s'%(item.get("label",""),LANGUAGE(30187)),
+                         'episodetitle':'%s - %s'%(fitem.get("episodetitle",""),LANGUAGE(30187)),
+                         'episodelabel':'%s - %s'%(fitem.get("episodelabel",""),LANGUAGE(30187)),
+                         'duration':dur, 
+                         'file':fitem.get('trailer'),
+                         'added':time.time()})#todo remove old entries.
+            self.log(f'addTrailer [{key}] {item.get('duration',0)}, {item.get('file')}')
+            for genre in (fitem.get('genre',[]) or ['resources']):
+                trailers.setdefault(key,{}).setdefault(genre.lower(),[]).append(item)
+        return trailers
+                
+                
+    def setTrailers(self, trailers={}):
+        self.log(f'setTrailers [Movies] = {len(trailers.get('movies',{}))}')
+        self.log(f'setTrailers [TVShows] = {len(trailers.get('tv',{}))}')
+        return SETTINGS.setCacheSetting('trailers', trailers)
+                                
+                        
+    def getTrailers(self, genre=None):
+        trailers = SETTINGS.getCacheSetting('trailers', default={})
+        self.log(f'getTrailers [Movies] = {len(trailers.get('movies',{}))}')
+        self.log(f'getTrailers [TVShows] = {len(trailers.get('tv',{}))}')
+        if not genre is None: return trailers.get(genre,[])
+        return trailers #return all

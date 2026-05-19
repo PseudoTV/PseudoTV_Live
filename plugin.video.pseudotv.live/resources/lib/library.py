@@ -113,7 +113,8 @@ class Library(object):
         return len(self.libraryDATA['library'].get(type,[])) > 0
         
         
-    def updateLibrary(self, types, silent=None, complete=False):
+    def updateLibrary(self, types, silent=None):
+        completed = []
         if silent is None: silent = BUILTIN.isPlaying()
         if not PROPERTIES.isRunning('Library.updateLibrary'):
             with PROPERTIES.chkRunning('Library.updateLibrary'):
@@ -125,11 +126,10 @@ class Library(object):
                         self.pHeader = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(32041))
                         with DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
                             items = self.AUTOTUNE[type]['func']()
-                    if items is None: self.service._que(self.service.tasks.chkLibrary,2,*(type,silent))
-                    else:
-                        complete = self.setLibrary(type,items)
-                        self.log("updateLibrary, type = %s, items = %s, complete = %s"%(type,len(items),complete))
-                return complete
+                    if items:
+                        completed.append(self.setLibrary(type,items))
+                        self.log("updateLibrary, type = %s, items = %s"%(type,len(items)))
+        return any(completed)
 
 
     def clrLibraryCache(self, type):
@@ -258,7 +258,6 @@ class Library(object):
         except Exception: return []
  
  
-    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getPVRRecordings(self):
         recordList    = []
         self.pDialog  = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
@@ -269,7 +268,6 @@ class Library(object):
         return sorted(recordList,key=itemgetter('name'))
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getPVRSearches(self):
         searchList = []
         json_response = self.jsonRPC.getPVRSearches()
@@ -286,7 +284,6 @@ class Library(object):
         return searchList
                 
 
-    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getTVInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getTVInfo')
         NetworkList = ShowGenreList = TVShowList = []
@@ -355,7 +352,6 @@ class Library(object):
         return {'studios':NetworkList,'genres':ShowGenreList,'shows':TVShowList}
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getMovieInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getMovieInfo')
         StudioList = MovieGenreList = []
@@ -408,7 +404,6 @@ class Library(object):
         return {'studios':StudioList,'genres':MovieGenreList}
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getMusicInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getMusicInfo')
         MusicGenreList = []

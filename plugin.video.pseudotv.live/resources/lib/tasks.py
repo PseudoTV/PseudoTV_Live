@@ -62,11 +62,13 @@ class Tasks(object):
     
     def _migrateChannels(self, old=CACHE_LOC, new=BACKUP_LOC):
         old_path = os.path.join(old,CHANNELFLE)
+        new_path = os.path.join(new,CHANNELFLE)
         if FileAccess.exists(old_path):
             self.log('migrate, importing %s...'%(old_path))
             if Backup().importChannels(old_path):
-                FileAccess.move(os.path.join(new,CHANNELFLE))
-                self.service._que(self.chkChannels,3)
+                if old_path != new_path: 
+                    FileAccess.move(old_path,new_path)
+                    self.service._que(self.chkChannels,3)
     
     
     def chkHTTP(self):
@@ -169,6 +171,7 @@ class Tasks(object):
     def chkFiles(self):
         if not PROPERTIES.isRunning('Builder.buildChannels'):
             if any([not bool(FileAccess.exists(file)) for file in [M3UFLEPATH,XMLTVFLEPATH,GENREFLEPATH]]): 
+                self.log('chkFiles, missing files! running chkChannels to rebuild.')
                 return self.service._que(self.chkChannels,3)
 
 
@@ -204,7 +207,32 @@ class Tasks(object):
                             # FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
             # pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
         
-
+        
+    def chkTrailers(self, silent=None):
+        if silent is None: silent = BUILTIN.isPlaying()
+        self.log("_chkTrailers, silent = %s"%(silent))
+        #todo clean old trailers by "added" epoch
+        if not PROPERTIES.isRunning('Tasks.chkTrailers'):
+            with PROPERTIES.chkRunning('Tasks.chkTrailers'):
+                trailers = self.jsonRPC.getTrailers()
+                pDialog  = None
+                pHeader  = '%s, %s %ss'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(30187))
+                with DIALOG._progressDialog(LANGUAGE(32015), pHeader, silent) as pDialog:
+                    movies = self.jsonRPC.getMovies()
+                    for midx, movie in enumerate(movies):
+                        if movie.get('trailer'):
+                            pDialog = DIALOG._updateProgress(pDialog,int(midx*100))
+                            trailers = self.jsonRPC.addTrailer(movie, trailers)
+                with DIALOG._progressDialog(LANGUAGE(32014), pHeader, silent) as pDialog:
+                    tvshows  = self.jsonRPC.getTVshows()
+                    for tidx, tvshow in enumerate(tvshows):
+                        if tvshow.get('trailer'):
+                            print(tidx,tvshow)
+                            pDialog = DIALOG._updateProgress(pDialog,int(tidx*100))
+                            trailers = self.jsonRPC.addTrailer(tvshow, trailers)
+                self.jsonRPC.setTrailers(trailers)
+                
+                            
     def chkLibrary(self, types=None, silent=None):
         if silent is None: silent = BUILTIN.isPlaying()
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))

@@ -217,7 +217,6 @@ class XMLTVS(object):
         if not self.m3u is None:
             programs = dict(self.hasProgrammes(self.getChannels(),programmes))
             for id, hasProgram in programs.items():
-                print('cleanStations',id, hasProgram)
                 if id and not hasProgram:
                     self.m3u.delStation({'id':id})
                     self.delBroadcast({'id':id})
@@ -229,7 +228,6 @@ class XMLTVS(object):
         if not self.m3u is None:
             programs = dict(self.hasProgrammes(self.getRecordings(), programmes))
             for id, hasProgram in programs.items():
-                print('cleanRecordings',id, hasProgram)
                 if id and not hasProgram:
                     self.m3u.delRecording({'id':id})
                     self.delRecording({'id':id})

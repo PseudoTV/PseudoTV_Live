@@ -28,6 +28,7 @@ class Fillers(object):
         self.runActions = builder.runActions
         self.jsonRPC    = builder.jsonRPC
         self.cache      = builder.jsonRPC.cache
+        self.trailers   = builder.jsonRPC.getTrailers()
         self.service    = builder.service
         self.resources  = Resources(service=builder.service)
         self.processID  = PROPERTIES.getProcessID()
@@ -78,9 +79,10 @@ class Fillers(object):
                 if self.service._interrupt(): break
                 values.setdefault('items',{}).update(_build(ftype, path))
                 
-            # kodi trailers
-            if values.get('incKODI', False):
-                trailers = self.builder.getTrailers()
+            if ftype == 'trailers' and values.get('incKODI', False):
+                if   ftype.lower() == 'trailers': trailers = self.trailers.get('movies',{})
+                elif ftype.lower() == 'adverts':  trailers = self.trailers.get('tvshows',{})
+                else:                             trailers = {}
                 for genre, items in trailers.items():
                     if self.service._interrupt(): break
                     for item in items:
@@ -117,23 +119,29 @@ class Fillers(object):
 
     def _getFillterItem(self, ftype, count=1, keys=['resources'], chance=False, passes=None):
         tmpLST = []
+        filler = self.bctTypes.get(ftype, {})
         if passes is None: passes = count * len(keys)
         if passes <= 0: return tmpLST
         for key in keys:
             if not key: continue
             elif isinstance(key, list):
-                tmpLST.extend(self._getFillterItem(ftype, count, key, chance, passes))
+                tmpLST.extend(self._getFillterItem(ftype, count, key, chanceBool(filler.get('chance', 0)), passes))
                 continue
-            fillerItems = self.bctTypes.get(ftype,{}).get('items', {}).get(key.lower(),[])
-            tmpLST.extend(Globals._randomSamples(fillerItems, count))
-            self.log('[%s] _getFillterItem [%s (%s)] count = %s/%s, chance = %s'%(self.citem.get('id'), ftype, key, count, len(fillerItems), chance))
+            tmpLST.extend(Globals._randomSamples(filler.get('items', {}).get(key.lower(),[]), count))
+            self.log('[%s] _getFillterItem [%s (%s)] count = %s, chance = %s'%(self.citem.get('id'), ftype, key, count, chance))
         
         if (len(tmpLST) < count and chance) and 'resources' not in keys:
-            tmpLST.extend(self._getFillterItem(ftype, count, ['resources'], chance, passes - 1))
-        
-        tmpLST = Globals._setDictLST([i for i in tmpLST if i])
+            tmpLST.extend(self._getFillterItem(ftype, count, ['resources'], chanceBool(filler.get('chance', 0)), passes - 1))
         return tmpLST
 
+
+    def _getExtras(self, fileItem):
+        try:# https://kodi.wiki/view/Video_extras
+            if   'movieid'  in fileItem: return self.getDirectory({"directory":'%s/%s'%(os.path.split(fileItem.get('file'))[0],'extras'),"media":'video'})
+            elif 'tvshowid' in fileItem: return self.jsonRPC.getEpisode(fileItem.get('tvshowid'),season=0)
+        except Exception: pass
+        return []
+        
 
     def _getPreRoll(self, fileItem):
         # pre roll - bumpers/ratings
@@ -149,28 +157,32 @@ class Fillers(object):
                     dur = item.get('duration', 0)
                     if not item.get('file') or dur == 0: continue
                     self.builder.pDialog = DIALOG._updateProgress(self.builder.pDialog, self.builder.pCount, message='Filling Pre-Rolls %s%%' % (int((i + 1) * 100 // max(1, len(items)))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
-                    item.update({'title'       : 'Pre-Roll',
-                                 'episodetitle': item.get('label'),
+                    item.update({'title'       : item.get('label'),
+                                 'episodetitle': 'Pre-Roll',
                                  'plot'        : item.get('plot', item.get('file')),
-                                 'genre'       : ['Pre-Roll'],
+                                 'genre'       : ['Fillers','Pre-Roll'],
                                  'path'        : item.get('file')})
                     self.log('[%s] injectFillers [Pre-Roll (%s)] %s, %s'%(self.citem.get('id'), ftype, dur, item.get('file')))
                     nfileList.extend(self.builder.buildCells(self.citem, dur, entries=1, info=item))
         return nfileList
         
         
-    def _getPostRoll(self, fileItem, remaining_seconds):
+     #todo includeExtras/Specials as postRolls.
+    def _getPostRoll(self, fileItem, nextItem={}, remaining_seconds=0):
         # post roll - adverts/trailers
         items = []
         nfileList = []
-        for ftype in ['adverts', 'trailers']:
-            filler = self.bctTypes.get(ftype, {})
-            ignore = {'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_TYPES}.get(ftype, IGNORE_CHTYPE)
-            if filler.get('enabled', False) and self.citem.get('type') not in ignore:
-                if filler.get('auto', False): numberToFetch = filler.get('max',PAGE_LIMIT)
-                else:                         numberToFetch = filler.get('min',SETTINGS.getSettingInt('Enable_Postroll'))
-                if numberToFetch > 0: items.extend(self._getFillterItem(ftype, numberToFetch, [self.citem.get('name',''), fileItem.get('genre',''), self.citem.get('group','')], chanceBool(filler.get('chance', 0))))
-
+        for item in [fileItem,nextItem]:
+            if not item: continue
+            for ftype in ['adverts', 'trailers', 'extras']:
+                filler = self.bctTypes.get(ftype, {})
+                ignore = {'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_TYPES}.get(ftype, IGNORE_CHTYPE)
+                if filler.get('enabled', False) and self.citem.get('type') not in ignore:
+                    if filler.get('auto', False): numberToFetch = filler.get('max',PAGE_LIMIT)
+                    else:                         numberToFetch = filler.get('min',SETTINGS.getSettingInt('Enable_Postroll'))
+                    keys = [self.citem.get('name',''), item.get('genre',''), self.citem.get('group','')]
+                    if numberToFetch > 0: items.extend(self._getFillterItem(ftype, numberToFetch, keys, chanceBool(filler.get('chance', 0))))
+                    if ftype == 'extras' and filler.get('incKODI',False) and ('movieid' in item or 'tvshowid' in item): items.extend(self._getExtras(item))
         if items:
             post_counter  = 0
             post_queue    = deque(Globals._randomShuffle(Globals._setDictLST(items)))
@@ -187,11 +199,11 @@ class Fillers(object):
                 if 0 < dur <= post_runtime:
                     post_counter = 0
                     post_runtime -= dur
-                    self.builder.pDialog = DIALOG._updateProgress(self.builder.pDialog, self.builder.pCount, message='Filling Post-Rolls %s%%' % (int(iteration * 100 // max(1, total_queue))), header='%s, %s' % (ADDON_NAME, getattr(builder, 'pMSG', '')))
-                    item.update({'title'       : 'Post-Roll',
-                                 'episodetitle': item.get('label'),
+                    self.builder.pDialog = DIALOG._updateProgress(self.builder.pDialog, self.builder.pCount, message='Filling Post-Rolls %s%%' % (int(iteration * 100 // max(1, total_queue))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
+                    item.update({'title'       : item.get('label'),
+                                 'episodetitle': 'Post-Roll',
                                  'plot'        : item.get('plot', item.get('file')),
-                                 'genre'       : ['Post-Roll'],
+                                 'genre'       : ['Fillers','Post-Roll'],
                                  'path'        : item.get('file')})
                     self.log('[%s] injectFillers [Post-Roll (%s)] %s, %s'%(self.citem.get('id'), ftype, dur, item.get('file')))
                     nfileList.extend(self.builder.buildCells(self.citem, dur, entries=1, info=item))
@@ -232,11 +244,12 @@ class Fillers(object):
             #Post-Rolls
             next_duration = fileList[i+1].get('duration', 0) if i + 1 < len(fileList) else 0
             if next_duration > 0:
+                next_fileitem = fileList[i+1]
                 total_runtime = runtime + next_duration
                 next_grid_boundary = ((total_runtime + SLOT_SEC - 1) // SLOT_SEC) * SLOT_SEC
                 gap_seconds = next_grid_boundary - total_runtime
                 if gap_seconds > 0:
-                    postrolls = self._getPostRoll(fileItem, gap_seconds)
+                    postrolls = self._getPostRoll(fileItem, next_fileitem, gap_seconds)
                     for item in postrolls:
                         item['start'] = runtime
                         runtime += item.get('duration', 0)
@@ -246,7 +259,7 @@ class Fillers(object):
                 next_grid_boundary = ((runtime + SLOT_SEC - 1) // SLOT_SEC) * SLOT_SEC
                 final_gap = next_grid_boundary - runtime
                 if final_gap > 0:
-                    postrolls = self._getPostRoll(fileItem, final_gap)
+                    postrolls = self._getPostRoll(fileItem, {}, final_gap)
                     for item in postrolls:
                         item['start'] = runtime
                         runtime += item.get('duration', 0)

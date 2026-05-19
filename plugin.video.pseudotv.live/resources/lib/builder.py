@@ -107,22 +107,16 @@ class Builder(object):
                                              "sources" :{"ids":SETTINGS.getSetting('Resource_Bumpers').split('|'),"paths":[os.path.join(FILLER_LOC,'Bumpers' ,'')]},"items":{}},
                                  
                                  "adverts" :{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":PAGE_LIMIT, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
-                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{}},
+                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{}, "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI')},
                                  
                                  "trailers":{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":PAGE_LIMIT, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
-                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{}, "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI')}}
+                                             "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{}, "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI')},
+                                 
+                                 "extras"  :{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":PAGE_LIMIT, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
+                                             "sources" :{"ids":[],"paths":[os.path.join(FILLER_LOC,'Extras','')]},"items":{}, "incKODI":SETTINGS.getSettingBool('Include_Extras_KODI')}}
 
         self.resources    = Resources(service=self.service)
         self.runActions   = RulesList(self.channels.getChannels()).runActions
-        self.trailerCache = SETTINGS.getCacheSetting('trailerCache', default={})
-        self.log(f'__init__, trailerCache = {len(self.trailerCache)}')
-
-
-    def __del__(self):
-        try:
-            SETTINGS.setCacheSetting('trailerCache', self.trailerCache)
-            self.log(f'__del__, trailerCache = {len(self.trailerCache)}')
-        except Exception: pass
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -247,6 +241,7 @@ class Builder(object):
                     now       = getUTCstamp()
                     nstart    = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
                     fallback  = epochTime(nstart,tz=False).strftime(DTFORMAT)
+                    self.trailers = self.jsonRPC.getTrailers()
 
                     self.pDialog = None
                     self.pMSG    = ''
@@ -290,7 +285,8 @@ class Builder(object):
                                         #fileList = {False:'In-Valid Channel', True:'Valid Channel w/o programmes', list:'Valid Channel w/ programmes}
                                         if isinstance(fileList,list):
                                             fileList = sorted(__addScheduling(citem, fileList, now, start), key=itemgetter('start'))
-                                            fileList = sorted(__addFillers(citem, fileList, self.enableBCTs), key=itemgetter('start'))
+                                            if not citem.get('radio',False): #fillers don't apply to radio stations.
+                                                fileList = sorted(__addFillers(citem, fileList, self.enableBCTs), key=itemgetter('start'))
                                             if not preview and __hasFileList(fileList):
                                                 updated.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
                                         elif not fileList:
@@ -311,6 +307,7 @@ class Builder(object):
                             __setStation()
                         except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)
                     if any(changes): self.channels.setChannels()
+                    self.jsonRPC.setTrailers(self.trailers)
                     self.log('[%s] buildChannels, completed = %s, updated = %s, changes = %s'%(citem['id'],any(completed),any(updated),any(changes)))
 
 
@@ -517,9 +514,14 @@ class Builder(object):
                 if self.incStrmDetails and not item.get('streamdetails',{}).get('video',[]) and not file.startswith(tuple(VFS_TYPES)): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
                     item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
 
-                title   = (item.get("title")     or item.get("label") or dirItem.get('label') or '')
-                tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')
-                if (item['type'].startswith(tuple(TV_TYPES)) or item.get("showtitle")):# This is a TV show
+                label = (item.get("title") or item.get("label") or dirItem.get('label') or '')
+                if not label:  
+                    self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))
+                    continue
+                    
+                # This is a TV show
+                if (item['type'].startswith(tuple(TV_TYPES)) or item.get("showtitle")):
+                    tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')
                     season  = int(item.get("season","0"))
                     episode = int(item.get("episode","0"))
                     if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
@@ -529,18 +531,14 @@ class Builder(object):
 
                     label = tvtitle
                     item["tvshowtitle"]  = tvtitle
-                    item["episodetitle"] = title
-                    item["episodelabel"] = '%s%s'%(title,' (%sx%s)'%(season,str(episode).zfill(2))) #Episode Title (SSxEE) Mimic Kodi's PVR label format
+                    item["episodetitle"] = label
+                    item["episodelabel"] = '%s%s'%(label,' (%sx%s)'%(season,str(episode).zfill(2))) #Episode Title (SSxEE) Mimic Kodi's PVR label format
                     item["showlabel"]    = '%s%s'%(item["tvshowtitle"],' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
                 else: # This is a Movie
-                    label = title
                     item["episodetitle"] = item.get("tagline","")
                     item["episodelabel"] = item.get("tagline","")
                     item["showlabel"]    = '%s%s'%(item.get("title",""), ' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
                 
-                if not label:  
-                    self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))
-                    continue
                     
                 dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
                 if dur > self.minDuration: #include media that's duration is above the players seek tolerance & users adv. rule
@@ -565,7 +563,7 @@ class Builder(object):
                     item['art'] = (item.get('art',{}) or dirItem.get('art',{}))
                     item.get('art',{})['icon'] = citem['logo']
                         
-                    if item.get('trailer'): self.setTrailers(item)
+                    if item.get('trailer'): self.trailers = self.jsonRPC.addTrailer(item, self.trailers)
                     if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                         seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
                     else: 
@@ -598,23 +596,6 @@ class Builder(object):
         if 'video' in details and details.get('video') != [] and len(details.get('video')) > 0:
             if len(details['video'][0]['stereomode'] or []) > 0: return True
         return False
-
-
-    def setTrailers(self, item):
-        dur = self.jsonRPC.getDuration(item.get('trailer'), accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=False)
-        if dur > 0:
-            item.update({'label':'%s - %s'%(item.get("label",""),LANGUAGE(30187)),
-                         'episodetitle':'%s - %s'%(item.get("episodetitle",""),LANGUAGE(30187)),
-                         'episodelabel':'%s - %s'%(item.get("episodelabel",""),LANGUAGE(30187)),
-                         'duration':dur, 
-                         'file':item.get('trailer')})
-            for genre in (item.get('genre',[]) or ['resources']):
-                self.trailerCache.setdefault(genre.lower(),[]).append(item)
-                        
-                        
-    def getTrailers(self, genre=None):
-        if not genre is None: return self.trailerCache.get(genre,[])
-        return self.trailerCache #return all
 
 
     def resetPagination(self, citem):
