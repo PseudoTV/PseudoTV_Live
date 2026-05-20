@@ -149,20 +149,10 @@ class Utilities(object):
                 return BUILTIN.executebuiltin('RunScript(script.kodi.loguploader)')
         
     @staticmethod
-    def _runCleanup(full=False):
-        log('Utilities: _runCleanup, full = %s'%(full))
-        files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
-                 LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
-                 LANGUAGE(30096):GENREFLEPATH}  #"Genre"
-
-        keys = list(files.keys())
-        if not full: keys = keys[:2]
+    def _runCleanup():
         if DIALOG.yesnoDialog('Utilities: %s ?'%(msg)): 
             with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
-                for key in keys:
-                    if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
-                    else:                             DIALOG.notificationDialog('Utilities: %s %s'%((LANGUAGE(32127)%(key.replace(':',''))),LANGUAGE(32052)))
-        _runUpdate(full)
+                Globals._cleanPVRFiles()
 
     @staticmethod
     def _runReload():

@@ -332,7 +332,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         self.remaining = floor(self.totalTime - self.player.getPlayedTime())
         self.intTime   = roundupDIV(self.threshold,3)
         self.log('__init__, totalTime = %s, threshold = %s, remaining = %s, intTime = %s'%(self.totalTime,self.threshold,self.remaining,self.intTime))
-        if self.remaining >= self.intTime:
+        if self.nitem and (self.remaining >= self.intTime):
             self.doModal()
         
         

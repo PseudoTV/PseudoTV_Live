@@ -111,8 +111,8 @@ class Multiroom(object):
                 payload['enabled'] = True
                 servers[payload['name']] = payload
                 self.log('addServer, adding server = %s'%(payload))
-                # if payload.get('host') != PROPERTIES.getRemoteHost(): 
-                DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
+                if payload.get('host') != PROPERTIES.getRemoteHost(): 
+                    DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
                 SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add IPTV Simple config
                 self._setServers(servers)
             else:
@@ -121,7 +121,6 @@ class Multiroom(object):
                     if payload['enabled']:
                         if payload['online'] != server.get('online',False):
                             DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))
-                        # if payload['host'] != server['host']: 
                         SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #update IPTV Simple config
                         if payload.get('settings') != server.get('settings'):
                             [SETTINGS.hasAddon(id) for _,addons in list(payload.get('settings',{}).items()) for id in addons if id.startswith(('resource','plugin'))]

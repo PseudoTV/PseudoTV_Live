@@ -67,8 +67,8 @@ class Tasks(object):
             self.log('migrate, importing %s...'%(old_path))
             if Backup().importChannels(old_path):
                 if old_path != new_path: 
-                    FileAccess.move(old_path,new_path)
-                    self.service._que(self.chkChannels,3)
+                    if FileAccess.move(old_path,new_path):
+                        PROPERTIES.setPendingRestart(True)
     
     
     def chkHTTP(self):
@@ -118,6 +118,7 @@ class Tasks(object):
         if not self.service.isClient:
             self._chkEpochTimer('chkFiles'    , self.chkFiles         , 900   , 1)#15MINS
             self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 900   , 2)#15MINS
+            self._chkEpochTimer('chkTrailers' , self.chkTrailers      , 259200, 5)#3DAYS
             
         #immediate run, bypass schedule
         self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh    , 1) 
@@ -208,31 +209,33 @@ class Tasks(object):
             # pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
         
         
-    def chkTrailers(self, silent=None):
+    def chkTrailers(self, movies=None, tvshows=None, silent=None):
+        if movies is None: movies = self.jsonRPC.getMovies()
+        if tvshows is None: tvshows = self.jsonRPC.getTVshows()
         if silent is None: silent = BUILTIN.isPlaying()
-        self.log("_chkTrailers, silent = %s"%(silent))
-        #todo clean old trailers by "added" epoch
+        self.log('chkTrailers, movies = %s, tvshows = %s, silent = %s'%(len(movies),len(tvshows), silent))
         if not PROPERTIES.isRunning('Tasks.chkTrailers'):
             with PROPERTIES.chkRunning('Tasks.chkTrailers'):
-                trailers = self.jsonRPC.getTrailers()
                 pDialog  = None
                 pHeader  = '%s, %s %ss'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(30187))
-                with DIALOG._progressDialog(LANGUAGE(32015), pHeader, silent) as pDialog:
-                    movies = self.jsonRPC.getMovies()
+                with DIALOG._progressDialog('%ss: %s'%(LANGUAGE(32208),LANGUAGE(32015)), pHeader, silent) as pDialog:
                     for midx, movie in enumerate(movies):
-                        if movie.get('trailer'):
-                            pDialog = DIALOG._updateProgress(pDialog,int(midx*100))
-                            trailers = self.jsonRPC.addTrailer(movie, trailers)
-                with DIALOG._progressDialog(LANGUAGE(32014), pHeader, silent) as pDialog:
-                    tvshows  = self.jsonRPC.getTVshows()
+                        if self.service._interrupt() or self.service._suspend():
+                            self.service._que(self.chkTrailers,-1,*(movies[midx:],None,None))
+                            break
+                        elif movie.get('trailer'):
+                            pDialog = DIALOG._updateProgress(pDialog,int(midx*100)//len(movies))
+                            self.service._que(self.jsonRPC.addTrailer,-1,*(movie))
+                with DIALOG._progressDialog('%ss: %s'%(LANGUAGE(32208),LANGUAGE(32014)), pHeader, silent) as pDialog:
                     for tidx, tvshow in enumerate(tvshows):
-                        if tvshow.get('trailer'):
-                            print(tidx,tvshow)
-                            pDialog = DIALOG._updateProgress(pDialog,int(tidx*100))
-                            trailers = self.jsonRPC.addTrailer(tvshow, trailers)
-                self.jsonRPC.setTrailers(trailers)
+                        if self.service._interrupt() or self.service._suspend():
+                            self.service._que(self.chkTrailers,-1,*(tvshows[tidx:],None,None))
+                            break
+                        elif tvshow.get('trailer'):
+                            pDialog = DIALOG._updateProgress(pDialog,int(tidx*100)//len(tvshows))
+                            self.service._que(self.jsonRPC.addTrailer,-1,*(tvshow))
                 
-                            
+                
     def chkLibrary(self, types=None, silent=None):
         if silent is None: silent = BUILTIN.isPlaying()
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
@@ -272,6 +275,7 @@ class Tasks(object):
             self.service._que(Builder(service=self.service).buildChannels,3,*(channels,False,silent))
             if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,4,*(channels,silent))
         else:
+            Globals._cleanPVRFiles()
             self.log('chkChannels, No Channels Configured!')
             if autotune or not SETTINGS.hasAutotuned():
                 self.log('chkChannels, Auto-tuning Channels.')

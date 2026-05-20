@@ -167,7 +167,6 @@ class Fillers(object):
         return nfileList
         
         
-     #todo includeExtras/Specials as postRolls.
     def _getPostRoll(self, fileItem, nextItem={}, remaining_seconds=0):
         # post roll - adverts/trailers
         items = []

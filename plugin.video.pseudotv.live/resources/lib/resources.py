@@ -128,7 +128,7 @@ class Resources(object):
     def getLogo(self, citem: dict, fallback=LOGO, lookup=False) -> str:
         try:
             logo = None
-            if not logo and citem.get('name') == LANGUAGE(32002): logo = self.holiday.get('logo')                  # seasonal
+            if not logo and citem.get('name') == LANGUAGE(32002): logo = self.holiday.get('logo') # seasonal
             if not logo and not lookup:                           logo = self.getCache(citem.get('name'),fallback) # cache
             if not logo and lookup: # perform progressively heavier lookups only when lookup=True
                 logo = self.getLocalLogo(citem.get('name'))                  # local

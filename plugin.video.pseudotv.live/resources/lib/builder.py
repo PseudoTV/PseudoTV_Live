@@ -241,7 +241,6 @@ class Builder(object):
                     now       = getUTCstamp()
                     nstart    = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
                     fallback  = epochTime(nstart,tz=False).strftime(DTFORMAT)
-                    self.trailers = self.jsonRPC.getTrailers()
 
                     self.pDialog = None
                     self.pMSG    = ''
@@ -307,7 +306,6 @@ class Builder(object):
                             __setStation()
                         except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)
                     if any(changes): self.channels.setChannels()
-                    self.jsonRPC.setTrailers(self.trailers)
                     self.log('[%s] buildChannels, completed = %s, updated = %s, changes = %s'%(citem['id'],any(completed),any(updated),any(changes)))
 
 
@@ -563,7 +561,7 @@ class Builder(object):
                     item['art'] = (item.get('art',{}) or dirItem.get('art',{}))
                     item.get('art',{})['icon'] = citem['logo']
                         
-                    if item.get('trailer'): self.trailers = self.jsonRPC.addTrailer(item, self.trailers)
+                    if item.get('trailer'): self.service._que(self.jsonRPC.addTrailer,-1,*(item))
                     if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                         seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
                     else: 

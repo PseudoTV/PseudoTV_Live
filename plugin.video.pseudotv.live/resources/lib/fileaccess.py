@@ -249,8 +249,13 @@ class FileAccess(object):
 
     @staticmethod
     def delete(filename):
-        try: return xbmcvfs.delete(filename)
-        except Exception as e: log('FileAccess: delete failed! %s'%(e), xbmc.LOGERROR)
+        try: 
+            if not FileAccess.exists(filename): return False
+            xbmcvfs.delete(filename)
+        except Exception as e: 
+            log('FileAccess: delete failed! %s'%(e), xbmc.LOGERROR)
+            os.remove(FileAccess.translatePath(filename))
+        return FileAccess.exists(filename)
         
         
     @staticmethod
@@ -264,7 +269,7 @@ class FileAccess(object):
             filepath = os.path.join(filepath,'')
             exists = os.path.exists(filepath)
             if not exists and not filepath.endswith('\\'):
-                filepath = xbmcvfs.translatePath(filepath)
+                filepath = FileAccess.translatePath(filepath)
                 exists = os.path.exists(filepath)
         log('FileAccess: path = %s, exists = %s'%(path,exists))
         return exists
@@ -289,17 +294,16 @@ class FileAccess(object):
 
 
     @staticmethod
-    def rename(path, newpath):       
-        log("FileAccess: rename %s to %s"%(path,newpath))
-        #todo prompt to delete existing.
-        if not FileAccess.exists(path):    return False
-        elif   FileAccess.exists(newpath): return False
+    def rename(path, newpath, force=True):       
+        log("FileAccess: rename %s to %s, force = %s"%(path,newpath,force))
+        if not FileAccess.exists(path): return False
         try:
-            if xbmcvfs.rename(path, newpath): return True
+            if not FileAccess.exists(path):   return False
+            if xbmcvfs.rename(path, newpath): return FileAccess.exists(newpath)
         except Exception as e: 
             log("FileAccess: rename, failed! %s"%(e), xbmc.LOGERROR)
-
-        try:
+            
+        try:#failed rename try moving.
             if FileAccess.move(path, newpath): return True
         except Exception as e: 
             log("FileAccess: move, failed! %s"%(e), xbmc.LOGERROR)
@@ -307,25 +311,20 @@ class FileAccess(object):
         if path[0:6].lower() == 'smb://' or newpath[0:6].lower() == 'smb://':
             if os.name.lower() == 'nt':
                 log("FileAccess: Modifying name")
-                if path[0:6].lower() == 'smb://':
-                    path = '\\\\' + path[6:]
-
-                if newpath[0:6].lower() == 'smb://':
-                    newpath = '\\\\' + newpath[6:]        
-        
-        if not os.path.exist(xbmcvfs.translatePath(path)): 
-            return False
+                if path[0:6].lower() == 'smb://': path = '\\\\' + path[6:]
+                if newpath[0:6].lower() == 'smb://': newpath = '\\\\' + newpath[6:]      
+        if not os.path.exists(FileAccess.translatePath(path)): return False
         else:
             try:
                 log("FileAccess: os.rename")
-                os.rename(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
+                os.rename(FileAccess.translatePath(path), FileAccess.translatePath(newpath))
                 return True
             except Exception as e: 
                 log("FileAccess: os.rename, failed! %s"%(e), xbmc.LOGERROR)
      
             try:
                 log("FileAccess: shutil.move")
-                shutil.move(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
+                shutil.move(FileAccess.translatePath(path), FileAccess.translatePath(newpath))
                 return True
             except Exception as e: 
                 log("FileAccess: shutil.move, failed! %s"%(e), xbmc.LOGERROR)
@@ -335,7 +334,8 @@ class FileAccess(object):
 
     @staticmethod
     def removedirs(path, force=True):
-        if len(path) == 0: return False
+        log("FileAccess: removedirs, path = %s, force = %s"%(path, force))
+        if not path: return False
         elif(xbmcvfs.exists(path)):
             return True
         try: 
@@ -344,34 +344,29 @@ class FileAccess(object):
             else: raise
         except Exception: 
             try: 
-                os.rmdir(xbmcvfs.translatePath(path))
-                if os.path.exists(xbmcvfs.translatePath(path)):
-                    return True
+                os.rmdir(FileAccess.translatePath(path))
+                if not os.path.exists(FileAccess.translatePath(path)): return True
             except Exception: log("FileAccess: removedirs failed!", xbmc.LOGERROR)
             return False
             
             
     @staticmethod
-    def makedirs(directory):
+    def makedirs(path):
         try:  
-            os.makedirs(xbmcvfs.translatePath(directory))
-            return os.path.exists(xbmcvfs.translatePath(directory))
+            log("FileAccess: makedirs, path = %s"%(path))
+            os.makedirs(FileAccess.translatePath(path))
+            return os.path.exists(FileAccess.translatePath(path))
         except Exception:
-            return FileAccess._makedirs(directory)
+            return FileAccess._makedirs(path)
             
             
     @staticmethod
     def _makedirs(path):
-        if len(path) == 0:
-            return False
-
-        if(xbmcvfs.exists(path)):
-            return True
-
-        success = xbmcvfs.mkdir(path)
-        if success == False:
-            if path == os.path.dirname(xbmcvfs.translatePath(path)): return False
-            if FileAccess._makedirs(os.path.dirname(xbmcvfs.translatePath(path))):
+        if not path: return False
+        if(xbmcvfs.exists(path)): return True
+        if not xbmcvfs.mkdir(path):
+            if path == os.path.dirname(FileAccess.translatePath(path)): return False
+            if FileAccess._makedirs(os.path.dirname(FileAccess.translatePath(path))):
                 return xbmcvfs.mkdir(path)
         return xbmcvfs.exists(path)
 
@@ -420,12 +415,12 @@ class VFSFile(object):
 
 
     def tell(self):
-        try:    return self.currentFile.tell()
+        try:              return self.currentFile.tell()
         except Exception: return self.currentFile.seek(0, 1)
         
 
     def readlines(self):
-        try:    return ''.join(list(self.readline())).split('\n')
+        try:              return ''.join(list(self.readline())).split('\n')
         except Exception: return self.read().split('\n')
 
 

@@ -32,7 +32,7 @@ def _open(fitem={}):
                 PROPERTIES.setRunning('Create.open',False)
             finally:del manager
             return True
-    else: DIALOG.notificationDialog(LANGUAGE(32057)%(ADDON_NAME))
+    else: DIALOG.notificationDialog(LANGUAGE(32129)%(ADDON_NAME))
             
 @threadit  
 def _add(sysARG, listitem: dict={}):

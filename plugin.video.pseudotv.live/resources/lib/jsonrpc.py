@@ -764,14 +764,18 @@ class JSONRPC(object):
         
         
     def getNextItem(self, citem={}, nitem={}): #return next broadcast ignoring fillers
-        if (citem.get('name','') and citem.get('id','')):
-            nextitems = self.matchChannel(citem.get('name',''), citem.get('id',''), citem.get('radio',False)).get('broadcastnext',[])
+        def __matchItem(nitem, nextitems):
             for idx, nextitem in enumerate(nextitems):
-                item = Globals._decodePlot(nextitem.get('plot',''))
-                if item.get('start') == nitem.get('start',str(random.random())) and item.get('id') == nitem.get('id',random.random()):
-                    for next in nextitems[idx:]:
-                        if not isFiller(next): return Globals._decodePlot(next.get('plot',''))
-        return nitem
+                fitem = Globals._decodePlot(nextitem.get('plot',''))
+                if fitem.get('start') == nitem.get('start',str(random.random())) and fitem.get('id') == fitem.get('id',random.random()):
+                    return nextitems[idx:]
+            return []
+            
+        if not isFiller(nitem): return nitem
+        broadcastnext = __matchItem(nitem, self.matchChannel(citem.get('name',''), citem.get('id',''), citem.get('radio',False)).get('broadcastnext',[]))
+        for next in broadcastnext:
+            if not isFiller(next): return Globals._decodePlot(next.get('plot',''))
+        return {}
         
 
     def toggleShowLog(self, state=False):
@@ -780,7 +784,8 @@ class JSONRPC(object):
             self.setSettingValue("debug.showloginfo",state,queue=False)
 
 
-    def addTrailer(self, item, trailers={}):
+    def addTrailer(self, item):
+        trailers = self.getTrailers()
         if   'movieid' in item: key = 'movies'
         elif 'tvshowid'in item: key = 'tvshows'
         else: return trailers
@@ -788,16 +793,17 @@ class JSONRPC(object):
         dur = self.getDuration(fitem.get('trailer'), accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=False)
         if dur > 0:
             if 'streamdetails' in fitem: fitem.pop('streamdetails')
-            fitem.update({'label':'%s - %s'%(item.get("label",""),LANGUAGE(30187)),
+            fitem.update({'label':'%s - %s'%(fitem.get("label",""),LANGUAGE(30187)),
                          'episodetitle':'%s - %s'%(fitem.get("episodetitle",""),LANGUAGE(30187)),
                          'episodelabel':'%s - %s'%(fitem.get("episodelabel",""),LANGUAGE(30187)),
                          'duration':dur, 
                          'file':fitem.get('trailer'),
                          'added':time.time()})#todo remove old entries.
-            self.log(f'addTrailer [{key}] {item.get('duration',0)}, {item.get('file')}')
+            self.log(f'addTrailer [{key}] {fitem.get('duration',0)}, {fitem.get('file')}')
             for genre in (fitem.get('genre',[]) or ['resources']):
-                trailers.setdefault(key,{}).setdefault(genre.lower(),[]).append(item)
-        return trailers
+                if fitem not in trailers.setdefault(key,{}).setdefault(genre.lower(),[]):
+                    trailers.setdefault(key,{}).setdefault(genre.lower(),[]).append(fitem)
+        return self.setTrailers(trailers)
                 
                 
     def setTrailers(self, trailers={}):
@@ -807,8 +813,12 @@ class JSONRPC(object):
                                 
                         
     def getTrailers(self, genre=None):
+        #todo clean old trailers by "added" epoch
         trailers = SETTINGS.getCacheSetting('trailers', default={})
         self.log(f'getTrailers [Movies] = {len(trailers.get('movies',{}))}')
         self.log(f'getTrailers [TVShows] = {len(trailers.get('tv',{}))}')
         if not genre is None: return trailers.get(genre,[])
         return trailers #return all
+        
+        
+        

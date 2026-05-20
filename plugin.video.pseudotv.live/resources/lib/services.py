@@ -119,12 +119,12 @@ class Player(xbmc.Player):
                 playingItem['chfile']     = BUILTIN.getInfoLabel('Player.Filename')
                 playingItem['chfolder']   = BUILTIN.getInfoLabel('Player.Folderpath')
                 playingItem['chpath']     = BUILTIN.getInfoLabel('Player.Filenameandpath')
-                playingItem['isfiller']   = self.isPlayingFiller()
                 #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
                 playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('VideoPlayer.Plot')))})
                 playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('VideoPlayer.NextPlot')))})
                 playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.curchannels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
                 playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
+                playingItem['isfiller'] = isFiller(playingItem.get('fitem',{}))
                 PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(playingItem))
             return playingItem
         except Exception as e: 

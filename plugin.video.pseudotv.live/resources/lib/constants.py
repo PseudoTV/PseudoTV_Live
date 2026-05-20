@@ -99,18 +99,21 @@ M3U_REFRESH         = 15
 M3U_INTERVAL        = 30
 M3U_TIMEOUT         = 60
 
-PRE_POST_ROLL_TYPES = ['Pre-Roll',
+ROLL_TYPES          = ['Fillers',
+                       'Pre-Roll',
                        'Post-Roll']
 
 FILLER_TYPE         = ['Rating',
                        'Bumper',
                        'Advert',
-                       'Trailer']
+                       'Trailer',
+                       'Extra']
                        
 FILLER_TYPES        = ['Ratings',
                        'Bumpers',
                        'Adverts',
-                       'Trailers']
+                       'Trailers',
+                       'Extras']
                        
 AUTOTUNE_TYPES      = ["Playlists",
                        "TV Networks",

@@ -1,5 +1,6 @@
 Language IDS w\empty strings: {
     "32033": "",
+    "32057": "",
     "32166": "",
     "33130": ""
 }
@@ -209,7 +210,9 @@ Language IDS not found in py files, possibly only in xml: {
     "32038": "Something went wrong! wait while we try again...\\nPlayback Attempt (%s)",
     "32048": "Select Servers",
     "32049": "Restarting...",
+    "32052": "Failed!",
     "32053": "Settings",
+    "32057": "",
     "32058": "No Channels Configured!",
     "32063": "OK",
     "32074": "Adding Channel",
@@ -250,7 +253,6 @@ Language IDS not found in py files, possibly only in xml: {
     "32186": "Unable to automatically configure IPTV-Simple, Please check user configurations.",
     "32193": "Mixed SmartPlaylist",
     "32197": "Currently Supported!",
-    "32208": "Parsing Trailer",
     "32210": "Parsing Details",
     "32214": "Sort Method",
     "32218": "Not Needed...",

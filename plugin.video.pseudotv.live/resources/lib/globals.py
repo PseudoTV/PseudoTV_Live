@@ -268,7 +268,7 @@ def isCenterlized():
     return True
                 
 def isFiller(item={}):
-    return any(genre.lower() in map(str.lower, PRE_POST_ROLL_TYPES) for genre in item.get('genre', []))
+    return any(genre.lower() in map(str.lower, ROLL_TYPES) for genre in item.get('genre', []))
 
 def isShort(item={}, minDuration=SETTINGS.getSettingInt('Seek_Tolerance')):
     if item.get('duration', minDuration) < minDuration: return True

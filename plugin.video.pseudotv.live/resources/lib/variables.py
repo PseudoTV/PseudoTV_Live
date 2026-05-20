@@ -288,3 +288,11 @@ class Globals:
         text = text[13:]
         return text
         
+    @staticmethod
+    def _cleanPVRFiles():
+        files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
+                 LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
+                 LANGUAGE(30096):GENREFLEPATH}  #"Genre"
+        for key in list(files.keys()):
+            if FileAccess.delete(files[key]): 
+                Globals._notificationDialog(LANGUAGE(32127)%(key.replace(':','')))

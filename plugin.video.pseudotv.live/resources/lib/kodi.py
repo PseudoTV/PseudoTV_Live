@@ -390,7 +390,7 @@ class Settings(object):
         if self.chkPVRChanges(instanceName, settings.copy()):
             self.log('[%s] setPVRRemote, %s settings = %s'%(PVR_CLIENT_ID, instanceName, nsettings))
             return self.instances.setSettings(instanceName, settings)
-        
+
 
     def chkPVRChanges(self, instanceName=ADDON_NAME, nsettings={}, prompt=None):
         if prompt is None: prompt = not bool(self.getSettingBool('Enable_Kodi_Access'))
