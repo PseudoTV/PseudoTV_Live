@@ -122,7 +122,7 @@ class Backup(object):
     @staticmethod
     def _selectRestore(msg, items=[]):
         def __buildMenuItem(item): #build menu item
-            return LISTITEMS.buildMenuListItem(item.get('name'),f'Channels ({item.get('channels',[])}) - Updated [{item.get('updated',"Unknown")}]')
+            return LISTITEMS.buildMenuListItem(item.get('name'),f'Channels ({item.get("channels",[])}) - Updated [{item.get("updated","Unknown")}]')
       
         with BUILTIN.busy_dialog():
             log(f'selectImports, imports = {len(imports)}')

@@ -50,7 +50,7 @@ class Multiroom(object):
         self.cache      = service.jsonRPC.cache
         self.serverData = FileAccess.getJSON(SERVERFLE_DEFAULT)
         self.serverTEMP = self.serverData.get('servers',[{}]).pop("friendly")
-        self.serverKEY  = f'Servers.{self.serverData.get('version',ADDON_VERSION)}'
+        self.serverKEY  = f'Servers.{self.serverData.get("version",ADDON_VERSION)}'
         self.serverData.update(self._load())
 
 

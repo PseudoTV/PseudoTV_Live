@@ -29,7 +29,7 @@ class Channels(object):
         if key is None: key = CHANNELAUTOTUNE_KEY if SETTINGS.getSettingBool('Enable_Autotune') else CHANNEL_KEY
         self.writable    = writable
         self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
-        self.channelKEY  = f'{key}.{self.channelDATA.get('version',ADDON_VERSION)}'
+        self.channelKEY  = f'{key}.{self.channelDATA.get("version",ADDON_VERSION)}'
         self.channelTEMP = self.channelDATA.get('channels',[{}]).pop(0)
         self.channelRULE = self.channelTEMP.pop('rules')
         self.channelTEMP['rules'] = {}

@@ -63,7 +63,7 @@ class Library(object):
         self.pHeader     = ''
         
         self.libraryDATA = FileAccess.getJSON(LIBRARYFLE_DEFAULT)
-        self.libraryKEY  = f'Library.{self.libraryDATA.get('version',ADDON_VERSION)}'
+        self.libraryKEY  = f'Library.{self.libraryDATA.get("version",ADDON_VERSION)}'
         self.libraryTEMP = self.libraryDATA['library'].pop('Item')
         self.libraryDATA.update(self._load())
         
