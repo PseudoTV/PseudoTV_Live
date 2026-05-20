@@ -96,6 +96,8 @@ AUTOTUNE_CHANNEL_LIMIT = 25
 AUTOTUNE_CHANNEL_DEFAULT = 2
 FILLER_LIMIT        = 250
 M3U_REFRESH         = 15
+M3U_INTERVAL        = 30
+M3U_TIMEOUT         = 60
 
 PRE_POST_ROLL_TYPES = ['Pre-Roll',
                        'Post-Roll']
@@ -251,6 +253,7 @@ TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
 
 #file paths
+CHANNEL_EXPORT_FLE  = os.path.join(BACKUP_LOC,CHANNELFLE)
 CHANNEL_BACKUP_FLE  = os.path.join(BACKUP_LOC,'%s.json'%(CHANNELBACKUP_KEY.lower()))
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 YOUTUBE_COOKIES     = os.path.join(SETTINGS_LOC,'www.youtube.com_cookies.txt')

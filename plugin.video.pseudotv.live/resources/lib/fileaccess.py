@@ -28,35 +28,33 @@ DEFAULT_ENCODING = "utf-8"
 class FileAccess(object):
     
     @staticmethod
-    def _getMD5(text):
-        if not isinstance(text, (str, bytes, bytearray)): text = FileAccess.dumpPICKLE(text)
-        if isinstance(text, str): text = text.encode(DEFAULT_ENCODING)
-        return hashlib.md5(text).hexdigest()
+    def _getMD5(data):
+        if not isinstance(data, (str, bytes, bytearray)):
+            data = FileAccess.dumpJSON(data, sortkey=True)
+        if isinstance(data, str): data = data.encode(DEFAULT_ENCODING)
+        return hashlib.md5(data).hexdigest()
 
 
     @staticmethod
-    def _encodeString(text='', encoding=DEFAULT_ENCODING):
+    def _encodeString(data=''):
+        if not data: return ""
         try:
-            if not text: return ""
-            elif isinstance(text, str): data = text.encode(encoding)
-            else:                       data = FileAccess.dumpPICKLE(text)
-            if not data: return ""
-            else:        return urllib.parse.quote(base64.b64encode(zlib.compress(data, level=1)).decode('ascii'))
+            normalized_str = FileAccess.dumpJSON(data)
+            compressed = zlib.compress(normalized_str.encode(DEFAULT_ENCODING), level=1)
+            return base64.urlsafe_b64encode(compressed).decode('ascii')
         except Exception as e: log(f"_encodeString failed! {e}", xbmc.LOGERROR)
         return ""
 
 
     @staticmethod
-    def _decodeString(text='', encoding=DEFAULT_ENCODING):
+    def _decodeString(data=''):
+        if not data: return ""
         try:
-            if not text: return ""
-            elif isinstance(text, str) and '%' in text: text = urllib.parse.unquote(text)
-            if isinstance(text, str):                   text = text.encode('ascii')
-            missing_padding = len(text) % 4
-            if missing_padding: text += b'=' * (4 - missing_padding)
-            decompressed = zlib.decompress(base64.b64decode(text))
-            if decompressed.startswith(b'\x80'): return FileAccess.loadPICKLE(decompressed)
-            return decompressed.decode(encoding)
+            if isinstance(data, str): data = data.encode('ascii')
+            padded_data = data + b'=' * (-len(data) % 4)
+            raw_bytes = base64.urlsafe_b64decode(padded_data)
+            decompressed_str = zlib.decompress(raw_bytes).decode(DEFAULT_ENCODING)
+            return FileAccess.loadJSON(decompressed_str)
         except Exception as e: log(f"_decodeString failed! {e}", xbmc.LOGERROR)
         return ""
             
@@ -64,7 +62,7 @@ class FileAccess(object):
     @staticmethod
     def dumpPICKLE(item={}):
         try:
-            if   not item:                             return b""
+            if not item:                               return b""
             elif hasattr(item,'write'):                return pickle.dump(None, item)
             elif isinstance(item, (bytes, bytearray)): return item
             return pickle.dumps(item, protocol=4)
@@ -75,7 +73,7 @@ class FileAccess(object):
     @staticmethod
     def loadPICKLE(item=""):
         try:        
-            if   not item:              return None
+            if not item:                return None
             elif hasattr(item,'read'):  return pickle.load(item)
             elif isinstance(item, str): item = item.encode('latin-1')
             return pickle.loads(item)
@@ -85,25 +83,26 @@ class FileAccess(object):
         
         
     @staticmethod
-    def dumpJSON(item={}, idnt=None, sortkey=False, separators=(',', ':')):
+    def dumpJSON(item=None, idnt=None, sortkey=False, separators=(',', ':')):
         try:
-            if   item is None:                   return ''
-            elif hasattr(item,'write'):          return json.dump(None, item, indent=idnt, sort_keys=sortkey, separators=separators)
-            elif isinstance(item, (str, bytes)): return item
-            elif isinstance(item, (dict, list)): return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
+            if item is None: return '{}'
+            if isinstance(item, (str, bytes, bytearray)): return item.decode('utf-8') if isinstance(item, (bytes, bytearray)) else item
+            if not hasattr(item,'write'): return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
+            json.dump(None, item, indent=idnt, sort_keys=sortkey, separators=separators)
+        except (TypeError, ValueError): return '{}'
         except Exception as e: log('FileAccess: dumpJSON failed! %s'%(e), xbmc.LOGERROR)
-        return ''
+        return '{}'
             
         
     @staticmethod
     def loadJSON(item=""):
         try:
-            if   item is None:                   return {}
-            elif hasattr(item, 'read'):          return json.load(item)
-            elif isinstance(item, (dict, list)): return item
-            elif isinstance(item, (str, bytes)): return json.loads(item)
+            if not item: return {}
+            if not hasattr(item,'read'): return json.loads(item)
+            json.load(item)
+        except (json.JSONDecodeError, TypeError): return item
         except Exception as e: log('FileAccess: loadJSON failed! %s' % (e), xbmc.LOGERROR)
-        return {}
+        return item
         
         
     @staticmethod
@@ -233,12 +232,11 @@ class FileAccess(object):
 
     @staticmethod
     def copy(orgfilename, newfilename):
-        log('FileAccess: copying %s to %s'%(orgfilename,newfilename))
-        #todo prompt to delete existing.
         if not FileAccess.exists(orgfilename): return False
-        elif   FileAccess.exists(newfilename): return False
         dir, file = os.path.split(newfilename)
         if not FileAccess.exists(dir): FileAccess.makedirs(dir)
+        elif   FileAccess.exists(newfilename): FileAccess.delete(newfilename) #todo prompt to delete existing.
+        log('FileAccess: copying %s to %s'%(orgfilename,newfilename))
         return xbmcvfs.copy(orgfilename, newfilename)
 
 

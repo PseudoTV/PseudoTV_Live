@@ -627,7 +627,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         def __seek(item, passed=False, wait=30):
             player = PLAYER()
-            if player.isPlaying(): return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(30136)}')
+            if player.isPlaying(): return DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(30136)))
             else:
                 # todo test seek for support disable via adv. rule if fails.
                 # todo set seeklock rule if seek == False
@@ -643,7 +643,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     if   self.monitor.waitForAbort(1.0) or wait < 1: break
                     elif player.isPlaying():
                         self.log('validatePaths, _seek: playing %s seeking to %s'%(item.get('file'),resume))
-                        if ((int(player.getTime()) >= resume) or BUILTIN.getInfoBool('SeekEnabled','Player')):
+                        if ((int(player.getTime()) >= resume) or BUILTIN.getInfoBool('Player.SeekEnabled')):
                             passed = True
                             break
                     else: wait -= 1
@@ -657,11 +657,11 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         def __vfs(path, citem, cnt=3):
             def __fileList(citem, fileList=[]):
-                return PROPERTIES.preemptActivity(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}', Builder().buildVideo, *(citem,True))
+                return PROPERTIES.preemptActivity('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(32140)), Builder().buildVideo, *(citem,True))
 
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 if isRadio({'path':[path]}): return True
-                DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}')
+                DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(32140)))
                 tmpcitem = citem.copy()
                 tmpcitem.update({'name':FileAccess._getMD5(citem['path']),'path':[path]})
                 tmpcitem['id'] = getChannelID(tmpcitem['name'], tmpcitem['path'], random.randrange(1, CHANNEL_LIMIT, 1), 'validatePaths')
@@ -672,10 +672,10 @@ class Manager(xbmcgui.WindowXMLDialog):
                         if __seek(random.choice(fileList)): return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]PASSED![/B]')
                         else:
                             retval = DIALOG.yesnoDialog(LANGUAGE(30202),customlabel='Try Again (%s)'%(cnt))
-                            if   retval == 1: return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]OVERRIDE![/B]')
+                            if   retval == 1: return DIALOG.notificationDialog('%s %s: [B]OVERRIDE![/B]'%(LANGUAGE(32098),LANGUAGE(32093)))
                             elif retval == 2: cnt -=1
                             else: break
-                return not bool(DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]FAILED![/B]'))
+                return not bool(DIALOG.notificationDialog('%s %s: [B]FAILED![/B]'%(LANGUAGE(32098),LANGUAGE(32093))))
         if path: 
             path = __convert(path)
             if __vfs(path, citem): return __set(path, citem)
@@ -766,7 +766,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                                   "enable"  : True,
                                   "radio"   : radio,
                                   "favorite": False})
-                    self.newChannels[number-1] = citem
+                    self.newChannels[number-1] = Globals._cleanGroups(citem)
             if self.madeChanges and self.launchManager: self.fillChanList(self.newChannels,True,focus=number)
             return True
                 
@@ -792,7 +792,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 tmpcitem = citem.copy()
                 tmpcitem['id'] = getChannelID(citem['name'], citem['path'], random.random())
                 start_time = time.time()
-                fileList   = PROPERTIES.preemptActivity(f'{LANGUAGE(32098)} {LANGUAGE(32093)}\n{LANGUAGE(32140)}', Builder().buildChannels, *([tmpcitem],True,False))
+                fileList   = PROPERTIES.preemptActivity('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(32140)), Builder().buildChannels, *([tmpcitem],True,False))
                 end_time   = time.time()
                 # self.log('previewChannel: __fileList, id = %s, fileList = %s'%(citem['id'],len(fileList)))
                 return fileList, round(abs(end_time-start_time),2)

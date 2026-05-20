@@ -184,7 +184,7 @@ class MyHandler(BaseHTTPRequestHandler):
                 elif self.path.endswith(f'/{M3UFLE.lower()}'):   return __sendFile(M3UFLEPATH, use_compression)
                 elif self.path.endswith(f'/{GENREFLE.lower()}'): return __sendFile(GENREFLEPATH, use_compression)
                 elif self.path.endswith(f'/{XMLTVFLE.lower()}'): return __sendFile(XMLTVFLEPATH, use_compression)
-                elif self.path.startswith('/filelist/'):         return __sendChunk(self.path, FileAccess.dumpJSON((SETTINGS.getCacheSetting(self.path.replace('/filelist/',''), FileAccess._getMD5(self.path.replace('/filelist/',''))) or [])).encode(encoding=DEFAULT_ENCODING), use_compression)
+                elif self.path.startswith('/filelist/'):         return __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.getCacheSetting(self.path.replace('/filelist/',''), FileAccess._getMD5(self.path.replace('/filelist/','')), default=[])).encode(encoding=DEFAULT_ENCODING), use_compression)
                 elif self.path.startswith('/image/'):            return __sendFile(Globals._unquoteString(self.path.split('/image/')[1]), False)
                 elif self.path.startswith('/api/'):
                     data = None
@@ -192,7 +192,7 @@ class MyHandler(BaseHTTPRequestHandler):
                     elif self.path == f'/api/{SERVERFLE}' : data = self.service.tasks.Multiroom(service=self.service).getServers()
                     elif self.path == f'/api/{LIBRARYFLE}': data = Library(self.service).getLibrary()
                     elif self.path == f'/api/{CHANNELFLE}': data = Channels().getChannels()
-                    elif self.path == f'/api/{LOGSFLE}'   : data = (SETTINGS.getCacheSetting('LOGS', FileAccess._getMD5(datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d'))) or {})
+                    elif self.path == f'/api/{LOGSFLE}'   : data = SETTINGS.getCacheSetting('LOGS', FileAccess._getMD5(datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d')), default={})
                     if not data is None:
                         return __sendChunk(self.path, FileAccess.dumpJSON(data,idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
                 elif self.path.endswith('.html'):
@@ -261,7 +261,7 @@ class HTTP(Thread):
             if not silent: DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
             SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
 
-        def __cancel(wait=M3U_REFRESH):
+        def __cancel(wait=1.0):
             try:
                 if self.httpd.is_alive():
                     if hasattr(self.httpd, 'cancel'): self.httpd.cancel()

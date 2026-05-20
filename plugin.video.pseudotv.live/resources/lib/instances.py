@@ -71,12 +71,12 @@ class Instances(object):
         return True
         
         
-    def getSettings(self, instance=ADDON_NAME):
-        self.log(f"getSettings {instance}")
-        return self._load(self.getPVRInstancePath(instance))
+    def getSettings(self, instanceName=ADDON_NAME):
+        self.log(f"getSettings {instanceName}")
+        return self._load(self.getPVRInstancePath(instanceName))
         
         
-    def setSettings(self, instance=ADDON_NAME, settings={}, silent=None):
+    def setSettings(self, instanceName=ADDON_NAME, settings={}, silent=None):
         # https://github.com/xbmc/xbmc/pull/23648 todo proper instance api support when merged.
         ### kodi api hack | unreliable in piers
         # if isinstance(addon, xbmcaddon.Addon):
@@ -98,25 +98,26 @@ class Instances(object):
         ###
         if silent is None: silent = self.settings.getSettingBool('Enable_Kodi_Access')
         addon = self.settings.hasAddon(PVR_CLIENT_ID,notify=True)
-        if self._save(self.getPVRInstancePath(instance),settings):
+        if self._save(self.getPVRInstancePath(instanceName),settings):
             if not silent: 
                 self.settings.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
             self.properties.setPropTimer('chkPVRRefresh')
         
 
-    def getPVRInstanceID(self, instance=ADDON_NAME):
-        return zlib.crc32(instance.encode('utf-8')) % 2147483648
+    def getPVRInstanceID(self, instanceName=ADDON_NAME):
+        #return id within IPTV-Simples limit (32-bit integer).
+        return zlib.crc32(instanceName.encode(DEFAULT_ENCODING)) % 2147483648
         
         
-    def getPVRInstancePath(self, instance=ADDON_NAME):
-        path = os.path.join(PVR_CLIENT_LOC,f'instance-settings-{self.getPVRInstanceID(instance)}.xml')
-        self.log(f"getPVRInstancePath {instance} => {path}")
-        return path
+    def getPVRInstancePath(self, instanceName=ADDON_NAME):
+        instancePath = os.path.join(PVR_CLIENT_LOC,f'instance-settings-{self.getPVRInstanceID(instanceName)}.xml')
+        self.log(f"getPVRInstancePath {instanceName} => {instancePath}")
+        return instancePath
         
         
-    def chkInstances(self, instance=ADDON_NAME):
-        self.log(f"chkInstances {instance}")
-        if not self.settings.hasPVRInstance(instance):
+    def chkInstances(self, instanceName=ADDON_NAME):
+        self.log(f"chkInstances {instanceName}")
+        if not self.settings.hasPVRInstance(instanceName):
             #clean abandoned configurations.
             files = [filename for filename in FileAccess.listdir(PVR_CLIENT_LOC)[1] if filename.endswith('.xml')]
             for file in files:
@@ -132,15 +133,13 @@ class Instances(object):
                             try: name = match.group(1)
                             except Exception: name = ""
                             
-                        if instance.lower() == name.replace('%s - '%(ADDON_NAME),'').lower():
+                        if instanceName.lower() == name.replace('%s - '%(ADDON_NAME),'').lower():
                             #auto remove any duplicate entries with the same instance name.
                             FileAccess.delete(os.path.join(PVR_CLIENT_LOC,file))
                             self.log('[%s] chkInstances, removing duplicate entry %s'%(PVR_CLIENT_ID,file))
                     except Exception as e:
                         self.log('[%s] chkInstances, path = %s, failed to open file = %s\n%s'%(PVR_CLIENT_ID,PVR_CLIENT_LOC,file,e))
                         continue
-        #create new configuration.
-        self.settings.setPVRLocal(instance)
 
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
@@ -149,8 +148,8 @@ class Instances(object):
                 'm3uRefreshMode'                :'1',
                 'm3uRefreshIntervalMins'        :'%s'%(M3U_REFRESH),
                 'm3uRefreshHour'                :'0',
-                'connectioncheckinterval'       :'%s'%(M3U_REFRESH*2),
-                'connectionchecktimeout'        :'%s'%(M3U_REFRESH*4),
+                'connectioncheckinterval'       :'%s'%(M3U_INTERVAL),
+                'connectionchecktimeout'        :'%s'%(M3U_TIMEOUT),
                 'defaultProviderName'           :ADDON_NAME,
                 'enableProviderMappings'      :'true',
                 # 'providerMappingFile'         :PROVIDERFLEPATH,#todo

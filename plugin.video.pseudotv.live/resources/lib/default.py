@@ -51,9 +51,10 @@ if __name__ == '__main__':
                 
             else:
                 try:    fitem, nitem = LISTITEMS.buildDictListItem(sys.listitem), {}
-                except: fitem, nitem = Globals._decodePlot(Globals._getInfoLabel('Plot')), Globals._decodePlot(Globals._getInfoLabel('NextPlot'))
+                except: fitem, nitem = Globals._decodePlot(Globals._getInfoLabel('ListItem.Plot')), Globals._decodePlot(Globals._getInfoLabel('ListItem.NextPlot'))
+                print('test',sysInfo.get("vid",""),FileAccess._decodeString(sysInfo.get("vid","")))
                 chid, vid   = (sysInfo.get("chid")  or fitem.get('citem',{}).get('id')), FileAccess._decodeString(sysInfo.get("vid",""))
-                name, title = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ChannelName')), (Globals._unquoteString(sysInfo.get('title','')) or Globals._getInfoLabel('label'))
+                name, title = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ListItem.ChannelName')), (Globals._unquoteString(sysInfo.get('title','')) or Globals._getInfoLabel('ListItem.label'))
                 sysInfo.update({'mode':sysInfo.get('mode'),'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':vid,'name':name,'title':title,'radio':sysInfo.get('mode') == "radio"})
                 _run(sysInfo.get('mode'), sysInfo)
     except Exception as e: 

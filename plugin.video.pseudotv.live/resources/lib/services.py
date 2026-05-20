@@ -116,13 +116,13 @@ class Player(xbmc.Player):
             playingItem = FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo'))
             if '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid',''):
                 playingItem['isPseudoTV'] = True
-                playingItem['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
-                playingItem['chfolder']   = BUILTIN.getInfoLabel('Folderpath','Player')
-                playingItem['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
+                playingItem['chfile']     = BUILTIN.getInfoLabel('Player.Filename')
+                playingItem['chfolder']   = BUILTIN.getInfoLabel('Player.Folderpath')
+                playingItem['chpath']     = BUILTIN.getInfoLabel('Player.Filenameandpath')
                 playingItem['isfiller']   = self.isPlayingFiller()
                 #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
-                playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')))})
-                playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')))})
+                playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('VideoPlayer.Plot')))})
+                playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('VideoPlayer.NextPlot')))})
                 playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.curchannels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
                 playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
                 PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(playingItem))
@@ -164,21 +164,21 @@ class Player(xbmc.Player):
 
     def getPlayerProgress(self):
         if self.isPlaying(): return abs(int((self.getRemainingTime() / self.getPlayerTime()) * 100) - 100)
-        else:                return int((BUILTIN.getInfoLabel('Progress','Player') or '-1'))
+        else:                return int((BUILTIN.getInfoLabel('Player.Progress') or '-1'))
 
 
     def getTimeLabel(self, prop: str='TimeRemaining') -> int and float: #prop='EpgEventElapsedTime'
-        if self.isPlaying(): return timeString2Seconds(BUILTIN.getInfoLabel('%s(hh:mm:ss)'%(prop),'Player'))
+        if self.isPlaying(): return timeString2Seconds(BUILTIN.getInfoLabel('Player.%s(hh:mm:ss)'%(prop)))
         else:                return -1
 
 
     def isPlayingFiller(self):
-        if self.isPlaying(): return isFiller({'genre':BUILTIN.getInfoLabel('Genre(comma)','VideoPlayer').split(',')})
+        if self.isPlaying(): return isFiller({'genre':BUILTIN.getInfoLabel('VideoPlayer.Genre(comma)').split(',')})
         else:                return isFiller(self.playingItem.get('fitem',{}))
         
         
     def isNextFiller(self):
-        if self.isPlaying(): return isFiller({'genre':BUILTIN.getInfoLabel('NextGenre(comma)','VideoPlayer').split(',')})
+        if self.isPlaying(): return isFiller({'genre':BUILTIN.getInfoLabel('VideoPlayer.NextGenre(comma)').split(',')})
         else:                return isFiller(self.playingItem.get('nitem',{}))
 
 
@@ -375,10 +375,10 @@ class Player(xbmc.Player):
         
     @debounceit(OSD_TIMER)
     def toggleInfo(self, state: bool=SETTINGS.getSettingBool('Enable_OnInfo')):
-        if state and self.isPlayingPseudoTV() and not self.playingItem.get('isfiller',True) and not BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
+        if state and self.isPlayingPseudoTV() and not self.playingItem.get('isfiller',True) and not BUILTIN.getInfoBool('Window.IsVisible(fullscreeninfo)'):
             BUILTIN.executewindow('ActivateWindow(fullscreeninfo)')
             timerit(self.toggleInfo)(float(OSD_TIMER),False)
-        elif not state and BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window'):
+        elif not state and BUILTIN.getInfoBool('Window.IsVisible(fullscreeninfo)'):
             BUILTIN.executebuiltin('Action(back)')
             BUILTIN.executebuiltin('Dialog.Close(fullscreeninfo)')
         else: return
@@ -471,10 +471,10 @@ class Service(object):
     pendingInterrupt = PROPERTIES.setPendingInterrupt(False)
     pendingShutdown  = PROPERTIES.setPendingShutdown(False)
     pendingRestart   = PROPERTIES.setPendingRestart(False)
-    jsonQue          = set(SETTINGS.getCacheSetting('jsonQue') or [])
-    postQue          = set(SETTINGS.getCacheSetting('postQue') or [])
-    logoQue          = set(SETTINGS.getCacheSetting('logoQue') or [])
-    imageCache       = OrderedDict(SETTINGS.getCacheSetting('imageCache') or {})
+    jsonQue          = set(SETTINGS.getCacheSetting('jsonQue', default=[]))
+    postQue          = set(SETTINGS.getCacheSetting('postQue', default=[]))
+    logoQue          = set(SETTINGS.getCacheSetting('logoQue', default=[]))
+    imageCache       = OrderedDict(SETTINGS.getCacheSetting('imageCache', default={}))
 
 
     def __init__(self):
@@ -531,7 +531,7 @@ class Service(object):
          
         
     def _interrupt(self) -> bool: #tasks break
-        pendingInterrupt = any([PROPERTIES.isPendingInterrupt(), self.pendingShutdown, self.pendingRestart, self.isScanning, self._isPlaying()])
+        pendingInterrupt = any([PROPERTIES.isInterruptActivity(), self.pendingShutdown, self.pendingRestart, self.isScanning, self._isPlaying()])
         if pendingInterrupt != self.pendingInterrupt:
             self.pendingInterrupt = PROPERTIES.setPendingInterrupt(pendingInterrupt)
             self.log('_interrupt, pendingInterrupt = %s'%(self.pendingInterrupt))
@@ -539,7 +539,7 @@ class Service(object):
     
 
     def _suspend(self) -> bool: #tasks continue
-        pendingSuspend = any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
+        pendingSuspend = any([PROPERTIES.isSuspendActivity(),BUILTIN.isSettingsOpened()])
         if pendingSuspend != self.pendingSuspend:
             self.pendingSuspend = PROPERTIES.setPendingSuspend(pendingSuspend)
             self.log('_suspend, pendingSuspend = %s'%(self.pendingSuspend))

@@ -106,10 +106,10 @@ class JSONRPC(object):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(float(SETTINGS.getSettingInt('RPC_Wait'))) # This is the critical line
             sock.connect((SETTINGS.getIP(), 9090))
-            sock.sendall(command.encode('utf-8'))
+            sock.sendall(command.encode(DEFAULT_ENCODING))
             response = sock.recv(4096)
             self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')))
-            return FileAccess.loadJSON(response.decode('utf-8'))
+            return FileAccess.loadJSON(response.decode(DEFAULT_ENCODING))
         except socket.timeout:
             self.log("sendRPC, JSONRPC Timed out!", xbmc.LOGERROR)
             return None
@@ -130,44 +130,51 @@ class JSONRPC(object):
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, media='video', depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        def __chkitem(path, f):
-            if chkDuration:
-                item['duration'] = self.getDuration(item.get('file'),item, accurate=bool(SETTINGS.getSettingInt('Duration_Type')))
-            
+    def walkFileDirectory(self, path, media='video', limit=None, depth=None, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), dir={'label':'resources'}):
+        if depth is None: depth = SETTINGS.getSettingInt('Recursive_Depth')
+        if limit is None: limit = CHANNEL_LIMIT * depth
         walk = {}
-        self.log('walkFileDirectory, walking %s, depth = %s'%(path,depth))
+        walk_depth = depth
+        subs = []
+        self.log('walkFileDirectory, walking %s, limit = %s, depth = %s'%(path,limit,depth))
         items, limits, errors = self.getDirectory({"directory":path,"media":media},True,checksum,expiration)
-        for idx, item in enumerate(items):
-            if item.get('filetype') == 'file':
-                __chkitem(item)
-                if item['duration'] == 0: continue
-                walk.setdefault(path,[]).append(item if retItem else item.get('file'))
-            elif item.get('filetype') == 'directory' and depth > 0:
-                depth -= 1
-                walk.update(self.walkFileDirectory(item.get('file'), media, depth, chkDuration, retItem, checksum, expiration))
+        for item in items:
+            if self.service._interrupt(): break
+            elif item.get('filetype') == 'file' and limit > 0:
+                limit -= 1
+                accurate = bool(SETTINGS.getSettingInt('Duration_Type'))
+                item['duration'] = self.getDuration(item.get('file'),item,accurate)
+                walk.setdefault(dir.get('label','root'),[]).append(item)
+            elif item.get('filetype') == 'directory' and walk_depth > 0:
+                walk_depth -= 1
+                subs.append(item)
+        [walk.update(self.walkFileDirectory(sub.get('file'), media, limit, depth, checksum, expiration, dir=sub)) for sub in subs if sub.get('file') and limit > 0 and not self.service._sleep(CPU_CYCLE)]
+        self.log('walkFileDirectory, walking finished')
         return walk
                 
 
-    def walkListDirectory(self, path, exts=[], depth=SETTINGS.getSettingInt('Recursive_Depth'), chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        def __chkfile(path, f):
+    def walkListDirectory(self, path, exts=[], depth=None, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+        if depth is None: depth = SETTINGS.getSettingInt('Recursive_Depth')
+        def __(path, f):
             if exts and f.lower().endswith(tuple(exts)): return
-            if chkDuration:
-                if self.getDuration(os.path.join(path,f), accurate=bool(SETTINGS.getSettingInt('Duration_Type'))) == 0: return
-            return {True:os.path.join(path,f).replace('\\','/'),False:f}[appendPath]
-            
+            return {'label': os.path.basename(path.rstrip('/')),
+                    'filetype': 'file',
+                    'title': path,
+                    'file': os.path.join(path,f),
+                    'duration':self.getDuration(os.path.join(path,f), accurate=bool(SETTINGS.getSettingInt('Duration_Type')))}
         walk = {}
         path = path.replace('\\','/')
         subs, files = self.getListDirectory(path,checksum,expiration)
-        self.log(f'walkListDirectory, walking {path}, found = ({len(subs)},{len(files)}), appended = {appendPath}, depth = {depth}, exts = {exts}')
-        walk.setdefault(path,[]).extend([_f for _f in [__chkfile(path, file) for file in files] if _f])
+        self.log('walkListDirectory, walking %s, found = (%s,%s), depth = %s, append = %s'%(path,len(subs),len(files),depth,append))
+        items = [__(path, _f) for _f in files if _f]
+        if items: walk.setdefault(path,[]).extend([_i for _i in items if _i])
         for sub in subs:
-            if depth == 0: break
+            if depth <= 0: break
             depth -= 1
-            walk.update(self.walkListDirectory(os.path.join(path,sub), exts, depth, chkDuration, appendPath, checksum, expiration))
+            walk.update(self.walkListDirectory(os.path.join(path,sub), exts, depth, checksum, expiration))
         return walk
                 
-                
+          
     def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         cacheName = 'getListDirectory.%s'%(FileAccess._getMD5(path))
         results   = self.cache.get(cacheName, checksum)
@@ -183,13 +190,13 @@ class JSONRPC(object):
 
     def getIntrospect(self, id):
         param = {"method":"JSONRPC.Introspect","params":{"filter":{"id":id,"type":"method"}}}
-        return self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('BuildVersion','System')).get('result',{})
+        return self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('System.BuildVersion')).get('result',{})
 
 
     def getEnums(self, id, type='', key='enums'):
         self.log('getEnums id = %s, type = %s, key = %s' % (id, type, key))
         param = {"method":"JSONRPC.Introspect","params":{"getmetadata":True,"filterbytransport":True,"filter":{"getreferences":False,"id":id,"type":"type"}}}
-        json_response = self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('BuildVersion','System')).get('result',{}).get('types',{}).get(id,{})
+        json_response = self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('System.BuildVersion')).get('result',{}).get('types',{}).get(id,{})
         return (json_response.get('properties',{}).get(type,{}).get(key) or json_response.get(type,{}).get(key) or json_response.get(key,[]))
 
 
@@ -258,8 +265,10 @@ class JSONRPC(object):
         else:     return self.sendJSON(param).get('result',{}).get('albums', [])
 
      
-    def getEpisode(self, tvshowid, season, episode, cache=True):
-        param = {"method":"VideoLibrary.GetEpisodes","params":{"tvshowid":tvshowid,"season":season,"properties":self.getEnums("Video.Fields.Episode", type='items'),"filter":{"field":"episode","operator":"is","value":str(episode)}}}
+    def getEpisode(self, tvshowid, season, episode=None, cache=True):
+        if not episode is None: filter = {"field":"episode","operator":"is","value":str(episode)}
+        else:                   filter = {}
+        param = {"method":"VideoLibrary.GetEpisodes","params":{"tvshowid":tvshowid,"season":season,"properties":self.getEnums("Video.Fields.Episode", type='items'),"filter":filter}}
         if cache: return self.cacheJSON(param).get('result',{}).get('episodes', [])
         else:     return self.sendJSON(param).get('result',{}).get('episodes', [])
   
@@ -468,16 +477,23 @@ class JSONRPC(object):
         return round(self.cache.get('getDuration.%s'%(FileAccess._getMD5(path)), checksum=FileAccess._getMD5(path)) or self._getRuntime({'file':path}))
 
 
-    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
+    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')): 
+        def __parseDuration(runtime, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
+            duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
+            if   runtime == 0: runtime = duration
+            elif round(percentDiff(runtime, duration)) <= RUNTIME_THRESHOLD: runtime = duration
+            if save and duration != runtime: self.queDuration(item, runtime)
+            return runtime
+            
         if not item: item = {'file':path}
         runtime = self._getRuntime(item) #player runtime, fallback meta provider runtime
         if runtime == 0 or accurate:
             duration = 0
             if isStack(path):# handle "stacked" videos
-                for file in splitStacks(path): duration += self.__parseDuration(runtime, file)
-            else: duration = self.__parseDuration(runtime, path, item, save)
+                for file in splitStacks(path): duration += __parseDuration(runtime, file)
+            else: duration = __parseDuration(runtime, path, item, save)
             if duration > 0: runtime = duration
-        self.log(f"getDuration [{runtime}] {path}, accurate = {accurate}, save ={save}")
+        self.log(f"getDuration [{runtime}], {path}, accurate = {accurate}, save ={save}")
         return runtime
 
 
@@ -487,15 +503,6 @@ class JSONRPC(object):
         return total
 
 
-    def __parseDuration(self, runtime, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
-        self.log("__parseDuration, runtime = %s, path = %s, save = %s" % (runtime, path, save))
-        duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
-        if round(percentDiff(runtime, duration)) > 25: duration = runtime
-        if save and duration != runtime: self.queDuration(item, duration)
-        self.log(f"__parseDuration [{runtime}] {path}, save = {save}")
-        return duration
-  
-  
     def queDuration(self, item={}, duration=0, runtime=0):
         mtypes = {'video'      : {"method":"Files.SetFileDetails"             ,"params":{"file"        :item.get('file',"")         ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
                   'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
@@ -571,7 +578,7 @@ class JSONRPC(object):
         else: #vfs path
             getDirectory = True
             param["media"]      = media
-            param["directory"]  = escapeDirJSON(path)
+            param["directory"]  = path#escapeDirJSON(path)
             param["properties"] = self.getEnums("List.Fields.Files", type='items')
         self.log("requestList, id: %s, getDirectory = %s, media = %s, limit = %s, sort = %s, query = %s, limits = %s\npath = %s"%(citem['id'],getDirectory,media,page,sort,query,limits,path))
         
@@ -696,6 +703,7 @@ class JSONRPC(object):
                 for result in results:
                     if result.get('label','').lower().startswith(dir.lower()):
                         self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
+                        
                         channels, limits, errors = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getProcessID(),expiration=datetime.timedelta(minutes=15))
                         for item in channels:
                             if item.get('label','').lower() == sysInfo.get('name','').lower() and Globals._decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
@@ -770,3 +778,37 @@ class JSONRPC(object):
         self.log('toggleShowLog, state = %s'%(state))
         if self.getSettingValue("debug.showloginfo") != state:
             self.setSettingValue("debug.showloginfo",state,queue=False)
+
+
+    def addTrailer(self, item, trailers={}):
+        if   'movieid' in item: key = 'movies'
+        elif 'tvshowid'in item: key = 'tvshows'
+        else: return trailers
+        fitem = item.copy()
+        dur = self.getDuration(fitem.get('trailer'), accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=False)
+        if dur > 0:
+            if 'streamdetails' in fitem: fitem.pop('streamdetails')
+            fitem.update({'label':'%s - %s'%(item.get("label",""),LANGUAGE(30187)),
+                         'episodetitle':'%s - %s'%(fitem.get("episodetitle",""),LANGUAGE(30187)),
+                         'episodelabel':'%s - %s'%(fitem.get("episodelabel",""),LANGUAGE(30187)),
+                         'duration':dur, 
+                         'file':fitem.get('trailer'),
+                         'added':time.time()})#todo remove old entries.
+            self.log(f'addTrailer [{key}] {item.get('duration',0)}, {item.get('file')}')
+            for genre in (fitem.get('genre',[]) or ['resources']):
+                trailers.setdefault(key,{}).setdefault(genre.lower(),[]).append(item)
+        return trailers
+                
+                
+    def setTrailers(self, trailers={}):
+        self.log(f'setTrailers [Movies] = {len(trailers.get('movies',{}))}')
+        self.log(f'setTrailers [TVShows] = {len(trailers.get('tv',{}))}')
+        return SETTINGS.setCacheSetting('trailers', trailers)
+                                
+                        
+    def getTrailers(self, genre=None):
+        trailers = SETTINGS.getCacheSetting('trailers', default={})
+        self.log(f'getTrailers [Movies] = {len(trailers.get('movies',{}))}')
+        self.log(f'getTrailers [TVShows] = {len(trailers.get('tv',{}))}')
+        if not genre is None: return trailers.get(genre,[])
+        return trailers #return all

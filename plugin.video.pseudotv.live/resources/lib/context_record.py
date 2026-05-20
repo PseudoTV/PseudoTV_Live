@@ -34,9 +34,9 @@ class Record(object):
     def add(self):
         if not PROPERTIES.isRunning('Record.add'):
             with PROPERTIES.chkRunning('Record.add'):
-                now   = timeString2Seconds(BUILTIN.getInfoLabel('Time(hh:mm:ss)','System'))
-                start = timeString2Seconds(BUILTIN.getInfoLabel('StartTime').split(' ')[0] +':00')
-                stop  = timeString2Seconds(BUILTIN.getInfoLabel('EndTime').split(' ')[0] +':00')
+                now   = timeString2Seconds(BUILTIN.getInfoLabel('System.Time(hh:mm:ss)'))
+                start = timeString2Seconds(BUILTIN.getInfoLabel('ListItem.StartTime').split(' ')[0] +':00')
+                stop  = timeString2Seconds(BUILTIN.getInfoLabel('ListItem.EndTime').split(' ')[0] +':00')
                 if (now > start and now < stop):
                     opt  ='Incl. Resume'
                     seek = (now - start) - OSD_TIMER #add rollback buffer
@@ -83,6 +83,6 @@ if __name__ == '__main__':
     try:    param = sys.argv[1]
     except Exception: param = None
     log('Record: __main__, param = %s'%(param))
-    if   param == 'add': Record(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot'))).add()
-    elif param == 'del': Record(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot'))).remove()
+    if   param == 'add': Record(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('ListItem.Plot'))).add()
+    elif param == 'del': Record(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('ListItem.Plot'))).remove()
     

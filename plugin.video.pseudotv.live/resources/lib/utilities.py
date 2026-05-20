@@ -106,7 +106,7 @@ class Utilities(object):
         def __postLog(data):
             try:
                 session = requests.Session()
-                response = session.post('https://paste.kodi.tv/' + 'documents', data=data.encode('utf-8'), headers={'User-Agent':'%s: %s'%(ADDON_ID, ADDON_VERSION)})
+                response = session.post('https://paste.kodi.tv/' + 'documents', data=data.encode(DEFAULT_ENCODING), headers={'User-Agent':'%s: %s'%(ADDON_ID, ADDON_VERSION)})
                 if 'key' in response.json():
                     return True, 'https://paste.kodi.tv/' + response.json()['key']
                 elif 'message' in response.json():

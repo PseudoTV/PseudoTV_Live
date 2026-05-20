@@ -232,8 +232,8 @@ class AVIParser:
 
     def parseStreamHeader(self, data):
         try:
-            self.StreamHeader.fccType = data.chunk[0:4].decode('utf-8')
-            self.StreamHeader.fccHandler = data.chunk[4:8].decode('utf-8')
+            self.StreamHeader.fccType = data.chunk[0:4].decode(DEFAULT_ENCODING)
+            self.StreamHeader.fccHandler = data.chunk[4:8].decode(DEFAULT_ENCODING)
             header = struct.unpack('<ihhiiiiiiiid', data.chunk[8:])
             self.StreamHeader.dwFlags = header[0]
             self.StreamHeader.wPriority = header[1]
@@ -254,7 +254,7 @@ class AVIParser:
 
     def getChunkOrList(self):
         try: 
-            data = self.File.readBytes(4).decode('utf-8')
+            data = self.File.readBytes(4).decode(DEFAULT_ENCODING)
         except: 
             data = self.File.read(4)
         

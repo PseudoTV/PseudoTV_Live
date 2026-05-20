@@ -37,8 +37,8 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         self.log('__init__, args = %s, kwargs = %s'%(args,kwargs))
         with BUILTIN.busy_dialog():
             self.jsonRPC = JSONRPC()
-            if BUILTIN.getInfoBool('Playing','Player'): self.window = xbmcgui.Window(12005) 
-            else:                                       self.window = xbmcgui.Window(10000) 
+            if BUILTIN.getInfoBool('Player.Playing'): self.window = xbmcgui.Window(12005) 
+            else:                                     self.window = xbmcgui.Window(10000) 
             self.window_w, self.window_h = WH
             self.advRule  = (kwargs.get("ADV_RULES") or False)
             self.focusIDX = (kwargs.get("Focus_IDX") or 1)
@@ -62,7 +62,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         try: 
             # self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
             # if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,self.vinView)
-            if BUILTIN.getInfoBool('Playing','Player'): BUILTIN.executewindow('ActivateWindow(fullscreenvideo)')
+            if BUILTIN.getInfoBool('Player.Playing'): BUILTIN.executewindow('ActivateWindow(fullscreenvideo)')
             self.doModal()
         except Exception as e: 
             self.log("__init__, failed! %s"%(e), xbmc.LOGERROR)
@@ -74,8 +74,8 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
 
 
     def onInit(self):
-        if not BUILTIN.getInfoBool('IsFullscreen','System'):
-            DIALOG.okDialog(LANGUAGE(32097)%(BUILTIN.getInfoLabel('ScreenResolution','System')))
+        if not BUILTIN.getInfoBool('System.IsFullscreen'):
+            DIALOG.okDialog(LANGUAGE(32097)%(BUILTIN.getInfoLabel('System.ScreenResolution')))
             
         self.posx, self.posy = 0, 0
         

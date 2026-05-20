@@ -27,7 +27,7 @@ MIN_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Min_Days')    or "1"))
 MAX_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Max_Days')    or "3"))
 OSD_TIMER           = int((REAL_SETTINGS.getSetting('OSD_Timer')   or "5"))
 EPG_ARTWORK         = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
-
+RUNTIME_THRESHOLD   = 15 #todo user setting % of allowed difference between runtime and duration before overriding runtime.
 #file paths
 CACHE_LOC           = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
 LOGO_LOC            = os.path.join(CACHE_LOC,'logos')
@@ -36,7 +36,7 @@ M3UFLEPATH          = os.path.join(CACHE_LOC,M3UFLE)
 XMLTVFLEPATH        = os.path.join(CACHE_LOC,XMLTVFLE)
 GENREFLEPATH        = os.path.join(CACHE_LOC,GENREFLE)
 PROVIDERFLEPATH     = os.path.join(CACHE_LOC,PROVIDERFLE)
-CHANNELFLEPATH      = os.path.join(CACHE_LOC,CHANNELFLE)
+
 
 class Globals:
     @staticmethod
@@ -114,8 +114,8 @@ class Globals:
         return (xbmc.getCondVisibility('%s.%s'%(param,key)) or False)
         
     @staticmethod
-    def _getInfoLabel(key, param='ListItem', default=''):
-        return (xbmc.getInfoLabel('%s.%s'%(param,key)) or "")
+    def _getInfoLabel(key, default=''):
+        return (xbmc.getInfoLabel(key) or default)
         
     @staticmethod
     def _openSettings(ctl=(0,1), id=ADDON_ID):
@@ -127,7 +127,7 @@ class Globals:
         return True
 
     @staticmethod
-    def _openGuide(instance=ADDON_NAME):
+    def _openGuide(instanceName=ADDON_NAME):
         def __match(match):
             for name in FileAccess.listdir('pvr://channels/tv/')[0]:
                 if name.lower().startswith(Globals._quoteString(match.lower())):
@@ -135,7 +135,7 @@ class Globals:
             return match, __match('All channels')
         if Globals._getInfoBool('HasTVChannels','Pvr'):
             try:
-                instance, path = __match(instance)
+                instanceName, path = __match(instanceName)
                 xbmc.executebuiltin("ReplaceWindow(TVGuide,%s)"%(path))
             except Exception: xbmc.executebuiltin("ReplaceWindow(TVGuide)")
         else: Globals._openSettings()
@@ -160,7 +160,7 @@ class Globals:
     def _buildWebImage(name, image=None, fallback=LOGO):
         image = Globals._cleanImage(image)
         if name and image is None: 
-            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache') or {}).get(name), f'http://{Globals._getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logo/{Globals._quoteString(name)}')
+            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache', default={})).get(name), f'http://{Globals._getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logo/{Globals._quoteString(name)}')
         elif image.startswith(('image://')):
             image = f'{Globals._getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
         elif not image.startswith(('http','resource')):
@@ -242,10 +242,18 @@ class Globals:
             
     @staticmethod  
     def _cleanGroups(citem={}):
-        if ADDON_NAME not in citem.get('group'): citem.setdefault('group',[]).append(ADDON_NAME)
         if REAL_SETTINGS.getSetting('Enable_Grouping') == "true":
-            if citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']: citem['group'].append(LANGUAGE(32019))
+            #Default
+            if ADDON_NAME not in citem.get('group'): citem.setdefault('group',[]).append(ADDON_NAME)
+            #Favorites
+            if citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']:   citem['group'].append(LANGUAGE(32019))
             elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']: citem['group'].remove(LANGUAGE(32019))
+            #Type
+            if citem.get('type') not in citem.get('group'): citem['group'].append(citem.get('type'))
+            #Genre
+            if citem.get('type') in [LANGUAGE(32006),LANGUAGE(32007),LANGUAGE(32009)]:#"TV Genres","Movie Genres","Mixed Genres"
+                citem['group'].append(citem.get('type').replace(f' {LANGUAGE(32014)}','').replace(f' {LANGUAGE(32015)}','').replace(f' {LANGUAGE(32010)}',''))
+        else: citem['group'] = [ADDON_NAME]
         citem['group'] = sorted(set(citem['group']))
         return citem
              

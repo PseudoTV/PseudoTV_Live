@@ -56,7 +56,7 @@ class Plugin(object):
             
     def _updateSysInfo(self):
         self.log('[%s] _updateSysInfo'%(self.sysInfo.get('chid')))
-        if not self.player.isPlaying(): DIALOG.notificationDialog(f'{LANGUAGE(32248)} {LANGUAGE(30223)}\n{LANGUAGE(32140)}')
+        if not self.player.isPlaying(): DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32248),LANGUAGE(30223),LANGUAGE(32140)))
         with PROPERTIES.suspendActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
         if pvritem:
@@ -156,12 +156,12 @@ class Plugin(object):
                 self.sysInfo["progresspercentage"] = -1
                 self.sysInfo['name'] = self.sysInfo['fitem'].get('label')
                 self.sysInfo['vid']  = self.sysInfo['fitem'].get('file')
-                DIALOG.notificationDialog(f"{LANGUAGE(32185)}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
+                DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Channel')}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
                 listitem = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
             else:
                 #STRM called from Guide, presumably live; workaround for Kodi bug w/strm handling in setResolvedUrl.
                 listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
-            listitem.setProperty('sysInfo',Globals._encodeString(self.sysInfo))
+            listitem.setProperty('sysInfo',FileAccess._encodeString(self.sysInfo))
             self._play(listitem.getPath(),listitem)
         else:#LIVE called from Guide/Channels.
             listitem = self._setResume(LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
@@ -245,7 +245,7 @@ class Plugin(object):
                 return listitem
             
         self.log('[%s] playPlaylist, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
-        DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Queue')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem']['label']}")
+        DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Playlist')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem']['label']}")
         nextitems = self._getPVRItems()
         listitems = poolit(__buildfItem)(nextitems)
         self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))

@@ -172,7 +172,7 @@ class CustomQueue(object):
         
         if self.service._shutdown(CPU_CYCLE): 
             self._stop()
-        elif not (self.service._interrupt() or self.service._suspend()) and not self.popThread.is_alive(): 
+        elif (not self.service._interrupt() or self.service._suspend()) and not self.popThread.is_alive(): 
             self._run()
             
 

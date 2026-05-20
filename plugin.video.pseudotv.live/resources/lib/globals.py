@@ -39,7 +39,7 @@ def stripRegion(s):
     except Exception: return s
     
 def chanceBool(percent=25):
-    return random.randrange(100) <= percent
+    return random.randrange(100) < percent
 
 def getChannelID(name, path, number, uuid=None):
     if uuid is None: uuid = SETTINGS.getMYUUID()
@@ -94,24 +94,15 @@ def hasFile(file):
     log("Globals: hasFile, file = %s (%s)"%(file,state))
     return state    
 
-def diffRuntime(dur, roundto=15):
-    def ceil_dt(dt, delta):
-        return dt + (datetime.datetime.min - dt) % delta
-    now = datetime.datetime.fromtimestamp(dur)
-    return (ceil_dt(now, datetime.timedelta(minutes=roundto)) - now).total_seconds()
-
-def roundTimeDown(dt, offset=30): # round the given time down to the nearest
-    n = datetime.datetime.fromtimestamp(dt)
-    delta = datetime.timedelta(minutes=offset)
-    if n.minute > (offset-1): n = n.replace(minute=offset, second=0, microsecond=0)
-    else: n = n.replace(minute=0, second=0, microsecond=0)
-    return time.mktime(n.timetuple())
+def roundTimeDown(dt=None, offset=30): # round the given time down to the nearest
+    if dt is None: dt = time.time()
+    offset_seconds = offset * 60
+    return (dt // offset_seconds) * offset_seconds
     
 def roundTimeUp(dt=None, roundTo=60):
-   if dt == None : dt = datetime.datetime.now()
-   seconds = (dt.replace(tzinfo=None) - dt.min).seconds
-   rounding = (seconds+roundTo/2) // roundTo * roundTo
-   return dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond)
+    if dt is None: dt = time.time()
+    round_seconds = roundTo * 60
+    return ((dt + round_seconds - 1) // round_seconds) * round_seconds
    
 def strpTime(datestring, format=DTJSONFORMAT): #convert pvr infolabel datetime string to datetime obj, thread safe!
     try:              return datetime.datetime.strptime(datestring, format)

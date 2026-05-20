@@ -58,13 +58,13 @@ class Background(xbmcgui.WindowXMLDialog):
     def onInit(self):
         try:
             self.log('onInit, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
-            logo      = (self.citem.get('logo')        or BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
-            chname    = (self.citem.get('name')        or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
-            nowTitle  = (self.fitem.get('label')       or BUILTIN.getInfoLabel('Title','VideoPlayer'))
-            nextTitle = (self.nitem.get('showlabel')   or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or chname)
+            logo      = (self.citem.get('logo')        or BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO)
+            chname    = (self.citem.get('name')        or BUILTIN.getInfoLabel('VideoPlayer.ChannelName'))
+            nowTitle  = (self.fitem.get('label')       or BUILTIN.getInfoLabel('VideoPlayer.Title'))
+            nextTitle = (self.nitem.get('showlabel')   or BUILTIN.getInfoLabel('VideoPlayer.NextTitle') or chname)
 
             try: 
-                nextTime = (epochTime(self.nitem['start']).strftime('%I:%M%p') or BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
+                nextTime = (epochTime(self.nitem['start']).strftime('%I:%M%p') or BUILTIN.getInfoLabel('VideoPlayer.NextStartTime'))
                 if not nextTime: return
             except Exception as e: return
                 
@@ -113,7 +113,7 @@ class Replay(xbmcgui.WindowXMLDialog):
     
     def _isVisible(self, control):
         try:              return control.isVisible()
-        except Exception: return (BUILTIN.getInfoBool('Playing','Player') and not bool(BUILTIN.getInfoBool('IsVisible(fullscreeninfo)','Window')) | BUILTIN.getInfoBool('IsVisible(fullscreenvideo)','Window'))
+        except Exception: return (BUILTIN.getInfoBool('Player.Playing') and not bool(BUILTIN.getInfoBool('Window.IsVisible(fullscreeninfo)')) | BUILTIN.getInfoBool('Window.IsVisible(fullscreenvideo)'))
     
     
     def onInit(self):
@@ -266,7 +266,7 @@ class Overlay(object):
                     self._addControl(self.channelBug)
                     
                     id   = self.channelBug.getId()
-                    logo = self.citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
+                    logo = self.citem.get('logo',(BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO))
                     wait = 900 #15mins todo add user settings
                     if   self.forceBugDiffuse:        self.channelBug.setColorDiffuse(self.channelBugColor)
                     elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
@@ -344,12 +344,12 @@ class OnNext(xbmcgui.WindowXMLDialog):
         try:
             self.log('onInit, citem = %s\nfitem = %ss\nnitem = %s'%(self.citem,self.fitem,self.nitem))
             if self.onNextMode in [1,2]: 
-                logo      = (self.citem.get('logo')      or BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
-                chname    = (self.citem.get('name')      or BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
-                nowTitle  = (self.fitem.get('label')     or BUILTIN.getInfoLabel('Title','VideoPlayer'))
-                nextTitle = (self.nitem.get('showlabel') or BUILTIN.getInfoLabel('NextTitle','VideoPlayer') or chname)
+                logo      = (self.citem.get('logo')      or BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO)
+                chname    = (self.citem.get('name')      or BUILTIN.getInfoLabel('VideoPlayer.ChannelName'))
+                nowTitle  = (self.fitem.get('label')     or BUILTIN.getInfoLabel('VideoPlayer.Title'))
+                nextTitle = (self.nitem.get('showlabel') or BUILTIN.getInfoLabel('VideoPlayer.NextTitle') or chname)
 
-                try: nextTime = (epochTime(self.nitem['start']).strftime('%I:%M%p') or BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
+                try: nextTime = (epochTime(self.nitem['start']).strftime('%I:%M%p') or BUILTIN.getInfoLabel('VideoPlayer.NextStartTime'))
                 except Exception as e: return
 
                 if not nextTime: return
@@ -433,7 +433,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             data.update(next_episode)
 
         except Exception: pass
-        if data: timerit(self.jsonRPC.notifyAll)(0.5,*('upnext_data', binascii.hexlify(FileAccess.dumpJSON(data).encode('utf-8')).decode('utf-8'), '%s.SIGNAL'%(ADDON_ID)))
+        if data: timerit(self.jsonRPC.notifyAll)(0.5,*('upnext_data', binascii.hexlify(FileAccess.dumpJSON(data).encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING), '%s.SIGNAL'%(ADDON_ID)))
         
         
     def onAction(self, act):

@@ -64,7 +64,7 @@ class Multiroom(object):
 
 
     def _load(self) -> dict:
-        servers = (SETTINGS.getCacheSetting(self.serverKEY, FileAccess._getMD5(self.serverKEY)) or {})
+        servers = SETTINGS.getCacheSetting(self.serverKEY, FileAccess._getMD5(self.serverKEY), default={})
         PROPERTIES.setHasServers(len(servers.get('servers',{})) > 0)
         SETTINGS.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers.get('servers',{}))]))
         self.log('_load, servers = %s'%(len(servers.get('servers',{}))))
@@ -111,9 +111,9 @@ class Multiroom(object):
                 payload['enabled'] = True
                 servers[payload['name']] = payload
                 self.log('addServer, adding server = %s'%(payload))
-                if payload.get('host') != PROPERTIES.getRemoteHost(): 
-                    DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
-                    SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add IPTV Simple config
+                # if payload.get('host') != PROPERTIES.getRemoteHost(): 
+                DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
+                SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add IPTV Simple config
                 self._setServers(servers)
             else:
                 payload['enabled'] = server.get('enabled',False)
@@ -121,8 +121,8 @@ class Multiroom(object):
                     if payload['enabled']:
                         if payload['online'] != server.get('online',False):
                             DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))
-                        if payload['host'] != server['host']: 
-                            SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #update IPTV Simple config
+                        # if payload['host'] != server['host']: 
+                        SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #update IPTV Simple config
                         if payload.get('settings') != server.get('settings'):
                             [SETTINGS.hasAddon(id) for _,addons in list(payload.get('settings',{}).items()) for id in addons if id.startswith(('resource','plugin'))]
                         if payload.get('resume') != server.get('resume'):
@@ -141,13 +141,12 @@ class Multiroom(object):
       
         with BUILTIN.busy_dialog():
             if not servers: servers = self.getServers()
-            lizLST = []
-            lizLST.extend(poolit(__buildMenuItem)(list(servers.values())))
+            lizLST = poolit(__buildMenuItem)(list(servers.values()))
 
         selects = DIALOG.selectDialog(lizLST,LANGUAGE(32183))
         if not selects is None:
             with BUILTIN.busy_dialog():
-                if self.chkServers([servers.pop(liz.getLabel()) for idx, liz in enumerate(lizLST) if not idx in selects]):
+                if self. _setServers([servers.pop(liz.getLabel()) for idx, liz in enumerate(lizLST) if not idx in selects]):
                     return DIALOG.notificationDialog(LANGUAGE(30046))
 
 
@@ -190,21 +189,21 @@ class Multiroom(object):
                                         DIALOG.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
                                     try: FileAccess.delete(SETTINGS.hasPVRInstance(liz.getLabel()))
                                     except Exception: pass
-                        if changed: self.chkServers(servers)
+                        if changed: self._setServers(servers)
 
 
     def _chkZeroConf(self):
         self.log('_chkZeroConf')
         if SETTINGS.getSetting('ZeroConf_Status') == '[COLOR=red][B]%s[/B][/COLOR]'%(LANGUAGE(32253)):
-            if BUILTIN.getInfoLabel('Platform.Windows','System'): #prompt windows users to dl bonjour service.
+            if BUILTIN.getInfoLabel('System.Platform.Windows'): #prompt windows users to dl bonjour service.
                 BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_ZeroConf_QR'%(ADDON_ID))
             if DIALOG.yesnoDialog(message=LANGUAGE(30129)):
                 if self.jsonRPC.setSettingValue("services.zeroconf",True,queue=False):
                     DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30035)))
                     self.service._que(self.service.tasks.chkDiscovery, 1)
         else: DIALOG.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30034)))
-                    
-            
+                            
+        
     @threadit
     @staticmethod
     def _run(self):

@@ -1,8 +1,10 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
+v.0.7.4+nightly
+- Moved Library, Channels, Server json files to internal database.
+- Improved Fillers, added Extras/Specials to post-roll options.
 
 v.0.7.3+nightly
 - Improved Internal backups and channel export utilities.
-- Moved Library, Channels, Server json files to internal database.
 - Improved Automatic Auto-tuning, new channels if available are added based on your max future guidedata value.
 - Tweaked Image hosting.
 - Improved Kodi PVR Instance support.

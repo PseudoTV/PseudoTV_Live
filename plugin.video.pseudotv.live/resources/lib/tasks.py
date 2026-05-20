@@ -54,18 +54,21 @@ class Tasks(object):
         
     def _host(self):
         self._client()
-        self.migrate() #temp, remove in v.0.7.5.
+        self._migrateChannels() #temp, remove in v.0.7.5.
         self.service._que(self.chkDirs,1)
         self.service._que(self.chkCrash,1)
         self.log('_initialize, _host...')
     
     
-    def migrate(self):
-        if FileAccess.exists(CHANNELFLEPATH):
-            self.log('migrate, importing...')
-            if Backup().importChannels(CHANNELFLEPATH):
-                FileAccess.move(CHANNELFLEPATH,CHANNEL_BACKUP_FLE)
-                PROPERTIES.setPendingRestart()
+    def _migrateChannels(self, old=CACHE_LOC, new=BACKUP_LOC):
+        old_path = os.path.join(old,CHANNELFLE)
+        new_path = os.path.join(new,CHANNELFLE)
+        if FileAccess.exists(old_path):
+            self.log('migrate, importing %s...'%(old_path))
+            if Backup().importChannels(old_path):
+                if old_path != new_path: 
+                    FileAccess.move(old_path,new_path)
+                    self.service._que(self.chkChannels,3)
     
     
     def chkHTTP(self):
@@ -91,7 +94,7 @@ class Tasks(object):
          
 
     def chkCrash(self):
-        citem = (SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM') or {})
+        citem = SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM', default={})
         SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
         if citem:
             self.log('chkCrash\n%s'%(citem))
@@ -143,7 +146,7 @@ class Tasks(object):
         try:              ONLINE_VERSION = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(self.jsonRPC.requestURL(ADDON_URL)))[0]
         except Exception: ONLINE_VERSION = ADDON_VERSION
         UPDATE_AVAILABLE = False
-        LAST_VERSION = (SETTINGS.getCacheSetting('chkVersion.LAST_VERSION') or '0.0.0')
+        LAST_VERSION = SETTINGS.getCacheSetting('chkVersion.LAST_VERSION', default='0.0.0')
         if ADDON_VERSION < ONLINE_VERSION:
             UPDATE_AVAILABLE = True
             DIALOG.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
@@ -151,7 +154,7 @@ class Tasks(object):
             SETTINGS.setCacheSetting('chkVersion.LAST_VERSION', ADDON_VERSION)
             BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
         SETTINGS.setSetting('Update_Status',{True:'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),False:'None'}[UPDATE_AVAILABLE])
-        self.log('chkVersion, installed version = %s, online version = %s, last version = %s'%(ADDON_VERSION,ONLINE_VERSION,LAST_VERSION))
+        self.log('chkVersion, installed = %s, online = %s, last = %s'%(ADDON_VERSION,ONLINE_VERSION,LAST_VERSION))
 
 
     def chkKodiSettings(self):
@@ -168,6 +171,7 @@ class Tasks(object):
     def chkFiles(self):
         if not PROPERTIES.isRunning('Builder.buildChannels'):
             if any([not bool(FileAccess.exists(file)) for file in [M3UFLEPATH,XMLTVFLEPATH,GENREFLEPATH]]): 
+                self.log('chkFiles, missing files! running chkChannels to rebuild.')
                 return self.service._que(self.chkChannels,3)
 
 
@@ -203,7 +207,32 @@ class Tasks(object):
                             # FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
             # pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
         
-
+        
+    def chkTrailers(self, silent=None):
+        if silent is None: silent = BUILTIN.isPlaying()
+        self.log("_chkTrailers, silent = %s"%(silent))
+        #todo clean old trailers by "added" epoch
+        if not PROPERTIES.isRunning('Tasks.chkTrailers'):
+            with PROPERTIES.chkRunning('Tasks.chkTrailers'):
+                trailers = self.jsonRPC.getTrailers()
+                pDialog  = None
+                pHeader  = '%s, %s %ss'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(30187))
+                with DIALOG._progressDialog(LANGUAGE(32015), pHeader, silent) as pDialog:
+                    movies = self.jsonRPC.getMovies()
+                    for midx, movie in enumerate(movies):
+                        if movie.get('trailer'):
+                            pDialog = DIALOG._updateProgress(pDialog,int(midx*100))
+                            trailers = self.jsonRPC.addTrailer(movie, trailers)
+                with DIALOG._progressDialog(LANGUAGE(32014), pHeader, silent) as pDialog:
+                    tvshows  = self.jsonRPC.getTVshows()
+                    for tidx, tvshow in enumerate(tvshows):
+                        if tvshow.get('trailer'):
+                            print(tidx,tvshow)
+                            pDialog = DIALOG._updateProgress(pDialog,int(tidx*100))
+                            trailers = self.jsonRPC.addTrailer(tvshow, trailers)
+                self.jsonRPC.setTrailers(trailers)
+                
+                            
     def chkLibrary(self, types=None, silent=None):
         if silent is None: silent = BUILTIN.isPlaying()
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
@@ -245,11 +274,12 @@ class Tasks(object):
         else:
             self.log('chkChannels, No Channels Configured!')
             if autotune or not SETTINGS.hasAutotuned():
+                self.log('chkChannels, Auto-tuning Channels.')
                 if SETTINGS.setAutotuned(_autotune(automatic=autotune)): PROPERTIES.setPropTimer('chkChanged')
             elif PROPERTIES.hasEnabledServers():                         PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
 
 
-    @debounceit(M3U_REFRESH)
+    @debounceit(M3U_INTERVAL)
     def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):
         self.log('chkPVRRefresh')
         def __toggle(state=True):
@@ -260,7 +290,7 @@ class Tasks(object):
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
                 if brute:
-                    if not self.service.player.isPlaying() and BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System'):
+                    if not self.service.player.isPlaying() and BUILTIN.getInfoBool('System.AddonIsEnabled(%s)'%(PVR_CLIENT_ID)):
                         DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
                         BUILTIN.executewindow('ActivateWindow(home)')
                         __toggle(False), self.service._sleep(M3U_REFRESH), __toggle(True)

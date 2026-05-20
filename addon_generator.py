@@ -109,6 +109,67 @@ def Report():
         fle.write('Language IDS w\duplicate strings: %s\n\n\n'%(json.dumps(find_duplicate_values(lang_ids), indent=4)))
         fle.write('Language IDS not found in py files, possibly only in xml: %s\n\n\n'%(json.dumps(find_unused(lang_ids,lang_ref), indent=4)))
 
+def Clean():
+    def get_py_files(start_path):
+        python_files = []
+        # os.walk yields a 3-tuple (dirpath, dirnames, filenames)
+        for root, dirs, files in os.walk(start_path):
+            for file in files:
+                if file.endswith('.py'):
+                    # Join the directory path and the file name
+                    full_path = os.path.join(root, file)
+                    python_files.append(full_path)
+        return python_files
+
+    def refactor_fstrings(path):
+        files = get_py_files(path)
+        print('starting f-string refactor, files = %s'%(len(files)))
+        for file in files:
+            out = open(file, 'w')
+            for fullline in open(file):
+                linestart = 0
+                print("line: '%s'" % (fullline))
+                while True:
+                    line = fullline[linestart:]
+                    if "f'" not in line and 'f"' not in line:
+                        out.write(line)
+                        break
+                    if "f'" in line:
+                        start = "f'"
+                        end = "'"
+                    elif 'f"' in line:
+                        start = 'f"'
+                        end = '"'
+                    
+                    istart = line.index(start)
+                    iinside = istart + len(start)
+                    if end not in line[iinside:]:
+                        print("skipping problematic part: '%s'" % line.rstrip())
+                        out.write(line)
+                        linestart += len(line)
+                        continue
+                    try:
+                        iend = iinside + line[iinside:].index(end)
+                        part = line[iinside:iend]
+                        matches = re.findall(r'{([^}:]*)(:[^}]*)?}', part)
+                        keys = [key for key, format in matches]
+                        part = re.sub(r'{([^}:]*)((:[^}]*)?)}', r'{\2}', part)
+                        # print('  "%s": matches:%s keys:%s' % (part, matches, keys))
+                        out.write(line[:istart])
+                        out.write(start.replace('f', ''))
+                        out.write(part)
+                        out.write(end)
+                        if len(keys) > 0:
+                            out.write('.format(' + ', '.join(['%s' % (key) for key in keys]) + ')')
+                        #out.write(line[iend+len(end):])
+                        linestart += iend + len(end)
+                    except:
+                        print("skipping problematic line: '%s'" % line.rstrip())
+                        out.write(line)
+                        linestart += len(line)
+
+    #refactor_fstrings(os.path.join(GITPATH,'plugin.video.pseudotv.live'))
+    
 class Generator(object):
     """
         Generates a new addons.xml file from each addons addon.xml file
@@ -277,3 +338,4 @@ if ( __name__ == "__main__" ):
     # start
     Generator()
     Report()
+    Clean()
