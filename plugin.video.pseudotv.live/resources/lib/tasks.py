@@ -113,7 +113,7 @@ class Tasks(object):
         self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200 , 1)#12HRS
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800 , 1)#3HRS
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300   , 1)#5MINS
-        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 120   , 1)#2MINS
+        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 120   , 5)#2MINS
         
         if not self.service.isClient:
             self._chkEpochTimer('chkFiles'    , self.chkFiles         , 900   , 1)#15MINS
@@ -225,15 +225,15 @@ class Tasks(object):
                             break
                         elif movie.get('trailer'):
                             pDialog = DIALOG._updateProgress(pDialog,int(midx*100)//len(movies))
-                            self.service._que(self.jsonRPC.addTrailer,-1,*(movie))
+                            self.service.trailerQue.add(frozenset(movie))
                 with DIALOG._progressDialog('%ss: %s'%(LANGUAGE(32208),LANGUAGE(32014)), pHeader, silent) as pDialog:
                     for tidx, tvshow in enumerate(tvshows):
                         if self.service._interrupt() or self.service._suspend():
-                            self.service._que(self.chkTrailers,-1,*(tvshows[tidx:],None,None))
+                            self.service._que(self.chkTrailers,5,*(tvshows[tidx:],None,None))
                             break
                         elif tvshow.get('trailer'):
                             pDialog = DIALOG._updateProgress(pDialog,int(tidx*100)//len(tvshows))
-                            self.service._que(self.jsonRPC.addTrailer,-1,*(tvshow))
+                            self.service.trailerQue.add(frozenset(tvshow))
                 
                 
     def chkLibrary(self, types=None, silent=None):
@@ -261,18 +261,16 @@ class Tasks(object):
         
 
     def chkChanged(self, channels=None, silent=None):
-        if silent is None: silent = BUILTIN.isPlaying()
         if channels is None: channels = self.getChannels()
         [self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent)) for channel in channels if channel.get('changed',False)]
         
         
     def chkChannels(self, channels=None, silent=None):
         autotune = SETTINGS.getSettingBool('Enable_Autotune')
-        if silent is None: silent = BUILTIN.isPlaying()
         if channels is None: channels = self.getChannels()
         if len(channels) > 0:
             self.log('chkChannels, channels = %s'%(len(channels)))
-            self.service._que(Builder(service=self.service).buildChannels,3,*(channels,False,silent))
+            [self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent)) for channel in channels]
             if SETTINGS.getSettingBool('Build_Filler_Folders'): self._que(self.chkFillers,4,*(channels,silent))
         else:
             Globals._cleanPVRFiles()
@@ -284,8 +282,9 @@ class Tasks(object):
 
 
     @debounceit(M3U_INTERVAL)
-    def chkPVRRefresh(self, brute=SETTINGS.getSettingBool('Enable_PVR_RELOAD')):
-        self.log('chkPVRRefresh')
+    def chkPVRRefresh(self, brute=None):
+        if brute is None: brute = SETTINGS.getSettingBool('Enable_PVR_RELOAD')
+        self.log('chkPVRRefresh, brute = %s'%(brute))
         def __toggle(state=True):
             with BUILTIN.busy_dialog(lock=True):
                 self.log('chkPVRRefresh, __toggle = %s'%(state))
@@ -343,6 +342,11 @@ class Tasks(object):
                         param = FileAccess.loadJSON(self.service.logoQue.pop())
                         self.service._que(library.resources.getLogo,-1,*(param,library.resources.getCache(param),True))
                     except Exception as e: self.log("chkQUES failed!, queuing = %s\nlogoQue: %s\n%s"%(len(self.service.logoQue),param,e))
+                if len(self.service.trailerQue) > 0:
+                    try:
+                        param = dict(self.service.trailerQue.pop())
+                        self.service._que(self.jsonRPC.addTrailer,-1,param)
+                    except Exception as e: self.log("chkQUES failed!, queuing = %s\ntrailerQue: %s\n%s"%(len(self.service.trailerQue),param,e))        
         del library
         
                 

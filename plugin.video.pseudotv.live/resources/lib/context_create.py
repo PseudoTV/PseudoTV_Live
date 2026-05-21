@@ -117,21 +117,7 @@ def _autotune(start=1, count=-1, automatic=False):
         del manager
     PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
     return True
-              
-# @threadit      
-# def _clrLibrary():
-    # #elif mode == 'clear_autotune' : _clrLibrary()
-    # DIALOG.notificationDialog(LANGUAGE(32025))
-    # manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
-    # manager.clrLibraryCache()
-    # del manager       
-    
-# @threadit   
-# def _clrBlacklist():
-    # # elif mode == 'clear_blackList': _clrBlacklist()
-    # DIALOG.notificationDialog(LANGUAGE(32025))
-    # SETTINGS.setSetting('Clear_BlackList','')
-        
+
 if __name__ == '__main__': 
     log('Create: __main__, param = %s'%(sys.argv))
     try:              mode = sys.argv[1]

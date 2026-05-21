@@ -27,18 +27,29 @@ class Info(object):
             listitem = LISTITEMS.buildItemListItem(fitem,fitem.get('media','video'))
         DIALOG.infoDialog(listitem)
             
-class Browse(object):
+class Browse(object): #todo fix with proper container and window
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         log('Browse: __init__, sysARG = %s'%(sysARG))
-        with BUILTIN.busy_dialog():
-            media = '%ss'%(fitem.get('media','video'))
-            path  = fitem.get('citem',{}).get('path')
-            if isinstance(path,list): path = path[0]
-            if '?xsp=' in path:
-                path, params = path.split('?xsp=')
-                path = '%s?xsp=%s'%(path,Globals._quoteString(Globals._unquoteString(params)))
-            log('Browse: target = %s, path = %s'%(media,path))
-        BUILTIN.executewindow('ReplaceWindow(%s,%s,return)'%(media,path))
+        # def __buildMenuItem(item):
+            # media = 'music' if item.get('citem',{}).get('radio',False) else 'video'
+            # return LISTITEMS.buildItemListItem(item, media)
+            
+        # with BUILTIN.busy_dialog():
+            # from jsonrpc import JSONRPC
+            # print('Browse fitem',fitem)
+            # citem = fitem.get('citem',{})
+            # items = JSONRPC().matchChannel(citem.get('name'),citem.get('id'),citem.get('radio'))
+            # items.get('broadcastnext',[]).insert(0,items.get('broadcastnow'))
+            # listitems = poolit(__buildMenuItem)(items)
+
+            # # path  = fitem.get('citem',{}).get('path')
+            # # if isinstance(path,list): path = path[0]
+            # # if '?xsp=' in path:
+                # # path, params = path.split('?xsp=')
+                # # path = '%s?xsp=%s'%(path,Globals._quoteString(Globals._unquoteString(params)))
+            # log('Browse: target = %s, path = %s'%('videos',path))
+        # BUILTIN.executewindow('ReplaceWindow(%s,%s,return)'%('videos',path))
+        DIALOG.notificationDialog(LANGUAGE(32020))
 
 class Match(object):
     SEARCH_SCRIPT  = None
@@ -47,16 +58,16 @@ class Match(object):
     
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         with BUILTIN.busy_dialog():
-            title  = BUILTIN.getInfoLabel('Title')
-            name   = BUILTIN.getInfoLabel('EpisodeName')
+            title  = BUILTIN.getInfoLabel('ListItem.Title')
+            name   = BUILTIN.getInfoLabel('ListItem.EpisodeName')
             dbtype = fitem.get('type').replace('episodes','tvshow').replace('tvshows','tvshow').replace('movies','movie')
             dbid   = (fitem.get('tvshowid') or fitem.get('movieid'))
             log('Match: __init__, sysARG = %s, title = %s, dbtype = %s, dbid = %s'%(sysARG,'%s - %s'%(title,name),dbtype,dbid))
-
-            if SETTINGS.hasAddon(self.EMBUARY_HELPER) and dbid:
-                self.SEARCH_SCRIPT = self.EMBUARY_HELPER
-            elif SETTINGS.hasAddon(self.GLOBAL_SCRIPT):
+           
+            if SETTINGS.hasAddon(self.GLOBAL_SCRIPT):
                 self.SEARCH_SCRIPT = self.GLOBAL_SCRIPT
+            elif SETTINGS.hasAddon(self.EMBUARY_HELPER) and dbid:
+                self.SEARCH_SCRIPT = self.EMBUARY_HELPER
             else: 
                 DIALOG.notificationDialog(LANGUAGE(32000))
             log('Match: SEARCH_SCRIPT = %s'%(self.SEARCH_SCRIPT))
@@ -73,15 +84,15 @@ class Match(object):
             # RunScript(script.globalsearch,movies=true)
             # RunScript(script.globalsearch,tvshows=true&amp;musicvideos=true&amp;songs=true)
             # availableeoptions: movies, tvshows, episodes, musicvideos, artists, albums, songs, livetv, actors, directors
-            BUILTIN.executebuiltin('RunScript(%s)'%('%s,searchstring=%s'%(self.SEARCH_SCRIPT,Gloabls._escapeString('%s,movies=True,episodes=True,tvshows=True,livetv=True'%(Globals._quoteString(title))))))
+            BUILTIN.executebuiltin('RunScript(%s)'%('%s,searchstring=%s'%(self.SEARCH_SCRIPT,Globals._escapeString('%s,movies=True,episodes=True,tvshows=True,livetv=True'%(Globals._quoteString(title))))))
  
 
 if __name__ == '__main__': 
     param = sys.argv[1]
     log('Info: __main__, param = %s'%(param))
-    if   param == 'info':   threadit(Info)(sys.argv ,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
-    elif param == 'browse': threadit(Browse)(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
-    elif param == 'match':  threadit(Match)(sys.argv ,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('Plot')))
+    if   param == 'info':   threadit(Info)(sys.argv ,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('ListItem.Plot')))
+    elif param == 'browse': threadit(Browse)(sys.argv,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('ListItem.Plot')))
+    elif param == 'match':  threadit(Match)(sys.argv ,sys.listitem,Globals._decodePlot(BUILTIN.getInfoLabel('ListItem.Plot')))
         
    
    

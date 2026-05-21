@@ -1144,6 +1144,7 @@ class Dialog(object):
         self.builtin.properties  = self.properties
         self.builtin.settings    = self.settings
         self.settings.dialog     = self
+        self.dialog_lock         = Lock()
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -1334,60 +1335,90 @@ class Dialog(object):
     @contextmanager
     def _progressDialog(self, message='', header=ADDON_NAME, silent=None, background=True):
         if silent is None: silent = self.builtin.isPlaying()
-        if not self.properties.isRunning('_progressDialog'):
-            with self.properties.chkRunning('_progressDialog'):
+        dlg = None
+        with self.dialog_lock:
+            if not self.properties.isRunning('_progressDialog'):
                 if not silent:
+                    self.properties.setRunning('_progressDialog', True) 
                     if background: dlg = xbmcgui.DialogProgressBG()
                     else:          dlg = xbmcgui.DialogProgress()
                     try:
                         dlg.create(header, message)
                         self.log(f'_progressDialog [0% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
-                        yield dlg
-                    finally:
-                        try:
-                            dlg.close()
-                            self.log(f'_progressDialog [100% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
-                        except Exception: pass
-                else: yield True
-        else: yield True
+                    except Exception as e:
+                        self.log(f'_progressDialog, failed! to create dialog: {e}')
+                        self.properties.setRunning('_progressDialog', False)
+                        dlg = None
+        try:
+            if dlg is not None: yield dlg
+            else:               yield True
+        finally:
+            if dlg is not None:
+                with self.dialog_lock:
+                    try:
+                        dlg.close()
+                        self.log(f'_progressDialog [100% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
+                    except Exception: pass
+                    finally: self.properties.setRunning('_progressDialog', False)
 
 
     def _updateProgress(self, dlg=None, percent=1, message='', header=ADDON_NAME):
-        if isinstance(dlg, xbmcgui.DialogProgressBG):
-            if   dlg.isFinished(): return None
-            elif hasattr(dlg, 'update'):
-                self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
-                dlg.update(percent, header, message)
-        elif isinstance(dlg, xbmcgui.DialogProgress):
-            if   dlg.iscanceled(): return None
-            elif hasattr(dlg, 'update'):
-                try:
-                    match   = re.compile(r'(.*?): (.*?)\%', re.IGNORECASE).search(message)
-                    message = '%s: %s'%(header.replace('%s, '%(ADDON_NAME),''),match.group(1))
-                    percent = int(match.group(2))
-                except Exception: pass
-                self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
-                dlg.update(percent, message)
+        if dlg is None or isinstance(dlg, bool): return dlg
+        try:
+            if isinstance(dlg, xbmcgui.DialogProgressBG):
+                if dlg.isFinished(): return None
+                elif hasattr(dlg, 'update'):
+                    self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
+                    dlg.update(percent, header, message)
+                    
+            elif isinstance(dlg, xbmcgui.DialogProgress):
+                if dlg.iscanceled(): return None
+                elif hasattr(dlg, 'update'):
+                    try:
+                        match = re.compile(r'(.*?): (.*?)\%', re.IGNORECASE).search(message)
+                        if match:
+                            message = '%s: %s' % (header.replace('%s, ' % (ADDON_NAME), ''), match.group(1))
+                            percent = int(match.group(2))
+                    except Exception: pass
+                    self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
+                    dlg.update(percent, message)
+        except Exception as e:
+            self.log(f'_updateProgress, failed! Thread error during progress update: {e}')
+            return None
         return dlg
         
         
     def progressDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
         if control is None and int(percent) == 0:
-            control = xbmcgui.DialogProgress()
-            control.create(header, message)  
+            with self.dialog_lock:
+                control = xbmcgui.DialogProgress()
+                control.create(header, message)  
         elif control:
-            if   int(percent) == 100 or control.iscanceled(): return control.close()
-            elif hasattr(control, 'update'): control.update(int(percent), message)
+            try:
+                if int(percent) == 100 or control.iscanceled(): 
+                    control.close()
+                    return None
+                elif hasattr(control, 'update'): 
+                    control.update(int(percent), message)
+            except Exception:
+                return None
         return control
         
         
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
         if control is None and int(percent) == 0:
-            control = xbmcgui.DialogProgressBG()
-            control.create(header, message)
+            with self.dialog_lock:
+                control = xbmcgui.DialogProgressBG()
+                control.create(header, message)
         elif control:
-            if   int(percent) == 100 or control.isFinished(): return control.close()
-            elif hasattr(control,'update'): control.update(int(percent), header, message)
+            try:
+                if int(percent) == 100 or control.isFinished(): 
+                    control.close()
+                    return None
+                elif hasattr(control, 'update'): 
+                    control.update(int(percent), header, message)
+            except Exception:
+                return None
         return control
 
                 

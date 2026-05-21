@@ -259,7 +259,8 @@ class Player(xbmc.Player):
             if playingItem.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             self.jsonRPC.quePlaycount(playingItem.get('fitem',{}),self.rollbackPlaycount)
             self._runActions(RULES_ACTION_PLAYER_STOP, playingItem.get('citem',{}), playingItem, inherited=self)
-        
+            self.playingItem = {}
+            
             
     def _runActions(self, action, citem={}, parameter=None, inherited=None):
         if self.runActions: return self.runActions(action, citem, parameter, inherited)
@@ -474,6 +475,7 @@ class Service(object):
     jsonQue          = set(SETTINGS.getCacheSetting('jsonQue', default=[]))
     postQue          = set(SETTINGS.getCacheSetting('postQue', default=[]))
     logoQue          = set(SETTINGS.getCacheSetting('logoQue', default=[]))
+    trailerQue       = set(SETTINGS.getCacheSetting('trailerQue', default=[]))
     imageCache       = OrderedDict(SETTINGS.getCacheSetting('imageCache', default={}))
 
 
@@ -493,6 +495,7 @@ class Service(object):
             SETTINGS.setCacheSetting('jsonQue'   , self.jsonQue)
             SETTINGS.setCacheSetting('postQue'   , self.postQue)
             SETTINGS.setCacheSetting('logoQue'   , self.logoQue)
+            SETTINGS.setCacheSetting('trailerQue', self.trailerQue)
             SETTINGS.setCacheSetting('imageCache', self.imageCache)
         except Exception: pass
 
@@ -552,8 +555,8 @@ class Service(object):
             else: wait -= CPU_CYCLE
         if wait > 0: self.log('_sleep, remaining = %s'%(wait))
         return False
-                    
-
+                
+                
     def _initialize(self):
         if self.isClient: self._que(self.tasks._client,1)
         else:             self._que(self.tasks._host,1)

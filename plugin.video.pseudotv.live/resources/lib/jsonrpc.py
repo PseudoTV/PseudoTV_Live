@@ -703,10 +703,11 @@ class JSONRPC(object):
                 for result in results:
                     if result.get('label','').lower().startswith(dir.lower()):
                         self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
-                        
                         channels, limits, errors = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getProcessID(),expiration=datetime.timedelta(minutes=15))
                         for item in channels:
-                            if item.get('label','').lower() == sysInfo.get('name','').lower() and Globals._decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
+                            fitem = Globals._decodePlot(item.get('plot',''))
+                            fitem_id = fitem.get('citem',{}).get('id')
+                            if (fitem_id == sysInfo.get('chid') or fitem_id == sysInfo.get('citem',{}).get('id')):
                                 self.log('[%s] getCallback: _matchJSON, found file = %s'%(sysInfo.get('chid'),item.get('file')))
                                 return item.get('file')
    

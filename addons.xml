@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.7.4+nightly" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.7.5+nightly" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
         <import addon="script.module.six" version="1.0.0"/>
@@ -58,15 +58,15 @@
                 </item>
                 <item library="resources/lib/context_create.py" args="add">
                     <label>30114</label>
-                    <visible>[!ListItem.IsPlayable + ListItem.IsFolder] + [!String.IsEmpty(ListItem.Label)]</visible>
+                    <visible>[!ListItem.IsPlayable + ListItem.IsFolder] + [!String.IsEmpty(ListItem.Label) + String.IsEqual(Addon.SettingStr(plugin.video.pseudotv.live,Enable_Autotune),False)]</visible>
                 </item>
                 <item library="resources/lib/context_create.py" args="open_manager">
                     <label>32261</label>
-                    <visible>[String.Contains(ListItem.Plot,"item=")]</visible>
+                    <visible>[String.Contains(ListItem.Plot,"item=") + String.IsEqual(Addon.SettingStr(plugin.video.pseudotv.live,Enable_Autotune),False)]</visible>
                 </item>
                 <item library="resources/lib/context_create.py" args="open_manager">
                     <label>30107</label>
-                    <visible>[!String.Contains(ListItem.Plot,"item=")]</visible>
+                    <visible>[!String.Contains(ListItem.Plot,"item=") + String.IsEqual(Addon.SettingStr(plugin.video.pseudotv.live,Enable_Autotune),False)]</visible>
                 </item>
             </menu>
         </menu>

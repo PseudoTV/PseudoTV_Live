@@ -1430,7 +1430,7 @@ msgid "[B]Next[/B]"
 msgstr ""
 
 msgctxt "#32117"
-msgid "Delete M3U/XMLTV"
+msgid "Delete M3U/XMLTV/Genres"
 msgstr ""
 
 msgctxt "#32118"
@@ -2415,7 +2415,7 @@ msgid "Vignette Non-Linear Stretch"
 msgstr ""
 
 msgctxt "#33198"
-msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\nDisable if you experience system instability."
+msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\nProgress Dialog disabled when running executors."
 msgstr ""
 
 msgctxt "#33201"

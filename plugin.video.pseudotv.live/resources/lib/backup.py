@@ -66,14 +66,16 @@ class Backup(object):
             
     def _getImport(self, file=CHANNEL_BACKUP_FLE):
         if FileAccess.exists(file):
-            return dict(os.path.basename(file).title(), {'name':file, 'channels': FileAccess.getJSON(file).get('channels',[]), 'updated':self.getFileDate(file)})
-        
+            return {os.path.basename(file).title(): { 'name': file, 'channels': FileAccess.getJSON(file).get('channels', []), 'updated': self.getFileDate(file)}}
+        return {}
+    
             
     def getImports(self):
-        keys = [CHANNEL_EXPORT_FLE,CHANNEL_BACKUP_FLE]
-        return list(filter(None,[self._getImport(key) for key in keys]))
-        
-            
+        return {os.path.basename(key).title(): self._getImport(key)[os.path.basename(key).title()]
+                for key in [CHANNEL_EXPORT_FLE, CHANNEL_BACKUP_FLE]
+                if key and FileAccess.exists(key)}
+    
+    
     def hasImports(self):
         return len(self.getImports()) > 0
      

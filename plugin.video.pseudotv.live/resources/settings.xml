@@ -1234,7 +1234,7 @@
                 </setting>
                 <setting id="Enable_Executor" type="boolean" label="30198" help="33198">
                     <level>3</level>
-                    <default>true</default>
+                    <default>false</default>
                     <control type="toggle"/>
                 </setting>
                 <setting id="Playback_Timeout" type="integer" label="30222" help="33222">

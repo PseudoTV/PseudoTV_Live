@@ -676,6 +676,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                             elif retval == 2: cnt -=1
                             else: break
                 return not bool(DIALOG.notificationDialog('%s %s: [B]FAILED![/B]'%(LANGUAGE(32098),LANGUAGE(32093))))
+        
         if path: 
             path = __convert(path)
             if __vfs(path, citem): return __set(path, citem)

@@ -160,7 +160,8 @@ class Builder(object):
         return [info.copy() for _ in range(entries)]
 
 
-    def buildChannels(self, channels: list=[], preview=False, silent=False):
+    def buildChannels(self, channels: list=[], preview=False, silent=None):
+        if silent is None: silent = BUILTIN.isPlaying()
         enableChanged = SETTINGS.getSettingBool('Enable_Changed')
         self.log('buildChannels, channels = %s'%(len(channels)))
         def __needsUpdate(citem, now, fallback, state=True):
@@ -277,7 +278,7 @@ class Builder(object):
                                 self.log("[%s] buildChannels, start (%s) => %s"%(citem['id'],start,self.pMSG))
 
                                 if start > 0:
-                                    with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=None, background=not preview) as self.pDialog:
+                                    with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
                                         self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
                                         if citem.get('radio',False): fileList = self.buildMusic(citem)
                                         else:                        fileList = self.buildVideo(citem)
@@ -561,7 +562,7 @@ class Builder(object):
                     item['art'] = (item.get('art',{}) or dirItem.get('art',{}))
                     item.get('art',{})['icon'] = citem['logo']
                         
-                    if item.get('trailer'): self.service._que(self.jsonRPC.addTrailer,-1,*(item))
+                    if item.get('trailer'): self.service._que(self.jsonRPC.addTrailer,-1,item)
                     if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                         seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
                     else: 
