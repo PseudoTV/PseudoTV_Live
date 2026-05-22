@@ -41,7 +41,7 @@ class ExecutorPool:
             
     def executor(self, func, timeout=None, *args, **kwargs):
         self.log("executor, func = %s, timeout = %s"%(func.__name__,timeout))
-        useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
+        useExecutor = REAL_SETTINGS.getSetting('Enable_Executor').lower() == "true"
         if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
             if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)
@@ -67,7 +67,7 @@ class ExecutorPool:
         
     def executors(self, func, items=[], timeout=None, *args, **kwargs):
         self.log("executors, func = %s, items = %s, timeout = %s"%(func.__name__,len(items),timeout))
-        useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
+        useExecutor = REAL_SETTINGS.getSetting('Enable_Executor').lower() == "true"
         if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
             if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)
@@ -139,7 +139,7 @@ def killit(method):
     @wraps(method)
     def wrapper(wait=None, *args, **kwargs):
         if wait is None: 
-            wait = REAL_SETTINGS.getSettingInt('RPC_Wait')
+            wait = int(REAL_SETTINGS.getSetting('RPC_Wait'))
         monitor  = MONITOR() 
         timeout  = float(wait) if wait >= 0 else None
         response = {'result': None, 'success': False, 'error': ''}

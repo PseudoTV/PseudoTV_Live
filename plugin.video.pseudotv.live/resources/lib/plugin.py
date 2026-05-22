@@ -156,7 +156,7 @@ class Plugin(object):
                 self.sysInfo["progresspercentage"] = -1
                 self.sysInfo['name'] = self.sysInfo['fitem'].get('label')
                 self.sysInfo['vid']  = self.sysInfo['fitem'].get('file')
-                DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Channel')}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
+                DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Channel')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
                 listitem = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
             else:
                 #STRM called from Guide, presumably live; workaround for Kodi bug w/strm handling in setResolvedUrl.
@@ -225,7 +225,7 @@ class Plugin(object):
         self.log('[%s] playVOD, vid = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('vid')))
         self.sysInfo["seek"] = -1
         self.sysInfo["progresspercentage"] = -1
-        DIALOG.notificationDialog(f"{LANGUAGE(32185)%('VOD')}: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
+        DIALOG.notificationDialog(f"{LANGUAGE(32185)%('VOD')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
         self._resolveURL(True, LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
             
             
@@ -245,7 +245,7 @@ class Plugin(object):
                 return listitem
             
         self.log('[%s] playPlaylist, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
-        DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Playlist')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem']['label']}")
+        DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Playlist')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem'].get('label')}")
         nextitems = self._getPVRItems()
         listitems = poolit(__buildfItem)(nextitems)
         self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
@@ -260,7 +260,7 @@ class Plugin(object):
                 folder, filename  = os.path.split(file)
                 oSeason, oEpisode = parseSE(filename)
                 self.log(f"[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {label}: {filename} in {folder}")
-                DIALOG.notificationDialog(f"Missing: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
+                DIALOG.notificationDialog(f"Missing: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
                 with PROPERTIES.suspendActivity():
                     items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
                     
@@ -278,7 +278,7 @@ class Plugin(object):
                     combineDicts(self.sysInfo['fitem'],item)
                     listitem.setPath(self.sysInfo['fitem']['file'])
                     self.log(f"[{self.sysInfo.get('chid')}] _playCheck, __findMissing found {self.sysInfo['fitem']['file']}")
-                    DIALOG.notificationDialog(f"Found: [B]{self.sysInfo['fitem']['label']}[/B]\n{self.sysInfo['fitem']['episodelabel']}")
+                    DIALOG.notificationDialog(f"Found: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
                 #else: listitem.setPath(insert missing media placeholder)
             return found, listitem
             

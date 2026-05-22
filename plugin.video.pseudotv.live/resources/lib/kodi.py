@@ -371,6 +371,27 @@ class Settings(object):
             self.log('[%s] setPVRPath, %s settings = %s'%(PVR_CLIENT_ID, instanceName, nsettings))
             return self.instances.setSettings(instanceName, settings)
         
+                
+    def setPVRLocal(self, host, instanceName=ADDON_NAME, cache=True):
+        settings  = self.instances.getSettings(instanceName)
+        processID = self.properties.getProcessID()
+        nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
+                     'kodi_addon_instance_enabled':'true',
+                     'm3uPathType'                :'1',
+                     'm3uUrl'                     :'http://%s/%s?%s'%(host,M3UFLE,processID),
+                     'm3uCache'                   :'%s'%(str(cache).lower()),
+                     'epgPathType'                :'1',
+                     'epgUrl'                     :'http://%s/%s?%s'%(host,XMLTVFLE,processID),
+                     'epgCache'                   :'%s'%(str(cache).lower()),
+                     'genresPathType'             :'1',
+                     'genresUrl'                  :'http://%s/%s?%s'%(host,GENREFLE,processID),
+                     'logoPathType'               :'1',
+                     'logoBaseUrl'                :'http://%s/logos'%(host)}
+        settings.update(nsettings)
+        if self.chkPVRChanges(instanceName, settings.copy()):
+            self.log('[%s] setPVRLocal, %s settings = %s'%(PVR_CLIENT_ID, instanceName, nsettings))
+            return self.instances.setSettings(instanceName, settings)
+        
         
     def setPVRRemote(self, host, instanceName=ADDON_NAME, cache=True):
         settings  = self.instances.getSettings(instanceName)
@@ -629,7 +650,7 @@ class Properties(object):
 
     def hasLibrary(self, type=None):
         if not type is None: return self.getEXTProperty('%s.has.%s'%(ADDON_ID,type),False)
-        return any([self.getEXTProperty('%s.has.%s'%(ADDON_ID,t),False) for t in AUTOTUNE_TYPES])
+        return any(self.getEXTProperty('%s.has.%s'%(ADDON_ID,t),False) for t in AUTOTUNE_TYPES)
         
         
     def setHasLibrary(self, type, state=True):
@@ -674,13 +695,16 @@ class Properties(object):
 
     @contextmanager
     def chkRunning(self, key):
-        if not self.isRunning(key):
-            self.setRunning(key,True)
-            try: yield True
-            finally: self.setRunning(key,False)
-        else: yield
+        try:
+            if not self.isRunning(key):
+                self.setRunning(key,True)
+                yield False
+            else:
+                yield True
+        finally:
+            self.setRunning(key,False)
             
-
+            
     def setRunning(self, key, state=True):
         return self.setEXTProperty('%s.%s.Running'%(ADDON_ID,key),state)
         
@@ -694,10 +718,11 @@ class Properties(object):
         try:
             if not self.isLockActivity():
                 self.setLockActivity(True)
-                try: yield
-                finally: self.setLockActivity(False)
-            else: return
-        except Exception: yield
+                yield True
+            else:
+                yield False
+        finally:
+            self.setLockActivity(False)
             
 
     def setLockActivity(self, state=True): # context state
@@ -763,10 +788,14 @@ class Properties(object):
 
     @contextmanager
     def legacy(self): #toggle legacy property from older pseudotv project that may still be used by third-party plugins.
-        if not self.isPseudoTVRunning():
-            self.setEXTProperty('PseudoTVRunning',True)
-            try: yield
-            finally: self.setEXTProperty('PseudoTVRunning',False)
+        try: 
+            if not self.isPseudoTVRunning():
+                self.setEXTProperty('PseudoTVRunning',True)
+                yield True
+            else:
+                yield False
+        finally: 
+            self.setEXTProperty('PseudoTVRunning',False)
 
 
     def isPseudoTVRunning(self):
@@ -876,7 +905,7 @@ class ListItems(object):
             properties = (info.pop('customproperties' ,{}) or {})
             if 'citem'   in info: properties.update({'citem'  :info.pop('citem')})   # write dump to single key
             if 'pvritem' in info: properties.update({'pvritem':info.pop('pvritem')}) # write dump to single key
-            
+          
             if media != 'video': #unify default artwork for music.
                 art['poster'] = Globals._getThumb(info,opt=1)
                 art['fanart'] = Globals._getThumb(info)
@@ -1337,18 +1366,17 @@ class Dialog(object):
         if silent is None: silent = self.builtin.isPlaying()
         dlg = None
         with self.dialog_lock:
-            if not self.properties.isRunning('_progressDialog'):
-                if not silent:
-                    self.properties.setRunning('_progressDialog', True) 
-                    if background: dlg = xbmcgui.DialogProgressBG()
-                    else:          dlg = xbmcgui.DialogProgress()
-                    try:
-                        dlg.create(header, message)
-                        self.log(f'_progressDialog [0% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
-                    except Exception as e:
-                        self.log(f'_progressDialog, failed! to create dialog: {e}')
-                        self.properties.setRunning('_progressDialog', False)
-                        dlg = None
+            if not silent and not self.properties.isRunning('_progressDialog'):
+                self.properties.setRunning('_progressDialog', True) 
+                if background: dlg = xbmcgui.DialogProgressBG()
+                else:          dlg = xbmcgui.DialogProgress()
+                try:
+                    dlg.create(header, message)
+                    self.log(f'_progressDialog [0% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
+                except Exception as e:
+                    self.log(f'_progressDialog, failed! to create dialog: {e}')
+                    self.properties.setRunning('_progressDialog', False)
+                    dlg = None
         try:
             if dlg is not None: yield dlg
             else:               yield True
@@ -1396,8 +1424,9 @@ class Dialog(object):
         elif control:
             try:
                 if int(percent) == 100 or control.iscanceled(): 
-                    control.close()
-                    return None
+                    with self.dialog_lock:
+                        control.close()
+                        return None
                 elif hasattr(control, 'update'): 
                     control.update(int(percent), message)
             except Exception:
@@ -1413,8 +1442,9 @@ class Dialog(object):
         elif control:
             try:
                 if int(percent) == 100 or control.isFinished(): 
-                    control.close()
-                    return None
+                    with self.dialog_lock:
+                        control.close()
+                        return None
                 elif hasattr(control, 'update'): 
                     control.update(int(percent), header, message)
             except Exception:

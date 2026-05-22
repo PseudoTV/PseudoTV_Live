@@ -786,13 +786,13 @@ class JSONRPC(object):
 
 
     def addTrailer(self, item):
-        trailers = self.getTrailers()
         if   'movieid' in item: key = 'movies'
         elif 'tvshowid'in item: key = 'tvshows'
-        else: return trailers
+        else: return
         fitem = item.copy()
         dur = self.getDuration(fitem.get('trailer'), accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=False)
         if dur > 0:
+            trailers = self.getTrailers()
             if 'streamdetails' in fitem: fitem.pop('streamdetails')
             fitem.update({'label':'%s - %s'%(fitem.get("label",""),LANGUAGE(30187)),
                          'episodetitle':'%s - %s'%(fitem.get("episodetitle",""),LANGUAGE(30187)),
@@ -804,20 +804,20 @@ class JSONRPC(object):
             for genre in (fitem.get('genre',[]) or ['resources']):
                 if fitem not in trailers.setdefault(key,{}).setdefault(genre.lower(),[]):
                     trailers.setdefault(key,{}).setdefault(genre.lower(),[]).append(fitem)
-        return self.setTrailers(trailers)
+            return self.setTrailers(trailers)
                 
                 
-    def setTrailers(self, trailers={}):
+    def setTrailers(self, trailers={'movies':{},'tvshows':{}}):
         self.log(f'setTrailers [Movies] = {len(trailers.get('movies',{}))}')
-        self.log(f'setTrailers [TVShows] = {len(trailers.get('tv',{}))}')
+        self.log(f'setTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
         return SETTINGS.setCacheSetting('trailers', trailers)
                                 
                         
     def getTrailers(self, genre=None):
         #todo clean old trailers by "added" epoch
-        trailers = SETTINGS.getCacheSetting('trailers', default={})
+        trailers = SETTINGS.getCacheSetting('trailers', default={'movies':{},'tvshows':{}})
         self.log(f'getTrailers [Movies] = {len(trailers.get('movies',{}))}')
-        self.log(f'getTrailers [TVShows] = {len(trailers.get('tv',{}))}')
+        self.log(f'getTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
         if not genre is None: return trailers.get(genre,[])
         return trailers #return all
         

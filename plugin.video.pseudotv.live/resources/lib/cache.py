@@ -69,7 +69,7 @@ class Cache(object):
     def __init__(self, mem_cache=False, disable_cache=False):
         self.cache = _Cache(service=self.service)
         self.cache.enable_mem_cache = mem_cache
-        self.disable_cache = (disable_cache or REAL_SETTINGS.getSettingBool('Disable_Cache'))
+        self.disable_cache = (disable_cache or REAL_SETTINGS.getSetting('Disable_Cache').lower() == "true")
         self.log('__init__, mem_cache = %s, disable_cache = %s' % (mem_cache, disable_cache))
 
 
@@ -113,7 +113,7 @@ class _Cache(object):
     def _getFreeMEM():
         try:              free = int("".join(re.findall(r"\d", BUILTIN.getInfoLabel('System.FreeMemory'))))
         except Exception: free = 1024 #1GB
-        return floor(free * (REAL_SETTINGS.getSettingInt('Cache_MEM_Limit') / 100)) * 1024 * 1024
+        return floor(free * (int(REAL_SETTINGS.getSetting('Cache_MEM_Limit')) / 100)) * 1024 * 1024
         
         
     def __init__(self, service=None, winID=10000):
@@ -121,7 +121,7 @@ class _Cache(object):
         self.monitor   = service.monitor
         self.window    = xbmcgui.Window(winID)
         self.max_bytes = _Cache._getFreeMEM()
-        self.dbfile    = FileAccess.translatePath(os.path.join(SETTINGS_LOC, 'cache.db'))
+        self.dbfile    = FileAccess.translatePath(CACHE_FLE)
         self._auto_clean_interval = int(REAL_SETTINGS.getSetting('Max_Days') or "3") * 86400 
         self._chkClean()
 

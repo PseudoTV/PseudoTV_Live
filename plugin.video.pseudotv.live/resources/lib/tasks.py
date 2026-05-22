@@ -113,7 +113,7 @@ class Tasks(object):
         self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200 , 1)#12HRS
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800 , 1)#3HRS
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300   , 1)#5MINS
-        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 120   , 5)#2MINS
+        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 60    , 5)#1MINS
         
         if not self.service.isClient:
             self._chkEpochTimer('chkFiles'    , self.chkFiles         , 900   , 1)#15MINS
@@ -171,7 +171,7 @@ class Tasks(object):
 
     def chkFiles(self):
         if not PROPERTIES.isRunning('Builder.buildChannels'):
-            if any([not bool(FileAccess.exists(file)) for file in [M3UFLEPATH,XMLTVFLEPATH,GENREFLEPATH]]): 
+            if any(not bool(FileAccess.exists(file)) for file in [M3UFLEPATH,XMLTVFLEPATH,GENREFLEPATH]): 
                 self.log('chkFiles, missing files! running chkChannels to rebuild.')
                 return self.service._que(self.chkChannels,3)
 
@@ -225,7 +225,7 @@ class Tasks(object):
                             break
                         elif movie.get('trailer'):
                             pDialog = DIALOG._updateProgress(pDialog,int(midx*100)//len(movies))
-                            self.service.trailerQue.add(frozenset(movie))
+                            self.service.trailerQue.add(FileAccess.dumpJSON(movie,sortkey=True))
                 with DIALOG._progressDialog('%ss: %s'%(LANGUAGE(32208),LANGUAGE(32014)), pHeader, silent) as pDialog:
                     for tidx, tvshow in enumerate(tvshows):
                         if self.service._interrupt() or self.service._suspend():
@@ -233,7 +233,7 @@ class Tasks(object):
                             break
                         elif tvshow.get('trailer'):
                             pDialog = DIALOG._updateProgress(pDialog,int(tidx*100)//len(tvshows))
-                            self.service.trailerQue.add(frozenset(tvshow))
+                            self.service.trailerQue.add(FileAccess.dumpJSON(tvshow,sortkey=True))
                 
                 
     def chkLibrary(self, types=None, silent=None):
@@ -300,7 +300,7 @@ class Tasks(object):
                     else: PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                 else:
                     try: self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
-                    except Exception: pass #PROPERTIES.setEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),True)
+                    except Exception: PROPERTIES.setEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),True)
             
             
     def chkSettingsChange(self, settings={}):
@@ -331,22 +331,22 @@ class Tasks(object):
                     try:
                         param = self.service.postQue.pop()
                         self.service._que(self.jsonRPC.requestURL,1,*param)
-                    except Exception as e: self.log("chkQUES failed!, queuing = %s\npostQue: %s\n%s"%(len(self.service.postQue),param,e))
+                    except Exception as e: self.log("chkQUES failed!, queuing = %s postQue: %s\n%s"%(len(self.service.postQue),param,e))
                 if len(self.service.jsonQue) > 0:
                     try:
                         param = self.service.jsonQue.pop()
                         self.service._que(self.jsonRPC.sendJSON,-1,param)
-                    except Exception as e: self.log("chkQUES failed!, queuing = %s\njsonQue: %s\n%s"%(len(self.service.jsonQue),param,e))
+                    except Exception as e: self.log("chkQUES failed!, queuing = %s jsonQue: %s\n%s"%(len(self.service.jsonQue),param,e))
                 if len(self.service.logoQue) > 0:
                     try:
                         param = FileAccess.loadJSON(self.service.logoQue.pop())
                         self.service._que(library.resources.getLogo,-1,*(param,library.resources.getCache(param),True))
-                    except Exception as e: self.log("chkQUES failed!, queuing = %s\nlogoQue: %s\n%s"%(len(self.service.logoQue),param,e))
+                    except Exception as e: self.log("chkQUES failed!, queuing = %s logoQue: %s\n%s"%(len(self.service.logoQue),param,e))
                 if len(self.service.trailerQue) > 0:
                     try:
-                        param = dict(self.service.trailerQue.pop())
+                        param = FileAccess.loadJSON(self.service.trailerQue.pop())
                         self.service._que(self.jsonRPC.addTrailer,-1,param)
-                    except Exception as e: self.log("chkQUES failed!, queuing = %s\ntrailerQue: %s\n%s"%(len(self.service.trailerQue),param,e))        
+                    except Exception as e: self.log("chkQUES failed!, queuing = %s trailerQue: %s\n%s"%(len(self.service.trailerQue),param,e))        
         del library
         
                 

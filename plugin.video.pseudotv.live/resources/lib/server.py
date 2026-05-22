@@ -181,9 +181,13 @@ class MyHandler(BaseHTTPRequestHandler):
             else: # 200 OK
                 self.send_response(200)
                 if   self.path == '/favicon.ico':                return __sendFile(ICON_WEB, use_compression)
+                elif self.path.endswith(PROPERTIES.getProcessID()):#force IPTV to reload fresh local meta.
+                    if   M3UFLE.lower()   in self.path:          return __sendFile(M3UFLEPATH, use_compression)
+                    elif XMLTVFLE.lower() in self.path:          return __sendFile(XMLTVFLEPATH, use_compression)
+                    elif GENREFLE.lower() in self.path:          return __sendFile(GENREFLEPATH, use_compression)
                 elif self.path.endswith(f'/{M3UFLE.lower()}'):   return __sendFile(M3UFLEPATH, use_compression)
-                elif self.path.endswith(f'/{GENREFLE.lower()}'): return __sendFile(GENREFLEPATH, use_compression)
                 elif self.path.endswith(f'/{XMLTVFLE.lower()}'): return __sendFile(XMLTVFLEPATH, use_compression)
+                elif self.path.endswith(f'/{GENREFLE.lower()}'): return __sendFile(GENREFLEPATH, use_compression)
                 elif self.path.startswith('/filelist/'):         return __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.getCacheSetting(self.path.replace('/filelist/',''), FileAccess._getMD5(self.path.replace('/filelist/','')), default=[])).encode(encoding=DEFAULT_ENCODING), use_compression)
                 elif self.path.startswith('/image/'):            return __sendFile(Globals._unquoteString(self.path.split('/image/')[1]), False)
                 elif self.path.startswith('/api/'):

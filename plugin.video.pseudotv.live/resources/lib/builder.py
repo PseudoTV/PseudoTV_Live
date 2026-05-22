@@ -147,19 +147,21 @@ class Builder(object):
 
              
     def buildCells(self, citem: dict, duration: int=10800, type: str='video', entries: int=3, info={}) -> list:
+        info.setdefault('art',{})['poster'] = Globals._getThumb(info,opt=1)
+        info.setdefault('art',{})['fanart'] = Globals._getThumb(info)
         info.update({'label'      : (info.get('title')        or citem['name']),
                     'episodetitle': (info.get('episodetitle') or '|'.join(citem.get('group',[]))),
                     'plot'        : (info.get('plot')         or LANGUAGE(32020)),
                     'genre'       : (info.get('genre')        or ['Undefined']),
                     'file'        : (info.get('path')         or info.get('file') or info.get('originalpath') or  '|'.join(citem.get('path',[]))),
-                    'art'         : (info.get('art')          or {"thumb":LOGO_COLOR,"fanart":FANART,"logo":LOGO,"icon":LOGO}),
+                    'art'         : (info.get('art')          or {"thumb":LOGO,"poster":LOGO_POSTER,"fanart":LOGO_LANDSCAPE,"landscape":LOGO_LANDSCAPE,"logo":LOGO,"icon":LOGO}),
                     'type'        : type,
                     'duration'    : duration,
                     'start'       : 0,
                     'stop'        : 0})
         return [info.copy() for _ in range(entries)]
 
-
+                
     def buildChannels(self, channels: list=[], preview=False, silent=None):
         if silent is None: silent = BUILTIN.isPlaying()
         enableChanged = SETTINGS.getSettingBool('Enable_Changed')
@@ -173,7 +175,7 @@ class Builder(object):
             
         def __hasChanged(citem: dict, detect=SETTINGS.getSettingBool('Enable_Changed')) -> bool:
             if not citem.get('changed',False) and detect:
-                state = any([SETTINGS.getFileCRC(file) for file in citem.get('path',[]) if file.endswith(tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS))])
+                state = any(SETTINGS.getFileCRC(file) for file in citem.get('path',[]) if file.endswith(tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)))
             else: state = citem.get('changed',False)
             self.log('[%s] buildChannels, __hasChanged = %s'%(citem['id'],state))
             if state: #clear channel m3u/xmltv 
@@ -195,7 +197,7 @@ class Builder(object):
             return state
         
         def __addProgrammes(citem: dict, fileList: list) -> bool:
-            state = any([self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)) for item in fileList])
+            state = any(self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)) for item in fileList)
             self.log('[%s] buildChannels, __addProgrammes fileList = %s'%(citem['id'],len(fileList)))
             return state
         
@@ -313,9 +315,9 @@ class Builder(object):
     def buildMusic(self, citem: dict) -> list:
         self.log("[%s] buildMusic"%(citem['id']))
         #todo insert custom radio labels,plots based on genre type?
-        return self.buildCells(citem, MIN_EPG_DURATION, 'music', ((MAX_GUIDEDAYS * 8)), info={'genre':["Music"],'art':{'thumb':citem['logo'],'icon':citem['logo'],'fanart':citem['logo']},'plot':LANGUAGE(32029)%(citem['name'])})
+        return self.buildCells(citem, MIN_EPG_DURATION, 'music', ((MAX_GUIDEDAYS * 8)), info={'genre':["Music"],'art':{"thumb":citem.get('logo',LOGO),"poster":LOGO_POSTER,"fanart":LOGO_LANDSCAPE,"landscape":LOGO_LANDSCAPE,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)},'plot':LANGUAGE(32029)%(citem['name'])})
         
-
+                
     def buildVideo(self, citem: dict, validate: bool=False):
         def _validFileList(fileArray):
             return any(len(fileList) > 0 for fileList in fileArray)
@@ -598,7 +600,7 @@ class Builder(object):
 
 
     def resetPagination(self, citem):
-        if isinstance(citem, list): return any([self.resetPagination(item) for item in citem])
-        return any([self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id')])
+        if isinstance(citem, list): return any(self.resetPagination(item) for item in citem)
+        return any(self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id'))
     
         

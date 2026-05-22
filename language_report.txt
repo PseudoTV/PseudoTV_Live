@@ -211,7 +211,6 @@ Language IDS not found in py files, possibly only in xml: {
     "32048": "Select Servers",
     "32049": "Restarting...",
     "32052": "Failed!",
-    "32053": "Settings",
     "32057": "",
     "32058": "No Channels Configured!",
     "32063": "OK",

@@ -21,14 +21,6 @@ from globals             import *
 from fileaccess          import FileAccess
 from concurrent.futures  import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
-class LlNode(object):
-    def __init__(self, package: tuple, priority: int=0, timer: int=0):
-        self.prev      = None
-        self.next      = None
-        self.package   = package
-        self.priority  = priority 
-        self.time      = timer
-
 class CustomQueue(object):
     def __init__(self, fifo: bool=False, lifo: bool=False, priority: bool=False, delay: bool=False, timer: bool=False, service=None):
         self.service     = service
@@ -74,28 +66,31 @@ class CustomQueue(object):
             self.sync_queue.clear()
             self.itemCount.clear()
             self.max_priority_seen = 0
+            
+            
+    def _use_executor(self):
+        if SETTINGS.getSettingBool('Enable_Executor') or BUILTIN.isPlaying(): return True
+        return len(self.sync_queue) >= QUEUE_CHUNK
 
 
     def _run(self):
-        useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
-        if not useExecutor and BUILTIN.isPlaying(): useExecutor = True
-        if not useExecutor:
-            if not self.syncThread.is_alive() and not self.service._interrupt() and not self.service._suspend():
+        if self.service._interrupt() or self.service._suspend(): return
+        if not self._use_executor():
+            if not self.syncThread.is_alive():
                 self.syncThread = Thread(target=self._sync_worker)
                 self.syncThread.daemon = True
                 self.syncThread.start()
-
-        if not self.popThread.is_alive() and not self.service._interrupt() and not self.service._suspend():
+        if not self.popThread.is_alive():
             self.popThread = Thread(target=self._start)
             self.popThread.daemon = True
             self.popThread.start()
 
 
     def _exe(self, func, *args, **kwargs):
-        useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
-        if not useExecutor and BUILTIN.isPlaying(): useExecutor = True
+        useExecutor = self._use_executor()
         self.log(f"_exe, func = {func.__name__}, useExecutor = {useExecutor}")
         if useExecutor:
+            if len(self.sync_queue) > 0: self._sync_empty()
             try:
                 future = self.executor.submit(func, *args, **kwargs)
                 future.add_done_callback(self._future_callback)
@@ -106,30 +101,43 @@ class CustomQueue(object):
                 self.sync_queue.append((func, args, kwargs))
 
 
-    def _sync_worker(self):
-        """Processes tasks one-by-one sequentially, protecting the main _start loop from blocking."""
-        useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
-        if not useExecutor and BUILTIN.isPlaying(): useExecutor = True
+    def _sync_empty(self):
+        self.log(f"Threshold breached ({len(self.sync_queue)} items). Flushing sync_queue to executor pool.")
         while not self.service.monitor.abortRequested():
-            if self.service._interrupt() or self.service._suspend() or useExecutor:
+            try:
+                with self.lock:
+                    if not self.sync_queue: break
+                    func, args, kwargs = self.sync_queue.popleft()
+                future = self.executor.submit(func, *args, **kwargs)
+                future.add_done_callback(self._future_callback)
+            except IndexError: break
+            except Exception as e: self.log(f"Failed offloading backlogged task to pool: {e}", xbmc.LOGERROR)
+
+
+    def _sync_worker(self):
+        """Processes tasks sequentially. Shuts down if Executor mode is activated."""
+        while not self.service.monitor.abortRequested():
+            if self.service._interrupt() or self.service._suspend(): break
+            if self._use_executor():
+                self._sync_empty()
                 break
                 
             sync_task = None
-            with self.lock:
-                if self.sync_queue:
-                    sync_task = self.sync_queue.popleft()
+            if self.sync_queue: 
+                with self.lock:
+                    if self.sync_queue: 
+                        sync_task = self.sync_queue.popleft()
                     
             if sync_task is None:
                 if self.service.monitor.waitForAbort(0.05): break
                 continue
-                
-            func, args, kwargs = sync_task
             try: 
+                func, args, kwargs = sync_task
                 func(*args, **kwargs)
             except Exception as e:
                 self.log(f"Synchronous execution failed: {e}", xbmc.LOGERROR)
             if self.service.monitor.waitForAbort(CPU_CYCLE): break
-                
+
 
     def _future_callback(self, future):
         try:
@@ -197,6 +205,7 @@ class CustomQueue(object):
                 
             package = None
             target_timer = 0
+            
             with self.lock:
                 if self.priority:
                     if self.min_heap:
@@ -206,7 +215,12 @@ class CustomQueue(object):
                         item = self.deque_queue.popleft() if self.fifo else self.deque_queue.pop()
                         package, _, target_timer = item
 
-            if package is None: break
+            # Main pipeline ran out of tasks
+            if package is None:
+                if self._use_executor():
+                    self._sync_empty()
+                break
+                
             try:
                 if (self.timer or target_timer) and time.time() < target_timer:
                     self._push(package, timer=target_timer)
@@ -217,6 +231,7 @@ class CustomQueue(object):
                             self.nodes.discard(package[0].__name__)
                             
                     self._exe(package[0], *package[1], **package[2])
+                    
             except Exception as e:
                 self.log(f"_start processing failure: {e}", xbmc.LOGERROR)
             if self.service.monitor.waitForAbort(CPU_CYCLE): break

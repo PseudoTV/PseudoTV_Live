@@ -48,6 +48,7 @@ if __name__ == '__main__':
                 Globals._notificationDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
                 Globals._setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
                 xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())
+                log(f'Default: __main__, failed! {sysARG[2]}', xbmc.LOGERROR)
                 
             else:
                 try:    fitem, nitem = LISTITEMS.buildDictListItem(sys.listitem), {}

@@ -1438,7 +1438,7 @@ msgid "Clean Start"
 msgstr ""
 
 msgctxt "#32119"
-msgid "Remove all files and configurations"
+msgid "Remove all files and configurations. M3U/XMLTV/Genres/Settings/Cache"
 msgstr ""
 
 msgctxt "#32120"

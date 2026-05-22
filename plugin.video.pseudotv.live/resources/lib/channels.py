@@ -113,7 +113,7 @@ class Channels(object):
         
 
     def delChannel(self, citem: dict={}) -> bool:
-        if isinstance(citem,list): return any([self.delChannel(channel) for channel in citem])
+        if isinstance(citem,list): return any(self.delChannel(channel) for channel in citem)
         try: 
             self.channelDATA['channels'].pop(self.findChannel(citem)[0])
             self.log('[%s] delChannel channel deleted!'%(citem['id']), xbmc.LOGINFO)
@@ -122,7 +122,7 @@ class Channels(object):
     
     
     def addChannel(self, citem: dict={}) -> bool:
-        if isinstance(citem,list): return any([self.addChannel(channel) for channel in citem])
+        if isinstance(citem,list): return any(self.addChannel(channel) for channel in citem)
         self.delChannel(citem)
         self.log('[%s] addChannel adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
         self.channelDATA.setdefault('channels',[]).append(Globals._cleanGroups(citem))

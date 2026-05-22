@@ -127,8 +127,9 @@ class Fillers(object):
             elif isinstance(key, list):
                 tmpLST.extend(self._getFillterItem(ftype, count, key, chanceBool(filler.get('chance', 0)), passes))
                 continue
-            tmpLST.extend(Globals._randomSamples(filler.get('items', {}).get(key.lower(),[]), count))
-            self.log('[%s] _getFillterItem [%s (%s)] count = %s, chance = %s'%(self.citem.get('id'), ftype, key, count, chance))
+            items = Globals._randomSamples(filler.get('items', {}).get(key.lower(),[]), count)
+            tmpLST.extend(items)
+            self.log('[%s] _getFillterItem [%s (%s)] %s/%s, total = %s, chance = %s'%(self.citem.get('id'), ftype, key, len(items), count, len(tmpLST), chance))
         
         if (len(tmpLST) < count and chance) and 'resources' not in keys:
             tmpLST.extend(self._getFillterItem(ftype, count, ['resources'], chanceBool(filler.get('chance', 0)), passes - 1))
@@ -161,14 +162,15 @@ class Fillers(object):
                                  'episodetitle': 'Pre-Roll',
                                  'plot'        : item.get('plot', item.get('file')),
                                  'genre'       : ['Fillers','Pre-Roll'],
-                                 'path'        : item.get('file')})
+                                 'path'        : item.get('file'),
+                                 'art'         : {"thumb":LOGO,"poster":LOGO_POSTER,"fanart":LOGO_LANDSCAPE,"landscape":LOGO_LANDSCAPE,"logo":LOGO,"icon":LOGO}})
                     self.log('[%s] injectFillers [Pre-Roll (%s)] %s, %s'%(self.citem.get('id'), ftype, dur, item.get('file')))
                     nfileList.extend(self.builder.buildCells(self.citem, dur, entries=1, info=item))
         return nfileList
         
         
     def _getPostRoll(self, fileItem, nextItem={}, remaining_seconds=0):
-        # post roll - adverts/trailers
+        # post roll - adverts/trailers/extras
         items = []
         nfileList = []
         for item in [fileItem,nextItem]:

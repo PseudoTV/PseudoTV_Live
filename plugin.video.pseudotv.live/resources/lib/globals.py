@@ -262,13 +262,15 @@ def pagination(list, end):
         yield seq[start:start+end]
 
 def isCenterlized():
-    default = 'special://profile/addon_data/plugin.video.pseudotv.live/cache'
-    if REAL_SETTINGS.getSetting('User_Folder') == default:
-        return False
-    return True
-                
+    default = f'special://profile/addon_data/{ADDON_ID}/cache'
+    if REAL_SETTINGS.getSetting('User_Folder') == default: return True
+    return False
+    
 def isFiller(item={}):
-    return any(genre.lower() in map(str.lower, ROLL_TYPES) for genre in item.get('genre', []))
+    lowers = map(str.lower, ROLL_TYPES)
+    genres = item.get('genre',[])
+    if not isinstance(genres,list) and ' / ' in genres: genres = genres.split(' / ')
+    return any(genre.lower() in lowers for genre in genres)
 
 def isShort(item={}, minDuration=SETTINGS.getSettingInt('Seek_Tolerance')):
     if item.get('duration', minDuration) < minDuration: return True

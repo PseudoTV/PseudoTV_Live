@@ -1,0 +1,47 @@
+name: LLM Code Review
+on:
+  pull_request:
+    branches:
+      - nightly
+    types:
+      - opened # when a PR is opened
+      - synchronize # when code is pushed to a pr
+
+jobs:
+  code-review:
+    runs-on:
+      - ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Get Diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "changeset<<EOF" >> $GITHUB_OUTPUT
+          echo "$(gh pr diff ${{ github.event.pull_request.number }} --repo "${{ github.repository }}")" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Run AI code review
+        uses: daves-dead-simple/open-ai-action@main
+        id: code-review
+        env:
+          OPEN_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          prompt: |
+            Please code review the following changeset: ${{ steps.get_diff.outputs.changeset }}
+
+      - name: Comment on PR with AI review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo "${{ github.repository }}" \
+            --body "${{ steps.code-review.outputs.completion }}"

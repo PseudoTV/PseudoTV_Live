@@ -116,16 +116,17 @@ class Player(xbmc.Player):
             playingItem = FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo'))
             if '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid',''):
                 playingItem['isPseudoTV'] = True
-                playingItem['chfile']     = BUILTIN.getInfoLabel('Player.Filename')
-                playingItem['chfolder']   = BUILTIN.getInfoLabel('Player.Folderpath')
-                playingItem['chpath']     = BUILTIN.getInfoLabel('Player.Filenameandpath')
+                playingItem['chfile']   = BUILTIN.getInfoLabel('Player.Filename')
+                playingItem['chfolder'] = BUILTIN.getInfoLabel('Player.Folderpath')
+                playingItem['chpath']   = BUILTIN.getInfoLabel('Player.Filenameandpath')
                 #playingItem from listitem maybe outdated, check with channels.json for fresh citem.
                 playingItem.update({'fitem':combineDicts(playingItem.get('fitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('VideoPlayer.Plot')))})
                 playingItem.update({'nitem':combineDicts(playingItem.get('nitem',{}),Globals._decodePlot(BUILTIN.getInfoLabel('VideoPlayer.NextPlot')))})
                 playingItem.update({'citem':combineDicts(playingItem.get('fitem',{}).get('citem',{}),next((item for item in self.service.curchannels if item.get('id',-1) == playingItem.get('chid',0)),{}))})
-                playingItem.get('fitem',{})['runtime'] = self.getPlayerTime()
-                playingItem['isfiller'] = isFiller(playingItem.get('fitem',{}))
-                PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(playingItem))
+                playingItem['fitem']['runtime']  = self.getPlayerTime()
+                playingItem['fitem']['isfiller'] = isFiller(playingItem['fitem'])
+                playingItem['nitem']['isfiller'] = isFiller(playingItem['nitem'])
+                PROPERTIES.setProperty('lastPlayed.sysInfo',playingItem)
             return playingItem
         except Exception as e: 
             self.log('getplayingItem: failed! %s'%(e), xbmc.LOGERROR)
@@ -173,13 +174,17 @@ class Player(xbmc.Player):
 
 
     def isPlayingFiller(self):
-        if self.isPlaying(): return isFiller({'genre':BUILTIN.getInfoLabel('VideoPlayer.Genre(comma)').split(',')})
+        if self.isPlaying(): return isFiller({'genre':BUILTIN.getInfoLabel('VideoPlayer.Genre(slash)').split(' / ')})
         else:                return isFiller(self.playingItem.get('fitem',{}))
         
         
     def isNextFiller(self):
-        if self.isPlaying(): return isFiller({'genre':BUILTIN.getInfoLabel('VideoPlayer.NextGenre(comma)').split(',')})
+        if self.isPlaying(): return isFiller({'genre':BUILTIN.getInfoLabel('VideoPlayer.NextGenre(slash)').split(' / ')})
         else:                return isFiller(self.playingItem.get('nitem',{}))
+
+
+    def isPlaylist(self):
+        return (self.playingItem.get('isPlaylist') or False)
 
 
     def isPseudoTV(self):
@@ -294,7 +299,7 @@ class Player(xbmc.Player):
             if not self.playingItem.get('callback'):
                 self.playingItem['callback'] = self.jsonRPC.getCallback(self.playingItem)
                 self.log('__chkCallback, callback = %s'%(self.playingItem['callback']))
-                PROPERTIES.setProperty('lastPlayed.sysInfo',FileAccess._encodeString(self.playingItem))
+                PROPERTIES.setProperty('lastPlayed.sysInfo',self.playingItem)
 
         def __chkBackground():
             remaining = floor(self.getRemainingTime())
@@ -303,7 +308,7 @@ class Player(xbmc.Player):
                 self.toggleBackground(self.enableOverlay)
 
         def __chkResumeTime():
-            if not self.playingItem.get('isfiller',True) and self.playingItem.get('isPlaylist',False):
+            if not self.isPlayingFiller() and self.isPlayingPlaylist():
                 if self.playingItem.get('fitem',{}).get('file') == self.getPlayingFile():
                     resume = {"position":self.getPlayedTime(),
                               "total":   self.getPlayerTime(),
@@ -313,7 +318,7 @@ class Player(xbmc.Player):
                     self.log('__chkResumeTime, resume = %s'%(self.playingItem.get('resume')))
 
         def __chkOverlay():
-            if not self.playingItem.get('isfiller',True) and ceil(self.getPlayedTime()) > self.minDuration: 
+            if not self.isPlayingFiller() and ceil(self.getPlayedTime()) > self.minDuration: 
                 self.toggleOverlay(self.enableOverlay)
 
         def __chkOnNext():
@@ -322,7 +327,7 @@ class Player(xbmc.Player):
             totalTime = int(self.getPlayerTime() * (self.maxProgress / 100))
             threshold = abs((totalTime - (totalTime * .75)) - (ONNEXT_TIMER*3))
             intTime   = roundupDIV(threshold,3)
-            if self.isPlayingPseudoTV() and not self.playingItem.get('isfiller',True) and not self.overlay is None:
+            if self.isPlayingPseudoTV() and not self.isPlayingFiller() and not self.overlay is None:
                 if played > self.minDuration and (remaining <= threshold and remaining >= intTime): 
                     self.log('__chkOnNext, played = %s, remaining = %s'%(played,remaining))
                     self.overlay.toggleOnNext(bool(self.OnNextMode))
@@ -366,7 +371,7 @@ class Player(xbmc.Player):
 
     @debounceit(OSD_TIMER)
     def toggleReplay(self, state: bool=bool(SETTINGS.getSettingInt('Replay_Percentage'))):
-        if state and self.isPlayingPseudoTV() and not self.playingItem.get('isfiller',True) and self.replay is None:
+        if state and self.isPlayingPseudoTV() and not self.isPlayingFiller() and self.replay is None:
             self.replay = Replay(REPLAY_XML, ADDON_PATH, "default", "1080i", service=self.service)
         elif not state and hasattr(self.replay,'onClose'):
             self.replay = self.replay.onClose()
@@ -376,7 +381,7 @@ class Player(xbmc.Player):
         
     @debounceit(OSD_TIMER)
     def toggleInfo(self, state: bool=SETTINGS.getSettingBool('Enable_OnInfo')):
-        if state and self.isPlayingPseudoTV() and not self.playingItem.get('isfiller',True) and not BUILTIN.getInfoBool('Window.IsVisible(fullscreeninfo)'):
+        if state and self.isPlayingPseudoTV() and not self.isPlayingFiller() and not BUILTIN.getInfoBool('Window.IsVisible(fullscreeninfo)'):
             BUILTIN.executewindow('ActivateWindow(fullscreeninfo)')
             timerit(self.toggleInfo)(float(OSD_TIMER),False)
         elif not state and BUILTIN.getInfoBool('Window.IsVisible(fullscreeninfo)'):

@@ -188,7 +188,7 @@ class XMLTVS(object):
                 if firstStart > fallback: raise Exception('First start-time in the future, rebuild channel with fallback')
                 yield channel['id'],datetime.datetime.timestamp(strpTime(lastStop, DTFORMAT))
             except Exception as e:
-                self.log(" [%s] loadStopTimes failed!\nMalformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s"%(channel.get('id'),e,fallback), xbmc.LOGWARNING)
+                self.log(" [%s] loadStopTimes failed! Malformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s"%(channel.get('id'),e,fallback), xbmc.LOGWARNING)
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
 
 
@@ -335,7 +335,6 @@ class XMLTVS(object):
         item['categories']    = (fItem.get('genre')        or ['Undefined'])[:5]#trim list to five
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
-        
         item['thumb']                = Globals._getThumb(fItem,EPG_ARTWORK)            #unify thumbnail by user preference 
         fItem.get('art',{})['thumb'] = Globals._getThumb(fItem,{0:1,1:0}[EPG_ARTWORK]) #unify thumbnail artwork, opposite of EPG_Artwork
          

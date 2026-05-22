@@ -27,7 +27,7 @@ class Utilities(object):
             return LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon'))
         
         items = [
-                 {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(False,)}, #"Rebuild M3U/XMLTV"
+                 {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(False,)}, #"Rebuild M3U/XMLTV/Genres"
                  {'label':LANGUAGE(32118)                  ,'label2':LANGUAGE(32119),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(True,)},  #"Clean Start"
                  {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':ICON,'func':Utilities._runReload   , 'hide':False},                  #"Force PVR reload"
                  {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':ICON,'func':Utilities._runRestart  , 'hide':False},                  #"Force PTVL restart"
@@ -55,9 +55,7 @@ class Utilities(object):
     def _runCleanup(inclCache=False):
         if DIALOG.yesnoDialog('Utilities: %s ?'%( LANGUAGE(32119) if inclCache else LANGUAGE(32120) )): 
             with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
-                Globals._cleanPVRFiles()
-            # if inclCache:#todo shutdown cache, del db?
-            #delete kodi settings.xml? instances.xml? 
+                Globals._cleanPVRFiles(inclCache)
     
     @staticmethod
     def _runReload():
