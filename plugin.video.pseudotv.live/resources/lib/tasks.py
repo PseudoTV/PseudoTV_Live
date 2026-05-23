@@ -65,11 +65,9 @@ class Tasks(object):
         new_path = os.path.join(new,CHANNELFLE)
         if FileAccess.exists(old_path):
             self.log('migrate, importing %s...'%(old_path))
-            if Backup().importChannels(old_path):
-                if old_path != new_path: 
-                    if FileAccess.move(old_path,new_path):
-                        PROPERTIES.setPendingRestart(True)
-    
+            if Backup().importChannels(old_path): PROPERTIES.setPendingRestart(True)
+            if FileAccess.move(old_path,new_path): DIALOG.notificationDialog(LANGUAGE(32025))
+                  
     
     def chkHTTP(self):
         timerit(HTTP)(0.1,self.service)
@@ -214,7 +212,7 @@ class Tasks(object):
         if tvshows is None: tvshows = self.jsonRPC.getTVshows()
         if silent is None: silent = BUILTIN.isPlaying()
         self.log('chkTrailers, movies = %s, tvshows = %s, silent = %s'%(len(movies),len(tvshows), silent))
-        if not PROPERTIES.isRunning('Tasks.chkTrailers'):
+        if not PROPERTIES.isRunning('Tasks.chkTrailers') and SETTINGS.getSettingBool('Include_Trailers_KODI'):
             with PROPERTIES.chkRunning('Tasks.chkTrailers'):
                 pDialog  = None
                 pHeader  = '%s, %s %ss'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(30187))
@@ -281,7 +279,7 @@ class Tasks(object):
             elif PROPERTIES.hasEnabledServers():                         PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
 
 
-    @debounceit(M3U_INTERVAL)
+    @debounceit(M3U_REFRESH)
     def chkPVRRefresh(self, brute=None):
         if brute is None: brute = SETTINGS.getSettingBool('Enable_PVR_RELOAD')
         self.log('chkPVRRefresh, brute = %s'%(brute))
@@ -299,8 +297,10 @@ class Tasks(object):
                         __toggle(False), self.service._sleep(M3U_REFRESH), __toggle(True)
                     else: PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                 else:
+                    # BUILTIN.executebuiltin('PVR.ClearPVRData',delay=M3U_REFRESH)
                     try: self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
-                    except Exception: PROPERTIES.setEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),True)
+                    except Exception: pass
+                        # timerit(PROPERTIES.setEXTProperty)(M3U_REFRESH,*('%s.HTTP.pendingRestart'%(ADDON_ID),True))
             
             
     def chkSettingsChange(self, settings={}):

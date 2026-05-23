@@ -1005,9 +1005,9 @@ class PreRoll(BaseRule):
         self.myId               = 502
         self.name               = "Pre-Roll"
         self.description        = "Pre-Roll Options"
-        self.optionLabels       = [LANGUAGE(30017),LANGUAGE(30139),LANGUAGE(30028),LANGUAGE(30029),"Ratings Folder","Bumpers Folder"]
-        self.optionValues       = [SETTINGS.getSettingInt('Enable_Preroll'),SETTINGS.getSettingInt('Random_Pre_Chance'),SETTINGS.getSetting('Resource_Ratings'),SETTINGS.getSetting('Resource_Bumpers'),[os.path.join(FILLER_LOC,'Ratings','')],[os.path.join(FILLER_LOC,'Bumpers','')]]
-        self.optionDescriptions = [LANGUAGE(30018),LANGUAGE(33134),LANGUAGE(33028),LANGUAGE(33029),"",""]
+        self.optionLabels       = [LANGUAGE(30017),LANGUAGE(30139),LANGUAGE(30029),LANGUAGE(30028),"Bumpers Folder","Ratings Folder"]
+        self.optionValues       = [SETTINGS.getSettingInt('Enable_Preroll'),SETTINGS.getSettingInt('Random_Pre_Chance'),SETTINGS.getSetting('Resource_Bumpers'),SETTINGS.getSetting('Resource_Ratings'),[os.path.join(FILLER_LOC,'Bumpers','')],[os.path.join(FILLER_LOC,'Ratings','')]]
+        self.optionDescriptions = [LANGUAGE(30018),LANGUAGE(33134),LANGUAGE(33029),LANGUAGE(33028),"",""]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0},list(range(0,101,1)),"","","",""]
         self.storedValues       = [{},{}]
@@ -1027,22 +1027,22 @@ class PreRoll(BaseRule):
         
     def onAction(self, optionindex):
         if   optionindex in [0,1]: self.onActionSelect(optionindex)
-        elif optionindex in [2,3]: self.onActionResources(optionindex, ftype={2:"ratings",3:"bumpers"}[optionindex])
-        elif optionindex in [4,5]: self.onActionMultiBrowse(optionindex, header="%s for %s"%(LANGUAGE(32080), {4:"Ratings",5:"Bumpers"}[optionindex]), exclude=[12,13,14,15,16,21,22])
+        elif optionindex in [2,3]: self.onActionResources(optionindex, ftype={2:"bumpers",3:"ratings"}[optionindex])
+        elif optionindex in [4,5]: self.onActionMultiBrowse(optionindex, header="%s for %s"%(LANGUAGE(32080), {4:"Bumpers",5:"Ratings"}[optionindex]), exclude=[12,13,14,15,16,21,22])
         return self.optionValues[optionindex]
 
 
     def runAction(self, actionid, citem, parameter, builder):
         if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedValues[0] = builder.bctTypes.get('ratings',{})
-            self.storedValues[1] = builder.bctTypes.get('bumpers',{})
-            builder.bctTypes['ratings'].update({"max":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[2].split('|'),"paths":self.optionValues[4]}})
-            builder.bctTypes['bumpers'].update({"max":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[3].split('|'),"paths":self.optionValues[5]}})
+            self.storedValues[0] = builder.bctTypes.get('bumpers',{})
+            self.storedValues[1] = builder.bctTypes.get('ratings',{})
+            builder.bctTypes['bumpers'].update({"max":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[2].split('|'),"paths":self.optionValues[4]}})
+            builder.bctTypes['ratings'].update({"max":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[3].split('|'),"paths":self.optionValues[5]}})
             self.log("runAction, setting bctTypes = %s"%(builder.bctTypes))
 
         elif actionid == RULES_ACTION_CHANNEL_STOP:
-            builder.bctTypes['ratings'] = self.storedValues[0]
-            builder.bctTypes['bumpers'] = self.storedValues[1]
+            builder.bctTypes['bumpers'] = self.storedValues[0]
+            builder.bctTypes['ratings'] = self.storedValues[1]
             self.log("runAction, restoring bctTypes = %s"%(builder.bctTypes))
         return parameter
         
@@ -1052,9 +1052,9 @@ class PostRoll(BaseRule):
         self.myId               = 503
         self.name               = "Post-Roll"
         self.description        = "Post-Roll Options"
-        self.optionLabels       = [LANGUAGE(30019),LANGUAGE(30134),LANGUAGE(30030),"Adverts Folder",LANGUAGE(30031),"Trailers Folder",LANGUAGE(30126)]
-        self.optionValues       = [SETTINGS.getSettingInt('Enable_Postroll'),SETTINGS.getSettingInt('Random_Post_Chance'),SETTINGS.getSetting('Resource_Adverts'),[os.path.join(FILLER_LOC,'Adverts','')],SETTINGS.getSetting('Resource_Trailers'),[os.path.join(FILLER_LOC,'Trailers','')],SETTINGS.getSettingBool('Include_Trailers_KODI')]
-        self.optionDescriptions = [LANGUAGE(30020),LANGUAGE(33134),LANGUAGE(33030),"",LANGUAGE(33031),"",LANGUAGE(33126)]
+        self.optionLabels       = [LANGUAGE(30019),LANGUAGE(30134),LANGUAGE(30030),"Adverts Folder",LANGUAGE(30031),"Trailers Folder",LANGUAGE(30126),LANGUAGE(30053)]
+        self.optionValues       = [SETTINGS.getSettingInt('Enable_Postroll'),SETTINGS.getSettingInt('Random_Post_Chance'),SETTINGS.getSetting('Resource_Adverts'),[os.path.join(FILLER_LOC,'Adverts','')],SETTINGS.getSetting('Resource_Trailers'),[os.path.join(FILLER_LOC,'Trailers','')],SETTINGS.getSettingBool('Include_Trailers_KODI'),SETTINGS.getSettingBool('Include_Extras_KODI')]
+        self.optionDescriptions = [LANGUAGE(30020),LANGUAGE(33134),LANGUAGE(33030),"",LANGUAGE(33031),"",LANGUAGE(33126),LANGUAGE(33233)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0,LANGUAGE(30026):1,LANGUAGE(30024):2,LANGUAGE(30025):3},list(range(0,101,1)),[]]
         self.storedValues       = [{},{}]
@@ -1076,7 +1076,7 @@ class PostRoll(BaseRule):
         if   optionindex in [0,1]: self.onActionSelect(optionindex)
         elif optionindex in [2,4]: self.onActionResources(optionindex, ftype={2:"adverts",4:"trailers"}[optionindex])
         elif optionindex in [3,5]: self.onActionMultiBrowse(optionindex, header="%s for %s"%(LANGUAGE(32080),{3:"Adverts",5:"Trailers"}[optionindex]), exclude=[12,13,14,15,16,21,22])
-        elif optionindex in [6]:   self.onActionToggleBool(optionindex)
+        elif optionindex in [6,7]: self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
 
 
@@ -1086,6 +1086,7 @@ class PostRoll(BaseRule):
             self.storedValues[1] = builder.bctTypes.get('trailers',{})
             builder.bctTypes['adverts'].update({"min":self.optionValues[0] , "max":builder.limit, "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[2].split('|'),"paths":self.optionValues[3]}})
             builder.bctTypes['trailers'].update({"min":self.optionValues[0], "max":builder.limit, "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[4].split('|'),"paths":self.optionValues[5]},"incKODI":self.optionValues[6]})
+            builder.bctTypes['extras'].update({"min":self.optionValues[0]  , "max":builder.limit, "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":[]                             ,"paths":[]}                  ,"incKODI":self.optionValues[7]})
             self.log("runAction, setting bctTypes = %s"%(builder.bctTypes))
             
         elif actionid == RULES_ACTION_CHANNEL_STOP:

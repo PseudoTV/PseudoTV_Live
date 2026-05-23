@@ -695,23 +695,6 @@
                         <popup>false</popup>
                     </control>
                 </setting>
-                <setting id="Resource_Ratings" type="list[addon]" label="30028" help="" parent="Enable_Preroll">
-                    <level>2</level>
-                    <default>resource.videos.ratings.mpaa.classic</default>
-                    <constraints>
-                        <addontype>kodi.resource.images</addontype>
-                    </constraints>
-                    <dependencies>
-                        <dependency type="enable">
-                            <condition operator="!is" setting="Enable_Preroll">0</condition>
-                        </dependency>
-                    </dependencies>
-                    <control type="button" format="addon">
-                        <heading>30069</heading>
-                        <show more="true" details="true">installed</show>
-                        <multiselect>true</multiselect>
-                    </control>
-                </setting>
                 <setting id="Resource_Bumpers" type="list[addon]" label="30029" help="" parent="Enable_Preroll">
                     <level>2</level>
                     <default>resource.videos.bumpers.pseudotv|resource.videos.bumpers.kodi</default>
@@ -725,6 +708,23 @@
                     </dependencies>
                     <control type="button" format="addon">
                         <heading>30068</heading>
+                        <show more="true" details="true">installed</show>
+                        <multiselect>true</multiselect>
+                    </control>
+                </setting>
+                <setting id="Resource_Ratings" type="list[addon]" label="30028" help="" parent="Enable_Preroll">
+                    <level>2</level>
+                    <default>resource.videos.ratings.mpaa.classic</default>
+                    <constraints>
+                        <addontype>kodi.resource.images</addontype>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="enable">
+                            <condition operator="!is" setting="Enable_Preroll">0</condition>
+                        </dependency>
+                    </dependencies>
+                    <control type="button" format="addon">
+                        <heading>30069</heading>
                         <show more="true" details="true">installed</show>
                         <multiselect>true</multiselect>
                     </control>
@@ -1199,7 +1199,7 @@
                 </setting>
                 <setting id="Enable_PVR_RELOAD" type="boolean" label="30155" help="33155">
                     <level>3</level>
-                    <default>true</default>
+                    <default>false</default>
                     <control type="toggle"/>
                     <dependencies>
                         <dependency type="enable">

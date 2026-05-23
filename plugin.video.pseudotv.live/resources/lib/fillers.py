@@ -79,7 +79,7 @@ class Fillers(object):
                 if self.service._interrupt(): break
                 values.setdefault('items',{}).update(_build(ftype, path))
                 
-            if ftype == 'trailers' and values.get('incKODI', False):
+            if values.get('incKODI', False):
                 if   ftype.lower() == 'trailers': trailers = self.trailers.get('movies',{})
                 elif ftype.lower() == 'adverts':  trailers = self.trailers.get('tvshows',{})
                 else:                             trailers = {}
@@ -173,26 +173,26 @@ class Fillers(object):
         # post roll - adverts/trailers/extras
         items = []
         nfileList = []
-        for item in [fileItem,nextItem]:
-            if not item: continue
-            for ftype in ['adverts', 'trailers', 'extras']:
-                filler = self.bctTypes.get(ftype, {})
-                ignore = {'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_TYPES}.get(ftype, IGNORE_CHTYPE)
-                if filler.get('enabled', False) and self.citem.get('type') not in ignore:
-                    if filler.get('auto', False): numberToFetch = filler.get('max',PAGE_LIMIT)
-                    else:                         numberToFetch = filler.get('min',SETTINGS.getSettingInt('Enable_Postroll'))
+        for ftype in ['adverts', 'trailers', 'extras']:
+            filler = self.bctTypes.get(ftype, {})
+            ignore = {'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_TYPES}.get(ftype, IGNORE_CHTYPE)
+            if filler.get('enabled', False) and self.citem.get('type') not in ignore:
+                if filler.get('auto', False): numberToFetch = filler.get('max',PAGE_LIMIT)
+                else:                         numberToFetch = filler.get('min',SETTINGS.getSettingInt('Enable_Postroll'))
+                for item in [fileItem,nextItem]:
+                    if not item: continue
                     keys = [self.citem.get('name',''), item.get('genre',''), self.citem.get('group','')]
-                    if numberToFetch > 0: items.extend(self._getFillterItem(ftype, numberToFetch, keys, chanceBool(filler.get('chance', 0))))
-                    if ftype == 'extras' and filler.get('incKODI',False) and ('movieid' in item or 'tvshowid' in item): items.extend(self._getExtras(item))
+                    if numberToFetch > 0:
+                        items.extend(self._getFillterItem(ftype, numberToFetch, keys, chanceBool(filler.get('chance', 0))))
+                    if ftype == 'extras' and filler.get('incKODI',False) and ('movieid' in item or 'tvshowid' in item):
+                        items.extend(self._getExtras(item))
         if items:
+            iteration     = 0
             post_counter  = 0
             post_queue    = deque(Globals._randomShuffle(Globals._setDictLST(items)))
             post_auto     = (self.bctTypes.get('adverts', {}).get('auto', False) or self.bctTypes.get('trailers', {}).get('auto', False))
             total_queue   = len(post_queue)
             post_runtime  = remaining_seconds if post_auto else MIN_EPG_DURATION
-            self.log('[%s] injectFillers [Post-Roll] %s/%s'%(self.citem.get('id'), post_runtime, remaining_seconds))
-
-            iteration = 0
             while not self.builder.monitor.abortRequested() and post_runtime > 0 and post_queue and post_counter < total_queue:
                 iteration += 1
                 item = post_queue.popleft()
@@ -206,7 +206,7 @@ class Fillers(object):
                                  'plot'        : item.get('plot', item.get('file')),
                                  'genre'       : ['Fillers','Post-Roll'],
                                  'path'        : item.get('file')})
-                    self.log('[%s] injectFillers [Post-Roll (%s)] %s, %s'%(self.citem.get('id'), ftype, dur, item.get('file')))
+                    self.log('[%s] injectFillers [Post-Roll (%s/%s)] %s, %s'%(self.citem.get('id'), post_runtime, remaining_seconds, dur, item.get('file')))
                     nfileList.extend(self.builder.buildCells(self.citem, dur, entries=1, info=item))
                 else:
                     post_queue.append(item)

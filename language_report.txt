@@ -359,7 +359,6 @@ Language IDS not found in py files, possibly only in xml: {
     "33224": "How many sub-folders to recursively search, 0 == Root Folder Only. [0 Default]\\nIncrease based on your media folder hierarchy.",
     "33226": "Enable Smart Shuffling\\nChanges may propagate slowly over time and may not be instantaneous. [False Default] *see wiki for details",
     "33227": "System Memory limit by percentage cache can utilize.",
-    "33233": "Include Extras & Specials in Post-Roll fillers.\\nContent is matched by the previous media played.\\nEnabling may slow down channel parsing.",
     "33308": "Install Log Uploader.",
     "33309": "Submit debugging log for review to http://paste.kodi.tv.",
     "33311": "Periodically populate channels based on your top 25 Kodi content by category.\\nDisable to enable Channel Manager."

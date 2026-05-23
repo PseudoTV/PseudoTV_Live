@@ -592,5 +592,6 @@ class Service(object):
                     try: thread.join(1.0)
                     except Exception: pass
                     self.log('_stop, closing %s...'%(thread.name))
-            PROPERTIES.setProcessID() #clrTrash
-        return pendingRestart
+        if pendingRestart: return True
+        PROPERTIES._clrTrash(PROPERTIES.getProcessID()) #clrTrash
+        

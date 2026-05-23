@@ -311,7 +311,8 @@ class HTTP(Thread):
             except Exception: pass
             self.log('run, http server shutdown, pendingRestart = %s, isAlive = %s'%(pendingRestart,__cancel()), xbmc.LOGINFO)
             if pendingRestart: 
-                timerit(self.service._que)(M3U_REFRESH,*(self.service.tasks.chkHTTP,1))
+                self.service._sleep(M3U_REFRESH)
+                self.service._que(self.service.tasks.chkHTTP,1)
             __update(pendingRestart)
             PROPERTIES.setRunning('HTTP.run',False)
             PROPERTIES.setRunning('HTTP.start',False)

@@ -114,9 +114,8 @@ class Multiroom(object):
                 if payload.get('host') != PROPERTIES.getRemoteHost(): 
                     DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
                     SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add Remote IPTV Simple config
-                else: 
-                    # SETTINGS.setPVRLocal(payload.get('host'),payload.get('name')) #add Local IPTV Simple config
-                    SETTINGS.setPVRRemote(payload.get('host'),payload.get('name'),cache=False) #add Remote IPTV Simple config
+                else:
+                    SETTINGS.setPVRLocal(payload.get('host'),payload.get('name')) #add Local IPTV Simple config
                 self._setServers(servers)
             else:
                 payload['enabled'] = server.get('enabled',False)
@@ -127,8 +126,7 @@ class Multiroom(object):
                         if payload.get('host') != PROPERTIES.getRemoteHost(): 
                             SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #update Remote IPTV Simple config
                         else:
-                            # SETTINGS.setPVRLocal(payload.get('host'),payload.get('name')) #update Local IPTV Simple config
-                            SETTINGS.setPVRRemote(payload.get('host'),payload.get('name'),cache=False) #add Remote IPTV Simple config
+                            SETTINGS.setPVRLocal(payload.get('host'),payload.get('name')) #update Local IPTV Simple config
                         if payload.get('settings') != server.get('settings'):
                             [SETTINGS.hasAddon(id) for _,addons in list(payload.get('settings',{}).items()) for id in addons if id.startswith(('resource','plugin'))]
                         if payload.get('resume') != server.get('resume'):

@@ -372,7 +372,7 @@ class Settings(object):
             return self.instances.setSettings(instanceName, settings)
         
                 
-    def setPVRLocal(self, host, instanceName=ADDON_NAME, cache=True):
+    def setPVRLocal(self, host, instanceName=ADDON_NAME, cache=False):
         settings  = self.instances.getSettings(instanceName)
         processID = self.properties.getProcessID()
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
@@ -1129,11 +1129,11 @@ class Builtin(object):
         return self.executebuiltin(key,wait,delay,condition)
         
         
-    def executebuiltin(self, key, wait=False, delay=False, condition=None):
+    def executebuiltin(self, key, wait=False, delay=None, condition=None):
         if not condition is None and not condition(): return False
         self.log('executebuiltin, key = %s, wait = %s, delay = %s, condition = %s):'%(key,wait,delay,condition))
-        xbmc.executebuiltin('%s'%(key),wait)
-        return True
+        if delay is None: return xbmc.executebuiltin('%s'%(key),wait)
+        return timerit(xbmc.executebuiltin)(delay,*(key,wait,None,condition))
         
         
     def executescript(self, path, condition=None):
