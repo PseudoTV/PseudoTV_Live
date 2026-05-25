@@ -223,7 +223,7 @@ class Globals:
     def _mergeDictLST(dict1={},dict2={}):
         for k, v in list(dict2.items()):
             dict1.setdefault(k,[]).extend(v)
-            Globals._setDictLST()
+            Globals._setDictLST(dict1)
         return dict1
         
     @staticmethod  
@@ -293,7 +293,11 @@ class Globals:
         files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
                  LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
                  LANGUAGE(30096):GENREFLEPATH}  #"Genre"
-        if full: files.update({LANGUAGE(32053):SETTINGS_FLE,'Cache':CACHE_FLE})
+        if full:
+            instanceName = PROPERITES.getFriendlyName()
+            files.update({LANGUAGE(32053)             :SETTINGS_FLE,'Cache':CACHE_FLE,
+                          f'Instance ({instanceName})':SETTINGS.instances.getPVRInstancePath(instanceName)})
         for key in list(files.keys()):
             if FileAccess.delete(files[key]): 
                 Globals._notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
+        if full: PROPERTIES.setPendingRestart(True)

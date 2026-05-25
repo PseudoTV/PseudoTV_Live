@@ -454,8 +454,7 @@ class XMLTVS(object):
          ##### TODO #####
            # 'country'     : [('USA', LANG)],#todo
            # 'premiere': (u'Not really. Just testing', u'en'),
-           
-        self.log('addProgram = %s'%(pitem.get('channel')))
+        self.log('[%s] addProgram'%(id))
         self.XMLTVDATA['programmes'].append(pitem)
         return True
 

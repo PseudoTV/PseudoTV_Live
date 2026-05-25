@@ -58,18 +58,17 @@ class Resources(object):
         self.monitor     = service.monitor
         self.jsonRPC     = service.jsonRPC
         self.cache       = service.jsonRPC.cache
-        self.baseURL     = service.jsonRPC.getLocalHost()
         self.seasonal    = Seasonal(cache=service.jsonRPC.cache)
         self.holiday     = self.seasonal.getHoliday()
         self.remoteHost  = PROPERTIES.getRemoteHost()
-        self.processID  = PROPERTIES.getProcessID()
+        self.processID   = PROPERTIES.getProcessID()
         self.openRouter  = OpenRouter(cache=service.jsonRPC.cache, jsonRPC=service.jsonRPC)
         
         try:
             self.imageCache  = service.imageCache 
-            self.pruneCache()
+            self.pruneimageCache()
         except:
-            self.imageCache = OrderedDict(SETTINGS.getCacheSetting('imageCache',default={}))
+            self.imageCache = self._getImageCache()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -92,13 +91,13 @@ class Resources(object):
         return 'http://%s/logos/%s?%s'%(self.remoteHost,Globals._quoteString(chname),self.processID) # host channel logos
 
 
-    def pruneCache(self):
+    def pruneimageCache(self):
         while not self.monitor.abortRequested() and len(self.imageCache) > IMAGE_CACHE_MAX:
             self.imageCache.popitem(last=False)
-            self.log(f'pruning imageCache = {len(self.imageCache)}')
+            self.log(f'pruneimageCache = {len(self.imageCache)}')
 
 
-    def getCache(self, chname, fallback=LOGO):
+    def getImageCache(self, chname, fallback=LOGO):
         # Use OrderedDict LRU behavior: move to end on access
         try:
             image = self.imageCache.get(chname)
@@ -108,20 +107,26 @@ class Resources(object):
             else: 
                 image = fallback
                 self.queueLogo(chname)
-            self.log('getCache, name = %s, image = %s'%(chname,image))
+            self.log('getImageCache, name = %s, image = %s'%(chname,image))
             return image
         except Exception as e: pass
 
+        
+    def _getImageCache(self):
+        imageCache = OrderedDict(SETTINGS.getCacheSetting('imageCache',default={}))
+        self.log('_getImageCache, imageCache = %s'%(len(imageCache)))
+        return imageCache
 
-    def setCache(self, chname, image=None):
+
+    def setImageCache(self, chname, image=None):
         if image:
             try:
                 self.imageCache[chname] = image
                 try: self.imageCache.move_to_end(chname)
                 except Exception: pass
-                self.pruneCache()
-                self.log('setCache, name = %s, image = %s'%(chname,image))
-            except Exception as e: self.log(f'setCache failed!\n{e}', xbmc.LOGWARNING)
+                self.pruneimageCache()
+                self.log('setImageCache, name = %s, image = %s'%(chname,image))
+            except Exception as e: self.log(f'setImageCache failed!\n{e}', xbmc.LOGWARNING)
         return image
 
 
@@ -129,14 +134,14 @@ class Resources(object):
         try:
             logo = None
             if not logo and citem.get('name') == LANGUAGE(32002): logo = self.holiday.get('logo') # seasonal
-            if not logo and not lookup:                           logo = self.getCache(citem.get('name'),fallback) # cache
+            if not logo and not lookup:                           logo = self.getImageCache(citem.get('name'),fallback) # cache
             if not logo and lookup: # perform progressively heavier lookups only when lookup=True
                 logo = self.getLocalLogo(citem.get('name'))                  # local
                 if not logo: logo = self.getLogoResources(citem)             # resources
                 if not logo: logo = self.getTVShowLogo(citem.get('name'))    # tvshow
                 # if not logo: logo = self.generateOnline(citem.get('name')) # generative (online)
                 if not logo: logo = self.generateLocal(citem.get('name'))    # generative (local)
-                if logo: self.setCache(citem.get('name'), logo)              # cache
+                if logo: self.setImageCache(citem.get('name'), logo)              # cache
             self.log('[%s] getLogo, name = %s, lookup = %s, logo = %s'%(citem.get('id'),citem.get('name'),lookup,logo))
             return Globals._buildWebImage(citem.get('name'), logo, fallback)
         except Exception as e: self.log(f'getLogo failed!\n{e}\n{citem}', xbmc.LOGERROR)

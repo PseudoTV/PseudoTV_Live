@@ -113,7 +113,7 @@ class Player(xbmc.Player):
 
     def getplayingItem(self):
         try: 
-            playingItem = FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo'))
+            playingItem = (FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo')) or {})
             if '@%s'%(Globals._slugify(ADDON_NAME)) in playingItem.get('chid',''):
                 playingItem['isPseudoTV'] = True
                 playingItem['chfile']   = BUILTIN.getInfoLabel('Player.Filename')
@@ -563,6 +563,7 @@ class Service(object):
                 
                 
     def _initialize(self):
+        PROPERTIES.setEXTProperty('%s.Local_Host'%(ADDON_ID),self.jsonRPC.getLocalHost())
         if self.isClient: self._que(self.tasks._client,1)
         else:             self._que(self.tasks._host,1)
 

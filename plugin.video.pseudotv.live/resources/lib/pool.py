@@ -95,71 +95,81 @@ def timeit(method):
         end_time = time.time()
         log('%s timeit => %.2f ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
 
-def debounceit(wait=SERVICE_INTERVAL):
+def debounceit(wait=SERVICE_INTERVAL, monitor=None):
+    if monitor is None: monitor = MONITOR()
     def decorator(method):
-        state = {'timer': None,'args': None,'kwargs': None}
-        lock  = Lock()
-        monitor = MONITOR()
+        state = { 'timer': None, 'args': None, 'kwargs': None }
+        lock  = threading.Lock()
         
         @wraps(method)
         def wrapper(*args, **kwargs):
             if monitor.abortRequested(): return
-            def __run():
-                with lock:
-                    current_args   = state['args']
-                    current_kwargs = state['kwargs']
-                    state['timer'] = None 
-                try:
-                    if not monitor.abortRequested():
-                        with timeit(method):
-                            method(*current_args, **current_kwargs)
-                    log('%s, executing %s' % (method.__qualname__.replace('.', ': => -:'), threading.current_thread().name))
-                except Exception as e:
-                    log('%s, failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
-                    
             with lock:
+                #Cancel existing pending timer if it exists
                 if state['timer'] is not None: state['timer'].cancel()
                 if monitor.abortRequested():
                     state['timer'] = None
                     return
-
+                
                 state['args']   = args
                 state['kwargs'] = kwargs
-                timer = Timer(float(wait), __run)
-                timer.name = 'debounceit.%s' % (method.__qualname__.replace('.', ': '))
-                state['timer'] = timer
-                timer.start()
+                def __run():
+                    try:
+                        if monitor.abortRequested(): return
+                        with lock:
+                            exec_args   = state['args']
+                            exec_kwargs = state['kwargs']
+                        
+                        # Execute the target method
+                        with timeit(method):
+                            method(*exec_args, **exec_kwargs)
+                        xbmc.log(f"{method.__qualname__} executed via {threading.current_thread().name}", xbmc.LOGINFO)
+                    except Exception as e: xbmc.log(f"{method.__qualname__} failed! Error: {e}", xbmc.LOGERROR)
+                    finally:
+                        with lock:
+                            if state['timer'] == current_timer:
+                                state['timer'] = None
+
+                current_timer = threading.Timer(float(wait), __run)
+                current_timer.name = f"debounceit.{method.__qualname__}"
+                state['timer'] = current_timer
+                current_timer.start()
         return wrapper
     return decorator
     
 def killit(method):
     @wraps(method)
     def wrapper(wait=None, *args, **kwargs):
-        if wait is None: wait = int(REAL_SETTINGS.getSetting('RPC_Wait'))
-        monitor  = MONITOR() 
+        if wait is None:
+            try: wait = int(REAL_SETTINGS.getSetting('RPC_Wait'))
+            except (NameError, ValueError):
+                wait = DISCOVERY_TIMER
+                
+        monitor  = MONITOR()
         timeout  = float(wait) if wait >= 0 else None
-        response = {'result': None, 'success': False, 'error': ''}
-
+        response = {'result': None, 'success': False, 'error': None}
+        
         def __run():
-            if monitor.abortRequested(): 
-                return
             try:
+                if monitor.abortRequested():  return
                 with timeit(method):
-                    response['result']  = method(*args, **kwargs)
-                    response['success'] = True
-                log('%s, executing %s' % (method.__qualname__.replace('.', ': => -:'), threading.current_thread().name))
+                    res = method(*args, **kwargs)
+                    
+                response['result']  = res
+                response['success'] = True
+                xbmc.log(f"{method.__qualname__} successfully executed on {threading.current_thread().name}", xbmc.LOGINFO)
             except Exception as e:
                 response['error'] = e
-                log('%s, failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
+                xbmc.log(f"{method.__qualname__} failed! Error: {e}", xbmc.LOGERROR)
 
         if monitor.abortRequested(): return None
-        thread = Thread(target=__run)
-        thread.name = 'killit.%s' % (method.__qualname__.replace('.', ': '))
+        thread = threading.Thread(target=__run)
+        thread.name = f"killit.{method.__qualname__}"
         thread.daemon = True 
         thread.start()
         thread.join(timeout=timeout)
         if thread.is_alive():
-            log('%s timed out after %ss. Background thread remains active.' % (thread.name, wait), xbmc.LOGWARNING)
+            xbmc.log(f"{thread.name} timed out after {wait}s. Thread abandoned in background (potential leak).", xbmc.LOGWARNING)
             return None
         return response['result'] if response['success'] else None
     return wrapper
@@ -167,63 +177,62 @@ def killit(method):
 def executeit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
-        if MONITOR().abortRequested():
-            return None
+        monitor = MONITOR()
         try:
-            log('executeit => %s'%(method.__qualname__.replace('.',': ')))
-            return EXECUTOR_POOL.executor(method, TIMEOUT_EXECUTOR, *args, **kwargs)
-        except (RuntimeError, KeyError): return None
+            if monitor.abortRequested(): return None
+            readable_name = method.__qualname__.replace('.', ': ')
+            xbmc.log(f"executeit => {readable_name}", xbmc.LOGINFO)
+            return ExecutorPool().executor(method, TIMEOUT_EXECUTOR, *args, **kwargs)
+        except (RuntimeError, KeyError) as pool_err:
+            xbmc.log(f"executeit => Pool infrastructure error running {method.__name__}: {pool_err}", xbmc.LOGERROR)
+            return None
+        except concurrent.futures.TimeoutError:
+            xbmc.log(f"executeit => {method.__name__} timed out after {TIMEOUT_EXECUTOR}s", xbmc.LOGWARNING)
+            return None
+        except Exception as method_err:
+            xbmc.log(f"executeit => Unhandled exception inside {method.__name__}: {method_err}", xbmc.LOGERROR)
+            return None
     return wrapper
     
 def threadit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
         monitor = MONITOR()
-        if monitor.abortRequested():
-            return None
-
-        existing_thread = None
+        if monitor.abortRequested(): return None
         with wrapper._lock:
             if wrapper._active_thread and wrapper._active_thread.is_alive():
-                existing_thread = wrapper._active_thread
-
-        if existing_thread:
-            if not monitor.abortRequested():
-                log('%s, joining existing Thread: %s' % (method.__qualname__, existing_thread.name))
-                existing_thread.join(CPU_CYCLE)
+                xbmc.log(f"{method.__qualname__} execution skipped: previous background thread is still busy.", xbmc.LOGDEBUG)
+                return wrapper._active_thread
 
         def __run():
-            if monitor.abortRequested(): 
-                return
             try:
+                if monitor.abortRequested(): return
                 with timeit(method):
                     method(*args, **kwargs)
-                log('%s, executing %s' % (method.__qualname__.replace('.', ': => -:'), threading.current_thread().name))
-            except Exception as e: 
-                log('%s, failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
+                xbmc.log(f"{method.__qualname__} finished executing on {threading.current_thread().name}", xbmc.LOGINFO)
+            except Exception as e: xbmc.log(f"{method.__qualname__} background run failed! Error: {e}", xbmc.LOGERROR)
             finally:
                 with wrapper._lock:
                     if wrapper._active_thread == threading.current_thread():
                         wrapper._active_thread = None
 
-        thread = Thread(target=__run)
-        thread.name = 'threadit.%s'%(method.__qualname__.replace('.',': '))
+        thread = threading.Thread(target=__run)
+        thread.name = f"threadit.{method.__qualname__}"
         thread.daemon = True
         
         with wrapper._lock:
+            if monitor.abortRequested(): return None
             wrapper._active_thread = thread
-            if not monitor.abortRequested():
-                thread.start()
-            else: return None
+            thread.start()
         return thread
-
+        
     wrapper._active_thread = None
-    wrapper._lock = Lock()
+    wrapper._lock = threading.Lock()
     return wrapper
     
 def timerit(method):
     _active_timer = None
-    _lock = Lock()
+    _lock = threading.Lock()
     _latest_args = None
     _latest_kwargs = None
 
@@ -231,34 +240,35 @@ def timerit(method):
     def wrapper(wait, *args, **kwargs):
         nonlocal _active_timer, _latest_args, _latest_kwargs
         monitor = MONITOR()
-        if monitor.abortRequested(): return None
-
+        if monitor.abortRequested():  return None
         def __run():
             nonlocal _active_timer
             with _lock:
                 current_args = _latest_args
                 current_kwargs = _latest_kwargs
-                _active_timer = None
             if monitor.abortRequested(): return
-                
             try:
                 if not monitor.abortRequested():
                     with timeit(method):
                         method(*current_args, **current_kwargs)
-                log('%s, running %s' % (method.__qualname__.replace('.', ': => -:'), threading.current_thread().name))
-            except Exception as e:
-                log('%s, failed! %s' % (method.__qualname__.replace('.', ': '), e), xbmc.LOGERROR)
-
+                xbmc.log(f"{method.__qualname__} executed on thread {threading.current_thread().name}", xbmc.LOGINFO)
+            except Exception as e: xbmc.log(f"{method.__qualname__} execution failed! Error: {e}", xbmc.LOGERROR)
+            finally:
+                with _lock:
+                    if _active_timer == current_thread_timer:
+                        _active_timer = None
         with _lock:
             if _active_timer is not None: _active_timer.cancel()
             if monitor.abortRequested():
                 _active_timer = None
                 return None
+                
             _latest_args = args
             _latest_kwargs = kwargs
-            timer = Timer(float(wait), __run)
-            timer.name = 'timerit.%s' % (method.__qualname__.replace('.', ': '))
+            timer = threading.Timer(float(wait), __run)
+            timer.name = f"timerit.{method.__qualname__}"
             timer.daemon = True
+            current_thread_timer = timer 
             _active_timer = timer
             timer.start()
         return timer
@@ -268,41 +278,30 @@ def poolit(method):
     @wraps(method)
     def wrapper(items=None, wait=TIMEOUT_EXECUTORS, *args, **kwargs):
         monitor = MONITOR()
+        if monitor.abortRequested(): return None
         if items is None: items = []
+        execution_state = { 'result': None, 'error': None }
         
-        if monitor.abortRequested():
-            return None
-
-        class pooler(Thread):
-            def __init__(self):
-                Thread.__init__(self)
-                self.result = None
-                self.error  = None
-                self.daemon = True
-
-            def run(self):
+        def __worker():
+            try:
                 if monitor.abortRequested(): return
-                try:    
-                    with timeit(method):
-                        self.result = ExecutorPool().executors(method, items, wait, *args, **kwargs)
-                    log('%s, running %s' % (method.__qualname__.replace('.', ': => -:'), threading.current_thread().name))
-                except Exception as e:
-                    self.error = traceback.format_exc()
+                execution_state['result'] = ExecutorPool().executors(method, items, wait, *args, **kwargs)
+                xbmc.log(f"{method.__qualname__} pool completed on {threading.current_thread().name}", xbmc.LOGINFO)
+            except Exception: execution_state['error'] = traceback.format_exc()
 
-        thread = pooler()
-        thread.name = '%s.%s'%('poolit', method.__qualname__.replace('.',': '))
+        if monitor.abortRequested(): return None
+        thread = threading.Thread(target=__worker)
+        thread.name = f"poolit.{method.__qualname__}"
+        thread.daemon = True
+        thread.start()
         
-        if not monitor.abortRequested():
-            thread.start()
-            log('%s, poolit starting %s' % (method.__name__, thread.name))
-            thread.join(float(wait))
-        
+        xbmc.log(f"{method.__name__} supervisor thread started: {thread.name}", xbmc.LOGDEBUG)
+        thread.join(timeout=float(wait))
         if thread.is_alive():
-            log('%s, poolit Timed out! Thread remains in background.' % method.__name__, xbmc.LOGWARNING)
+            xbmc.log(f"{method.__name__} pool timed out! Background supervisor abandoned.", xbmc.LOGWARNING)
             return None
-            
-        if thread.error:
-            log('%s, poolit Errors: %s' % (method.__name__, thread.error), xbmc.LOGERROR)
-            
-        return thread.result
+        if execution_state['error']:
+            xbmc.log(f"{method.__name__} pool failed with errors:\n{execution_state['error']}", xbmc.LOGERROR)
+            return None
+        return execution_state['result']
     return wrapper

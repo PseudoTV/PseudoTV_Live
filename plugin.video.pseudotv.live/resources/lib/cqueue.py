@@ -42,6 +42,7 @@ class CustomQueue(object):
         self.itemCount   = defaultdict(int)
         self.max_priority_seen = 0
         
+        self.useExecutor = SETTINGS.getSettingBool('Enable_Executor')
         self.executor    = ThreadPoolExecutor(max_workers=THREAD_COUNT)
         self.popThread   = Thread(target=self._start)
         self.log(f"__init__, type = {self.type}, delay = {delay}, timer = {timer}")
@@ -69,12 +70,13 @@ class CustomQueue(object):
             
             
     def _use_executor(self):
-        if SETTINGS.getSettingBool('Enable_Executor') or BUILTIN.isPlaying(): return True
-        return len(self.sync_queue) >= QUEUE_CHUNK
+        if self.useExecutor or BUILTIN.isPlaying(): return True
+        return False
 
 
     def _run(self):
         if self.service._interrupt() or self.service._suspend(): return
+        self.useExecutor = SETTINGS.getSettingBool('Enable_Executor')
         if not self._use_executor():
             if not self.syncThread.is_alive():
                 self.syncThread = Thread(target=self._sync_worker)
@@ -119,7 +121,7 @@ class CustomQueue(object):
         while not self.service.monitor.abortRequested():
             if self.service._interrupt() or self.service._suspend(): break
             if self._use_executor():
-                self._sync_empty()
+                if len(self.sync_queue) > 0: self._sync_empty()
                 break
                 
             sync_task = None
@@ -192,8 +194,7 @@ class CustomQueue(object):
                 else:
                     self.deque_queue.append((package, priority, timer))
         
-        if self.service._shutdown(CPU_CYCLE): 
-            self._stop()
+        if self.service._shutdown(CPU_CYCLE): self._stop()
         elif (not self.service._interrupt() or self.service._suspend()) and not self.popThread.is_alive(): 
             self._run()
 
@@ -205,7 +206,6 @@ class CustomQueue(object):
                 
             package = None
             target_timer = 0
-            
             with self.lock:
                 if self.priority:
                     if self.min_heap:
@@ -217,7 +217,7 @@ class CustomQueue(object):
 
             # Main pipeline ran out of tasks
             if package is None:
-                if self._use_executor():
+                if self._use_executor() and len(self.sync_queue) > 0: 
                     self._sync_empty()
                 break
                 

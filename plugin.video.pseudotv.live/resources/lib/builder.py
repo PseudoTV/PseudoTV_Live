@@ -115,8 +115,8 @@ class Builder(object):
                                  "extras"  :{"min":SETTINGS.getSettingInt('Enable_Postroll'), "max":PAGE_LIMIT, "auto":SETTINGS.getSettingInt('Enable_Postroll') == -1, "enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')), "chance":SETTINGS.getSettingInt('Random_Post_Chance'),
                                              "sources" :{"ids":[],"paths":[]},"items":{}, "incKODI":SETTINGS.getSettingBool('Include_Extras_KODI')}}
 
-        self.resources    = Resources(service=self.service)
-        self.runActions   = RulesList(self.channels.getChannels()).runActions
+        self.resources       = Resources(service=self.service)
+        self.runActions      = RulesList(self.channels.getChannels()).runActions
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -141,7 +141,7 @@ class Builder(object):
                 continue
             else:
                 if not citem.get('id'): citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'],SETTINGS.getMYUUID()) #generate new channelid
-                citem['logo'] = self.resources.getLogo(citem,fallback=self.resources.getCache(citem['name']),lookup=True)
+                citem['logo'] = self.resources.getLogo(citem,fallback=self.resources.getImageCache(citem['name']),lookup=True)
                 self.log('[%s] VERIFIED - channel %s: %s changed = %s'%(citem['id'],citem['number'],citem['name'],citem.get('changed',False)),xbmc.LOGINFO)
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, Globals._cleanGroups(citem), inherited=self) #inject persistent citem changes here
 
@@ -175,7 +175,8 @@ class Builder(object):
             
         def __hasChanged(citem: dict, detect=SETTINGS.getSettingBool('Enable_Changed')) -> bool:
             if not citem.get('changed',False) and detect:
-                state = any(SETTINGS.getFileCRC(file) for file in citem.get('path',[]) if file.endswith(tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)))
+                state = any([SETTINGS.getFileCRC(file) for file in citem.get('path',[]) if file.endswith(tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS))])
+                if state: self.log('[%s] buildChannels, __hasChanged file = %s'%(citem['id'],file))
             else: state = citem.get('changed',False)
             self.log('[%s] buildChannels, __hasChanged = %s'%(citem['id'],state))
             if state: #clear channel m3u/xmltv 
@@ -197,13 +198,13 @@ class Builder(object):
             return state
         
         def __addProgrammes(citem: dict, fileList: list) -> bool:
-            state = any(self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)) for item in fileList)
-            self.log('[%s] buildChannels, __addProgrammes fileList = %s'%(citem['id'],len(fileList)))
+            state = any([self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)) for item in fileList])
+            self.log('[%s] buildChannels, __addProgrammes %s fileList = %s'%(citem['id'],state,len(fileList)))
             return state
         
         def __addStation(citem: dict) -> bool:
             sitem = self.m3u.getStationItem(citem)
-            state = any([self.m3u.addStation(sitem),self.xmltv.addChannel(sitem)])
+            state = any([self.m3u.addStation(sitem), self.xmltv.addChannel(sitem)])
             self.log('[%s] buildChannels, __addStation = %s'%(citem['id'],state))
             return state
         
@@ -233,13 +234,12 @@ class Builder(object):
             self.log("[%s] buildChannels, __addFillers, enable = %s, fileList = %s"%(citem['id'],enable,len(fileList)))
             if enable: return Fillers(citem,self).injectFillers(fileList)
             return fileList
-                         
-            
+                
         if not PROPERTIES.isRunning('Builder.buildChannels'):
             with PROPERTIES.legacy(), PROPERTIES.chkRunning('Builder.buildChannels'):
                 channels = self.getVerifiedChannels(channels)
                 if len(channels) > 0:
-                    completed = set()
+                    complete  = set()
                     changes   = set()
                     now       = getUTCstamp()
                     nstart    = roundTimeDown(now,offset=60)#offset time to start bottom of the hour
@@ -303,13 +303,13 @@ class Builder(object):
                             else: updated.add(__hasProgrammes(citem))
                                 
                             if any(updated): 
-                                completed.add(__addStation(citem)) #add m3u station if lineup available. 
+                                complete.add(__addStation(citem)) #add m3u station if lineup available. 
                                 PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
                             else: __clrStation(citem) #remove m3u/xmltv references when no valid programmes found.
                             __setStation()
                         except Exception as e: self.log("buildChannels, failed! %s"%(e), xbmc.LOGERROR)
                     if any(changes): self.channels.setChannels()
-                    self.log('[%s] buildChannels, completed = %s, updated = %s, changes = %s'%(citem['id'],any(completed),any(updated),any(changes)))
+                    self.log('[%s] buildChannels, complete = %s, updated = %s, changes = %s'%(citem['id'],any(complete),any(updated),any(changes)))
 
 
     def buildMusic(self, citem: dict) -> list:
@@ -600,7 +600,7 @@ class Builder(object):
 
 
     def resetPagination(self, citem):
-        if isinstance(citem, list): return any(self.resetPagination(item) for item in citem)
-        return any(self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id'))
+        if isinstance(citem, list): return any([self.resetPagination(item) for item in citem])
+        return any([self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id')])
     
         

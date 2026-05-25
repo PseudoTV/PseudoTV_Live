@@ -106,7 +106,7 @@ class Library(object):
         self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
         self.libraryDATA['library'][type] = items
         PROPERTIES.setHasLibrary(type,len(items) > 0)
-        return self._save()
+        return True if self._save() else False
 
 
     def hasLibrary(self, type):
@@ -114,7 +114,7 @@ class Library(object):
         
         
     def updateLibrary(self, types, silent=None):
-        completed = []
+        complete = set()
         if silent is None: silent = BUILTIN.isPlaying()
         if not PROPERTIES.isRunning('Library.updateLibrary'):
             with PROPERTIES.chkRunning('Library.updateLibrary'):
@@ -127,9 +127,9 @@ class Library(object):
                         with DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
                             items = self.AUTOTUNE[type]['func']()
                     if items:
-                        completed.append(self.setLibrary(type,items))
+                        complete.add(self.setLibrary(type,items))
                         self.log("updateLibrary, type = %s, items = %s"%(type,len(items)))
-        return any(completed)
+        return any(complete)
 
 
     def clrLibraryCache(self, type):

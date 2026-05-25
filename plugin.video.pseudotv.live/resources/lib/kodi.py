@@ -202,6 +202,7 @@ class Settings(object):
             return url
             
         def __hasADDON(id):
+            if not id: return False
             hasAddon  = self.builtin.getInfoBool('System.HasAddon(%s)'%(id))
             isEnabled = self.builtin.getInfoBool('System.AddonIsEnabled(%s)'%(id))
             self.log(f'[{id}] hasAddon = {hasAddon}, isEnabled = {isEnabled}, Kodi Override = {bypass}')
@@ -212,11 +213,11 @@ class Settings(object):
                         if not self.dialog.yesnoDialog(message=LANGUAGE(32156)%(id)):
                             self.log('[%s] hasAddon, (Not Enabled!)'%(id))
                             return
-                    self.builtin.executebuiltin('EnableAddon(%s)'%(id),wait=True)
+                    self.builtin.executebuiltin(f'EnableAddon({id})',wait=True)
                 elif notify: self.dialog.notificationDialog(LANGUAGE(32264)%(id))
-            elif install: self.builtin.executebuiltin('InstallAddon(%s)'%(id),wait=True)
+            elif install: self.builtin.executebuiltin(f'InstallAddon({id})',wait=True)
             elif notify:  self.dialog.notificationDialog(LANGUAGE(32034)%(id))
-            return self.builtin.getInfoBool('System.HasAddon(%s)'%(id))
+            return self.builtin.getInfoBool(f'System.HasAddon({id})')
         
         bypass = self.getSettingBool('Enable_Kodi_Access')
         if install is None: install = bypass
@@ -339,12 +340,6 @@ class Settings(object):
         return self.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned', state, life=datetime.timedelta(days=MAX_GUIDEDAYS)))
 
 
-    def chkPVRBackend(self): 
-        self.log('chkPVRBackend')
-        if self.hasAddon(PVR_CLIENT_ID,notify=True):
-            self.instances.chkInstances(self.properties.getFriendlyName())
-
-
     def hasPVRInstance(self, instanceName=ADDON_NAME):
         instancePath = self.instances.getPVRInstancePath(instanceName)
         if FileAccess.exists(instancePath):
@@ -378,13 +373,13 @@ class Settings(object):
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
                      'kodi_addon_instance_enabled':'true',
                      'm3uPathType'                :'1',
-                     'm3uUrl'                     :'http://%s/%s?%s'%(host,M3UFLE,processID),
+                     'm3uUrl'                     :'http://%s/%s'%(host,M3UFLE),
                      'm3uCache'                   :'%s'%(str(cache).lower()),
                      'epgPathType'                :'1',
-                     'epgUrl'                     :'http://%s/%s?%s'%(host,XMLTVFLE,processID),
-                     'epgCache'                   :'%s'%(str(cache).lower()),
+                     'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
+                     'epgCache'                   :'true',#'%s'%(str(cache).lower()),
                      'genresPathType'             :'1',
-                     'genresUrl'                  :'http://%s/%s?%s'%(host,GENREFLE,processID),
+                     'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
                      'logoPathType'               :'1',
                      'logoBaseUrl'                :'http://%s/logos'%(host)}
         settings.update(nsettings)
@@ -1156,12 +1151,12 @@ class Builtin(object):
 
 
 class Dialog(object):
-    monitor    = MONITOR()
-    settings   = Settings()
-    properties = Properties()
-    listitems  = ListItems()
-    builtin    = Builtin()
-    dialog     = xbmcgui.Dialog()
+    monitor     = MONITOR()
+    settings    = Settings()
+    properties  = Properties()
+    listitems   = ListItems()
+    builtin     = Builtin()
+    dialog      = xbmcgui.Dialog()
     
     def __init__(self):
         self.settings.monitor    = self.monitor
@@ -1501,12 +1496,14 @@ class Dialog(object):
         if custom: return self.customSelect(items, header, preselect, useDetails, autoclose, multi)
         elif multi == True:
             if not preselect: preselect = [-1]
-            select = self.dialog.multiselect(header, items, (autoclose*1000), preselect, useDetails)
+            with self.dialog_lock:
+                select = self.dialog.multiselect(header, items, (autoclose*1000), preselect, useDetails)
             if select == [-1]: return
         else:
             if not preselect: preselect = -1
             elif isinstance(preselect,list) and len(preselect) > 0: preselect = preselect[0]
-            select = self.dialog.select(header, items, (autoclose*1000), preselect, useDetails)
+            with self.dialog_lock:
+                select = self.dialog.select(header, items, (autoclose*1000), preselect, useDetails)
             if select == -1: return
         return select
       
@@ -1520,7 +1517,8 @@ class Dialog(object):
         ## - key: xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
         ## - opt: xbmcgui.PASSWORD_VERIFY (verifies an existing (default) md5 hashed password)
         ## - opt: xbmcgui.ALPHANUM_HIDE_INPUT (masks input)
-        return self.dialog.input(message, default, key, opt, close)
+        with self.dialog_lock:
+            return self.dialog.input(message, default, key, opt, close)
         
 
     def importSTRM(self, strm):
@@ -1616,8 +1614,9 @@ class Dialog(object):
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#gafa1e339e5a98ae4ea4e3d3bb3e1d028c
         self.toggleInfoMonitor(monitor)
-        if multi == True and type > 0:  retval = self.dialog.browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
-        else:                           retval = self.dialog.browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
+        with self.dialog_lock:
+            if multi == True and type > 0:  retval = self.dialog.browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
+            else:                           retval = self.dialog.browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
         self.toggleInfoMonitor(False)
         if not retval is None and retval != default:
             return retval

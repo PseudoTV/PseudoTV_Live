@@ -107,35 +107,32 @@ class Multiroom(object):
             payload['online'] = True
             servers = self.getServers()
             server  = servers.get(payload.get('name'),{})
+            print('addServer',type(payload),payload,server)
             if not server: 
                 payload['enabled'] = True
                 servers[payload['name']] = payload
                 self.log('addServer, adding server = %s'%(payload))
                 if payload.get('host') != PROPERTIES.getRemoteHost(): 
-                    DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
                     SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add Remote IPTV Simple config
-                else:
-                    SETTINGS.setPVRLocal(payload.get('host'),payload.get('name')) #add Local IPTV Simple config
+                    DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
                 self._setServers(servers)
             else:
+                instancePath = SETTINGS.hasPVRInstance(server.get('name'))
                 payload['enabled'] = server.get('enabled',False)
-                if payload.get('md5') != server.get('md5',str(random.random())):#something changed!
+                if instancePath is None or (payload.get('md5') != server.get('md5',str(random.random()))):#something changed!
                     if payload['enabled']:
                         if payload['online'] != server.get('online',False):
                             DIALOG.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))
                         if payload.get('host') != PROPERTIES.getRemoteHost(): 
                             SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #update Remote IPTV Simple config
-                        else:
-                            SETTINGS.setPVRLocal(payload.get('host'),payload.get('name')) #update Local IPTV Simple config
                         if payload.get('settings') != server.get('settings'):
                             [SETTINGS.hasAddon(id) for _,addons in list(payload.get('settings',{}).items()) for id in addons if id.startswith(('resource','plugin'))]
-                        if payload.get('resume') != server.get('resume'):
+                        if payload.get('resume') != server.get('resume'): 
                             [self.getRemote(url) for url in payload.get('resume',[])]
-                    else: FileAccess.delete(SETTINGS.hasPVRInstance(server.get('name'))) #del IPTV Simple config
+                    else: FileAccess.delete(instancePath) #del IPTV Simple config
                     servers[payload['name']] = payload
                     self.log('addServer, updating server = %s'%(payload))
                     self._setServers(servers)
-
 
     def _delServer(self, servers={}):
         self.log('_delServer')

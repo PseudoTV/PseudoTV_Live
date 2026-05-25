@@ -137,11 +137,14 @@ class Fillers(object):
 
 
     def _getExtras(self, fileItem):
+        items = []
         try:# https://kodi.wiki/view/Video_extras
-            if   'movieid'  in fileItem: return self.getDirectory({"directory":'%s/%s'%(os.path.split(fileItem.get('file'))[0],'extras'),"media":'video'})
-            elif 'tvshowid' in fileItem: return self.jsonRPC.getEpisode(fileItem.get('tvshowid'),season=0)
+            if   'movieid'  in fileItem: items = self.getDirectory({"directory":'%s/%s'%(os.path.split(fileItem.get('file'))[0],'extras'),"media":'video'})
+            elif 'tvshowid' in fileItem: items = self.jsonRPC.getEpisode(fileItem.get('tvshowid'),season=0)
         except Exception: pass
-        return []
+        self.log('[%s] _getExtras, items = %s'%(self.citem.get('id'), len(items)))
+        print('_getExtras items',items)
+        return items
         
 
     def _getPreRoll(self, fileItem):
@@ -164,9 +167,9 @@ class Fillers(object):
                                  'genre'       : ['Fillers','Pre-Roll'],
                                  'path'        : item.get('file'),
                                  'art'         : {"thumb":LOGO,"poster":LOGO_POSTER,"fanart":LOGO_LANDSCAPE,"landscape":LOGO_LANDSCAPE,"logo":LOGO,"icon":LOGO}})
-                    self.log('[%s] injectFillers [Pre-Roll (%s)] %s, %s'%(self.citem.get('id'), ftype, dur, item.get('file')))
+                    self.log('[%s] injectFillers [%s: Pre-Roll (%s)] %s, %s'%(self.citem.get('id'), i, ftype, dur, item.get('file')))
                     nfileList.extend(self.builder.buildCells(self.citem, dur, entries=1, info=item))
-        return nfileList
+        return Globals._setDictLST(nfileList)
         
         
     def _getPostRoll(self, fileItem, nextItem={}, remaining_seconds=0):
@@ -179,13 +182,15 @@ class Fillers(object):
             if filler.get('enabled', False) and self.citem.get('type') not in ignore:
                 if filler.get('auto', False): numberToFetch = filler.get('max',PAGE_LIMIT)
                 else:                         numberToFetch = filler.get('min',SETTINGS.getSettingInt('Enable_Postroll'))
-                for item in [fileItem,nextItem]:
+                for item in [fileItem, nextItem]:
                     if not item: continue
                     keys = [self.citem.get('name',''), item.get('genre',''), self.citem.get('group','')]
                     if numberToFetch > 0:
                         items.extend(self._getFillterItem(ftype, numberToFetch, keys, chanceBool(filler.get('chance', 0))))
                     if ftype == 'extras' and filler.get('incKODI',False) and ('movieid' in item or 'tvshowid' in item):
                         items.extend(self._getExtras(item))
+                        
+        print('_getPostRoll items',items)
         if items:
             iteration     = 0
             post_counter  = 0
@@ -206,7 +211,7 @@ class Fillers(object):
                                  'plot'        : item.get('plot', item.get('file')),
                                  'genre'       : ['Fillers','Post-Roll'],
                                  'path'        : item.get('file')})
-                    self.log('[%s] injectFillers [Post-Roll (%s/%s)] %s, %s'%(self.citem.get('id'), post_runtime, remaining_seconds, dur, item.get('file')))
+                    self.log('[%s] injectFillers [%s: Post-Roll (%s/%s)] %s, %s'%(self.citem.get('id'), iteration, post_runtime, remaining_seconds, dur, item.get('file')))
                     nfileList.extend(self.builder.buildCells(self.citem, dur, entries=1, info=item))
                 else:
                     post_queue.append(item)
@@ -215,6 +220,7 @@ class Fillers(object):
         
 
     def injectFillers(self, fileList, slot_size_mins=30):
+        self.log('[%s] injectFillers, IN fileList = %s'%(self.citem.get('id'), len(fileList)))
         nfileList = []
         SLOT_SEC  = slot_size_mins * 60
         runtime   = fileList[0]['start']
@@ -240,7 +246,7 @@ class Fillers(object):
             runtime += duration
             fileItem['stop'] = runtime
             nfileList.append(fileItem)
-            self.log('[%s] injectFillers [Media (%s)] %s, %s'%(self.citem.get('id'), fileItem.get('type'), fileItem.get('duration'), fileItem.get('file')))
+            self.log('[%s] injectFillers [%s: Media (%s)] %s, %s'%(self.citem.get('id'), i, fileItem.get('type'), fileItem.get('duration'), fileItem.get('file')))
             
             #Post-Rolls
             next_duration = fileList[i+1].get('duration', 0) if i + 1 < len(fileList) else 0
@@ -266,5 +272,5 @@ class Fillers(object):
                         runtime += item.get('duration', 0)
                         item['stop'] = runtime
                         nfileList.append(item)
-        self.log('[%s] injectFillers, finished' % (self.citem.get('id')))
-        return [f for f in nfileList if f]
+        self.log('[%s] injectFillers, OUT fileList = %s'%(self.citem.get('id'), len(nfileList)))
+        return nfileList

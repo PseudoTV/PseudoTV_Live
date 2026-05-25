@@ -660,8 +660,8 @@ class JSONRPC(object):
         if local: ip = 'localhost'
         else:     ip = SETTINGS.getIP()
         webURL =  '{0}://{1}{2}:{3}'.format(protocol,username,ip,port)
-        PROPERTIES.setEXTProperty('%s.Local_Host'%(ADDON_ID),webURL)
         self.log("getLocalHost; returning %s"%(webURL))
+        return webURL
 
 
     def padItems(self, files, page=SETTINGS.getSettingInt('Page_Limit')):

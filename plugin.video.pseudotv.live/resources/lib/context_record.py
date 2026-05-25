@@ -51,8 +51,8 @@ class Record(object):
                         m3u   = M3U(writable=True)
                         xmltv = XMLTVS(writable=True)
                         ritem = m3u.getRecordItem(self.fitem, seek)
-                        if any(m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)):
-                            if any(m3u._save(), xmltv._save()):
+                        if any([m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)]):
+                            if any([m3u._save(), xmltv._save()]):
                                 log('Record: add, ritem = %s'%(ritem))
                                 DIALOG.notificationDialog('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
                                 PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
@@ -69,8 +69,8 @@ class Record(object):
                         m3u   = M3U(writable=True)
                         xmltv = XMLTVS(writable=True)
                         ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})
-                        if any(m3u.delRecording(ritem), xmltv.delRecording(ritem)):
-                            if any(m3u._save(), xmltv._save()):
+                        if any([m3u.delRecording(ritem), xmltv.delRecording(ritem)]):
+                            if any([m3u._save(), xmltv._save()]):
                                 log('Record: remove, ritem = %s'%(ritem))
                                 DIALOG.notificationDialog('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
                                 PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
