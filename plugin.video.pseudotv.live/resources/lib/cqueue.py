@@ -43,7 +43,7 @@ class CustomQueue(object):
         self.max_priority_seen = 0
         
         self.useExecutor = SETTINGS.getSettingBool('Enable_Executor')
-        self.executor    = ThreadPoolExecutor(max_workers=THREAD_COUNT)
+        self.executor    = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
         self.popThread   = Thread(target=self._start)
         self.log(f"__init__, type = {self.type}, delay = {delay}, timer = {timer}")
 

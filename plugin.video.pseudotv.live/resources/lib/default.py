@@ -45,7 +45,8 @@ if __name__ == '__main__':
                     Globals._openSettings()
                     
             elif any(item in sysARG[2] for item in ['{catchup-id}', '{utc}', '{duration}', '{utcend}']):
-                Globals._notificationDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
+                name = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ListItem.ChannelName') or ADDON_NAME)
+                Globals._notificationDialog(LANGUAGE(32265)%(name))
                 Globals._setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
                 xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())
                 log(f'Default: __main__, failed! {sysARG[2]}', xbmc.LOGERROR)

@@ -71,8 +71,9 @@ class Tasks(object):
    
     def chkPVRBackend(self): 
         instanceName = PROPERTIES.getFriendlyName()
-        self.log('chkPVRBackend, instanceName = %s'%(instanceName))
-        if SETTINGS.hasAddon(PVR_CLIENT_ID,notify=True):
+        hasPVR       = SETTINGS.hasAddon(PVR_CLIENT_ID,notify=True)
+        self.log('chkPVRBackend, instanceName = %s, hasPVR'%(instanceName,hasPVR))
+        if hasPVR:
             SETTINGS.instances.chkInstances(instanceName)
             SETTINGS.setPVRLocal(PROPERTIES.getRemoteHost(),instanceName)
             
@@ -119,7 +120,7 @@ class Tasks(object):
         self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200 , 1)#12HRS
         self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800 , 1)#3HRS
         self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300   , 1)#5MINS
-        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 60    , 5)#1MINS
+        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 120   , 5)#2MINS
         
         if not self.service.isClient:
             self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 900   , 2)#15MINS
@@ -136,7 +137,7 @@ class Tasks(object):
         if nextrun is None: nextrun = int(PROPERTIES.getEXTProperty(key,'0')) # nextrun == 0 => force que
         epoch = int(time.time())
         if epoch >= nextrun:
-            self.log('_chkEpochTimer, key = %s, last run %s' % (key, epoch - nextrun))
+            self.log('_chkEpochTimer, key = %s, nextrun in %s seconds' % (key, epoch - nextrun))
             PROPERTIES.setEXTProperty(key, (epoch + runevery))
             self.service._que(func, priority, *args, **kwargs)
 
@@ -183,43 +184,55 @@ class Tasks(object):
 
 
     def chkFillers(self, channels=None, silent=None):
-        if silent is None: silent = BUILTIN.isPlaying()
-        if SETTINGS.getSettingBool('Build_Filler_Folders'): 
-            self.log('chkFillers')
-            # if channels is None: channels = self.getChannels())))
-            # if len(channels) > 0:
-                # for fidx, ftype in enumerate(FILLER_TYPES):
-                    # fpath = os.path.join(FILLER_LOC,ftype.lower(),'')
-                    # if not FileAccess.exists(fpath): FileAccess.makedirs(fpath)
-                    
-                    # for cidx, citem in enumerate(channels):
-                        # cpath = os.path.join(fpath, citem.get('name','').lower())
-                        # if not FileAccess.exists(cpath): FileAccess.makedirs(cpath)
+        def __create(idx,total,label,path):
+            FileAccess.makedirs(path)
+            return DIALOG._updateProgress(pDialog, int(idx//total), message=label, header=head)
+            
+        head = f'{ADDON_NAME}, {LANGUAGE(32179)}'
+        with DIALOG._progressDialog(head, ADDON_NAME, silent=silent, background=True) as pDialog:
+            if channels is None: channels = self.getChannels()
+            if isinstance(channels,list) and len(channels) > 0:
+                genres = Globals._mergeDict(self.jsonRPC.getVideoGenres(type="movie"),self.jsonRPC.getVideoGenres(type="tvshow"),'label')
+                mpaas  = Globals._mergeDict(self.jsonRPC.getMPAA(type="movie"),self.jsonRPC.getMPAA(type="tvshow"),'label')
+                for fidx, ftype in enumerate(FILLER_TYPES):
+                    if ftype == 'Extras': continue
+                    ignore = {'bumpers': IGNORE_CHTYPE + MOVIE_CHTYPE, 'ratings': IGNORE_CHTYPE + TV_CHTYPE,
+                              'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_CHTYPE}.get(ftype.lower(), IGNORE_CHTYPE)
+                              
+                    #Filler Folder
+                    fpath = os.path.join(FILLER_LOC, ftype)
+                    if not FileAccess.exists(fpath): pDialog = __create(fidx,len(FILLER_TYPES),ftype,fpath)
                         
-                        # for gidx, genres in channels()
-                        
-                        # if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),'')):
-                            # FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),''))
-                    
-                    # for ftype in FILLER_TYPES[1:]:
-                        # for genre in genres:
-                            # if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),'')):
-                                # pDialog = DIALOG.progressBGDialog(int(idx*50//len(channels)), pDialog, message='%s: %s'%(genre,int(idx*100//len(channels)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
-                                # FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower()))
-                        
-                        # if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
-                            # if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
-                            # else:                          IGNORE = IGNORE_CHTYPE
-                            # if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE: 
-                                # pDialog = DIALOG.progressBGDialog(int(idx*50//len(channels)), pDialog, message='%s: %s'%(citem.get('name'),int(idx*100//len(channels)))+'%', header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
-                                # FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
-                # pDialog = DIALOG.progressBGDialog(100, pDialog, message=LANGUAGE(32025), header='%s, %s'%(ADDON_NAME,LANGUAGE(32179)))
+                    #Filler Ratings
+                    if ftype == 'Ratings':
+                        for midx, mpaa in enumerate(mpaas):
+                            mpath = os.path.join(fpath, mpaa.get('label'))
+                            if not FileAccess.exists(mpath): pDialog = __create(midx,len(mpaas),mpaa.get('label'),mpath)
+                        continue
+                                
+                    #Filler Genre
+                    elif ftype in ['Bumpers','Adverts','Trailers']:
+                        for gidx, genre in enumerate(genres):
+                            gpath = os.path.join(fpath, genre.get('label'))
+                            if not FileAccess.exists(gpath): pDialog = __create(gidx,len(genres),genre.get('label'),gpath)
+                                
+                    #Filler Channel Name & Groups
+                    for cidx, channel in enumerate(channels):    
+                        if channel.get('type') in ignore or channel.get('radio',False): continue
+                        cpath = os.path.join(fpath, channel.get('name',''))
+                        if not FileAccess.exists(cpath): pDialog = __create(cidx,len(channels),channel.get('name',''),cpath)
+                            
+                        if ftype in ['Bumpers','Adverts','Trailers']:
+                            groups = channel.get('group',[])
+                            for gpidx, group in enumerate(groups):
+                                gpath = os.path.join(fpath, group)
+                                if not FileAccess.exists(gpath): pDialog = __create(gpidx, len(groups), group, gpath)
         
         
     def chkTrailers(self, movies=None, tvshows=None, silent=None):
         if movies is None: movies = self.jsonRPC.getMovies()
         if tvshows is None: tvshows = self.jsonRPC.getTVshows()
-        if silent is None: silent = BUILTIN.isPlaying()
+        if silent is None: silent = not SETTINGS.showDialog(silent)
         self.log('chkTrailers, movies = %s, tvshows = %s, silent = %s'%(len(movies),len(tvshows), silent))
         if not PROPERTIES.isRunning('Tasks.chkTrailers') and SETTINGS.getSettingBool('Include_Trailers_KODI'):
             with PROPERTIES.chkRunning('Tasks.chkTrailers'):
@@ -238,7 +251,7 @@ class Tasks(object):
                 
                 
     def chkLibrary(self, types=None, silent=None):
-        if silent is None: silent = BUILTIN.isPlaying()
+        if silent is None: silent = not SETTINGS.showDialog(silent)
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
         complete = set()
         library  = Library(service=self.service, writable=True)
@@ -271,9 +284,9 @@ class Tasks(object):
         if channels is None: channels = self.getChannels()
         if len(channels) > 0:
             self.log('chkChannels, channels = %s'%(len(channels)))
+            if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers,3,*(channels,silent))
             for channel in channels:
                 self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent))
-                self.service._que(self.chkFillers,4,*([channel],silent))
         else:
             self.log('chkChannels, No Channels Configured!')
             Globals._cleanPVRFiles()
@@ -283,27 +296,30 @@ class Tasks(object):
             elif PROPERTIES.hasEnabledServers():                         PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
 
 
-    @debounceit(M3U_REFRESH)
+    @debounceit(M3U_INTERVAL)
     def chkPVRRefresh(self, brute=None):
         if brute is None: brute = SETTINGS.getSettingBool('Enable_PVR_RELOAD')
         self.log('chkPVRRefresh, brute = %s'%(brute))
         def __toggle(state=True):
             with BUILTIN.busy_dialog(lock=True):
-                self.log('chkPVRRefresh, __toggle = %s'%(state))
-                self.service.jsonRPC.sendJSON({"method":"Addons.SetAddonEnabled","params":{"addonid":PVR_CLIENT_ID,"enabled":state}})
-                self.service._sleep(M3U_REFRESH//2)
+                DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH//2, usethread=True)
+                # if not state: BUILTIN.executewindow('ActivateWindow(home)') #exit possible livetv windows to avoid crash when disabling backend.
+                if BUILTIN.getInfoBool('System.AddonIsEnabled(%s)'%(PVR_CLIENT_ID)) != state:
+                    self.log('chkPVRRefresh, __toggle = %s'%(state))
+                    self.service.jsonRPC.sendJSON({"method":"Addons.SetAddonEnabled","params":{"addonid":PVR_CLIENT_ID,"enabled":state}})
+                    self.service._sleep(M3U_REFRESH//2)
             
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
                 if brute:
-                    if not self.service.player.isPlaying() and BUILTIN.getInfoBool('System.AddonIsEnabled(%s)'%(PVR_CLIENT_ID)):
-                        BUILTIN.executewindow('ActivateWindow(home)')
-                        DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH, usethread=True)
-                        __toggle(False), __toggle(True)
-                    else: PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
-                BUILTIN.executebuiltin('PVR.ClearPVRData',delay=M3U_REFRESH)
-                try: self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
-                except Exception: pass
+                    if not self.service.player.isPlaying(): __toggle(False), __toggle(True)
+                    else: PROPERTIES.setPropTimer('chkPVRRefresh')
+                try: 
+                    response = self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
+                    if response.get('error'): raise Exception(response.get('error',{}).get('message',LANGUAGE(30079)))
+                except Exception as e: 
+                    self.log("chkPVRRefresh, failed! Triggering PVR.ClearPVRData %s"%(e), xbmc.LOGERROR)
+                    BUILTIN.executebuiltin('PVR.ClearPVRData',delay=M3U_REFRESH)
             
             
     def chkSettingsChange(self, settings={}):
@@ -327,21 +343,25 @@ class Tasks(object):
         for i in list(range(QUEUE_CHUNK)):
             if len(self.service.postQue) > 0:
                 try:
+                    self.log(f"chkQUES postQue {len(self.service.postQue)}")
                     param = self.service.postQue.pop()
                     self.service._que(self.jsonRPC.requestURL,1,*param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s postQue: %s\n%s"%(len(self.service.postQue),param,e))
             if len(self.service.jsonQue) > 0:
                 try:
+                    self.log(f"chkQUES jsonQue {len(self.service.jsonQue)}")
                     param = self.service.jsonQue.pop()
                     self.service._que(self.jsonRPC.sendJSON,-1,param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s jsonQue: %s\n%s"%(len(self.service.jsonQue),param,e))
             if len(self.service.logoQue) > 0:
                 try:
+                    self.log(f"chkQUES logoQue {len(self.service.logoQue)}")
                     param = FileAccess.loadJSON(self.service.logoQue.pop())
                     self.service._que(library.resources.getLogo,-1,*({'name':param},library.resources.getImageCache(param),True))
                 except Exception as e: self.log("chkQUES failed!, queuing = %s logoQue: %s\n%s"%(len(self.service.logoQue),param,e))
             if len(self.service.trailerQue) > 0:
                 try:
+                    self.log(f"chkQUES trailerQue {len(self.service.trailerQue)}")
                     param = FileAccess.loadJSON(self.service.trailerQue.pop())
                     self.service._que(self.jsonRPC.addTrailer,-1,param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s trailerQue: %s\n%s"%(len(self.service.trailerQue),param,e))        

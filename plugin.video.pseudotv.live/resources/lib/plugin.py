@@ -36,7 +36,7 @@ class Plugin(object):
         if not self.sysInfo.get('fitem'): 
             self._updateSysInfo() #Widgets don't include listitem meta, attempt to find matching meta with jsonrpc
             
-        self.sysInfo['isVOD']      = self.sysInfo.get('fitem').get('file','-1') != self.sysInfo.get('vid','-1')
+        self.sysInfo['isVOD']      = False#self.sysInfo.get('fitem').get('file','-1') != self.sysInfo.get('vid','-1')
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
         self.sysInfo['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
         mode = 'playlist' if any([self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist']]) else sysInfo.get('mode')

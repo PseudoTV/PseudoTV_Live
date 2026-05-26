@@ -40,6 +40,7 @@ class Busy(xbmcgui.WindowXMLDialog):
         actionId = act.getId()
         log('Busy: onAction, actionId = %s, isLocked = %s'%(actionId,self.isLocked))
         if not self.isLocked and actionId in ACTION_PREVIOUS_MENU: self.close()
+        elif self.isLocked: DIALOG.notificationDialog(LANGUAGE(32260))
         
 
 class Background(xbmcgui.WindowXMLDialog):

@@ -115,7 +115,7 @@ class Library(object):
         
     def updateLibrary(self, types, silent=None):
         complete = set()
-        if silent is None: silent = BUILTIN.isPlaying()
+        if silent is None: silent = not SETTINGS.showDialog(silent)
         if not PROPERTIES.isRunning('Library.updateLibrary'):
             with PROPERTIES.chkRunning('Library.updateLibrary'):
                 for type in types:

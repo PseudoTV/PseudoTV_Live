@@ -212,7 +212,7 @@ class Settings(object):
                     if not force:
                         if not self.dialog.yesnoDialog(message=LANGUAGE(32156)%(id)):
                             self.log('[%s] hasAddon, (Not Enabled!)'%(id))
-                            return
+                            return isEnabled
                     self.builtin.executebuiltin(f'EnableAddon({id})',wait=True)
                 elif notify: self.dialog.notificationDialog(LANGUAGE(32264)%(id))
             elif install: self.builtin.executebuiltin(f'InstallAddon({id})',wait=True)
@@ -224,11 +224,7 @@ class Settings(object):
         if enable  is None: enable  = bypass
         if force   is None: force   = bypass
         if '://' in id: id = __getIDbyPath(id)
-        cacheName     = 'hasAddon.%s'%(id)
-        cacheResponse = self.cache.get(cacheName)
-        if not cacheResponse: cacheResponse = self.cache.set(cacheName, __hasADDON(id), checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15))
-        if cacheResponse: return xbmcaddon.Addon(id)
-        return cacheResponse
+        return __hasADDON(id)
             
             
     @cacheit(expiration=datetime.timedelta(minutes=15))
@@ -461,6 +457,12 @@ class Settings(object):
         logs = self.getLogs(time)
         logs.setdefault(key,[]).append(f'{time.strftime(DTFORMAT)} - {event}')
         self.setCacheSetting('LOGS', logs, FileAccess._getMD5(time.strftime('%Y%m%d')), datetime.timedelta(days=2))
+            
+            
+    def showDialog(self, silent=None):
+        if silent: return False
+        if not self.builtin.isPlaying(): return True
+        return self.getSettingBool('Notify_While_Playing')
             
             
 class Properties(object):
@@ -1081,7 +1083,7 @@ class Builtin(object):
             try: 
                 if self.busy is None:
                     from overlay import Busy 
-                    try:               self.busy = Busy(BUSY_XML, ADDON_PATH, "default", lock=lock)
+                    try:               self.busy = Busy(BUSY_XML, ADDON_PATH, "default", isLocked=lock)
                     except Exception:  self.busy = None
                     finally: self.busy.show()
                 elif cancel and hasattr(self.busy, 'close'):
@@ -1344,11 +1346,11 @@ class Dialog(object):
         return timerit(self.notificationWait)(0.1,*(message, header, wait))
 
 
-    def notificationWait(self, message, header=ADDON_NAME, wait=4, show=None, usethread=False):
-        if show is None: show = self.settings.getSettingBool('Notify_While_Playing')
+    def notificationWait(self, message, header=ADDON_NAME, wait=4, silent=None, usethread=False):
+        if silent is None: silent = not self.settings.showDialog(silent)
         if usethread: return self._notificationWait(message, header, wait)
         else:
-            with self._progressDialog(message, header, show==False) as pDialog:
+            with self._progressDialog(message, header, silent) as pDialog:
                 for idx in range(int(wait)):
                     pDialog = self._updateProgress(pDialog,int(idx*100//wait))
                     if pDialog is None or self.monitor.waitForAbort(1.0): break
@@ -1358,7 +1360,7 @@ class Dialog(object):
 
     @contextmanager
     def _progressDialog(self, message='', header=ADDON_NAME, silent=None, background=True):
-        if silent is None: silent = self.builtin.isPlaying()
+        if silent is None: silent = not self.settings.showDialog(silent)
         dlg = None
         with self.dialog_lock:
             if not silent and not self.properties.isRunning('_progressDialog'):
@@ -1451,22 +1453,22 @@ class Dialog(object):
         self.dialog.info(listitem)
         
     
-    def _notificationDialog(self, message, header, sound, time, icon, show):
-        threadit(self.notificationDialog)(message, header, sound, time, icon, show)
+    def _notificationDialog(self, message, header, sound, time, icon, silent):
+        threadit(self.notificationDialog)(message, header, sound, time, icon, silent)
 
 
-    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=LOGO_COLOR, show=None, usethread=False):
-        if show is None: show = self.settings.getSettingBool('Notify_While_Playing')
-        self.log('notificationDialog: %s, show = %s'%(message,show))
-        if usethread: self._notificationDialog(message, header, sound, time, icon, show)
+    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=LOGO_COLOR, silent=None, usethread=False):
+        if silent is None: silent = not self.settings.showDialog(silent)
+        self.log('notificationDialog: %s, silent = %s'%(message,silent))
+        if   silent: return
+        elif usethread: self._notificationDialog(message, header, sound, time, icon, silent)
         else:
             ## - Builtin Icons:
             ## - xbmcgui.NOTIFICATION_INFO
             ## - xbmcgui.NOTIFICATION_WARNING
             ## - xbmcgui.NOTIFICATION_ERROR
-            if show:
-                try: self.dialog.notification(header, message, icon, time*1000, sound=False)
-                except Exception: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time*1000, icon))
+            try: self.dialog.notification(header, message, icon, time*1000, sound=False)
+            except Exception: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time*1000, icon))
         return True
         
              

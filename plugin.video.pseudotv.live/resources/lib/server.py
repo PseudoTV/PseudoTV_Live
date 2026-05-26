@@ -260,7 +260,7 @@ class HTTP(Thread):
 
     def run(self):  
         def __update(silent=None):
-            if silent is None: silent = BUILTIN.isPlaying()
+            if silent is None: not SETTINGS.showDialog(silent)
             isRunning = PROPERTIES.isRunning('HTTP.run')
             if not silent: DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
             SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))

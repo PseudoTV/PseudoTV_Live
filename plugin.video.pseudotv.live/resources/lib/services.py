@@ -308,7 +308,7 @@ class Player(xbmc.Player):
                 self.toggleBackground(self.enableOverlay)
 
         def __chkResumeTime():
-            if not self.isPlayingFiller() and self.isPlayingPlaylist():
+            if not self.isPlayingFiller() and self.playingItem.get('isPlaylist',False):
                 if self.playingItem.get('fitem',{}).get('file') == self.getPlayingFile():
                     resume = {"position":self.getPlayedTime(),
                               "total":   self.getPlayerTime(),

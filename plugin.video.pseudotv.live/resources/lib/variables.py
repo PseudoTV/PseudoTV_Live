@@ -218,9 +218,15 @@ class Globals:
     @staticmethod  
     def _setDictLST(lst=[]): #set lst of dicts then return
         return [FileAccess.loadJSON(s) for s in list(OrderedDict.fromkeys([FileAccess.dumpJSON(d) for d in lst]))]
-
+    
+    @staticmethod  
+    def _mergeDict(dict1={},dict2={},key='label'):
+        # dict = [{ "key": ""}, {"key": ""}]
+        return list({d[key]: d for d in dict1 + dict2}.values())
+        
     @staticmethod  
     def _mergeDictLST(dict1={},dict2={}):
+        # dict = { "key": [], "key": []}
         for k, v in list(dict2.items()):
             dict1.setdefault(k,[]).extend(v)
             Globals._setDictLST(dict1)

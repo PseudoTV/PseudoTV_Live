@@ -163,7 +163,7 @@ class Builder(object):
 
                 
     def buildChannels(self, channels: list=[], preview=False, silent=None):
-        if silent is None: silent = BUILTIN.isPlaying()
+        if silent is None: silent = not SETTINGS.showDialog(silent)
         enableChanged = SETTINGS.getSettingBool('Enable_Changed')
         self.log('buildChannels, channels = %s'%(len(channels)))
         def __needsUpdate(citem, now, fallback, state=True):

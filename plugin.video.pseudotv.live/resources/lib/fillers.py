@@ -152,8 +152,8 @@ class Fillers(object):
         nfileList = []
         for ftype in ['bumpers','ratings']:
             filler = self.bctTypes.get(ftype, {})
-            ignore = {'bumpers': IGNORE_CHTYPE + MOVIE_CHTYPE, 'ratings': IGNORE_CHTYPE + TV_TYPES}[ftype]
-            keys   = {'bumpers':[self.citem.get('name'), fileItem.get('genre'), self.citem.get('group'), self.fbuild],'ratings':[(self.convertMPAA(fileItem.get('mpaa')) or 'NR'), (fileItem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')]}[ftype]
+            ignore = {'bumpers': IGNORE_CHTYPE + MOVIE_CHTYPE, 'ratings': IGNORE_CHTYPE + TV_CHTYPE}[ftype]
+            keys   = {'bumpers':[self.citem.get('name'), fileItem.get('genre'), self.citem.get('group',[]), self.fbuild],'ratings':[(self.convertMPAA(fileItem.get('mpaa')) or 'NR'), (fileItem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')]}[ftype]
             if filler.get('enabled', False) and self.citem.get('type') not in ignore:
                 items = self._getFillterItem(ftype, 1, keys, chanceBool(filler.get('chance', 0)))
                 # iterate and add pre-rolls
@@ -178,13 +178,13 @@ class Fillers(object):
         nfileList = []
         for ftype in ['adverts', 'trailers', 'extras']:
             filler = self.bctTypes.get(ftype, {})
-            ignore = {'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_TYPES}.get(ftype, IGNORE_CHTYPE)
+            ignore = {'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_CHTYPE}.get(ftype, IGNORE_CHTYPE)
             if filler.get('enabled', False) and self.citem.get('type') not in ignore:
                 if filler.get('auto', False): numberToFetch = filler.get('max',PAGE_LIMIT)
                 else:                         numberToFetch = filler.get('min',SETTINGS.getSettingInt('Enable_Postroll'))
                 for item in [fileItem, nextItem]:
                     if not item: continue
-                    keys = [self.citem.get('name',''), item.get('genre',''), self.citem.get('group','')]
+                    keys = [self.citem.get('name',''), item.get('genre',''), self.citem.get('group',[])]
                     if numberToFetch > 0:
                         items.extend(self._getFillterItem(ftype, numberToFetch, keys, chanceBool(filler.get('chance', 0))))
                     if ftype == 'extras' and filler.get('incKODI',False) and ('movieid' in item or 'tvshowid' in item):

@@ -2014,6 +2014,10 @@ msgctxt "#32264"
 msgid "%s disabled, Please Enable!"
 msgstr ""
 
+msgctxt "#32265"
+msgid "%s is unavailable, Try again later..."
+msgstr ""
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 

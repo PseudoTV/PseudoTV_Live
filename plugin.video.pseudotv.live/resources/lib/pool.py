@@ -24,7 +24,7 @@ from logger              import log
 from concurrent.futures  import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 class ExecutorPool:
-    _executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)
+    _executor = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
     
     def __del__(self):
         try: self._executor.shutdown(wait=False, cancel_futures=True)
@@ -44,7 +44,7 @@ class ExecutorPool:
         useExecutor = REAL_SETTINGS.getSetting('Enable_Executor').lower() == "true"
         if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
-            if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)
+            if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
             with timeit(func), self._executor as executor:
                 try: return executor.submit(func, *args, **kwargs).result(timeout)
                 except Exception as e: self.log("executor, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
@@ -70,7 +70,7 @@ class ExecutorPool:
         useExecutor = REAL_SETTINGS.getSetting('Enable_Executor').lower() == "true"
         if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
-            if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_COUNT)
+            if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
             with timeit(func), self._executor as executor:
                 try: 
                     results = executor.map(self._wrapped_partial(func, *args, **kwargs), items, timeout=timeout)

@@ -92,8 +92,8 @@ class JSONRPC(object):
         response = FileAccess.loadJSON(BUILTIN.executeJSONRPC(FileAccess.dumpJSON(command)))
         self.service.monitor.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')))
         if response and response.get('error'):
-            self.log('sendJSON, failed! error = %s\n%s'%(FileAccess.dumpJSON(response.get('error')),param), xbmc.LOGWARNING)
-            response.setdefault('result',{})['error'] = response.pop('error')
+            self.log('sendJSON, failed! error = %s\n%s'%(response.get('error',{}).get('message',LANGUAGE(30079)),param), xbmc.LOGWARNING)
+            response.setdefault('result',{})['error'] = response.pop('error') #move to result for processing in builder.
         return response
 
 
@@ -330,6 +330,14 @@ class JSONRPC(object):
         else:     results = self.sendJSON(param).get('result',{})
         return results.get((key or list(results.keys())[0]),[]), results.get('limits',{}), results.get('error',{})
         
+        
+    def getMPAA(self, type='movie', incItem=False):
+        def __parse(items): 
+            for item in items:
+                yield {'label':cleanMPAA(item.get("mpaa","NR")),'item':item if incItem else {}}
+        if   type == 'movie':  return list(__parse(self.getMovies()))
+        elif type == 'tvshow': return list(__parse(self.getTVshows()))
+
 
     def getStreamDetails(self, path, media='video'):
         if isStack(path): path = splitStacks(path)[0]
