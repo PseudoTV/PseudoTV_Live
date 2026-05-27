@@ -65,10 +65,10 @@ class Resources(object):
         self.openRouter  = OpenRouter(cache=service.jsonRPC.cache, jsonRPC=service.jsonRPC)
         
         try:
-            self.imageCache  = service.imageCache 
+            self.imageCache = service.imageCache 
             self.pruneimageCache()
         except:
-            self.imageCache = self._getImageCache()
+            self.imageCache = OrderedDict(SETTINGS.getCacheSetting('imageCache',default={}))
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -101,21 +101,15 @@ class Resources(object):
         # Use OrderedDict LRU behavior: move to end on access
         try:
             image = self.imageCache.get(chname)
+            self.log('getImageCache, name = %s, image = %s'%(chname,image))
             if image is not None:
                 try: self.imageCache.move_to_end(chname)
                 except Exception: pass
             else: 
                 image = fallback
                 self.queueLogo(chname)
-            self.log('getImageCache, name = %s, image = %s'%(chname,image))
             return image
         except Exception as e: pass
-
-        
-    def _getImageCache(self):
-        imageCache = OrderedDict(SETTINGS.getCacheSetting('imageCache',default={}))
-        self.log('_getImageCache, imageCache = %s'%(len(imageCache)))
-        return imageCache
 
 
     def setImageCache(self, chname, image=None):

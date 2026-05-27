@@ -733,7 +733,7 @@
             <group id="2" label="30164">
                 <setting id="Enable_Postroll" type="integer" label="30019" help="30020">
                     <level>2</level>
-                    <default>-1</default>
+                    <default>0</default>
                     <constraints>
                         <options>
                             <option label="30022">-1</option>

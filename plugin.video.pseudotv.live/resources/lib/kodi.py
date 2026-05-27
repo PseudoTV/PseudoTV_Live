@@ -460,6 +460,8 @@ class Settings(object):
             
             
     def showDialog(self, silent=None):
+        #True Show/False Silent
+        if self.getSettingBool('Debug_Enable'): return True
         if silent: return False
         if not self.builtin.isPlaying(): return True
         return self.getSettingBool('Notify_While_Playing')

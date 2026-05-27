@@ -1096,11 +1096,11 @@ msgstr ""
 msgctxt "#32032"
 msgid "No Duration Found!"
 msgstr ""
-               
+            
 msgctxt "#32033"
-msgid ""
+msgid "No New Content Found"
 msgstr ""
-
+   
 msgctxt "#32034"
 msgid "%s not found, Please Install!"
 msgstr ""
@@ -2018,6 +2018,8 @@ msgctxt "#32265"
 msgid "%s is unavailable, Try again later..."
 msgstr ""
 
+msgctxt "#32266"
+msgid "If [B]No[/B], debugging will automatically disable in [B]%s[/B] minutes."
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 

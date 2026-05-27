@@ -301,8 +301,9 @@ class Globals:
                  LANGUAGE(30096):GENREFLEPATH}  #"Genre"
         if full:
             instanceName = PROPERITES.getFriendlyName()
-            files.update({LANGUAGE(32053)             :SETTINGS_FLE,'Cache':CACHE_FLE,
-                          f'Instance ({instanceName})':SETTINGS.instances.getPVRInstancePath(instanceName)})
+            files.update({LANGUAGE(32053)             :SETTINGS_FLE,
+                          'Cache'                     :CACHE_FLE,
+                          f'Instance: {instanceName}':SETTINGS.instances.getPVRInstancePath(instanceName)})
         for key in list(files.keys()):
             if FileAccess.delete(files[key]): 
                 Globals._notificationDialog(LANGUAGE(32127)%(key.replace(':','')))

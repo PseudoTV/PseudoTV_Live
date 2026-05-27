@@ -187,6 +187,7 @@ class Builder(object):
             return state, citem
                     
         def __hasProgrammes(citem: dict) -> bool:
+            print(dict(self.xmltv.hasProgrammes([citem])).get(citem['id']))
             try:    state = dict(self.xmltv.hasProgrammes([citem])).get(citem['id'],False)
             except Exception: state = False
             self.log('[%s] buildChannels, __hasProgrammes = %s'%(citem['id'],state))
@@ -266,7 +267,7 @@ class Builder(object):
                             if self.service._interrupt():
                                 self.log("[%s] buildChannels, _interrupt"%(citem['id']))
                                 self.pErrors = [LANGUAGE(32160)]
-                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,*(channels[idx:],silent))
+                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
                                 break
                             elif self.service._suspend():
                                 self.log("[%s] buildChannels, _suspend"%(citem['id']))
@@ -292,9 +293,10 @@ class Builder(object):
                                             if not preview and __hasFileList(fileList):
                                                 updated.add(__addProgrammes(citem, fileList))#add xmltv lineup entries.
                                         elif not fileList:
-                                            updated.add(__hasProgrammes(citem))
+                                            hasProgrammes = __hasProgrammes(citem)
+                                            updated.add(hasProgrammes)
                                             if len(self.pErrors) > 0:
-                                                self.pErrors.append(LANGUAGE(32026))
+                                                if hasProgrammes: self.pErrors.append(LANGUAGE(32033))
                                                 chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
                                                 self.log('[%s] buildChannels, In-Valid Channel (%s) %s'%(citem['id'],self.pName,chanErrors))
                                                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message='%s: %s'%(self.pName,chanErrors),header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
@@ -564,7 +566,7 @@ class Builder(object):
                     item['art'] = (item.get('art',{}) or dirItem.get('art',{}))
                     item.get('art',{})['icon'] = citem['logo']
                         
-                    if item.get('trailer'): self.service._que(self.jsonRPC.addTrailer,-1,item)
+                    if item.get('trailer'): self.service._que(self.jsonRPC.addTrailer,-1,0,0,item)
                     if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                         seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
                     else: 

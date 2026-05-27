@@ -492,7 +492,7 @@ class Service(object):
         self.curchannels   = self.tasks.getChannels()
         self.cursettings   = SETTINGS.getCurrentSettings()
         self.isClient      = SETTINGS.getSettingBool('Enable_Client')
-        self.priorityQUE   = CustomQueue(priority=True, service=self)
+        self.priorityQUE   = CustomQueue(service=self)
     
 
     def __del__(self):
@@ -509,8 +509,8 @@ class Service(object):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _que(self, func, priority=-1, *args, **kwargs):# priority -1 autostack (FIFO), 1 Highest, 5 Lowest
-        self.priorityQUE._push((func, args, kwargs), priority)
+    def _que(self, func, priority=-1, delay=0, timer=0, *args, **kwargs):# priority -1 autostack (FIFO), 1 Highest, 5 Lowest
+        self.priorityQUE._push((func, args, kwargs), priority, delay, timer)
 
 
     def _isPlaying(self) -> bool: #assert playback for background service throttling.
@@ -518,8 +518,8 @@ class Service(object):
         return False
     
         
-    def _tasks(self):
-        self._que(self.tasks._chkEpochTimer,-1,*('chkQueTimer', self.tasks.chkQueTimer, 15)) #keep CustomQueue alive after interrupt.
+    def _tasks(self): #keeps CustomQueue alive after interrupt.
+        self._que(self.tasks.chkQueTimer,-1,TASK_INTERVAL)
     
     
     def _shutdown(self, wait=SERVICE_INTERVAL) -> bool: #service break

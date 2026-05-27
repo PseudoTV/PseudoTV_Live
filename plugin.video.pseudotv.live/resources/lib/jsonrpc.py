@@ -549,7 +549,7 @@ class JSONRPC(object):
             try:
                 params = param.get(item.get('type'))
                 self.log('quePlaycount, params = %s'%(params.get('params',{})))
-                if hasattr(self.service,'_que'): self.service._que(self.sendJSON,1,params)
+                if hasattr(self.service,'_que'): self.service._que(self.sendJSON,1,0,0,params)
             except Exception: pass
 
 

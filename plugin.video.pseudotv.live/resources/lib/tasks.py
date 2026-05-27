@@ -72,7 +72,7 @@ class Tasks(object):
     def chkPVRBackend(self): 
         instanceName = PROPERTIES.getFriendlyName()
         hasPVR       = SETTINGS.hasAddon(PVR_CLIENT_ID,notify=True)
-        self.log('chkPVRBackend, instanceName = %s, hasPVR'%(instanceName,hasPVR))
+        self.log('chkPVRBackend, instanceName = %s, hasPVR = %s'%(instanceName,hasPVR))
         if hasPVR:
             SETTINGS.instances.chkInstances(instanceName)
             SETTINGS.setPVRLocal(PROPERTIES.getRemoteHost(),instanceName)
@@ -83,16 +83,18 @@ class Tasks(object):
         self.log('chkHTTP')
         
         
-    def chkDebugging(self):
-        self.log('chkDebugging')
+    def chkDebugging(self, disable=False):
+        kodi_access = SETTINGS.getSettingBool('Enable_Kodi_Access')
+        self.log('chkDebugging, disable = %s'%(disable))
         if SETTINGS.getSettingBool('Debug_Enable'):
-            if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=4):
+            if disable: SETTINGS.setSettingBool('Debug_Enable',False)
+            elif DIALOG.yesnoDialog(LANGUAGE(32142) if kodi_access else '%s\n%s'%(LANGUAGE(32142),LANGUAGE(32266)%(DEBUG_TIMEOUT//60)) ,autoclose=4):
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Debug_Enable',False)
                 DIALOG.notificationDialog(LANGUAGE(32025))
+            elif not kodi_access: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True)
         #Force enable Kodi Debugging when enabled in PseudoTV via JSONRPC only if Kodi access allowed by user.
-        if SETTINGS.getSettingBool('Enable_Kodi_Access'):
-            self.jsonRPC.toggleShowLog(SETTINGS.getSettingBool('Debug_Enable'))
+        if kodi_access: self.jsonRPC.toggleShowLog(SETTINGS.getSettingBool('Debug_Enable'))
                     
              
     def chkDiscovery(self):
@@ -117,37 +119,27 @@ class Tasks(object):
   
     def chkQueTimer(self):
         self.log('chkQueTimer')
-        self._chkEpochTimer('chkVersion'      , self.chkVersion       , 43200 , 1)#12HRS
-        self._chkEpochTimer('chkKodiSettings' , self.chkKodiSettings  , 10800 , 1)#3HRS
-        self._chkEpochTimer('chkDiscovery'    , self.chkDiscovery     , 300   , 1)#5MINS
-        self._chkEpochTimer('chkQUES'         , self.chkQUES          , 120   , 5)#2MINS
+        self.service._que(self.chkVersion     , 1, 43200)#12HRS
+        self.service._que(self.chkKodiSettings, 1, 10800)#3HRS
+        self.service._que(self.chkDiscovery   , 1, 300)#5MINS
+        self.service._que(self.chkQUES        , 5, 120)#2MINS
         
         if not self.service.isClient:
-            self._chkEpochTimer('chkLibrary'  , self.chkLibrary       , 900   , 2)#15MINS
-            self._chkEpochTimer('chkFiles'    , self.chkFiles         , 900   , 5)#15MINS
-            self._chkEpochTimer('chkTrailers' , self.chkTrailers      , 259200, 5)#3DAYS
+            self.service._que(self.chkLibrary , 2, 900)#15MINS
+            self.service._que(self.chkFiles   , 5, 900)#15MINS
+            self.service._que(self.chkTrailers, 5, 259200)#3DAYS
             
-        #immediate run, bypass schedule
-        self._chkPropTimer('chkPVRRefresh'    , self.chkPVRRefresh    , 1) 
-        self._chkPropTimer('chkChanged'       , self.chkChanged       , 3)
+        #immediate run, bypass delay
+        self._chkPropTimer('chkPVRRefresh', self.chkPVRRefresh, 1) 
+        self._chkPropTimer('chkChanged'   , self.chkChanged   , 3)
         
         
-    #_chkEpochTimer trigger - Time = 0 == Run
-    def _chkEpochTimer(self, key, func, runevery=900, priority=-1, nextrun=None, *args, **kwargs):
-        if nextrun is None: nextrun = int(PROPERTIES.getEXTProperty(key,'0')) # nextrun == 0 => force que
-        epoch = int(time.time())
-        if epoch >= nextrun:
-            self.log('_chkEpochTimer, key = %s, nextrun in %s seconds' % (key, epoch - nextrun))
-            PROPERTIES.setEXTProperty(key, (epoch + runevery))
-            self.service._que(func, priority, *args, **kwargs)
-
-
      #_chkPropTimer trigger - True == Run
     def _chkPropTimer(self, key, func, priority=-1, *args, **kwargs):
         if PROPERTIES.getPropTimer(key):
             self.log('_chkPropTimer, key = %s'%(key))
             PROPERTIES.clrEXTProperty(key)
-            self.service._que(func, priority, *args, **kwargs)
+            self.service._que(func, priority, 0, 0, *args, **kwargs)
 
  
     def chkVersion(self):
@@ -262,7 +254,7 @@ class Tasks(object):
             if items:
                 self.log("chkLibrary, %s library found! Setting items (%s), queuing update."%(type,len(items)))
                 complete.add(library.setLibrary(type, items))
-                self.service._que(library.updateLibrary,-1,*([type],True))
+                self.service._que(library.updateLibrary,-1,0,0,*([type],True))
             else:
                 self.log("chkLibrary, %s library not found! starting update."%(type))
                 complete.add(library.updateLibrary([type],silent))
@@ -276,7 +268,7 @@ class Tasks(object):
         for idx, channel in enumerate(channels): 
             self.log('[%s] chkChanged, changed = %s'%(channel['id'],channel.get('changed',False)))
             if channel.get('changed',False):
-                self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent))
+                self.service._que(Builder(service=self.service).buildChannels,3,0,0,*([channel],False,silent))
         
         
     def chkChannels(self, channels=None, silent=None):
@@ -284,9 +276,9 @@ class Tasks(object):
         if channels is None: channels = self.getChannels()
         if len(channels) > 0:
             self.log('chkChannels, channels = %s'%(len(channels)))
-            if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers,3,*(channels,silent))
+            if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers,3,0,0,*(channels,silent))
             for channel in channels:
-                self.service._que(Builder(service=self.service).buildChannels,3,*([channel],False,silent))
+                self.service._que(Builder(service=self.service).buildChannels,3,0,0,*([channel],False,silent))
         else:
             self.log('chkChannels, No Channels Configured!')
             Globals._cleanPVRFiles()
@@ -334,7 +326,7 @@ class Tasks(object):
             if nSettings.get(setting) != value and actions.get(setting):
                 action = actions.get(setting)
                 self.log('chkSettingsChange, detected change in %s: %s => %s\naction = %s'%(setting,value,nSettings.get(setting),action))
-                self.service._que(action.get('func'),1,*action.get('args',()),**action.get('kwargs',{}))
+                self.service._que(action.get('func'),1,0,0,*action.get('args',()),**action.get('kwargs',{}))
         return nSettings
 
 
@@ -345,25 +337,25 @@ class Tasks(object):
                 try:
                     self.log(f"chkQUES postQue {len(self.service.postQue)}")
                     param = self.service.postQue.pop()
-                    self.service._que(self.jsonRPC.requestURL,1,*param)
+                    self.service._que(self.jsonRPC.requestURL,1,0,0,*param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s postQue: %s\n%s"%(len(self.service.postQue),param,e))
             if len(self.service.jsonQue) > 0:
                 try:
                     self.log(f"chkQUES jsonQue {len(self.service.jsonQue)}")
                     param = self.service.jsonQue.pop()
-                    self.service._que(self.jsonRPC.sendJSON,-1,param)
+                    self.service._que(self.jsonRPC.sendJSON,-1,0,0,param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s jsonQue: %s\n%s"%(len(self.service.jsonQue),param,e))
             if len(self.service.logoQue) > 0:
                 try:
                     self.log(f"chkQUES logoQue {len(self.service.logoQue)}")
                     param = FileAccess.loadJSON(self.service.logoQue.pop())
-                    self.service._que(library.resources.getLogo,-1,*({'name':param},library.resources.getImageCache(param),True))
+                    self.service._que(library.resources.getLogo,-1,0,0,*({'name':param},library.resources.getImageCache(param),True))
                 except Exception as e: self.log("chkQUES failed!, queuing = %s logoQue: %s\n%s"%(len(self.service.logoQue),param,e))
             if len(self.service.trailerQue) > 0:
                 try:
                     self.log(f"chkQUES trailerQue {len(self.service.trailerQue)}")
                     param = FileAccess.loadJSON(self.service.trailerQue.pop())
-                    self.service._que(self.jsonRPC.addTrailer,-1,param)
+                    self.service._que(self.jsonRPC.addTrailer,-1,0,0,param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s trailerQue: %s\n%s"%(len(self.service.trailerQue),param,e))        
         del library
         

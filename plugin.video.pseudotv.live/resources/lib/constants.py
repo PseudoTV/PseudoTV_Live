@@ -71,6 +71,7 @@ QUEUE_CHUNK         = THREAD_WORKERS * 2
 
 DISCOVERY_TIMER     = 60    #secs
 SERVICE_INTERVAL    = 5.0   #secs
+TASK_INTERVAL       = 30.0  #secs
 SUSPEND_INTERVAL    = 2.5   #secs
 DISCOVER_INTERVAL   = 30    #secs
 MIN_EPG_DURATION    = 10800 #secs
@@ -98,6 +99,7 @@ FILLER_LIMIT        = 250
 M3U_REFRESH         = 15
 M3U_INTERVAL        = 30
 M3U_TIMEOUT         = 60
+DEBUG_TIMEOUT       = 900
 
 ROLL_TYPES          = ['Fillers',
                        'Pre-Roll',

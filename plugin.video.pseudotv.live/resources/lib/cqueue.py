@@ -22,51 +22,32 @@ from fileaccess          import FileAccess
 from concurrent.futures  import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 class CustomQueue(object):
-    def __init__(self, fifo: bool=False, lifo: bool=False, priority: bool=False, delay: bool=False, timer: bool=False, service=None):
+    def __init__(self, service=None):
         self.service     = service
-        self.fifo        = fifo
-        self.lifo        = lifo
-        self.priority    = priority
-        self.delay       = delay
-        self.timer       = timer
-        
         self.lock        = Lock()
         self.min_heap    = []
-        self.deque_queue = deque()
         self.nodes       = set()
+        self.itemCount   = defaultdict(int)
+        self.maxPriority = 0
+        self.useExecutor = SETTINGS.getSettingBool('Enable_Executor')
         
         self.sync_queue  = deque()
         self.syncThread  = Thread(target=self._sync_worker)
-        
-        self.type        = self._getType()
-        self.itemCount   = defaultdict(int)
-        self.max_priority_seen = 0
-        
-        self.useExecutor = SETTINGS.getSettingBool('Enable_Executor')
         self.executor    = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
         self.popThread   = Thread(target=self._start)
-        self.log(f"__init__, type = {self.type}, delay = {delay}, timer = {timer}")
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f'{self.__class__.__name__} [{self.type}]: {msg}', level)
+        return log(f'{self.__class__.__name__}: {msg}', level)
 
-
-    def _getType(self):
-        if self.fifo:        return 'FIFO'
-        elif self.lifo:      return 'LIFO'
-        elif self.priority:  return 'PRIORITY'
-        return 'UNKNOWN'
-        
         
     def _clear(self):
         with self.lock:
             self.nodes.clear()
-            self.deque_queue.clear()
             self.min_heap.clear()
             self.sync_queue.clear()
             self.itemCount.clear()
-            self.max_priority_seen = 0
+            self.maxPriority = 0
             
             
     def _use_executor(self):
@@ -152,48 +133,40 @@ class CustomQueue(object):
         func_name = package[0].__name__
         if priority:
             for idx, item in enumerate(self.min_heap):
-                epriority, _, epackage = item
-                if package[0] == epackage[0]:
+                epriority, ecount, eexecute_at, epackage = item
+                if epackage[0].__name__ == func_name:
                     if priority < epriority:
                         self.min_heap.pop(idx)
                         heapq.heapify(self.min_heap) 
-                        self.log(f"_exists, replacing queue: func = {func_name}, priority {epriority} => {priority}")
+                        self.log(f"_exists, replacing queue item: func = {func_name}, priority {epriority} => {priority}")
                         return False
-                    return True
-        elif timer:
-            if func_name in self.nodes: 
-                return True
-            self.nodes.add(func_name)
-        return False
-             
-             
+                    else:
+                        self.log(f"_exists, dropping duplicate task: func = {func_name} (existing priority {epriority} <= new {priority})")
+                        return True
+                    
+                    
     def _push(self, package: tuple, priority: int = 0, delay: int = 0, timer: int = 0):
+        self.log(f"_push package = {package[0].__name__}, priority = {priority}, delay = {delay}, timer = {timer}")
         with self.lock:
-            if priority == -1:
-                self.max_priority_seen += 1
-                priority = self.max_priority_seen
-            else:
-                if priority > self.max_priority_seen:
-                    self.max_priority_seen = priority
+            if   timer: execute_at = timer
+            elif delay: execute_at = time.time() + delay
+            else:       execute_at = 0.0
 
-            if delay:
-                if not timer: timer = time.time()
-                timer += delay
-            
-            if self.priority:
-                if not self._exists(package, priority, timer):
-                    try:
-                        self.itemCount[priority] += 1
-                        heapq.heappush(self.min_heap, (priority, self.itemCount[priority], package))
-                    except Exception as e:
-                        self.log(f"_push failed! {e}", xbmc.LOGFATAL)
-                        return
+            if priority == -1:
+                self.maxPriority += 1
+                priority = self.maxPriority
             else:
-                if timer and self._exists(package, priority, timer):
-                    self.log(f"{package[0].__name__} exists")
-                else:
-                    self.deque_queue.append((package, priority, timer))
-        
+                if priority > self.maxPriority:
+                    self.maxPriority = priority
+
+            if not self._exists(package, priority):
+                try:
+                    self.itemCount[priority] += 1
+                    heapq.heappush(self.min_heap, (priority, self.itemCount[priority], execute_at, package))
+                except Exception as e:
+                    self.log(f"_push failed! {e}", xbmc.LOGFATAL)
+                    return
+                
         if self.service._shutdown(CPU_CYCLE): self._stop()
         elif (not self.service._interrupt() or self.service._suspend()) and not self.popThread.is_alive(): 
             self._run()
@@ -202,40 +175,44 @@ class CustomQueue(object):
     def _start(self):
         while not self.service.monitor.abortRequested():
             if self.service._interrupt() or self.service._suspend():
+                self.log("_start, _interrupt/_suspend")
                 break
                 
             package = None
-            target_timer = 0
+            now = time.time()
             with self.lock:
-                if self.priority:
-                    if self.min_heap:
-                        _, _, package = heapq.heappop(self.min_heap)
-                else:
-                    if self.deque_queue:
-                        item = self.deque_queue.popleft() if self.fifo else self.deque_queue.pop()
-                        package, _, target_timer = item
+                if self.min_heap:
+                    sorted_heap_items = sorted(enumerate(self.min_heap), key=lambda x: (x[1][0], x[1][1]))
+                    target_idx = None
+                    for original_idx, (priority, count, execute_at, peek_package) in sorted_heap_items:
+                        if execute_at <= now:
+                            target_idx = original_idx
+                            break
 
-            # Main pipeline ran out of tasks
+                    if target_idx is not None:
+                        _, _, _, package = self.min_heap.pop(target_idx)
+                        heapq.heapify(self.min_heap)  # Repair the heap structure
+                    else: pass
+
             if package is None:
-                if self._use_executor() and len(self.sync_queue) > 0: 
+                if self._use_executor() and len(self.sync_queue) > 0:
                     self._sync_empty()
-                break
-                
-            try:
-                if (self.timer or target_timer) and time.time() < target_timer:
-                    self._push(package, timer=target_timer)
+
+                with self.lock:
+                    has_items = len(self.min_heap) > 0
+
+                if has_items:
+                    # Items exist but all are future-delayed. Sleep briefly and check again.
                     if self.service.monitor.waitForAbort(0.05): break
-                else:
-                    if target_timer:
-                        with self.lock:
-                            self.nodes.discard(package[0].__name__)
-                            
-                    self._exe(package[0], *package[1], **package[2])
-                    
+                    continue
+                else: break
+
+            try:
+                self._exe(package[0], *package[1], **package[2])
             except Exception as e:
                 self.log(f"_start processing failure: {e}", xbmc.LOGERROR)
+
             if self.service.monitor.waitForAbort(CPU_CYCLE): break
-        
         if self.service._shutdown(CPU_CYCLE):
             self._stop()
                 
