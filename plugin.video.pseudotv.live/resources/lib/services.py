@@ -485,14 +485,14 @@ class Service(object):
 
 
     def __init__(self):
-        self.jsonRPC       = JSONRPC(service=self)
-        self.monitor       = Monitor(service=self)
-        self.player        = self.monitor.player
-        self.tasks         = Tasks(service=self)
-        self.curchannels   = self.tasks.getChannels()
-        self.cursettings   = SETTINGS.getCurrentSettings()
-        self.isClient      = SETTINGS.getSettingBool('Enable_Client')
-        self.priorityQUE   = CustomQueue(service=self)
+        self.jsonRPC     = JSONRPC(service=self)
+        self.monitor     = Monitor(service=self)
+        self.player      = self.monitor.player
+        self.tasks       = Tasks(service=self)
+        self.curchannels = self.tasks.getChannels()
+        self.cursettings = SETTINGS.getCurrentSettings()
+        self.isClient    = SETTINGS.getSettingBool('Enable_Client')
+        self.priorityQUE = CustomQueue(service=self)
     
 
     def __del__(self):
@@ -519,11 +519,12 @@ class Service(object):
     
         
     def _tasks(self): #keeps CustomQueue alive after interrupt.
-        self._que(self.tasks.chkQueTimer,-1,TASK_INTERVAL)
+        self._que(self.tasks.chkQueTimer,-1,SERVICE_INTERVAL)
     
     
     def _shutdown(self, wait=SERVICE_INTERVAL) -> bool: #service break
         pendingShutdown = any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+        PROPERTIES.clrEXTProperty('%s.SERVICE.pendingShutdown'%(ADDON_ID))
         if self.pendingShutdown != pendingShutdown:
             self.pendingShutdown = pendingShutdown
             self.log('_shutdown, pendingShutdown = %s, wait = %s'%(self.pendingShutdown,wait))
@@ -532,6 +533,7 @@ class Service(object):
     
     def _restart(self) -> bool: #service restart
         pendingRestart = PROPERTIES.isPendingRestart()
+        PROPERTIES.clrEXTProperty('%s.SERVICE.pendingRestart'%(ADDON_ID))
         if self.pendingRestart != pendingRestart:
             self.pendingRestart = pendingRestart
             self.log('_restart, pendingRestart = %s'%(self.pendingRestart))
@@ -593,6 +595,5 @@ class Service(object):
                     try: thread.join(1.0)
                     except Exception: pass
                     self.log('_stop, closing %s...'%(thread.name))
-        if pendingRestart: return True
-        PROPERTIES._clrTrash(PROPERTIES.getProcessID()) #clrTrash
-        
+            PROPERTIES._clrTrash(PROPERTIES.getProcessID()) #clrTrash
+        return pendingRestart

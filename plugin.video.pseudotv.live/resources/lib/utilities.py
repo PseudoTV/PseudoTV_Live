@@ -27,12 +27,12 @@ class Utilities(object):
             return LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon'))
         
         items = [
-                 {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(False,)}, #"Rebuild M3U/XMLTV/Genres"
-                 {'label':LANGUAGE(32118)                  ,'label2':LANGUAGE(32119),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(True,)},  #"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':ICON,'func':Utilities._runReload   , 'hide':False},                  #"Force PVR reload"
-                 {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':ICON,'func':Utilities._runRestart  , 'hide':False},                  #"Force PTVL restart"
-                 {'label':LANGUAGE(30205)                  ,'label2':LANGUAGE(30205),'icon':ICON,'func':Utilities._runCPUBench , 'hide':False},
-                 {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':ICON,'func':Utilities._runIOBench  , 'hide':False},
+                 {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(False,),'kwargs':{}}, #"Rebuild M3U/XMLTV/Genres"
+                 {'label':LANGUAGE(32118)                  ,'label2':LANGUAGE(32119),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(True,) ,'kwargs':{}}, #"Clean Start"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':ICON,'func':Utilities._runReload   , 'hide':False ,'args':()      ,'kwargs':{}}, #"Force PVR reload"
+                 {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':ICON,'func':Utilities._runRestart  , 'hide':False ,'args':()      ,'kwargs':{}}, #"Force PTVL restart"
+                 {'label':LANGUAGE(30205)                  ,'label2':LANGUAGE(30205),'icon':ICON,'func':Utilities._runCPUBench , 'hide':False ,'args':()      ,'kwargs':{}}, 
+                 {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':ICON,'func':Utilities._runIOBench  , 'hide':False ,'args':()      ,'kwargs':{}}, 
                  ]
 
         with BUILTIN.busy_dialog():
@@ -44,18 +44,36 @@ class Utilities(object):
             try: 
                 selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
                 log('Utilities: buildMenu, selectItem = %s'%selectItem)
-                if selectItem.get('args'): selectItem['func'](*selectItem['args'])
-                else:                      selectItem['func']()
+                selectItem['func'](*selectItem.get('args',()),**selectItem.get('kwargs',{}))
             except Exception as e: 
                 log('Utilities: buildMenu, failed! %s'%(e), xbmc.LOGERROR)
                 return DIALOG.notificationDialog(LANGUAGE(32000))
         else: Globals._openSettings((6,1))
     
+    
     @staticmethod
-    def _runCleanup(inclCache=False):
-        if DIALOG.yesnoDialog('Utilities: %s ?'%( LANGUAGE(32119) if inclCache else LANGUAGE(32120) )): 
-            with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
-                Globals._cleanPVRFiles(inclCache)
+    def _runCleanup(full=False):
+        if DIALOG.yesnoDialog('Utilities: %s ?'%( LANGUAGE(32119) if full else LANGUAGE(32120) )): 
+            with BUILTIN.busy_dialog(lock=True), PROPERTIES.interruptActivity():
+                log('Utilities: _runCleanup, full %s'%(full))
+                files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
+                         LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
+                         LANGUAGE(30096):GENREFLEPATH}  #"Genre"
+                if full:
+                    instanceName = PROPERTIES.getFriendlyName()
+                    files.update({LANGUAGE(32053)                :SETTINGS_FLE, #Settings.xml
+                                  f'PVR Instance: {instanceName}':SETTINGS.instances.getPVRInstancePath(instanceName)}) #IPTV Instance.xml
+                
+                for key, path in list(files.items()):
+                    if FileAccess.delete(path): 
+                        DIALOG.notificationDialog('%s: %s\n%s'%(LANGUAGE(32127),key.replace(': ',''),path),silent=False)
+                        
+                if full:
+                    SETTINGS.cache.cache.shutdown()
+                    if FileAccess.exists(SETTINGS.cache.cache.dbfile): FileAccess.delete(SETTINGS.cache.cache.dbfile)
+                    timerit(PROPERTIES.setPendingRestart)(TASK_INTERVAL)
+                DIALOG.notificationDialog(LANGUAGE(32025))
+
     
     @staticmethod
     def _runReload():
@@ -63,7 +81,8 @@ class Utilities(object):
             state = SETTINGS.getSettingBool('Enable_PVR_RELOAD')
             SETTINGS.setSettingBool('Enable_PVR_RELOAD',True)
             PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
-            timerit(SETTINGS.setSettingBool)(SERVICE_INTERVAL*4,*('Enable_PVR_RELOAD',state))
+            timerit(SETTINGS.setSettingBool)(TASK_INTERVAL,*('Enable_PVR_RELOAD',state))
+        DIALOG.notificationDialog(LANGUAGE(32025))
             
     @staticmethod
     def _runRestart():

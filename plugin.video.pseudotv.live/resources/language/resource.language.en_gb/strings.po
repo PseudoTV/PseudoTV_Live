@@ -1470,7 +1470,7 @@ msgid "Utility Menu"
 msgstr ""
 
 msgctxt "#32127"
-msgid "Deleting %s"
+msgid "Deleting"
 msgstr ""
 
 msgctxt "#32128"

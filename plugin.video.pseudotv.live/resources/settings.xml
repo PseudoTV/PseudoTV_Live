@@ -549,7 +549,7 @@
                 </setting>
                 <setting id="Enable_3D" type="boolean" label="30055" help="33055">
                     <level>1</level>
-                    <default>true</default>
+                    <default>false</default>
                     <control type="toggle"/>
                 </setting>
                 <setting id="Enable_Details" type="boolean" label="30225" help="33225">

@@ -17,21 +17,22 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
+from globals    import *
 from services   import Service
 
 def _start():
     try:
-        service = Service()
-        while not service.monitor.abortRequested():
-            restart = service._start()
-            if service.monitor.waitForAbort(CPU_CYCLE) or not restart: 
+        monitor = MONITOR()
+        while not monitor.abortRequested():
+            restart = Service()._start()
+            if monitor.waitForAbort(CPU_CYCLE) or not restart: 
                 DIALOG.notificationDialog(LANGUAGE(32141))
                 log("Services: _start, shutting down...")
                 break
             elif restart:
                 DIALOG.notificationDialog(LANGUAGE(32124))
                 log("Services: _start, restarting...")
-        del service
+        del monitor
     except Exception as e:
          log("Services: _start, failed! %s"%(e), xbmc.LOGERROR)
          DIALOG.notificationDialog(LANGUAGE(30079))

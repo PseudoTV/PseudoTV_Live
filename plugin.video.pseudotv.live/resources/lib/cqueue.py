@@ -173,6 +173,7 @@ class CustomQueue(object):
 
 
     def _start(self):
+        is_idle = False
         while not self.service.monitor.abortRequested():
             if self.service._interrupt() or self.service._suspend():
                 self.log("_start, _interrupt/_suspend")
@@ -205,14 +206,22 @@ class CustomQueue(object):
                     # Items exist but all are future-delayed. Sleep briefly and check again.
                     if self.service.monitor.waitForAbort(0.05): break
                     continue
-                else: break
-
-            try:
-                self._exe(package[0], *package[1], **package[2])
-            except Exception as e:
-                self.log(f"_start processing failure: {e}", xbmc.LOGERROR)
-
+                else:
+                    if not is_idle:
+                        try: SETTINGS.cache.cache.checkpoint()
+                        except Exception as e: self.log(f"Cleanup failure: {e}", xbmc.LOGERROR)
+                        is_idle = True
+                        
+                    if self.service.monitor.waitForAbort(0.5): break 
+                    continue
+                    
+            # If we successfully grabbed a package, reset the idle flag
+            is_idle = False
+            
+            try: self._exe(package[0], *package[1], **package[2])
+            except Exception as e: self.log(f"_start processing failure: {e}", xbmc.LOGERROR)
             if self.service.monitor.waitForAbort(CPU_CYCLE): break
+                
         if self.service._shutdown(CPU_CYCLE):
             self._stop()
                 

@@ -45,18 +45,25 @@ class Tasks(object):
 
 
     def _client(self):
-        self.service._que(self.chkPVRBackend,1)
+        self.service._que(self.chkPVRBackend    ,1)
         self.service._que(self.chkHTTP          ,1)
         self.service._que(self.chkDebugging     ,1)
         self.service._que(self.monitor.chkIdle  ,1)
+        self.service._que(self.chkVersion       ,1)
+        self.service._que(self.chkKodiSettings  ,1)
+        self.service._que(self.chkDiscovery     ,1)
+        self.service._que(self.chkQUES          ,5)
         self.log('_initialize, _client...')
         
         
     def _host(self):
         self._client()
         self._migrateChannels() #temp, remove in v.0.7.5.
-        self.service._que(self.chkDirs,1)
-        self.service._que(self.chkCrash,1)
+        self.service._que(self.chkDirs          ,1)
+        self.service._que(self.chkCrash         ,1)
+        self.service._que(self.chkLibrary       ,2)
+        self.service._que(self.chkFiles         ,5)
+        self.service._que(self.chkTrailers      ,5)
         self.log('_initialize, _host...')
     
     
@@ -100,6 +107,7 @@ class Tasks(object):
     def chkDiscovery(self):
         timerit(Discovery)(0.1,*(self.service, Multiroom(service=self.service)))
         self.log('chkDiscovery')
+        self.service._que(self.chkDiscovery,1,300)#5MINS
          
 
     def chkCrash(self):
@@ -119,16 +127,6 @@ class Tasks(object):
   
     def chkQueTimer(self):
         self.log('chkQueTimer')
-        self.service._que(self.chkVersion     , 1, 43200)#12HRS
-        self.service._que(self.chkKodiSettings, 1, 10800)#3HRS
-        self.service._que(self.chkDiscovery   , 1, 300)#5MINS
-        self.service._que(self.chkQUES        , 5, 120)#2MINS
-        
-        if not self.service.isClient:
-            self.service._que(self.chkLibrary , 2, 900)#15MINS
-            self.service._que(self.chkFiles   , 5, 900)#15MINS
-            self.service._que(self.chkTrailers, 5, 259200)#3DAYS
-            
         #immediate run, bypass delay
         self._chkPropTimer('chkPVRRefresh', self.chkPVRRefresh, 1) 
         self._chkPropTimer('chkChanged'   , self.chkChanged   , 3)
@@ -155,6 +153,7 @@ class Tasks(object):
             BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
         SETTINGS.setSetting('Update_Status',{True:'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),False:'None'}[UPDATE_AVAILABLE])
         self.log('chkVersion, installed = %s, online = %s, last = %s'%(ADDON_VERSION,ONLINE_VERSION,LAST_VERSION))
+        self.service._que(self.chkVersion,1,43200)#12HRS
 
 
     def chkKodiSettings(self):
@@ -162,6 +161,7 @@ class Tasks(object):
         MIN_GUIDEDAYS = SETTINGS.setSettingInt('Min_Days' ,self.jsonRPC.getSettingValue('epg.pastdaystodisplay'     ,default=1))
         MAX_GUIDEDAYS = SETTINGS.setSettingInt('Max_Days' ,self.jsonRPC.getSettingValue('epg.futuredaystodisplay'   ,default=3))
         OSD_TIMER     = SETTINGS.setSettingInt('OSD_Timer',self.jsonRPC.getSettingValue('pvrmenu.displaychannelinfo',default=5))
+        self.service._que(self.chkKodiSettings,1,10800)#3HRS
          
 
     def chkDirs(self):
@@ -172,7 +172,8 @@ class Tasks(object):
         if not PROPERTIES.isRunning('Builder.buildChannels'):
             if any(not bool(FileAccess.exists(file)) for file in [M3UFLEPATH,XMLTVFLEPATH,GENREFLEPATH]): 
                 self.log('chkFiles, missing files! running chkChannels to rebuild.')
-                return self.service._que(self.chkChannels,3)
+                self.service._que(self.chkChannels,3)
+        self.service._que(self.chkFiles,5,900)#15MINS
 
 
     def chkFillers(self, channels=None, silent=None):
@@ -240,6 +241,7 @@ class Tasks(object):
                         if tvshow.get('trailer'):
                             pDialog = DIALOG._updateProgress(pDialog,int(tidx*100)//len(tvshows))
                             self.service.trailerQue.add(FileAccess.dumpJSON(tvshow,sortkey=True))
+        self.service._que(self.chkTrailers,5,259200)#3DAYS
                 
                 
     def chkLibrary(self, types=None, silent=None):
@@ -260,6 +262,7 @@ class Tasks(object):
                 complete.add(library.updateLibrary([type],silent))
         del library
         if any(complete): self.service._que(self.chkChannels,3)
+        self.service._que(self.chkLibrary ,2, 900)#15MINS
         self.log("chkLibrary, complete = %s"%(any(complete)))
         
 
@@ -281,7 +284,6 @@ class Tasks(object):
                 self.service._que(Builder(service=self.service).buildChannels,3,0,0,*([channel],False,silent))
         else:
             self.log('chkChannels, No Channels Configured!')
-            Globals._cleanPVRFiles()
             if autotune or not SETTINGS.hasAutotuned():
                 self.log('chkChannels, Auto-tuning Channels.')
                 if SETTINGS.setAutotuned(_autotune(automatic=autotune)): PROPERTIES.setPropTimer('chkChanged')
@@ -358,6 +360,7 @@ class Tasks(object):
                     self.service._que(self.jsonRPC.addTrailer,-1,0,0,param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s trailerQue: %s\n%s"%(len(self.service.trailerQue),param,e))        
         del library
+        self.service._que(self.chkQUES,5,120)#2MINS
         
                 
     def setUserPath(self, old, new):

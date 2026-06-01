@@ -148,7 +148,6 @@ class RulesList(object):
 
 
 class BaseRule(object):
-    dialog = Dialog()
     
     def __init__(self):
         self.myId               = 0

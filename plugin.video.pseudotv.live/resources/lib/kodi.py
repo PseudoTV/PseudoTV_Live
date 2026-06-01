@@ -673,22 +673,20 @@ class Properties(object):
         
         
     def setPendingShutdown(self, state=True):
-        return self.setEXTProperty('%s.pendingShutdown'%(ADDON_ID),state)
+        return self.setEXTProperty('%s.SERVICE.pendingShutdown'%(ADDON_ID),state)
         
 
     def isPendingShutdown(self):
-        value = self.getEXTProperty('%s.pendingShutdown'%(ADDON_ID),False)
-        # self.clrProperty('pendingShutdown')
+        value = self.getEXTProperty('%s.SERVICE.pendingShutdown'%(ADDON_ID),False)
         return value
         
                 
     def setPendingRestart(self, state=True):
-        return self.setEXTProperty('%s.pendingRestart'%(ADDON_ID),state)
+        return self.setEXTProperty('%s.SERVICE.pendingRestart'%(ADDON_ID),state)
 
 
     def isPendingRestart(self):
-        value = self.getEXTProperty('%s.pendingRestart'%(ADDON_ID),False)
-        # self.clrProperty('pendingRestart')
+        value = self.getEXTProperty('%s.SERVICE.pendingRestart'%(ADDON_ID),False)
         return value
 
 

@@ -156,19 +156,6 @@ class Globals:
             if art: return art
         return {0:LOGO_LANDSCAPE,1:LOGO_POSTER}[opt]
 
-    @staticmethod  
-    def _buildWebImage(name, image=None, fallback=LOGO):
-        image = Globals._cleanImage(image)
-        if name and image is None: 
-            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache', default={})).get(name), f'http://{Globals._getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logo/{Globals._quoteString(name)}')
-        elif image.startswith(('image://')):
-            image = f'{Globals._getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
-        elif not image.startswith(('http','resource')):
-            image = f'http://{Globals._getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
-        elif fallback:
-            image = fallback
-        return image
-        
     @staticmethod
     def _getDummyIcon(text, background=COLOR_BACKGROUND, color=COLOR_TEXT):
         if not isinstance(text, (str,bytes)): text = str(text)
@@ -294,17 +281,3 @@ class Globals:
         text = text[13:]
         return text
         
-    @staticmethod
-    def _cleanPVRFiles(full=False):
-        files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
-                 LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
-                 LANGUAGE(30096):GENREFLEPATH}  #"Genre"
-        if full:
-            instanceName = PROPERITES.getFriendlyName()
-            files.update({LANGUAGE(32053)             :SETTINGS_FLE,
-                          'Cache'                     :CACHE_FLE,
-                          f'Instance: {instanceName}':SETTINGS.instances.getPVRInstancePath(instanceName)})
-        for key in list(files.keys()):
-            if FileAccess.delete(files[key]): 
-                Globals._notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
-        if full: PROPERTIES.setPendingRestart(True)

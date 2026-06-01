@@ -74,7 +74,7 @@ class Cache(object):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s [%s]: %s' % (self.__class__.__name__, {True:'MEM',False:'DB'}[self.cache.enable_mem_cache], msg), level)
+        log('%s [%s]: %s' % (self.__class__.__name__, {True:'MEM|DB',False:'DB'}[self.cache.enable_mem_cache], msg), level)
 
 
     def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
@@ -102,7 +102,10 @@ class Cache(object):
 
 class _Cache(object):
     _lock            = RLock() 
+    _trim            = False
+    _clean           = False
     _exit            = False
+    _checkpoint      = False
     _database        = None
     _cache_idx       = deque()
     global_checksum  = '1.0.0'
@@ -123,7 +126,6 @@ class _Cache(object):
         self.max_bytes = _Cache._getFreeMEM()
         self.dbfile    = FileAccess.translatePath(CACHE_FLE)
         self._auto_clean_interval = int(REAL_SETTINGS.getSetting('Max_Days') or "3") * 86400 
-        self._chkClean()
 
 
     def __del__(self):
@@ -135,7 +137,6 @@ class _Cache(object):
 
 
     def _open(self):
-        #todo add support for mysql
         with self._lock:
             retries = 0
             while not self.monitor.abortRequested() and retries < LOCK_MAX_FILE_TIMEOUT:
@@ -158,21 +159,28 @@ class _Cache(object):
                 except Exception as e: 
                     self.log("_open failed: %s" % str(e), xbmc.LOGERROR)
                     break
+                finally: 
+                    self._chkClean()
                     
 
     def _execute_sql(self, query, data=None):
         with self._lock:
-            if self._database is None: self._database = self._open()
-            if not self._database: return None
-            try:
-                if isinstance(data, list): result = self._database.executemany(query, data)
-                elif data:                 result = self._database.execute(query, data)
-                else:                      result = self._database.execute(query)
-                self._database.commit()
-                return result
-            except Exception as e:
-                self.log("SQL Error: %s" % str(e), xbmc.LOGERROR)
-                return None
+            if self._checkpoint: 
+                if not self.monitor.waitForAbort(1.0):
+                    return self._execute_sql(query,data)
+            elif self._database is None and not self._exit:
+                self._database = self._open()
+                
+            if self._database:
+                try:
+                    if isinstance(data, list): result = self._database.executemany(query, data)
+                    elif data:                 result = self._database.execute(query, data)
+                    else:                      result = self._database.execute(query)
+                    self._database.commit()
+                    return result
+                except Exception as e:
+                    self.log("SQL Error: %s" % str(e), xbmc.LOGERROR)
+                    return None
 
 
     def get(self, endpoint, checksum=""):
@@ -250,79 +258,98 @@ class _Cache(object):
 
     def _chkClean(self):
         cur_time = datetime.datetime.now()
-        lastexec = Globals._getEXTProperty("%s.cache.lastexecuted"%(ADDON_ID))
-        if not lastexec: Globals._getEXTProperty("%s.cache.lastexecuted"%(ADDON_ID), repr(cur_time))
-        elif (eval(lastexecuted) + self._auto_clean_interval) < cur_time: self.clean()
+        lastexec = Globals._getEXTProperty("%s.CACHE.LastExecuted"%(ADDON_ID))
+        if not lastexec: lastexec = Globals._setEXTProperty("%s.CACHE.LastExecuted"%(ADDON_ID), repr(cur_time))
+        elif (eval(lastexec) + self._auto_clean_interval) < cur_time: self._cleanDB()
         else: self._trimMEM()
             
-            
+             
     def _trimMEM(self):
-        if   self._exit or self.monitor.abortRequested(): return
-        elif not Globals._getEXTProperty("%s.cache.trimbusy"%(ADDON_ID)):
-            """Evicts oldest items until memory usage is under max_bytes."""
-            self.log('_trimMEM, max_bytes = %s' % self.max_bytes)
-            Globals._setEXTProperty("%s.cache.trimbusy"%(ADDON_ID), "busy")
-            current_total = sum(size for _, size in self._cache_idx)
-            while self.monitor.abortRequested() and current_total > self.max_bytes and self._cache_idx:
-                if self.monitor.waitForAbort(CPU_CYCLE): break
-                endpoint, size = self._cache_idx.popleft()
-                Globals._clrEXTProperty('%s.%s' % (ADDON_ID, endpoint))
-                current_total -= size
-                self.log("_trimMEM, %s to free %s bytes" % (endpoint, size))
-            Globals._clrEXTProperty("%s.cache.trimbusy"%(ADDON_ID))
+        if not self._exit and not self._trim:
+            self.log('_trimMEM, started, max_bytes = %s' % self.max_bytes)
+            try:
+                self._trim = True
+                current_total = sum(size for _, size in self._cache_idx)
+                while not self.monitor.abortRequested() and current_total > self.max_bytes and self._cache_idx:
+                    if self.monitor.waitForAbort(CPU_CYCLE): return
+                    endpoint, size = self._cache_idx.popleft()
+                    Globals._clrEXTProperty('%s.%s' % (ADDON_ID, endpoint))
+                    current_total -= size
+                    self.log("_trimMEM, %s to free %s bytes" % (endpoint, size))
+            except Exception as e: self.log("_trimMEM, failed!\n%s"%(e),xbmc.LOGERROR)
+            finally: self._trim = False
 
 
-    def clean(self):
-        if   self._exit or self.monitor.abortRequested(): return
-        elif not Globals._getEXTProperty("%s.cache.cleanbusy"%(ADDON_ID)):
-            Globals._setEXTProperty("%s.cache.cleanbusy"%(ADDON_ID), "busy")
-            self.log("clean, running...")
-            
-            if self._database:
-                # Cleanup expired
-                time = datetime.datetime.now()
-                cur_time = self.getTimestamp(time)
-                for cache_data in self._execute_sql("SELECT id, expires FROM cache").fetchall():
-                    if self.service._interrupt(): break
-                    else:
-                        Globals._clrEXTProperty('%s.%s'%(ADDON_ID,cache_data[0]))
-                        if cache_data[1] >= 0 and cache_data[1] < cur_time:
-                            self.log("clean, [%s]: Expired! (%s < %s)" % (cache_data[0], cache_data[1], cur_time))
-                            self._execute_sql('DELETE FROM cache WHERE id = ?', (cache_data[0],))
-                            self.log("clean, [%s] deleted from db"%cache_data[0])
-                self._execute_sql("VACUUM")
-                
-                # Cleanup WAL
+    def _cleanDB(self):
+        if self._database and not self._exit and not self._clean:
+            self.log("_cleanDB, started...")
+            try:
                 with self._lock:
+                    self._clean = True
+                    # Cleanup expired
+                    cur_time = self.getTimestamp(datetime.datetime.now())
+                    for cache_data in self._execute_sql("SELECT id, expires FROM cache").fetchall():
+                        if self.monitor.waitForAbort(CPU_CYCLE): break
+                        else:
+                            Globals._clrEXTProperty('%s.%s'%(ADDON_ID,cache_data[0]))
+                            if cache_data[1] >= 0 and cache_data[1] < cur_time:
+                                self.log("_cleanDB, [%s]: Expired! (%s < %s)" % (cache_data[0], cache_data[1], cur_time))
+                                self._execute_sql('DELETE FROM cache WHERE id = ?', (cache_data[0],))
+                                self.log("_cleanDB, [%s] deleted from db"%cache_data[0])
+                    self._execute_sql("VACUUM")
+                    self.checkpoint() # Cleanup WAL
+                    Globals._setEXTProperty("%s.CACHE.LastExecuted"%(ADDON_ID), repr(datetime.datetime.now()))
+                    self.log("_cleanDB, complete!")
+            except Exception as e: self.log("checkpoint, failed!\n%s"%(e),xbmc.LOGERROR)
+            finally: self._clean = False
+            
+            
+    def checkpoint(self):
+        if self._database and not self._exit and not self._checkpoint:
+            self.log("checkpoint, started...")
+            try:
+                with self._lock:
+                    self._checkpoint = True
                     self._database.commit()
                     # Force WAL to merge into the main DB file on close
                     self._database.execute("PRAGMA wal_checkpoint(FULL);")
                     self._database.close()
                     self._database = None
-                    self.log("clean, Database closed and WAL checkpointed.")
-                    Globals._setEXTProperty("%s.cache.lastexecuted"%(ADDON_ID), repr(time))
-            Globals._clrEXTProperty("%s.cache.cleanbusy"%(ADDON_ID))
-            self.log("clean, complete!")
-            if self.service._shutdown():
-                self.shutdown()
-            
+                    self.log("checkpoint, Database WAL checkpointed.")
+            except Exception as e: self.log("checkpoint, failed!\n%s"%(e),xbmc.LOGERROR)
+            finally: self._checkpoint = False
+        
  
     def shutdown(self):
-        with self._lock:
-            if self._database and not self._exit:
-                self.log("shutdown, started...")
-                try:
+        while not self.monitor.abortRequested():
+            if self.monitor.waitForAbort(CPU_CYCLE): break
+            elif self._checkpoint: self.log("shutdown, waiting for active checkpoint to finish...")
+            else: break
+                
+        if self._database and not self._exit:
+            self.log("shutdown, started...")
+            try:
+                with self._lock:
                     self._exit = True
                     self._database.commit()
                     # FORCE Checkpoint (Merges .db-wal into .db)
                     self._database.execute("PRAGMA wal_checkpoint(TRUNCATE);")
                     self._database.close()
                     self._database = None
-                    self.log("shutdown, Database closed and WAL checkpointed.")
-                except Exception as e: self.log("shutdown, failed!\n%s"%(e),xbmc.LOGERROR)
-                finally: self._exit = False
-
-
+                    
+                    while not self.monitor.abortRequested():
+                        if not FileAccess.exists('%s-wal'%(self.dbfile)): break
+                        elif self.monitor.waitForAbort(SERVICE_INTERVAL): break
+                        else: self.log("shutdown, waiting for WAL checkpoint flush...")
+                self.log("shutdown, Database closed and WAL checkpointed.")
+            except Exception as e: self.log("shutdown, failed!\n%s"%(e),xbmc.LOGERROR)
+            finally: self._exit = False
+                
+        state = not bool(FileAccess.exists('%s-wal'%(self.dbfile)))
+        self.log("shutdown, complete = %s"%(state))
+        return state
+        
+                
     @staticmethod
     def getTimestamp(date_time):
         try:              return int(date_time.timestamp())

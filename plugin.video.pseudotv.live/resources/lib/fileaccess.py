@@ -251,11 +251,13 @@ class FileAccess(object):
     def delete(filename):
         try: 
             if not FileAccess.exists(filename): return False
-            xbmcvfs.delete(filename)
+            log('FileAccess: delete %s'%(filename), xbmc.LOGERROR)
+            return xbmcvfs.delete(filename)
         except Exception as e: 
             log('FileAccess: delete failed! %s'%(e), xbmc.LOGERROR)
-            os.remove(FileAccess.translatePath(filename))
-        return FileAccess.exists(filename)
+            filename = FileAccess.translatePath(filename)
+            os.remove(filename)
+            return not bool(FileAccess.exists(filename))
         
         
     @staticmethod

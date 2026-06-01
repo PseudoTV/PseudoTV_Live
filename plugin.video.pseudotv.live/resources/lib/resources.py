@@ -137,11 +137,24 @@ class Resources(object):
                 if not logo: logo = self.generateLocal(citem.get('name'))    # generative (local)
                 if logo: self.setImageCache(citem.get('name'), logo)              # cache
             self.log('[%s] getLogo, name = %s, lookup = %s, logo = %s'%(citem.get('id'),citem.get('name'),lookup,logo))
-            return Globals._buildWebImage(citem.get('name'), logo, fallback)
+            return self._buildWebImage(citem.get('name'), logo, fallback)
         except Exception as e: self.log(f'getLogo failed!\n{e}\n{citem}', xbmc.LOGERROR)
         return LOGO
 
 
+    def _buildWebImage(self, name, image=None, fallback=LOGO):
+        image = Globals._cleanImage(image)
+        if name and image is None: 
+            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache', default={})).get(name), f'http://{PROPERTIES.getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logo/{Globals._quoteString(name)}')
+        elif image.startswith(('image://')):
+            image = f'{PROPERTIES.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
+        elif not image.startswith(('http','resource')):
+            image = f'http://{PROPERTIES.getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
+        elif fallback:
+            image = fallback
+        return image
+        
+        
     @cacheit(expiration=datetime.timedelta(minutes=5))
     def getLocalLogo(self, chname: str, select: bool=False) -> list:
         logos = []
