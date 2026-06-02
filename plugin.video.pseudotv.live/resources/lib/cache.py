@@ -159,30 +159,32 @@ class _Cache(object):
                 except Exception as e: 
                     self.log("_open failed: %s" % str(e), xbmc.LOGERROR)
                     break
-                finally: 
-                    self._chkClean()
                     
-
+                    
     def _execute_sql(self, query, data=None):
         with self._lock:
+            if self._exit:
+                self.log("SQL rejected: Cache is shutting down/shut down.", xbmc.LOGWARNING)
+                return None
+
             if self._checkpoint: 
                 if not self.monitor.waitForAbort(1.0):
-                    return self._execute_sql(query,data)
-            elif self._database is None and not self._exit:
+                    return self._execute_sql(query, data)
+            elif self._database is None:
                 self._database = self._open()
                 
             if self._database:
                 try:
                     if isinstance(data, list): result = self._database.executemany(query, data)
-                    elif data:                 result = self._database.execute(query, data)
-                    else:                      result = self._database.execute(query)
+                    elif data:                  result = self._database.execute(query, data)
+                    else:                       result = self._database.execute(query)
                     self._database.commit()
                     return result
                 except Exception as e:
-                    self.log("SQL Error: %s" % str(e), xbmc.LOGERROR)
+                    self.log("SQL Error: %s" % str(query)[:64], xbmc.LOGERROR)
                     return None
-
-
+                    
+                    
     def get(self, endpoint, checksum=""):
         checksum = self.getChecksum(checksum)
         cur_time = self.getTimestamp(datetime.datetime.now())
@@ -257,11 +259,15 @@ class _Cache(object):
 
 
     def _chkClean(self):
-        cur_time = datetime.datetime.now()
-        lastexec = Globals._getEXTProperty("%s.CACHE.LastExecuted"%(ADDON_ID))
-        if not lastexec: lastexec = Globals._setEXTProperty("%s.CACHE.LastExecuted"%(ADDON_ID), repr(cur_time))
-        elif (eval(lastexec) + self._auto_clean_interval) < cur_time: self._cleanDB()
-        else: self._trimMEM()
+        cur_time = self.getTimestamp(datetime.datetime.now())
+        try:
+            lastexec = (Globals._getEXTProperty("%s.CACHE.LastExecuted"%(ADDON_ID)) or repr(cur_time))
+            lastexec = int(eval(lastexec))
+        except Exception:
+            lastexec = cur_time
+            
+        if (lastexec + self._auto_clean_interval) < cur_time: self._cleanDB()
+        else:                                                 self._trimMEM()
             
              
     def _trimMEM(self):
@@ -298,57 +304,78 @@ class _Cache(object):
                                 self.log("_cleanDB, [%s] deleted from db"%cache_data[0])
                     self._execute_sql("VACUUM")
                     self.checkpoint() # Cleanup WAL
-                    Globals._setEXTProperty("%s.CACHE.LastExecuted"%(ADDON_ID), repr(datetime.datetime.now()))
+                    Globals._setEXTProperty("%s.CACHE.LastExecuted"%(ADDON_ID), repr(cur_time))
                     self.log("_cleanDB, complete!")
             except Exception as e: self.log("checkpoint, failed!\n%s"%(e),xbmc.LOGERROR)
             finally: self._clean = False
             
+    
+    def purge(self):
+        with self._lock:
+            try:
+                if self._database is None:
+                    self._database = self._open()
+                    
+                if self._database:
+                    self._cache_idx.clear()
+                    # Drop tables
+                    self._database.execute("DROP TABLE IF EXISTS cache;")
+                    self._database.execute("VACUUM;")
+                    self._database.commit()
+                    
+                    self._database.execute("""
+                        CREATE TABLE IF NOT EXISTS cache(
+                            id TEXT UNIQUE, 
+                            expires INTEGER, 
+                            data BLOB, 
+                            checksum BLOB
+                        )""")
+                    self._database.commit()
+                    self.log("purge, Database schema dropped and recreated.")
+                    return True
+            except Exception as e:
+                self.log("purge, failed! %s" % str(e), xbmc.LOGERROR)
+                return False
+            
             
     def checkpoint(self):
-        if self._database and not self._exit and not self._checkpoint:
-            self.log("checkpoint, started...")
-            try:
-                with self._lock:
+        with self._lock:
+            if self._database and not self._exit and not self._checkpoint:
+                try:
                     self._checkpoint = True
                     self._database.commit()
                     # Force WAL to merge into the main DB file on close
                     self._database.execute("PRAGMA wal_checkpoint(FULL);")
-                    self._database.close()
-                    self._database = None
-                    self.log("checkpoint, Database WAL checkpointed.")
-            except Exception as e: self.log("checkpoint, failed!\n%s"%(e),xbmc.LOGERROR)
-            finally: self._checkpoint = False
+                    self.log("checkpoint, Database checkpointed.")      
+                except Exception as e:
+                    self.log("checkpoint SQL commands failed: %s" % e, xbmc.LOGERROR)
+                finally:
+                    self._checkpoint = False 
         
  
     def shutdown(self):
         while not self.monitor.abortRequested():
-            if self.monitor.waitForAbort(CPU_CYCLE): break
+            if   self.monitor.waitForAbort(CPU_CYCLE): break
             elif self._checkpoint: self.log("shutdown, waiting for active checkpoint to finish...")
             else: break
                 
-        if self._database and not self._exit:
-            self.log("shutdown, started...")
-            try:
-                with self._lock:
+        with self._lock:
+            if self._database and not self._checkpoint and not self._exit:
+                try:
                     self._exit = True
                     self._database.commit()
                     # FORCE Checkpoint (Merges .db-wal into .db)
                     self._database.execute("PRAGMA wal_checkpoint(TRUNCATE);")
-                    self._database.close()
+                    self.log("shutdown, Database checkpointed.")
+                except Exception as e:
+                    self.log("shutdown SQL commands failed: %s" % e, xbmc.LOGERROR)
+                finally:
+                    try: self._database.close()
+                    except Exception: pass
                     self._database = None
-                    
-                    while not self.monitor.abortRequested():
-                        if not FileAccess.exists('%s-wal'%(self.dbfile)): break
-                        elif self.monitor.waitForAbort(SERVICE_INTERVAL): break
-                        else: self.log("shutdown, waiting for WAL checkpoint flush...")
-                self.log("shutdown, Database closed and WAL checkpointed.")
-            except Exception as e: self.log("shutdown, failed!\n%s"%(e),xbmc.LOGERROR)
-            finally: self._exit = False
-                
-        state = not bool(FileAccess.exists('%s-wal'%(self.dbfile)))
-        self.log("shutdown, complete = %s"%(state))
-        return state
-        
+                    self._exit = False
+                    self.log("shutdown, Database closed.")        
+
                 
     @staticmethod
     def getTimestamp(date_time):

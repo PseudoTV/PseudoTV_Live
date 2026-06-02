@@ -1,7 +1,10 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
 v.0.7.5+nightly
 - Refactored CustomQueue and ThreadPoolExecutor.
-
+- Refactored "Clean Start" Utility Menu option. 
+  - Purges M3U/XMLTV/Genre/Settings/Cache for a 100% clean start. No user files are deleted from the cache folder, only PseudoTV related files.
+  - Purge excludes: Youtube Cookies, Fillers and Logo folders.
+  
 v.0.7.4+nightly
 - Moved Library, Channels, Server json files to internal database.
 - Improved Fillers and "Auto" post-roll fill.

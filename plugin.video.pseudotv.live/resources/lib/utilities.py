@@ -66,12 +66,11 @@ class Utilities(object):
                 
                 for key, path in list(files.items()):
                     if FileAccess.delete(path): 
-                        DIALOG.notificationDialog('%s: %s\n%s'%(LANGUAGE(32127),key.replace(': ',''),path),silent=False)
+                        DIALOG.notificationDialog('%s: %s\n%s'%(LANGUAGE(32127),key.replace(': ',''),os.path.split(path)[1]),silent=False)
                         
                 if full:
-                    SETTINGS.cache.cache.shutdown()
-                    if FileAccess.exists(SETTINGS.cache.cache.dbfile): FileAccess.delete(SETTINGS.cache.cache.dbfile)
-                    timerit(PROPERTIES.setPendingRestart)(TASK_INTERVAL)
+                    if SETTINGS.cache.cache.purge():
+                        timerit(PROPERTIES.setPendingRestart)(SERVICE_INTERVAL)
                 DIALOG.notificationDialog(LANGUAGE(32025))
 
     
