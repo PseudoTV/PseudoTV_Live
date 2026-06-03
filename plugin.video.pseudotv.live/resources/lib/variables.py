@@ -281,3 +281,15 @@ class Globals:
         text = text[13:]
         return text
         
+    @staticmethod
+    def _getCountry(type=xbmc.ISO_639_1):
+        try: return xbmc.getLanguage(type, region=True).split('-')[1].upper() # Results in "US", "GB", etc.
+        except Exception: return "GB"
+            
+    @staticmethod
+    def _getLanguage(type=xbmc.ISO_639_1):
+        local = xbmc.getLanguage(type, region=True).replace('_', '-')
+        parts = local.split('-')
+        if len(parts) == 2:
+            return f"{parts[0].lower()}-{parts[1].upper()}"
+        return local.lower()

@@ -841,6 +841,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 chname = channelData.get('name')
                 logos  = self.resources.selectLogo(channelData)
+                print(logos)
                 lizLST = []
                 lizLST.extend(poolit(__buildItem)(logos))
             select = DIALOG.selectDialog(lizLST,'%s (%s)'%(LANGUAGE(32066).split('[CR]')[1],chname),useDetails=True,multi=False)

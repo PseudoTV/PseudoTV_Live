@@ -32,7 +32,7 @@ class Service(object):
     player  = PLAYER()
     monitor = MONITOR()
     def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+        return PROPERTIES.isPendingShutdown() or self.monitor.waitForAbort(wait)
     def _restart(self) -> bool:
         return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:

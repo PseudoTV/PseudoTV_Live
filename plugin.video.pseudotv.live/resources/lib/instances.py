@@ -151,8 +151,8 @@ class Instances(object):
                 'connectioncheckinterval'       :'%s'%(M3U_INTERVAL),
                 'connectionchecktimeout'        :'%s'%(M3U_TIMEOUT),
                 'defaultProviderName'           :ADDON_NAME,
-                'enableProviderMappings'      :'true',
-                # 'providerMappingFile'         :PROVIDERFLEPATH,#todo
+                'enableProviderMappings'        :'true',
+                'providerMappingFile'           :PROVIDERFLE_DEFAULT,
                 # 'tvGroupMode'                 :'0',
                 # 'customTvGroupsFile'          :(TVGROUPFLE),#todo
                 # 'radioGroupMode'              :'0',

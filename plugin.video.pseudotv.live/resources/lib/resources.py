@@ -38,7 +38,7 @@ class Service(object):
     player  = PLAYER()
     monitor = MONITOR()
     def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+        return PROPERTIES.isPendingShutdown() or self.monitor.waitForAbort(wait)
     def _restart(self) -> bool:
         return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
@@ -80,8 +80,11 @@ class Resources(object):
         logos.extend(self.getLocalLogo(citem.get('name'),select=True) or [])
         logos.extend(self.getLogoResources(citem, select=True) or [])
         logos.extend(self.getTVShowLogo(citem.get('name'), select=True) or [])
+        logos.extend(self.generateOnline(citem,True) or [])
+        logos.extend(self.generateLocal(citem.get('name')) or [])
+        logos = [f for f in logos if f]
         self.log('selectLogo, chname = %s, logos = %s'%(citem.get('name'), len(logos)))
-        return [f for f in logos if f]
+        return logos
 
 
     def queueLogo(self, chname):
@@ -133,9 +136,9 @@ class Resources(object):
                 logo = self.getLocalLogo(citem.get('name'))                  # local
                 if not logo: logo = self.getLogoResources(citem)             # resources
                 if not logo: logo = self.getTVShowLogo(citem.get('name'))    # tvshow
-                # if not logo: logo = self.generateOnline(citem.get('name')) # generative (online)
+                if not logo: logo = self.generateOnline(citem)               # generative (online)
                 if not logo: logo = self.generateLocal(citem.get('name'))    # generative (local)
-                if logo: self.setImageCache(citem.get('name'), logo)              # cache
+                if logo: self.setImageCache(citem.get('name'), logo)         # cache
             self.log('[%s] getLogo, name = %s, lookup = %s, logo = %s'%(citem.get('id'),citem.get('name'),lookup,logo))
             return self._buildWebImage(citem.get('name'), logo, fallback)
         except Exception as e: self.log(f'getLogo failed!\n{e}\n{citem}', xbmc.LOGERROR)
@@ -318,7 +321,7 @@ class Resources(object):
 
     def generateOnline(self, citem, select=False):
         if self.openRouter:
-            try: return self.openRouter.getImage(citem, 1, SETTINGS.getSetting('Generative_Image_Model'))
+            try: return self.openRouter.getImage(citem, 3 if select else 1, SETTINGS.getSetting('Generative_Image_Model'), select)
             except Exception as e: self.log(f'generateOnline failed!: {e}', xbmc.LOGERROR)
                 
                 

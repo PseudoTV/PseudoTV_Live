@@ -352,7 +352,7 @@ class Settings(object):
                      'm3uCache'                   :'false',
                      'epgPathType'                :'0',
                      'epgPath'                    :os.path.join(path,XMLTVFLE),
-                     'epgCache'                   :'false',
+                     'epgCache'                   :'true',
                      'genresPathType'             :'0',
                      'genresPath'                 :os.path.join(path,GENREFLE),
                      'logoPathType'               :'0',
@@ -363,17 +363,17 @@ class Settings(object):
             return self.instances.setSettings(instanceName, settings)
         
                 
-    def setPVRLocal(self, host, instanceName=ADDON_NAME, cache=False):
+    def setPVRLocal(self, host, instanceName=ADDON_NAME):
         settings  = self.instances.getSettings(instanceName)
         processID = self.properties.getProcessID()
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
                      'kodi_addon_instance_enabled':'true',
                      'm3uPathType'                :'1',
                      'm3uUrl'                     :'http://%s/%s'%(host,M3UFLE),
-                     'm3uCache'                   :'%s'%(str(cache).lower()),
+                     'm3uCache'                   :'false',
                      'epgPathType'                :'1',
                      'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
-                     'epgCache'                   :'true',#'%s'%(str(cache).lower()),
+                     'epgCache'                   :'true',
                      'genresPathType'             :'1',
                      'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
                      'logoPathType'               :'1',

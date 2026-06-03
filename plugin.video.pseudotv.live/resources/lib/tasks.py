@@ -46,6 +46,7 @@ class Tasks(object):
 
     def _client(self):
         self.service._que(self.chkPVRBackend    ,1)
+        self.service._que(self.chkStations      ,1)
         self.service._que(self.chkHTTP          ,1)
         self.service._que(self.chkDebugging     ,1)
         self.service._que(self.monitor.chkIdle  ,1)
@@ -62,6 +63,7 @@ class Tasks(object):
         self.service._que(self.chkDirs          ,1)
         self.service._que(self.chkCrash         ,1)
         self.service._que(self.chkLibrary       ,2)
+        self.service._que(self.chkChannels      ,3)
         self.service._que(self.chkFiles         ,5)
         self.service._que(self.chkTrailers      ,5)
         self.log('_initialize, _host...')
@@ -127,7 +129,6 @@ class Tasks(object):
   
     def chkQueTimer(self):
         self.log('chkQueTimer')
-        #immediate run, bypass delay
         self._chkPropTimer('chkPVRRefresh', self.chkPVRRefresh, 1) 
         self._chkPropTimer('chkChanged'   , self.chkChanged   , 3)
         
@@ -272,6 +273,7 @@ class Tasks(object):
             self.log('[%s] chkChanged, changed = %s'%(channel['id'],channel.get('changed',False)))
             if channel.get('changed',False):
                 self.service._que(Builder(service=self.service).buildChannels,3,0,0,*([channel],False,silent))
+        if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers,3,0,0,*(channels,silent))
         
         
     def chkChannels(self, channels=None, silent=None):
@@ -282,6 +284,7 @@ class Tasks(object):
             if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers,3,0,0,*(channels,silent))
             for channel in channels:
                 self.service._que(Builder(service=self.service).buildChannels,3,0,0,*([channel],False,silent))
+            self.service._que(self.chkChannels,3,MIN_EPG_DURATION)#3HRS
         else:
             self.log('chkChannels, No Channels Configured!')
             if autotune or not SETTINGS.hasAutotuned():
@@ -311,9 +314,7 @@ class Tasks(object):
                 try: 
                     response = self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
                     if response.get('error'): raise Exception(response.get('error',{}).get('message',LANGUAGE(30079)))
-                except Exception as e: 
-                    self.log("chkPVRRefresh, failed! Triggering PVR.ClearPVRData %s"%(e), xbmc.LOGERROR)
-                    BUILTIN.executebuiltin('PVR.ClearPVRData',delay=M3U_REFRESH)
+                except Exception as e: self.log("chkPVRRefresh, failed! %s"%(e), xbmc.LOGERROR)
             
             
     def chkSettingsChange(self, settings={}):
@@ -361,6 +362,18 @@ class Tasks(object):
                 except Exception as e: self.log("chkQUES failed!, queuing = %s trailerQue: %s\n%s"%(len(self.service.trailerQue),param,e))        
         del library
         self.service._que(self.chkQUES,5,120)#2MINS
+        
+                
+    def chkStations(self, channels=None):
+        builder = Builder()
+        if channels is None: channels = builder.channels.getChannels()
+        self.log('chkStations, channels = %s'%(len(channels)))
+        stopTimes = dict(builder.xmltv.hasProgrammes())
+        for channel in channels:
+            if not stopTimes.get(channel['id'],False):
+                builder.m3u.delStation(channel)
+        builder.m3u._save()
+        del builder
         
                 
     def setUserPath(self, old, new):

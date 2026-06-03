@@ -35,7 +35,7 @@ class Service(object):
     player  = PLAYER()
     monitor = MONITOR()
     def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return any([PROPERTIES.isPendingShutdown(),self.monitor.waitForAbort(wait)])
+        return PROPERTIES.isPendingShutdown() or self.monitor.waitForAbort(wait)
     def _restart(self) -> bool:
         return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
@@ -187,7 +187,6 @@ class Builder(object):
             return state, citem
                     
         def __hasProgrammes(citem: dict) -> bool:
-            print(dict(self.xmltv.hasProgrammes([citem])).get(citem['id']))
             try:    state = dict(self.xmltv.hasProgrammes([citem])).get(citem['id'],False)
             except Exception: state = False
             self.log('[%s] buildChannels, __hasProgrammes = %s'%(citem['id'],state))
