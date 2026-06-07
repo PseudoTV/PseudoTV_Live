@@ -34,11 +34,12 @@ class Service(object):
     def _interrupt(self) -> bool:
         return any([Globals._getEXTProperty('%s.pendingInterrupt'%(ADDON_ID),False),self._shutdown(),self._restart()])
     def _suspend(self) -> bool:
-        return any([Globals._getEXTProperty('%s.pendingSuspend'%(ADDON_ID),False)])
+        return any(Globals._getEXTProperty('%s.pendingSuspend'%(ADDON_ID),False))
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
-            else: wait -= CPU_CYCLE
+            if any(self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()):
+                return True
+            wait -= CPU_CYCLE
         return False
         
 def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):

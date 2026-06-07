@@ -45,7 +45,7 @@ class XMLTVS(object):
             
             
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def _load(self) -> dict:

@@ -41,7 +41,7 @@ class Tasks(object):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def _client(self):
@@ -101,7 +101,7 @@ class Tasks(object):
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Debug_Enable',False)
                 DIALOG.notificationDialog(LANGUAGE(32025))
-            elif not kodi_access: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True)
+            elif kodi_access: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True)
         #Force enable Kodi Debugging when enabled in PseudoTV via JSONRPC only if Kodi access allowed by user.
         if kodi_access: self.jsonRPC.toggleShowLog(SETTINGS.getSettingBool('Debug_Enable'))
                     
@@ -129,8 +129,8 @@ class Tasks(object):
   
     def chkQueTimer(self):
         self.log('chkQueTimer')
-        self._chkPropTimer('chkPVRRefresh', self.chkPVRRefresh, 1) 
-        self._chkPropTimer('chkChanged'   , self.chkChanged   , 3)
+        self._chkPropTimer('chkChanged'   , self.chkChanged   , 4)
+        self._chkPropTimer('chkPVRRefresh', self.chkPVRRefresh, 5)
         
         
      #_chkPropTimer trigger - True == Run
@@ -284,7 +284,7 @@ class Tasks(object):
             if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers,3,0,0,*(channels,silent))
             for channel in channels:
                 self.service._que(Builder(service=self.service).buildChannels,3,0,0,*([channel],False,silent))
-            self.service._que(self.chkChannels,3,MIN_EPG_DURATION)#3HRS
+            self.service._que(self.chkChannels,3,1800,True)#30Mins
         else:
             self.log('chkChannels, No Channels Configured!')
             if autotune or not SETTINGS.hasAutotuned():
@@ -293,7 +293,7 @@ class Tasks(object):
             elif PROPERTIES.hasEnabledServers():                         PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
 
 
-    @debounceit(M3U_INTERVAL)
+    @debounceit(M3U_REFRESH)
     def chkPVRRefresh(self, brute=None):
         if brute is None: brute = SETTINGS.getSettingBool('Enable_PVR_RELOAD')
         self.log('chkPVRRefresh, brute = %s'%(brute))
@@ -311,20 +311,19 @@ class Tasks(object):
                 if brute:
                     if not self.service.player.isPlaying(): __toggle(False), __toggle(True)
                     else: PROPERTIES.setPropTimer('chkPVRRefresh')
-                try: 
-                    response = self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1)) #currently not supported by IPTV Simple.
-                    if response.get('error'): raise Exception(response.get('error',{}).get('message',LANGUAGE(30079)))
-                except Exception as e: self.log("chkPVRRefresh, failed! %s"%(e), xbmc.LOGERROR)
+                try: self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1))
+                except Exception as e: pass #currently not supported by IPTV Simple.
             
             
     def chkSettingsChange(self, settings={}):
+        if SETTINGS.restoreSettings(SETTINGS.getCacheSetting('Utilities._runCleanup',default={})):
+            SETTINGS.setCacheSetting('Utilities._runCleanup',None)
         nSettings = SETTINGS.getCurrentSettings()
         for setting, value in list(settings.items()):
             actions = {'User_Folder'     :{'func':self.setUserPath            ,'kwargs':{'old':value,'new':nSettings.get(setting)}},
                        'Debug_Enable'    :{'func':self.jsonRPC.toggleShowLog  ,'kwargs':{'state':SETTINGS.getSettingBool('Debug_Enable')}},
                        'TCP_PORT'        :{'func':self.chkPVRBackend},
-                       'Autotune_Limit'  :{'func':SETTINGS.setAutotuned       ,'kwargs':{'state':False}},
-                       'Enable_Autotune':{'func':PROPERTIES.setPropTimer      ,'kwargs':{'key':'chkChanged','state':True}},}
+                       'Enable_Autotune' :{'func':self.service._que           ,'kwargs':{'func':'chkLibrary','priority':2}},}
                        
             if nSettings.get(setting) != value and actions.get(setting):
                 action = actions.get(setting)

@@ -30,7 +30,7 @@ class Autotune(object):
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def _runTune(self, start=1, count=None):
@@ -41,7 +41,7 @@ class Autotune(object):
         if not autoChannels:
             hasChannels  = PROPERTIES.hasChannels()
             hasLibrary   = any([PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES])
-            if count is None: count = min(max(SETTINGS.getSettingInt('Autotune_Limit'), AUTOTUNE_CHANNEL_DEFAULT), AUTOTUNE_CHANNEL_LIMIT)
+            if count is None: count = AUTOTUNE_LIMIT
             self.log(f'_runTune, Count = {count}, hasChannels = {hasChannels}, hasLibrary = {hasLibrary}')
             
             if not hasChannels and hasLibrary:

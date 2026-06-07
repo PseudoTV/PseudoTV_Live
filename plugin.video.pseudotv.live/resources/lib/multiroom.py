@@ -30,13 +30,14 @@ class Service(object):
     def _restart(self) -> bool:
         return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        return any([PROPERTIES.isPendingInterrupt(),self._shutdown(),self._restart(),BUILTIN.isScanning()])
+        any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
     def _suspend(self) -> bool:
-        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
+        return any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
-            else: wait -= CPU_CYCLE
+            if any(self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()):
+                return True
+            wait -= CPU_CYCLE
         return False
         
             
@@ -55,7 +56,7 @@ class Multiroom(object):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def _getStatus(self):
@@ -114,7 +115,7 @@ class Multiroom(object):
                 self.log('addServer, adding server = %s'%(payload))
                 if payload.get('host') != PROPERTIES.getRemoteHost(): 
                     SETTINGS.setPVRRemote(payload.get('host'),payload.get('name')) #add Remote IPTV Simple config
-                    DIALOG.notificationDialog('%s: %s'%(LANGUAGE(32047),payload.get('name')))
+                    DIALOG.notificationDialog('[B]%s:[/B] %s'%(LANGUAGE(32047),payload.get('name')))
                 self._setServers(servers)
             else:
                 instancePath = SETTINGS.hasPVRInstance(server.get('name'))

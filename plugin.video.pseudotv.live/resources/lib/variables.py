@@ -22,7 +22,7 @@ from logger      import log
 from fileaccess  import FileAccess, FileLock
 
 #variables
-PAGE_LIMIT          = int((REAL_SETTINGS.getSetting('Page_Limit')  or "25"))
+PAGE_LIMIT          = int((REAL_SETTINGS.getSetting('Page_Limit')  or "10"))
 MIN_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Min_Days')    or "1"))
 MAX_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Max_Days')    or "3"))
 OSD_TIMER           = int((REAL_SETTINGS.getSetting('OSD_Timer')   or "5"))

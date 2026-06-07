@@ -25,23 +25,6 @@
                     <default>false</default>
                     <control type="toggle"/>
                 </setting>
-                <setting id="Autotune_Limit" type="integer" label="32064" help="33181" parent="Enable_Autotune">
-                    <level>1</level>
-                    <default>5</default>
-                    <constraints>
-                        <minimum>1</minimum>
-                        <step>1</step>
-                        <maximum>25</maximum>
-                    </constraints>
-                    <dependencies>
-                        <dependency type="visible">
-							<condition operator="is" setting="Enable_Autotune">true</condition>
-                        </dependency>
-                    </dependencies>
-                    <control type="slider" format="integer">
-                        <popup>false</popup>
-                    </control>
-                </setting>
                 <setting id="Open_Manager" type="string" label="30107" help="33310">
                     <level>1</level>
                     <constraints>
@@ -489,10 +472,10 @@
             <group id="3" label="32258">
                 <setting id="Page_Limit" type="integer" label="30015" help="33015">
                     <level>3</level>
-                    <default>25</default>
+                    <default>10</default>
                     <constraints>
                         <minimum>0</minimum>
-                        <step>25</step>
+                        <step>5</step>
                         <maximum>1000</maximum>
                     </constraints>
                     <control type="slider" format="integer">

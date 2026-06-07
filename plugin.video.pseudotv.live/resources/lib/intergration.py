@@ -35,7 +35,7 @@ class OpenRouter(object):
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     @cacheit(expiration=datetime.timedelta(minutes=15))

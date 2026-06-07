@@ -124,7 +124,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def onInit(self):
@@ -713,7 +713,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if DIALOG.yesnoDialog(LANGUAGE(32100)):   
                     SETTINGS.setAutotuned(True)
                     items = []
-                    count = max(1, min(int(DIALOG.inputDialog(f"{LANGUAGE(32099)} [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", default = str(SETTINGS.getSettingInt('Autotune_Limit')) , key=xbmcgui.INPUT_NUMERIC)), AUTOTUNE_CHANNEL_LIMIT))
+                    count = AUTOTUNE_LIMIT
                     DIALOG.notificationDialog(f'Input [B]{count}[/B] Valid!\n{LANGUAGE(32140)}')
                     for idx, type in enumerate(AUTOTUNE_TYPES):
                         try:

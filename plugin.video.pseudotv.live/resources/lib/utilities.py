@@ -69,6 +69,7 @@ class Utilities(object):
                         DIALOG.notificationDialog('%s: %s\n%s'%(LANGUAGE(32127),key.replace(': ',''),os.path.split(path)[1]),silent=False)
                         
                 if full:
+                    SETTINGS.setCacheSetting('Utilities._runCleanup',SETTINGS.getCurrentSettings())
                     if SETTINGS.cache.cache.purge():
                         timerit(PROPERTIES.setPendingRestart)(SERVICE_INTERVAL)
                 DIALOG.notificationDialog(LANGUAGE(32025))

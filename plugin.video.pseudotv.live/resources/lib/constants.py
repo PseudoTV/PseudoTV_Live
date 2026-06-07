@@ -78,6 +78,7 @@ MIN_EPG_DURATION    = 10800 #secs
 TIMEOUT_EXECUTOR    = 1800
 TIMEOUT_EXECUTORS   = 10800
 ONNEXT_TIMER        = 15
+AUTOTUNE_LIMIT      = 25
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'

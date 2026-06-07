@@ -80,7 +80,7 @@ class M3U(object):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def _load(self): # https://github.com/kodi-pvr/pvr.iptvsimple#supported-m3u-and-xmltv-elements

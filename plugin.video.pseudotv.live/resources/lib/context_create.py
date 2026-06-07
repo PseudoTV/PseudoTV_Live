@@ -81,7 +81,6 @@ def _autotune(start=1, count=-1, automatic=False):
                     return False if time.time() >= (run_time + AUTOCLOSE_DELAY) else True #return True if autoclose
                 elif retval == 1:#Yes  
                     SETTINGS.setSettingBool('Enable_Autotune',True)
-                    SETTINGS.setSettingInt('Autotune_Limit',max(1, min(int(DIALOG.inputDialog(f"{LANGUAGE(32099)} [MAX:{AUTOTUNE_CHANNEL_LIMIT}]", default = str(SETTINGS.getSettingInt('Autotune_Limit')) , key=xbmcgui.INPUT_NUMERIC, close=60000)), AUTOTUNE_CHANNEL_LIMIT)))
                     break
                 elif retval == 2: #Custom
                     def __manager():  return _open()
@@ -106,7 +105,7 @@ def _autotune(start=1, count=-1, automatic=False):
     with DIALOG._progressDialog("", LANGUAGE(30038)) as pDialog:
         items   = []
         manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
-        if count <= 0: count = min(max(SETTINGS.getSettingInt('Autotune_Limit'), AUTOTUNE_CHANNEL_DEFAULT), AUTOTUNE_CHANNEL_LIMIT)
+        if count <= 0: count = AUTOTUNE_LIMIT
         for idx, type in enumerate(AUTOTUNE_TYPES):
             
             pDialog = DIALOG._updateProgress(pDialog, int(idx*100//len(AUTOTUNE_TYPES)), type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))

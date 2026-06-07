@@ -42,13 +42,14 @@ class Service(object):
     def _restart(self) -> bool:
         return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        return any([PROPERTIES.isPendingInterrupt(),self._shutdown(),self._restart(),BUILTIN.isScanning()])
+        any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
     def _suspend(self) -> bool:
-        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
+        return any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if any([self.monitor.waitForAbort(CPU_CYCLE),self._interrupt()]): return True
-            else: wait -= CPU_CYCLE
+            if any(self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()):
+                return True
+            wait -= CPU_CYCLE
         return False
 
 class Resources(object):
@@ -72,7 +73,7 @@ class Resources(object):
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def selectLogo(self, citem: dict) -> list:

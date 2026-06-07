@@ -426,9 +426,13 @@ class Settings(object):
         
 
     def getCurrentSettings(self):
-        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT','Autotune_Limit','Enable_Autotune']
+        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT', 'Enable_Autotune', 'Remove_BG_APIKEY', 'Open_Router_APIKEY']
         return dict([(setting,self.getSetting(setting)) for setting in settings])
-               
+              
+              
+    def restoreSettings(self, settings={}):
+        return any([SETTINGS.setSetting(k,v) for k,v in list(settings.items())])
+
 
     def getFileCRC(self, file):
         try:

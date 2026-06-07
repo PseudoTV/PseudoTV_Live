@@ -2015,7 +2015,7 @@ msgid "%s disabled, Please Enable!"
 msgstr ""
 
 msgctxt "#32265"
-msgid "%s is unavailable, Try again later..."
+msgid "%s is unavailable\nTry again later..."
 msgstr ""
 
 msgctxt "#32266"

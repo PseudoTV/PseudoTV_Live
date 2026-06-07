@@ -42,7 +42,7 @@ class Discovery(Thread):
             self.jsonRPC   = multiroom.jsonRPC
 
         def log(self, msg, level=xbmc.LOGDEBUG):
-            return log('%s: %s'%(self.__class__.__name__,msg),level)
+            return log(f"{self.__class__.__name__}: {msg}", level)
 
         def removeService(self, zeroconf, type, name):
             self.log("removeService, type = %s, name = %s"%(type,name))
@@ -68,7 +68,7 @@ class Discovery(Thread):
         self.start()
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
     def run(self):
         if not PROPERTIES.isRunning('Discovery.run'):
@@ -106,7 +106,7 @@ class MyHandler(BaseHTTPRequestHandler):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def do_HEAD(self):
@@ -226,7 +226,7 @@ class HTTP(Thread):
         
                     
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def _chkPort(self, host, port=SETTINGS.getSettingInt('TCP_PORT')):

@@ -53,7 +53,7 @@ class Background(xbmcgui.WindowXMLDialog):
         self.nitem   = self.player.playingItem.get('nitem',{})
       
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def onInit(self):
@@ -109,7 +109,7 @@ class Replay(xbmcgui.WindowXMLDialog):
                 
                 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
     
     
     def _isVisible(self, control):
@@ -206,7 +206,7 @@ class Overlay(object):
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def _hasControl(self, control):
@@ -338,7 +338,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        return log(f"{self.__class__.__name__}: {msg}", level)
 
         
     def onInit(self):
