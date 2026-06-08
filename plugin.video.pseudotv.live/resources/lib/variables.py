@@ -250,24 +250,23 @@ class Globals:
         citem['group'] = sorted(set(citem['group']))
         return citem
              
-    @staticmethod  
+    @staticmethod
     def _randomShuffle(items):
-        if isinstance(items,dict):
-            keys = Globals._randomShuffle(list(items.keys()))
-            return {key: Globals._randomShuffle(items[key]) for key in keys}
-        elif isinstance(items,list):
-            if items:
-                tmpItems = items[:]
-                random.shuffle(tmpItems)
-                return [Globals._randomShuffle(item) for item in tmpItems]
+        if isinstance(items, dict):
+            return {key: Globals._randomShuffle(items[key]) for key in Globals._randomShuffle(list(items.keys()))}
+        elif isinstance(items, (list, tuple)):
+            if not items: return [] if isinstance(items, list) else ()
+            shuffled_list = random.sample(items, len(items))
+            result = [Globals._randomShuffle(item) for item in shuffled_list]
+            return tuple(result) if isinstance(items, tuple) else result
         return items
 
-    @staticmethod  
-    def _randomSamples(items=[], x=-1):
-        if isinstance(items, list):
-            if items and len(items) >= x: return random.sample(items, x)
-            else:                         return random.sample(items, len(items))
-        return items
+    @staticmethod
+    def _randomSamples(items: Sequence[Any] = None, x: int = -1) -> list:
+        if items is None: return []
+        try: items_list = list(items)
+        except TypeError: return items
+        return random.sample(items_list, len(items_list) if x < 0 or x > len(items_list) else x)
         
     @staticmethod
     def double_urlencode(text):

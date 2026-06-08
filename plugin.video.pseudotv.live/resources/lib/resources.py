@@ -42,12 +42,12 @@ class Service(object):
     def _restart(self) -> bool:
         return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
+        any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _suspend(self) -> bool:
-        return any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if any(self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()):
+            if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
                 return True
             wait -= CPU_CYCLE
         return False

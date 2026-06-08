@@ -39,12 +39,12 @@ class Service(object):
     def _restart(self) -> bool:
         return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
+        any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _suspend(self) -> bool:
-        return any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if any(self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()):
+            if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
                 return True
             wait -= CPU_CYCLE
         return False
@@ -87,8 +87,8 @@ class Builder(object):
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
         self.recursiveLimit   = SETTINGS.getSettingInt('Recursive_Depth')
-        self.padScheduling    = False 
-        self.padFilelist      = False 
+        self.padScheduling    = False #TODO Adv. Rules 
+        self.padFilelist      = False #TODO Adv. Rules 
         self.enableEven       = bool(SETTINGS.getSettingInt('Enable_Even'))
         self.evenEpisode      = SETTINGS.getSettingBool('Enable_Even_Force_Episode')
         self.evenShuffle      = SETTINGS.getSettingBool('Enable_Even_Force_Random')
@@ -168,10 +168,11 @@ class Builder(object):
              
              
     def buildCells(self, citem: dict, duration: int=10800, type: str='video', entries: int=3, info=None) -> list:
-        if info is None: 
-            info = {}
-        info.setdefault('art', {})['poster'] = Globals._getThumb(info, opt=1)
-        info.setdefault('art', {})['fanart'] = Globals._getThumb(info)
+        if info is None: info = {}
+        art = info.setdefault('art', {})
+        art['poster'] = art.get('poster') or Globals._getThumb(info, opt=1)
+        art['fanart'] = art.get('fanart') or Globals._getThumb(info)
+        
         info.update({
             'label': (info.get('title') or citem['name']),
             'episodetitle': (info.get('episodetitle') or '|'.join(citem.get('group', []))),
@@ -184,14 +185,13 @@ class Builder(object):
             'start': 0,
             'stop': 0
         })
-        return [info.copy() for _ in range(entries)]
+        copy_info = info.copy
+        return [copy_info() for _ in range(entries)]
 
                 
     def buildChannels(self, channels: list=None, preview=False, silent=None):
-        if channels is None:
-            channels = []
-        if silent is None: 
-            silent = not SETTINGS.showDialog(silent)
+        if channels is None: channels = []
+        if silent is None: silent = not SETTINGS.showDialog(silent)
         self.log(f"buildChannels, channels = {len(channels)}")
         
         def __needsUpdate(citem, now, fallback, state=True):
@@ -265,9 +265,7 @@ class Builder(object):
         if PROPERTIES.isRunning('Builder.buildChannels'): return
         with PROPERTIES.legacy(), PROPERTIES.chkRunning('Builder.buildChannels'):
             channels = self.getVerifiedChannels(channels)
-            if len(channels) == 0:
-                return
-
+            if len(channels) == 0: return
             complete  = set()
             changes   = set()
             now       = getUTCstamp()
@@ -295,19 +293,15 @@ class Builder(object):
                         self.log(f"[{citem['id']}] buildChannels, _interrupt")
                         self.pErrors = [LANGUAGE(32160)]
                         if hasattr(self.service, '_que'): 
-                            self.service._que(self.service.tasks.chkChannels, 3, 0, 0, *(channels[idx:], silent))
+                            self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
                         break
                     elif self.service._suspend():
                         self.log(f"[{citem['id']}] buildChannels, _suspend")
-                        if not self.service._sleep(CPU_CYCLE): 
-                            continue
+                        if not self.service._sleep(CPU_CYCLE): continue
                     elif _update or _changed:                       
-                        if preview:          
-                            self.pMSG = LANGUAGE(32236)                           
-                        elif start == fallback: 
-                            self.pMSG = f"{LANGUAGE(30014)} {LANGUAGE(30223)}"
-                        else:                  
-                            self.pMSG = f"{LANGUAGE(32022)} {LANGUAGE(30223)}"
+                        if preview:             self.pMSG = LANGUAGE(32236)                           
+                        elif start == fallback: self.pMSG = f"{LANGUAGE(30014)} {LANGUAGE(30223)}"
+                        else:                   self.pMSG = f"{LANGUAGE(32022)} {LANGUAGE(30223)}"
                             
                         self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
                         self.log(f"[{citem['id']}] buildChannels, start ({start}) => {self.pMSG}")
@@ -315,10 +309,8 @@ class Builder(object):
                         if start > 0:
                             with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
                                 self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
-                                if citem.get('radio', False): 
-                                    fileList = self.buildMusic(citem)
-                                else:                        
-                                    fileList = self.buildVideo(citem)
+                                if citem.get('radio', False): fileList = self.buildMusic(citem)
+                                else:                         fileList = self.buildVideo(citem)
                                     
                                 if isinstance(fileList, list):
                                     fileList = sorted(__addScheduling(citem, fileList, now, start), key=itemgetter('start'))
@@ -336,16 +328,13 @@ class Builder(object):
                                         self.log(f"[{citem['id']}] buildChannels, In-Valid Channel ({self.pName}) {chanErrors}")
                                         self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}: {chanErrors}', header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
                                 self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
-                                if preview: 
-                                    return fileList
-                    else: 
-                        updated.add(__hasProgrammes(citem))
+                                if preview: return fileList
+                    else: updated.add(__hasProgrammes(citem))
                         
                     if any(updated): 
                         complete.add(__addStation(citem)) 
                         PROPERTIES.setPropTimer('chkPVRRefresh')
-                    else: 
-                        __clrStation(citem)
+                    else: __clrStation(citem)
                     __setStation()
                 except Exception as e: 
                     self.log(f"buildChannels, failed! {e}", xbmc.LOGERROR)
@@ -552,6 +541,9 @@ class Builder(object):
             file        = item.get('file', '')
             fileType    = item.get('filetype', 'file')
             self.fCount = int(idx * 100) // len(items)
+            if self.cCount == 1: 
+                self.pCount = max(0, min(self.fCount, 99))
+                self.fCount = -1
             
             if not item.get('type'): item['type'] = query.get('key', 'files')
             if self.service._interrupt() or self.service._suspend():
@@ -564,7 +556,8 @@ class Builder(object):
             elif fileType != 'file':
                 continue
             else:
-                self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}: {self.fCount}%',header=self.pHeader)
+                suffix = "" if self.fCount < 0 else f": {self.fCount}%"
+                self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}{suffix}',header=self.pHeader)
                 if file.startswith('pvr://'): #parse encoded fileitem otherwise no relevant meta provided via org. query. playable pvr:// paths are limited in Kodi.
                     self.log("[%s] buildFiles, IDX = %s, PVR item => FileItem! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
                     item = Globals._decodePlot(item.get('plot',''))
@@ -595,8 +588,11 @@ class Builder(object):
                 # This is a TV show
                 if (item['type'].startswith(tuple(TV_TYPES)) or item.get("showtitle")):
                     tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')
-                    season  = int(item.get("season","0"))
-                    episode = int(item.get("episode","0"))
+                    try:
+                        season  = int(item.get("season","0"))
+                        episode = int(item.get("episode","0"))
+                    except (ValueError, TypeError):
+                        season, episode = 0, 0
                     if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
                         self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
                         self.log("[%s] buildFiles, IDX = %s skipping extras! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
@@ -614,7 +610,7 @@ class Builder(object):
                 
                 dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
                 if dur > self.minDuration: #include media that's duration is above the players seek tolerance & users adv. rule
-                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}: {self.fCount}%',header=self.pHeader)
+                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}{suffix}',header=self.pHeader)
                     item['duration']     = dur
                     item['media']        = media
                     item['originalpath'] = path #use for path sorting/playback verification 

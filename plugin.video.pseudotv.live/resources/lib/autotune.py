@@ -33,14 +33,11 @@ class Autotune(object):
         return log(f"{self.__class__.__name__}: {msg}", level)
 
 
-    def _runTune(self, start=1, count=None):
-        def __buildAutotune(type, count):
-            return Globals._randomSamples(Library().getLibrary(type),count)
-                
+    def _runTune(self, start=1, count=None):                
         autoChannels = SETTINGS.getSettingBool('Autotuned_Channels')
         if not autoChannels:
             hasChannels  = PROPERTIES.hasChannels()
-            hasLibrary   = any([PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES])
+            hasLibrary   = any(PROPERTIES.hasLibrary(ty) for ty in AUTOTUNE_TYPES)
             if count is None: count = AUTOTUNE_LIMIT
             self.log(f'_runTune, Count = {count}, hasChannels = {hasChannels}, hasLibrary = {hasLibrary}')
             
@@ -71,13 +68,14 @@ class Autotune(object):
             if autoChannels: 
                 if manager.backup.backupChannels(CHANNELFLE_AUTOTUNE,silent=True): 
                     FileAccess.delete(CHANNELFLEPATH)
-            
+                    
+            library = Library()
             for idx, type in enumerate(AUTOTUNE_TYPES):
                 self.pMSG    = type
                 self.pCount  = int(idx*100//len(AUTOTUNE_TYPES))
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
-                items.extend(__buildAutotune(type,count))
-            
+                items.extend(Globals._randomSamples(library.getLibrary(type),count))
+            del library
             manager._addChannels(start, Globals._randomShuffle(items))
             manager.closeManager()
         del manager

@@ -60,342 +60,419 @@ M3U_MIN  = {"id"                : "",
             "radio"             : False,
             "label"             : "",
             "url"               : ""}
-            
+
 class M3U(object):
-    M3UDATA = {}
-    
+    _RE_GLOBAL = {
+        'tvg-shift': re.compile(r'tvg-shift="([^"]*)"', re.IGNORECASE),
+        'x-tvg-url': re.compile(r'x-tvg-url="([^"]*)"', re.IGNORECASE),
+        'catchup-correction': re.compile(r'catchup-correction="([^"]*)"', re.IGNORECASE)
+    }
+
+    _RE_TAGS = {
+        'label': re.compile(r',(.*)', re.IGNORECASE),
+        'id': re.compile(r'tvg-id="([^"]*)"', re.IGNORECASE),
+        'name': re.compile(r'tvg-name="([^"]*)"', re.IGNORECASE),
+        'group': re.compile(r'group-title="([^"]*)"', re.IGNORECASE),
+        'number': re.compile(r'tvg-chno="([^"]*)"', re.IGNORECASE),
+        'logo': re.compile(r'tvg-logo="([^"]*)"', re.IGNORECASE),
+        'radio': re.compile(r'radio="([^"]*)"', re.IGNORECASE),
+        'tvg-shift': re.compile(r'tvg-shift="([^"]*)"', re.IGNORECASE),
+        'catchup': re.compile(r'catchup="([^"]*)"', re.IGNORECASE),
+        'catchup-source': re.compile(r'catchup-source="([^"]*)"', re.IGNORECASE),
+        'catchup-days': re.compile(r'catchup-days="([^"]*)"', re.IGNORECASE),
+        'catchup-correction': re.compile(r'catchup-correction="([^"]*)"', re.IGNORECASE),
+        'provider': re.compile(r'provider="([^"]*)"', re.IGNORECASE),
+        'provider-type': re.compile(r'provider-type="([^"]*)"', re.IGNORECASE),
+        'provider-logo': re.compile(r'provider-logo="([^"]*)"', re.IGNORECASE),
+        'provider-countries': re.compile(r'provider-countries="([^"]*)"', re.IGNORECASE),
+        'provider-languages': re.compile(r'provider-languages="([^"]*)"', re.IGNORECASE),
+        'media': re.compile(r'media="([^"]*)"', re.IGNORECASE),
+        'media-dir': re.compile(r'media-dir="([^"]*)"', re.IGNORECASE),
+        'media-size': re.compile(r'media-size="([^"]*)"', re.IGNORECASE),
+        'realtime': re.compile(r'realtime="([^"]*)"', re.IGNORECASE)
+    }
+
+    _RE_EXTGRP    = re.compile(r'^#EXTGRP:(.*)$', re.IGNORECASE)
+    _RE_KODIPROP  = re.compile(r'^#KODIPROP:(.*)$', re.IGNORECASE)
+    _RE_EXTVLCOPT = re.compile(r'^#EXTVLCOPT:(.*)$', re.IGNORECASE)
+    _RE_WEBPROP   = re.compile(r'^#WEBPROP:(.*)$', re.IGNORECASE)
+    _RE_XPLAYLIST = re.compile(r'^#EXT-X-PLAYLIST-TYPE:(.*)$', re.IGNORECASE)
+
     def __init__(self, file=M3UFLEPATH, writable=False):
         self.writable    = writable
         self.stationFile = file
+        self.M3UDATA     = {}
+        
         stations, recordings = self.cleanSelf(list(self._load()))
-        self.M3UDATA = {'data':'#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE)),
-                        'stations':stations,'recordings':recordings}
-
+        self.M3UDATA = {
+            'data': '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
+                'http://%s/%s' % (PROPERTIES.getRemoteHost(), XMLTVFLE)
+            ),
+            'stations': stations,
+            'recordings': recordings
+        }
 
     def __del__(self):
         try:
-            if self.writable: self._save()
-            self.log('__del__, writable = %s'%(self.writable))
-        except Exception: pass
-
+            if getattr(self, 'writable', False): 
+                self._save()
+            self.log('__del__, writable = %s' % (getattr(self, 'writable', False)))
+        except Exception: 
+            pass
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log(f"{self.__class__.__name__}: {msg}", level)
 
-
-    def _load(self): # https://github.com/kodi-pvr/pvr.iptvsimple#supported-m3u-and-xmltv-elements
-        self.log('_load, file = %s'%self.stationFile)
+    def _load(self):
+        self.log('_load, file = %s' % self.stationFile)
+        lines = []
         if FileAccess.exists(self.stationFile): 
+            fle = None
             try:
-                fle   = FileAccess.open(self.stationFile, 'r')
+                fle = FileAccess.open(self.stationFile, 'r')
                 lines = fle.readlines()
-            except Exception: lines = []
+            except Exception as e: 
+                self.log(f"Error reading file lines: {e}", xbmc.LOGERROR)
+                lines = []
             finally:
-                if hasattr(fle, 'close'): 
+                if fle and hasattr(fle, 'close'): 
                     fle.close()
             
             chCount = 0
-            data    = {}
-            filter  = []
+            global_data = {}
+            seen_ids = set()
+            
             for idx, line in enumerate(lines):
                 line = line.rstrip()
+                if not line:
+                    continue
+                
                 if line.startswith('#EXTM3U'):
-                    data = {'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                            'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                            'catchup-correction':re.compile('catchup-correction=\"(.*?)\"' , re.IGNORECASE).search(line)}
+                    global_data = {k: pattern.search(line) for k, pattern in self._RE_GLOBAL.items()}
 
                 elif line.startswith('#EXTINF:'):
                     chCount += 1
-                    match = {'label'             :re.compile(',(.*)'                        , re.IGNORECASE).search(line),
-                             'id'                :re.compile('tvg-id=\"(.*?)\"'             , re.IGNORECASE).search(line),
-                             'name'              :re.compile('tvg-name=\"(.*?)\"'           , re.IGNORECASE).search(line),
-                             'group'             :re.compile('group-title=\"(.*?)\"'        , re.IGNORECASE).search(line),
-                             'number'            :re.compile('tvg-chno=\"(.*?)\"'           , re.IGNORECASE).search(line),
-                             'logo'              :re.compile('tvg-logo=\"(.*?)\"'           , re.IGNORECASE).search(line),
-                             'radio'             :re.compile('radio=\"(.*?)\"'              , re.IGNORECASE).search(line),
-                             'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                             'catchup'           :re.compile('catchup=\"(.*?)\"'            , re.IGNORECASE).search(line),
-                             'catchup-source'    :re.compile('catchup-source=\"(.*?)\"'     , re.IGNORECASE).search(line),
-                             'catchup-days'      :re.compile('catchup-days=\"(.*?)\"'       , re.IGNORECASE).search(line),
-                             'catchup-correction':re.compile('catchup-correction=\"(.*?)\"' , re.IGNORECASE).search(line),
-                             'provider'          :re.compile('provider=\"(.*?)\"'           , re.IGNORECASE).search(line),
-                             'provider-type'     :re.compile('provider-type=\"(.*?)\"'      , re.IGNORECASE).search(line),
-                             'provider-logo'     :re.compile('provider-logo=\"(.*?)\"'      , re.IGNORECASE).search(line),
-                             'provider-countries':re.compile('provider-countries=\"(.*?)\"' , re.IGNORECASE).search(line),
-                             'provider-languages':re.compile('provider-languages=\"(.*?)\"' , re.IGNORECASE).search(line),
-                             'media'             :re.compile('media=\"(.*?)\"'              , re.IGNORECASE).search(line),
-                             'media-dir'         :re.compile('media-dir=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                             'media-size'        :re.compile('media-size=\"(.*?)\"'         , re.IGNORECASE).search(line),
-                             'realtime'          :re.compile('realtime=\"(.*?)\"'           , re.IGNORECASE).search(line)}
+                    match = {k: pattern.search(line) for k, pattern in self._RE_TAGS.items()}
                     
-                    if match['id'].group(1) in filter:
-                        self.log('_load, filtering duplicate %s'%(match['id'].group(1)))
-                        continue
-                    filter.append(match['id'].group(1)) #filter dups, todo find where dups originate from. 
+                    m_id = match['id'].group(1) if (match['id'] and match['id'].group(1)) else None
+                    if m_id:
+                        if m_id in seen_ids:
+                            self.log('_load, filtering duplicate %s' % m_id)
+                            continue
+                        seen_ids.add(m_id)
                     
                     mitem = self.getMitem()
-                    mitem.update({'number' :chCount,
-                                  'logo'   :LOGO,
-                                  'catchup':''}) #set default parameters
+                    mitem.update({
+                        'number': chCount,
+                        'logo': LOGO,
+                        'catchup': ''
+                    })
                     
-                    for key, value in list(match.items()):
+                    for key, value in match.items():
                         if value is None:
-                            if data.get(key,None) is not None:
-                                self.log('_load, using #EXTM3U "%s" value for #EXTINF'%(key))
-                                value = data[key] #no local EXTINF value found; use global EXTM3U if applicable.
-                            else: continue
+                            if global_data.get(key) is not None:
+                                self.log('_load, using #EXTM3U "%s" value for #EXTINF' % key)
+                                value = global_data[key]
+                            else: 
+                                continue
                         
-                        if value.group(1) is None:
+                        val_str = value.group(1)
+                        if val_str is None:
                             continue
-                        elif key == 'logo':
-                            mitem[key] = value.group(1)
                             
+                        if key == 'logo':
+                            mitem[key] = val_str
                         elif key == 'number':
-                            try:    mitem[key] = int(value.group(1))
-                            except Exception: mitem[key] = float(value.group(1))#todo why was this needed?
-                                
+                            try:    
+                                mitem[key] = int(val_str)
+                            except Exception: 
+                                try:
+                                    mitem[key] = float(val_str)
+                                except Exception:
+                                    mitem[key] = chCount
                         elif key == 'group':
-                            mitem[key] = [_f for _f in sorted(list(set((value.group(1)).split(';')))) if _f]
-                            
-                        elif key in ['radio','favorite','realtime','media']:
-                            mitem[key] = (value.group(1)).lower() == 'true'
+                            mitem[key] = [_f for _f in sorted(list(set(val_str.split(';')))) if _f]
+                        elif key in ['radio', 'favorite', 'realtime', 'media']:
+                            mitem[key] = val_str.lower() == 'true'
                         else:
-                            mitem[key] = value.group(1)
+                            mitem[key] = val_str
 
-                    for nidx in range(idx+1,len(lines)):
-                        try:
-                            nline = lines[nidx].rstrip()
-                            if   nline.startswith('#EXTINF:'): break
-                            elif nline.startswith('#EXTGRP'):
-                                grop = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
-                                if grop is not None: 
-                                    mitem['group'].append(grop.group(1).split(';'))
-                                    mitem['group'] = sorted(set(mitem['group']))
-                            elif nline.startswith('#KODIPROP:'):
-                                prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
-                                if prop is not None: mitem.setdefault('kodiprops',[]).append(prop.group(1))
-                            elif nline.startswith('#EXTVLCOPT'):
-                                copt = re.compile('^#EXTVLCOPT:(.*)$', re.IGNORECASE).search(nline)
-                                if copt is not None:  mitem.setdefault('extvlcopt',[]).append(copt.group(1))
-                            elif nline.startswith('#WEBPROP'):
-                                web = re.compile('^#WEBPROP:(.*)$', re.IGNORECASE).search(nline)
-                                if web is not None:  mitem.setdefault('webprops',[]).append(web.group(1))
-                            elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
-                                xplay = re.compile('^#EXT-X-PLAYLIST-TYPE:(.*)$', re.IGNORECASE).search(nline)
-                                if xplay is not None: mitem['x-playlist-type'] = xplay.group(1)
-                            elif nline.startswith('##'): continue
-                            elif not nline: continue
-                            else: mitem['url'] = nline
-                        except Exception as e: self.log('_load, error parsing m3u! %s'%(e))
+                    for nidx in range(idx + 1, len(lines)):
+                        nline = lines[nidx].rstrip()
+                        if not nline or nline.startswith('##'): 
+                            continue
+                        if nline.startswith('#EXTINF:'): 
+                            break
                             
-                    #Fill missing with similar parameters.
-                    mitem['name']     = (mitem.get('name')     or mitem.get('label') or '')
-                    mitem['label']    = (mitem.get('label')    or mitem.get('name')  or '')
+                        if nline.startswith('#EXTGRP'):
+                            grop = self._RE_EXTGRP.search(nline)
+                            if grop:
+                                current_groups = mitem.get('group', [])
+                                current_groups.extend(grop.group(1).split(';'))
+                                mitem['group'] = sorted(list(set(current_groups)))
+                        elif nline.startswith('#KODIPROP:'):
+                            prop = self._RE_KODIPROP.search(nline)
+                            if prop: 
+                                mitem.setdefault('kodiprops', []).append(prop.group(1))
+                        elif nline.startswith('#EXTVLCOPT'):
+                            copt = self._RE_EXTVLCOPT.search(nline)
+                            if copt:  
+                                mitem.setdefault('extvlcopt', []).append(copt.group(1))
+                        elif nline.startswith('#WEBPROP'):
+                            web = self._RE_WEBPROP.search(nline)
+                            if web:  
+                                mitem.setdefault('webprops', []).append(web.group(1))
+                        elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
+                            xplay = self._RE_XPLAYLIST.search(nline)
+                            if xplay: 
+                                mitem['x-playlist-type'] = xplay.group(1)
+                        else: 
+                            mitem['url'] = nline
+
+                    mitem['name']     = (mitem.get('name') or mitem.get('label') or '')
+                    mitem['label']    = (mitem.get('label') or mitem.get('name') or '')
                     mitem['favorite'] = (mitem.get('favorite') or False)
                     
-                    #Set Fav. based on group value.
-                    if LANGUAGE(32019) in mitem['group'] and not mitem['favorite']:
+                    if LANGUAGE(32019) in mitem.get('group', []) and not mitem['favorite']:
                         mitem['favorite'] = True
                     
-                    #Core m3u parameters missing, ignore entry.
                     if not mitem.get('id') or not mitem.get('name') or not mitem.get('number'): 
-                        self.log('_load, SKIPPED MISSING META m3u item = %s'%mitem)
+                        self.log('_load, SKIPPED MISSING META m3u item = %s' % mitem)
                         continue
                         
-                    self.log('_load, m3u item = %s'%mitem)
+                    self.log('_load, m3u item = %s' % mitem)
                     yield mitem
-        
-        
+
     @debounceit(SERVICE_INTERVAL)
     def _save(self):
-        self.M3UDATA['data']       = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""'%('http://%s/%s'%(PROPERTIES.getRemoteHost(),XMLTVFLE))
-        self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
-        self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]), key='name')
-        self.log('_save, writable = %s, file = %s\nstations = %s recordings = %s'%(self.writable,self.stationFile,len(self.M3UDATA['stations']),len(self.M3UDATA['recordings'])))
+        self.M3UDATA['data'] = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
+            'http://%s/%s' % (PROPERTIES.getRemoteHost(), XMLTVFLE)
+        )
+        self.M3UDATA['stations'] = self.sortStations(self.M3UDATA.get('stations', []))
+        self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings', []), key='name')
+        
+        self.log('_save, writable = %s, file = %s\nstations = %s recordings = %s' % (
+            self.writable, self.stationFile, len(self.M3UDATA['stations']), len(self.M3UDATA['recordings'])
+        ))
+        
         if self.writable:
             with FileLock(self.stationFile):
+                fle = None
                 try:
                     fle = FileAccess.open(self.stationFile, 'w')
-                    fle.write('%s\n'%(self.M3UDATA['data']))
+                    fle.write('%s\n' % (self.M3UDATA['data']))
                     opts = list(self.getMitem().keys())
-                    line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+                    line_template = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+                    
                     for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
                         try:
                             optional  = ''
-                            xplaylist = ''
-                            kodiprops = {}
-                            extvlcopt = {}
-                                
-                            # write optional m3u parameters.
-                            if 'kodiprops'       in station: kodiprops = station.pop('kodiprops')
-                            if 'extvlcopt'       in station: extvlcopt = station.pop('extvlcopt')
-                            if 'x-playlist-type' in station: xplaylist = station.pop('x-playlist-type')
-                            for key, value in list(station.items()):
-                                if key in opts and str(value):
-                                    optional += '%s="%s" '%(key,value)
+                            kodiprops = station.get('kodiprops', [])
+                            extvlcopt = station.get('extvlcopt', [])
+                            xplaylist = station.get('x-playlist-type', '')
+                            
+                            for key, value in station.items():
+                                if key not in ['kodiprops', 'extvlcopt', 'x-playlist-type'] and key in opts and str(value):
+                                    optional += '%s="%s" ' % (key, value)
 
-                            fle.write(line%(station['number'],
-                                            station['id'],
-                                            station['name'],
-                                            station['logo'],
-                                            ';'.join(station['group']),
-                                            station['radio'],
-                                            station['catchup'],
-                                            optional,
-                                            station['label']))
-                                   
-                            if kodiprops:  fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop)  for prop in kodiprops])))
-                            if extvlcopt:  fle.write('%s\n'%('\n'.join(['#EXTVLCOPT:%s'%(prop) for prop in extvlcopt])))
-                            if xplaylist:  fle.write('%s\n'%('#EXT-X-PLAYLIST-TYPE:%s'%(xplaylist)))
+                            fle.write(line_template % (
+                                station.get('number', ''),
+                                station.get('id', ''),
+                                station.get('name', ''),
+                                station.get('logo', ''),
+                                ';'.join(station.get('group', [])),
+                                str(station.get('radio', False)),
+                                station.get('catchup', ''),
+                                optional,
+                                station.get('label', '')
+                            ))
+                                    
+                            if kodiprops: 
+                                fle.write('%s\n' % ('\n'.join(['#KODIPROP:%s' % prop for prop in kodiprops])))
+                            if extvlcopt: 
+                                fle.write('%s\n' % ('\n'.join(['#EXTVLCOPT:%s' % prop for prop in extvlcopt])))
+                            if xplaylist: 
+                                fle.write('#EXT-X-PLAYLIST-TYPE:%s\n' % xplaylist)
+                                
+                            fle.write('%s\n' % (station.get('url', '')))
                         except Exception as e:
-                            self.log("_save, failed! %s"%(e), xbmc.LOGERROR)
+                            self.log("_save, loop record entry failed! %s" % e, xbmc.LOGERROR)
                             continue
-                        fle.write('%s\n'%(station['url']))
                     return True
-                except Exception: self.log("_save, failed! %s"%(e), xbmc.LOGERROR)
+                except Exception as e: 
+                    self.log("_save, global write process failed! %s" % e, xbmc.LOGERROR)
                 finally:
-                    if hasattr(fle, 'close'): 
+                    if fle and hasattr(fle, 'close'): 
                         fle.close()
-        
-        
+        return False
+
     def _reload(self):
         self.log('_reload') 
-        self.__init__()
+        self.__init__(file=self.stationFile, writable=self.writable)
         
-        
-    def _verify(self, stations=[], recordings=[], chkPath=SETTINGS.getSettingBool('Clean_Recordings')):
-        if stations: #remove abandoned m3u entries; Stations that are not found in the channel list
+    def _verify(self, stations=None, recordings=None, chkPath=None):
+        if chkPath is None:
+            chkPath = SETTINGS.getSettingBool('Clean_Recordings')
+            
+        if stations:
             channels = Channels().getChannels()
-            stations = [station for station in stations for channel in channels if channel.get('id') == station.get('id',str(random.random()))] 
-            self.log('_verify, stations = %s'%(len(stations)))
-            return stations
-        elif recordings:#remove recordings that no longer exists on disk
-            if chkPath: recordings = [recording for recording in recordings if hasFile(FileAccess._decodeString(dict(urllib.parse.parse_qsl(recording.get('url',''))).get('vid').replace('.pvr','')))]
-            else:       recordings = [recording for recording in recordings if recording.get('media',False)]
-            self.log('_verify, recordings = %s, chkPath = %s'%(len(recordings),chkPath))
-            return recordings
+            chan_ids = {channel.get('id') for channel in channels if channel.get('id')}
+            verified_stations = [station for station in stations if station.get('id') in chan_ids]
+            self.log('_verify, stations = %s' % (len(verified_stations)))
+            return verified_stations
+            
+        elif recordings:
+            verified_recordings = []
+            for recording in recordings:
+                if chkPath:
+                    url = recording.get('url', '')
+                    parsed_query = dict(urllib.parse.parse_qsl(url))
+                    vid_param = parsed_query.get('vid', '').replace('.pvr', '')
+                    decoded_path = FileAccess._decodeString(vid_param) if vid_param else ''
+                    if decoded_path and hasFile(decoded_path):
+                        verified_recordings.append(recording)
+                else:
+                    if recording.get('media', False):
+                        verified_recordings.append(recording)
+            self.log('_verify, recordings = %s, chkPath = %s' % (len(verified_recordings), chkPath))
+            return verified_recordings
         return []
         
-
-    def cleanSelf(self, items, key='id', slug='@%s'%(Globals._slugify(ADDON_NAME))): # remove m3u imports (Non PseudoTV Live)
-        if not slug: return items
-        stations   = self.sortStations(self._verify(stations=[station for station in items if station.get(key,'').endswith(slug) and not station.get('media',False)]))
-        recordings = self.sortStations(self._verify(recordings=[recording for recording in items if recording.get(key,'').endswith(slug) and recording.get('media',False)]), key='name')
-        self.log('cleanSelf, slug = %s, key = %s: returning: stations = %s, recordings = %s'%(slug,key,len(stations),len(recordings)))
+    def cleanSelf(self, items, key='id', slug=None):
+        if slug is None:
+            slug = '@%s' % (Globals._slugify(ADDON_NAME))
+        if not slug: 
+            return items
+            
+        stations_raw = [st for st in items if str(st.get(key, '')).endswith(slug) and not st.get('media', False)]
+        recordings_raw = [rec for rec in items if str(rec.get(key, '')).endswith(slug) and rec.get('media', False)]
+        
+        stations = self.sortStations(self._verify(stations=stations_raw))
+        recordings = self.sortStations(self._verify(recordings=recordings_raw), key='name')
+        
+        self.log('cleanSelf, slug = %s, key = %s: returning: stations = %s, recordings = %s' % (slug, key, len(stations), len(recordings)))
         return stations, recordings
 
-
     def sortStations(self, stations, key='number'):
-        try:              return sorted(stations, key=itemgetter(key))
-        except Exception: return stations
-        
+        try:              
+            return sorted(stations, key=itemgetter(key))
+        except Exception: 
+            return stations
         
     def getM3U(self):
         return self.M3UDATA
         
-        
     def getMitem(self):
         return M3U_TEMP.copy()
         
-        
     def getTZShift(self):
         self.log('getTZShift')
-        return ((time.mktime(time.localtime()) - time.mktime(time.gmtime())) / 60 / 60)
+        return ((time.mktime(time.localtime()) - time.mktime(time.gmtime())) / 60.0 / 60.0)
 
-    
     def getStations(self):
-        stations = self.sortStations(self.M3UDATA.get('stations',[]))
-        self.log('getStations, stations = %s'%(len(stations)))
+        stations = self.sortStations(self.M3UDATA.get('stations', []))
+        self.log('getStations, stations = %s' % (len(stations)))
         return stations
               
-              
     def getRecordings(self):
-        recordings = self.sortStations(self.M3UDATA.get('recordings',[]), key='name')
-        self.log('getRecordings, recordings = %s'%(len(recordings)))
+        recordings = self.sortStations(self.M3UDATA.get('recordings', []), key='name')
+        self.log('getRecordings, recordings = %s' % (len(recordings)))
         return recordings
                
-               
     def getStationItem(self, sitem):
-        if 3000 in list(sitem.get('rules',{}).keys()): #PauseRule
-               sitem['url'] = RESUME_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']))
-        elif   sitem['radio']: sitem['url'] = RADIO_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']),radio=str(sitem['radio']),vid='{catchup-id}')
-        elif   sitem['catchup']:
-               sitem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']),vid='{catchup-id}')
-               sitem['url'] = LIVE_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
-        else:  sitem['url'] = TV_URL.format(addon=ADDON_ID,name=Globals._quoteString(sitem['name']),chid=Globals._quoteString(sitem['id']))
+        if 3000 in list(sitem.get('rules', {}).keys()): 
+            sitem['url'] = RESUME_URL.format(addon=ADDON_ID, name=Globals._quoteString(sitem['name']), chid=Globals._quoteString(sitem['id']))
+        elif sitem.get('radio'): 
+            sitem['url'] = RADIO_URL.format(addon=ADDON_ID, name=Globals._quoteString(sitem['name']), chid=Globals._quoteString(sitem['id']), radio=str(sitem['radio']), vid='{catchup-id}')
+        elif sitem.get('catchup'):
+            sitem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID, name=Globals._quoteString(sitem['name']), chid=Globals._quoteString(sitem['id']), vid='{catchup-id}')
+            sitem['url'] = LIVE_URL.format(addon=ADDON_ID, name=Globals._quoteString(sitem['name']), chid=Globals._quoteString(sitem['id']), vid='{catchup-id}', now='{lutc}', start='{utc}', duration='{duration}', stop='{utcend}')
+        else:  
+            sitem['url'] = TV_URL.format(addon=ADDON_ID, name=Globals._quoteString(sitem['name']), chid=Globals._quoteString(sitem['id']))
         return sitem
     
-    
     def getRecordItem(self, fitem, seek=0):
-        if seek <= 0: group = LANGUAGE(30119)
-        else:         group = LANGUAGE(30152)
+        group = LANGUAGE(30119) if seek <= 0 else LANGUAGE(30152)
         ritem = self.getMitem()
-        ritem['provider']      = '%s (%s)'%(ADDON_NAME,PROPERTIES.getFriendlyName())
-        ritem['provider-type'] = 'addon'
+        ritem['provider'] = '%s (%s)' % (ADDON_NAME, PROPERTIES.getFriendlyName())
+        ritem['provider-type'] = 'video'
         ritem['provider-logo'] = LOGO_HOST
-        ritem['label']         = (fitem.get('showlabel') or '%s%s'%(fitem.get('label',''),' - %s'%(fitem.get('episodelabel','')) if fitem.get('episodelabel','') else ''))
-        ritem['name']          = ritem['label']
-        ritem['number']        = random.Random(str(fitem.get('id',1))).random()
-        ritem['logo']          = Globals._getThumb(fitem,opt=EPG_ARTWORK)
-        ritem['media']         = True
-        ritem['media-size']    = str(fitem.get('size',0))
-        ritem['media-dir']     = ''#todo optional add parent directory via user prompt?
-        ritem['group']         = ['%s (%s)'%(group,ADDON_NAME)]
-        ritem['id']            = getRecordID(ritem['name'], (fitem.get('originalfile') or fitem.get('file','')), ritem['number'], SETTINGS.getMYUUID())
-        ritem['url']           = DVR_URL.format(addon=ADDON_ID,title=Globals._quoteString(ritem['label']),chid=Globals._quoteString(ritem['id']),vid=(FileAccess._encodeString((fitem.get('originalfile') or fitem.get('file','')))),seek=seek,duration=fitem.get('duration',0))#fitem.get('catchup-id','')
+        ritem['label'] = (fitem.get('showlabel') or '%s%s' % (fitem.get('label', ''), ' - %s' % (fitem.get('episodelabel', '')) if fitem.get('episodelabel', '') else ''))
+        ritem['name'] = ritem['label']
+        ritem['number'] = random.Random(str(fitem.get('id', 1))).random()
+        ritem['logo'] = Globals._getThumb(fitem, opt=EPG_ARTWORK)
+        ritem['media'] = True
+        ritem['media-size'] = str(fitem.get('size', 0))
+        ritem['media-dir'] = ''
+        ritem['group'] = ['%s (%s)' % (group, ADDON_NAME)]
+        ritem['id'] = getRecordID(ritem['name'], (fitem.get('originalfile') or fitem.get('file', '')), ritem['number'], SETTINGS.getMYUUID())
+        ritem['url'] = DVR_URL.format(addon=ADDON_ID, title=Globals._quoteString(ritem['label']), chid=Globals._quoteString(ritem['id']), vid=(FileAccess._encodeString((fitem.get('originalfile') or fitem.get('file', '')))), seek=seek, duration=fitem.get('duration', 0))
         return ritem
-        
         
     def delStation(self, citem):
         try: 
-            self.M3UDATA['stations'].pop(self.findStation(citem)[0])
-            self.log('[%s] delStation, channel deleted!'%(citem['id']), xbmc.LOGINFO)
-            return True
-        except Exception: pass
-        
+            idx, _ = self.findStation(citem)
+            if idx is not None:
+                self.M3UDATA['stations'].pop(idx)
+                self.log('[%s] delStation, channel deleted!' % (citem['id']), xbmc.LOGINFO)
+                return True
+        except Exception: 
+            pass
+        return False
 
     def delRecording(self, ritem):
         try: 
-            self.M3UDATA['recordings'].pop(self.findRecording(ritem)[0])
-            self.log('[%s] delRecording, channel deleted!'%(ritem['id']), xbmc.LOGINFO)
-            return True
-        except Exception: pass
-            
+            idx, _ = self.findRecording(ritem)
+            if idx is not None:
+                self.M3UDATA['recordings'].pop(idx)
+                self.log('[%s] delRecording, channel deleted!' % (ritem['id']), xbmc.LOGINFO)
+                return True
+        except Exception: 
+            pass
+        return False
             
     def addStation(self, citem):
-        self.log('addStation, citem:\n%s'%(citem))
         mitem = self.getMitem()
         mitem.update(citem)            
-        mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes
-        mitem['logo']          = citem['logo']
-        mitem['realtime']      = False
-        mitem['provider']      = '%s (%s)'%(ADDON_NAME,PROPERTIES.getFriendlyName())
-        mitem['provider-type'] = 'addon'
+        mitem['label'] = citem['name'] 
+        mitem['logo'] = citem['logo']
+        mitem['realtime'] = False
+        mitem['provider'] = '%s (%s)' % (ADDON_NAME, PROPERTIES.getFriendlyName())
+        mitem['provider-type'] = 'audio' if citem.get('radio', False) else 'video'
         mitem['provider-logo'] = LOGO_HOST
-        self.log('addStation, mitem:\n%s'%(mitem))
-        self.delStation(citem)
-        self.M3UDATA.setdefault('stations',[]).append(mitem)
-        self.log('addStation, [%s] adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
-        return True
         
+        self.delStation(citem)
+        self.M3UDATA.setdefault('stations', []).append(mitem)
+        self.log('addStation, [%s] adding channel %s' % (citem["id"], citem["name"]), xbmc.LOGINFO)
+        return True
         
     def addRecording(self, ritem):
-        # https://github.com/kodi-pvr/pvr.iptvsimple/blob/Omega/README.md#media
         self.delRecording(ritem)
-        self.M3UDATA.setdefault('recordings',[]).append(ritem)
-        self.log('addRecording, [%s] adding recording %s'%(ritem["id"],ritem["name"]), xbmc.LOGINFO)
+        self.M3UDATA.setdefault('recordings', []).append(ritem)
+        self.log('addRecording, [%s] adding recording %s' % (ritem["id"], ritem["name"]), xbmc.LOGINFO)
         return True
         
-        
     def findStation(self, citem):
-        def __match(eitem):
-            return (citem.get('id',str(random.random())) == eitem.get('id') or citem.get('url',str(random.random())).lower() == eitem.get('url','').lower())
-        return tuple(next(((idx, eitem) for idx, eitem in enumerate(self.M3UDATA.get('stations',[])) if __match(eitem)),(None, {})))
+        c_id = citem.get('id')
+        c_url_lower = citem.get('url', '').lower() if citem.get('url') else None
         
+        for idx, eitem in enumerate(self.M3UDATA.get('stations', [])):
+            if c_id and c_id == eitem.get('id'):
+                return idx, eitem
+            if c_url_lower and c_url_lower == eitem.get('url', '').lower():
+                return idx, eitem
+        return None, {}
         
     def findRecording(self, ritem):
-        def __match(eitem):
-            return (ritem.get('id',str(random.random())) == eitem.get('id')) or (ritem.get('label',str(random.random())).lower() == eitem.get('label','').lower()) or (ritem.get('path',str(random.random())).endswith('%s.pvr'%(eitem.get('name'))))
-        return tuple(next(((idx, eitem) for idx, eitem in enumerate(self.M3UDATA.get('recordings',[])) if __match(eitem)),(None, {})))
+        r_id = ritem.get('id')
+        r_label_lower = ritem.get('label', '').lower() if ritem.get('label') else None
+        r_path = ritem.get('path', '')
         
-        
+        for idx, eitem in enumerate(self.M3UDATA.get('recordings', [])):
+            if r_id and r_id == eitem.get('id'):
+                return idx, eitem
+            if r_label_lower and r_label_lower == eitem.get('label', '').lower():
+                return idx, eitem
+            if r_path and r_path.endswith('%s.pvr' % (eitem.get('name', ''))):
+                return idx, eitem
+        return None, {}

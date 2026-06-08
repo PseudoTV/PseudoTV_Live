@@ -27,16 +27,29 @@ from fileaccess  import FileAccess, FileLock
 #todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
 
 class XMLTVS(object):
-    XMLTVDATA = {}
-    
     def __init__(self, file=XMLTVFLEPATH, writable=False, m3u=None):
         if m3u is None: m3u = M3U(writable=writable)
         self.m3u       = m3u
         self.writable  = writable
         self.XMLTVFile = file
+        self.XMLTVDATA = {}
         self.XMLTVDATA = self._load()
         
+        
+    # with XMLTVS(writable=True) as epg:
+    # # Do work here
+      # epg.addChannel(...)
+    # # Auto-saves reliably right here
+    def __enter__(self):
+        return self
 
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if self.writable: self._save()
+        except Exception: pass
+            
+            
     def __del__(self):
         try:
             if self.writable: self._save()
@@ -67,33 +80,33 @@ class XMLTVS(object):
         self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'], opt='RECORDINGS')
         self.log('_save, writable = %s, file = %s, reset = %s\nchannels = %s, programmes = %s, recordings = %s'%(self.writable,self.XMLTVFile,reset,len(self.XMLTVDATA['channels']),len(self.XMLTVDATA['programmes']),len(self.XMLTVDATA['recordings'])))
         
-        if self.writable:
-            writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
-                                  date                = data['date'],
-                                  source_info_url     = self.cleanString(data['source-info-url']), 
-                                  source_info_name    = self.cleanString(data['source-info-name']),
-                                  generator_info_url  = self.cleanString(data['generator-info-url']), 
-                                  generator_info_name = self.cleanString(data['generator-info-name']))
+        if not self.writable: return False
+        writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
+                              date                = data['date'],
+                              source_info_url     = self.cleanString(data['source-info-url']), 
+                              source_info_name    = self.cleanString(data['source-info-name']),
+                              generator_info_url  = self.cleanString(data['generator-info-url']), 
+                              generator_info_name = self.cleanString(data['generator-info-name']))
 
-            for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
-                writer.addChannel(channel)
-                
-            for program in self.XMLTVDATA['programmes']:
-                writer.addProgramme(program)
-                
-            try:
-                with FileLock(self.XMLTVFile):
-                    try:
-                        fle = FileAccess.open(self.XMLTVFile, "w")
-                        writer.write(fle, pretty_print=True)
-                    except Exception as e: self.log("_save, failed!", xbmc.LOGERROR)
-                    finally: 
-                        if hasattr(fle, 'close'): 
-                            fle.close()
-            except Exception as e:
-                self.log("_save, failed!", xbmc.LOGERROR)
-                DIALOG.notificationDialog(LANGUAGE(32000))
-            return self.buildGenres()
+        for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
+            writer.addChannel(channel)
+            
+        for program in self.XMLTVDATA['programmes']:
+            writer.addProgramme(program)
+            
+        try:
+            with FileLock(self.XMLTVFile):
+                try:
+                    fle = FileAccess.open(self.XMLTVFile, "w")
+                    writer.write(fle, pretty_print=True)
+                except Exception as e: self.log("_save, failed!", xbmc.LOGERROR)
+                finally: 
+                    if hasattr(fle, 'close'): 
+                        fle.close()
+        except Exception as e:
+            self.log("_save, failed!", xbmc.LOGERROR)
+            DIALOG.notificationDialog(LANGUAGE(32000))
+        return self.buildGenres()
         
         
     def _reload(self) -> bool:
@@ -102,22 +115,24 @@ class XMLTVS(object):
     
     
     def _error(self, name, e):
-        #hacky; try to log malformed xml's by printing error position..
-        if not 'no element found: line 1, column 0' in str(e):
-            try:
-                match = re.compile(r'line\ (.*?),\ column\ (.*)', re.IGNORECASE).search(str(e))
-                if match:
-                    try: 
-                        fle   = FileAccess.open(self.XMLTVFile,'r')
-                        return fle.readlines()
-                    except Exception: 
-                        self.log('%s, failed! parser error %s\nLine: %s\n Error: %s'%(name,e,lines[int(match.group(1))],lines[int(match.group(1))][int(match.group(2))-5:]), xbmc.LOGERROR)
-                        return
-                    finally:
-                        if hasattr(fle, 'close'): 
-                            fle.close()
-                else: raise Exception('no parser match %s'%(str(e)))
-            except Exception as en: self.log('%s, failed! %s\n%s'%(name,e,en), xbmc.LOGERROR)
+        try:
+            if 'no element found: line 1, column 0' in str(e): return   
+            match = re.compile(r'line\ (.*?),\ column\ (.*)', re.IGNORECASE).search(str(e))
+            if match:
+                fle = None
+                try: 
+                    fle = FileAccess.open(self.XMLTVFile, 'r')
+                    lines = fle.readlines()  # Define 'lines' explicitly
+                    line_num = int(match.group(1)) - 1 # 0-indexed adjustment
+                    col_num = int(match.group(2))
+                    
+                    self.log('%s parser error: %s\nLine: %s' % (name, e, lines[line_num].strip()), xbmc.LOGERROR)
+                except Exception: pass
+                finally:
+                    if fle and hasattr(fle, 'close'): 
+                        fle.close()
+        except Exception as en: 
+            self.log('%s, logging failed! %s' % (name, en), xbmc.LOGERROR)
     
                 
     def resetData(self):
@@ -131,48 +146,46 @@ class XMLTVS(object):
 
     def loadData(self) -> dict:
         self.log('loadData, file = %s'%self.XMLTVFile)
-        try:
-            data = self.resetData()
-            try: 
-                fle  = FileAccess.open(self.XMLTVFile, 'r')
-                return (xmltv.read_data(fle) or data)
-            except: pass
-            finally:
-                if hasattr(fle, 'close'): 
-                    fle.close()
+        fle  = None
+        data = self.resetData()
+        try: 
+            fle  = FileAccess.open(self.XMLTVFile, 'r')
+            return (xmltv.read_data(fle) or data)
         except Exception as e:
             self._error('loadData',self.XMLTVFile,e)
             return data
-
+        finally:
+            if hasattr(fle, 'close'): 
+                fle.close()
+        
 
     def loadChannels(self) -> list:
         self.log('loadChannels, file = %s'%self.XMLTVFile)
-        try:
-            try: 
-                fle  = FileAccess.open(self.XMLTVFile, 'r')
-                return (xmltv.read_channels(fle) or [])
-            except Exception: pass
-            finally:
-                if hasattr(fle, 'close'): 
-                    fle.close()
+        fle = None
+        try: 
+            fle = FileAccess.open(self.XMLTVFile, 'r')
+            return (xmltv.read_channels(fle) or [])
         except Exception as e:
-            self._error('loadChannels',self.XMLTVFile,e)
+            self._error('loadChannels', e)
             return []
+        finally:
+            if fle and hasattr(fle, 'close'): 
+                fle.close()
         
         
     def loadProgrammes(self) -> list:
         self.log('loadProgrammes, file = %s'%self.XMLTVFile)
+        fle = None
         try: 
-            try: 
-                fle = FileAccess.open(self.XMLTVFile, 'r')
-                return (xmltv.read_programmes(fle) or [])
-            except Exception: pass
-            finally:
-                if hasattr(fle, 'close'): 
-                    fle.close()
+            fle = FileAccess.open(self.XMLTVFile, 'r')
+            return (xmltv.read_programmes(fle) or [])
         except Exception as e: 
             self._error('loadProgrammes',self.XMLTVFile,e)
             return []
+        finally:
+            if hasattr(fle, 'close'): 
+                fle.close()
+        
 
             
     def loadStopTimes(self, channels: list=[], programmes: list=[], fallback=None):
@@ -530,7 +543,9 @@ class XMLTVS(object):
             root.appendChild(name)
             
             genres = __getGenres()
-            [__matchGenres(program) for program in self.XMLTVDATA.get('programmes',[])]
+            for program in self.XMLTVDATA.get('programmes', []):
+                __matchGenres(program)
+                
             epggenres = __getGenres(GENREFLEPATH)
             epggenres.update(dict(sorted(sorted(list(genres.items()), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId'])))
             for key in list(set(epggenres)):

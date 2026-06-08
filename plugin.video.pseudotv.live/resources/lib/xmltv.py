@@ -37,14 +37,12 @@ with this software; if not, see <http://www.gnu.org/licenses/>.
 # https://github.com/kodi-pvr/pvr.iptvsimple#supported-m3u-and-xmltv-elements
 
 from globals import *
-
-# The Python-XMLTV version
-VERSION = "1.4.4_PSEUDOTV"
+VERSION = "1.4.5_PSEUDOTV"
 
 # The date format used in XMLTV (the %Z will go away in 0.6)
-locale           = DEFAULT_ENCODING  #'utf-8'
-date_format      = DTZFORMAT         #'%Y%m%d%H%M%S %Z'
-date_format_notz = DTFORMAT          #'%Y%m%d%H%M%S'
+locale           = DEFAULT_ENCODING  # 'utf-8'
+date_format      = DTZFORMAT          # '%Y%m%d%H%M%S %Z'
+date_format_notz = DTFORMAT           # '%Y%m%d%H%M%S'
 
 def set_attrs(d, elem, attrs):
     """
@@ -53,7 +51,7 @@ def set_attrs(d, elem, attrs):
     Add any attributes in 'attrs' found in 'elem' to 'd'
     """
     for attr in attrs:
-        if attr in elem:
+        if attr in elem.attrib:
             d[attr] = elem.get(attr)
 
 def set_boolean(d, name, elem):
@@ -64,10 +62,11 @@ def set_boolean(d, name, elem):
     from the 'yes' or 'no' content of the node
     """
     node = elem.find(name)
-    if node is not None:
-        if node.text.lower() == 'yes':
+    if node is not None and node.text:
+        val = node.text.lower()
+        if val == 'yes':
             d[name] = True
-        elif node.text.lower() == 'no':
+        elif val == 'no':
             d[name] = False
 
 def append_text(d, name, elem, with_lang=True):
@@ -77,14 +76,18 @@ def append_text(d, name, elem, with_lang=True):
     Append any text nodes with 'name' found in 'elem' to 'd'['name']. If
     'with_lang' is 'True', a tuple of ('text', 'lang') is appended
     """
-    for node in elem.findall(name):
-        if node is not None:
-            if name not in d:
-                d[name] = []
-            if with_lang:
-                d[name].append((node.text, node.get('lang', '')))
-            else:
-                d[name].append(node.text)
+    nodes = elem.findall(name)
+    if not nodes:
+        return
+        
+    if name not in d:
+        d[name] = []
+        
+    for node in nodes:
+        if with_lang:
+            d[name].append((node.text or '', node.get('lang', '')))
+        else:
+            d[name].append(node.text or '')
 
 def set_text(d, name, elem, with_lang=True):
     """
@@ -96,9 +99,9 @@ def set_text(d, name, elem, with_lang=True):
     node = elem.find(name)
     if node is not None:
         if with_lang:
-            d[name] = (node.text, node.get('lang', ''))
+            d[name] = (node.text or '', node.get('lang', ''))
         else:
-            d[name] = node.text
+            d[name] = node.text or ''
 
 def append_icons(d, elem):
     """
@@ -106,13 +109,21 @@ def append_icons(d, elem):
 
     Append any icons found under 'elem' to 'd'
     """
-    for iconnode in elem.findall('icon'):
-        if 'icon' not in d:
-            d['icon'] = []
-        if iconnode.get('src'):
-            d['icon'].append({'src':iconnode.get('src')})
-        # icond = {}
-        # set_attrs(icond, iconnode, ('src', 'width', 'height'))
+    icon_nodes = elem.findall('icon')
+    if not icon_nodes:
+        return
+        
+    if 'icon' not in d:
+        d['icon'] = []
+        
+    for iconnode in icon_nodes:
+        src = iconnode.get('src')
+        if src:
+            icon_dict = {'src': src}
+            for attr in ('width', 'height'):
+                if iconnode.get(attr):
+                    icon_dict[attr] = iconnode.get(attr)
+            d['icon'].append(icon_dict)
 
 def elem_to_channel(elem):
     """
@@ -137,7 +148,7 @@ def elem_to_programme(elem):
     d = {'start': elem.get('start'),
          'stop': elem.get('stop'),
          'channel': elem.get('channel'),
-         'catchup-id': elem.get('catchup-id','')}
+         'catchup-id': elem.get('catchup-id', '')}
 
     set_attrs(d, elem, ('catchup-id', 'stop', 'pdc-start', 'vps-start', 'showview',
                         'videoplus', 'clumpidx'))
@@ -149,7 +160,6 @@ def elem_to_programme(elem):
     crednode = elem.find('credits')
     if crednode is not None:
         creddict = {}
-        # TODO: actor can have a 'role' attribute
         for credtype in ('director', 'actor', 'writer', 'adapter', 'producer',
                          'presenter', 'commentator', 'guest', 'composer',
                          'editor'):
@@ -163,9 +173,7 @@ def elem_to_programme(elem):
 
     lennode = elem.find('length')
     if lennode is not None:
-        lend = {'units': lennode.get('units'),
-                'length': lennode.text}
-        d['length'] = lend
+        d['length'] = {'units': lennode.get('units'), 'length': lennode.text or ''}
 
     append_icons(d, elem)
     append_text(d, 'url', elem, with_lang=False)
@@ -174,9 +182,8 @@ def elem_to_programme(elem):
     for epnumnode in elem.findall('episode-num'):
         if 'episode-num' not in d:
             d['episode-num'] = []
-        d['episode-num'].append((epnumnode.text,
-                                 epnumnode.get('system', 'xmltv_ns'),
-                                 epnumnode.get('system', 'onscreen')))
+        d['episode-num'].append((epnumnode.text or '',
+                                 epnumnode.get('system', 'xmltv_ns')))
 
     vidnode = elem.find('video')
     if vidnode is not None:
@@ -201,7 +208,7 @@ def elem_to_programme(elem):
     psnode = elem.find('previously-shown')
     if psnode is not None:
         psd = {}
-        set_attrs(psd, psnode, ('start', 'channel','catchup-id'))
+        set_attrs(psd, psnode, ('start', 'channel', 'catchup-id'))
         d['previously-shown'] = psd
 
     set_text(d, 'premiere', elem)
@@ -240,15 +247,15 @@ def elem_to_programme(elem):
         if 'review' not in d:
             d['review'] = []
         rd = {}
-        set_attrs(rd, revnode, ('type', 'source', 'reviewer',))
+        set_attrs(rd, revnode, ('type', 'source', 'reviewer'))
         set_text(rd, 'value', revnode, with_lang=False)
         d['review'].append(rd)
 
     return d
          
 def escape_xml_string(text):
-  """Escapes special characters in a string for use in XML."""
-  return escape(text)
+    """Escapes special characters in a string for use in XML."""
+    return escape(text)
 
 def read_error(msg, fp, e):
     try:
@@ -260,78 +267,73 @@ def read_error(msg, fp, e):
         if len(lines) >= line: log(f"{msg}, Line {line}: {lines[line-1].strip()}")
     except Exception: log(f"{msg}, {e}")
 
+def _parse_tree(fp, tree):
+    if tree is not None:
+        return tree if hasattr(tree, 'getroot') else tree
+    if fp:
+        if hasattr(fp, 'read'): 
+            return fromstring(fp.read(), parser=XMLParser(encoding=locale))
+        else:                   
+            return ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
+    return None
+
 def read_data(fp=None, tree=None):
     """
     read_data(fp=None, tree=None) -> dict
-
-    Get the source and other info from file object fp or the ElementTree
-    'tree'
     """
-    if fp:
-        try:
+    try:
+        root = _parse_tree(fp, tree)
+        if root is not None:
             d = {}
-            if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-            else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
-            set_attrs(d, tree, ('date', 'source-info-url', 'source-info-name', 'source-data-url', 'generator-info-name', 'generator-info-url'))
+            set_attrs(d, root, ('date', 'source-info-url', 'source-info-name', 
+                                'source-data-url', 'generator-info-name', 'generator-info-url'))
             return d
-        except Exception as e:
-            read_error('read_data', fp, e)
-            return {}
+    except Exception as e:
+        read_error('read_data', fp, e)
+    return {}
 
 def read_channels(fp=None, tree=None):
     """
     read_channels(fp=None, tree=None) -> list
-
-    Return a list of channel dictionaries from file object 'fp' or the
-    ElementTree 'tree'
     """
-    if fp:
-        try:
+    try:
+        root = _parse_tree(fp, tree)
+        if root is not None:
             channels = []
-            if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-            else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
-            for elem in tree.findall('channel'):
-                channel = elem_to_channel(elem) 
-                try: channel['icon'] = [{'src': elem.findall('icon')[0].get('src')}]
-                except IndexError:
-                    log("Icon element missing or malformed", xbmc.LOGERROR)
-                    channel['icon'] = []
+            for elem in root.findall('channel'):
+                channel = elem_to_channel(elem)
                 channels.append(channel)
             return channels
-        except Exception as e:
-            read_error('read_channels', fp, e)
-            return []
+    except Exception as e:
+        read_error('read_channels', fp, e)
+    return []
             
 def read_programmes(fp=None, tree=None):
     """
     read_programmes(fp=None, tree=None) -> list
-
-    Return a list of programme dictionaries from file object 'fp' or the
-    ElementTree 'tree'
     """
-    if fp:
-        try:
-            if hasattr(fp, 'read'): tree = fromstring(fp.read(), parser=XMLParser(encoding=locale))
-            else:                   tree = ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
-            return [elem_to_programme(elem) for elem in tree.findall('programme')]
-        except Exception as e:
-            read_error('read_programmes', fp, e)
-            return []
+    try:
+        root = _parse_tree(fp, tree)
+        if root is not None:
+            return [elem_to_programme(elem) for elem in root.findall('programme')]
+    except Exception as e:
+        read_error('read_programmes', fp, e)
+    return []
             
 def indent(elem, level=0):
     """
     Indent XML for pretty printing
     """
-    i = "\n" + level*"  "
+    i = "\n" + level * "  "
     if len(elem):
         if not elem.text or not elem.text.strip():
             elem.text = i + "  "
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
-        for elem in elem:
-            indent(elem, level+1)
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
+        for sub_elem in elem:
+            indent(sub_elem, level + 1)
+        if not sub_elem.tail or not sub_elem.tail.strip():
+            sub_elem.tail = i
     else:
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
@@ -339,35 +341,10 @@ def indent(elem, level=0):
 class Writer:
     """
     A class for generating XMLTV data
-
-    **All strings passed to this class must be Unicode, except for dictionary
-    keys**
     """
     def __init__(self, encoding=locale, date=None,
                  source_info_url=None, source_info_name=None,
                  generator_info_url=None, generator_info_name=None):
-        """
-        Arguments:
-
-          'encoding' -- The text encoding that will be used.
-                        *Defaults to 'UTF-8'*
-
-          'date' -- The date this data was generated. *Optional*
-
-          'source-info-url' -- A URL for information about the source of the
-                               data. *Optional*
-
-          'source-info-name' -- A human readable description of
-                                'source-info-url'. *Optional*
-
-          'generator-info-url' -- A URL for information about the program
-                                  that is generating the XMLTV document.
-                                  *Optional*
-
-          'generator-info-name' -- A human readable description of
-                                   'generator-info-url'. *Optional*
-
-        """
         self.data = {'date': date,
                      'source-info-url': source_info_url,
                      'source-info-name': source_info_name,
@@ -375,43 +352,26 @@ class Writer:
                      'generator-info-name': generator_info_name}
 
         self.root = Element('tv')
-        for attr in self.data:
-            if self.data[attr]:
-                self.root.set(attr, self.data[attr])
+        for attr, val in self.data.items():
+            if val:
+                self.root.set(attr, val)
 
     def setattr(self, node, attr, value):
-        """
-        setattr(node, attr, value) -> None
-
-        Set 'attr' in 'node' to 'value'
-        """
-        node.set(attr, value)
+        if value is not None:
+            node.set(attr, str(value))
 
     def settext(self, node, text, with_lang=True):
-        """
-        settext(node, text) -> None
-
-        Set 'node's text content to 'text'
-        """
         if with_lang:
-            if text[0] == None:
-                node.text = ''
+            if isinstance(text, tuple) or isinstance(text, list):
+                node.text = '' if text[0] is None else str(text[0])
+                if len(text) > 1 and text[1]:
+                    node.set('lang', str(text[1]))
             else:
-                node.text = text[0]
-            if text[1]:
-                node.set('lang', text[1])
+                node.text = '' if text is None else str(text)
         else:
-            if text == None:
-                node.text = ''
-            else:
-                node.text = text
+            node.text = '' if text is None else str(text)
 
     def seticons(self, node, icons):
-        """
-        seticon(node, icons) -> None
-
-        Create 'icons' under 'node'
-        """
         for icon in icons:
             if 'src' not in icon:
                 raise ValueError("'icon' element requires 'src' attribute")
@@ -420,38 +380,20 @@ class Writer:
                 if attr in icon:
                     self.setattr(i, attr, icon[attr])
 
-
     def set_zero_ormore(self, programme, element, p):
-        """
-        set_zero_ormore(programme, element, p) -> None
-
-        Add nodes under p for the element 'element', which occurs zero
-        or more times with PCDATA and a 'lang' attribute
-        """
-        if element in programme:
+        if element in programme and programme[element]:
             for item in programme[element]:
                 e = SubElement(p, element)
                 self.settext(e, item)
 
     def set_zero_orone(self, programme, element, p):
-        """
-        set_zero_ormore(programme, element, p) -> None
-
-        Add nodes under p for the element 'element', which occurs zero
-        times or once with PCDATA and a 'lang' attribute
-        """
-        if element in programme:
+        if element in programme and programme[element] is not None:
             e = SubElement(p, element)
             self.settext(e, programme[element])
-
 
     def addProgramme(self, programme):
         """
         Add a single XMLTV 'programme'
-
-        Arguments:
-
-          'programme' -- A dict representing XMLTV data
         """
         p = SubElement(self.root, 'programme')
 
@@ -466,19 +408,20 @@ class Writer:
             if attr in programme:
                 self.setattr(p, attr, programme[attr])
 
-        for title in programme['title']:
-            t = SubElement(p, 'title')
-            self.settext(t, title)
+        if 'title' in programme:
+            for title in programme['title']:
+                t = SubElement(p, 'title')
+                self.settext(t, title)
 
         # Sub-title and description
         for element in ('sub-title', 'desc'):
             self.set_zero_ormore(programme, element, p)
 
         # Credits
-        if 'credits' in programme:
+        if 'credits' in programme and programme['credits']:
             c = SubElement(p, 'credits')
             for credtype in ('director', 'actor', 'writer', 'adapter',
-                             'producer', 'presenter', 'commentator', 'guest'):
+                             'producer', 'presenter', 'commentator', 'guest', 'composer', 'editor'):
                 if credtype in programme['credits']:
                     for name in programme['credits'][credtype]:
                         cred = SubElement(c, credtype)
@@ -497,10 +440,12 @@ class Writer:
             self.set_zero_orone(programme, element, p)
 
         # Length
-        if 'length' in programme:
+        if 'length' in programme and programme['length']:
             l = SubElement(p, 'length')
-            self.setattr(l, 'units', programme['length']['units'])
-            self.settext(l, programme['length']['length'], with_lang=False)
+            if 'units' in programme['length']:
+                self.setattr(l, 'units', programme['length']['units'])
+            if 'length' in programme['length']:
+                self.settext(l, programme['length']['length'], with_lang=False)
 
         # Icon
         if 'icon' in programme:
@@ -519,11 +464,12 @@ class Writer:
         if 'episode-num' in programme:
             for epnum in programme['episode-num']:
                 e = SubElement(p, 'episode-num')
-                self.setattr(e, 'system', epnum[1])
+                if len(epnum) > 1:
+                    self.setattr(e, 'system', epnum[1])
                 self.settext(e, epnum[0], with_lang=False)
 
         # Video details
-        if 'video' in programme:
+        if 'video' in programme and programme['video']:
             e = SubElement(p, 'video')
             for videlem in ('aspect', 'quality'):
                 if videlem in programme['video']:
@@ -532,28 +478,23 @@ class Writer:
             for attr in ('present', 'colour'):
                 if attr in programme['video']:
                     a = SubElement(e, attr)
-                    if programme['video'][attr]:
-                        self.settext(a, 'yes', with_lang=False)
-                    else:
-                        self.settext(a, 'no', with_lang=False)
+                    self.settext(a, 'yes' if programme['video'][attr] else 'no', with_lang=False)
 
         # Audio details
-        if 'audio' in programme:
+        if 'audio' in programme and programme['audio']:
             a = SubElement(p, 'audio')
             if 'stereo' in programme['audio']:
                 s = SubElement(a, 'stereo')
                 self.settext(s, programme['audio']['stereo'], with_lang=False)
             if 'present' in programme['audio']:
-                p = SubElement(a, 'present')
-                if programme['audio']['present']:
-                    self.settext(p, 'yes', with_lang=False)
-                else:
-                    self.settext(p, 'no', with_lang=False)
+                # CRITICAL BUG FIX: Renamed 'p' to 'pres_elem' to prevent over-writing parent container reference
+                pres_elem = SubElement(a, 'present')
+                self.settext(pres_elem, 'yes' if programme['audio']['present'] else 'no', with_lang=False)
 
         # Previously shown
-        if 'previously-shown' in programme:
+        if 'previously-shown' in programme and programme['previously-shown']:
             ps = SubElement(p, 'previously-shown')
-            for attr in ('start', 'channel'):
+            for attr in ('start', 'channel', 'catchup-id'):
                 if attr in programme['previously-shown']:
                     self.setattr(ps, attr, programme['previously-shown'][attr])
 
@@ -562,8 +503,8 @@ class Writer:
             self.set_zero_orone(programme, element, p)
 
         # New
-        if 'new' in programme:
-            n = SubElement(p, 'new')
+        if 'new' in programme and programme['new']:
+            SubElement(p, 'new')
 
         # Subtitles
         if 'subtitles' in programme:
@@ -575,53 +516,43 @@ class Writer:
                     l = SubElement(s, 'language')
                     self.settext(l, subtitles['language'])
 
-        # Rating
-        if 'rating' in programme:
-            for rating in programme['rating']:
-                r = SubElement(p, 'rating')
-                if 'system' in rating:
-                    self.setattr(r, 'system', rating['system'])
-                v = SubElement(r, 'value')
-                self.settext(v, rating['value'], with_lang=False)
-                if 'icon' in rating:
-                    self.seticons(r, rating['icon'])
+        # Rating & Star Rating & Review blocks
+        for block_name in ('rating', 'star-rating'):
+            if block_name in programme:
+                for rate_data in programme[block_name]:
+                    block_elem = SubElement(p, block_name)
+                    if 'system' in rate_data:
+                        self.setattr(block_elem, 'system', rate_data['system'])
+                    if 'value' in rate_data:
+                        v = SubElement(block_elem, 'value')
+                        self.settext(v, rate_data['value'], with_lang=False)
+                    if 'icon' in rate_data:
+                        self.seticons(block_elem, rate_data['icon'])
 
-        # Star rating
-        if 'star-rating' in programme:
-            for star_rating in programme['star-rating']:
-                sr = SubElement(p, 'star-rating')
-                if 'system' in star_rating:
-                    self.setattr(sr, 'system', star_rating['system'])
-                v = SubElement(sr, 'value')
-                self.settext(v, star_rating['value'], with_lang=False)
-                if 'icon' in star_rating:
-                    self.seticons(sr, star_rating['icon'])
-
-        # Review
         if 'review' in programme:
             for review in programme['review']:
                 r = SubElement(p, 'review')
                 for attr in ('type', 'source', 'reviewer'):
                     if attr in review:
                         self.setattr(r, attr, review[attr])
-                v = SubElement(r, 'value')
-                self.settext(v, review['value'], with_lang=False)
+                if 'value' in review:
+                    v = SubElement(r, 'value')
+                    self.settext(v, review['value'], with_lang=False)
+
+        return p
 
     def addChannel(self, channel):
         """
         add a single XMLTV 'channel'
-
-        Arguments:
-
-          'channel' -- A dict representing XMLTV data
         """
         c = SubElement(self.root, 'channel')
         self.setattr(c, 'id', channel['id'])
         
         # Display Name
-        for display_name in channel['display-name']:
-            dn = SubElement(c, 'display-name')
-            self.settext(dn, display_name)
+        if 'display-name' in channel:
+            for display_name in channel['display-name']:
+                dn = SubElement(c, 'display-name')
+                self.settext(dn, display_name)
 
         # Icon
         if 'icon' in channel:
@@ -632,13 +563,11 @@ class Writer:
             for url in channel['url']:
                 u = SubElement(c, 'url')
                 self.settext(u, url, with_lang=False)
+        return c
         
     def write(self, file, pretty_print=False):
         """
         write(file, pretty_print=False) -> None
-
-        Write XML to filename of file object in 'file'. If pretty_print is
-        True, the XML will contain whitespace to make it human-readable.
         """
         if pretty_print:
             indent(self.root)

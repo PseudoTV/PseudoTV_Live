@@ -81,7 +81,7 @@ class Predefined(object):
 
 
     @staticmethod
-    def createMovieGenrePlaylist(genre: str, method: str='year') -> list:
+    def createMovieGenrePlaylist(genre: str, method: str='random') -> list:
         param = Predefined.getTemplete()
         param["type"] = "movies"
         param["order"]["method"] = method

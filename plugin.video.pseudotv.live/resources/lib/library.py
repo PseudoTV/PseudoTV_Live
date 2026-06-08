@@ -36,12 +36,12 @@ class Service(object):
     def _restart(self) -> bool:
         return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
+        any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _suspend(self) -> bool:
-        return any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if any(self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()):
+            if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
                 return True
             wait -= CPU_CYCLE
         return False
@@ -69,17 +69,17 @@ class Library(object):
         self.libraryDATA.update(self._load())
         
         self.AUTOTUNE    = {"Playlists"    :{'func':self.getPlaylists   ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
-                            "TV Networks"  :{'func':self.getNetworks    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                            "TV Networks"  :{'func':self.getNetworks    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                             "TV Shows"     :{'func':self.getTVShows     ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
-                            "TV Genres"    :{'func':self.getTVGenres    ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                            "Movie Genres" :{'func':self.getMovieGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                            "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
-                            "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)},
+                            "TV Genres"    :{'func':self.getTVGenres    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                            "Movie Genres" :{'func':self.getMovieGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                            "Movie Studios":{'func':self.getMovieStudios,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
+                            "Mixed Genres" :{'func':self.getMixedGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                             "Mixed Video"  :{'func':self.getMixedVideo  ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
                             "Mixed Music"  :{'func':self.getMixedMusic  ,'life':datetime.timedelta(minutes=MAX_GUIDEDAYS)},
                             "Recommended"  :{'func':self.getRecommend   ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                             "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
-                            "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(days=MAX_GUIDEDAYS)}}
+                            "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)}}
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -165,7 +165,7 @@ class Library(object):
         return PlayList
 
     
-    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+    @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
     def getNetworks(self):
         try:    return self.getTVInfo().get('studios',[])
         except Exception: return []
@@ -177,25 +177,25 @@ class Library(object):
         except Exception: return []
         
         
-    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+    @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
     def getTVGenres(self):
         try:    return self.getTVInfo().get('genres',[])
         except Exception: return []
  
        
-    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+    @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
     def getMovieGenres(self):
         try:    return self.getMovieInfo().get('genres',[])
         except Exception: return []
               
            
-    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))  
+    @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))  
     def getMovieStudios(self):
         try:    return self.getMovieInfo().get('studios',[])
         except Exception: return []
         
          
-    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+    @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
     def getMixedGenres(self):
         MixedGenreList = []
         tvGenres    = self.getTVGenres()
@@ -209,8 +209,8 @@ class Library(object):
     @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
     def getMixedVideo(self):
         MixedList = []
-        MixedList.append({'name':'%s Video'%(LANGUAGE(32001)), 'type':"Mixed Video",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Video"})}) #"Recently Added"
-        MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed Video",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo({'name':LANGUAGE(32002),'type':"Mixed Video"})}) #"Seasonal"
+        MixedList.append({'name':'%s Video'%(LANGUAGE(32001)), 'type':"Mixed Video",'path':self.predefined.createMixedRecent(),'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Video"})}) #"Recently Added"
+        MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed Video",'path':self.predefined.createSeasonal(),'logo':self.resources.getLogo({'name':LANGUAGE(32002),'type':"Mixed Video"})}) #"Seasonal"
         MixedList.extend(self.getPVRRecordings())#"PVR Recordings"
         MixedList.extend(self.getPVRSearches())  #"PVR Searches"
         self.log('getMixedVideo, mixed = %s' % (len(MixedList)))
@@ -253,7 +253,7 @@ class Library(object):
         return []
 
 
-    @cacheit(expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+    @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
     def getMusicGenres(self):
         try: return self.getMusicInfo().get('genres',[])
         except Exception: return []
@@ -455,7 +455,7 @@ class Library(object):
                 # payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION))
             # else:
                 # payload = FileAccess.loadJSON(payload)
-                # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
             
             # if payload:
                 # self.log('searchRecommended, found addonid = %s, payload = %s'%(addonid,payload))

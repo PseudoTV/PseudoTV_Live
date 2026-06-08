@@ -59,29 +59,50 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __loadChannels(name=SETTINGS.getSetting('Default_Channels')): #load local or remote channel configurations
             self.log('__loadChannels, name = %s, local = %s'%(name, self.friendly))
             self.oldChannels = self.channels.getChannels()
-            if   name == self.friendly or not kwargs.get('start',False): return self.oldChannels #Local
-            elif name == LANGUAGE(30022):#Auto
-                if len(self.oldChannels ) > 0: return self.oldChannels 
-                else:                          return __loadChannels(LANGUAGE(32069))
-            elif name == LANGUAGE(32069):#Ask
+            if name == self.friendly or not kwargs.get('start', False): 
+                return self.oldChannels #Local
+            elif name == LANGUAGE(30022): #Auto
+                if len(self.oldChannels) > 0: 
+                    return self.oldChannels 
+                else:                         
+                    return __loadChannels(LANGUAGE(32069))
+            elif name == LANGUAGE(32069): #Ask
                 def __buildItem(server):
-                    return LISTITEMS.buildMenuListItem(server.get('name'),
-                                                       '%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],
-                                                       {True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)]),
-                                                       server.get('host'),len(server.get('channels',[]))),
-                                                       icon=Globals._getDummyIcon(str(servers.index(server)+1)))
+                    online_state = server.get('online', False)
+                    color = 'green' if online_state else 'red'
+                    status_text = LANGUAGE(32158) if online_state else LANGUAGE(32253)
+                    
+                    label2 = '%s - %s: Channels (%s)' % (
+                        LANGUAGE(32211) % (color, status_text),
+                        server.get('host'),
+                        len(server.get('channels', []))
+                    )
+                    return LISTITEMS.buildMenuListItem(
+                        server.get('name'),
+                        label2,
+                        icon=Globals._getDummyIcon(str(servers.index(server) + 1))
+                    )
                 
                 lizLST  = []
                 serLST  = Multiroom().getServers()
-                servers = [value for key, value in list(serLST.items()) if value.get('online',False)]
-                if servers: lizLST.extend(poolit(__buildItem)(servers))
-                lizLST.insert(0,LISTITEMS.buildMenuListItem(self.friendly,'%s - %s: Channels (%s)'%('[B]Local[/B]',self.host,len(self.oldChannels)),icon=ICON))
-                select = DIALOG.selectDialog(lizLST, '%s for Channel Setup'%(LANGUAGE(30173)), None, True, SELECT_DELAY, False)
-                if not select is None: return __loadChannels(lizLST[select].getLabel())
-                else:                  return
+                servers = [value for key, value in serLST.items() if value.get('online', False)]
+                if servers: 
+                    lizLST.extend(poolit(__buildItem)(servers))
+                
+                lizLST.insert(0, LISTITEMS.buildMenuListItem(
+                    self.friendly,
+                    '%s - %s: Channels (%s)' % ('[B]Local[/B]', self.host, len(self.oldChannels)),
+                    icon=ICON
+                ))
+                
+                select = DIALOG.selectDialog(lizLST, '%s for Channel Setup' % (LANGUAGE(30173)), None, True, SELECT_DELAY, False)
+                if select is not None: 
+                    return __loadChannels(lizLST[select].getLabel())
+                else:                  
+                    return
             elif name:
-                self.server = Multiroom().getServers().get(name,{})
-                return self.server.get('channels',[])
+                self.server = Multiroom().getServers().get(name, {})
+                return self.server.get('channels', [])
             return self.oldChannels
 
         with BUILTIN.busy_dialog(lock=True):
@@ -109,23 +130,23 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.channelList   = self.channels.sortChannels(self.createChannelList(list(self.buildArray()), __loadChannels()))
                 self.newChannels   = self.channelList.copy()
                 self.openChannel   = kwargs.get('open')
-                self.launchManager = kwargs.get('start',True)
-                self.startChannel  = self._findAvailChannel(kwargs.get('channel',-1))
-                self.focusIndex    = (self.startChannel - 1) #Covert from channel number to list index ie. channel 1 => index 0
+                self.launchManager = kwargs.get('start', True)
+                self.startChannel  = self._findAvailChannel(kwargs.get('channel', -1))
+                self.focusIndex    = (self.startChannel - 1) #Convert from channel number to list index ie. channel 1 => index 0
                 
-                if self.openChannel: self.openChannel = self.channelList[self.focusIndex]
-                self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s'%(self.startChannel, self.focusIndex, self.openChannel))
+                if self.openChannel: 
+                    self.openChannel = self.channelList[self.focusIndex]
+                
+                self.log('Manager, startChannel = %s, focusIndex = %s, openChannel = %s' % (self.startChannel, self.focusIndex, self.openChannel))
                 if self.launchManager and not PROPERTIES.isRunning('Manager'):
                     with PROPERTIES.chkRunning('Manager'):
                         self.doModal()
         except Exception as e: 
-            self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
+            self.log('Manager failed! %s' % (e), xbmc.LOGERROR)
             self.closeManager()
-
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log(f"{self.__class__.__name__}: {msg}", level)
-
 
     def onInit(self):
         try:
@@ -137,17 +158,17 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.right_button2 = self.getControl(9002)
             self.right_button3 = self.getControl(9003)
             self.right_button4 = self.getControl(9004)
-            self.fillChanList(self.newChannels,focus=self.focusIndex,channel=self.openChannel)
-            self.log(f"onInit, backup {CHANNELLATEST_KEY} = {self.backup.backupChannels(CHANNELLATEST_KEY,silent=True)}")
+            self.fillChanList(self.newChannels, focus=self.focusIndex, channel=self.openChannel)
+            self.log(f"onInit, backup {CHANNELLATEST_KEY} = {self.backup.backupChannels(CHANNELLATEST_KEY, silent=True)}")
         except Exception as e: 
-            log("onInit, failed! %s"%(e), xbmc.LOGERROR)
+            log("onInit, failed! %s" % (e), xbmc.LOGERROR)
             self.closeManager()
-
 
     def _findAvailChannel(self, start=-1):
         if start == -1: 
             for channel in self.channelList:
-                if not channel.get('id'): return channel.get('number')
+                if not channel.get('id'): 
+                    return channel.get('number')
         return start
 
     @cacheit(checksum=PROPERTIES.getProcessID())
@@ -159,29 +180,30 @@ class Manager(xbmcgui.WindowXMLDialog):
             return newChannel
         return poolit(__create)(list(range(CHANNEL_LIMIT)))
   
-        
     def createChannelList(self, channelArray, channelList):
         self.log('createChannelList') # Fill blank array with citems from channels.json
         def __update(item):
-            if item.get("number",0) > 0:
-                channelArray[item["number"]-1].update(item) #CUSTOM
+            if item.get("number", 0) > 0:
+                channelArray[item["number"] - 1].update(item) #CUSTOM
             
         checksum  = PROPERTIES.getProcessID()
-        cacheName = 'createChannelList.%s'%(checksum)
-        try:   cacheResponse = list(self.cache.get(cacheName, checksum=checksum))
-        except Exception:cacheResponse = []
+        cacheName = 'createChannelList.%s' % (checksum)
+        try:   
+            cacheResponse = list(self.cache.get(cacheName, checksum=checksum))
+        except Exception:
+            cacheResponse = []
+            
         if not cacheResponse:
             poolit(__update)(channelList)
             cacheResponse = self.cache.set(cacheName, channelArray, checksum=checksum, expiration=datetime.timedelta(seconds=5))
         return cacheResponse
 
-
     def fillChanList(self, channelList, refresh=False, focus=None, channel=None):
-        self.log('fillChanList, focus = %s, channel = %s'%(focus,channel))
+        self.log('fillChanList, focus = %s, channel = %s' % (focus, channel))
         def __buildItem(citem):
-            isFavorite    = citem.get('favorite',False)
+            isFavorite    = citem.get('favorite', False)
             isLocked      = False #todo parse channel lock rule
-            isSeasonal    = citem.get('path',[]) == ["{Seasonal}"]
+            isSeasonal    = citem.get('path', []) == ["{Seasonal}"]
             channelColor  = COLOR_UNAVAILABLE_CHANNEL
             labelColor    = COLOR_UNAVAILABLE_CHANNEL
             
@@ -191,191 +213,235 @@ class Manager(xbmcgui.WindowXMLDialog):
                 elif isFavorite:     channelColor = COLOR_FAVORITE_CHANNEL
                 elif isRadio(citem): channelColor = COLOR_RADIO_CHANNEL
                 elif not isSeasonal: channelColor = COLOR_AVAILABLE_CHANNEL
-            return  LISTITEMS.buildMenuListItem('[COLOR=%s][B]%s|[/COLOR][/B]'%(channelColor,citem["number"]),'[COLOR=%s]%s[/COLOR]'%(labelColor,citem.get("name",'')),citem.get("logo",LOGO_COLOR),'|'.join(citem.get("path",[])),props={'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':LANGUAGE(32169)%(citem["number"],self.server.get('name',self.friendly))})
+                
+            return LISTITEMS.buildMenuListItem(
+                '[COLOR=%s][B]%s|[/COLOR][/B]' % (channelColor, citem["number"]),
+                '[COLOR=%s]%s[/COLOR]' % (labelColor, citem.get("name", '')),
+                citem.get("logo", LOGO_COLOR),
+                '|'.join(citem.get("path", [])),
+                props={
+                    'citem': citem,
+                    'chname': citem["name"],
+                    'chnum': '%i' % (citem["number"]),
+                    'radio': citem.get('radio', False),
+                    'description': LANGUAGE(32169) % (citem["number"], self.server.get('name', self.friendly))
+                }
+            )
                 
         self.togglechanList(reset=refresh)
-        with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+        with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
             lizLST = poolit(__buildItem)(channelList)
             self.chanList.addItems(lizLST)
-            if focus is None: self.selItem(self.chanList, self.setFocusPOS(lizLST))
-            else:             self.selItem(self.chanList, focus)
+            if focus is None: 
+                self.selItem(self.chanList, self.setFocusPOS(lizLST))
+            else:             
+                self.selItem(self.chanList, focus)
             self.setFocus(self.chanList)
-            if channel: self.buildChannelItem(channel)
-
+            if channel: 
+                self.buildChannelItem(channel)
 
     def isLocked(self):
-        return PROPERTIES.getProperty('Manager.isLocked',False)
-        
+        return PROPERTIES.getProperty('Manager.isLocked', False)
         
     def setLocked(self, state=True):
-        try: self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[PROPERTIES.setProperty('Manager.isLocked',state)])
-        except Exception: pass
-        
+        try: 
+            color = "0xC0FF0000" if state else "0xFFFFFFFF"
+            self.getControl(41).setColorDiffuse(color)
+            PROPERTIES.setProperty('Manager.isLocked', state)
+        except Exception: 
+            pass
 
     @contextmanager
     def toggleSpinner(self, state=True, lock=True, condition=None):
-        self.log('toggleSpinner, state = %s, condition = %s, lock = %s'%(state,condition,lock))
+        self.log('toggleSpinner, state = %s, condition = %s, lock = %s' % (state, condition, lock))
         if self.launchManager:
-            if not condition is None and condition:
-                PROPERTIES.setRunning('Manager.toggleSpinner',state)
-                self.setVisibility(self.spinner,state)
-                if lock: self.setLocked(True)
-                try: yield
+            if condition is not None and condition:
+                PROPERTIES.setRunning('Manager.toggleSpinner', state)
+                self.setVisibility(self.spinner, state)
+                if lock: 
+                    self.setLocked(True)
+                try: 
+                    yield
                 finally:
-                    if self.isLocked(): self.setLocked(False)
-                    self.setVisibility(self.spinner,False)
-                    PROPERTIES.setRunning('Manager.toggleSpinner',False)
-            else: yield
+                    if self.isLocked(): 
+                        self.setLocked(False)
+                    self.setVisibility(self.spinner, False)
+                    PROPERTIES.setRunning('Manager.toggleSpinner', False)
+            else: 
+                yield
         else:
             with BUILTIN.busy_dialog(not bool(condition), lock):
                 yield
 
-
     def togglechanList(self, state=True, focus=0, reset=False):
-        self.log('togglechanList, state = %s, focus = %s, reset = %s'%(state,focus,reset))
-        with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-            if state and hasattr(self.chanList,'reset'): # channellist
+        self.log('togglechanList, state = %s, focus = %s, reset = %s' % (state, focus, reset))
+        with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
+            if state and hasattr(self.chanList, 'reset'): # channellist
                 if reset: 
-                    self.setVisibility(self.chanList,False)
+                    self.setVisibility(self.chanList, False)
                     self.chanList.reset()
                     
-                self.setVisibility(self.itemList,False)
-                self.setVisibility(self.chanList,True)
+                self.setVisibility(self.itemList, False)
+                self.setVisibility(self.chanList, True)
                 self.setFocus(self.chanList)
                 self.selItem(self.chanList, focus)
                 
                 if self.madeChanges:
-                    #1
-                    self.setLabels(self.right_button1,LANGUAGE(32059))#Save
-                    self.setEnableCondition(self.right_button1,'')
-                    #2
-                    self.setLabels(self.right_button2,LANGUAGE(32060))#Cancel
-                    self.setEnableCondition(self.right_button2,'')
-                    #3
-                    self.setLabels(self.right_button3,LANGUAGE(32136))#Move
-                    self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
-                    #4
-                    self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
-                    self.setEnableCondition(self.right_button4,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                    #1 Save
+                    self.setLabels(self.right_button1, LANGUAGE(32059))
+                    self.setEnableCondition(self.right_button1, '')
+                    #2 Cancel
+                    self.setLabels(self.right_button2, LANGUAGE(32060))
+                    self.setEnableCondition(self.right_button2, '')
+                    #3 Move
+                    self.setLabels(self.right_button3, LANGUAGE(32136))
+                    self.setEnableCondition(self.right_button3, '[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                    #4 Delete
+                    self.setLabels(self.right_button4, LANGUAGE(32061))
+                    self.setEnableCondition(self.right_button4, '[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                 else:
-                    #1
-                    self.setLabels(self.right_button1,LANGUAGE(32062))#Close
-                    self.setEnableCondition(self.right_button1,'')
-                    #2
-                    if len(self.oldChannels) == 0: #no configured channels
-                        self.setLabels(self.right_button2,LANGUAGE(30038))#AutoTune
-                        self.setEnableCondition(self.right_button2,'[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                    #1 Close
+                    self.setLabels(self.right_button1, LANGUAGE(32062))
+                    self.setEnableCondition(self.right_button1, '')
+                    #2 AutoTune / Predefined
+                    if len(self.oldChannels) == 0: 
+                        self.setLabels(self.right_button2, LANGUAGE(30038))
+                        self.setEnableCondition(self.right_button2, '[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                     else:
-                        self.setLabels(self.right_button2,LANGUAGE(30229))#Predefined
-                        self.setEnableCondition(self.right_button2,'[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
-                    #3
-                    if len(self.oldChannels) == 0: #no configured channels
-                        if self.hasBackups: self.setLabels(self.right_button3,LANGUAGE(32112))#Recover
-                        self.setEnableCondition(self.right_button3,'[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                        self.setLabels(self.right_button2, LANGUAGE(30229))
+                        self.setEnableCondition(self.right_button2, '[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                    #3 Recover / Move
+                    if len(self.oldChannels) == 0: 
+                        if self.hasBackups: 
+                            self.setLabels(self.right_button3, LANGUAGE(32112))
+                        self.setEnableCondition(self.right_button3, '[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                     else: 
-                        self.setLabels(self.right_button3,LANGUAGE(32136))#Move
-                        self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
-                    #4
-                    self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
-                    self.setEnableCondition(self.right_button4,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                        self.setLabels(self.right_button3, LANGUAGE(32136))
+                        self.setEnableCondition(self.right_button3, '[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
+                    #4 Delete
+                    self.setLabels(self.right_button4, LANGUAGE(32061))
+                    self.setEnableCondition(self.right_button4, '[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
 
                 self.setFocus(self.right_button1)
-            elif hasattr(self.itemList,'reset'): # channelitems
+            elif hasattr(self.itemList, 'reset'): # channelitems
                 self.itemList.reset()
-                self.setVisibility(self.chanList,False)
-                self.setVisibility(self.itemList,True)
+                self.setVisibility(self.chanList, False)
+                self.setVisibility(self.itemList, True)
                 self.selItem(self.itemList, focus)
                 self.setFocus(self.itemList)
                 
                 if self.madeItemchange:
-                    self.setLabels(self.right_button1,LANGUAGE(32240))#Confirm
-                    self.setLabels(self.right_button2,LANGUAGE(32060))#Cancel
-                    self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Label) + !String.IsEmpty(Container(6).ListItem(Container(6).Position).Path)]')
-                    self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Property(chnum))]')
+                    self.setLabels(self.right_button1, LANGUAGE(32240)) #Confirm
+                    self.setLabels(self.right_button2, LANGUAGE(32060)) #Cancel
+                    self.setEnableCondition(self.right_button1, '[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Label) + !String.IsEmpty(Container(6).ListItem(Container(6).Position).Path)]')
+                    self.setEnableCondition(self.right_button2, '[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Property(chnum))]')
                 else:
-                    self.setLabels(self.right_button1,LANGUAGE(32062))#Close
-                    self.setLabels(self.right_button2,LANGUAGE(32060))#Cancel
-                    self.setEnableCondition(self.right_button1,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Property(chnum))]')
-                    self.setEnableCondition(self.right_button2,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Path)]')
+                    self.setLabels(self.right_button1, LANGUAGE(32062)) #Close
+                    self.setLabels(self.right_button2, LANGUAGE(32060)) #Cancel
+                    self.setEnableCondition(self.right_button1, '[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Property(chnum))]')
+                    self.setEnableCondition(self.right_button2, '[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Path)]')
                     
-                self.setLabels(self.right_button3,LANGUAGE(32235))#Preview
-                self.setLabels(self.right_button4,LANGUAGE(32239))#Clear
-                self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Path) + String.IsEqual(Container(6).ListItem(Container(6).Position).Property(radio),False)]')
-                self.setEnableCondition(self.right_button4,'[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Path)]')
-            
-        
+                self.setLabels(self.right_button3, LANGUAGE(32235)) #Preview
+                self.setLabels(self.right_button4, LANGUAGE(32239)) #Clear
+                self.setEnableCondition(self.right_button3, '[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Path) + String.IsEqual(Container(6).ListItem(Container(6).Position).Property(radio),False)]')
+                self.setEnableCondition(self.right_button4, '[!String.IsEmpty(Container(6).ListItem(Container(6).Position).Path)]')
+
     def setFocusPOS(self, listitems, chnum=None, ignore=True):
         for idx, listitem in enumerate(listitems):
             chnumber = int(cleanLabel(listitem.getLabel()).strip('|'))
-            if  ignore and chnumber > CHANNEL_LIMIT: continue
-            elif chnum is not None and chnum == chnumber: return idx
-            elif chnum is None and cleanLabel(listitem.getLabel2()): return idx
+            if ignore and chnumber > CHANNEL_LIMIT: 
+                continue
+            elif chnum is not None and chnum == chnumber: 
+                return idx
+            elif chnum is None and cleanLabel(listitem.getLabel2()): 
+                return idx
         return 0
-        
            
     def selItem(self, cntrl, focus=0):
-        try: cntrl.selectItem(focus)
-        except Exception as e: pass
-           
+        try: 
+            cntrl.selectItem(focus)
+        except Exception: 
+            pass
            
     def getRuleAbbr(self, citem, myId, optionindex):
-        value = citem.get('rules',{}).get(myId,{}).get('values',{}).get(optionindex)
-        self.log('getRuleAbbr, id = %s, myId = %s, optionindex = %s, optionvalue = %s'%(citem.get('id',-1),myId,optionindex,value))
+        value = citem.get('rules', {}).get(myId, {}).get('values', {}).get(optionindex)
+        self.log('getRuleAbbr, id = %s, myId = %s, optionindex = %s, optionvalue = %s' % (citem.get('id', -1), myId, optionindex, value))
         return value
-                    
 
     def getLogoColor(self, citem):
-        self.log('getLogoColor, id = %s'%(citem.get('id',-1)))
-        if  (citem.get('logo') and citem.get('name')) is None: return 'FFFFFFFF'
-        elif citem.get('rules',{}).get(1):
-            if (self.getRuleAbbr(citem,1,4) or self.resources.isMono(citem['logo'])):
-                return self.getRuleAbbr(citem,1,3)
+        self.log('getLogoColor, id = %s' % (citem.get('id', -1)))
+        if (citem.get('logo') and citem.get('name')) is None: 
+            return 'FFFFFFFF'
+        elif citem.get('rules', {}).get(1):
+            if self.getRuleAbbr(citem, 1, 4) or self.resources.isMono(citem['logo']):
+                return self.getRuleAbbr(citem, 1, 3)
         return SETTINGS.getSetting('ChannelBug_Color')
         
-        
     def buildChannelItem(self, citem: dict={}, focuskey: str='path'):
-        self.log('buildChannelItem, id = %s, focuskey = %s'%(citem.get('id'),focuskey))
+        self.log('buildChannelItem, id = %s, focuskey = %s' % (citem.get('id'), focuskey))
         def __buildItem(key):
             key   = key.lower()
-            value = citem.get(key,' ')
-            if   key in ["number","type","logo","id","catchup"]: return # keys to ignore, internal use only.
-            elif isinstance(value,(list,dict)): 
-                if   key == "group" : value = ('|'.join(sorted(set(value))) or LANGUAGE(30127))
-                elif key == "path"  : value = '|'.join(value)
-                elif key == "rules" : value = '|'.join([rule.name for key, rule in list(self.rule.loadRules([citem]).get(citem['id'],{}).items())])#todo load rule names
-            elif not isinstance(value,str): value = str(value)
-            elif not value: value = ' '
-            return LISTITEMS.buildMenuListItem(LABEL.get(key,' '),value,citem.get('logo',LOGO_COLOR),'|'.join(citem.get('path',[])),props={'key':key,'value':value,'citem':citem,'chname':citem["name"],'chnum':'%i'%(citem["number"]),'radio':citem.get('radio',False),'description':DESC.get(key,''),'colorDiffuse':self.getLogoColor(citem)})
+            value = citem.get(key, ' ')
+            if key in ["number", "type", "logo", "id", "catchup"]: 
+                return # keys to ignore, internal use only.
+            elif isinstance(value, (list, dict)): 
+                if   key == "group": value = ('|'.join(sorted(set(value))) or LANGUAGE(30127))
+                elif key == "path" : value = '|'.join(value)
+                elif key == "rules": value = '|'.join([rule.name for k, rule in self.rule.loadRules([citem]).get(citem['id'], {}).items()])
+            elif not isinstance(value, str): 
+                value = str(value)
+            elif not value: 
+                value = ' '
+                
+            return LISTITEMS.buildMenuListItem(
+                LABEL.get(key, ' '),
+                value,
+                citem.get('logo', LOGO_COLOR),
+                '|'.join(citem.get('path', [])),
+                props={
+                    'key': key,
+                    'value': value,
+                    'citem': citem,
+                    'chname': citem["name"],
+                    'chnum': '%i' % (citem["number"]),
+                    'radio': citem.get('radio', False),
+                    'description': DESC.get(key, ''),
+                    'colorDiffuse': self.getLogoColor(citem)
+                }
+            )
 
         self.togglechanList(False)
-        LABEL = {'name'    : LANGUAGE(32092),
-                 'path'    : LANGUAGE(32093),
-                 'group'   : LANGUAGE(32094),
-                 'rules'   : LANGUAGE(32095),
-                 'radio'   : LANGUAGE(32091),
-                 'favorite': LANGUAGE(32090),
-                 'enable'  : LANGUAGE(30184),
-                 'changed' : LANGUAGE(32259)}
+        LABEL = {
+            'name'    : LANGUAGE(32092),
+            'path'    : LANGUAGE(32093),
+            'group'   : LANGUAGE(32094),
+            'rules'   : LANGUAGE(32095),
+            'radio'   : LANGUAGE(32091),
+            'favorite': LANGUAGE(32090),
+            'enable'  : LANGUAGE(30184),
+            'changed' : LANGUAGE(32259)
+        }
                  
-        DESC = {'name'    : LANGUAGE(32085),
-                'path'    : LANGUAGE(32086),
-                'group'   : LANGUAGE(32087),
-                'rules'   : LANGUAGE(32088),
-                'radio'   : LANGUAGE(32084),
-                'favorite': LANGUAGE(32083),
-                'enable'  : LANGUAGE(33184),
-                'changed' : LANGUAGE(33259)}
+        DESC = {
+            'name'    : LANGUAGE(32085),
+            'path'    : LANGUAGE(32086),
+            'group'   : LANGUAGE(32087),
+            'rules'   : LANGUAGE(32088),
+            'radio'   : LANGUAGE(32084),
+            'favorite': LANGUAGE(32083),
+            'enable'  : LANGUAGE(33184),
+            'changed' : LANGUAGE(33259)
+        }
 
         lizLST = []
         lizLST.extend(poolit(__buildItem)(list(self.newChannel.keys())))
         self.itemList.addItems(lizLST)
-        self.itemList.selectItem([idx for idx, liz in enumerate(lizLST) if liz.getProperty('key')== focuskey][0])
+        self.itemList.selectItem([idx for idx, liz in enumerate(lizLST) if liz.getProperty('key') == focuskey][0])
         self.setFocus(self.itemList)
-
 
     def itemInput(self, channelListItem=xbmcgui.ListItem()):
         def __getName(citem: dict={}, name: str=''):
-            return DIALOG.inputDialog(message=LANGUAGE(32079),default=name), citem
+            return DIALOG.inputDialog(message=LANGUAGE(32079), default=name), citem
        
         def __getPath(citem: dict={}, paths: list=[]):
             return self.getPaths(citem, paths)
@@ -389,225 +455,228 @@ class Manager(xbmcgui.WindowXMLDialog):
         def __getGroups(citem: dict={}, groups: list=[]):
             groups  = list([_f for _f in groups if _f])
             ngroups = sorted([_f for _f in set(SETTINGS.getSetting('User_Groups').split('|') + GROUP_TYPES + groups) if _f])
-            ngroups.insert(0, '-%s'%(LANGUAGE(30064)))
-            selects = DIALOG.selectDialog(ngroups,header=LANGUAGE(32081),preselect=Globals._findItemsInLST(ngroups,groups),useDetails=False)
-            if not selects is None:
+            ngroups.insert(0, '-%s' % (LANGUAGE(30064)))
+            selects = DIALOG.selectDialog(ngroups, header=LANGUAGE(32081), preselect=Globals._findItemsInLST(ngroups, groups), useDetails=False)
+            if selects is not None:
                 if 0 in selects:
-                    SETTINGS.setSetting('User_Groups',DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups')))
+                    SETTINGS.setSetting('User_Groups', DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups')))
                     return __getGroups(citem, groups)
-                elif len(ngroups) > 0: groups = [ngroups[idx] for idx in selects]
-            if not groups: groups = [LANGUAGE(30127)]
+                elif len(ngroups) > 0: 
+                    groups = [ngroups[idx] for idx in selects]
+            if not groups: 
+                groups = [LANGUAGE(30127)]
             return groups, citem
         
         key   = channelListItem.getProperty('key')
         value = channelListItem.getProperty('value')
         citem = FileAccess.loadJSON(channelListItem.getProperty('citem'))
-        self.log('itemInput, In value = %s, key = %s\ncitem = %s'%(value,key,citem))
+        self.log('itemInput, In value = %s, key = %s\ncitem = %s' % (value, key, citem))
         
-        KEY_INPUT = {"name"     : {'func':__getName  , 'kwargs':{'citem':citem, 'name'  :citem.get('name','')}},
-                     "path"     : {'func':__getPath  , 'kwargs':{'citem':citem, 'paths' :citem.get('path',[])}},
-                     "group"    : {'func':__getGroups, 'kwargs':{'citem':citem, 'groups':citem.get('group',[])}},
-                     "rules"    : {'func':__getRule  , 'kwargs':{'citem':citem, 'rules' :self.rule.loadRules([citem]).get(citem['id'],{})}},
-                     "radio"    : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('radio',False)}},
-                     "favorite" : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('favorite',False)}},
-                     "enable"   : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('enable',False)}},
-                     "changed"  : {'func':__getBool  , 'kwargs':{'citem':citem, 'state' :citem.get('changed',False)}}}
+        KEY_INPUT = {
+            "name"     : {'func': __getName,   'kwargs': {'citem': citem, 'name': citem.get('name', '')}},
+            "path"     : {'func': __getPath,   'kwargs': {'citem': citem, 'paths': citem.get('path', [])}},
+            "group"    : {'func': __getGroups, 'kwargs': {'citem': citem, 'groups': citem.get('group', [])}},
+            "rules"    : {'func': __getRule,   'kwargs': {'citem': citem, 'rules': self.rule.loadRules([citem]).get(citem['id'], {})}},
+            "radio"    : {'func': __getBool,   'kwargs': {'citem': citem, 'state': citem.get('radio', False)}},
+            "favorite" : {'func': __getBool,   'kwargs': {'citem': citem, 'state': citem.get('favorite', False)}},
+            "enable"   : {'func': __getBool,   'kwargs': {'citem': citem, 'state': citem.get('enable', False)}},
+            "changed"  : {'func': __getBool,   'kwargs': {'citem': citem, 'state': citem.get('changed', False)}}
+        }
               
         action = KEY_INPUT.get(key) 
-        retval, citem = action['func'](*action.get('args',()),**action.get('kwargs',{}))
-        retval, citem = self.validateInputs(key,retval,citem)
-        if not retval is None:
+        retval, citem = action['func'](*action.get('args', ()), **action.get('kwargs', {}))
+        retval, citem = self.validateInputs(key, retval, citem)
+        if retval is not None:
             citem['changed']    = value != retval
             self.madeItemchange = value != retval
-            if key in list(self.newChannel.keys()): citem[key] = retval
-            self.log('itemInput, Out value = %s, key = %s\ncitem = %s'%(retval,key,citem))
+            if key in self.newChannel: 
+                citem[key] = retval
+            self.log('itemInput, Out value = %s, key = %s\ncitem = %s' % (retval, key, citem))
         return citem
-   
    
     def getPaths(self, citem: dict={}, paths: list=[]):
         def __buildItem(path):
-            return LISTITEMS.buildMenuListItem('',path,url='|'.join([path]),icon=Globals._getDummyIcon(str(pathLST.index(path)+1)),props={'citem':citem,'idx':pathLST.index(path)+1})
+            return LISTITEMS.buildMenuListItem('', path, url='|'.join([path]), icon=Globals._getDummyIcon(str(pathLST.index(path) + 1)), props={'citem': citem, 'idx': pathLST.index(path) + 1})
         
         select  = -1
         lastOPT = None
         epaths  = paths.copy()
         pathLST = list([_f for _f in paths if _f])
-        #radio check
-        if not citem.get('radio',False) and isRadio({'path':paths}): citem['radio'] = True #set radio on music paths
-        if citem.get('radio',False): excLST = [10,12,21,22]
-        else:                        excLST = [11,13,21]
         
-        while not self.monitor.abortRequested() and not select is None:
-            with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+        if not citem.get('radio', False) and isRadio({'path': paths}): 
+            citem['radio'] = True 
+        excLST = [10, 12, 21, 22] if citem.get('radio', False) else [11, 13, 21]
+        
+        while not self.monitor.abortRequested() and select is not None:
+            with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
                 npath  = None
-                if pathLST: lizLST = poolit(__buildItem)(pathLST)
-                else:       lizLST = []
-                lizLST.append(LISTITEMS.buildMenuListItem('',LANGUAGE(33113),icon=Globals._getDummyIcon(str(len(pathLST)+1)),props={'key':'add','citem':citem,'idx':0}))
-                if len(pathLST) > 0 and epaths != pathLST: lizLST.insert(0,LISTITEMS.buildMenuListItem('[B]%s[/B]'%(LANGUAGE(32059)),LANGUAGE(33114),icon=ICON,props={'key':'save','citem':citem}))
+                lizLST = poolit(__buildItem)(pathLST) if pathLST else []
+                lizLST.append(LISTITEMS.buildMenuListItem('', LANGUAGE(33113), icon=Globals._getDummyIcon(str(len(pathLST) + 1)), props={'key': 'add', 'citem': citem, 'idx': 0}))
+                if len(pathLST) > 0 and epaths != pathLST: 
+                    lizLST.insert(0, LISTITEMS.buildMenuListItem('[B]%s[/B]' % (LANGUAGE(32059)), LANGUAGE(33114), icon=ICON, props={'key': 'save', 'citem': citem}))
                 
             select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32086), preselect=lastOPT, multi=False)
-            if not select is None:
-                with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+            if select is not None:
+                with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
                     key, path = lizLST[select].getProperty('key'), lizLST[select].getPath()
-                    try:    lastOPT = int(lizLST[select].getProperty('idx'))
-                    except Exception: lastOPT = None
+                    try:    
+                        lastOPT = int(lizLST[select].getProperty('idx'))
+                    except Exception: 
+                        lastOPT = None
+                        
                     if key == 'add': 
                         retval = DIALOG.browseSources(heading=LANGUAGE(32080), exclude=excLST, monitor=True)
-                        if not retval is None:
-                            npath, citem = self.validatePaths(retval,citem)
-                            if npath: pathLST.append(npath)
+                        if retval is not None:
+                            npath, citem = self.validatePaths(retval, citem)
+                            if npath: 
+                                pathLST.append(npath)
                     elif key == 'save': 
                         paths = pathLST
                         break
                     elif path in pathLST:
                         retval = DIALOG.yesnoDialog(LANGUAGE(32102), customlabel=LANGUAGE(32103))
-                        if retval in [1,2]: pathLST.pop(pathLST.index(path))
+                        if retval in [1, 2]: 
+                            pathLST.pop(pathLST.index(path))
                         if retval == 2:
                             npath, citem = self.validatePaths(DIALOG.browseSources(heading=LANGUAGE(32080), default=path, monitor=True, exclude=excLST), citem)
                             pathLST.append(npath)
-        self.log('getPaths, paths = %s'%(paths))
+        self.log('getPaths, paths = %s' % (paths))
         return paths, citem
-
 
     def getRules(self, citem: dict={}, rules: dict={}):
         def __buildItem(data):
-            return LISTITEMS.buildMenuListItem(data[1].name,data[1].getTitle(),icon=Globals._getDummyIcon(str(data[1].myId)),props={'myId':data[1].myId,'citem':citem,'idx':list(ruleLST.keys()).index(data[0])+1}) 
+            return LISTITEMS.buildMenuListItem(data[1].name, data[1].getTitle(), icon=Globals._getDummyIcon(str(data[1].myId)), props={'myId': data[1].myId, 'citem': citem, 'idx': list(ruleLST.keys()).index(data[0]) + 1}) 
         
-        if citem.get('id') is None or len(citem.get('path',[])) == 0: DIALOG.notificationDialog(LANGUAGE(32071))
+        if citem.get('id') is None or len(citem.get('path', [])) == 0: 
+            DIALOG.notificationDialog(LANGUAGE(32071))
+            return rules, citem
         else:            
             select  = -1
             erules  = rules.copy()
             ruleLST = rules.copy()
             lastIDX = None
             lastXID = None
-            while not self.monitor.abortRequested() and not select is None:
-                with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+            while not self.monitor.abortRequested() and select is not None:
+                with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
                     nrule  = None
-                    crules = self.rule.loadRules([citem],append=True).get(citem['id'],{}) #all rule instances w/ channel rules
-                    arules = [rule for key, rule in list(crules.items()) if not ruleLST.get(key)] #all unused rule instances
+                    crules = self.rule.loadRules([citem], append=True).get(citem['id'], {}) 
+                    arules = [rule for key, rule in crules.items() if not ruleLST.get(key)] 
                     lizLST = []
-                    lizLST.extend(poolit(__buildItem)([(key, rule) for key, rule in list(ruleLST.items()) if rule.myId]))
-                    lizLST.insert(0,LISTITEMS.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,props={'key':'add' ,'citem':citem,'idx':0}))
-                    if len(ruleLST) > 0 and erules != ruleLST: lizLST.insert(1,LISTITEMS.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save','citem':citem}))
+                    lizLST.extend(poolit(__buildItem)([(key, rule) for key, rule in ruleLST.items() if rule.myId]))
+                    lizLST.insert(0, LISTITEMS.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]' % (LANGUAGE(32173)), "", icon=ICON, props={'key': 'add', 'citem': citem, 'idx': 0}))
+                    if len(ruleLST) > 0 and erules != ruleLST: 
+                        lizLST.insert(1, LISTITEMS.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]' % (LANGUAGE(32174)), "", icon=ICON, props={'key': 'save', 'citem': citem}))
                             
                 select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32095), preselect=lastIDX, multi=False)
-                if not select is None:
+                if select is not None:
                     key, myId = lizLST[select].getProperty('key'), int(lizLST[select].getProperty('myId') or '-1')
-                    try:    lastIDX = int(lizLST[select].getProperty('idx'))
-                    except Exception: lastIDX = None
+                    try:    
+                        lastIDX = int(lizLST[select].getProperty('idx'))
+                    except Exception: 
+                        lastIDX = None
+                        
                     if key == 'add':
-                        with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                            lizLST = [LISTITEMS.buildMenuListItem(rule.name,rule.description,icon=Globals._getDummyIcon(rule.myId),props={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
+                        with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
+                            lizLST = [LISTITEMS.buildMenuListItem(rule.name, rule.description, icon=Globals._getDummyIcon(rule.myId), props={'idx': idx, 'myId': rule.myId, 'citem': citem}) for idx, rule in enumerate(arules) if rule.myId]
                         select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32072), preselect=lastXID, multi=False)
-                        with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                            try:    lastXID = int(lizLST[select].getProperty('idx'))
-                            except Exception: lastXID = -1
+                        with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
+                            try:    
+                                lastXID = int(lizLST[select].getProperty('idx'))
+                            except Exception: 
+                                lastXID = -1
                             nrule, citem = self.getRule(citem, arules[lastXID])
-                            if not nrule is None: ruleLST.update({str(nrule.myId):nrule})
+                            if nrule is not None: 
+                                ruleLST.update({str(nrule.myId): nrule})
                     elif key == 'save':
                         rules = ruleLST
                         break
                     elif ruleLST.get(str(myId)):
-                        with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+                        with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
                             retval = DIALOG.yesnoDialog(LANGUAGE(32175), customlabel=LANGUAGE(32176))
-                            if retval in [1,2]: ruleLST.pop(str(myId))
+                            if retval in [1, 2]: 
+                                ruleLST.pop(str(myId))
                             if retval == 2: 
-                                nrule, citem = self.getRule(citem, crules.get(myId,{}))
-                                if not nrule is None: ruleLST.update({nrule.myId:nrule})
-                    # elif not ruleLST.get(str(myId)):
-                        # nrule, citem = self.getRule(citem, crules.get(myId,{}))
-                        # if not nrule is None:  ruleLST.update({nrule.myId:nrule})
-            self.log('getRules, rules = %s'%(len(rules)))
+                                nrule, citem = self.getRule(citem, crules.get(myId, {}))
+                                if nrule is not None: 
+                                    ruleLST.update({nrule.myId: nrule})
+            self.log('getRules, rules = %s' % (len(rules)))
             return self.rule.dumpRules(rules), citem
-        
 
     def getRule(self, citem={}, rule={}):
-        self.log('getRule, name = %s'%(rule.name))
+        self.log('getRule, name = %s' % (rule.name))
         select = -1
-        while not self.monitor.abortRequested() and not select is None:
-            with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                lizLST = [LISTITEMS.buildMenuListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],Globals._getDummyIcon(idx+1),[rule.myId],{'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
-            select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
-            if not select is None:
-                try: rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
+        while not self.monitor.abortRequested() and select is not None:
+            with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
+                lizLST = [LISTITEMS.buildMenuListItem('%s = %s' % (rule.optionLabels[idx], rule.optionValues[idx]), rule.optionDescriptions[idx], Globals._getDummyIcon(idx + 1), [rule.myId], {'value': optionValue, 'idx': idx, 'myId': rule.myId, 'citem': citem}) for idx, optionValue in enumerate(rule.optionValues)]
+            select = DIALOG.selectDialog(lizLST, header='%s %s - %s' % (LANGUAGE(32176), rule.myId, rule.name), multi=False)
+            if select is not None:
+                try: 
+                    rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
                 except Exception as e:
-                    self.log("getRule, onAction failed! %s"%(e), xbmc.LOGERROR)
+                    self.log("getRule, onAction failed! %s" % (e), xbmc.LOGERROR)
                     DIALOG.okDialog(LANGUAGE(32000))
         return rule, citem
-    
         
     def setID(self, citem: dict={}) -> dict:
         if not citem.get('id') and citem.get('name') and citem.get('path') and citem.get('number'): 
             citem['id'] = getChannelID(citem['name'], citem['path'], citem['number'], SETTINGS.getMYUUID())
-            self.log('setID, id = %s'%(citem['id']))
+            self.log('setID, id = %s' % (citem['id']))
         return citem
-    
        
     def setName(self, path, citem: dict={}) -> dict:
-        with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-            if citem.get('name'): return citem
-            elif path.strip('/').endswith(('.xml','.xsp')):            citem['name'] = XSP().getName(path)
-            elif path.startswith(tuple(DB_TYPES+WEB_TYPES+VFS_TYPES)): citem['name'] = self.getMontiorList().getLabel()
-            else:                                                      citem['name'] = os.path.basename(os.path.dirname(path)).strip('/')
-            self.log('setName, id = %s, name = %s'%(citem['id'],citem['name']))
+        with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
+            if citem.get('name'): 
+                return citem
+            elif path.strip('/').endswith(('.xml', '.xsp')):            
+                citem['name'] = XSP().getName(path)
+            elif path.startswith(tuple(DB_TYPES + WEB_TYPES + VFS_TYPES)): 
+                citem['name'] = self.getMontiorList().getLabel()
+            else:                                                                     
+                citem['name'] = os.path.basename(os.path.dirname(path)).strip('/')
+            self.log('setName, id = %s, name = %s' % (citem['id'], citem['name']))
             return citem
-
 
     def setLogo(self, name=None, citem={}, force=False):
         name = (name or citem.get('name'))
         if name:
-            if force: logo = ''
-            else:     logo = citem.get('logo')
-            if not logo or logo in [LOGO,LOGO_COLOR,ICON]:
-                with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+            logo = '' if force else citem.get('logo')
+            if not logo or logo in [LOGO, LOGO_COLOR, ICON]:
+                with self.toggleSpinner(condition=(PROPERTIES.isRunning('Manager.toggleSpinner') == False)):
                     citem['logo'] = self.resources.getLogo(citem, fallback=self.resources.getImageCache(citem['name']))
-        self.log('setLogo, id = %s, logo = %s, force = %s'%(citem.get('id'),citem.get('logo'),force))
+        self.log('setLogo, id = %s, logo = %s, force = %s' % (citem.get('id'), citem.get('logo'), force))
         return citem
        
-       
     def validateInputs(self, key, value, citem):
-        self.log('validateInputs, key = %s, value = %s'%(key,value))
+        self.log('validateInputs, key = %s, value = %s' % (key, value))
         def __validateName(name, citem):
-            if name and (len(name) > 1 or len(name) < 128): 
+            if name and (1 < len(name) < 128): 
                 citem['name'] = validString(name)
-                self.log('__validateName, name = %s'%(citem['name']))
+                self.log('__validateName, name = %s' % (citem['name']))
                 return citem['name'], self.setLogo(name, citem, force=True)
             return None, citem
 
         def __validatePath(paths, citem):
             if len(paths) > 0: 
-                name, citem = __validateName(citem.get('name',''),self.setName(paths[0], citem))
-                self.log('__validatePath, name = %s, paths = %s'%(name,paths))
+                name, citem = __validateName(citem.get('name', ''), self.setName(paths[0], citem))
+                self.log('__validatePath, name = %s, paths = %s' % (name, paths))
                 return paths, citem
             return None, citem
 
         def __validateGroup(groups, citem):
             return groups, Globals._cleanGroups(citem)
-            
                    
         def __validateRules(rules, citem):
-            return rules, citem #todo check values
-            
-        def __validateBool(state, citem):
-            if isinstance(state,bool): return state, citem
-            return None, citem
+            return rules, citem
+
+        VALIDATORS = {
+            "name": __validateName,
+            "path": __validatePath,
+            "group": __validateGroup,
+            "rules": __validateRules
+        }
         
-        KEY_VALIDATION = {'name'    :__validateName,
-                          'path'    :__validatePath,
-                          'group'   :__validateGroup,
-                          'rules'   :__validateRules,
-                          'radio'   :__validateBool,
-                          'favorite':__validateBool}.get(key,None)
-        try:
-            with self.toggleSpinner():
-                retval, citem = KEY_VALIDATION(value,citem)
-                if retval is None:
-                    DIALOG.notificationDialog(LANGUAGE(32077)%key.title()) 
-                    return None , citem
-                return retval, self.setID(citem)
-        except Exception as e: 
-            self.log("validateInputs, key = %s no action! %s"%(key,e))
-            return value, citem
+        validator = VALIDATORS.get(key, lambda val, item: (val, item))
+        return validator(value, citem)
             
             
     def validatePaths(self, path, citem):
@@ -713,14 +782,12 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if DIALOG.yesnoDialog(LANGUAGE(32100)):   
                     SETTINGS.setAutotuned(True)
                     items = []
-                    count = AUTOTUNE_LIMIT
-                    DIALOG.notificationDialog(f'Input [B]{count}[/B] Valid!\n{LANGUAGE(32140)}')
                     for idx, type in enumerate(AUTOTUNE_TYPES):
                         try:
                             samples = self.getLibrary(type)
                             items.extend([s for s in samples if s])
                         except Exception: pass
-                    self._addChannels(start, Globals._randomShuffle(items))
+                    self._addChannels(start, Globals._randomSamples(items,AUTOTUNE_LIMIT))
             except Exception as e: self.log("autoTune, failed! %s"%(e), xbmc.LOGERROR)
 
 

@@ -28,12 +28,12 @@ class Service(object):
     def _restart(self) -> bool:
         return PROPERTIES.isPendingRestart()
     def _interrupt(self) -> bool:
-        any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
+        any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _suspend(self) -> bool:
-        return any(PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened())
+        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
     def _sleep(self, wait=CPU_CYCLE):
         while not self.monitor.abortRequested() and wait > 0:
-            if any(self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()):
+            if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
                 return True
             wait -= CPU_CYCLE
         return False
@@ -52,7 +52,11 @@ class JSONRPC(object):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
 
-    def requestURL(self, url, params={}, payload={}, header=HEADER, timeout=15, file=None, life=datetime.timedelta(minutes=15)):
+    def requestURL(self, url, params=None, payload=None, header=None, timeout=15, file=None, life=datetime.timedelta(minutes=15)):
+        if params is None:  params  = {}
+        if payload is None: payload = {}
+        if header is None:  header  = {}
+
         def __error(result={}): return result
         def __getCache():       return (self.cache.get('requestURL.%s'%(FileAccess._getMD5((url,params,payload,file)))) or {})
         def __setCache():       return self.cache.set('requestURL.%s'%(FileAccess._getMD5((url,params,payload,file))), results, expiration=life)
@@ -149,12 +153,15 @@ class JSONRPC(object):
             elif item.get('filetype') == 'directory' and walk_depth > 0:
                 walk_depth -= 1
                 subs.append(item)
-        [walk.update(self.walkFileDirectory(sub.get('file'), media, limit, depth, checksum, expiration, dir=sub)) for sub in subs if sub.get('file') and limit > 0 and not self.service._sleep(CPU_CYCLE)]
+        for sub in subs:
+            if sub.get('file') and limit > 0 and not self.service._sleep(CPU_CYCLE):
+                walk.update(self.walkFileDirectory(sub.get('file'), media, limit, depth, checksum, expiration, dir=sub))
         self.log('walkFileDirectory, walking finished')
         return walk
                 
 
     def walkListDirectory(self, path, exts=[], depth=None, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+        accurate_duration = bool(SETTINGS.getSettingInt('Duration_Type'))
         if depth is None: depth = SETTINGS.getSettingInt('Recursive_Depth')
         def __(path, f):
             if exts and f.lower().endswith(tuple(exts)): return
@@ -162,11 +169,11 @@ class JSONRPC(object):
                     'filetype': 'file',
                     'title': path,
                     'file': os.path.join(path,f),
-                    'duration':self.getDuration(os.path.join(path,f), accurate=bool(SETTINGS.getSettingInt('Duration_Type')))}
+                    'duration':self.getDuration(os.path.join(path,f), accurate=accurate_duration)}
         walk = {}
         path = path.replace('\\','/')
         subs, files = self.getListDirectory(path,checksum,expiration)
-        self.log('walkListDirectory, walking %s, found = (%s,%s), depth = %s, append = %s'%(path,len(subs),len(files),depth,append))
+        self.log('walkListDirectory, walking %s, found = (%s,%s), depth = %s'%(path,len(subs),len(files),depth))
         items = [__(path, _f) for _f in files if _f]
         if items: walk.setdefault(path,[]).extend([_i for _i in items if _i])
         for sub in subs:
@@ -526,12 +533,12 @@ class JSONRPC(object):
         if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)):
             try:
                 mtype = mtypes.get(item.get('type'))
-                if mtype.get('params'):
-                    if   duration == 0: mtype['params'].pop('resume')  #save file duration meta
-                    elif runtime  == 0: mtype['params'].pop('runtime') #save player runtime meta
+                if mtype and mtype.get('params'):
+                    if   duration == 0: mtype['params'].pop('resume')  
+                    elif runtime  == 0: mtype['params'].pop('runtime') 
                     id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
                     self.log('[%s] queDuration, media = %s, duration = %s, runtime = %s'%(id,item['type'],duration,runtime))
-                    self.queueJSON(mtype['params'])
+                    self.queueJSON(mtype)
             except Exception as e: self.log("queDuration, failed! %s\nmtype = %s\nitem = %s"%(e,mtype,item), xbmc.LOGERROR)
         
         
@@ -550,7 +557,7 @@ class JSONRPC(object):
             try:
                 params = param.get(item.get('type'))
                 self.log('quePlaycount, params = %s'%(params.get('params',{})))
-                if hasattr(self.service,'_que'): self.service._que(self.sendJSON,1,0,0,params)
+                if hasattr(self.service, 'jsonQue'): self.service.jsonQue.add(params)
             except Exception: pass
 
 

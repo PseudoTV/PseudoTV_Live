@@ -1006,7 +1006,7 @@ class Service(object):
         
         
     def _tasks(self):
-        self._que(self.tasks.chkQueTimer, 1, DISCOVER_INTERVAL)
+        self._que(self.tasks.chkQueTimer,1,DISCOVER_INTERVAL)
         
         
     def _shutdown(self, wait=SERVICE_INTERVAL) -> bool:

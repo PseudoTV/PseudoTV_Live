@@ -129,8 +129,8 @@ class Tasks(object):
   
     def chkQueTimer(self):
         self.log('chkQueTimer')
-        self._chkPropTimer('chkChanged'   , self.chkChanged   , 4)
-        self._chkPropTimer('chkPVRRefresh', self.chkPVRRefresh, 5)
+        self._chkPropTimer('chkChanged'   , self.chkChanged   , 3)
+        self._chkPropTimer('chkPVRRefresh', self.chkPVRRefresh, 4)
         
         
      #_chkPropTimer trigger - True == Run
@@ -262,8 +262,8 @@ class Tasks(object):
                 self.log("chkLibrary, %s library not found! starting update."%(type))
                 complete.add(library.updateLibrary([type],silent))
         del library
-        if any(complete): self.service._que(self.chkChannels,3)
-        self.service._que(self.chkLibrary ,2, 900)#15MINS
+        if any(complete): self.service._que(self.chkChannels,3,0,0,*(None,silent))
+        self.service._que(self.chkLibrary,2,1800,0,0,*(None,True))#30MINS
         self.log("chkLibrary, complete = %s"%(any(complete)))
         
 
@@ -284,7 +284,6 @@ class Tasks(object):
             if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers,3,0,0,*(channels,silent))
             for channel in channels:
                 self.service._que(Builder(service=self.service).buildChannels,3,0,0,*([channel],False,silent))
-            self.service._que(self.chkChannels,3,1800,True)#30Mins
         else:
             self.log('chkChannels, No Channels Configured!')
             if autotune or not SETTINGS.hasAutotuned():
@@ -315,21 +314,25 @@ class Tasks(object):
                 except Exception as e: pass #currently not supported by IPTV Simple.
             
             
-    def chkSettingsChange(self, settings={}):
+    def chkSettingsChange(self, old_settings={}):
+        #if cleanstart ie del settings.xml, restore important values.
         if SETTINGS.restoreSettings(SETTINGS.getCacheSetting('Utilities._runCleanup',default={})):
             SETTINGS.setCacheSetting('Utilities._runCleanup',None)
-        nSettings = SETTINGS.getCurrentSettings()
-        for setting, value in list(settings.items()):
-            actions = {'User_Folder'     :{'func':self.setUserPath            ,'kwargs':{'old':value,'new':nSettings.get(setting)}},
-                       'Debug_Enable'    :{'func':self.jsonRPC.toggleShowLog  ,'kwargs':{'state':SETTINGS.getSettingBool('Debug_Enable')}},
-                       'TCP_PORT'        :{'func':self.chkPVRBackend},
-                       'Enable_Autotune' :{'func':self.service._que           ,'kwargs':{'func':'chkLibrary','priority':2}},}
+            
+        #settings changed actions.
+        new_settings = SETTINGS.getCurrentSettings()
+        for setting, old_value in list(old_settings.items()):
+            new_value = new_settings.get(setting)
+            actions = {'User_Folder'     :{'func':self.setUserPath ,'args':(old_value,new_value)},
+                       'Debug_Enable'    :{'func':self.chkDebugging,'args':(new_value)},
+                       'TCP_PORT'        :{'func':PROPERTIES.setPendingRestart},
+                       'Enable_Autotune' :{'func':self.chkLibrary}}
                        
-            if nSettings.get(setting) != value and actions.get(setting):
+            if setting in actions and old_value != new_value:
                 action = actions.get(setting)
-                self.log('chkSettingsChange, detected change in %s: %s => %s\naction = %s'%(setting,value,nSettings.get(setting),action))
+                self.log('chkSettingsChange, detected change in %s: %s => %s\naction = %s'%(setting,old_value,new_value,action))
                 self.service._que(action.get('func'),1,0,0,*action.get('args',()),**action.get('kwargs',{}))
-        return nSettings
+        return new_settings
 
 
     def chkQUES(self):

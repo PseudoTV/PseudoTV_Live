@@ -822,9 +822,9 @@ class Properties(object):
             
             Dialog().notificationDialog(msg)
             self.log('preemptActivity, isInterrupt = %s, isSuspend = %s, isBuilding = %s'%(isInterrupt,isSuspend,isBuilding))
-            if not isInterrupt and any([isSuspend, isBuilding]):  #force interrupt.
-                if isSuspend:  self.setPendingSuspend(False)  #release suspension 
-                if isBuilding: self.setPendingInterrupt(True) #interrupt building.
+            if not isInterrupt and any([isSuspend, isBuilding]): #force interrupt.
+                if isSuspend:  self.setPendingSuspend(False)   #release suspension 
+                if isBuilding: self.setPendingInterrupt(True)  #interrupt building.
             elif isInterrupt and not isBuilding: self.setPendingInterrupt(False)#release interrupt.
             elif not isInterrupt and not any([isSuspend, isBuilding]):
                 with self.lockActivity():
