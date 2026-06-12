@@ -1,0 +1,21 @@
+name: Kodi Addon-Check
+
+on: [push, pull_request]
+
+jobs:
+  kodi-addon-checker:
+    runs-on: ubuntu-latest
+    name: Kodi addon checker
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.10.20
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.10.20
+    - name: Install addon checker
+      run: |
+        pip install -q kodi-addon-checker
+    - name: Check with addon-checker
+      run: |
+        kodi-addon-checker --branch omega plugin.video.pseudotv.live
+        
