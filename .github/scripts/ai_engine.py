@@ -81,6 +81,10 @@ def call_ai_smart(system_prompt, user_content, valid_keys):
         return f"❌ **Request Error:** {e}", "Failed"
 
 def post_github_comment(body):
+    # Workflow Command for Annotations (shows in GitHub Actions logs/annotations sidebar)
+    # Note: Annotations don't support full Markdown, so we provide a summary link.
+    print(f"::notice title=AI Quality Report::Check the PR comments for the full analysis.")
+    
     if not PR_NUMBER or PR_NUMBER == "None" or not GITHUB_TOKEN:
         print(body)
         return
@@ -97,12 +101,12 @@ def main():
     
     # Enhanced Review Prompt
     linter_prompt = (
-        "Expert Kodi developer. Analyze Content for changes, recommend improvements or optimizations that will improve the project. Review Checker the output of kodi-addon-checker for insight. Output formatted markdown using ASCII art headers (e.g., '### 📂 Analysis') "
+        "Expert Kodi developer. Analyze Content for changes, recommend improvements and optimizations that will improve the project. Review Checker which is the output of kodi-addon-checker for insight. Output formatted markdown using ASCII art headers (e.g., '### 📂 Analysis') "
         "and emoji lists (🚀, 💡, 🐛, ✅). Keep it high-impact and readable."
     )
     review_summary, _ = call_ai_smart(linter_prompt, f"Content: {eval_content}\nChecker: {checker_logs}", valid_keys)
     
-    # Restored Markdown for test generation so the AI provides code blocks
+    # Restored Markdown for test generation
     test_gen_prompt = "Write a pytest file. Use sys.path to add 'resources/lib'. Mock xbmc modules to simulate xbmc kodi api. Use Markdown code blocks."
     generated_test_code, _ = call_ai_smart(test_gen_prompt, eval_content, valid_keys)
     
@@ -110,7 +114,6 @@ def main():
     test_status = "⚠️ SKIPPED"
     test_output = "No tests were executed."
     
-    # Extract code from markdown block if provided by AI
     clean_code = generated_test_code.split("```python")[-1].split("```")[0] if "```" in generated_test_code else generated_test_code
     
     if checker_passed and "Error" not in generated_test_code and clean_code.strip():
