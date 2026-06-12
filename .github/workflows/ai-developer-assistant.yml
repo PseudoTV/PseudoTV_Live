@@ -1,8 +1,12 @@
 name: AI Linter & Dynamic Test Generator
 
 on:
+  push:
+    branches:
+      - master
+      - nightly
   pull_request:
-    types: [opened, synchronize]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,22 +19,24 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Important: gets the git history to compare diffs
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
+          pip install --upgrade pip
           pip install requests pytest kodi-addon-checker
 
-      - name: Run AI Assistant Engine
+      - name: Run AI Engine
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AI_API_KEY: ${{ secrets.AI_API_KEY }} # Your OpenAI/Anthropic/Gemini API key
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          # Set FULL_EVAL to true only if triggered manually via workflow_dispatch
+          FULL_EVAL: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: python .github/scripts/ai_engine.py
