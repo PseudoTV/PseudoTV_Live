@@ -1180,6 +1180,11 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
+				<setting id="Debug_Keep_Enable" type="boolean" label="32267" help="33267">
+                    <level>3</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                </setting>
                 <setting id="Enable_PVR_RELOAD" type="boolean" label="30155" help="33155">
                     <level>3</level>
                     <default>true</default>

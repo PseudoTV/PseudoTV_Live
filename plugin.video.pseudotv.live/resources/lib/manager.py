@@ -528,8 +528,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         retval = DIALOG.browseSources(heading=LANGUAGE(32080), exclude=excLST, monitor=True)
                         if retval is not None:
                             npath, citem = self.validatePaths(retval, citem)
-                            if npath: 
-                                pathLST.append(npath)
+                            if npath: pathLST.append(npath)
                     elif key == 'save': 
                         paths = pathLST
                         break
@@ -656,21 +655,23 @@ class Manager(xbmcgui.WindowXMLDialog):
             return None, citem
 
         def __validatePath(paths, citem):
-            if len(paths) > 0: 
-                name, citem = __validateName(citem.get('name', ''), self.setName(paths[0], citem))
-                self.log('__validatePath, name = %s, paths = %s' % (name, paths))
-                return paths, citem
+            if len(paths) > 0:
+                for path in paths:
+                    name, citem = __validateName(citem.get('name', ''), self.setName(path, citem))
+                    self.log('__validatePath, name = %s, path = %s' % (name, path))
+                    if name: return paths, citem
             return None, citem
 
         def __validateGroup(groups, citem):
             return groups, Globals._cleanGroups(citem)
                    
+                   
         def __validateRules(rules, citem):
             return rules, citem
 
         VALIDATORS = {
-            "name": __validateName,
-            "path": __validatePath,
+            "name" : __validateName,
+            "path" : __validatePath,
             "group": __validateGroup,
             "rules": __validateRules
         }
@@ -681,19 +682,37 @@ class Manager(xbmcgui.WindowXMLDialog):
             
     def validatePaths(self, path, citem):
         def __convert(path): #convert videodb:// paths to dynamic xsp thru. predefined
-            paths = []
+            paths = [path]
             if path.lower().startswith('videodb://'):
                 if   'tvshows/titles'  in path: paths = Predefined.createShowPlaylist(self.jsonRPC.DBIDtoLabel(path))
                 elif 'tvshows/studios' in path: paths = Predefined.createNetworkPlaylist(self.jsonRPC.DBIDtoLabel(path))
                 elif 'tvshows/genres'  in path: paths = Predefined.createTVGenrePlaylist(self.jsonRPC.DBIDtoLabel(path))
                 elif 'movies/genres'   in path: paths = Predefined.createMovieGenrePlaylist(self.jsonRPC.DBIDtoLabel(path))
                 elif 'movies/studios'  in path: paths = Predefined.createStudioPlaylist(self.jsonRPC.DBIDtoLabel(path))
-            return paths[0] if isinstance(paths,list) and len(paths) > 0 else path
+            return paths
 
-        def __set(path, citem):
-            citem = self.setName(path, citem)
-            return path, self.setLogo(citem.get('name'),citem)
-            
+        def __vfs(path, citem, cnt=3):
+            def __fileList(citem, fileList=[]):
+                return PROPERTIES.preemptActivity('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(32140)), Builder().buildVideo, *(citem,True))
+
+            with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
+                if isRadio({'path':[path]}): return True
+                DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(32140)))
+                tmpcitem = citem.copy()
+                tmpcitem.update({'name':FileAccess._getMD5(citem['path']),'path':[path]})
+                tmpcitem['id'] = getChannelID(tmpcitem['name'], tmpcitem['path'], random.randrange(1, CHANNEL_LIMIT, 1), 'validatePaths')
+                fileList = __fileList(tmpcitem)
+                if fileList:
+                    while not self.monitor.abortRequested() and cnt > 0:
+                        if __seek(random.choice(fileList)): return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]PASSED![/B]')
+                        else:
+                            retval = DIALOG.yesnoDialog(LANGUAGE(30202),customlabel='Try Again (%s)'%(cnt))
+                            if   retval == 1: return DIALOG.notificationDialog('%s %s: [B]OVERRIDE![/B]'%(LANGUAGE(32098),LANGUAGE(32093)))
+                            elif retval == 2: cnt -=1
+                            else: break
+                self.log('validatePaths, __vfs: path = %s fileList = %s'%(path,len(fileList) if isinstance(fileList,list) else fileList))
+                return not bool(DIALOG.notificationDialog('%s %s: [B]FAILED![/B]'%(LANGUAGE(32098),LANGUAGE(32093))))
+                
         def __seek(item, passed=False, wait=30):
             player = PLAYER()
             if player.isPlaying(): return DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(30136)))
@@ -724,31 +743,14 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.log('validatePaths, _seek: passed = %s'%(passed))
             return passed
             
-        def __vfs(path, citem, cnt=3):
-            def __fileList(citem, fileList=[]):
-                return PROPERTIES.preemptActivity('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(32140)), Builder().buildVideo, *(citem,True))
-
-            with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
-                if isRadio({'path':[path]}): return True
-                DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(32140)))
-                tmpcitem = citem.copy()
-                tmpcitem.update({'name':FileAccess._getMD5(citem['path']),'path':[path]})
-                tmpcitem['id'] = getChannelID(tmpcitem['name'], tmpcitem['path'], random.randrange(1, CHANNEL_LIMIT, 1), 'validatePaths')
-                fileList = __fileList(tmpcitem)
-                if fileList:
-                    self.log('validatePaths, __vfs: path = %s fileList = %s'%(path,len(fileList)))
-                    while not self.monitor.abortRequested() and cnt > 0:
-                        if __seek(random.choice(fileList)): return DIALOG.notificationDialog(f'{LANGUAGE(32098)} {LANGUAGE(32093)}: [B]PASSED![/B]')
-                        else:
-                            retval = DIALOG.yesnoDialog(LANGUAGE(30202),customlabel='Try Again (%s)'%(cnt))
-                            if   retval == 1: return DIALOG.notificationDialog('%s %s: [B]OVERRIDE![/B]'%(LANGUAGE(32098),LANGUAGE(32093)))
-                            elif retval == 2: cnt -=1
-                            else: break
-                return not bool(DIALOG.notificationDialog('%s %s: [B]FAILED![/B]'%(LANGUAGE(32098),LANGUAGE(32093))))
-        
+        def __set(path, citem):
+            citem = self.setName(path, citem)
+            return path, self.setLogo(citem.get('name'),citem)
+            
         if path: 
-            path = __convert(path)
-            if __vfs(path, citem): return __set(path, citem)
+            paths = __convert(path)
+            self.log(f'validatePaths, paths = {paths}')
+            if any(citem for path in paths if __vfs(path, citem)): return __set(path, citem)
         return None, citem
 
 
@@ -860,7 +862,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 tmpcitem = citem.copy()
                 tmpcitem['id'] = getChannelID(citem['name'], citem['path'], random.random())
                 start_time = time.time()
-                fileList   = PROPERTIES.preemptActivity('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(32140)), Builder().buildChannels, *([tmpcitem],True,False))
+                fileList   = PROPERTIES.preemptActivity('%s %s\n%s'%(LANGUAGE(32098),LANGUAGE(32093),LANGUAGE(32140)), Builder().buildChannels, *([tmpcitem],True,False,False))
                 end_time   = time.time()
                 # self.log('previewChannel: __fileList, id = %s, fileList = %s'%(citem['id'],len(fileList)))
                 return fileList, round(abs(end_time-start_time),2)
@@ -1084,7 +1086,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         if self.channels.setChannels(channels):
                             self.madeChanges = False
                             self.log(f"saveChanges, backup {CHANNELCHANGED_KEY} = {self.backup.backupChannels(CHANNELCHANGED_KEY,silent=True)}")
-                            PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
+                            PROPERTIES.setPropTimer('chkChanged')# Refresh Channel Changed!
                             if self.launchManager: 
                                 self.fillChanList(self.newChannels,True,focus=start)
             else: self.madeChanges = False

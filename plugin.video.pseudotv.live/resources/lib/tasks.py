@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
+from m3u        import M3U
 from backup     import Backup
 from library    import Library
 from builder    import Builder
@@ -46,7 +47,6 @@ class Tasks(object):
 
     def _client(self):
         self.service._que(self.chkPVRBackend    ,1)
-        self.service._que(self.chkStations      ,1)
         self.service._que(self.chkHTTP          ,1)
         self.service._que(self.chkDebugging     ,1)
         self.service._que(self.monitor.chkIdle  ,1)
@@ -62,6 +62,7 @@ class Tasks(object):
         self._migrateChannels() #temp, remove in v.0.7.5.
         self.service._que(self.chkDirs          ,1)
         self.service._que(self.chkCrash         ,1)
+        self.service._que(self.chkStations      ,1)
         self.service._que(self.chkLibrary       ,2)
         self.service._que(self.chkChannels      ,3)
         self.service._que(self.chkFiles         ,5)
@@ -94,6 +95,7 @@ class Tasks(object):
         
     def chkDebugging(self, disable=False):
         kodi_access = SETTINGS.getSettingBool('Enable_Kodi_Access')
+        keep_debug  = SETTINGS.getSettingBool('Debug_Keep_Enable')
         self.log('chkDebugging, disable = %s'%(disable))
         if SETTINGS.getSettingBool('Debug_Enable'):
             if disable: SETTINGS.setSettingBool('Debug_Enable',False)
@@ -101,7 +103,7 @@ class Tasks(object):
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Debug_Enable',False)
                 DIALOG.notificationDialog(LANGUAGE(32025))
-            elif kodi_access: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True)
+            elif kodi_access and not keep_debug: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True)
         #Force enable Kodi Debugging when enabled in PseudoTV via JSONRPC only if Kodi access allowed by user.
         if kodi_access: self.jsonRPC.toggleShowLog(SETTINGS.getSettingBool('Debug_Enable'))
                     
@@ -178,49 +180,75 @@ class Tasks(object):
 
 
     def chkFillers(self, channels=None, silent=None):
-        def __create(idx,total,label,path):
-            FileAccess.makedirs(path)
-            return DIALOG._updateProgress(pDialog, int(idx//total), message=label, header=head)
-            
-        head = f'{ADDON_NAME}, {LANGUAGE(32179)}'
-        with DIALOG._progressDialog(head, ADDON_NAME, silent=silent, background=True) as pDialog:
+        with DIALOG._progressDialog(f'{ADDON_NAME}, {LANGUAGE(32179)}', ADDON_NAME, silent=silent, background=True) as pDialog:
             if channels is None: channels = self.getChannels()
-            if isinstance(channels,list) and len(channels) > 0:
-                genres = Globals._mergeDict(self.jsonRPC.getVideoGenres(type="movie"),self.jsonRPC.getVideoGenres(type="tvshow"),'label')
-                mpaas  = Globals._mergeDict(self.jsonRPC.getMPAA(type="movie"),self.jsonRPC.getMPAA(type="tvshow"),'label')
-                for fidx, ftype in enumerate(FILLER_TYPES):
-                    if ftype == 'Extras': continue
-                    ignore = {'bumpers': IGNORE_CHTYPE + MOVIE_CHTYPE, 'ratings': IGNORE_CHTYPE + TV_CHTYPE,
-                              'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_CHTYPE}.get(ftype.lower(), IGNORE_CHTYPE)
-                              
-                    #Filler Folder
-                    fpath = os.path.join(FILLER_LOC, ftype)
-                    if not FileAccess.exists(fpath): pDialog = __create(fidx,len(FILLER_TYPES),ftype,fpath)
-                        
-                    #Filler Ratings
-                    if ftype == 'Ratings':
-                        for midx, mpaa in enumerate(mpaas):
-                            mpath = os.path.join(fpath, mpaa.get('label'))
-                            if not FileAccess.exists(mpath): pDialog = __create(midx,len(mpaas),mpaa.get('label'),mpath)
+            if not isinstance(channels, list) or len(channels) == 0:
+                self.log("chkFillers: No valid channels provided. Exiting tree scaffolding.")
+                return
+
+            def __create(idx, total, label, path):
+                FileAccess.makedirs(path)
+                return DIALOG._updateProgress(pDialog, int((idx / max(1, total)) * 100), message=label, header=f'{ADDON_NAME}, {LANGUAGE(32179)}')
+
+            genres = Globals._mergeDict(self.jsonRPC.getVideoGenres(type="movie"), self.jsonRPC.getVideoGenres(type="tvshow"), 'label')
+            mpaas  = Globals._mergeDict(self.jsonRPC.getMPAA(type="movie"), self.jsonRPC.getMPAA(type="tvshow"), 'label')
+            
+            filler_len = len(FILLER_TYPES)
+            for fidx, ftype in enumerate(FILLER_TYPES):
+                if ftype == 'Extras': 
+                    continue
+                    
+                ignore = {
+                    'bumpers' : IGNORE_CHTYPE + MOVIE_CHTYPE, 
+                    'ratings' : IGNORE_CHTYPE + TV_CHTYPE,
+                    'adverts' : IGNORE_CHTYPE + MOVIE_CHTYPE, 
+                    'trailers': IGNORE_CHTYPE + TV_CHTYPE
+                }.get(ftype.lower(), IGNORE_CHTYPE)
+                      
+                fpath = os.path.join(FILLER_LOC, ftype)
+                if not FileAccess.exists(fpath): 
+                    pDialog = __create(fidx, filler_len, ftype, fpath)
+                    
+                # --- RATINGS ---
+                if ftype == 'Ratings':
+                    mpaas_len = len(mpaas)
+                    for midx, mpaa in enumerate(mpaas):
+                        mpaa_label = mpaa.get('label')
+                        if mpaa_label:
+                            mpath = os.path.join(fpath, mpaa_label)
+                            if not FileAccess.exists(mpath): 
+                                pDialog = __create(midx, mpaas_len, mpaa_label, mpath)
+                    continue
+                    
+                # --- GENRES ---
+                elif ftype in ['Bumpers', 'Adverts', 'Trailers']:
+                    genres_len = len(genres)
+                    for gidx, genre in enumerate(genres):
+                        genre_label = genre.get('label')
+                        if genre_label:
+                            genre_folder_path = os.path.join(fpath, genre_label)
+                            if not FileAccess.exists(genre_folder_path): 
+                                pDialog = __create(gidx, genres_len, genre_label, genre_folder_path)
+                                
+                # --- GROUPS ---
+                channels_len = len(channels)
+                for cidx, channel in enumerate(channels):    
+                    if channel.get('type') in ignore or channel.get('radio', False): 
                         continue
-                                
-                    #Filler Genre
-                    elif ftype in ['Bumpers','Adverts','Trailers']:
-                        for gidx, genre in enumerate(genres):
-                            gpath = os.path.join(fpath, genre.get('label'))
-                            if not FileAccess.exists(gpath): pDialog = __create(gidx,len(genres),genre.get('label'),gpath)
-                                
-                    #Filler Channel Name & Groups
-                    for cidx, channel in enumerate(channels):    
-                        if channel.get('type') in ignore or channel.get('radio',False): continue
-                        cpath = os.path.join(fpath, channel.get('name',''))
-                        if not FileAccess.exists(cpath): pDialog = __create(cidx,len(channels),channel.get('name',''),cpath)
+                        
+                    ch_name = channel.get('name', '')
+                    if not ch_name: continue
+                    cpath = os.path.join(fpath, ch_name)
+                    if not FileAccess.exists(cpath): 
+                        pDialog = __create(cidx, channels_len, ch_name, cpath)
                             
-                        if ftype in ['Bumpers','Adverts','Trailers']:
-                            groups = channel.get('group',[])
-                            for gpidx, group in enumerate(groups):
-                                gpath = os.path.join(fpath, group)
-                                if not FileAccess.exists(gpath): pDialog = __create(gpidx, len(groups), group, gpath)
+                    if ftype in ['Bumpers', 'Adverts', 'Trailers']:
+                        groups = channel.get('group', [])
+                        groups_len = len(groups)
+                        for gpidx, group in enumerate(groups):
+                            group_folder_path = os.path.join(fpath, group)
+                            if not FileAccess.exists(group_folder_path): 
+                                pDialog = __create(gpidx, groups_len, group, group_folder_path)
         
         
     def chkTrailers(self, movies=None, tvshows=None, silent=None):
@@ -245,6 +273,23 @@ class Tasks(object):
         self.service._que(self.chkTrailers,5,259200)#3DAYS
                 
                 
+    def chkStations(self, channels=None):
+        if channels is None: channels = self.getChannels()
+        if channels:
+            programmes = []
+            if BUILTIN.getInfoBool("Pvr.HasTVChannels"):    programmes.extend(self.jsonRPC.getPVRChannels())
+            if BUILTIN.getInfoBool("Pvr.HasRadioChannels"): programmes.extend(self.jsonRPC.getPVRChannels(radio=True))
+            if not programmes: return self.service._que(self.chkStations,1,30)#30SECS
+            broadcasts = { Globals._decodePlot(b.get('plot', '')).get('citem', {}).get('name') for b in programmes if 'broadcastnow' in b and b.get('plot')}
+            remove     = [c for c in channels if c.get('name') not in broadcasts]
+            print(tv,radio,broadcasts,remove)
+            self.log(f"chkStations, channels = {len(channels)}, removing = {len(remove)}")
+            with M3U(writable=len(remove)>0) as m3u:
+                for channel in remove: m3u.delStation(channel)
+            self.service._que(self.chkStations,-1,MIN_EPG_DURATION)#3HRS
+            PROPERTIES.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
+                
+
     def chkLibrary(self, types=None, silent=None):
         if silent is None: silent = not SETTINGS.showDialog(silent)
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
@@ -266,52 +311,79 @@ class Tasks(object):
         self.service._que(self.chkLibrary,2,1800,0,0,*(None,True))#30MINS
         self.log("chkLibrary, complete = %s"%(any(complete)))
         
-
+        
     def chkChanged(self, channels=None, silent=None):
         if channels is None: channels = self.getChannels()
-        for idx, channel in enumerate(channels): 
-            self.log('[%s] chkChanged, changed = %s'%(channel['id'],channel.get('changed',False)))
-            if channel.get('changed',False):
-                self.service._que(Builder(service=self.service).buildChannels,3,0,0,*([channel],False,silent))
-        if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers,3,0,0,*(channels,silent))
-        
-        
+        if silent is None: silent = not SETTINGS.showDialog(silent)
+        self.log("chkChanged, channels = %s, silent = %s"%(len(channels),silent))
+        changed_channels = [ch for ch in channels if isinstance(ch, dict) and ch.get('changed', False)]
+        if len(changed_channels) == 0:
+            self.log("chkChanged: No channel modifications detected. Skipping batch allocation.")
+            return
+        self.log(f"chkChanged: Distributing {len(changed_channels)} modified channels across concurrent batches.")
+        chunk_size = max(1, len(changed_channels) // 4)
+        for i in range(0, len(changed_channels), chunk_size):
+            batch = changed_channels[i:i + chunk_size]
+            self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, batch, False, silent, True)
+        if SETTINGS.getSettingBool('Build_Filler_Folders'): 
+            self.service._que(self.chkFillers, 3, 0, 0, changed_channels, silent)
+
+
     def chkChannels(self, channels=None, silent=None):
-        autotune = SETTINGS.getSettingBool('Enable_Autotune')
         if channels is None: channels = self.getChannels()
-        if len(channels) > 0:
-            self.log('chkChannels, channels = %s'%(len(channels)))
-            if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers,3,0,0,*(channels,silent))
-            for channel in channels:
-                self.service._que(Builder(service=self.service).buildChannels,3,0,0,*([channel],False,silent))
+        if silent is None: silent = not SETTINGS.showDialog(silent)
+        self.log("chkChannels, channels = %s, silent = %s"%(len(channels),silent))
+        channel_count = len(channels) if isinstance(channels, list) else 0
+        if channel_count > 0:
+            self.log(f"chkChannels, processing channels count = {channel_count}")
+            if SETTINGS.getSettingBool('Build_Filler_Folders'): 
+                self.service._que(self.chkFillers, 3, 0, 0, channels, silent)
+
+            chunk_size = max(1, channel_count // 4)
+            for i in range(0, channel_count, chunk_size):
+                batch = channels[i:i + chunk_size]
+                self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, batch, False, silent, True)
         else:
             self.log('chkChannels, No Channels Configured!')
-            if autotune or not SETTINGS.hasAutotuned():
+            run_autotune = SETTINGS.getSettingBool('Enable_Autotune')
+            if run_autotune or not SETTINGS.hasAutotuned():
                 self.log('chkChannels, Auto-tuning Channels.')
-                if SETTINGS.setAutotuned(_autotune(automatic=autotune)): PROPERTIES.setPropTimer('chkChanged')
-            elif PROPERTIES.hasEnabledServers():                         PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
+                if SETTINGS.setAutotuned(_autotune(automatic=run_autotune)): 
+                    PROPERTIES.setPropTimer('chkChanged')# Refresh Channel Changed!
+            elif PROPERTIES.hasEnabledServers():                     
+                PROPERTIES.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
 
 
     @debounceit(M3U_REFRESH)
-    def chkPVRRefresh(self, brute=None):
+    def chkPVRRefresh(self, brute: bool = None):
         if brute is None: brute = SETTINGS.getSettingBool('Enable_PVR_RELOAD')
-        self.log('chkPVRRefresh, brute = %s'%(brute))
-        def __toggle(state=True):
-            with BUILTIN.busy_dialog(lock=True):
-                DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=M3U_REFRESH//2, usethread=True)
-                # if not state: BUILTIN.executewindow('ActivateWindow(home)') #exit possible livetv windows to avoid crash when disabling backend.
-                if BUILTIN.getInfoBool('System.AddonIsEnabled(%s)'%(PVR_CLIENT_ID)) != state:
-                    self.log('chkPVRRefresh, __toggle = %s'%(state))
-                    self.service.jsonRPC.sendJSON({"method":"Addons.SetAddonEnabled","params":{"addonid":PVR_CLIENT_ID,"enabled":state}})
-                    self.service._sleep(M3U_REFRESH//2)
+        self.log(f"chkPVRRefresh, brute force reload state = {brute}")
+        def __toggle(state: bool):
+            current_state = BUILTIN.getInfoBool(f"System.AddonIsEnabled({PVR_CLIENT_ID})")
+            if current_state == state: return
+            self.log(f"chkPVRRefresh: __toggle transitioning target state to = {state}")
             
+            with BUILTIN.busy_dialog(lock=True):
+                notification_msg = f"{PVR_CLIENT_NAME}: {LANGUAGE(32125)}"
+                DIALOG.notificationWait(notification_msg, wait=M3U_REFRESH // 2, usethread=True)
+                payload = { "method": "Addons.SetAddonEnabled", "params": {"addonid": PVR_CLIENT_ID, "enabled": state} }
+                self.service.jsonRPC.sendJSON(payload)
+                self.service._sleep(M3U_REFRESH // 2)
+
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
                 if brute:
-                    if not self.service.player.isPlaying(): __toggle(False), __toggle(True)
-                    else: PROPERTIES.setPropTimer('chkPVRRefresh')
-                try: self.jsonRPC.PVRScan(self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1))
-                except Exception as e: pass #currently not supported by IPTV Simple.
+                    if not self.service.player.isPlaying(): 
+                        __toggle(False)
+                        __toggle(True)
+                    else: 
+                        PROPERTIES.setPropTimer('chkPVRRefresh')
+                
+                try: 
+                    client_id = self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid', -1)
+                    if client_id != -1: self.jsonRPC.PVRScan(client_id)
+                except Exception as e: 
+                    self.log(f"chkPVRRefresh: PVR backend scanning trigger unsupported or failed: {str(e)}", xbmc.LOGDEBUG)
             
             
     def chkSettingsChange(self, old_settings={}):
@@ -364,20 +436,8 @@ class Tasks(object):
                 except Exception as e: self.log("chkQUES failed!, queuing = %s trailerQue: %s\n%s"%(len(self.service.trailerQue),param,e))        
         del library
         self.service._que(self.chkQUES,5,120)#2MINS
-        
-                
-    def chkStations(self, channels=None):
-        builder = Builder()
-        if channels is None: channels = builder.channels.getChannels()
-        self.log('chkStations, channels = %s'%(len(channels)))
-        stopTimes = dict(builder.xmltv.hasProgrammes())
-        for channel in channels:
-            if not stopTimes.get(channel['id'],False):
-                builder.m3u.delStation(channel)
-        builder.m3u._save()
-        del builder
-        
-                
+     
+     
     def setUserPath(self, old, new):
         self.log('setUserPath, old = %s, new = %s'%(old,new))
         dia = DIALOG.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))

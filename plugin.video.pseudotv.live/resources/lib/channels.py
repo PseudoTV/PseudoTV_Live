@@ -38,6 +38,24 @@ class Channels(object):
         self.log(f'__init__ channelKEY = {self.channelKEY}')
         
         
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if self.writable: self._save()
+        except Exception: pass
+            
+            
+    def __del__(self):
+        try:
+            if getattr(self, 'writable', False): self._save()
+            self.log('__del__, writable = %s' % (getattr(self, 'writable', False)))
+        except Exception: 
+            pass
+        
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: [%s] %s'%(self.__class__.__name__,self.channelKEY,msg),level)
 

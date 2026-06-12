@@ -219,7 +219,7 @@ class Utilities(object):
     @staticmethod
     def _runUpdate(full=False):
         log('Utilities: _runUpdate, full = %s'%(full))
-        PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
+        PROPERTIES.setPropTimer('chkChanged')# Refresh Channel Changed!
               
     @staticmethod
     def openPositionUtil(idx):

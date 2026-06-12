@@ -112,14 +112,25 @@ class M3U(object):
             'recordings': recordings
         }
 
+
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if self.writable: self._save()
+        except Exception: pass
+            
+            
     def __del__(self):
         try:
-            if getattr(self, 'writable', False): 
-                self._save()
+            if getattr(self, 'writable', False): self._save()
             self.log('__del__, writable = %s' % (getattr(self, 'writable', False)))
         except Exception: 
             pass
-
+        
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log(f"{self.__class__.__name__}: {msg}", level)
 
@@ -243,7 +254,6 @@ class M3U(object):
                     self.log('_load, m3u item = %s' % mitem)
                     yield mitem
 
-    @debounceit(SERVICE_INTERVAL)
     def _save(self):
         self.M3UDATA['data'] = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
             'http://%s/%s' % (PROPERTIES.getRemoteHost(), XMLTVFLE)

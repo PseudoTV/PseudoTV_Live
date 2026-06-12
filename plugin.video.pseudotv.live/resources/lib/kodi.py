@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import platform, pyqrcode, threading
+import platform, pyqrcode, threading, copy
 
 from ast                 import literal_eval
 from uuid                import uuid1, uuid4, UUID
@@ -426,7 +426,7 @@ class Settings(object):
         
 
     def getCurrentSettings(self):
-        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT', 'Enable_Autotune', 'Remove_BG_APIKEY', 'Open_Router_APIKEY']
+        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT', 'Enable_Autotune', 'Remove_BG_APIKEY', 'Open_Router_APIKEY', 'Enable_Kodi_Access']
         return dict([(setting,self.getSetting(setting)) for setting in settings])
               
               
@@ -475,6 +475,7 @@ class Properties(object):
     def __init__(self, winID=10131):
         self.winID  = winID
         self.window = xbmcgui.Window(winID)
+        self._memory_cache = OrderedDict()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -529,10 +530,15 @@ class Properties(object):
     def getProperty(self, key, default=''):
         try:
             key, thid = self._getKey(key)
-            value = (self.window.getProperty(key) or default)
+            if key in self._memory_cache: 
+                self._memory_cache.move_to_end(key)
+                return self._memory_cache[key]
+            value = self.window.getProperty(key)
+            if not value: return default
             try: value = FileAccess._decodeString(value)
             except (ValueError, SyntaxError): pass
             self.log(f'[{self.winID}] getProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+            self._memory_cache[key] = value
             return value
         except Exception as e: 
             self.log(f"[{self.winID}] getProperty [{thid}], failed! {e} - key = [{key}]", xbmc.LOGERROR)
@@ -541,48 +547,72 @@ class Properties(object):
         
     def getEXTProperty(self, key, default=''):
         try:
-            value = (xbmcgui.Window(10000).getProperty(key) or default)
+            if key in self._memory_cache: 
+                self._memory_cache.move_to_end(key)
+                return self._memory_cache[key]
+            value = xbmcgui.Window(10000).getProperty(key)
+            if not value: return default
+            if isinstance(value, str):
+                if not value.startswith(('[', '{', '(', 'True', 'False', 'None')) and not value.isdigit():
+                    if not '.TRASH' in key: self.log(f'[10000] getEXTProperty, key = {key}, value = {str(value)[:128]}, type = str')
+                    self._memory_cache[key] = value
+                    return value
             try: value = literal_eval(value)
             except (ValueError, SyntaxError): pass
             if not '.TRASH' in key: self.log(f'[10000] getEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+            self._memory_cache[key] = value
             return value
         except Exception as e: 
-            self.log("[%s] getEXTProperty, failed! %s - key = %s, value = %s"%('10000', e,key,str(value)[:128]), xbmc.LOGERROR)
+            self.log("[%s] getEXTProperty, failed! %s - key = %s, value = %s"%('10000', e, key, str(locals().get('value', default))[:128]), xbmc.LOGERROR)
             return default
         
         
     #CLEAR
     def clrProperties(self):
         self.log('clrProperties')
+        self._memory_cache = OrderedDict()
         return self.window.clearProperties()
         
         
     def clrProperty(self, key):
         key, thid = self._getKey(key)
         self.log(f'[{self.winID}] clrProperty [{thid}], key = {key}')
+        self._memory_cache.pop(key, None)
         return self.window.clearProperty(key)
 
 
     def clrEXTProperty(self, key):
         self.log('[%s] clrEXTProperty, key = %s'%('10000', key))
+        self._memory_cache.pop(key, None)
         return xbmcgui.Window(10000).clearProperty(key)
         
         
     #SET
     def setProperty(self, key, value):
         key, thid = self._getKey(key)
+        if value is None or value == '':
+            self.clrProperty(key)
+            return value
         try:
-            if not value is None: 
-                self.window.setProperty(key, str(FileAccess._encodeString(value)))
-                self.log(f'[{self.winID}] setProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+            encoded_str = str(FileAccess._encodeString(value))
+            self.window.setProperty(key, encoded_str)
+            self._memory_cache[key] = FileAccess._decodeString(encoded_str)
+            self._memory_cache.move_to_end(key)
+            if len(self._memory_cache) > MAX_CACHE_SIZE: oldest_key, _ = self._memory_cache.popitem(last=False)
+            self.log(f'[{self.winID}] setProperty [{thid}], key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         except Exception as e: self.log(f"[{self.winID}] setProperty [{thid}], failed! {e} - key = {key}, value = {str(value)[:128]}", xbmc.LOGERROR)
         return value
         
         
     def setEXTProperty(self, key, value):
-        if not value is None: 
-            xbmcgui.Window(10000).setProperty(key,str(value))
-            if not '.TRASH' in key: self.log(f'[10000] setEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+        if value is None or value == '':
+            self.clrEXTProperty(key)
+            return value
+        self._memory_cache[key] = copy.deepcopy(value)
+        self._memory_cache.move_to_end(key)
+        if len(self._memory_cache) > MAX_CACHE_SIZE: oldest_key, _ = self._memory_cache.popitem(last=False)
+        xbmcgui.Window(10000).setProperty(key, str(value))
+        if not '.TRASH' in key: self.log(f'[10000] setEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return value
 
 
@@ -1464,15 +1494,15 @@ class Dialog(object):
     def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=LOGO_COLOR, silent=None, usethread=False):
         if silent is None: silent = not self.settings.showDialog(silent)
         self.log('notificationDialog: %s, silent = %s'%(message,silent))
-        if   silent: return
-        elif usethread: self._notificationDialog(message, header, sound, time, icon, silent)
-        else:
-            ## - Builtin Icons:
-            ## - xbmcgui.NOTIFICATION_INFO
-            ## - xbmcgui.NOTIFICATION_WARNING
-            ## - xbmcgui.NOTIFICATION_ERROR
-            try: self.dialog.notification(header, message, icon, time*1000, sound=False)
-            except Exception: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time*1000, icon))
+        if not silent:
+            if usethread: self._notificationDialog(message, header, sound, time, icon, silent)
+            else:
+                ## - Builtin Icons:
+                ## - xbmcgui.NOTIFICATION_INFO
+                ## - xbmcgui.NOTIFICATION_WARNING
+                ## - xbmcgui.NOTIFICATION_ERROR
+                try: self.dialog.notification(header, message, icon, time*1000, sound=False)
+                except Exception: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time*1000, icon))
         return True
         
              

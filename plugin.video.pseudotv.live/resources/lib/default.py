@@ -39,15 +39,15 @@ if __name__ == '__main__':
             
             if sysInfo.get('mode') is None:
                 xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
-                if Globals._getEXTProperty('%s.%s'%(ADDON_ID, 'has.Channels')) == "true":
+                if PROPERTIES.getEXTProperty('%s.%s'%(ADDON_ID, 'has.Channels')) == "true":
                     Globals._openGuide()
                 else:
                     Globals._openSettings()
                     
             elif any(item in sysARG[2] for item in ['{catchup-id}', '{utc}', '{duration}', '{utcend}']):
                 name = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ListItem.ChannelName') or ADDON_NAME)
-                Globals._notificationDialog(LANGUAGE(32265)%(name))
-                Globals._setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
+                DIALOG.notificationDialog(LANGUAGE(32265)%(name))
+                PROPERTIES.setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
                 xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())
                 log(f'Default: __main__, failed! {sysARG[2]}', xbmc.LOGERROR)
                 
@@ -61,4 +61,4 @@ if __name__ == '__main__':
                 _run(sysInfo.get('mode'), sysInfo)
     except Exception as e: 
         log(f'Default: __main__, failed! {e}', xbmc.LOGERROR)
-        Globals._notificationDialog(LANGUAGE(30079))
+        DIALOG.notificationDialog(LANGUAGE(30079))

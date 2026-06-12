@@ -36,10 +36,6 @@ class XMLTVS(object):
         self.XMLTVDATA = self._load()
         
         
-    # with XMLTVS(writable=True) as epg:
-    # # Do work here
-      # epg.addChannel(...)
-    # # Auto-saves reliably right here
     def __enter__(self):
         return self
 
@@ -70,7 +66,6 @@ class XMLTVS(object):
                 'programmes' : self.cleanSelf(self.loadProgrammes(),'channel')}
 
 
-    @debounceit(SERVICE_INTERVAL)
     def _save(self, reset: bool=True) -> bool:
         if reset: data = self.resetData()
         else:     data = self.XMLTVDATA['data']
@@ -186,23 +181,41 @@ class XMLTVS(object):
             if hasattr(fle, 'close'): 
                 fle.close()
         
-
-            
-    def loadStopTimes(self, channels: list=[], programmes: list=[], fallback=None):
+        
+    def loadStopTimes(self, channels: list = [], programmes: list = [], fallback=None):
         if not channels:   channels   = self.getChannels()
         if not programmes: programmes = self.getProgrammes()
-        if not fallback:   fallback   = epochTime(roundTimeDown(getUTCstamp(),offset=60),tz=False).strftime(DTFORMAT)
+        if not fallback:   fallback   = epochTime(roundTimeDown(getUTCstamp(), offset=60), tz=False).strftime(DTFORMAT)
+
+        channel_bounds = {
+            channel['id']: {'start': fallback, 'stop': fallback} 
+            for channel in channels if 'id' in channel
+        }
         
-        for channel in channels:
-            try: 
-                firstStart = min((program['start'] for program in programmes if program['channel'] == channel['id']), default=fallback)
-                lastStop   = max((program['stop']  for program in programmes if program['channel'] == channel['id']), default=fallback)
-                self.log(' [%s] loadStopTimes first-start = %s, last-stop = %s, fallback = %s'%(channel['id'],firstStart,lastStop,fallback))
-                if firstStart > fallback: raise Exception('First start-time in the future, rebuild channel with fallback')
-                yield channel['id'],datetime.datetime.timestamp(strpTime(lastStop, DTFORMAT))
+        for program in programmes:
+            ch_id = program.get('channel')
+            if ch_id not in channel_bounds: continue
+                
+            p_start = program.get('start')
+            if not channel_bounds[ch_id]['start'] or p_start < channel_bounds[ch_id]['start']:
+                channel_bounds[ch_id]['start'] = p_start
+                
+            p_stop = program.get('stop')
+            if not channel_bounds[ch_id]['stop'] or p_stop > channel_bounds[ch_id]['stop']:
+                channel_bounds[ch_id]['stop'] = p_stop
+
+        for ch_id, bounds in channel_bounds.items():
+            firstStart = bounds['start']
+            lastStop   = bounds['stop']
+            
+            try:
+                self.log(' [%s] loadStopTimes first-start = %s, last-stop = %s, fallback = %s' % (ch_id, firstStart, lastStop, fallback))
+                if firstStart > fallback:# Check if the program's actual first start time is in the future
+                    raise Exception('First start-time in the future, rebuild channel with fallback')
+                yield ch_id, datetime.datetime.timestamp(strpTime(lastStop, DTFORMAT))
             except Exception as e:
-                self.log(" [%s] loadStopTimes failed! Malformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s"%(channel.get('id'),e,fallback), xbmc.LOGWARNING)
-                yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
+                self.log(" [%s] loadStopTimes failed! Malformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s" % (ch_id, e, fallback), xbmc.LOGWARNING)
+                yield ch_id, datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
 
 
     def hasProgrammes(self, channels: list=[], programmes: list=[], now=None):
@@ -399,7 +412,6 @@ class XMLTVS(object):
         mitem = ({'id'           : citem['id'],
                   'display-name' : [(self.cleanString(citem['name']), LANG)],
                   'icon'         : [{'src':citem['logo']}]})
-                  
         self.log('addChannel, mitem = %s'%(mitem))
         try:              self.XMLTVDATA['channels'][self.findChannel(mitem)[0]] = mitem
         except Exception: self.XMLTVDATA['channels'].append(mitem)

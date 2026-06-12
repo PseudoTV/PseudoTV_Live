@@ -51,8 +51,6 @@ class Service(object):
 
 class Builder(object):
     xsp      = XSP()
-    m3u      = M3U(writable=True)
-    xmltv    = XMLTVS(writable=True, m3u=m3u)
     seasonal = Seasonal()
     loopback = None
     
@@ -188,159 +186,131 @@ class Builder(object):
         copy_info = info.copy
         return [copy_info() for _ in range(entries)]
 
-                
-    def buildChannels(self, channels: list=None, preview=False, silent=None):
-        if channels is None: channels = []
-        if silent is None: silent = not SETTINGS.showDialog(silent)
-        self.log(f"buildChannels, channels = {len(channels)}")
-        
-        def __needsUpdate(citem, now, fallback, state=True):
-            last_stop   = dict(self.xmltv.loadStopTimes([citem], fallback=fallback)).get(citem['id'])
-            future_stop = now + ((MAX_GUIDEDAYS * 86400) - 10800)
-            if last_stop > (future_stop): state = False
-            self.log(f"[{citem['id']}] buildChannels, __needsUpdate = {state}, last_stop = {last_stop}, future_stop = {future_stop}")
-            return state, last_stop
-            
-        def __hasChanged(citem: dict, detect=False) -> bool:
-            state = citem.get('changed', False)
-            if not state and detect:
-                state = any(SETTINGS.getFileCRC(file) for file in citem.get('path', []) if file.endswith(tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)))
-                if state: self.log(f"[{citem['id']}] buildChannels, __hasChanged playlist detected!")
-            self.log(f"[{citem['id']}] buildChannels, __hasChanged = {state}")
-            if state: 
-                if __clrStation(citem): citem['changed'] = False
-                changes.add(self.channels.addChannel(citem))
-            return state, citem
-                    
-        def __hasProgrammes(citem: dict) -> bool:
-            try:              state = dict(self.xmltv.hasProgrammes([citem])).get(citem['id'], False)
-            except Exception: state = False
-            self.log(f"[{citem['id']}] buildChannels, __hasProgrammes = {state}")
-            return state
 
-        def __hasFileList(fileList: list, state=False) -> bool:
-            if isinstance(fileList, list) and len(fileList) > 0: state = True
-            self.log(f"[{citem['id']}] buildChannels, __hasFileList = {state}")
-            return state
+    def buildChannels(self, channels: list = None, preview=False, silent=None, write=True):
+        if channels is None: channels = []
+        if silent is None:   silent = not SETTINGS.showDialog(silent)
+        self.log(f"buildChannels invoked, payload footprint: {len(channels)} channels")
         
-        def __addProgrammes(citem: dict, fileList: list) -> bool:
-            state = any([self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item)) for item in fileList])
-            self.log(f"[{citem['id']}] buildChannels, __addProgrammes {state} fileList = {len(fileList)}")
-            return state
-        
-        def __addStation(citem: dict) -> bool:
-            sitem = self.m3u.getStationItem(citem)
-            state = any([self.m3u.addStation(sitem), self.xmltv.addChannel(sitem)])
-            self.log(f"[{citem['id']}] buildChannels, __addStation = {state}")
-            return state
-        
-        def __clrStation(citem: dict) -> bool:
-            state = any([self.resetPagination(citem), self.m3u.delStation(citem), self.xmltv.delBroadcast(citem)])
-            self.log(f"[{citem['id']}] buildChannels, __clrStation = {state}")
-            return state
-        
-        def __setStation():
-            state = any([self.m3u._save(), self.xmltv._save()])
-            self.log(f"[{citem['id']}] buildChannels, __setStation = {state}")
-            return state
-            
-        def __addScheduling(citem: dict, fileList: list, now: int, start: int) -> list: 
-            self.log(f"[{citem['id']}] __addScheduling, IN fileList = {len(fileList)}, now = {now}, start = {start}")
-            fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList.copy(), inherited=self)
-            for idx, item in enumerate(fileList):
-                if not item.get('duration'): continue
-                item["idx"]   = idx
-                item['start'] = start
-                item['stop']  = start + item['duration']
-                start = item['stop']
-            fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, fileList.copy(), inherited=self)
-            self.log(f"[{citem['id']}] buildChannels, __addScheduling, OUT fileList = {len(fileList)}")
-            return fileList
-        
-        def __addFillers(citem, fileList, enable=False):
-            self.log(f"[{citem['id']}] buildChannels, __addFillers, enable = {enable}, fileList = {len(fileList)}")
-            if enable: return Fillers(citem, self).injectFillers(fileList)
-            return fileList
-                
         if PROPERTIES.isRunning('Builder.buildChannels'): return
         with PROPERTIES.legacy(), PROPERTIES.chkRunning('Builder.buildChannels'):
             channels = self.getVerifiedChannels(channels)
-            if len(channels) == 0: return
-            complete  = set()
-            changes   = set()
-            now       = getUTCstamp()
-            nstart    = roundTimeDown(now, offset=60)
-            fallback  = epochTime(nstart, tz=False).strftime(DTFORMAT)
+            if not channels: return
+            changes  = set()
+            complete = set()
+            
+            now = float(getUTCstamp())
+            fallback_epoch = float(roundTimeDown(now, offset=60))
+            future_stop = now + ((MAX_GUIDEDAYS * 86400) - 10800)
+            fallback_str = epochTime(fallback_epoch, tz=False).strftime(DTFORMAT)
 
             self.pDialog, self.pMSG, self.pName, self.pHeader = None, '', '', ''
             self.pErrors = []
             self.pCount  = 0
             self.cCount  = len(channels)
-
-            for idx, citem in enumerate(channels):
-                try:
-                    updated      = set()
-                    self.pMSG    = f"{LANGUAGE(32144)}: {LANGUAGE(32212)}"
-                    self.pHeader = ADDON_NAME
-                    self.pName   = citem['name']
-                    self.pCount  = int(idx * 100) // self.cCount
-                    citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
-                    _update, start  = __needsUpdate(citem, now, fallback)
-                    _changed, citem = __hasChanged(citem,  self.enableChanged) 
-                    self.log(f"[{citem['id']}] buildChannels, preview = {preview}, rules = {citem.get('rules', {})}, _update = {_update}")
-                    
-                    if self.service._interrupt():
-                        self.log(f"[{citem['id']}] buildChannels, _interrupt")
-                        self.pErrors = [LANGUAGE(32160)]
-                        if hasattr(self.service, '_que'): 
-                            self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
-                        break
-                    elif self.service._suspend():
-                        self.log(f"[{citem['id']}] buildChannels, _suspend")
-                        if not self.service._sleep(CPU_CYCLE): continue
-                    elif _update or _changed:                       
-                        if preview:             self.pMSG = LANGUAGE(32236)                           
-                        elif start == fallback: self.pMSG = f"{LANGUAGE(30014)} {LANGUAGE(30223)}"
-                        else:                   self.pMSG = f"{LANGUAGE(32022)} {LANGUAGE(30223)}"
-                            
-                        self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
-                        self.log(f"[{citem['id']}] buildChannels, start ({start}) => {self.pMSG}")
-
-                        if start > 0:
-                            with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
-                                self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
-                                if citem.get('radio', False): fileList = self.buildMusic(citem)
-                                else:                         fileList = self.buildVideo(citem)
-                                    
-                                if isinstance(fileList, list):
-                                    fileList = sorted(__addScheduling(citem, fileList, now, start), key=itemgetter('start'))
-                                    if not citem.get('radio', False): 
-                                        fileList = sorted(__addFillers(citem, fileList, self.enableBCTs), key=itemgetter('start'))
-                                    if not preview and __hasFileList(fileList):
-                                        updated.add(__addProgrammes(citem, fileList))
-                                elif not fileList:
-                                    hasProgrammes = __hasProgrammes(citem)
-                                    updated.add(hasProgrammes)
-                                    if len(self.pErrors) > 0:
-                                        if hasProgrammes: 
-                                            self.pErrors.append(LANGUAGE(32033))
-                                        chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
-                                        self.log(f"[{citem['id']}] buildChannels, In-Valid Channel ({self.pName}) {chanErrors}")
-                                        self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}: {chanErrors}', header=f'{ADDON_NAME}, {LANGUAGE(32027)} {LANGUAGE(30223)}')
-                                self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
-                                if preview: return fileList
-                    else: updated.add(__hasProgrammes(citem))
+            
+            preview_results = {}
+            with M3U(writable=write) as m3u, XMLTVS(writable=write, m3u=m3u) as epg:
+                all_stop_times = dict(epg.loadStopTimes(channels, fallback=fallback_str))
+                has_programmes = dict(epg.hasProgrammes(channels)) if hasattr(self, 'xmltv') else {}
+                
+                for idx, citem in enumerate(channels):
+                    try:
+                        updated = set()
+                        self.pMSG = f"{LANGUAGE(32144)}: {LANGUAGE(32212)}"
+                        self.pHeader = ADDON_NAME
+                        self.pName   = citem.get('name', '')
+                        self.pCount  = int(idx * 100) // self.cCount
                         
-                    if any(updated): 
-                        complete.add(__addStation(citem)) 
-                        PROPERTIES.setPropTimer('chkPVRRefresh')
-                    else: __clrStation(citem)
-                    __setStation()
-                except Exception as e: 
-                    self.log(f"buildChannels, failed! {e}", xbmc.LOGERROR)
-            if any(changes): 
-                self.channels.setChannels()
-            self.log(f"buildChannels execution completed. Status metrics matched successfully.")
+                        if self.service._interrupt():
+                            self.log(f"[{citem.get('id')}] buildChannels, _interrupt")
+                            self.service._que(( self.service.tasks.chkChannels, (channels,), {'batch_id': f"batch.{self.__class__.__name__}.chkChannels", 'idx': idx, 'silent': silent} ), priority=2)
+                            break
+                        elif self.service._suspend():
+                            self.log(f"[{citem.get('id')}] buildChannels, _suspend")
+                            if not self.service._sleep(CPU_CYCLE): 
+                                continue
+                                
+                        citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
+                        raw_start = all_stop_times.get(citem.get('id'), fallback_epoch)
+                        
+                        if isinstance(raw_start, str):
+                            start_epoch = float(string_to_epoch(raw_start))
+                            start_timestamp_str = raw_start
+                        else:
+                            start_epoch = float(raw_start)
+                            start_timestamp_str = epochTime(start_epoch, tz=False).strftime(DTFORMAT)
+
+                        _update = start_epoch <= fallback_epoch or start_epoch <= future_stop
+                        self.log(f"[{citem.get('id')}] Schedule delta audit -> Update Required: {_update} | Target End: {start_timestamp_str}")
+
+                        _changed = citem.get('changed', False)
+                        if not _changed and getattr(self, 'enableChanged', False):
+                            paths = citem.get('path', [])
+                            valid_extensions = tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)
+                            _changed = any(SETTINGS.getFileCRC(f) for f in paths if f.endswith(valid_extensions))
+                        
+                        if _changed:
+                            self.log(f"[{citem.get('id')}] Playlist signature mutation caught; flushing target datasets.")
+                            self.resetPagination(citem)
+                            m3u.delStation(citem)
+                            epg.delBroadcast(citem)
+                            citem['changed'] = False
+                            changes.add(self.channels.addChannel(citem))
+
+                        if _update or _changed:                       
+                            self.pMSG = LANGUAGE(32236) if preview else (f"{LANGUAGE(30014)} {LANGUAGE(30223)}" if start_timestamp_str == fallback_str else f"{LANGUAGE(32022)} {LANGUAGE(30223)}")
+                            self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
+
+                            if start_epoch > 0:
+                                with DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
+                                    self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
+                                    fileList = self.buildMusic(citem) if citem.get('radio', False) else self.buildVideo(citem)
+                                    
+                                    if isinstance(fileList, list) and fileList:
+                                        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)
+                                        for s_idx, item in enumerate(fileList):
+                                            duration = item.get('duration')
+                                            if not duration: continue
+                                            item["idx"] = s_idx
+                                            item['start'] = start_epoch
+                                            item['stop'] = start_epoch + duration
+                                            start_epoch = item['stop']
+                                            
+                                        fileList = sorted(self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, fileList, inherited=self), key=itemgetter('start'))
+                                        if not citem.get('radio', False): fileList = sorted(Fillers(citem, self).injectFillers(fileList), key=itemgetter('start'))
+                                        if preview: preview_results[citem.get('id')] = fileList
+                                        else:
+                                            prog_added = any([epg.addProgram(citem.get('id'), epg.getProgramItem(citem, item)) for item in fileList])
+                                            updated.add(prog_added)
+                                            self.log(f"[{citem.get('id')}] Pipeline serialization completed -> Total entries matching: {len(fileList)}")
+                                    
+                                    elif not fileList:
+                                        has_progs = has_programmes.get(citem.get('id'), False)
+                                        updated.add(has_progs)
+                                        if self.pErrors:
+                                            if has_progs: self.pErrors.append(LANGUAGE(32033))
+                                            chanErrors = ' | '.join(sorted(set(self.pErrors)))
+                                            self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}: {chanErrors}', header=f'{ADDON_NAME}, Errors detected.')
+                                    self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
+                        else:
+                            has_progs = has_programmes.get(citem.get('id'), False)
+                            updated.add(has_progs)
+                        
+                        if any(updated): 
+                            sitem = m3u.getStationItem(citem)
+                            station_added = any([m3u.addStation(sitem), epg.addChannel(sitem)])
+                            complete.add(station_added) 
+                        else:
+                            self.resetPagination(citem)
+                            m3u.delStation(citem)
+                            epg.delBroadcast(citem)
+                    except Exception as e: 
+                        self.log(f"Channel compiler faulted critically at index execution point: {str(e)}", xbmc.LOGERROR)
+
+            if any(changes): self.channels.setChannels()
+            self.log("Channel compilation loop finished successfully.")
+            return preview_results if preview else None
 
 
     def buildMusic(self, citem: dict) -> list:
@@ -355,304 +325,351 @@ class Builder(object):
         )
         
         
-    def buildVideo(self, citem: dict, validate: bool=False):
-        def _validFileList(fileArray):
-            return any(len(fileList) > 0 for fileList in fileArray)
+    def buildVideo(self, citem: dict, validate: bool = False):
+        paths = citem.get('path', [])
+        if isinstance(paths, (str, bytes)):
+            paths = [paths]
+        path_len = len(paths)
+
+        tmp_citem = citem.copy()
+        if paths == ["{Seasonal}"]:
+            nrules = {800: {"values": {0: list(self.seasonal.buildSeasonal(self.holiday))}}}
+            tmp_citem.setdefault('rules', {}).update(nrules)
+            self.log(f" [{citem.get('id')}] buildVideo: Seasonal Content, new rules = {nrules}")
             
-        def _injectRules(citem):
-            tmpCitem = citem.copy()
-            if tmpCitem.get('path', []) == ["{Seasonal}"]:
-                nrules = {800: {"values": {0: list(self.seasonal.buildSeasonal(self.holiday))}}}
-                tmpCitem.setdefault('rules', {}).update(nrules)
-                self.log(f" [{citem['id']}] buildVideo: _injectRules, Seasonal Content, new rules = {nrules}")
-                
-            if self.enableEven and not citem.get('rules', {}).get(1000):
-                nrules = {1000: {"values": {0: SETTINGS.getSettingInt('Enable_Even'), 1: self.evenEpisode, 2: self.evenShuffle}}}
-                tmpCitem.setdefault('rules', {}).update(nrules)
-                self.log(f" [{citem['id']}] buildVideo: _injectRules, Even Show Distribution, new rules = {nrules}")
-            return tmpCitem
+        if self.enableEven and not tmp_citem.get('rules', {}).get(1000):
+            nrules = {1000: {"values": {0: SETTINGS.getSettingInt('Enable_Even'), 1: self.evenEpisode, 2: self.evenShuffle}}}
+            tmp_citem.setdefault('rules', {}).update(nrules)
+            self.log(f" [{citem.get('id')}] buildVideo: Even Show Distribution, new rules = {nrules}")
             
-        citem     = _injectRules(citem) 
+        citem = tmp_citem
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self) 
-        self.log(f"[{citem['id']}] buildVideo, channel pre fileArray items = {len(fileArray)}", xbmc.LOGINFO)
+        self.log(f"[{citem.get('id')}] buildVideo, channel pre fileArray items = {len(fileArray)}", xbmc.LOGINFO)
         
-        if not _validFileList(fileArray): 
-            for idx, paths in enumerate(citem.get('path', [])):
+        has_valid_files = any(len(sublist) > 0 for sublist in fileArray if isinstance(sublist, list))
+        if not has_valid_files: 
+            for idx, base_path in enumerate(paths):
                 if self.service._interrupt():
-                    self.log(f"[{citem['id']}] buildVideo, _interrupt")
+                    self.log(f"[{citem.get('id')}] buildVideo, _interrupt")
                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                     return []
                 elif self.service._suspend():
-                    self.log(f"[{citem['id']}] buildVideo, _suspend")
+                    self.log(f"[{citem.get('id')}] buildVideo, _suspend")
                     if not self.service._sleep(CPU_CYCLE): 
                         continue
-                else:
-                    if len(citem.get('path', [])) > 1:
-                        self.pName = f"{citem['name']} {idx+1}/{len(citem.get('path',[]))}"
-                        
-                    if self.xsp.isXSP(paths):
-                        paths = self.xsp.parseXSP(citem['id'], paths)
-                    elif isinstance(paths, (str, bytes)):
-                        paths = [paths]
-                    
-                    if self.sort.get("method", "") == 'random':
-                        self.log(f"[{citem['id']}] buildVideo, random shuffling [{idx}/{len(paths)}]")
-                        paths = Globals._randomShuffle(paths)               
+                
+                if path_len > 1: self.pName = f"{citem.get('name', '')} {idx + 1}/{path_len}"
+                sub_paths = self.xsp.parseXSP(citem.get('id'), base_path) if self.xsp.isXSP(base_path) else [base_path]
+                if self.sort.get("method", "") == 'random':
+                    self.log(f"[{citem.get('id')}] buildVideo, random shuffling [{idx}/{len(sub_paths)}]")
+                    sub_paths = Globals._randomShuffle(sub_paths)               
 
-                    for cnt, path in enumerate(paths):
-                        if len(paths) > 1:
-                            self.pName = f"{citem['name']} {idx+1}/{len(citem.get('path',[]))}\n{cnt+1}/{len(paths)}"
-                            
-                        self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}', header=self.pHeader)
-                        fileList = self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, path, inherited=self), 'video', self.limit, self.sort, self.limits, self.query)
-                        if isinstance(fileList, list): 
-                            fileArray.append(fileList)
+                sub_path_len = len(sub_paths)
+                for cnt, path in enumerate(sub_paths):
+                    if sub_path_len > 1:
+                        self.pName = f"{citem.get('name', '')} {idx + 1}/{path_len}\n{cnt + 1}/{sub_path_len}"
+                        
+                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}', header=self.pHeader)
+                    processed_path = self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, path, inherited=self)
+                    fileList = self.buildFileList(citem, processed_path, 'video', self.limit, self.sort, self.limits, self.query)
+                    
+                    if isinstance(fileList, list): 
+                        fileArray.append(fileList)
                         if validate and len(fileList) > 0: 
                             break
-                        self.log(f"[{citem['id']}]  buildVideo, validate = {validate}, fileList [{len(fileList)}/{sum(len(sublist) for sublist in fileArray)}], path [{cnt}/{self.limit}]\n{path}, ")
-        
+                            
+                    self.log(f"[{citem.get('id')}] buildVideo, validate = {validate}, fileList [{len(fileList)}/{sum(len(sublist) for sublist in fileArray if isinstance(sublist, list))}], path [{cnt}/{self.limit}]\n{path}")
+                if validate and any(len(sublist) > 0 for sublist in fileArray if isinstance(sublist, list)):
+                    break
+
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self) 
         if isinstance(fileArray, list):
-            self.log(f"[{citem['id']}] buildVideo, channel post fileArray items = {len(fileArray)}", xbmc.LOGINFO)
-            if not _validFileList(fileArray):
-                self.log(f"[{citem['id']}] buildVideo, channel fileArray In-Valid!", xbmc.LOGINFO)
+            self.log(f"[{citem.get('id')}] buildVideo, channel post fileArray items = {len(fileArray)}", xbmc.LOGINFO)
+            if not any(len(sublist) > 0 for sublist in fileArray if isinstance(sublist, list)):
+                self.log(f"[{citem.get('id')}] buildVideo, channel fileArray In-Valid!", xbmc.LOGINFO)
                 return False
-            fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, interleave(fileArray, self.interleaveSet, self.interleaveRepeat), inherited=self)
-            self.log(f"[{citem['id']}] buildVideo, pre fileList items = {len(fileList)}", xbmc.LOGINFO)
+                
+            interleaved = interleave(fileArray, self.interleaveSet, self.interleaveRepeat)
+            fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, interleaved, inherited=self)
+            self.log(f"[{citem.get('id')}] buildVideo, pre fileList items = {len(fileList)}", xbmc.LOGINFO)
             fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, fileList, inherited=self)
-            self.log(f"[{citem['id']}] buildVideo, post fileList items = {len(fileList)}", xbmc.LOGINFO)
+            self.log(f"[{citem.get('id')}] buildVideo, post fileList items = {len(fileList)}", xbmc.LOGINFO)
         else:
-            fileList = fileArray
+            fileList = fileArray if isinstance(fileArray, list) else []
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN, citem, fileList, inherited=self)
 
 
-    def buildFileList(self, citem: dict, path: str, media: str='video', page: int=None, sort=None, limits=None, query=None) -> list:
+    def buildFileList(self, citem: dict, path: str, media: str = 'video', page: int = None, sort = None, limits = None, query = None) -> list:
         if page is None:   page   = SETTINGS.getSettingInt('Page_Limit')
         if sort is None:   sort   = {}
         if limits is None: limits = {"end": -1, "start": 0, "total": 0}
         if query is None:  query  = {}
-
-        self.log(f"[{citem['id']}] buildFileList, path = {path}\nmedia = {media}, limit = {page}, sort = {sort}, page = {limits}")
+        self.log(f"[{citem.get('id')}] buildFileList, path = {path}\nmedia = {media}, limit = {page}, sort = {sort}, page = {limits}")
         self.loopback = None
-        
-        def __padFileList(fileItems, page):
-            self.log(f"[{citem['id']}] buildFileList, __padFileList fileItems")
-            if page > len(fileItems):
-                tmpList   = fileItems * (page // len(fileItems))
-                remainder = page % len(fileItems)
-                if remainder > 0:
-                    tmpList.extend(fileItems[-remainder:])
-                self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'padding {remainder} files', header=self.pHeader)
-                return tmpList
-            return fileItems
 
         if self.xsp.isDXSP(path):
-            path = self.xsp.parseDXSP(citem['id'], path, self.filter, self.incExtras)
-  
+            path = self.xsp.parseDXSP(citem.get('id'), path, self.filter, self.incExtras)
+     
         fileList = []
         dirCount = -1
         dirList  = [{'file': path}]
-        self.log(f"[{citem['id']}] buildFileList, path = {path}\nsort = {sort}, limits = {limits}, page = {page}")
+        self.log(f"[{citem.get('id')}] buildFileList, path = {path}\nsort = {sort}, limits = {limits}, page = {page}")
         
         while not self.monitor.abortRequested():
             if self.service._interrupt():
-                self.log(f"[{citem['id']}] buildFileList, _interrupt")
+                self.log(f"[{citem.get('id')}] buildFileList, _interrupt")
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                 return []
+            
             elif self.service._suspend():
-                self.log(f"[{citem['id']}] buildFileList, _suspend")
+                self.log(f"[{citem.get('id')}] buildFileList, _suspend")
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
                 if not self.service._sleep(CPU_CYCLE): 
                     continue
+            
             elif len(dirList) == 0 or dirCount >= self.recursiveLimit:
-                if self.padFilelist and 0 < len(fileList) < page: 
-                    fileList = __padFileList(fileList, page)
-                elif len(fileList) < page and len(dirList) > dirCount: 
-                    self.pErrors.append(LANGUAGE(32262))
-                self.log(f"[{citem['id']}] buildFileList, no more folders to parse or recursive limit met.")
+                list_len = len(fileList)
+                if self.padFilelist and 0 < list_len < page: 
+                    self.log(f"[{citem.get('id')}] buildFileList, __padFileList processing")
+                    multiplier = page // list_len
+                    remainder  = page % list_len
+                    paddedList = fileList * multiplier
+                    if remainder > 0: paddedList.extend(fileList[:remainder])
+                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'padding {remainder} files', header=self.pHeader)
+                    fileList = paddedList
+                    
+                elif list_len < page and len(dirList) > dirCount: self.pErrors.append(LANGUAGE(32262))
+                self.log(f"[{citem.get('id')}] buildFileList, no more folders to parse or recursive limit met.")
                 break
-            elif len(dirList) > 0:
+                
+            else:
                 dirCount += 1
                 folder   = dirList.pop(0)
-                path     = folder.get('file')
+                current_path = folder.get('file')
+                
                 if folder.get("label"): 
                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'parsing folder: {folder.get("label")}', header=self.pHeader)
                 
-                subfileList, subdirList, limits, errors = self.buildList(citem, path, media, abs(page - len(fileList)), sort, limits, folder, query)
+                remaining_needed = abs(page - len(fileList))
+                subfileList, subdirList, limits, errors = self.buildList(citem, current_path, media, remaining_needed, sort, limits, folder, query)
                 if sort.get("method", "") == 'random':
-                    self.log(f"[{citem['id']}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], random shuffling ")
-                    subdirList  = Globals._randomShuffle(subdirList)
-                    subfileList = Globals._randomShuffle(subfileList)
+                    self.log(f"[{citem.get('id')}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], random shuffling")
+                    if isinstance(subdirList, list):  subdirList  = Globals._randomShuffle(subdirList)
+                    if isinstance(subfileList, list): subfileList = Globals._randomShuffle(subfileList)
                     
                 if isinstance(subfileList, list): 
                     fileList.extend(subfileList)
+                    
                 if isinstance(subdirList, list):  
-                    dirList = Globals._setDictLST(dirList + subdirList)
-                self.log(f"[{citem['id']}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], adding fileList [{len(fileList)}/{page}] remaining sub-directories [{len(dirList)}]\npath = {path}, limits = {limits}")
-
-        self.log(f"[{citem['id']}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], returning fileList [{len(fileList)}/{page}]")
+                    dirList.extend(subdirList)
+                    dirList = Globals._setDictLST(dirList)
+                self.log(f"[{citem.get('id')}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], adding fileList [{len(fileList)}/{page}] remaining sub-directories [{len(dirList)}]\npath = {current_path}, limits = {limits}")
+        self.log(f"[{citem.get('id')}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], returning fileList [{len(fileList)}/{page}]")
         return fileList
 
 
-    def buildList(self, citem: dict, path: str, media: str='video', page: int=None, sort=None, limits=None, dirItem=None, query=None):
+    def buildList(self, citem: dict, path: str, media: str = 'video', page: int = None, sort = None, limits = None, dirItem = None, query = None):
         if page is None:    page    = SETTINGS.getSettingInt('Page_Limit')
         if sort is None:    sort    = {}
         if limits is None:  limits  = {"end": -1, "start": 0, "total": 0}
         if dirItem is None: dirItem = {}
         if query is None:   query   = {}
-
-        self.log(f"[{citem['id']}] buildList, media = {media}, path = {path}\npage = {page}, sort = {sort}, query = {query}, limits = {limits}\ndirItem = {dirItem}")
+        self.log(f"[{citem.get('id')}] buildList, media = {media}, path = {path}\npage = {page}, sort = {sort}, query = {query}, limits = {limits}\ndirItem = {dirItem}")
+        
         nlimits = limits
-        errors  = {}
-        items   = self.runActions(RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE, citem, [], inherited=self)
+        pre_items = self.runActions(RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE, citem, [], inherited=self)
         items, nlimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, self.filter, limits, query)
+        if not items and pre_items: items = pre_items
         items = self.runActions(RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST, citem, items, inherited=self)
         
-        if errors.get('message'):
-            self.pErrors.append(errors['message'])
+        error_msg = errors.get('message') if isinstance(errors, dict) else None
+        if error_msg:
+            self.pErrors.append(error_msg)
             return [], [], nlimits, errors
-        elif not items:
-            self.log(f"[{citem['id']}] buildList, no request items found using path = {path}")
+            
+        if not items:
+            self.log(f"[{citem.get('id')}] buildList, no request items found using path = {path}")
             self.pErrors.append(LANGUAGE(32026))
             return [], [], nlimits, errors
-        elif items == self.loopback and limits != nlimits:
-            self.log(f"[{citem['id']}] buildList, loopback detected using path = {path}")
+            
+        if items == self.loopback and limits != nlimits:
+            self.log(f"[{citem.get('id')}] buildList, loopback detected using path = {path}")
             self.pErrors.append(LANGUAGE(32030))
             return [], [], nlimits, errors
-        elif items:
-            self.loopback = items
-            fileList, dirList = self.buildFiles(citem, path, items, media, page, sort, limits, dirItem, query)
-            if len(fileList) == 0 and path in dirList: 
-                self.jsonRPC.autoPagination(citem['id'], path, query, limits)
-            self.log(f"[{citem['id']}] buildList, returning fileList [{len(fileList)}], dirList [{len(dirList)}]")
-            return fileList, dirList, nlimits, errors
+            
+        self.loopback = items
+        fileList, dirList = self.buildFiles(citem, path, items, media, page, sort, limits, dirItem, query)
+        if len(fileList) == 0 and isinstance(dirList, list):
+            has_matching_dir = any(
+                path == d or (isinstance(d, dict) and d.get('file') == path) 
+                for d in dirList
+            )
+            if has_matching_dir:
+                self.jsonRPC.autoPagination(citem.get('id'), path, query, limits)
+                
+        self.log(f"[{citem.get('id')}] buildList, returning fileList [{len(fileList)}], dirList [{len(dirList)}]")
+        return fileList, dirList, nlimits, errors
 
 
-    def buildFiles(self, citem: dict, path: str, items: list=None, media: str='video', page: int=None, sort=None, limits=None, dirItem=None, query=None):
-        if items is None:   items    = []
+    def buildFiles(self, citem: dict, path: str, items: list = None, media: str = 'video', page: int = None, sort = None, limits = None, dirItem = None, query = None):
+        if items is None:   items   = []
         if page is None:    page    = SETTINGS.getSettingInt('Page_Limit')
         if sort is None:    sort    = {}
         if limits is None:  limits  = {"end": -1, "start": 0, "total": 0}
         if dirItem is None: dirItem = {}
         if query is None:   query   = {}
-
         fileList, dirList, seasoneplist = [], [], []
+        items_len = len(items)
+        vfs_tuple = tuple(VFS_TYPES) if 'VFS_TYPES' in globals() else ()
+        tv_tuple  = tuple(TV_TYPES) if 'TV_TYPES' in globals() else ()
+        
+        holiday   = None
+        holiday_values = citem.get('rules', {}).get(800, {}).get('values', {}).get(0, [])
+        if holiday_values and isinstance(holiday_values, list):
+            holiday = holiday_values[0].get('holiday') if isinstance(holiday_values[0], dict) else None
+
+        default_type = query.get('key', 'files')
+        sort_method = sort.get("method", "")
         for idx, item in enumerate(items):
-            file        = item.get('file', '')
-            fileType    = item.get('filetype', 'file')
-            self.fCount = int(idx * 100) // len(items)
-            if self.cCount == 1: 
-                self.pCount = max(0, min(self.fCount, 99))
-                self.fCount = -1
+            if not isinstance(item, dict): continue
             
-            if not item.get('type'): item['type'] = query.get('key', 'files')
+            file = item.get('file', '')
+            fileType = item.get('filetype', 'file')
+            
+            if items_len > 0:
+                self.fCount = int(idx * 100) // items_len
+                if self.cCount == 1: 
+                    self.pCount = max(0, min(self.fCount, 99))
+                    self.fCount = -1
+
+            if not item.get('type'): 
+                item['type'] = default_type
+
             if self.service._interrupt() or self.service._suspend():
-                self.log(f"[{citem['id']}] buildFiles, _interrupt/_suspend")
+                self.log(f"[{citem.get('id')}] buildFiles, _interrupt/_suspend")
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                 break
-            elif fileType == 'directory':
+
+            if fileType == 'directory':
                 dirList.append(item)
                 continue
             elif fileType != 'file':
                 continue
-            else:
-                suffix = "" if self.fCount < 0 else f": {self.fCount}%"
-                self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}{suffix}',header=self.pHeader)
-                if file.startswith('pvr://'): #parse encoded fileitem otherwise no relevant meta provided via org. query. playable pvr:// paths are limited in Kodi.
-                    self.log("[%s] buildFiles, IDX = %s, PVR item => FileItem! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                    item = Globals._decodePlot(item.get('plot',''))
-                    file = item.get('file')
-                if not file:
-                    self.pErrors.append(LANGUAGE(32031))
-                    self.log("[%s] buildFiles, IDX = %s, skipping missing playable file! path = %s"%(citem['id'],idx,path),xbmc.LOGINFO)
-                    continue
-                elif (file.lower().endswith('strm') and not self.incStrms): 
-                    self.pErrors.append('%s STRM'%(LANGUAGE(32027)))
-                    self.log("[%s] buildFiles, IDX = %s, skipping strm file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                    continue
-                elif not self.inc3D:
-                    if self.is3D(item):
-                        item['is3D'] = True
-                        self.pErrors.append('%s 3D'%(LANGUAGE(32027)))
-                        self.log("[%s] buildFiles, IDX = %s skipping 3D file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                        continue
 
-                if self.incStrmDetails and not item.get('streamdetails',{}).get('video',[]) and not file.startswith(tuple(VFS_TYPES)): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
+            suffix = "" if self.fCount < 0 else f": {self.fCount}%"
+            self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
+
+            if file.startswith('pvr://'):
+                self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx}, PVR item => FileItem! file = {file}", xbmc.LOGINFO)
+                item = Globals._decodePlot(item.get('plot', ''))
+                file = item.get('file', '')
+
+            if not file:
+                self.pErrors.append(LANGUAGE(32031))
+                self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx}, skipping missing playable file! path = {path}", xbmc.LOGINFO)
+                continue
+
+            if file.lower().endswith('strm') and not self.incStrms: 
+                self.pErrors.append(f"{LANGUAGE(32027)} STRM")
+                self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx}, skipping strm file! file = {file}", xbmc.LOGINFO)
+                continue
+
+            if not self.inc3D and self.is3D(item):
+                item['is3D'] = True
+                self.pErrors.append(f"{LANGUAGE(32027)} 3D")
+                self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx} skipping 3D file! file = {file}", xbmc.LOGINFO)
+                continue
+
+            # Fetch Missing Stream Details Metadata (Kodi JSON-RPC bug workaround)
+            if self.incStrmDetails and not file.startswith(vfs_tuple):
+                if not item.get('streamdetails', {}).get('video', []):
                     item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
 
-                label = (item.get("title") or item.get("label") or dirItem.get('label') or '')
-                if not label:  
-                    self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))
-                    continue
+            label = item.get("title") or item.get("label") or dirItem.get('label') or ''
+            if not label:  
+                self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))
+                continue
+                
+            # Normalize Metadata Schemas (TV Shows vs Movies)
+            is_tv_show = item['type'].startswith(tv_tuple) or "showtitle" in item
+            
+            if is_tv_show:
+                tvtitle = item.get("showtitle") or item.get("label") or dirItem.get('label') or ''
+                try:
+                    season  = int(item.get("season", 0))
+                    episode = int(item.get("episode", 0))
+                except (ValueError, TypeError):
+                    season, episode = 0, 0
                     
-                # This is a TV show
-                if (item['type'].startswith(tuple(TV_TYPES)) or item.get("showtitle")):
-                    tvtitle = (item.get("showtitle") or item.get("label") or dirItem.get('label') or '')
-                    try:
-                        season  = int(item.get("season","0"))
-                        episode = int(item.get("episode","0"))
-                    except (ValueError, TypeError):
-                        season, episode = 0, 0
-                    if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
-                        self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
-                        self.log("[%s] buildFiles, IDX = %s skipping extras! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                        continue
+                if not file.startswith(vfs_tuple) and not self.incExtras and (season == 0 or episode == 0):
+                    self.pErrors.append(f"{LANGUAGE(32027)} Extras")
+                    self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx} skipping extras! file = {file}", xbmc.LOGINFO)
+                    continue
 
-                    label = tvtitle
-                    item["tvshowtitle"]  = tvtitle
-                    item["episodetitle"] = label
-                    item["episodelabel"] = '%s%s'%(label,' (%sx%s)'%(season,str(episode).zfill(2))) #Episode Title (SSxEE) Mimic Kodi's PVR label format
-                    item["showlabel"]    = '%s%s'%(item["tvshowtitle"],' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
-                else: # This is a Movie
-                    item["episodetitle"] = item.get("tagline","")
-                    item["episodelabel"] = item.get("tagline","")
-                    item["showlabel"]    = '%s%s'%(item.get("title",""), ' - %s'%(item['episodelabel']) if item['episodelabel'] else '')
-                
-                dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
-                if dur > self.minDuration: #include media that's duration is above the players seek tolerance & users adv. rule
-                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}{suffix}',header=self.pHeader)
-                    item['duration']     = dur
-                    item['media']        = media
-                    item['originalpath'] = path #use for path sorting/playback verification 
-                    item['friendly']     = PROPERTIES.getFriendlyName()
-                    item['remote']       = PROPERTIES.getRemoteHost()
-                        
-                    if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554
-                    spTitle, spYear = splitYear(label)
-                    item['label']   = spTitle
-                        
-                    if item.get('year',0) == 0 and spYear: item['year'] = spYear #replace missing item year with one parsed from show title
-                    item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(32020)).strip()
-                        
-                    holiday = citem.get('rules',{}).get(800,{}).get('values',{}).get(0,[{}])[0].get('holiday',{})
-                    if holiday: #add seasonal meta
-                        item["plot"] = "%s \n%s"%("[B]%s[/B] - [I]%s[/I]"%(holiday["name"],holiday["tagline"]) if holiday["tagline"] else "[B]%s[/B]"%(holiday["name"]),item["plot"])
-                        
-                    item['art'] = (item.get('art',{}) or dirItem.get('art',{}))
-                    item.get('art',{})['icon'] = citem['logo']
-                        
-                    if item.get('trailer'): self.service._que(self.jsonRPC.addTrailer,-1,0,0,item)
-                    if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
-                        seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
-                    else: 
-                        fileList.append(item)
+                label = tvtitle
+                item["tvshowtitle"]  = tvtitle
+                item["episodetitle"] = label
+                item["episodelabel"] = f"{label} ({season}x{str(episode).zfill(2)})"
+                item["showlabel"]    = f"{tvtitle} - {item['episodelabel']}" if item['episodelabel'] else tvtitle
+            else:
+                tagline = item.get("tagline", "")
+                item["episodetitle"] = tagline
+                item["episodelabel"] = tagline
+                item["showlabel"]    = f"{item.get('title', '')} - {tagline}" if tagline else item.get('title', '')
+            
+            # Duration Validation
+            dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
+            if dur > self.minDuration:
+                self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
+                item.update({
+                    'duration': dur,
+                    'media': media,
+                    'originalpath': path,
+                    'friendly': PROPERTIES.getFriendlyName(),
+                    'remote': PROPERTIES.getRemoteHost()
+                })
+                    
+                if item.get("year", 0) == 1601: 
+                    item['year'] = 0
+                    
+                spTitle, spYear = splitYear(label)
+                item['label'] = spTitle
+                    
+                if item.get('year', 0) == 0 and spYear: 
+                    item['year'] = spYear
+                    
+                raw_plot = item.get("plot") or item.get("plotoutline") or item.get("description") or LANGUAGE(32020)
+                item['plot'] = raw_plot.strip()
+                    
+                if holiday:
+                    tagline_str = f" - [I]{holiday['tagline']}[/I]" if holiday.get("tagline") else ""
+                    item["plot"] = f"[B]{holiday.get('name', '')}[/B]{tagline_str}\n{item['plot']}"
+                    
+                item['art'] = item.get('art', {}) or dirItem.get('art', {})
+                item['art']['icon'] = citem.get('logo', '')
+                    
+                if item.get('trailer'): 
+                    self.service._que(self.jsonRPC.addTrailer, -1, 0, 0, item)
+                    
+                if sort_method == 'episode' and (season + episode) > 0: 
+                    seasoneplist.append((season, episode, item))
                 else: 
-                    self.pErrors.append(LANGUAGE(32032))
-                    self.log("[%s] buildFiles, IDX = %s skipping content no duration meta found! or runtime below minDuration (%s/%s) file = %s"%(citem['id'],idx,dur,self.minDuration,file),xbmc.LOGINFO)
+                    fileList.append(item)
+            else: 
+                self.pErrors.append(LANGUAGE(32032))
+                self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx} skipping content: duration too low ({dur}/{self.minDuration}) file = {file}", xbmc.LOGINFO)
         
-        if sort.get("method","") == 'episode':
-            self.log("[%s] buildFiles, sorting by episode"%(citem['id']))
-            seasoneplist.sort(key=lambda seep: seep[1])
-            seasoneplist.sort(key=lambda seep: seep[0])
-            for seepitem in seasoneplist: 
-                fileList.append(seepitem[2])
+        if sort_method == 'episode':
+            self.log(f"[{citem.get('id')}] buildFiles, sorting by episode")
+            seasoneplist.sort(key=lambda seep: (seep[0], seep[1]))
+            fileList.extend(seep[2] for seep in seasoneplist)
                 
-        elif sort.get("method","") == 'random':
-            self.log("[%s] buildFiles, random shuffling"%(citem['id']))
+        elif sort_method == 'random':
+            self.log(f"[{citem.get('id')}] buildFiles, random shuffling")
             dirList  = Globals._randomShuffle(dirList)
             fileList = Globals._randomShuffle(fileList)
             
-        self.log("[%s] buildFiles, returning (%s) files, (%s) dirs"%(citem['id'],len(fileList),len(dirList)))
+        self.log(f"[{citem.get('id')}] buildFiles, returning ({len(fileList)}) files, ({len(dirList)}) dirs")
         return fileList, dirList
 
 

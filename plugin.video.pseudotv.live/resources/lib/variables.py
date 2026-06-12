@@ -40,30 +40,6 @@ PROVIDERFLEPATH     = os.path.join(CACHE_LOC,PROVIDERFLE)
 
 class Globals:
     @staticmethod
-    def _getEXTProperty(key, default=''):
-        try:
-            value = (xbmcgui.Window(10000).getProperty(key) or default)
-            try: value = literal_eval(value)
-            except (ValueError, SyntaxError): pass
-            if not '.TRASH' in key: log(f'Globals: [10000] _getEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-            return value 
-        except Exception as e: 
-            log(f'Globals: [10000] _getEXTProperty, failed! key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}\n{e}')
-            return default
-
-    @staticmethod
-    def _setEXTProperty(key, value):
-        if not value is None: 
-            xbmcgui.Window(10000).setProperty(key, value)
-            if not '.TRASH' in key: log(f'Globals: [10000] _setEXTProperty, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
-        return value
-
-    @staticmethod
-    def _clrEXTProperty(key):
-        log(f'Globals: [10000] _clrEXTProperty, key = {key}')
-        return xbmcgui.Window(10000).clearProperty(key)
-
-    @staticmethod
     def _encodePlot(plot, text):
         return '%s [COLOR item="%s"][/COLOR]'%(plot,FileAccess._encodeString(text))
         

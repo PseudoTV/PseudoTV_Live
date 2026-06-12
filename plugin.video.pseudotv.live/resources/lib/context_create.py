@@ -60,7 +60,7 @@ def _add(sysARG, listitem: dict={}):
                     manager._addChannels(citem['number'], citem)
                     manager.closeManager()
                 del manager
-                PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
+                PROPERTIES.setPropTimer('chkChanged')# Refresh Channel Changed!
                 return DIALOG.notificationDialog("%s [B]%s[/B]: [B]%s[/B]\nAdded!"%(LANGUAGE(30223),citem['number'],citem['name']))
 
 def _autotune(start=1, count=-1, automatic=False):
@@ -114,7 +114,7 @@ def _autotune(start=1, count=-1, automatic=False):
         manager._addChannels(start, Globals._randomShuffle(items))
         manager.closeManager()
         del manager
-    PROPERTIES.setPropTimer('chkChanged')#refresh channel changed
+    PROPERTIES.setPropTimer('chkChanged')# Refresh Channel Changed!
     return True
 
 if __name__ == '__main__': 

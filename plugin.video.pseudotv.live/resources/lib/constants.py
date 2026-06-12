@@ -68,7 +68,7 @@ CPU_COUNT           = os.cpu_count() or 1
 CPU_CYCLE           = 0.016 # ~60Hz
 THREAD_WORKERS      = min(32, CPU_COUNT * 5)
 QUEUE_CHUNK         = THREAD_WORKERS * 2
-
+MAX_CACHE_SIZE      = 1000
 DISCOVERY_TIMER     = 60    #secs
 SERVICE_INTERVAL    = 5.0   #secs
 TASK_INTERVAL       = 30.0  #secs

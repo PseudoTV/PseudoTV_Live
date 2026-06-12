@@ -23,13 +23,14 @@ from concurrent.futures  import ThreadPoolExecutor, as_completed, TimeoutError a
 
 class CustomQueue(object):
     def __init__(self, service=None):
-        self.service      = service
-        self.lock         = Lock()
-        self.min_heap     = []
-        self.itemCount    = defaultdict(int)
-        self.maxPriority  = 0
-        self.useExecutor  = SETTINGS.getSettingBool('Enable_Executor')
-        self.active_tasks = {}
+        self.service        = service
+        self.lock           = Lock()
+        self.min_heap       = []
+        self.itemCount      = defaultdict(int)
+        self.maxPriority    = 0
+        self.useExecutor    = SETTINGS.getSettingBool('Enable_Executor')
+        self.active_tasks   = {}
+        self._batch_cursors = {}
         
         self.executor     = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
         self.popThread    = None
@@ -41,6 +42,7 @@ class CustomQueue(object):
         with self.lock:
             self.min_heap.clear()
             self.itemCount.clear()
+            self._batch_cursors.clear() # Sync clear events
             self.maxPriority = 0
             
     def _use_executor(self):
@@ -73,11 +75,15 @@ class CustomQueue(object):
                     with self.lock:
                         if self.active_tasks.get(task_key, (None,))[0] == task_id:
                             self.active_tasks.pop(task_key, None)
+                            if 'batch_id' in kwargs:
+                                self._batch_cursors.pop(kwargs['batch_id'], None)
         except Exception as e: 
             self.log(f"_exe, Execution processing failure: {e}", xbmc.LOGERROR)
             with self.lock:
                 if self.active_tasks.get(task_key, (None,))[0] == task_id:
                     self.active_tasks.pop(task_key, None)
+                    if 'batch_id' in kwargs:
+                        self._batch_cursors.pop(kwargs['batch_id'], None)
 
     def _future_callback(self, future, task_key, task_id):
         try:
@@ -87,11 +93,14 @@ class CustomQueue(object):
         finally:
             with self.lock:
                 if self.active_tasks.get(task_key, (None,))[0] == task_id:
+                    _, _, kwargs = self.active_tasks[task_key] # Grab cached package parameters
+                    if 'batch_id' in kwargs:
+                        self._batch_cursors.pop(kwargs['batch_id'], None)
                     self.active_tasks.pop(task_key, None)
             
     def _exists(self, task_key: str, requested_priority: int):
         if task_key in self.active_tasks:
-            existing_task_id, existing_priority = self.active_tasks[task_key]
+            existing_task_id, existing_priority, _ = self.active_tasks[task_key]
             if requested_priority == -1 or requested_priority >= existing_priority:
                 self.log(f"_exists, dropping duplicate/delayed task signature: {task_key} "
                          f"(existing priority {existing_priority}, requested {requested_priority})")
@@ -103,11 +112,17 @@ class CustomQueue(object):
         return False, None
                     
     def _push(self, package: tuple, priority: int = 0, delay: int = 0, timer: int = 0):
-        func_name = package[0].__name__
+        func, args, kwargs = package
+        func_name = func.__name__
         is_alive = self.popThread.is_alive() if self.popThread else False
         self.log(f"_push (Fair-Share), package = {func_name}, priority = {priority}, delay = {delay}, timer = {timer}, isAlive = {is_alive}")
         
         with self.lock:
+            if 'batch_id' in kwargs:
+                batch_id = kwargs['batch_id']
+                current_idx = kwargs.get('idx', 0)
+                self._batch_cursors[batch_id] = current_idx
+
             now = time.time()
             if   timer: execute_at = timer
             elif delay: execute_at = now + delay
@@ -128,7 +143,7 @@ class CustomQueue(object):
                 try:
                     self.itemCount[priority] += 1
                     unique_task_id = f"{func_name}_{now}_{self.itemCount[priority]}"
-                    self.active_tasks[task_key] = (unique_task_id, priority)
+                    self.active_tasks[task_key] = (unique_task_id, priority, kwargs)
                     
                     heapq.heappush(self.min_heap, (scheduling_score, execute_at, self.itemCount[priority], unique_task_id, task_key, package))
                 except Exception as e:
@@ -169,6 +184,12 @@ class CustomQueue(object):
                         break
                         
                     _, _, _, task_id, task_key, package = heapq.heappop(self.min_heap)
+                    func, args, kwargs = package
+                    if 'batch_id' in kwargs:
+                        batch_id = kwargs['batch_id']
+                        if batch_id in self._batch_cursors:
+                            kwargs['idx'] = self._batch_cursors[batch_id]
+                            package = (func, args, kwargs)
                     break
 
             if package is None:
@@ -202,5 +223,7 @@ class CustomQueue(object):
         
     def _getKey(self, package: tuple) -> str:
         func, args, kwargs = package
-        sorted_kwargs = tuple(sorted(kwargs.items()))
+        cleaned_kwargs = kwargs.copy()
+        if 'batch_id' in cleaned_kwargs: cleaned_kwargs['idx'] = 'ATOMIC_INDEX_HOLDER'
+        sorted_kwargs = tuple(sorted(cleaned_kwargs.items()))
         return f"{func.__name__}|args:{args}|kwargs:{sorted_kwargs}"

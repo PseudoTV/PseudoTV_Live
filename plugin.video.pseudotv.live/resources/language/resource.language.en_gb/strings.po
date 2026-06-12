@@ -2020,6 +2020,14 @@ msgstr ""
 
 msgctxt "#32266"
 msgid "If [B]No[/B], debugging will automatically disable in [B]%s[/B] minutes."
+msgstr ""
+
+msgctxt "#32267"
+msgid "Keep Debugging enabled"
+msgstr ""
+
+
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
