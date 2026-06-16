@@ -49,7 +49,6 @@ class Tasks(object):
         self.service._que(self.chkPVRBackend    ,1)
         self.service._que(self.chkHTTP          ,1)
         self.service._que(self.chkDebugging     ,1)
-        self.service._que(self.monitor.chkIdle  ,1)
         self.service._que(self.chkVersion       ,1)
         self.service._que(self.chkKodiSettings  ,1)
         self.service._que(self.chkDiscovery     ,1)
@@ -321,7 +320,7 @@ class Tasks(object):
             self.log("chkChanged: No channel modifications detected. Skipping batch allocation.")
             return
         self.log(f"chkChanged: Distributing {len(changed_channels)} modified channels across concurrent batches.")
-        chunk_size = max(1, len(changed_channels) // 4)
+        chunk_size = max(1, len(changed_channels) // QUEUE_CHUNK)
         for i in range(0, len(changed_channels), chunk_size):
             batch = changed_channels[i:i + chunk_size]
             self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, batch, False, silent, True)
@@ -339,7 +338,7 @@ class Tasks(object):
             if SETTINGS.getSettingBool('Build_Filler_Folders'): 
                 self.service._que(self.chkFillers, 3, 0, 0, channels, silent)
 
-            chunk_size = max(1, channel_count // 4)
+            chunk_size = max(1, channel_count // QUEUE_CHUNK)
             for i in range(0, channel_count, chunk_size):
                 batch = channels[i:i + chunk_size]
                 self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, batch, False, silent, True)
@@ -409,7 +408,7 @@ class Tasks(object):
 
     def chkQUES(self):
         library = Library()
-        for i in list(range(QUEUE_CHUNK)):
+        for i in list(range(BATCH_SIZE)):
             if len(self.service.postQue) > 0:
                 try:
                     self.log(f"chkQUES postQue {len(self.service.postQue)}")

@@ -224,7 +224,7 @@ class Builder(object):
                         
                         if self.service._interrupt():
                             self.log(f"[{citem.get('id')}] buildChannels, _interrupt")
-                            self.service._que(( self.service.tasks.chkChannels, (channels,), {'batch_id': f"batch.{self.__class__.__name__}.chkChannels", 'idx': idx, 'silent': silent} ), priority=2)
+                            if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
                             break
                         elif self.service._suspend():
                             self.log(f"[{citem.get('id')}] buildChannels, _suspend")
@@ -648,7 +648,7 @@ class Builder(object):
                 item['art'] = item.get('art', {}) or dirItem.get('art', {})
                 item['art']['icon'] = citem.get('logo', '')
                     
-                if item.get('trailer'): 
+                if item.get('trailer') and hasattr(self.service,'_que'): 
                     self.service._que(self.jsonRPC.addTrailer, -1, 0, 0, item)
                     
                 if sort_method == 'episode' and (season + episode) > 0: 

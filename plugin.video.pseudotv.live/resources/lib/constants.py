@@ -46,6 +46,8 @@ from six.moves             import urllib
 from math                  import ceil, floor, sqrt
 from requests.adapters     import HTTPAdapter, Retry
 
+DEFAULT_ENCODING    = "utf-8"
+
 #info
 ADDON_ID            = 'plugin.video.pseudotv.live'
 REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
@@ -66,8 +68,9 @@ PLAYER              = xbmc.Player
 #constants
 CPU_COUNT           = os.cpu_count() or 1
 CPU_CYCLE           = 0.016 # ~60Hz
-THREAD_WORKERS      = min(32, CPU_COUNT * 5)
-QUEUE_CHUNK         = THREAD_WORKERS * 2
+THREAD_WORKERS      = min(32, CPU_COUNT * 4)
+BATCH_SIZE          = min(32, max(4, THREAD_WORKERS * 2))
+QUEUE_CHUNK         = max(2, 32 // CPU_COUNT)
 MAX_CACHE_SIZE      = 1000
 DISCOVERY_TIMER     = 60    #secs
 SERVICE_INTERVAL    = 5.0   #secs

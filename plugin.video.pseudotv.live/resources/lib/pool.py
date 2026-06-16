@@ -40,14 +40,16 @@ class ExecutorPool:
             
             
     def executor(self, func, timeout=None, *args, **kwargs):
-        self.log("executor, func = %s, timeout = %s"%(func.__name__,timeout))
+        self.log(f"executor, func = {func.__name__}, timeout = {timeout}")
         useExecutor = REAL_SETTINGS.getSetting('Enable_Executor').lower() == "true"
-        if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
+        if not useExecutor and xbmc.getCondVisibility('Player.Playing'): 
+            useExecutor = True
+            
         if useExecutor:
             if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
             with timeit(func), self._executor as executor:
                 try: return executor.submit(func, *args, **kwargs).result(timeout)
-                except Exception as e: self.log("executor, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
+                except Exception as e: self.log(f"executor, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
         return self.execute(func, *args, **kwargs)
 
 
@@ -56,7 +58,7 @@ class ExecutorPool:
         try:
             with timeit(func):
                 return func(*args, **kwargs)
-        except Exception as e: self.log("execute, func = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,e,args,kwargs), xbmc.LOGERROR)
+        except Exception as e: self.log(f"execute, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
 
 
     def _wrapped_partial(self, func, *args, **kwargs):
@@ -66,16 +68,13 @@ class ExecutorPool:
         
         
     def executors(self, func, items=[], timeout=None, *args, **kwargs):
-        self.log("executors, func = %s, items = %s, timeout = %s"%(func.__name__,len(items),timeout))
-        useExecutor = REAL_SETTINGS.getSetting('Enable_Executor').lower() == "true"
-        if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
             if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
             with timeit(func), self._executor as executor:
                 try: 
                     results = executor.map(self._wrapped_partial(func, *args, **kwargs), items, timeout=timeout)
                     return [r for r in results if r is not None]
-                except Exception as e: self.log("executors, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
+                except Exception as e: self.log(f"executors, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
         return self.generator(func, items, *args, **kwargs)
 
 
@@ -85,7 +84,7 @@ class ExecutorPool:
             with timeit(func):
                 results = [self._wrapped_partial(func, *args, **kwargs)(i) for i in items]
                 return [r for r in results if r is not None]
-        except Exception as e: self.log("generator, func = %s, items = %s failed! %s\nargs = %s, kwargs = %s"%(func.__name__,len(items),e,args,kwargs), xbmc.LOGERROR)
+        except Exception as e: self.log(f"generator, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
 
 @contextmanager
 def timeit(method):
@@ -137,6 +136,7 @@ def debounceit(wait=SERVICE_INTERVAL, monitor=None):
         return wrapper
     return decorator
     
+
 def killit(method):
     @wraps(method)
     def wrapper(wait=None, *args, **kwargs):
@@ -168,12 +168,14 @@ def killit(method):
         thread.daemon = True 
         thread.start()
         thread.join(timeout=timeout)
+        
         if thread.is_alive():
             xbmc.log(f"{thread.name} timed out after {wait}s. Thread abandoned in background (potential leak).", xbmc.LOGWARNING)
             return None
         return response['result'] if response['success'] else None
     return wrapper
     
+
 def executeit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
@@ -194,6 +196,7 @@ def executeit(method):
             return None
     return wrapper
     
+
 def threadit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
@@ -230,6 +233,7 @@ def threadit(method):
     wrapper._lock = threading.Lock()
     return wrapper
     
+
 def timerit(method):
     _active_timer = None
     _lock = threading.Lock()
@@ -274,6 +278,7 @@ def timerit(method):
         return timer
     return wrapper
     
+
 def poolit(method):
     @wraps(method)
     def wrapper(items=None, wait=TIMEOUT_EXECUTORS, *args, **kwargs):

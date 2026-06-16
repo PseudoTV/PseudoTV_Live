@@ -226,10 +226,10 @@ class Overlay:
         self.jsonRPC    = self.player.jsonRPC if self.player else None
         self.runActions = self.player.runActions if self.player else None
         
-        playing_item = self.player.playingItem if (self.player and hasattr(self.player, 'playingItem')) else {}
-        self.citem = playing_item.get('citem', {})
-        self.fitem = playing_item.get('fitem', {})
-        self.nitem = playing_item.get('nitem', {})
+        playing_item   = self.player.playingItem if (self.player and hasattr(self.player, 'playingItem')) else {}
+        self.citem     = playing_item.get('citem', {})
+        self.fitem     = playing_item.get('fitem', {})
+        self.nitem     = playing_item.get('nitem', {})
         self.resources = Resources(service=self.service) if self.service else None
         
         self.cntrlManager = {}
@@ -249,30 +249,27 @@ class Overlay:
         
         # Watermark
         self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
-        self.forceBugDiffuse = SETTINGS.getSettingBool('Force_Diffuse')
+        self.forceBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
         
-        hex_color = SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'
-        self.channelBugColor = f"0x{hex_color}"
-        self.channelBugFade = SETTINGS.getSettingInt('ChannelBug_Transparency')
+        self.channelBugColor = f"0x{SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'}"
+        self.channelBugFade  = SETTINGS.getSettingInt('ChannelBug_Transparency')
         
         try:    
             self.channelBugX, self.channelBugY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY"))
         except Exception: 
-            self.channelBugX = abs(int(self.window_w // 9) - self.window_w) - 128
-            self.channelBugY = abs(int(self.window_h // 16) - self.window_h) - 128
+            self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log(f"{self.__class__.__name__}: {msg}", level)
 
     def _hasControl(self, control):
-        return control is not None and control in self.cntrlManager
+        return control in self.cntrlManager
 
     def _isVisible(self, control):
         return self.cntrlManager.get(control, False)
 
     def _setVisible(self, control, state: bool = False):
-        if control is None:
-            return False
+        if control is None: return False
         try:
             control.setVisible(state)
             return state
@@ -282,8 +279,7 @@ class Overlay:
             return False
 
     def _addControl(self, control):
-        if control is None:
-            return
+        if control is None: return
         if not self._hasControl(control):
             try: 
                 self.window.addControl(control)
@@ -294,19 +290,14 @@ class Overlay:
         
     def _delControl(self, control):
         if self._hasControl(control):
-            try: 
-                self.window.removeControl(control)
-            except Exception as e: 
-                self.log(f"_delControl context ejection failure: {str(e)}", xbmc.LOGERROR)
+            try: self.window.removeControl(control)
+            except Exception as e: self.log(f"_delControl context ejection failure: {str(e)}", xbmc.LOGERROR)
             self.cntrlManager.pop(control, None)  
             
     def open(self):
         if PROPERTIES.isRunning('Overlay'): return
         PROPERTIES.setRunning('Overlay', True)
-        if not self.citem:
-            self.close()
-            return
-
+        if not self.citem: return self.close()
         if self.runActions: self.runActions(RULES_ACTION_OVERLAY_OPEN, self.citem, inherited=self)
         self.log(f"open: enableVignette={self.enableVignette}, enableChannelBug={self.enableChannelBug}")
         
@@ -315,7 +306,6 @@ class Overlay:
             self.vignette = xbmcgui.ControlImage(0, 0, w_width, w_height, ' ', aspectRatio=0)
             self._addControl(self.vignette)
             self.vignette.setImage(self.vinImage)
-            
             if self.vinView != self.defaultView and self.jsonRPC: timerit(self.jsonRPC.setViewMode)(0.5, [self.vinView])
             self.vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
         
@@ -323,34 +313,30 @@ class Overlay:
             self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
             self._addControl(self.channelBug)
             
-            bug_id = 99105 
-            try:
-                self.channelBug.setId(bug_id)
-            except Exception:
-                bug_id = self.channelBug.getId()
-
-            logo = self.citem.get('logo') or BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO
-            if self.forceBugDiffuse or (self.resources and self.resources.isMono(logo)): 
-                self.channelBug.setColorDiffuse(self.channelBugColor)
+            id   = self.channelBug.getId()
+            logo = self.citem.get('logo',(BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO))
+            wait = 900 #15mins todo add user settings
+            
+            if   self.forceBugDiffuse:        self.channelBug.setColorDiffuse(self.channelBugColor)
+            elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
                 
             self.channelBug.setImage(logo)
-            self.channelBug.setAnimations([
-                ('Conditional', f'effect=fade start=0 end=100 time=2000 delay=1000 condition=Control.IsVisible({bug_id}) reversible=false'),
-                ('Conditional', f'effect=fade start=100 end={self.channelBugFade} time=1000 delay=3000 condition=Control.IsVisible({bug_id}) reversible=false')
-            ])
+            self.channelBug.setAnimations([('Conditional', f'effect=fade start=0 end=100 time=2000 delay=1000 condition=Control.IsVisible({id}) reversible=false'),
+                                           ('Conditional', f'effect=fade start=100 end={self.channelBugFade} time=1000 delay=3000 condition=Control.IsVisible({id}) reversible=false')])
+                                           # ('Conditional', f'effect=fade start={self.channelBugFade} end=0 time=2000 delay={7000+wait} loop="true" condition=Control.IsVisible({id})'),
+                                           # ('Conditional', f'effect=fade start=0 end={self.channelBugFade} time=2000 delay={7000+wait+wait} loop="true" condition=Control.IsVisible({id})')])
+            self.log('enableChannelBug, logo = %s, channelBugColor = %s, window = (%s,%s)'%(logo,self.channelBugColor,self.window_h, self.window_w))
+            
         
     def toggleOnNext(self, state: bool = None):
-        if state is None:
-            state = bool(SETTINGS.getSettingInt('OnNext_Mode'))
-            
+        if state is None: state = bool(SETTINGS.getSettingInt('OnNext_Mode'))
         if state and self.onnext is None and self.jsonRPC:
             next_item = self.jsonRPC.getNextItem(self.citem, self.nitem)
             self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", 
                                  service=self.service, mode=self.player.OnNextMode, 
                                  position=self.player.onNextPosition, next=next_item)
         elif not state and self.onnext is not None:
-            if hasattr(self.onnext, 'onClose'):
-                self.onnext.onClose()
+            if hasattr(self.onnext, 'onClose'): self.onnext.onClose()
             self.onnext = None
 
     def close(self):
@@ -367,20 +353,19 @@ class Overlay:
             
         if self.vinView != self.defaultView and self.jsonRPC: 
             timerit(self.jsonRPC.setViewMode)(0.5, self.defaultView)
-            
         PROPERTIES.setRunning('Overlay', False)
        
 class OnNext(xbmcgui.WindowXMLDialog):
-    closing = False
+    closing   = False
     totalTime = 0
     threshold = 0
     remaining = 0
-    intTime = 0
+    intTime   = 0
     
     def __init__(self, *args, **kwargs):
-        self.service = kwargs.pop('service', None)
-        self.nitem = kwargs.pop('next', {})
-        self.onNextMode = kwargs.pop('mode', SETTINGS.getSettingInt('OnNext_Mode'))
+        self.service        = kwargs.pop('service', None)
+        self.nitem          = kwargs.pop('next', {})
+        self.onNextMode     = kwargs.pop('mode', SETTINGS.getSettingInt('OnNext_Mode'))
         self.onNextPosition = kwargs.pop('position', SETTINGS.getSetting("OnNext_Position_XY"))
         
         super().__init__(*args, **kwargs)
@@ -402,28 +387,25 @@ class OnNext(xbmcgui.WindowXMLDialog):
             self.onNextY = abs(int(self.window_h // 16) - self.window_h) - 356 
     
         self.log(f"__init__: enableOnNext={bool(self.onNextMode)}, mode={self.onNextMode}, X={self.onNextX}, Y={self.onNextY}")
-        
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
-
-    def show_dialog(self):
         if not self.player or not self.nitem: return False
         try:
             self.totalTime = int(self.player.getPlayerTime() * (self.player.maxProgress / 100))
             self.threshold = abs((self.totalTime - (self.totalTime * .75)) - (ONNEXT_TIMER * 3))
             self.remaining = floor(self.totalTime - self.player.getPlayedTime())
-            self.intTime = roundupDIV(self.threshold, 3)
+            self.intTime   = roundupDIV(self.threshold, 3)
         except Exception as e:
             self.log(f"show_dialog metrics parse failed: {str(e)}", xbmc.LOGERROR)
             return False
 
         self.log(f"show_dialog: totalTime={self.totalTime}, threshold={self.threshold}, remaining={self.remaining}, intTime={self.intTime}")
-        
         if self.remaining >= self.intTime:
             self.doModal()
             return True
         return False
         
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log(f"{self.__class__.__name__}: {msg}", level)
+
     def onInit(self):
         try:
             self.log(f"onInit: citem={self.citem}\nfitem={self.fitem}\nnitem={self.nitem}")

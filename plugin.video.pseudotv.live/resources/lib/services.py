@@ -272,13 +272,12 @@ class Player(xbmc.Player):
 
         if not self.isPlayingFiller():
             if self.playingItem.get('isPlaylist', False) and self.playingItem.get('fitem', {}).get('file') == self.getPlayingFile():
-                resume = {
-                    "position": played,
-                    "total": self.getPlayerTime(),
-                    "file": self.getPlayerFile(),
-                    "updated": {'instance': PROPERTIES.getFriendlyName(), 'time': getUTCstamp()}
-                }
+                resume = { "position": played,
+                           "total": self.getPlayerTime(),
+                           "file": self.getPlayerFile(),
+                           "updated": {'instance': PROPERTIES.getFriendlyName(), 'time': getUTCstamp()} }
                 self.playingItem.setdefault('resume', {}).update(resume)
+                
             if played > self.minDuration: 
                 self.toggleOverlay(self.enableOverlay)
 
@@ -354,38 +353,34 @@ class Monitor(xbmc.Monitor):
         self.isIdle     = False
         self.isRunning  = False
         self.player     = Player(monitor=self, service=service)
-        self.idle_lock  = threading.Lock()
-        self.idleThread = None
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log(f"{self.__class__.__name__}: {msg}", level)
 
     def chkIdle(self):
-        with self.idle_lock:
-            if self.idleThread and self.idleThread.is_alive():
-                try: self.idleThread.join(timeout=0.2)
-                except Exception: pass
-            self.idleThread = threading.Thread(target=self._chkIdle, name="PseudoTV_IdleMonitor")
-            self.idleThread.daemon = True
-            self.idleThread.start()
+        if self.isRunning: return
+        self.idleThread = Thread(target=self._chkIdle)
+        if self.idleThread.is_alive():
+            if hasattr(self.idleThread, 'cancel'): self.idleThread.cancel()
+            try: self.idleThread.join(0.5)
+            except Exception: pass
+        self.idleThread.daemon = True
+        self.idleThread.start()
             
     def _chkIdle(self):
-        if self.isRunning: return
         self.isRunning = True
-        self.log("Background idle tracking engine engaged.")
+        self.log("_chkIdle, idle service started.")
         try:
             while not self.abortRequested():
-                if self.service._shutdown(0.5): break
-                if self.player.isPlayingPseudoTV():
+                if   self.service._shutdown(0.5): break
+                elif self.player.isPlayingPseudoTV():
                     self.idleTime = BUILTIN.getIdle()
-                    self.isIdle = self.idleTime > OSD_TIMER
+                    self.isIdle   = self.idleTime > OSD_TIMER
                     if self.isIdle: self.player._onIdle()
-                else:
-                    self.log("_chkIdle: Playback state dropped, pausing loop.")
-                    break
+                elif self.service._sleep(0.5): break
         finally:
             self.isRunning = False
-            self.log("_chkIdle background lifecycle completed.")
+            self.log("_chkIdle, shutdown!")
 
     def onNotification(self, sender, method, data):
         self.log(f"onNotification received -> Sender: {sender} | Method: {method} | Data: {data}")
@@ -512,7 +507,7 @@ class Service(object):
     def _initialize(self):
         PROPERTIES.setEXTProperty(f'{ADDON_ID}.Local_Host', self.jsonRPC.getLocalHost())
         if self.isClient: self._que(self.tasks._client, 1)
-        else:             self._que(self.tasks._host, 1)
+        else:             self._que(self.tasks._host  , 1)
 
     def _saveCache(self):
         try:
@@ -525,7 +520,7 @@ class Service(object):
         return True
 
     def _start(self):
-        self.log("Starting main core background lifecycle...")
+        self.log("_start, service started")
         self._initialize()
         if DIALOG.notificationWait(f"{LANGUAGE(32054)}...", wait=15):
             if self.player.isPlayingPseudoTV(): 
@@ -544,18 +539,19 @@ class Service(object):
                     self._sleep()
                     break
                 elif not self._isPlaying(): self._tasks()
+                self.monitor.chkIdle()
                 self.monitor.waitForAbort(CPU_CYCLE)
             return self._stop(self.pendingRestart)
 
     def _stop(self, pendingRestart: bool = False) -> bool:
-        self.log(f"_stop, shutdown sequence. Restart state: {pendingRestart}")
+        self.log(f"_stop, service shutdown sequence. Restart state: {pendingRestart}")
         if self.player.isPlayingPseudoTV(): self.player.onPlayBackStopped()
         if self._saveCache(): SETTINGS.cache.cache.shutdown()
         with PROPERTIES.interruptActivity():
             for thread in threading.enumerate():
                 if thread.name != "MainThread" and thread.is_alive():
                     if "PseudoTV" in thread.name or thread.name.startswith(f"{ADDON_ID}"):
-                        self.log(f"Terminating module-bound worker worker: {thread.name}")
+                        self.log(f"_stop, Terminating Thread: {thread.name}")
                         if hasattr(thread, 'cancel'): thread.cancel()
                         try:  thread.join(timeout=0.5)
                         except Exception: pass
