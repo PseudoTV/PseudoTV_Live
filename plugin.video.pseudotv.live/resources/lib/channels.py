@@ -20,6 +20,7 @@
 
 from globals    import *
 from multiroom  import Multiroom
+from variables  import SETTINGS
 
 #todo create dataclasses for all jsons
 # https://pypi.org/project/dataclasses-json/

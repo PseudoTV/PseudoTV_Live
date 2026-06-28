@@ -124,7 +124,11 @@ class XSP(object):
         return [file]
             
 
-    def parseDXSP(self, id, file, filters={}, incExtras: bool=SETTINGS.getSettingBool('Enable_Extras')):
+    def parseDXSP(self, id, file, filters=None, incExtras=None):
+        if filters is None:
+            filters = {}
+        if incExtras is None:
+            incExtras = SETTINGS.getSettingBool('Enable_Extras')
         self.log("[%s] parseDXSP, IN = %s, filters = %s, incExtras = %s"%(id,file,filters,incExtras))
         try:
             path, params = str(file).split('?xsp=')

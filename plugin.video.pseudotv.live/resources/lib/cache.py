@@ -19,34 +19,17 @@
 # -*- coding: utf-8 -*-
 import sqlite3
 
-from variables   import *
+from constants   import *
 from logger      import log
 from fileaccess  import FileAccess, FileLock
 
-
-class Service(object):
-    player  = PLAYER()
-    monitor = MONITOR()
-    def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return any([self._getEXTProperty('%s.pendingShutdown'%(ADDON_ID),False),self.monitor.waitForAbort(wait)])
-    def _restart(self) -> bool:
-        return self._getEXTProperty('%s.pendingRestart'%(ADDON_ID),False)
-    def _interrupt(self) -> bool:
-        return any([self._getEXTProperty('%s.pendingInterrupt'%(ADDON_ID),False),self._shutdown(),self._restart()])
-    def _suspend(self) -> bool:
-        return any([self._getEXTProperty('%s.pendingSuspend'%(ADDON_ID),False)])
-    def _sleep(self, wait=CPU_CYCLE):
-        while not self.monitor.abortRequested() and wait > 0:
-            if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
-                return True
-            wait -= CPU_CYCLE
-        return False
-        
 def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
+    # checksum=PROPERTIES.getProcessID()
     def internal(method):
         @wraps(method)
         def wrapper(*args, **kwargs):
             instance = args[0]
+            cache_checksum = checksum() if callable(checksum) else checksum
             cache_segments = [f"{instance.__class__.__name__}.{method.__name__}"]
             for item in args[1:]:
                 if isinstance(item, (str, int, float, bool)) or item is None:
@@ -64,26 +47,24 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
                     cache_segments.append(f"{k}=obj_{id(v)}")
             cacheName = ".".join(cache_segments)
             
-            results = instance.cache.get(cacheName, checksum)
+            results = instance.cache.get(cacheName, cache_checksum)
             if results is not None:
                 log(f'{method.__qualname__.replace(".", ": ")}, cacheit returning cache')
                 return results
                 
             log(f'{method.__qualname__.replace(".", ": ")}, cacheit saving results')
             value = method(*args, **kwargs)
-            instance.cache.set(cacheName, value, checksum, expiration)
+            instance.cache.set(cacheName, value, cache_checksum, expiration)
             return value
         return wrapper
     return internal
     
 class Cache(object):
-    service = Service()
-    monitor = service.monitor
-
     def __init__(self, mem_cache=False, disable_cache=False):
-        self.cache = _Cache(service=self.service)
+        self.monitor = xbmc.Monitor()
+        self.cache   = _Cache(monitor=self.monitor)
         self.cache.enable_mem_cache = mem_cache
-        self.disable_cache = (disable_cache or REAL_SETTINGS.getSetting('Disable_Cache').lower() == "true")
+        self.disable_cache = (disable_cache or REAL_SETTINGS.getSetting('Disable_Cache'))
         self.log('__init__, mem_cache = %s, disable_cache = %s' % (mem_cache, disable_cache))
 
 
@@ -113,13 +94,18 @@ class Cache(object):
         self.log('clr, name = %s' % name)
         self.cache.clr(name)
 
+    def checkpoint(self):
+        self.cache._checkpoint()
+        
+    def shutdown(self):
+        self.cache._shutdown()
 
 class _Cache(object):
     _lock            = RLock() 
     _trim            = False
     _clean           = False
     _exit            = False
-    _checkpoint      = False
+    _checkpointing   = False
     _database        = None
     _cache_idx       = deque()
     global_checksum  = '1.0.0'
@@ -128,19 +114,19 @@ class _Cache(object):
     @staticmethod
     def _getFreeMEM():
         try:
-            raw_mem = BUILTIN.getInfoLabel('System.FreeMemory')
+            raw_mem = xbmc.getInfoLabel('System.FreeMemory')
             free = int("".join(c for c in raw_mem if c.isdigit()))
         except Exception: 
             free = 1024 
         pct = int(REAL_SETTINGS.getSetting('Cache_MEM_Limit') or "10")
         return floor(free * (pct / 100)) * 1024 * 1024
         
-    def __init__(self, service=None, winID=10000):
-        self.service   = service
-        self.monitor   = service.monitor
+    def __init__(self, monitor=None, winID=10000):
+        self.monitor   = monitor
         self.window    = xbmcgui.Window(winID)
         self.max_bytes = _Cache._getFreeMEM()
         self.dbfile    = FileAccess.translatePath(CACHE_FLE)
+        self.timeout   = int(REAL_SETTINGS.getSetting('API_Timeout'))
         self._auto_clean_interval = int(REAL_SETTINGS.getSetting('Max_Days') or "3") * 86400 
 
     def __del__(self):
@@ -154,7 +140,7 @@ class _Cache(object):
             retries = 0
             while not self.monitor.abortRequested() and retries < LOCK_MAX_FILE_TIMEOUT:
                 try:
-                    conn = sqlite3.connect(self.dbfile, timeout=30, check_same_thread=False)
+                    conn = sqlite3.connect(self.dbfile, timeout=self.timeout, check_same_thread=False)
                     conn.execute("PRAGMA journal_mode=WAL;")
                     conn.execute("PRAGMA synchronous=NORMAL;")
                     conn.execute("""
@@ -178,7 +164,7 @@ class _Cache(object):
         with self._lock:
             if self._exit:
                 return None
-            if self._checkpoint: 
+            if self._checkpointing: 
                 if self.monitor.waitForAbort(1.0): return None
                 return self._execute_sql(query, data)
             if self._database is None:
@@ -314,27 +300,27 @@ class _Cache(object):
                 self.log("purge failed: %s" % e, xbmc.LOGERROR)
                 return False
             
-    def checkpoint(self):
+    def _checkpoint(self):
         with self._lock:
-            if self._database and not self._exit and not self._checkpoint:
+            if self._database and not self._exit and not self._checkpointing:
                 try:
-                    self._checkpoint = True
+                    self._checkpointing = True
                     self._database.commit()
-                    self._database.execute("PRAGMA wal_checkpoint(FULL);")
+                    self._database.execute("PRAGMA wal_checkpointing(FULL);")
                 except Exception as e:
-                    self.log("checkpoint failed: %s" % e, xbmc.LOGERROR)
+                    self.log("_checkpoint failed: %s" % e, xbmc.LOGERROR)
                 finally:
-                    self._checkpoint = False 
+                    self._checkpointing = False 
 
-    def shutdown(self):
+    def _shutdown(self):
         with self._lock:
             if self._database and not self._exit:
                 try:
                     self._exit = True
                     self._database.commit()
-                    self._database.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+                    self._database.execute("PRAGMA wal_checkpointing(TRUNCATE);")
                 except Exception as e:
-                    self.log("shutdown SQL commands failed: %s" % e, xbmc.LOGERROR)
+                    self.log("_shutdown SQL commands failed: %s" % e, xbmc.LOGERROR)
                 finally:
                     try: self._database.close()
                     except Exception: pass

@@ -53,17 +53,16 @@ class Autotune(object):
                         SETTINGS.setSettingBool('Autotuned_Channels',True)
                         break       
                     elif retval == 2:#Custom
-                        with BUILTIN.busy_dialog():
-                            menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33310),url='special://home/addons/%s/resources/lib/utilities.py, Channel_Manager'%(ADDON_ID))]
-                            if hasBackup:  menu.append(LISTITEMS.buildMenuListItem('%s %s'%(LANGUAGE(32112),LANGUAGE(30108)),LANGUAGE(32111),url='special://home/addons/%s/resources/lib/backup.py, Recover_Backup'%(ADDON_ID)))
-                            if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='special://home/addons/%s/resources/lib/multiroom.py, Select_Server_Client'%(ADDON_ID)))
+                        menu = [LISTITEMS.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33310),url='special://home/addons/%s/resources/lib/utilities.py, Channel_Manager'%(ADDON_ID))]
+                        if hasBackup:  menu.append(LISTITEMS.buildMenuListItem('%s %s'%(LANGUAGE(32112),LANGUAGE(30108)),LANGUAGE(32111),url='special://home/addons/%s/resources/lib/backup.py, Recover_Backup'%(ADDON_ID)))
+                        if hasServers: menu.append(LISTITEMS.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='special://home/addons/%s/resources/lib/multiroom.py, Select_Server_Client'%(ADDON_ID)))
                         select = DIALOG.selectDialog(menu,multi=False)
                         if not select is None: return BUILTIN.executescript(menu[select].getPath())
                     return False #Cancel
             else: return True
             
         with DIALOG._progressDialog("", LANGUAGE(30038)) as self.pDialog:
-            items   = []
+            items = []
             manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
             if autoChannels: 
                 if manager.backup.backupChannels(CHANNELFLE_AUTOTUNE,silent=True): 
@@ -76,7 +75,7 @@ class Autotune(object):
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
                 items.extend(Globals._randomSamples(library.getLibrary(type),count))
             del library
-            manager._addChannels(start, Globals._randomShuffle(items))
+            if items: manager._addChannels(start, Globals._randomShuffle(items))
             manager.closeManager()
         del manager
         return True

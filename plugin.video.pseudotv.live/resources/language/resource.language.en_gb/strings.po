@@ -458,7 +458,7 @@ msgid "Edit Channel %s\n[COLOR=white][B]In-use[/B][/COLOR] | [COLOR=dimgray][B]U
 msgstr ""
 
 msgctxt "#30110"
-msgid "JSONRPC Delay"
+msgid "Kodi API Delay"
 msgstr ""
 
 msgctxt "#30111"
@@ -2245,7 +2245,7 @@ msgid "Restore the last channel backup."
 msgstr ""
 
 msgctxt "#33109"
-msgid "Adjust delay between JSONRPC requests (in seconds) to avoid crashes.\nIncreasing value decreases performance; while adding system stability. [1 Default]"
+msgid "Adjust delay between Kodi API requests (in seconds) to avoid collisions.\nIncreasing value decreases performance; while adding system stability. [1 Default]"
 msgstr ""
 
 msgctxt "#33110"
@@ -2433,7 +2433,7 @@ msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\n
 msgstr ""
 
 msgctxt "#33201"
-msgid "How long to wait for JSONRPC response in seconds [-1 Disabled Default]\nPervent system hangs while waiting for a lengthy response."
+msgid "How long to wait for Kodi response in seconds [-1 Disabled Default]\nPervent system hangs while waiting for a lengthy response."
 msgstr ""
 
 msgctxt "#33202"

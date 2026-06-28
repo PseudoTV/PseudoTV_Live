@@ -19,64 +19,76 @@
 # -*- coding: utf-8 -*-
 import traceback, threading
 
-from variables           import *
+from constants           import *
 from logger              import log
 from concurrent.futures  import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 class ExecutorPool:
-    _executor = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
+    def __init__(self, workers=THREAD_WORKERS):
+        self._workers  = workers
+        self._executor = ThreadPoolExecutor(max_workers=workers)
     
     def __del__(self):
-        try: self._executor.shutdown(wait=False, cancel_futures=True)
-        except Exception: pass
-
+        self.shutdown()
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log(f"{self.__class__.__name__}: {msg}", level)
 
-
     def isShutdown(self):
         return getattr(self._executor, "_shutdown", False)
             
+    def shutdown(self, wait=False, cancel=True):
+        try: 
+            self._executor.shutdown(wait=wait, cancel_futures=cancel)
+            self.log("_shutdown, _executor")
+        except Exception: pass
             
     def executor(self, func, timeout=None, *args, **kwargs):
-        self.log(f"executor, func = {func.__name__}, timeout = {timeout}")
-        useExecutor = REAL_SETTINGS.getSetting('Enable_Executor').lower() == "true"
-        if not useExecutor and xbmc.getCondVisibility('Player.Playing'): 
-            useExecutor = True
-            
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout'))
+        useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
+        if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
-            if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
-            with timeit(func), self._executor as executor:
-                try: return executor.submit(func, *args, **kwargs).result(timeout)
-                except Exception as e: self.log(f"executor, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
+            if self.isShutdown(): 
+                self._executor = ThreadPoolExecutor(max_workers=self._workers)
+                
+            with timeit(func):
+                try:
+                    future = self._executor.submit(func, *args, **kwargs)
+                    return future.result(timeout=float(timeout) )
+                except TimeoutError:
+                    self.log(f"executor, func = {func.__name__} timed out after {timeout}s", xbmc.LOGWARNING)
+                    future.cancel()
+                except Exception as e: 
+                    self.log(f"executor, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
         return self.execute(func, *args, **kwargs)
 
-
     def execute(self, func, *args, **kwargs):
-        self.log("execute, func = %s"%(func.__name__))
         try:
             with timeit(func):
                 return func(*args, **kwargs)
         except Exception as e: self.log(f"execute, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
-
 
     def _wrapped_partial(self, func, *args, **kwargs):
         partial_func = partial(func, *args, **kwargs)
         update_wrapper(partial_func, func)
         return partial_func
         
-        
     def executors(self, func, items=[], timeout=None, *args, **kwargs):
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout'))
+        useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
+        if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
-            if self.isShutdown(): self._executor = ThreadPoolExecutor(max_workers=THREAD_WORKERS)
-            with timeit(func), self._executor as executor:
-                try: 
-                    results = executor.map(self._wrapped_partial(func, *args, **kwargs), items, timeout=timeout)
-                    return [r for r in results if r is not None]
-                except Exception as e: self.log(f"executors, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
+            if self.isShutdown(): 
+                self._executor = ThreadPoolExecutor(max_workers=self._workers)
+                
+            with timeit(func):
+                futures = {self._executor.submit(self._wrapped_partial(func, *args, **kwargs), i): i for i in items}
+                results = []
+                for future in as_completed(futures, timeout=float(timeout)):
+                    try: results.append(future.result())
+                    except Exception as e: self.log(f"executors, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
+                if results: return results
         return self.generator(func, items, *args, **kwargs)
-
 
     def generator(self, func, items=[], *args, **kwargs):
         self.log("generator, items = %s"%(len(items)))
@@ -84,7 +96,8 @@ class ExecutorPool:
             with timeit(func):
                 results = [self._wrapped_partial(func, *args, **kwargs)(i) for i in items]
                 return [r for r in results if r is not None]
-        except Exception as e: self.log(f"generator, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
+        except Exception as e: self.log(f"generator, func = {func.__name__} failed! {e}", xbmc.LOGERROR) 
+        return []
 
 @contextmanager
 def timeit(method):
@@ -130,52 +143,12 @@ def debounceit(wait=SERVICE_INTERVAL, monitor=None):
                                 state['timer'] = None
 
                 current_timer = threading.Timer(float(wait), __run)
-                current_timer.name = f"debounceit.{method.__qualname__}"
+                current_timer.name = f"{ADDON_ID}.debounceit.{method.__qualname__}"
                 state['timer'] = current_timer
                 current_timer.start()
         return wrapper
     return decorator
     
-
-def killit(method):
-    @wraps(method)
-    def wrapper(wait=None, *args, **kwargs):
-        if wait is None:
-            try: wait = int(REAL_SETTINGS.getSetting('RPC_Wait'))
-            except (NameError, ValueError):
-                wait = DISCOVERY_TIMER
-                
-        monitor  = MONITOR()
-        timeout  = float(wait) if wait >= 0 else None
-        response = {'result': None, 'success': False, 'error': None}
-        
-        def __run():
-            try:
-                if monitor.abortRequested():  return
-                with timeit(method):
-                    res = method(*args, **kwargs)
-                    
-                response['result']  = res
-                response['success'] = True
-                xbmc.log(f"{method.__qualname__} successfully executed on {threading.current_thread().name}", xbmc.LOGINFO)
-            except Exception as e:
-                response['error'] = e
-                xbmc.log(f"{method.__qualname__} failed! Error: {e}", xbmc.LOGERROR)
-
-        if monitor.abortRequested(): return None
-        thread = threading.Thread(target=__run)
-        thread.name = f"killit.{method.__qualname__}"
-        thread.daemon = True 
-        thread.start()
-        thread.join(timeout=timeout)
-        
-        if thread.is_alive():
-            xbmc.log(f"{thread.name} timed out after {wait}s. Thread abandoned in background (potential leak).", xbmc.LOGWARNING)
-            return None
-        return response['result'] if response['success'] else None
-    return wrapper
-    
-
 def executeit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
@@ -220,7 +193,7 @@ def threadit(method):
                         wrapper._active_thread = None
 
         thread = threading.Thread(target=__run)
-        thread.name = f"threadit.{method.__qualname__}"
+        thread.name = f"{ADDON_ID}.threadit.{method.__qualname__}"
         thread.daemon = True
         
         with wrapper._lock:
@@ -270,7 +243,7 @@ def timerit(method):
             _latest_args = args
             _latest_kwargs = kwargs
             timer = threading.Timer(float(wait), __run)
-            timer.name = f"timerit.{method.__qualname__}"
+            timer.name = f"{ADDON_ID}.timerit.{method.__qualname__}"
             timer.daemon = True
             current_thread_timer = timer 
             _active_timer = timer
@@ -296,7 +269,7 @@ def poolit(method):
 
         if monitor.abortRequested(): return None
         thread = threading.Thread(target=__worker)
-        thread.name = f"poolit.{method.__qualname__}"
+        thread.name = f"{ADDON_ID}.poolit.{method.__qualname__}"
         thread.daemon = True
         thread.start()
         

@@ -20,35 +20,16 @@
 
 from globals    import *
 
-class Service(object):
-    from jsonrpc import JSONRPC
-    jsonRPC = JSONRPC()
-    player  = PLAYER()
-    monitor = MONITOR()
-    def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return PROPERTIES.isPendingShutdown() or self.monitor.waitForAbort(wait)
-    def _restart(self) -> bool:
-        return PROPERTIES.isPendingRestart()
-    def _interrupt(self) -> bool:
-        any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
-    def _suspend(self) -> bool:
-        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
-    def _sleep(self, wait=CPU_CYCLE):
-        while not self.monitor.abortRequested() and wait > 0:
-            if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
-                return True
-            wait -= CPU_CYCLE
-        return False
-        
-            
 class Multiroom(object):
     def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = %s'%(sysARG))
-        if service is None: service = Service()
+        if service is None: 
+            from _services import Service
+            service = Service()   
         self.sysARG     = sysARG
         self.service    = service
         self.jsonRPC    = service.jsonRPC
-        self.cache      = service.jsonRPC.cache
+        self.cache      = service.cache
         self.serverData = FileAccess.getJSON(SERVERFLE_DEFAULT)
         self.serverTEMP = self.serverData.get('servers',[{}]).pop("friendly")
         self.serverKEY  = f'Servers.{self.serverData.get("version",ADDON_VERSION)}'
@@ -108,7 +89,6 @@ class Multiroom(object):
             payload['online'] = True
             servers = self.getServers()
             server  = servers.get(payload.get('name'),{})
-            print('addServer',type(payload),payload,server)
             if not server: 
                 payload['enabled'] = True
                 servers[payload['name']] = payload

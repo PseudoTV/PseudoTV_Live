@@ -26,15 +26,12 @@ __maintainer__ = 'William McBrine <wmcbrine@gmail.com>'
 __version__ = '0.16-wmcbrine'
 __license__ = 'LGPL'
 
-import sys
-import time
-import struct
-import socket
-import threading
-import select
-import traceback
-from functools import reduce
-from kodi_six import xbmc
+import sys, time, struct
+import socket, threading, select, traceback
+
+from variables   import *
+from functools   import reduce
+from kodi_six   import xbmc
 
 DEFAULT_ENCODING = "utf-8"
 
@@ -778,9 +775,9 @@ class Engine(threading.Thread):
     def __init__(self, zc):
         threading.Thread.__init__(self)
         self.zc = zc
-        self.readers = {} # maps socket to reader
-        self.timeout = 5
+        self.readers   = {} # maps socket to reader
         self.condition = threading.Condition()
+        self.timeout   = int(REAL_SETTINGS.getSetting('API_Timeout'))
         self.start()
 
     def run(self):

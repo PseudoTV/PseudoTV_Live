@@ -22,40 +22,24 @@ from globals     import *
 from predefined  import Predefined
 from resources   import Resources
 from channels    import Channels
+from variables   import DIALOG, PROPERTIES, SETTINGS, LISTITEMS, BUILTIN
 
 #constants
 REG_KEY = 'PseudoTV_Recommended.%s'
 
-class Service(object):
-    from jsonrpc import JSONRPC
-    jsonRPC = JSONRPC()
-    player  = PLAYER()
-    monitor = MONITOR()
-    def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return PROPERTIES.isPendingShutdown() or self.monitor.waitForAbort(wait)
-    def _restart(self) -> bool:
-        return PROPERTIES.isPendingRestart()
-    def _interrupt(self) -> bool:
-        any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
-    def _suspend(self) -> bool:
-        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
-    def _sleep(self, wait=CPU_CYCLE):
-        while not self.monitor.abortRequested() and wait > 0:
-            if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
-                return True
-            wait -= CPU_CYCLE
-        return False
-        
 class Library(object):
     channels   = Channels()
     predefined = Predefined()
     
     def __init__(self, service=None, writable=False):
-        if service is None: service = Service()
+        if service is None: 
+            from _services import Service
+            service = Service()            
         self.writable    = writable
         self.service     = service
+        self.pool        = service.pool
         self.jsonRPC     = service.jsonRPC
-        self.cache       = service.jsonRPC.cache
+        self.cache       = service.cache
         self.resources   = Resources(service=self.service)
         
         self.pCount      = 0
@@ -151,7 +135,7 @@ class Library(object):
             nPlayList = []
             results   = self.jsonRPC.getSmartPlaylists(type)
             for idx, result in enumerate(results):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getPlaylists, _interrupt")
                     return
                 elif not result.get('label'): continue
@@ -274,7 +258,7 @@ class Library(object):
         json_response = self.jsonRPC.getPVRSearches()
         self.pDialog  = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
         for idx, item in enumerate(json_response):
-            if self.service._interrupt():
+            if self.service.pendingInterrupt:
                 self.log("getPVRSearches, _interrupt")
                 return
             elif not item.get('file'): continue
@@ -296,7 +280,7 @@ class Library(object):
             self.pDialog  = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
             json_response = self.jsonRPC.getTVshows()
             for idx, info in enumerate(json_response):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getTVInfo, _interrupt")
                     return
                 elif info.get('label'):
@@ -316,7 +300,7 @@ class Library(object):
             #search resources for studio/genre logos
             nTVShowList = []
             for idx, show in enumerate(TVShowList):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getTVInfo, _interrupt")
                     return
                 else:
@@ -328,7 +312,7 @@ class Library(object):
 
             nNetworkList = []
             for idx, network in enumerate(NetworkList):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getTVInfo, _interrupt")
                     return
                 else:
@@ -340,7 +324,7 @@ class Library(object):
             
             nShowGenreList = []
             for idx, tvgenre in enumerate(ShowGenreList):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getTVInfo, _interrupt")
                     return
                 else:
@@ -363,7 +347,7 @@ class Library(object):
             json_response  = self.jsonRPC.getMovies() #we can't parse for genres directly from Kodi json ie.getGenres; because we need the weight of each genre to prioritize list.
 
             for idx, info in enumerate(json_response):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getMovieInfo, _interrupt")
                     return
                 else:
@@ -380,7 +364,7 @@ class Library(object):
             #search resources for studio/genre logos
             nStudioList = []
             for idx, studio in enumerate(StudioList):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getMovieInfo, _interrupt")
                     return
                 else:
@@ -392,7 +376,7 @@ class Library(object):
             
             nMovieGenreList = []
             for idx, genre in enumerate(MovieGenreList):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getMovieInfo, _interrupt")
                     return
                 else:
@@ -414,7 +398,7 @@ class Library(object):
             json_response  = self.jsonRPC.getMusicGenres()
             
             for idx, info in enumerate(json_response):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getMusicInfo, _interrupt")
                     return
                 else:
@@ -426,7 +410,7 @@ class Library(object):
             #search resources for studio/genre logos
             nMusicGenreList = []
             for idx, genre in enumerate(MusicGenreList):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log("getMusicInfo, _interrupt")
                     return
                 else:

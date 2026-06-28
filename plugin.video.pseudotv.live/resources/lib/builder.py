@@ -29,36 +29,16 @@ from seasonal   import Seasonal
 from rules      import RulesList
 from seasonal   import Seasonal
 
-class Service(object):
-    from jsonrpc import JSONRPC
-    jsonRPC = JSONRPC()
-    player  = PLAYER()
-    monitor = MONITOR()
-    def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return PROPERTIES.isPendingShutdown() or self.monitor.waitForAbort(wait)
-    def _restart(self) -> bool:
-        return PROPERTIES.isPendingRestart()
-    def _interrupt(self) -> bool:
-        any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
-    def _suspend(self) -> bool:
-        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
-    def _sleep(self, wait=CPU_CYCLE):
-        while not self.monitor.abortRequested() and wait > 0:
-            if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
-                return True
-            wait -= CPU_CYCLE
-        return False
-
 class Builder(object):
     xsp      = XSP()
     seasonal = Seasonal()
     loopback = None
     
-    def __init__(self, service=None):
-        self.service  = service if service is not None else Service()
-        self.monitor  = self.service.monitor
-        self.jsonRPC  = self.service.jsonRPC
-        self.cache    = self.service.jsonRPC.cache
+    def __init__(self, service):
+        self.service  = service
+        self.monitor  = service.monitor
+        self.jsonRPC  = service.jsonRPC
+        self.cache    = service.cache
         self.holiday  = self.seasonal.getHoliday()
         self.channels = Channels(writable=True)
         
@@ -190,7 +170,7 @@ class Builder(object):
     def buildChannels(self, channels: list = None, preview=False, silent=None, write=True):
         if channels is None: channels = []
         if silent is None:   silent = not SETTINGS.showDialog(silent)
-        self.log(f"buildChannels invoked, payload footprint: {len(channels)} channels")
+        self.log(f"buildChannels, channels = {len(channels)}")
         
         if PROPERTIES.isRunning('Builder.buildChannels'): return
         with PROPERTIES.legacy(), PROPERTIES.chkRunning('Builder.buildChannels'):
@@ -222,11 +202,11 @@ class Builder(object):
                         self.pName   = citem.get('name', '')
                         self.pCount  = int(idx * 100) // self.cCount
                         
-                        if self.service._interrupt():
+                        if self.service.pendingInterrupt:
                             self.log(f"[{citem.get('id')}] buildChannels, _interrupt")
                             if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
                             break
-                        elif self.service._suspend():
+                        elif self.service.pendingSuspend:
                             self.log(f"[{citem.get('id')}] buildChannels, _suspend")
                             if not self.service._sleep(CPU_CYCLE): 
                                 continue
@@ -252,7 +232,7 @@ class Builder(object):
                         
                         if _changed:
                             self.log(f"[{citem.get('id')}] Playlist signature mutation caught; flushing target datasets.")
-                            self.resetPagination(citem)
+                            self._resetPagination(citem)
                             m3u.delStation(citem)
                             epg.delBroadcast(citem)
                             citem['changed'] = False
@@ -302,7 +282,7 @@ class Builder(object):
                             station_added = any([m3u.addStation(sitem), epg.addChannel(sitem)])
                             complete.add(station_added) 
                         else:
-                            self.resetPagination(citem)
+                            self._resetPagination(citem)
                             m3u.delStation(citem)
                             epg.delBroadcast(citem)
                     except Exception as e: 
@@ -349,11 +329,11 @@ class Builder(object):
         has_valid_files = any(len(sublist) > 0 for sublist in fileArray if isinstance(sublist, list))
         if not has_valid_files: 
             for idx, base_path in enumerate(paths):
-                if self.service._interrupt():
+                if self.service.pendingInterrupt:
                     self.log(f"[{citem.get('id')}] buildVideo, _interrupt")
                     self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                     return []
-                elif self.service._suspend():
+                elif self.service.pendingSuspend:
                     self.log(f"[{citem.get('id')}] buildVideo, _suspend")
                     if not self.service._sleep(CPU_CYCLE): 
                         continue
@@ -416,12 +396,12 @@ class Builder(object):
         self.log(f"[{citem.get('id')}] buildFileList, path = {path}\nsort = {sort}, limits = {limits}, page = {page}")
         
         while not self.monitor.abortRequested():
-            if self.service._interrupt():
+            if self.service.pendingInterrupt:
                 self.log(f"[{citem.get('id')}] buildFileList, _interrupt")
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                 return []
             
-            elif self.service._suspend():
+            elif self.service.pendingSuspend:
                 self.log(f"[{citem.get('id')}] buildFileList, _suspend")
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
                 if not self.service._sleep(CPU_CYCLE): 
@@ -545,7 +525,7 @@ class Builder(object):
             if not item.get('type'): 
                 item['type'] = default_type
 
-            if self.service._interrupt() or self.service._suspend():
+            if self.service.pendingInterrupt or self.service.pendingSuspend:
                 self.log(f"[{citem.get('id')}] buildFiles, _interrupt/_suspend")
                 self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                 break
@@ -649,7 +629,7 @@ class Builder(object):
                 item['art']['icon'] = citem.get('logo', '')
                     
                 if item.get('trailer') and hasattr(self.service,'_que'): 
-                    self.service._que(self.jsonRPC.addTrailer, -1, 0, 0, item)
+                    self.service._que(self.jsonRPC.addTrailer, 3, 0, 0, item)
                     
                 if sort_method == 'episode' and (season + episode) > 0: 
                     seasoneplist.append((season, episode, item))
@@ -683,8 +663,7 @@ class Builder(object):
         return False
 
 
-    def resetPagination(self, citem):
-        if isinstance(citem, list): return any([self.resetPagination(item) for item in citem])
+    def _resetPagination(self, citem):
+        if isinstance(citem, list): return any([self.jsonRPC.resetPagination(item) for item in citem])
         return any([self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id')])
     
-        

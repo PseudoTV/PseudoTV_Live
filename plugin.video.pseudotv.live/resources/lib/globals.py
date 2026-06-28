@@ -18,14 +18,7 @@
 #
 # -*- coding: utf-8 -*-
 from variables   import *
-from kodi        import *
-from pool        import debounceit, killit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
-
-DIALOG     = Dialog()
-PROPERTIES = DIALOG.properties
-SETTINGS   = DIALOG.settings
-LISTITEMS  = DIALOG.listitems
-BUILTIN    = DIALOG.builtin
+from pool        import debounceit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
 
 def validString(s):
     return "".join(x for x in s if (x.isalnum() or x not in '\\/:*?"<>|'))
@@ -272,7 +265,8 @@ def isFiller(item={}):
     if not isinstance(genres,list) and ' / ' in genres: genres = genres.split(' / ')
     return any(genre.lower() in lowers for genre in genres)
 
-def isShort(item={}, minDuration=SETTINGS.getSettingInt('Seek_Tolerance')):
+def isShort(item={}, minDuration=None):
+    if minDuration is None: minDuration = SETTINGS.getSettingInt('Seek_Tolerance')
     if item.get('duration', minDuration) < minDuration: return True
     else: return False
    

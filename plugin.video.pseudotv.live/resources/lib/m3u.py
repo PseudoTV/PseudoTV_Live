@@ -23,44 +23,6 @@ from globals     import *
 from channels    import Channels
 from fileaccess  import FileAccess, FileLock
 
-M3U_TEMP = {"id"                : "",
-            "number"            : 0,
-            "name"              : "",
-            "logo"              : "",
-            "group"             : [],
-            "catchup"           : "vod",
-            "radio"             : False,
-            "favorite"          : False,
-            "realtime"          : False,
-            "media"             : "",
-            "label"             : "",
-            "url"               : "",
-            "tvg-shift"         : "",
-            "x-tvg-url"         : "",
-            "media-dir"         : "",
-            "media-size"        : "",
-            "media-type"        : "",
-            "catchup-source"    : "",
-            "catchup-days"      : "",
-            "catchup-correction": "",
-            "provider"          : ADDON_NAME,
-            "provider-type"     : "addon",
-            "provider-logo"     : LOGO_COLOR,
-            "provider-countries": Globals._getCountry(),
-            "provider-languages": Globals._getLanguage(),
-            "x-playlist-type"   : "",
-            "kodiprops"         : []}
-            
-M3U_MIN  = {"id"                : "",
-            "number"            : 0,
-            "name"              : "",
-            "logo"              : "",
-            "group"             : [],
-            "catchup"           : "vod",
-            "radio"             : False,
-            "label"             : "",
-            "url"               : ""}
-
 class M3U(object):
     _RE_GLOBAL = {
         'tvg-shift': re.compile(r'tvg-shift="([^"]*)"', re.IGNORECASE),
@@ -104,24 +66,19 @@ class M3U(object):
         self.M3UDATA     = {}
         
         stations, recordings = self.cleanSelf(list(self._load()))
-        self.M3UDATA = {
-            'data': '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
-                'http://%s/%s' % (PROPERTIES.getRemoteHost(), XMLTVFLE)
-            ),
-            'stations': stations,
-            'recordings': recordings
-        }
-
+        self.M3UDATA = { 'data': '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
+                         'http://%s/%s' % (PROPERTIES.getRemoteHost(), XMLTVFLE) ),
+                         'stations': stations,
+                         'recordings': recordings }
 
     def __enter__(self):
         return self
 
-
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
-            if self.writable: self._save()
+            if getattr(self, 'writable', False): self._save()
+            self.log('__exit__, writable = %s' % (getattr(self, 'writable', False)))
         except Exception: pass
-            
             
     def __del__(self):
         try:
@@ -129,7 +86,6 @@ class M3U(object):
             self.log('__del__, writable = %s' % (getattr(self, 'writable', False)))
         except Exception: 
             pass
-        
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log(f"{self.__class__.__name__}: {msg}", level)
@@ -256,8 +212,7 @@ class M3U(object):
 
     def _save(self):
         self.M3UDATA['data'] = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
-            'http://%s/%s' % (PROPERTIES.getRemoteHost(), XMLTVFLE)
-        )
+                               'http://%s/%s' % (PROPERTIES.getRemoteHost(), XMLTVFLE) )
         self.M3UDATA['stations'] = self.sortStations(self.M3UDATA.get('stations', []))
         self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings', []), key='name')
         
@@ -316,10 +271,6 @@ class M3U(object):
                         fle.close()
         return False
 
-    def _reload(self):
-        self.log('_reload') 
-        self.__init__(file=self.stationFile, writable=self.writable)
-        
     def _verify(self, stations=None, recordings=None, chkPath=None):
         if chkPath is None:
             chkPath = SETTINGS.getSettingBool('Clean_Recordings')
@@ -373,8 +324,34 @@ class M3U(object):
         return self.M3UDATA
         
     def getMitem(self):
-        return M3U_TEMP.copy()
-        
+        return {"id"                : "",
+                "number"            : 0,
+                "name"              : "",
+                "logo"              : "",
+                "group"             : [],
+                "catchup"           : "vod",
+                "radio"             : False,
+                "favorite"          : False,
+                "realtime"          : False,
+                "media"             : "",
+                "label"             : "",
+                "url"               : "",
+                "tvg-shift"         : "",
+                "x-tvg-url"         : "",
+                "media-dir"         : "",
+                "media-size"        : "",
+                "media-type"        : "",
+                "catchup-source"    : "",
+                "catchup-days"      : "",
+                "catchup-correction": "",
+                "provider"          : ADDON_NAME,
+                "provider-type"     : "addon",
+                "provider-logo"     : LOGO_COLOR,
+                "provider-countries": Globals._getCountry(),
+                "provider-languages": Globals._getLanguage(),
+                "x-playlist-type"   : "",
+                "kodiprops"         : []}.copy()
+            
     def getTZShift(self):
         self.log('getTZShift')
         return ((time.mktime(time.localtime()) - time.mktime(time.gmtime())) / 60.0 / 60.0)

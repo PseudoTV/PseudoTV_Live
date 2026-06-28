@@ -30,15 +30,15 @@ from server     import HTTP, Discovery
 from context_create import _autotune
 
 class Tasks(object):
-    citems  = []
-    cache   = SETTINGS.cache
-    cache = SETTINGS.cache
+    citems = []
     
     def __init__(self, service):
         self.service   = service       
+        self.pool      = service.pool
         self.jsonRPC   = service.jsonRPC
         self.player    = service.player
         self.monitor   = service.monitor
+        self.cache     = service.cache
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -61,7 +61,7 @@ class Tasks(object):
         self._migrateChannels() #temp, remove in v.0.7.5.
         self.service._que(self.chkDirs          ,1)
         self.service._que(self.chkCrash         ,1)
-        self.service._que(self.chkStations      ,1)
+        # self.service._que(self.chkStations      ,1)
         self.service._que(self.chkLibrary       ,2)
         self.service._que(self.chkChannels      ,3)
         self.service._que(self.chkFiles         ,5)
@@ -80,7 +80,7 @@ class Tasks(object):
    
     def chkPVRBackend(self): 
         instanceName = PROPERTIES.getFriendlyName()
-        hasPVR       = SETTINGS.hasAddon(PVR_CLIENT_ID,notify=True)
+        hasPVR       = SETTINGS.hasAddon(PVR_CLIENT_ID,enable=True,notify=True)
         self.log('chkPVRBackend, instanceName = %s, hasPVR = %s'%(instanceName,hasPVR))
         if hasPVR:
             SETTINGS.instances.chkInstances(instanceName)
@@ -93,10 +93,10 @@ class Tasks(object):
         
         
     def chkDebugging(self, disable=False):
-        kodi_access = SETTINGS.getSettingBool('Enable_Kodi_Access')
-        keep_debug  = SETTINGS.getSettingBool('Debug_Keep_Enable')
         self.log('chkDebugging, disable = %s'%(disable))
         if SETTINGS.getSettingBool('Debug_Enable'):
+            kodi_access = SETTINGS.getSettingBool('Enable_Kodi_Access')
+            keep_debug  = SETTINGS.getSettingBool('Debug_Keep_Enable')
             if disable: SETTINGS.setSettingBool('Debug_Enable',False)
             elif DIALOG.yesnoDialog(LANGUAGE(32142) if kodi_access else '%s\n%s'%(LANGUAGE(32142),LANGUAGE(32266)%(DEBUG_TIMEOUT//60)) ,autoclose=4):
                 self.log('_chkDebugging, disabling debugging.')
@@ -280,8 +280,7 @@ class Tasks(object):
             if BUILTIN.getInfoBool("Pvr.HasRadioChannels"): programmes.extend(self.jsonRPC.getPVRChannels(radio=True))
             if not programmes: return self.service._que(self.chkStations,1,30)#30SECS
             broadcasts = { Globals._decodePlot(b.get('plot', '')).get('citem', {}).get('name') for b in programmes if 'broadcastnow' in b and b.get('plot')}
-            remove     = [c for c in channels if c.get('name') not in broadcasts]
-            print(tv,radio,broadcasts,remove)
+            remove = [c for c in channels if c.get('name') not in broadcasts]
             self.log(f"chkStations, channels = {len(channels)}, removing = {len(remove)}")
             with M3U(writable=len(remove)>0) as m3u:
                 for channel in remove: m3u.delStation(channel)
@@ -315,33 +314,25 @@ class Tasks(object):
         if channels is None: channels = self.getChannels()
         if silent is None: silent = not SETTINGS.showDialog(silent)
         self.log("chkChanged, channels = %s, silent = %s"%(len(channels),silent))
-        changed_channels = [ch for ch in channels if isinstance(ch, dict) and ch.get('changed', False)]
-        if len(changed_channels) == 0:
-            self.log("chkChanged: No channel modifications detected. Skipping batch allocation.")
-            return
-        self.log(f"chkChanged: Distributing {len(changed_channels)} modified channels across concurrent batches.")
-        chunk_size = max(1, len(changed_channels) // QUEUE_CHUNK)
-        for i in range(0, len(changed_channels), chunk_size):
-            batch = changed_channels[i:i + chunk_size]
-            self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, batch, False, silent, True)
-        if SETTINGS.getSettingBool('Build_Filler_Folders'): 
-            self.service._que(self.chkFillers, 3, 0, 0, changed_channels, silent)
+        changed = [ch for ch in channels if isinstance(ch, dict) and ch.get('changed', False)]
+        if not changed: return self.log("chkChanged: No channel modifications detected. Skipping batch allocation.")
+        self.log(f"chkChanged: Distributing {len(changed)} modified channels across concurrent batches.")
+        if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers, 3, 0, 0, changed, silent)
+        chunk_size = max(1, len(changed) // QUEUE_CHUNK)
+        for i in range(0, len(changed), chunk_size):
+            self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, changed[i:i + chunk_size], False, silent, True)
 
 
     def chkChannels(self, channels=None, silent=None):
         if channels is None: channels = self.getChannels()
         if silent is None: silent = not SETTINGS.showDialog(silent)
         self.log("chkChannels, channels = %s, silent = %s"%(len(channels),silent))
-        channel_count = len(channels) if isinstance(channels, list) else 0
-        if channel_count > 0:
-            self.log(f"chkChannels, processing channels count = {channel_count}")
-            if SETTINGS.getSettingBool('Build_Filler_Folders'): 
-                self.service._que(self.chkFillers, 3, 0, 0, channels, silent)
-
-            chunk_size = max(1, channel_count // QUEUE_CHUNK)
-            for i in range(0, channel_count, chunk_size):
-                batch = channels[i:i + chunk_size]
-                self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, batch, False, silent, True)
+        if len(channels) > 0:
+            self.log(f"chkChannels, processing channels count = {len(channels)}")
+            if SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers, 3, 0, 0, channels, silent)
+            chunk_size = max(1, len(channels) // QUEUE_CHUNK)
+            for i in range(0, len(channels), chunk_size):
+                self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, channels[i:i + chunk_size], False, silent, True)
         else:
             self.log('chkChannels, No Channels Configured!')
             run_autotune = SETTINGS.getSettingBool('Enable_Autotune')
@@ -367,22 +358,19 @@ class Tasks(object):
                 DIALOG.notificationWait(notification_msg, wait=M3U_REFRESH // 2, usethread=True)
                 payload = { "method": "Addons.SetAddonEnabled", "params": {"addonid": PVR_CLIENT_ID, "enabled": state} }
                 self.service.jsonRPC.sendJSON(payload)
-                self.service._sleep(M3U_REFRESH // 2)
 
         if not PROPERTIES.isRunning('Tasks.chkPVRRefresh'):
             with PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
                 if brute:
                     if not self.service.player.isPlaying(): 
-                        __toggle(False)
-                        __toggle(True)
-                    else: 
-                        PROPERTIES.setPropTimer('chkPVRRefresh')
-                
+                        __toggle(False),self.service._sleep(M3U_REFRESH // 2),__toggle(True)
+                    else: PROPERTIES.setPropTimer('chkPVRRefresh')
                 try: 
                     client_id = self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid', -1)
                     if client_id != -1: self.jsonRPC.PVRScan(client_id)
                 except Exception as e: 
-                    self.log(f"chkPVRRefresh: PVR backend scanning trigger unsupported or failed: {str(e)}", xbmc.LOGDEBUG)
+                    PROPERTIES.setEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),True)
+                    self.log(f"chkPVRRefresh: PVR backend scanning trigger unsupported or failed! restarting HTTP Server... {str(e)}", xbmc.LOGDEBUG)
             
             
     def chkSettingsChange(self, old_settings={}):
@@ -413,25 +401,25 @@ class Tasks(object):
                 try:
                     self.log(f"chkQUES postQue {len(self.service.postQue)}")
                     param = self.service.postQue.pop()
-                    self.service._que(self.jsonRPC.requestURL,1,0,0,*param)
+                    self.service._que(self.jsonRPC.requestURL,3,0,0,*param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s postQue: %s\n%s"%(len(self.service.postQue),param,e))
             if len(self.service.jsonQue) > 0:
                 try:
                     self.log(f"chkQUES jsonQue {len(self.service.jsonQue)}")
                     param = self.service.jsonQue.pop()
-                    self.service._que(self.jsonRPC.sendJSON,-1,0,0,param)
+                    self.service._que(self.jsonRPC.sendJSON,4,0,0,param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s jsonQue: %s\n%s"%(len(self.service.jsonQue),param,e))
             if len(self.service.logoQue) > 0:
                 try:
                     self.log(f"chkQUES logoQue {len(self.service.logoQue)}")
                     param = FileAccess.loadJSON(self.service.logoQue.pop())
-                    self.service._que(library.resources.getLogo,-1,0,0,*({'name':param},library.resources.getImageCache(param),True))
+                    self.service._que(library.resources.getLogo,5,0,0,*({'name':param},library.resources.getImageCache(param),True))
                 except Exception as e: self.log("chkQUES failed!, queuing = %s logoQue: %s\n%s"%(len(self.service.logoQue),param,e))
             if len(self.service.trailerQue) > 0:
                 try:
                     self.log(f"chkQUES trailerQue {len(self.service.trailerQue)}")
                     param = FileAccess.loadJSON(self.service.trailerQue.pop())
-                    self.service._que(self.jsonRPC.addTrailer,-1,0,0,param)
+                    self.service._que(self.jsonRPC.addTrailer,5,0,0,param)
                 except Exception as e: self.log("chkQUES failed!, queuing = %s trailerQue: %s\n%s"%(len(self.service.trailerQue),param,e))        
         del library
         self.service._que(self.chkQUES,5,120)#2MINS

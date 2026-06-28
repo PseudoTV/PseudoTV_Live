@@ -21,6 +21,7 @@
 from globals      import *
 from seasonal     import Seasonal 
 from intergration import OpenRouter
+from variables    import DIALOG, PROPERTIES, SETTINGS, LISTITEMS, BUILTIN
 
 # Tunable: maximum number of entries to keep in the in-memory image cache.
 IMAGE_CACHE_MAX = CHANNEL_LIMIT
@@ -32,38 +33,20 @@ _PAREN_RE     = re.compile(r'\([^)]*\)')
 _NON_ALNUM_RE = re.compile(r'[^a-zA-Z0-9\s&]')
 _MULTI_WS_RE  = re.compile(r'\s+')
 
-class Service(object):
-    from jsonrpc import JSONRPC
-    jsonRPC = JSONRPC()
-    player  = PLAYER()
-    monitor = MONITOR()
-    def _shutdown(self, wait=CPU_CYCLE) -> bool:
-        return PROPERTIES.isPendingShutdown() or self.monitor.waitForAbort(wait)
-    def _restart(self) -> bool:
-        return PROPERTIES.isPendingRestart()
-    def _interrupt(self) -> bool:
-        any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
-    def _suspend(self) -> bool:
-        return any([PROPERTIES.isPendingSuspend(),BUILTIN.isSettingsOpened()])
-    def _sleep(self, wait=CPU_CYCLE):
-        while not self.monitor.abortRequested() and wait > 0:
-            if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
-                return True
-            wait -= CPU_CYCLE
-        return False
-
 class Resources(object):
     def __init__(self, service=None):
-        if service is None: service = Service()
+        if service is None: 
+            from _services import Service
+            service = Service()   
         self.service     = service
         self.monitor     = service.monitor
         self.jsonRPC     = service.jsonRPC
-        self.cache       = service.jsonRPC.cache
-        self.seasonal    = Seasonal(cache=service.jsonRPC.cache)
+        self.cache       = service.cache
+        self.seasonal    = Seasonal(service)
         self.holiday     = self.seasonal.getHoliday()
         self.remoteHost  = PROPERTIES.getRemoteHost()
         self.processID   = PROPERTIES.getProcessID()
-        self.openRouter  = OpenRouter(cache=service.jsonRPC.cache, jsonRPC=service.jsonRPC)
+        self.openRouter  = OpenRouter(service)
         
         try:
             self.imageCache = service.imageCache 
@@ -232,13 +215,13 @@ class Resources(object):
         if not chname: return []
         variations = {chname} # original name
         variations.add(cleanChannelSuffix(chname, type)) # Remove Suffix
-        variations.add(_NON_ALNUM_RE.sub(' ', chname)) # Remove Non-Alphanumeric (except spaces and &)
-        
-        if '&' in chname: variations.add(chname.replace('&', ' and '))  # '&' to 'and' replacement
-        elif ' and ' in chname: variations.add(chname.replace(' and ', '&')) # 'and' to '&' replacement
-        if '(' in chname and ')' in chname: variations.add(_PAREN_RE.sub(' ', chname))# Remove Parentheses contents
-        if _YEAR_RE.search(chname): variations.add(_YEAR_RE.sub(' ', chname)) # Remove Years
-        if chname.lower().startswith('the '): variations.add(chname[4:])# Handle 'the ' prefix removal
+        if isinstance(chname,str): 
+            variations.add(_NON_ALNUM_RE.sub(' ', chname)) # Remove Non-Alphanumeric (except spaces and &)
+            if '&' in chname: variations.add(chname.replace('&', ' and '))  # '&' to 'and' replacement
+            elif ' and ' in chname: variations.add(chname.replace(' and ', '&')) # 'and' to '&' replacement
+            if '(' in chname and ')' in chname: variations.add(_PAREN_RE.sub(' ', chname))# Remove Parentheses contents
+            if _YEAR_RE.search(chname): variations.add(_YEAR_RE.sub(' ', chname)) # Remove Years
+            if chname.lower().startswith('the '): variations.add(chname[4:])# Handle 'the ' prefix removal
         final_results = set() # Final cleanup: apply the 'multi-whitespace' rule to all generated variants
         for v in variations:
             cleaned = _MULTI_WS_RE.sub(' ', v).strip()
@@ -335,7 +318,7 @@ class Resources(object):
         
 
     def setTexture(self, url):
-        image = f'{Globals._getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'
+        image = f'{PROPERTIES.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'
         self.log('setTexture, url = %s\nimage = %s'%(url,image))
         self.jsonRPC.requestURL(image)
         return image

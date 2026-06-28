@@ -24,15 +24,14 @@ from m3u         import M3U
 from seasonal    import Seasonal
 from fileaccess  import FileAccess, FileLock
 
-#todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
-
 class XMLTVS(object):
+    XMLTVDATA = {}
+    
     def __init__(self, file=XMLTVFLEPATH, writable=False, m3u=None):
         if m3u is None: m3u = M3U(writable=writable)
         self.m3u       = m3u
         self.writable  = writable
         self.XMLTVFile = file
-        self.XMLTVDATA = {}
         self.XMLTVDATA = self._load()
         
         
@@ -43,6 +42,7 @@ class XMLTVS(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
             if self.writable: self._save()
+            self.log('__exit__, writable = %s'%(self.writable))
         except Exception: pass
             
             
@@ -57,57 +57,64 @@ class XMLTVS(object):
         return log(f"{self.__class__.__name__}: {msg}", level)
 
 
+    def _clean(self, items: list=[], key: str='id', slug: str="") -> list: # remove (Non PseudoTV Live) entires from XMLTV, key = {'id':channels,'channel':programmes}
+        if not slug: slug = '@%s'%(Globals._slugify(ADDON_NAME))
+        channels   = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 32])#128byte ChannelIDS
+        recordings = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 16])#64byte RecordingIDs
+        if key == 'id': #stations
+            self.log('_clean, slug = %s, key = %s: returning channels = %s, recordings = %s'%(slug,key,len(channels),len(recordings)))
+            return self.sortChannels(Globals._setDictLST(channels)), self.sortChannels(Globals._setDictLST(recordings))
+        elif key == 'channel': #programmes
+            programmes = self.cleanStations(self.cleanProgrammes(channels)) +  self.cleanRecordings(recordings)
+            self.log('_clean, slug = %s, key = %s: returning programmes = %s'%(slug,key,len(programmes)))
+            return self.sortProgrammes(programmes)
+        
+        
     def _load(self) -> dict:
         self.log('_load')
-        channels, recordings = self.cleanSelf(self.loadChannels(),'id')
+        channels, recordings = self._clean(self.loadChannels(),'id')
         return {'data'       : self.loadData(),
                 'channels'   : channels,
                 'recordings' : recordings,
-                'programmes' : self.cleanSelf(self.loadProgrammes(),'channel')}
+                'programmes' : self._clean(self.loadProgrammes(),'channel')}
 
 
     def _save(self, reset: bool=True) -> bool:
         if reset: data = self.resetData()
         else:     data = self.XMLTVDATA['data']
-            
         self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
         self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'], opt='PROGRAMMES')
         self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'], opt='RECORDINGS')
         self.log('_save, writable = %s, file = %s, reset = %s\nchannels = %s, programmes = %s, recordings = %s'%(self.writable,self.XMLTVFile,reset,len(self.XMLTVDATA['channels']),len(self.XMLTVDATA['programmes']),len(self.XMLTVDATA['recordings'])))
         
-        if not self.writable: return False
-        writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
-                              date                = data['date'],
-                              source_info_url     = self.cleanString(data['source-info-url']), 
-                              source_info_name    = self.cleanString(data['source-info-name']),
-                              generator_info_url  = self.cleanString(data['generator-info-url']), 
-                              generator_info_name = self.cleanString(data['generator-info-name']))
+        if self.writable:
+            writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
+                                  date                = data['date'],
+                                  source_info_url     = self.cleanString(data['source-info-url']), 
+                                  source_info_name    = self.cleanString(data['source-info-name']),
+                                  generator_info_url  = self.cleanString(data['generator-info-url']), 
+                                  generator_info_name = self.cleanString(data['generator-info-name']))
 
-        for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
-            writer.addChannel(channel)
-            
-        for program in self.XMLTVDATA['programmes']:
-            writer.addProgramme(program)
-            
-        try:
-            with FileLock(self.XMLTVFile):
-                try:
-                    fle = FileAccess.open(self.XMLTVFile, "w")
-                    writer.write(fle, pretty_print=True)
-                except Exception as e: self.log("_save, failed!", xbmc.LOGERROR)
-                finally: 
-                    if hasattr(fle, 'close'): 
-                        fle.close()
-        except Exception as e:
-            self.log("_save, failed!", xbmc.LOGERROR)
-            DIALOG.notificationDialog(LANGUAGE(32000))
-        return self.buildGenres()
+            for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
+                writer.addChannel(channel)
+                
+            for program in self.XMLTVDATA['programmes']:
+                writer.addProgramme(program)
+                
+            try:
+                with FileLock(self.XMLTVFile):
+                    try:
+                        fle = FileAccess.open(self.XMLTVFile, "w")
+                        writer.write(fle, pretty_print=True)
+                    except Exception as e: self.log("_save, failed!", xbmc.LOGERROR)
+                    finally: 
+                        if hasattr(fle, 'close'): 
+                            fle.close()
+            except Exception as e:
+                self.log("_save, failed!", xbmc.LOGERROR)
+                DIALOG.notificationDialog(LANGUAGE(32000))
+            return self.buildGenres()
         
-        
-    def _reload(self) -> bool:
-        self.log('_reload') 
-        self.__init__()
-    
     
     def _error(self, name, e):
         try:
@@ -119,8 +126,6 @@ class XMLTVS(object):
                     fle = FileAccess.open(self.XMLTVFile, 'r')
                     lines = fle.readlines()  # Define 'lines' explicitly
                     line_num = int(match.group(1)) - 1 # 0-indexed adjustment
-                    col_num = int(match.group(2))
-                    
                     self.log('%s parser error: %s\nLine: %s' % (name, e, lines[line_num].strip()), xbmc.LOGERROR)
                 except Exception: pass
                 finally:
@@ -186,12 +191,8 @@ class XMLTVS(object):
         if not channels:   channels   = self.getChannels()
         if not programmes: programmes = self.getProgrammes()
         if not fallback:   fallback   = epochTime(roundTimeDown(getUTCstamp(), offset=60), tz=False).strftime(DTFORMAT)
-
-        channel_bounds = {
-            channel['id']: {'start': fallback, 'stop': fallback} 
-            for channel in channels if 'id' in channel
-        }
-        
+            
+        channel_bounds = { channel['id']: {'start': fallback, 'stop': fallback} for channel in channels if 'id' in channel }
         for program in programmes:
             ch_id = program.get('channel')
             if ch_id not in channel_bounds: continue
@@ -204,6 +205,7 @@ class XMLTVS(object):
             if not channel_bounds[ch_id]['stop'] or p_stop > channel_bounds[ch_id]['stop']:
                 channel_bounds[ch_id]['stop'] = p_stop
 
+        print('loadStopTimes channel_bounds',channel_bounds)
         for ch_id, bounds in channel_bounds.items():
             firstStart = bounds['start']
             lastStop   = bounds['stop']
@@ -260,20 +262,7 @@ class XMLTVS(object):
                     self.log('cleanRecordings, removing = %s; no programmes!'%(id))
         return programmes
         
-        
-    def cleanSelf(self, items: list=[], key: str='id', slug: str='@%s'%(Globals._slugify(ADDON_NAME))) -> list: # remove (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
-        if not slug: return items
-        channels   = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 32])
-        recordings = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 16])
-        if key == 'id': #stations
-            self.log('cleanSelf, slug = %s, key = %s: returning channels = %s, recordings = %s'%(slug,key,len(channels),len(recordings)))
-            return self.sortChannels(Globals._setDictLST(channels)), self.sortChannels(Globals._setDictLST(recordings))
-        elif key == 'channel': #programmes
-            programmes = self.cleanStations(self.cleanProgrammes(channels)) +  self.cleanRecordings(recordings)
-            self.log('cleanSelf, slug = %s, key = %s: returning programmes = %s'%(slug,key,len(programmes)))
-            return self.sortProgrammes(programmes)
-        
-        
+         
     def cleanChannels(self, channels: list=[], programmes: list=[], opt='PROGRAMMES') -> list: # remove stations with no guidedata
         stations    = list(set([program.get('channel') for program in programmes]))
         tmpChannels = [channel for station in stations for channel in channels if channel.get('id') == station]

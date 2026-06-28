@@ -27,8 +27,8 @@ class Fillers(object):
         self.bctTypes   = builder.bctTypes
         self.runActions = builder.runActions
         self.jsonRPC    = builder.jsonRPC
-        self.cache      = builder.jsonRPC.cache
-        self.trailers   = builder.jsonRPC.getTrailers()
+        self.cache      = builder.cache
+        self.trailers   = builder.getTrailers()
         self.service    = builder.service
         self.resources  = Resources(service=builder.service)
         self.processID  = PROPERTIES.getProcessID()
@@ -48,9 +48,9 @@ class Fillers(object):
             data    = self.jsonRPC.walkFileDirectory(path, 'video', None, PAGE_LIMIT, checksum, expiration)
             tmpDICT = {}
             for path, items in list(data.items()):
-                if self.service._interrupt(): break
+                if self.service.pendingInterrupt: break
                 for item in items:
-                    if self.service._interrupt(): break
+                    if self.service.pendingInterrupt: break
                     if not item.get('file'): continue
                     item['label']    = '%s - %s'%(path.strip('/').split('/')[-1:][0],os.path.split(item.get('file'))[1])
                     item['duration'] = self.jsonRPC.getDuration(item.get('file'), item, accurate=True, save=False)
@@ -64,19 +64,19 @@ class Fillers(object):
         pMSG    = getattr(self.builder, 'pMSG', '')
 
         for ftype, values in list(self.bctTypes.items()):
-            if self.service._interrupt(): break
+            if self.service.pendingInterrupt: break
             if not values.get('enabled', False): continue
             self.builder.pDialog = DIALOG._updateProgress(pDialog, pCount, message='%s %s' % (LANGUAGE(30014), ftype.title()), header='%s, %s' % (ADDON_NAME, pMSG))
             
             # resources
             for id in values.get("sources",{}).get("ids",[]):
-                if self.service._interrupt(): break
+                if self.service.pendingInterrupt: break
                 if not SETTINGS.hasAddon(id): continue
                 values.setdefault('items',{}).update(_build(ftype, os.path.join('special://home/addons/%s'%id), SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION), datetime.timedelta(days=MAX_GUIDEDAYS)))
 
             # vfs
             for path in values.get("sources", {}).get("paths",[]):
-                if self.service._interrupt(): break
+                if self.service.pendingInterrupt: break
                 values.setdefault('items',{}).update(_build(ftype, path))
                 
             if values.get('incKODI', False):
@@ -84,9 +84,9 @@ class Fillers(object):
                 elif ftype.lower() == 'adverts':  trailers = self.trailers.get('tvshows',{})
                 else:                             trailers = {}
                 for genre, items in trailers.items():
-                    if self.service._interrupt(): break
+                    if self.service.pendingInterrupt: break
                     for item in items:
-                        if self.service._interrupt(): break
+                        if self.service.pendingInterrupt: break
                         item['duration'] = self.jsonRPC.getDuration(item.get('file'), item, accurate=True, save=False)
                         if item['duration'] == 0: continue
                         values.setdefault('items',{}).setdefault(genre.lower(),[]).append(item)
@@ -143,7 +143,6 @@ class Fillers(object):
             elif 'tvshowid' in fileItem: items = self.jsonRPC.getEpisode(fileItem.get('tvshowid'),season=0)
         except Exception: pass
         self.log('[%s] _getExtras, items = %s'%(self.citem.get('id'), len(items)))
-        print('_getExtras items',items)
         return items
         
 
@@ -190,7 +189,6 @@ class Fillers(object):
                     if ftype == 'extras' and filler.get('incKODI',False) and ('movieid' in item or 'tvshowid' in item):
                         items.extend(self._getExtras(item))
                         
-        print('_getPostRoll items',items)
         if items:
             iteration     = 0
             post_counter  = 0
@@ -225,7 +223,7 @@ class Fillers(object):
         SLOT_SEC  = slot_size_mins * 60
         runtime   = fileList[0]['start']
         for i in range(len(fileList)):
-            if self.service._interrupt(): 
+            if self.service.pendingInterrupt: 
                 return nfileList + fileList[i + 1:]
             fileItem = fileList[i]
             if not fileItem: continue

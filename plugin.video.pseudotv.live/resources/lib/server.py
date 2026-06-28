@@ -26,6 +26,7 @@ from library                   import Library
 from resources                 import Resources
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
+from variables                 import DIALOG, PROPERTIES, SETTINGS, LISTITEMS, BUILTIN
 #todo proper REST API to handle server/client communication incl. sync/update triggers.
 #todo incorporate experimental webserver UI to master branch.
 
@@ -123,7 +124,8 @@ class MyHandler(BaseHTTPRequestHandler):
             else:
                 from multiroom  import Multiroom
                 for server in list(Multiroom().getServers().values()):
-                    if server.get('uuid') == uuid: return True
+                    if server.get('uuid') == uuid:
+                        return True
 
         try:              incoming = FileAccess.loadJSON(self.rfile.read(int(self.headers['content-length'])).decode())
         except Exception: incoming = {}
@@ -181,11 +183,11 @@ class MyHandler(BaseHTTPRequestHandler):
             else: # 200 OK
                 self.send_response(200)
                 if   self.path == '/favicon.ico':                return __sendFile(ICON_WEB, use_compression)
-                elif self.path.endswith(PROPERTIES.getProcessID()):#force IPTV to reload fresh local meta.
+                elif self.path.endswith(PROPERTIES.getProcessID()): #force IPTV to reload fresh local meta.
                     if   M3UFLE.lower()   in self.path:          return __sendFile(M3UFLEPATH, use_compression)
                     elif XMLTVFLE.lower() in self.path:          return __sendFile(XMLTVFLEPATH, use_compression)
                     elif GENREFLE.lower() in self.path:          return __sendFile(GENREFLEPATH, use_compression)
-                elif self.path.endswith(f'/{M3UFLE.lower()}'):   return __sendFile(M3UFLEPATH, use_compression)
+                elif self.path.endswith(f'/{M3UFLE.lower()}'):   return __sendFile(M3UFLEPATH, use_compression) 
                 elif self.path.endswith(f'/{XMLTVFLE.lower()}'): return __sendFile(XMLTVFLEPATH, use_compression)
                 elif self.path.endswith(f'/{GENREFLE.lower()}'): return __sendFile(GENREFLEPATH, use_compression)
                 elif self.path.startswith('/filelist/'):         return __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.getCacheSetting(self.path.replace('/filelist/',''), FileAccess._getMD5(self.path.replace('/filelist/','')), default=[])).encode(encoding=DEFAULT_ENCODING), use_compression)
@@ -229,7 +231,9 @@ class HTTP(Thread):
         return log(f"{self.__class__.__name__}: {msg}", level)
 
 
-    def _chkPort(self, host, port=SETTINGS.getSettingInt('TCP_PORT')):
+    def _chkPort(self, host, port=None):
+        if port is None:
+            port = SETTINGS.getSettingInt('TCP_PORT')
         def __isAvailable(host, tmpPort):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 try:
@@ -243,7 +247,8 @@ class HTTP(Thread):
 
         tmpPort = port
         while not self.monitor.abortRequested() and not __isAvailable(host, tmpPort):
-            if self.service._shutdown(0.5): break
+            self.monitor.waitForAbort(0.5)
+            if self.service.pendingShutdown: break
             else:
                 self.log(f"_chkPort {tmpPort} is in use. Trying next port.")
                 tmpPort += 1
@@ -251,12 +256,6 @@ class HTTP(Thread):
         self.log("_chkPort, port available = %s"%(tmpPort))
         return tmpPort
         
-
-    def _pendingRestart(self):
-        value = PROPERTIES.getEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),False)
-        PROPERTIES.clrEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID))
-        return value
-       
 
     def run(self):  
         def __update(silent=None):
@@ -278,7 +277,7 @@ class HTTP(Thread):
         if not PROPERTIES.isRunning('HTTP.start'):
             PROPERTIES.setRunning('HTTP.start',True)
             while not self.monitor.abortRequested():
-                pendingRestart = self._pendingRestart()
+                pendingRestart = PROPERTIES.getEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),False)
                 if not PROPERTIES.isRunning('HTTP.run'):
                     PROPERTIES.setRunning('HTTP.run',True)
                     try: 
@@ -297,13 +296,15 @@ class HTTP(Thread):
                         except Exception as e: self.log("run, http server failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
 
                         self.httpd = Thread(target=self._server.serve_forever)
+                        self.httpd.name = f"{ADDON_ID}.HTTP.run"
                         self.httpd.daemon=True
                         self.httpd.start()
                         __update(pendingRestart)
                     except Exception as e:
                         self.log("run, http server failed! %s"%(e), xbmc.LOGERROR)
                         break
-                elif self.service._shutdown(M3U_REFRESH) or pendingRestart: 
+                elif self.service.pendingShutdown or pendingRestart:
+                    self.monitor.waitForAbort(M3U_REFRESH)
                     self.log("run, _shutdown/pendingRestart", xbmc.LOGERROR)
                     break
                     
@@ -311,8 +312,8 @@ class HTTP(Thread):
             except Exception: pass
             self.log('run, http server shutdown, pendingRestart = %s, isAlive = %s'%(pendingRestart,__cancel()), xbmc.LOGINFO)
             if pendingRestart: 
-                self.service._sleep(M3U_REFRESH)
-                self.service._que(self.service.tasks.chkHTTP,1)
+                PROPERTIES.clrEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID))
+                self.service._que(self.service.tasks.chkHTTP,1,M3U_REFRESH)
             __update(pendingRestart)
             PROPERTIES.setRunning('HTTP.run',False)
             PROPERTIES.setRunning('HTTP.start',False)

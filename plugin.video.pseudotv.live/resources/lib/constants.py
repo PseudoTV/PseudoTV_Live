@@ -68,15 +68,15 @@ PLAYER              = xbmc.Player
 #constants
 CPU_COUNT           = os.cpu_count() or 1
 CPU_CYCLE           = 0.016 # ~60Hz
-THREAD_WORKERS      = min(32, CPU_COUNT * 4)
-BATCH_SIZE          = min(32, max(4, THREAD_WORKERS * 2))
-QUEUE_CHUNK         = max(2, 32 // CPU_COUNT)
+THREAD_WORKERS      = min(16, CPU_COUNT * 4)
+BATCH_SIZE          = min(16, max(4, THREAD_WORKERS * 2))
+QUEUE_CHUNK         = max(2, 16 // CPU_COUNT)
 MAX_CACHE_SIZE      = 1000
 DISCOVERY_TIMER     = 60    #secs
+DISCOVER_INTERVAL   = 30    #secs
 SERVICE_INTERVAL    = 5.0   #secs
 TASK_INTERVAL       = 30.0  #secs
 SUSPEND_INTERVAL    = 2.5   #secs
-DISCOVER_INTERVAL   = 30    #secs
 MIN_EPG_DURATION    = 10800 #secs
 TIMEOUT_EXECUTOR    = 1800
 TIMEOUT_EXECUTORS   = 10800
@@ -371,7 +371,7 @@ RULES_ACTION_OVERLAY_CLOSE = 31 #Overlay closed
 ##playback
 RULES_ACTION_PLAYBACK_RESUME = 40 #Prior to playback trigger resume to received a FileList
 
-HEADER      = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246"}
+HEADER = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246"}
 
 MUSIC_LISTITEM_TYPES =   {'tracknumber'             : (int,),  #integer (8)
                           'discnumber'              : (int,),  #integer (2)

@@ -20,6 +20,8 @@
 from constants   import *
 from logger      import log
 from fileaccess  import FileAccess, FileLock
+from kodi_six    import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
+from kodi        import *
 
 #variables
 PAGE_LIMIT          = int((REAL_SETTINGS.getSetting('Page_Limit')  or "10"))
@@ -37,6 +39,11 @@ XMLTVFLEPATH        = os.path.join(CACHE_LOC,XMLTVFLE)
 GENREFLEPATH        = os.path.join(CACHE_LOC,GENREFLE)
 PROVIDERFLEPATH     = os.path.join(CACHE_LOC,PROVIDERFLE)
 
+DIALOG     = Dialog()
+PROPERTIES = DIALOG.properties
+SETTINGS   = DIALOG.settings
+LISTITEMS  = DIALOG.listitems
+BUILTIN    = DIALOG.builtin
 
 class Globals:
     @staticmethod

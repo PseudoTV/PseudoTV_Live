@@ -17,8 +17,9 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from globals    import *
-from services   import Service
+from variables import * 
+from globals   import *
+from services  import Service
 
 def _start():
     try:

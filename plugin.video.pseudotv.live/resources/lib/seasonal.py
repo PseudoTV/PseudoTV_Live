@@ -24,7 +24,9 @@
 # https://tvtropes.org/pmwiki/pmwiki.php/Main/PopCultureHoliday
 # https://fanlore.org/wiki/List_of_Annual_Holidays,_Observances,_and_Events_in_Fandom
 
-from globals     import *
+from globals   import *
+from cache     import Cache, cacheit
+from variables import SETTINGS
 
 KEY_QUERY   = {"method":"","order":"","field":'',"operator":'',"value":[]}
 LIMITS      = {"end":-1,"start":0,"total":0}
@@ -34,9 +36,13 @@ TV_QUERY    = {"path":"videodb://tvshows/titles/", "method":"VideoLibrary.GetEpi
 MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"  ,"limits":LIMITS,"sort":SORT,"filter":FILTER}
 
 class Seasonal(object):
-    def __init__(self, cache=None):
-        if cache is None: cache = SETTINGS.cache
-        self.cache = cache
+    def __init__(self, service=None):
+        if service is None: 
+            from _services import Service
+            service = Service()   
+        self.service = service
+        self.pool    = service.pool
+        self.cache   = service.cache
     
     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -121,14 +127,16 @@ class Seasonal(object):
         return FileAccess.getJSON(SEASONS).get(month,{})
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=15), checksum=PROPERTIES.getProcessID())
-    def getHoliday(self, nearest=SETTINGS.getSettingBool('Nearest_Holiday')):
+    @cacheit(expiration=datetime.timedelta(minutes=15))
+    def getHoliday(self, nearest=None):
         """
         Retrieves the current or nearest holiday based on user settings.
 
         :param nearest: Boolean indicating whether to return the nearest holiday (default: True).
         :return: A dictionary representing the holiday details.
         """
+        if nearest is None:
+            nearest = SETTINGS.getSettingBool('Nearest_Holiday')
         self.log('getHoliday, nearest = %s' % (nearest))
         if nearest: return self.getNearestHoliday()
         else:       return self.getCurrentHoliday()

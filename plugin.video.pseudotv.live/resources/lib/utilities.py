@@ -70,8 +70,8 @@ class Utilities(object):
                         
                 if full:
                     SETTINGS.setCacheSetting('Utilities._runCleanup',SETTINGS.getCurrentSettings())
-                    if SETTINGS.cache.cache.purge():
-                        timerit(PROPERTIES.setPendingRestart)(SERVICE_INTERVAL)
+                    # if SETTINGS.cache.cache.purge(): #TODO REROUTE
+                    timerit(PROPERTIES.setPendingRestart)(SERVICE_INTERVAL)
                 DIALOG.notificationDialog(LANGUAGE(32025))
 
     
@@ -81,7 +81,7 @@ class Utilities(object):
             state = SETTINGS.getSettingBool('Enable_PVR_RELOAD')
             SETTINGS.setSettingBool('Enable_PVR_RELOAD',True)
             PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
-            timerit(SETTINGS.setSettingBool)(TASK_INTERVAL,*('Enable_PVR_RELOAD',state))
+            timerit(SETTINGS.setSettingBool)(M3U_REFRESH,*('Enable_PVR_RELOAD',state))
         DIALOG.notificationDialog(LANGUAGE(32025))
             
     @staticmethod

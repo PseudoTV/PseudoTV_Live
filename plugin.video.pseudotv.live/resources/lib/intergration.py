@@ -26,12 +26,13 @@ BASE_HEADER = {"Authorization": "",
                "X-Reference"  : f"{ADDON_URL}",}
            
 class OpenRouter(object):
-    def __init__(self, cache=None, jsonRPC=None):
-        if jsonRPC is None:
-            from jsonrpc import JSONRPC
-            jsonRPC = JSONRPC()
-        self.jsonRPC = jsonRPC
-        self.cache   = cache
+    def __init__(self, service=None):
+        if service is None: 
+            from _services import Service
+            service = Service()   
+        self.service = service
+        self.pool    = service.pool
+        self.cache   = service.cache
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -52,7 +53,6 @@ class OpenRouter(object):
     @cacheit(expiration=datetime.timedelta(minutes=15))
     def _getModels(self):
         response = self._request("https://openrouter.ai/api/v1/models")
-        print(response)
         image_models = []
         text_models  = []
         if "data" in response:
@@ -116,7 +116,6 @@ class OpenRouter(object):
                 }
 
         response = self._request("https://openrouter.ai/api/v1/chat/completions", payload=payload)
-        print(response)
         if not response or "choices" not in response:
             self.log("getImage: Invalid or empty response received from OpenRouter API.", xbmc.LOGERROR)
             return False
@@ -218,8 +217,8 @@ class OpenRouter(object):
             try:              param = sysARG[1]
             except Exception: param = None
             log('OpenRouter: param = %s'%(param))
-            if param == 'getImageModels':   OpenRouter(cache=SETTINGS.cache)._getImageModels()
-            if param == 'getContextModels': OpenRouter(cache=SETTINGS.cache)._getContextModels()
+            if param == 'getImageModels':   OpenRouter()._getImageModels()
+            if param == 'getContextModels': OpenRouter()._getContextModels()
             return Globals._openSettings(ctl)
 
 if __name__ == '__main__': OpenRouter()._run(sys.argv)

@@ -113,7 +113,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.madeItemchange = False
             self.showingList    = True
             
-            self.cache          = SETTINGS.cache
+            self.cache          = service.cache
             self.channels       = Channels(writable=True)
             self.rule           = RulesList()
             self.jsonRPC        = JSONRPC()
@@ -171,7 +171,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     return channel.get('number')
         return start
 
-    @cacheit(checksum=PROPERTIES.getProcessID())
+    @cacheit(checksum=lambda: PROPERTIES.getProcessID())
     def buildArray(self):
         self.log('buildArray') # Create blank array of citem templates. 
         def __create(idx):
@@ -910,7 +910,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             with self.toggleSpinner(condition=PROPERTIES.isRunning('Manager.toggleSpinner')==False):
                 chname = channelData.get('name')
                 logos  = self.resources.selectLogo(channelData)
-                print(logos)
                 lizLST = []
                 lizLST.extend(poolit(__buildItem)(logos))
             select = DIALOG.selectDialog(lizLST,'%s (%s)'%(LANGUAGE(32066).split('[CR]')[1],chname),useDetails=True,multi=False)

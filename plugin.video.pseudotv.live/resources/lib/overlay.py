@@ -22,8 +22,6 @@
 from globals   import *
 from resources import Resources
 
-WH, WIN = BUILTIN.getResolution()
-
 class Busy(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.isLocked = kwargs.pop('isLocked', False)
@@ -67,6 +65,7 @@ class Background(xbmcgui.WindowXMLDialog):
     def onInit(self):
         try:
             self.log(f"onInit: citem={self.citem}\nfitem={self.fitem}\nnitem={self.nitem}")
+            WH, WIN   = BUILTIN.getResolution()
             logo      = self.citem.get('logo') or BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO
             chname    = self.citem.get('name') or BUILTIN.getInfoLabel('VideoPlayer.ChannelName')
             nowTitle  = self.fitem.get('label') or BUILTIN.getInfoLabel('VideoPlayer.Title')
@@ -160,15 +159,15 @@ class Replay(xbmcgui.WindowXMLDialog):
         try:
             control = self.getControl(40000)
             control.setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo) + Window.IsVisible(fullscreenvideo)]')
-            self.service._que(self._run_osd_countdown, 1, 0, 0, control)
+            self._run(control)
         except Exception as e: 
             self.log(f"onInit failed: {str(e)}", xbmc.LOGERROR)
-            self.service._que(self.close, 1, 0, 0)
+            self.close()
 
-    def _run_osd_countdown(self, control):
+    def _run(self, control):
         try:
             wait = OSD_TIMER * 2
-            tot = wait
+            tot  = wait
             xpos = control.getX()
             
             while not self.monitor.abortRequested():
@@ -193,13 +192,12 @@ class Replay(xbmcgui.WindowXMLDialog):
         except Exception as e:
             self.log(f"Background OSD countdown loop crashed: {str(e)}", xbmc.LOGERROR)
         finally:
-            self.service._que(self.close, 1, 0, 0)
+            self.close()
 
     def onAction(self, act):
         actionId = act.getId()
         self.log(f"onAction: actionId = {actionId}")
         self.closing = True
-        
         if   actionId == ACTION_MOVE_UP:       BUILTIN.executebuiltin('AlarmClock(up,Action(up),.5,true,false)')
         elif actionId == ACTION_MOVE_DOWN:     BUILTIN.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
         elif actionId in ACTION_PREVIOUS_MENU: BUILTIN.executebuiltin('AlarmClock(back,Action(back),.5,true,false)')
@@ -209,7 +207,7 @@ class Replay(xbmcgui.WindowXMLDialog):
                 with BUILTIN.busy_dialog():
                     liz = LISTITEMS.buildItemListItem(self.fitem)
                     liz.setProperty('sysInfo', FileAccess._encodeString(self.player.playingItem))
-                    timerit(self.player.play)(1.0, *(self.fitem.get('catchup-id'), liz))
+                    timerit(self.player.play)(0.5, *(self.fitem.get('catchup-id'), liz))
                     self.player.stop()
             else: 
                 DIALOG.notificationDialog(LANGUAGE(30154))
@@ -238,6 +236,7 @@ class Overlay:
         self.onnext       = None
         
         # Kodi Fullscreen Video
+        WH, WIN     = BUILTIN.getResolution()
         self.window = xbmcgui.Window(12005) 
         self.window_w, self.window_h = WH
         
@@ -363,20 +362,22 @@ class OnNext(xbmcgui.WindowXMLDialog):
     intTime   = 0
     
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
         self.service        = kwargs.pop('service', None)
         self.nitem          = kwargs.pop('next', {})
         self.onNextMode     = kwargs.pop('mode', SETTINGS.getSettingInt('OnNext_Mode'))
         self.onNextPosition = kwargs.pop('position', SETTINGS.getSetting("OnNext_Position_XY"))
         
-        super().__init__(*args, **kwargs)
         self.monitor = self.service.monitor if self.service else None
         self.player  = self.service.player if self.service else None
         self.jsonRPC = self.player.jsonRPC if self.player else None
         
-        playing_item = self.player.playingItem if (self.player and hasattr(self.player, 'playingItem')) else {}
-        self.citem = playing_item.get('citem', {})
-        self.fitem = playing_item.get('fitem', {})
+        self.pitem = self.player.playingItem if (self.player and hasattr(self.player, 'playingItem')) else {}
+        self.citem = self.pitem.get('citem', {})
+        self.fitem = self.pitem.get('fitem', {})
                 
+        WH, WIN     = BUILTIN.getResolution()
         self.window = xbmcgui.Window(12005) 
         self.window_w, self.window_h = WH 
                 
@@ -386,18 +387,18 @@ class OnNext(xbmcgui.WindowXMLDialog):
             self.onNextX = abs(int(self.window_w // 9))
             self.onNextY = abs(int(self.window_h // 16) - self.window_h) - 356 
     
-        self.log(f"__init__: enableOnNext={bool(self.onNextMode)}, mode={self.onNextMode}, X={self.onNextX}, Y={self.onNextY}")
-        if not self.player or not self.nitem: return False
         try:
+            if not self.player or not self.nitem: raise Exception("Missing Next Item")
             self.totalTime = int(self.player.getPlayerTime() * (self.player.maxProgress / 100))
             self.threshold = abs((self.totalTime - (self.totalTime * .75)) - (ONNEXT_TIMER * 3))
             self.remaining = floor(self.totalTime - self.player.getPlayedTime())
             self.intTime   = roundupDIV(self.threshold, 3)
+            self.log(f"__init__: totalTime={self.totalTime}, threshold={self.threshold}, remaining={self.remaining}, intTime={self.intTime}")
         except Exception as e:
-            self.log(f"show_dialog metrics parse failed: {str(e)}", xbmc.LOGERROR)
+            self.log(f"__init__ failed! {str(e)}", xbmc.LOGERROR)
             return False
 
-        self.log(f"show_dialog: totalTime={self.totalTime}, threshold={self.threshold}, remaining={self.remaining}, intTime={self.intTime}")
+        self.log(f"__init__: enableOnNext={bool(self.onNextMode)}, mode={self.onNextMode}, X={self.onNextX}, Y={self.onNextY}")
         if self.remaining >= self.intTime:
             self.doModal()
             return True
@@ -409,12 +410,11 @@ class OnNext(xbmcgui.WindowXMLDialog):
     def onInit(self):
         try:
             self.log(f"onInit: citem={self.citem}\nfitem={self.fitem}\nnitem={self.nitem}")
-            self.service._que(self._run_async_notification_flow, 1, 0, 0)
+            self._run()
         except Exception as e: 
-            self.log(f"onInit critical error layout failed: {str(e)}", xbmc.LOGERROR)
-            self.service._que(self.close, 1, 0, 0)
+            self.log(f"onInit: critical error layout failed: {str(e)}", xbmc.LOGERROR)
             
-    def _run_async_notification_flow(self):
+    def _run(self):
         try:
             if self.onNextMode in [1, 2]: 
                 logo      = self.citem.get('logo') or BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO
@@ -427,17 +427,14 @@ class OnNext(xbmcgui.WindowXMLDialog):
                 except Exception:
                     nextTime = BUILTIN.getInfoLabel('VideoPlayer.NextStartTime')
 
-                if not nextTime: 
-                    self.service._que(self.close, 1, 0, 0)
-                    return
-
+                if not nextTime: return
                 onNow  = nowTitle if chname in validString(nowTitle) else f"{nowTitle} on {chname}"
                 onNext = f"@ {nextTime}: {nextTitle}"
             
-                container_control = self.getControl(40001)
-                container_control.setPosition(self.onNextX, self.onNextY)
-                container_control.setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo) + Window.IsVisible(fullscreenvideo)]')
-                container_control.setAnimations([
+                container = self.getControl(40001)
+                container.setPosition(self.onNextX, self.onNextY)
+                container.setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo) + Window.IsVisible(fullscreenvideo)]')
+                container.setAnimations([
                     ('WindowOpen' , f'effect=zoom start=80 end=100 center={self.onNextX},{self.onNextY} delay=160 tween=back time=240 reversible=false'),
                     ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
                     ('WindowClose', f'effect=zoom start=100 end=80 center={self.onNextX},{self.onNextY} delay=160 tween=back time=240 reversible=false'),
@@ -464,7 +461,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                         if self.service._shutdown(CPU_CYCLE) or not self.player.isPlayingPseudoTV() or show < 1: 
                             break
                         show -= CPU_CYCLE
-                        self.service._sleep(int(CPU_CYCLE * 1000))
+                        self.service._sleep(CPU_CYCLE)
                         
                     self.onNext_Text.setVisible(False)
                     self.onNext_Artwork.setVisible(False)
@@ -479,12 +476,9 @@ class OnNext(xbmcgui.WindowXMLDialog):
                 if self.service._shutdown(CPU_CYCLE) or not self.player.isPlayingPseudoTV() or wait < 1: 
                     break
                 wait -= CPU_CYCLE
-                self.service._sleep(int(CPU_CYCLE * 1000))
+                self.service._sleep(CPU_CYCLE)
                 
-        except Exception as e:
-            self.log(f"Asynchronous notification task loop crash failure: {str(e)}", xbmc.LOGERROR)
-        finally:
-            self.service._que(self.close, 1, 0, 0)
+        except Exception as e: self.log(f"_run: notification task loop crash failure: {str(e)}", xbmc.LOGERROR)
 
     def _updateUpNext(self, nowItem: dict = None, nextItem: dict = None):
         if nowItem is None: nowItem = {}
@@ -494,8 +488,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         data = {}
         try:
             data["notification_offset"] = int(floor(self.player.getRemainingTime())) + OSD_TIMER
-            
-            def build_episode_map(item):
+            def _map(item):
                 return {
                     "episodeid" : item.get("id", ""),
                     "tvshowid"  : item.get("tvshowid", ""),
@@ -511,13 +504,10 @@ class OnNext(xbmcgui.WindowXMLDialog):
                     "runtime"   : item.get("runtime", "")
                 }
                 
-            data["current_episode"] = build_episode_map(nowItem)
-            data["next_episode"] = build_episode_map(nextItem)
-            
-            json_dump = FileAccess.dumpJSON(data).encode(DEFAULT_ENCODING)
-            hex_payload = binascii.hexlify(json_dump).decode(DEFAULT_ENCODING)
-            
-            timerit(self.jsonRPC.notifyAll)(0.5, *('upnext_data', hex_payload, f"{ADDON_ID}.SIGNAL"))
+            data["current_episode"] = _map(nowItem)
+            data["next_episode"]    = _map(nextItem)
+            hex_payload = binascii.hexlify(FileAccess.dumpJSON(data).encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING)
+            self.jsonRPC.notifyAll('upnext_data', hex_payload, f"{ADDON_ID}.SIGNAL")
         except Exception as e:
             self.log(f"_updateUpNext structural payload packaging failed: {str(e)}", xbmc.LOGERROR)
 

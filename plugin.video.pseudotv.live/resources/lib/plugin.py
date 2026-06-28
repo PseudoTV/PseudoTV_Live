@@ -18,17 +18,18 @@
 
 # -*- coding: utf-8 -*-
 from globals             import *
-from jsonrpc             import JSONRPC
+from _services           import Service
 from rules               import RulesList
 from infotagger.listitem import ListItemInfoTag
 
 class Plugin(object):
-    player  = PLAYER()
-    jsonRPC = JSONRPC()
-    monitor = MONITOR()
-    cache   = SETTINGS.cache
-    
     def __init__(self, mode='playlist', sysInfo={}):
+        service = Service()   
+        self.service = service
+        self.pool    = service.pool
+        self.jsonRPC = service.jsonRPC
+        self.cache   = service.cache
+        self.monitor = service.monitor
         self.sysInfo = sysInfo
         self.sysInfo['seek'] = (sysInfo.get('seek') or abs(int(sysInfo.get('start',-1)) - int(sysInfo.get('now',-1))) if int(sysInfo.get('start',-1)) > 0 else -1)
         self.sysInfo["progresspercentage"] = round((self.sysInfo["seek"]/int(self.sysInfo["duration"])) * 100, 2) if self.sysInfo['seek'] > 0 else -1 
@@ -56,7 +57,7 @@ class Plugin(object):
             
     def _updateSysInfo(self):
         self.log('[%s] _updateSysInfo'%(self.sysInfo.get('chid')))
-        if not self.player.isPlaying(): DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32248),LANGUAGE(30223),LANGUAGE(32140)))
+        if not self.player.isPlaying() and SETTINGS.getSettingBool('Debug_Enable'): DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32248),LANGUAGE(30223),LANGUAGE(32140)))
         with PROPERTIES.suspendActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
         if pvritem:

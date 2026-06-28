@@ -19,7 +19,7 @@
 # -*- coding: utf-8 -*-
 import codecs, shutil, errno
 
-from variables   import *
+from constants   import *
 from logger      import log
 
 #constants 
