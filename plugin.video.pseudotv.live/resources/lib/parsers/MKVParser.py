@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from globals import *
+from variables import *
 from typing import Union
 import struct
 
@@ -25,8 +25,10 @@ class MKVParser:
     Parser for Matroska (MKV) video files.
     Extracts duration from EBML header information.
     """
-    monitor = xbmc.Monitor()
-    
+    def __init__(self):
+        self.monitor = MONITOR()
+        
+
     def determineLength(self, filename: str) -> Union[int, float]:
         """
         Determines video length from MKV file.

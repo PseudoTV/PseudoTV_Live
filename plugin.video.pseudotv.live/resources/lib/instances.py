@@ -17,15 +17,15 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from variables import * 
-from globals   import *
+from variables   import *
+from fileaccess  import FileAccess
         
 class Instances(object):
     def __init__(self, settings):
         self.settings = settings
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
     def _load(self, file=INSTANCEFLE_DEFAULT):
         settings = self.IPTV_SIMPLE_SETTINGS()
@@ -88,14 +88,14 @@ class Instances(object):
                 # instancePath = self.getPVRInstancePath(self.settings.properties.getFriendlyName())
                 # if FileAccess.exists(instancePath): FileAccess.delete(instancePath)
                 # if FileAccess.move(PVR_SETTINGS_XML, instancePath):
-                    # self.settings.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
+                    # self.settings.Globals.DIALOG.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
                     # self.settings.properties.setPropTimer('chkPVRRefresh')
         ###
         if silent is None: silent = self.settings.getSettingBool('Enable_Kodi_Access')
         addon = self.settings.hasAddon(PVR_CLIENT_ID,notify=True)
         if self._save(self.getPVRInstancePath(instanceName),settings):
             if not silent: 
-                self.settings.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
+                self.settings.Globals.DIALOG.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
             self.settings.properties.setPropTimer('chkPVRRefresh')
         
     def getPVRInstanceID(self, instanceName=ADDON_NAME):
@@ -107,9 +107,15 @@ class Instances(object):
         self.log(f"getPVRInstancePath {instanceName} => {instancePath}")
         return instancePath
         
+    def hasPVRInstance(self, instanceName=ADDON_NAME):
+        instancePath = self.getPVRInstancePath(instanceName)
+        if FileAccess.exists(instancePath):
+            self.log('[%s] hasPVRInstance, instanceName = %s, path = %s'%(PVR_CLIENT_ID,instanceName, instancePath))
+            return instancePath
+        
     def chkInstances(self, instanceName=ADDON_NAME):
         self.log(f"chkInstances {instanceName}")
-        if not self.settings.hasPVRInstance(instanceName):
+        if not self.hasPVRInstance(instanceName):
             #clean abandoned configurations.
             files = [filename for filename in FileAccess.listdir(PVR_CLIENT_LOC)[1] if filename.endswith('.xml')]
             for file in files:
@@ -132,6 +138,7 @@ class Instances(object):
                     except Exception as e:
                         self.log('[%s] chkInstances, path = %s, failed to open file = %s\n%s'%(PVR_CLIENT_ID,PVR_CLIENT_LOC,file,e))
                         continue
+
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
         return {'startNum'                      :'1',

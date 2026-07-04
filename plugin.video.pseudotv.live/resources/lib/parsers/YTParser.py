@@ -16,13 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from globals    import *
+from variables    import *
 
 class YTParser(object):
     def determineLength(self, filename: str) -> int and float:
         try:
             dur = 0
-            if SETTINGS.hasAddon('script.module.youtube.dl'):
+            if Globals.SETTINGS.hasAddon('script.module.youtube.dl'):
                 from youtube_dl import YoutubeDL
                 if   'videoid'  in filename: vID = (re.compile(r'videoid\=(.*)' , re.IGNORECASE).search(filename)).group(1)
                 elif 'video_id' in filename: vID = (re.compile(r'video_id\=(.*)', re.IGNORECASE).search(filename)).group(1)

@@ -18,7 +18,7 @@
 # https://github.com/kodi-community-addons/script.module.simplecache/blob/master/README.md
 # -*- coding: utf-8 -*-
  
-from globals    import *
+from variables    import *
 from library    import Library
 from channels   import Channels
 
@@ -30,22 +30,22 @@ class Backup(object):
         
     
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def getBackups(self):
         keys = [CHANNELBACKUP_KEY,CHANNELCHANGED_KEY,CHANNELLATEST_KEY]
-        return list(filter(None,[PROPERTIES.setBackup(key, self.getChannels(key)) for key in keys]))
+        return list(filter(None,[Globals.PROPERTIES.setBackup(key, self.getChannels(key)) for key in keys]))
         
         
     def backupChannels(self, key: str=CHANNELBACKUP_KEY, silent=True) -> bool:
         channels = self.getChannels()
         if len(channels) > 0:
             self.log('backupChannels, key = %s, channels = %s'%(key, len(channels)))
-            with BUILTIN.busy_dialog(silent):
-                if SETTINGS.setCacheSetting(key, self._setChannels(channels), FileAccess._getMD5(key)):
-                    if not silent: DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32110),LANGUAGE(32025), key))
-                    PROPERTIES.setBackup(key, channels)
+            with Globals.BUILTIN.busy_dialog(silent):
+                if Globals.SETTINGS.setCacheSetting(key, self._setChannels(channels), FileAccess._getMD5(key)):
+                    if not silent: Globals.DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32110),LANGUAGE(32025), key))
+                    Globals.PROPERTIES.setBackup(key, channels)
                     return True
         return False
                     
@@ -54,12 +54,12 @@ class Backup(object):
         channels = Channels(key).getChannels()
         if len(channels) > 0:
             self.log('recoverChannels, key = %s, channels = %s'%(key, len(channels)))
-            if DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(len(self.getChannels()),len(channels),key))): 
-                with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
-                    if SETTINGS.setCacheSetting(CHANNEL_KEY, self._setChannels(channels), FileAccess._getMD5(CHANNEL_KEY), -1):
-                        DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32112),LANGUAGE(32025), key))
-                        PROPERTIES.setPendingRestart()
-                        PROPERTIES.setBackup(key, channels)
+            if Globals.DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(len(self.getChannels()),len(channels),key))): 
+                with Globals.BUILTIN.busy_dialog(), Globals.PROPERTIES.interruptActivity():
+                    if Globals.SETTINGS.setCacheSetting(CHANNEL_KEY, self._setChannels(channels), FileAccess._getMD5(CHANNEL_KEY), -1):
+                        Globals.DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32112),LANGUAGE(32025), key))
+                        Globals.PROPERTIES.setPendingRestart()
+                        Globals.PROPERTIES.setBackup(key, channels)
                         return True
         return False
             
@@ -81,35 +81,35 @@ class Backup(object):
      
      
     def exportChannels(self, file=CHANNEL_BACKUP_FLE):
-        with BUILTIN.busy_dialog():
+        with Globals.BUILTIN.busy_dialog():
             if FileAccess.setJSON(file, self._setChannels(self.getChannels())):
-                DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32110),LANGUAGE(32025),file))
+                Globals.DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32110),LANGUAGE(32025),file))
         
         
     def importChannels(self, file=CHANNEL_BACKUP_FLE):
-        if file is None: file = DIALOG.browseSources(1,default=file,mask="files")
+        if file is None: file = Globals.DIALOG.browseSources(1,default=file,mask="files")
         if FileAccess.exists(file):
             channels = FileAccess.getJSON(file).get('channels',[])
             if len(channels) > 0:
                 self.log('importChannels, file = %s, channels = %s'%(file, len(channels)))
-                if DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(len(self.getChannels()),len(channels),file))): 
-                    with BUILTIN.busy_dialog(), PROPERTIES.interruptActivity():
-                        if SETTINGS.setCacheSetting(CHANNEL_KEY, self._setChannels(channels), FileAccess._getMD5(CHANNEL_KEY), -1):
-                            DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32112),LANGUAGE(32025),file))
-                            PROPERTIES.setPendingRestart()
-                            PROPERTIES.setBackup(CHANNEL_KEY, channels)
+                if Globals.DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(len(self.getChannels()),len(channels),file))): 
+                    with Globals.BUILTIN.busy_dialog(), Globals.PROPERTIES.interruptActivity():
+                        if Globals.SETTINGS.setCacheSetting(CHANNEL_KEY, self._setChannels(channels), FileAccess._getMD5(CHANNEL_KEY), -1):
+                            Globals.DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32112),LANGUAGE(32025),file))
+                            Globals.PROPERTIES.setPendingRestart()
+                            Globals.PROPERTIES.setBackup(CHANNEL_KEY, channels)
                             return True
         return False
 
-                # if not DIALOG.yesnoDialog('%s\n%s?'%(LANGUAGE(32108),SETTINGS.getSetting('Backup_Channels'))): 
-                        # SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
-                        # SETTINGS.setSetting('Recover_Backup','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(channels)))
+                # if not Globals.DIALOG.yesnoDialog('%s\n%s?'%(LANGUAGE(32108),Globals.SETTINGS.getSetting('Backup_Channels'))): 
+                        # Globals.SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
+                        # Globals.SETTINGS.setSetting('Recover_Backup','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(channels)))
 
     @staticmethod
     def _setChannels(channels):
         channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT).copy()
-        channelDATA['name']     = PROPERTIES.getFriendlyName()
-        channelDATA['uuid']     = SETTINGS.getMYUUID()
+        channelDATA['name']     = Globals.PROPERTIES.getFriendlyName()
+        channelDATA['uuid']     = Globals.SETTINGS.getMYUUID()
         channelDATA['channels'] = channels
         channelDATA['updated']  = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         return channelDATA
@@ -117,21 +117,21 @@ class Backup(object):
 
     @staticmethod
     def getFileDate(file: str) -> str:
-        try:              return epochTime(pathlib.Path(FileAccess.translatePath(file)).stat().st_mtime,tz=False).strftime(BACKUP_TIME_FORMAT)
+        try:              return Globals._epochTime(pathlib.Path(FileAccess.translatePath(file)).stat().st_mtime,tz=False).strftime(BACKUP_TIME_FORMAT)
         except Exception: return datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
             
             
     @staticmethod
     def _selectRestore(msg, items=[]):
         def __buildMenuItem(item): #build menu item
-            return LISTITEMS.buildMenuListItem(item.get('name'),f'Channels ({item.get("channels",[])}) - Updated [{item.get("updated","Unknown")}]')
+            return Globals.LISTITEMS.buildMenuListItem(item.get('name'),f'Channels ({item.get("channels",[])}) - Updated [{item.get("updated","Unknown")}]')
       
-        with BUILTIN.busy_dialog():
+        with Globals.BUILTIN.busy_dialog():
             log(f'selectImports, imports = {len(imports)}')
             lizLST = poolit(__buildMenuItem)(list(imports.values()))
-            if len(lizLST) > 0 and not PROPERTIES.isRunning('Backup.select'):
-                with PROPERTIES.chkRunning('Backup.select'):
-                    select = DIALOG.selectDialog(lizLST,f'{LANGUAGE(32067)} {msg}',multi=False)
+            if len(lizLST) > 0 and not Globals.PROPERTIES.isRunning('Backup.select'):
+                with Globals.PROPERTIES.chkRunning('Backup.select'):
+                    select = Globals.DIALOG.selectDialog(lizLST,f'{LANGUAGE(32067)} {msg}',multi=False)
                     if not select is None: 
                         channels = lizLST[select].get('channels',[])
                         if len(channels) > 0: return lizLST[select].get('name')
@@ -154,7 +154,7 @@ class Backup(object):
         
     @threadit
     def run(self):  
-        with BUILTIN.busy_dialog():
+        with Globals.BUILTIN.busy_dialog():
             ctl = (0,1) #settings return focus
             try:
                 param = self.sysARG[1]

@@ -16,29 +16,32 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
-
-from globals     import *
+from contextlib  import contextmanager
+from variables   import *
 from videoparser import VideoParser
+from _services   import _Service
 
 class JSONRPC(object):
     def __init__(self, service=None):
-        if service is None: 
-            from _services import Service
-            service = Service()   
-        self.service = service
-        self.pool    = service.pool
-        self.cache   = service.cache
+        self.runtimeThreshold = 15 #todo user setting % of allowed difference between runtime and duration before overriding runtime.
+        if service is None: service = _Service()
+        self.service     = service
+        self.pool        = service.pool
+        self.cache       = service.cache
         self.videoParser = VideoParser()
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+
+    def log(self, msg, level=None):
+        if level is None: level = xbmc.LOGDEBUG
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
 
-    def requestURL(self, url, params=None, payload=None, header=None, timeout=None, file=None, life=datetime.timedelta(minutes=15)):
+    def requestURL(self, url, params=None, payload=None, header=None, timeout=None, file=None, life=None):
         if params is None:  params  = {}
         if payload is None: payload = {}
         if header is None:  header  = {}
         if timeout is None: timeout = REAL_SETTINGS.getSettingInt('API_Timeout')
+        if life is None:    life = datetime.timedelta(minutes=15)
 
         def __error(result={}): return result
         def __getCache():       return (self.cache.get('requestURL.%s'%(FileAccess._getMD5((url,params,payload,file)))) or {})
@@ -108,7 +111,9 @@ class JSONRPC(object):
         if hasattr(self.service,'jsonQue'): self.service.jsonQue.add(param)
         
         
-    def cacheJSON(self, param, life=datetime.timedelta(minutes=5), checksum=ADDON_VERSION, timeout=None):
+    def cacheJSON(self, param, life=None, checksum=None, timeout=None):
+        if checksum is None: checksum = ADDON_VERSION
+        if life is None: life = datetime.timedelta(minutes=5)
         cacheName = 'cacheJSON.%s'%(FileAccess._getMD5(FileAccess.dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
@@ -117,9 +122,11 @@ class JSONRPC(object):
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, media='video', limit=None, depth=None, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), dir={'label':'resources'}):
-        if depth is None: depth = REAL_SETTINGS.getSettingInt('Recursive_Depth')
+    def walkFileDirectory(self, path, media='video', limit=None, depth=None, checksum=None, expiration=None, dir={'label':'resources'}):
         if limit is None: limit = CHANNEL_LIMIT * depth
+        if depth is None: depth = REAL_SETTINGS.getSettingInt('Recursive_Depth')
+        if checksum is None: checksum = ADDON_VERSION
+        if expiration is None: expiration = datetime.timedelta(minutes=15)
         walk = {}
         walk_depth = depth
         subs = []
@@ -142,7 +149,9 @@ class JSONRPC(object):
         return walk
                 
 
-    def walkListDirectory(self, path, exts=[], depth=None, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkListDirectory(self, path, exts=[], depth=None, checksum=None, expiration=None):
+        if checksum is None: checksum = ADDON_VERSION
+        if expiration is None: expiration = datetime.timedelta(minutes=15)
         accurate_duration = bool(REAL_SETTINGS.getSettingInt('Duration_Type'))
         if depth is None: depth = REAL_SETTINGS.getSettingInt('Recursive_Depth')
         def __(path, f):
@@ -165,7 +174,9 @@ class JSONRPC(object):
         return walk
                 
           
-    def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def getListDirectory(self, path, checksum=None, expiration=None):
+        if checksum is None: checksum = ADDON_VERSION
+        if expiration is None: expiration = datetime.timedelta(minutes=15)
         cacheName = 'getListDirectory.%s'%(FileAccess._getMD5(path))
         results   = self.cache.get(cacheName, checksum)
         if results is None:
@@ -180,17 +191,18 @@ class JSONRPC(object):
 
     def getIntrospect(self, id):
         param = {"method":"JSONRPC.Introspect","params":{"filter":{"id":id,"type":"method"}}}
-        return self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('System.BuildVersion')).get('result',{})
+        return self.cacheJSON(param,datetime.timedelta(days=28),self.getInfoLabel('System.BuildVersion')).get('result',{})
 
 
     def getEnums(self, id, type='', key='enums'):
         self.log('getEnums id = %s, type = %s, key = %s' % (id, type, key))
         param = {"method":"JSONRPC.Introspect","params":{"getmetadata":True,"filterbytransport":True,"filter":{"getreferences":False,"id":id,"type":"type"}}}
-        json_response = self.cacheJSON(param,datetime.timedelta(days=28),BUILTIN.getInfoLabel('System.BuildVersion')).get('result',{}).get('types',{}).get(id,{})
+        json_response = self.cacheJSON(param,datetime.timedelta(days=28),self.getInfoLabel('System.BuildVersion')).get('result',{}).get('types',{}).get(id,{})
         return (json_response.get('properties',{}).get(type,{}).get(key) or json_response.get(type,{}).get(key) or json_response.get(key,[]))
 
 
-    def notifyAll(self, message, data, sender=ADDON_ID):
+    def notifyAll(self, message, data, sender=None):
+        if sender is None: sender = ADDON_ID
         param = {"method":"JSONRPC.NotifyAll","params":{"sender":sender,"message":message,"data":[data]}}
         return self.sendJSON(param).get('result') == 'OK'
 
@@ -201,21 +213,25 @@ class JSONRPC(object):
 
 
     def getSetting(self, category, section, cache=False):
-        param = {"method":"REAL_SETTINGS.getSettings","params":{"filter":{"category":category,"section":section}}}
+        param = {"method":"Settings.getSettings","params":{"filter":{"category":category,"section":section}}}
         if cache: return self.cacheJSON(param).get('result',{}).get('settings',[])
         else:     return self.sendJSON(param).get('result',{}).get('settings',[])
 
 
     def getSettingValue(self, key, default='', cache=False):
-        param = {"method":"REAL_SETTINGS.getSettingValue","params":{"setting":key}}
-        if cache: return (self.cacheJSON(param).get('result',{}).get('value') or default)
-        else:     return (self.sendJSON(param).get('result',{}).get('value')  or default)
+        param = {"method":"Settings.getSettingValue","params":{"setting":key}}
+        if cache: value = self.cacheJSON(param).get('result',{}).get('value')
+        else:     value = self.sendJSON(param).get('result',{}).get('value')
+        self.log(f'[{ADDON_ID}] getSettingValue, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+        return value  or default
 
 
     def setSettingValue(self, key, value, queue=False):
         param = {"method":"Settings.SetSettingValue","params":{"setting":key,"value":value}}
         if queue: self.queueJSON(param)
         else:     self.sendJSON(param)
+        self.log(f'[{ADDON_ID}] setSettingValue, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+        
 
 
     def getSources(self, media='video', cache=True):
@@ -224,7 +240,8 @@ class JSONRPC(object):
         else:     return self.sendJSON(param).get('result',{}).get('sources', [])
 
 
-    def getAddonDetails(self, addonid=ADDON_ID, cache=True):
+    def getAddonDetails(self, addonid=None, cache=True):
+        if addonid is None: addonid = ADDON_ID
         param = {"method":"Addons.GetAddonDetails","params":{"addonid":addonid,"properties":self.getEnums("Addon.Fields", type='items')}}
         if cache: return self.cacheJSON(param).get('result',{}).get('addon', {})
         else:     return self.sendJSON(param).get('result',{}).get('addon', {})
@@ -305,7 +322,9 @@ class JSONRPC(object):
         else:     return self.sendJSON(param).get('result',{}).get('textures', [])
             
         
-    def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def getDirectory(self, param={}, cache=True, checksum=None, expiration=None):
+        if checksum is None: checksum = ADDON_VERSION
+        if expiration is None: expiration = datetime.timedelta(minutes=15)
         param["properties"] = self.getEnums("List.Fields.Files", type='items') #todo change enums from files to media specific? 
         param = {"method":"Files.GetDirectory","params":param}
         if cache: results = self.cacheJSON(param, expiration, checksum, timeout=120).get('result',{})
@@ -324,13 +343,13 @@ class JSONRPC(object):
     def getMPAA(self, type='movie', incItem=False):
         def __parse(items): 
             for item in items:
-                yield {'label':cleanMPAA(item.get("mpaa","NR")),'item':item if incItem else {}}
+                yield {'label':Globals._cleanMPAA(item.get("mpaa","NR")),'item':item if incItem else {}}
         if   type == 'movie':  return list(__parse(self.getMovies()))
         elif type == 'tvshow': return list(__parse(self.getTVshows()))
 
 
     def getStreamDetails(self, path, media='video'):
-        if isStack(path): path = splitStacks(path)[0]
+        if Globals._isStack(path): path = Globals._splitStacks(path)[0]
         param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}
         return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=FileAccess._getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
@@ -361,12 +380,14 @@ class JSONRPC(object):
         return self.sendJSON(param).get('result',{}).get('clients',[])
 
 
-    def getPVRClient(self, id=PVR_CLIENT_ID):
+    def getPVRClient(self, id=None):
+        if id is None: id = PVR_CLIENT_ID
         results = self.getPVRClients()
         return next((result for result in results if result.get('addonid','').lower() == id.lower()),None)
 
 
-    def getPVRChannelGroups(self, match=ADDON_NAME, radio=False):
+    def getPVRChannelGroups(self, match=None, radio=False):
+        if match is None: match = ADDON_NAME
         param   = {"method":"PVR.GetChannelGroups","params":{"channeltype":{True:'radio',False:'tv'}[radio]}}
         results = self.sendJSON(param).get('result',{}).get('channelgroups', [])
         if match is None: return results
@@ -483,7 +504,7 @@ class JSONRPC(object):
         def __parseDuration(runtime, path, item={}, save=False):
             duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
             if   runtime == 0: runtime = duration
-            elif round(percentDiff(runtime, duration)) <= RUNTIME_THRESHOLD: runtime = duration
+            elif round(Globals._percentDiff(runtime, duration)) <= self.runtimeThreshold: runtime = duration
             if save and duration != runtime: self.queDuration(item, runtime)
             return runtime
             
@@ -491,8 +512,8 @@ class JSONRPC(object):
         runtime = self._getRuntime(item) #player runtime, fallback meta provider runtime
         if runtime == 0 or accurate:
             duration = 0
-            if isStack(path):# handle "stacked" videos
-                for file in splitStacks(path): duration += __parseDuration(runtime, file)
+            if Globals._isStack(path):# handle "stacked" videos
+                for file in Globals._splitStacks(path): duration += __parseDuration(runtime, file)
             else: duration = __parseDuration(runtime, path, item, save)
             if duration > 0: runtime = duration
         self.log(f"getDuration [{runtime}], {path}, accurate = {accurate}, save ={save}")
@@ -637,11 +658,11 @@ class JSONRPC(object):
 
     @contextmanager
     def detectRPCCrash(self, citem):
-        SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',citem)
+        Globals.SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',citem)
         try: yield
         except Exception:pass
         finally:
-            SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
+            Globals.SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
 
 
     def getLocalHost(self, local=False):
@@ -691,8 +712,9 @@ class JSONRPC(object):
         self.log("inputFriendlyName, name = %s"%(friendly))
         if not friendly or friendly.lower() == 'kodi':
             if Dialog().okDialog(LANGUAGE(32132)%(friendly)):
-                with PROPERTIES.interruptActivity():
+                with Globals.PROPERTIES.interruptActivity():
                     friendly = Dialog().inputDialog(LANGUAGE(30122), friendly)
+                    print(friendly)
                 if not friendly or friendly.lower() == 'kodi':
                     return self.inputFriendlyName()
                 else:
@@ -727,7 +749,7 @@ class JSONRPC(object):
             for result in results:
                 label = result.get('label', '')
                 if label.startswith(ADDON_NAME) or label.startswith('All channels'):
-                    channels, _, _ = self.getDirectory(param={"directory": result.get('file')},checksum=PROPERTIES.getProcessID(),expiration=datetime.timedelta(minutes=15))
+                    channels, _, _ = self.getDirectory(param={"directory": result.get('file')},checksum=Globals.PROPERTIES.getProcessID(),expiration=datetime.timedelta(minutes=15))
                     
                     for item in channels:
                         fitem_id = Globals._decodePlot(item.get('plot', '')).get('citem', {}).get('id')
@@ -743,7 +765,7 @@ class JSONRPC(object):
     def matchChannel(self, chname: str, id: str, radio: bool=False, extend=True):
         self.log('[%s] matchChannel, chname = %s, radio = %s' % (id, chname, radio))
         cacheName     = 'matchChannel.%s' % (FileAccess._getMD5('%s.%s.%s.%s' % (chname, id, radio, extend)))
-        cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getProcessID()) or {})
+        cacheResponse = (self.cache.get(cacheName, checksum=Globals.PROPERTIES.getProcessID()) or {})
         if cacheResponse: return cacheResponse
             
         pvrItem  = None
@@ -779,14 +801,14 @@ class JSONRPC(object):
                 pvrItem['broadcastnext'] = broadcastnext
             elif 'broadcastnext' in pvrItem: pass 
             self.log('matchChannel: __extend, broadcastnext = %s entries' % len(pvrItem.get('broadcastnext', [])))
-        self.cache.set(cacheName, pvrItem, checksum=PROPERTIES.getProcessID(), expiration=datetime.timedelta(seconds=15))
+        self.cache.set(cacheName, pvrItem, checksum=Globals.PROPERTIES.getProcessID(), expiration=datetime.timedelta(seconds=15))
         return pvrItem
         
         
     def getNextItem(self, citem=None, nitem=None):
         if citem is None: citem = {}
         if nitem is None: nitem = {}
-        if not isFiller(nitem): return nitem
+        if not Globals._isFiller(nitem): return nitem
             
         n_id = Globals._decodePlot(nitem.get('plot', '')).get('id')
         next_items = self.matchChannel(citem.get('name', ''), citem.get('id', ''), citem.get('radio', False)).get('broadcastnext', [])
@@ -800,7 +822,7 @@ class JSONRPC(object):
         if found_idx != -1:
             for i in range(found_idx, len(next_items)):
                 candidate = next_items[i]
-                if not isFiller(candidate):
+                if not Globals._isFiller(candidate):
                     return Globals._decodePlot(candidate.get('plot', ''))
         return {}
         
@@ -816,7 +838,7 @@ class JSONRPC(object):
         elif 'tvshowid'in item: key = 'tvshows'
         else: return
         fitem = item.copy()
-        dur = self.getDuration(fitem.get('trailer'), accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=False)
+        dur = self.getDuration(fitem.get('trailer'), accurate=bool(Globals.SETTINGS.getSettingInt('Duration_Type')), save=False)
         if dur > 0:
             trailers = self.getTrailers()
             if 'streamdetails' in fitem: fitem.pop('streamdetails')
@@ -836,12 +858,12 @@ class JSONRPC(object):
     def setTrailers(self, trailers={'movies':{},'tvshows':{}}):
         self.log(f'setTrailers [Movies] = {len(trailers.get('movies',{}))}')
         self.log(f'setTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
-        return SETTINGS.setCacheSetting('trailers', trailers)
+        return Globals.SETTINGS.setCacheSetting('trailers', trailers)
                                 
                         
     def getTrailers(self, genre=None):
         #todo clean old trailers by "added" epoch
-        trailers = SETTINGS.getCacheSetting('trailers', default={'movies':{},'tvshows':{}})
+        trailers = Globals.SETTINGS.getCacheSetting('trailers', default={'movies':{},'tvshows':{}})
         self.log(f'getTrailers [Movies] = {len(trailers.get('movies',{}))}')
         self.log(f'getTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
         if not genre is None: return trailers.get(genre,[])

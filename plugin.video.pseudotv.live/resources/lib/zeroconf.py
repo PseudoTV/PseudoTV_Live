@@ -29,9 +29,9 @@ __license__ = 'LGPL'
 import sys, time, struct
 import socket, threading, select, traceback
 
-from variables   import *
 from functools   import reduce
-from kodi_six   import xbmc
+from kodi_six    import xbmc
+from variables   import *
 
 DEFAULT_ENCODING = "utf-8"
 

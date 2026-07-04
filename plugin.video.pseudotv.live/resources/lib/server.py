@@ -20,13 +20,12 @@
 import gzip, mimetypes, socket, errno
 
 from zeroconf                  import *
-from globals                   import *
+from variables                 import *
 from channels                  import Channels
 from library                   import Library
 from resources                 import Resources
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
-from variables                 import DIALOG, PROPERTIES, SETTINGS, LISTITEMS, BUILTIN
 #todo proper REST API to handle server/client communication incl. sync/update triggers.
 #todo incorporate experimental webserver UI to master branch.
 
@@ -43,7 +42,7 @@ class Discovery(Thread):
             self.jsonRPC   = multiroom.jsonRPC
 
         def log(self, msg, level=xbmc.LOGDEBUG):
-            return log(f"{self.__class__.__name__}: {msg}", level)
+            return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
         def removeService(self, zeroconf, type, name):
             self.log("removeService, type = %s, name = %s"%(type,name))
@@ -56,7 +55,7 @@ class Discovery(Thread):
                 if not isinstance(address, bytes):
                     address = bytes(address)
                 ip = socket.inet_ntop(socket.AF_INET, address)
-                self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(ip,INFO.getPort()),'bonjour':'http://%s:%s/api/%s'%(ip,SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
+                self.zServers[server] = {'type':type,'name':name,'server':server,'host':'%s:%d'%(ip,INFO.getPort()),'bonjour':'http://%s:%s/api/%s'%(ip,Globals.SETTINGS.getSettingInt('TCP_PORT'),BONJOURFLE)}
                 self.log("addService, found zeroconf %s @ %s using bonjour %s"%(server,self.zServers[server]['host'],self.zServers[server]['bonjour']))
                 self.multiroom.addServer(self.jsonRPC.requestURL(self.zServers[server]['bonjour']))
             
@@ -69,11 +68,11 @@ class Discovery(Thread):
         self.start()
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
     def run(self):
-        if not PROPERTIES.isRunning('Discovery.run'):
-            with PROPERTIES.chkRunning('Discovery.run'):
+        if not Globals.PROPERTIES.isRunning('Discovery.run'):
+            with Globals.PROPERTIES.chkRunning('Discovery.run'):
                 while not self.monitor.abortRequested():
                     try: 
                         zcons = self.multiroom._getStatus()
@@ -82,11 +81,11 @@ class Discovery(Thread):
                             zconf = Zeroconf()
                             self.log("run, Multicast DNS Service waiting for (%s)"%(ZEROCONF_SERVICE))
                             ServiceBrowser(zconf, ZEROCONF_SERVICE, self.MyListener(multiroom=self.multiroom))
-                            SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
+                            Globals.SETTINGS.setSetting('ZeroConf_Status','[COLOR=yellow][B]%s[/B][/COLOR]'%(LANGUAGE(32252)))
                             if self.service._sleep(DISCOVER_INTERVAL): break
                             self.log("run, Multicast DNS Service stopping search for (%s)"%(ZEROCONF_SERVICE))
                             zconf.close()
-                        SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
+                        Globals.SETTINGS.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
                     except Exception as e:
                         self.log("run, Multicast DNS Service failed! %s"%(e), xbmc.LOGERROR)
                         break
@@ -107,7 +106,7 @@ class MyHandler(BaseHTTPRequestHandler):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def do_HEAD(self):
@@ -120,7 +119,7 @@ class MyHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         self.log('do_POST, incoming path = %s'%(self.path))
         def __verifyUUID(uuid):#lazy security check
-            if uuid == SETTINGS.getMYUUID(): return True
+            if uuid == Globals.SETTINGS.getMYUUID(): return True
             else:
                 from multiroom  import Multiroom
                 for server in list(Multiroom().getServers().values()):
@@ -136,13 +135,13 @@ class MyHandler(BaseHTTPRequestHandler):
                 if self.path == f'/api/{CHANNELFLE}':
                     channels = Channels(writable=True)
                     if channels.setChannels(list(channels._verify(incoming.get('payload')))):
-                        DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30108),incoming.get('name',ADDON_NAME)))
+                        Globals.DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30108),incoming.get('name',ADDON_NAME)))
                     del channels
                     self.send_response(200, "OK")
             elif self.path.startswith('/filelist/'):
                 #filelist w/resume - paused channel rule
-                if SETTINGS.setCacheSetting(self.path.replace('/filelist/',''), incoming.get('payload'), FileAccess._getMD5(self.path.replace('/filelist/','')), datetime.timedelta(days=84)):
-                    DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30060),incoming.get('name',ADDON_NAME)))
+                if Globals.SETTINGS.setCacheSetting(self.path.replace('/filelist/',''), incoming.get('payload'), FileAccess._getMD5(self.path.replace('/filelist/','')), datetime.timedelta(days=84)):
+                    Globals.DIALOG.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30060),incoming.get('name',ADDON_NAME)))
                     self.send_response(200, "OK")
             else: return self.do_GET()
                     
@@ -176,29 +175,29 @@ class MyHandler(BaseHTTPRequestHandler):
             use_compression = "gzip" in accept_encoding
             if self.path.startswith('/logos/'): # 302 Temporary Redirect
                 self.send_response(302)
-                self.send_header('Location', f'http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getImageCache(Globals._unquoteString(self.path.split("/logos/")[1])))}')
-                self.log(f'do_GET, redirecting to http://{PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(image)}')
+                self.send_header('Location', f'http://{Globals.PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(self.resources.getImageCache(Globals._unquoteString(self.path.split("/logos/")[1])))}')
+                self.log(f'do_GET, redirecting to http://{Globals.PROPERTIES.getRemoteHost()}/images/{Globals._quoteString(image)}')
                 self.end_headers()
                 return
             else: # 200 OK
                 self.send_response(200)
                 if   self.path == '/favicon.ico':                return __sendFile(ICON_WEB, use_compression)
-                elif self.path.endswith(PROPERTIES.getProcessID()): #force IPTV to reload fresh local meta.
+                elif self.path.endswith(Globals.PROPERTIES.getProcessID()): #force IPTV to reload fresh local meta.
                     if   M3UFLE.lower()   in self.path:          return __sendFile(M3UFLEPATH, use_compression)
                     elif XMLTVFLE.lower() in self.path:          return __sendFile(XMLTVFLEPATH, use_compression)
                     elif GENREFLE.lower() in self.path:          return __sendFile(GENREFLEPATH, use_compression)
                 elif self.path.endswith(f'/{M3UFLE.lower()}'):   return __sendFile(M3UFLEPATH, use_compression) 
                 elif self.path.endswith(f'/{XMLTVFLE.lower()}'): return __sendFile(XMLTVFLEPATH, use_compression)
                 elif self.path.endswith(f'/{GENREFLE.lower()}'): return __sendFile(GENREFLEPATH, use_compression)
-                elif self.path.startswith('/filelist/'):         return __sendChunk(self.path, FileAccess.dumpJSON(SETTINGS.getCacheSetting(self.path.replace('/filelist/',''), FileAccess._getMD5(self.path.replace('/filelist/','')), default=[])).encode(encoding=DEFAULT_ENCODING), use_compression)
+                elif self.path.startswith('/filelist/'):         return __sendChunk(self.path, FileAccess.dumpJSON(Globals.SETTINGS.getCacheSetting(self.path.replace('/filelist/',''), FileAccess._getMD5(self.path.replace('/filelist/','')), default=[])).encode(encoding=DEFAULT_ENCODING), use_compression)
                 elif self.path.startswith('/image/'):            return __sendFile(Globals._unquoteString(self.path.split('/image/')[1]), False)
                 elif self.path.startswith('/api/'):
                     data = None
-                    if   self.path == f'/api/{BONJOURFLE}': data = SETTINGS.getBonjour()
+                    if   self.path == f'/api/{BONJOURFLE}': data = Globals.SETTINGS.getBonjour()
                     elif self.path == f'/api/{SERVERFLE}' : data = self.service.tasks.Multiroom(service=self.service).getServers()
                     elif self.path == f'/api/{LIBRARYFLE}': data = Library(self.service).getLibrary()
                     elif self.path == f'/api/{CHANNELFLE}': data = Channels().getChannels()
-                    elif self.path == f'/api/{LOGSFLE}'   : data = SETTINGS.getCacheSetting('LOGS', FileAccess._getMD5(datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d')), default={})
+                    elif self.path == f'/api/{LOGSFLE}'   : data = Globals.SETTINGS.getCacheSetting('LOGS', FileAccess._getMD5(datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d')), default={})
                     if not data is None:
                         return __sendChunk(self.path, FileAccess.dumpJSON(data,idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
                 elif self.path.endswith('.html'):
@@ -228,12 +227,12 @@ class HTTP(Thread):
         
                     
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def _chkPort(self, host, port=None):
         if port is None:
-            port = SETTINGS.getSettingInt('TCP_PORT')
+            port = Globals.SETTINGS.getSettingInt('TCP_PORT')
         def __isAvailable(host, tmpPort):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 try:
@@ -252,17 +251,17 @@ class HTTP(Thread):
             else:
                 self.log(f"_chkPort {tmpPort} is in use. Trying next port.")
                 tmpPort += 1
-        if tmpPort != port: DIALOG.notificationDialog(LANGUAGE(30097)%(port,tmpPort))
+        if tmpPort != port: Globals.DIALOG.notificationDialog(LANGUAGE(30097)%(port,tmpPort))
         self.log("_chkPort, port available = %s"%(tmpPort))
         return tmpPort
         
 
     def run(self):  
         def __update(silent=None):
-            if silent is None: not SETTINGS.showDialog(silent)
-            isRunning = PROPERTIES.isRunning('HTTP.run')
-            if not silent: DIALOG.notificationDialog('%s: %s'%(SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
-            SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
+            if silent is None: not Globals.SETTINGS.showDialog(silent)
+            isRunning = Globals.PROPERTIES.isRunning('HTTP.run')
+            if not silent: Globals.DIALOG.notificationDialog('%s: %s'%(Globals.SETTINGS.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
+            Globals.SETTINGS.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
 
         def __cancel(wait=1.0):
             try:
@@ -274,20 +273,20 @@ class HTTP(Thread):
             except Exception: pass
             
         """Starts the threaded HTTP server with GZIP support."""
-        if not PROPERTIES.isRunning('HTTP.start'):
-            PROPERTIES.setRunning('HTTP.start',True)
+        if not Globals.PROPERTIES.isRunning('HTTP.start'):
+            Globals.PROPERTIES.setRunning('HTTP.start',True)
             while not self.monitor.abortRequested():
-                pendingRestart = PROPERTIES.getEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),False)
-                if not PROPERTIES.isRunning('HTTP.run'):
-                    PROPERTIES.setRunning('HTTP.run',True)
+                pendingRestart = Globals.PROPERTIES.getEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),False)
+                if not Globals.PROPERTIES.isRunning('HTTP.run'):
+                    Globals.PROPERTIES.setRunning('HTTP.run',True)
                     try: 
-                        host   = SETTINGS.getIP()
-                        port   = self._chkPort(host, SETTINGS.getSettingInt('TCP_PORT'))
-                        server = PROPERTIES.setRemoteHost('%s:%s'%(host,port))
-                        SETTINGS.setSetting('Remote_NAME' ,PROPERTIES.getFriendlyName())
-                        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
-                        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
-                        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
+                        host   = Globals.SETTINGS.getIP()
+                        port   = self._chkPort(host, Globals.SETTINGS.getSettingInt('TCP_PORT'))
+                        server = Globals.PROPERTIES.setRemoteHost('%s:%s'%(host,port))
+                        Globals.SETTINGS.setSetting('Remote_NAME' ,Globals.PROPERTIES.getFriendlyName())
+                        Globals.SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
+                        Globals.SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
+                        Globals.SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
                         self.log("run, http server @ %s"%(server),xbmc.LOGINFO)
                         
                         ThreadedHTTPServer.allow_reuse_address = True
@@ -312,8 +311,8 @@ class HTTP(Thread):
             except Exception: pass
             self.log('run, http server shutdown, pendingRestart = %s, isAlive = %s'%(pendingRestart,__cancel()), xbmc.LOGINFO)
             if pendingRestart: 
-                PROPERTIES.clrEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID))
+                Globals.PROPERTIES.clrEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID))
                 self.service._que(self.service.tasks.chkHTTP,1,M3U_REFRESH)
             __update(pendingRestart)
-            PROPERTIES.setRunning('HTTP.run',False)
-            PROPERTIES.setRunning('HTTP.start',False)
+            Globals.PROPERTIES.setRunning('HTTP.run',False)
+            Globals.PROPERTIES.setRunning('HTTP.start',False)

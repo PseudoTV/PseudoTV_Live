@@ -17,14 +17,14 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals import *
+from variables import *
 
 class Utilities(object):
     
     @staticmethod
     def buildMenu(select=None):        
         def __buildMenuItem(item):
-            return LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon'))
+            return Globals.LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon'))
         
         items = [
                  {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(False,),'kwargs':{}}, #"Rebuild M3U/XMLTV/Genres"
@@ -35,90 +35,90 @@ class Utilities(object):
                  {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':ICON,'func':Utilities._runIOBench  , 'hide':False ,'args':()      ,'kwargs':{}}, 
                  ]
 
-        with BUILTIN.busy_dialog():
-            if not SETTINGS.getSettingBool('Debug_Enable'): items = [item for item in items if not item.get('hide',False)]
+        with Globals.BUILTIN.busy_dialog():
+            if not Globals.SETTINGS.getSettingBool('Debug_Enable'): items = [item for item in items if not item.get('hide',False)]
             listItems = poolit(__buildMenuItem)(sorted(items,key=itemgetter('label')))
             
-        select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
+        select = Globals.DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
         if not select is None:
             try: 
-                selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
+                selectItem = [item for item in items if item.get('label') == listItems[select].Globals._getLabel()][0]
                 log('Utilities: buildMenu, selectItem = %s'%selectItem)
                 selectItem['func'](*selectItem.get('args',()),**selectItem.get('kwargs',{}))
             except Exception as e: 
                 log('Utilities: buildMenu, failed! %s'%(e), xbmc.LOGERROR)
-                return DIALOG.notificationDialog(LANGUAGE(32000))
+                return Globals.DIALOG.notificationDialog(LANGUAGE(32000))
         else: Globals._openSettings((6,1))
     
     
     @staticmethod
     def _runCleanup(full=False):
-        if DIALOG.yesnoDialog('Utilities: %s ?'%( LANGUAGE(32119) if full else LANGUAGE(32120) )): 
-            with BUILTIN.busy_dialog(lock=True), PROPERTIES.interruptActivity():
+        if Globals.DIALOG.yesnoDialog('Utilities: %s ?'%( LANGUAGE(32119) if full else LANGUAGE(32120) )): 
+            with Globals.BUILTIN.busy_dialog(lock=True), Globals.PROPERTIES.interruptActivity():
                 log('Utilities: _runCleanup, full %s'%(full))
                 files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
                          LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
                          LANGUAGE(30096):GENREFLEPATH}  #"Genre"
                 if full:
-                    instanceName = PROPERTIES.getFriendlyName()
+                    instanceName = Globals.PROPERTIES.getFriendlyName()
                     files.update({LANGUAGE(32053)                :SETTINGS_FLE, #Settings.xml
-                                  f'PVR Instance: {instanceName}':SETTINGS.instances.getPVRInstancePath(instanceName)}) #IPTV Instance.xml
+                                  f'PVR Instance: {instanceName}':Globals.SETTINGS.instances.getPVRInstancePath(instanceName)}) #IPTV Instance.xml
                 
                 for key, path in list(files.items()):
                     if FileAccess.delete(path): 
-                        DIALOG.notificationDialog('%s: %s\n%s'%(LANGUAGE(32127),key.replace(': ',''),os.path.split(path)[1]),silent=False)
+                        Globals.DIALOG.notificationDialog('%s: %s\n%s'%(LANGUAGE(32127),key.replace(': ',''),os.path.split(path)[1]),silent=False)
                         
                 if full:
-                    SETTINGS.setCacheSetting('Utilities._runCleanup',SETTINGS.getCurrentSettings())
-                    # if SETTINGS.cache.cache.purge(): #TODO REROUTE
-                    timerit(PROPERTIES.setPendingRestart)(SERVICE_INTERVAL)
-                DIALOG.notificationDialog(LANGUAGE(32025))
+                    Globals.SETTINGS.setCacheSetting('Utilities._runCleanup',Globals.SETTINGS.getCurrentSettings())
+                    # if Globals.SETTINGS.cache.cache.purge(): #TODO REROUTE
+                    timerit(Globals.PROPERTIES.setPendingRestart)(SERVICE_INTERVAL)
+                Globals.DIALOG.notificationDialog(LANGUAGE(32025))
 
     
     @staticmethod
     def _runReload():
-        if DIALOG.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
-            state = SETTINGS.getSettingBool('Enable_PVR_RELOAD')
-            SETTINGS.setSettingBool('Enable_PVR_RELOAD',True)
-            PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
-            timerit(SETTINGS.setSettingBool)(M3U_REFRESH,*('Enable_PVR_RELOAD',state))
-        DIALOG.notificationDialog(LANGUAGE(32025))
+        if Globals.DIALOG.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
+            state = Globals.SETTINGS.getSettingBool('Enable_PVR_RELOAD')
+            Globals.SETTINGS.setSettingBool('Enable_PVR_RELOAD',True)
+            Globals.PROPERTIES.setPropTimer('chkPVRRefresh')#refresh pvr guide
+            timerit(Globals.SETTINGS.setSettingBool)(M3U_REFRESH,*('Enable_PVR_RELOAD',state))
+        Globals.DIALOG.notificationDialog(LANGUAGE(32025))
             
     @staticmethod
     def _runRestart():
-        return PROPERTIES.setPendingRestart()
+        return Globals.PROPERTIES.setPendingRestart()
         
     @staticmethod
     def _runCPUBench():
-        with BUILTIN.busy_dialog():
-            if SETTINGS.hasAddon('script.pystone.benchmark', notify=True):
-                return BUILTIN.executebuiltin('RunScript(script.pystone.benchmark)')
+        with Globals.BUILTIN.busy_dialog():
+            if Globals.SETTINGS.hasAddon('script.pystone.benchmark', notify=True):
+                return Globals.BUILTIN.executebuiltin('RunScript(script.pystone.benchmark)')
         
     @staticmethod
     def _runIOBench():
-        with BUILTIN.busy_dialog():
-            if SETTINGS.hasAddon('script.io.benchmark', notify=True):
-                return BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(Globals._escapeString(f'path={CACHE_LOC}')))
+        with Globals.BUILTIN.busy_dialog():
+            if Globals.SETTINGS.hasAddon('script.io.benchmark', notify=True):
+                return Globals.BUILTIN.executebuiltin('RunScript(script.io.benchmark,%s)'%(Globals._escapeString(f'path={CACHE_LOC}')))
     
     @staticmethod
     def qrWiki():
-        DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
+        Globals.DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
 
     @staticmethod
     def qrSupport():
-        DIALOG.qrDialog(URL_SUPPORT, LANGUAGE(30033)%(ADDON_NAME))
+        Globals.DIALOG.qrDialog(URL_SUPPORT, LANGUAGE(30033)%(ADDON_NAME))
         
     @staticmethod
     def qrRemote():
-        DIALOG.qrDialog('Utilities: http://%s/%s'%(PROPERTIES.getRemoteHost(),'remote.html'), LANGUAGE(30165))
+        Globals.DIALOG.qrDialog('Utilities: http://%s/%s'%(Globals.PROPERTIES.getRemoteHost(),'remote.html'), LANGUAGE(30165))
 
     @staticmethod
     def qrReadme():
-        DIALOG.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
+        Globals.DIALOG.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
 
     @staticmethod
     def qrBonjourDL():
-        DIALOG.qrDialog(URL_WIN_BONJOUR, LANGUAGE(32217))
+        Globals.DIALOG.qrDialog(URL_WIN_BONJOUR, LANGUAGE(32217))
         
     @staticmethod
     def showChangelog():
@@ -156,10 +156,10 @@ class Utilities(object):
                 text = text.replace('- Warning'    ,'[COLOR=red][B]- Warning:[/B][/COLOR]')
                 return text  
                 
-            with BUILTIN.busy_dialog():
+            with Globals.BUILTIN.busy_dialog():
                 with FileAccess.stream(CHANGELOG_FLE) as fle:
                     txt = __addColor(fle.read())
-                DIALOG.textviewer(txt, heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+                Globals.DIALOG.textviewer(txt, heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: log('Utilities: showChangelog failed! %s'%(e), xbmc.LOGERROR)
 
     @staticmethod
@@ -199,34 +199,34 @@ class Utilities(object):
                 log('Utilities: qrDebug, unable to retrieve the paste url')
                 return False, LANGUAGE(30190)
               
-        with BUILTIN.busy_dialog():
-            payload = SETTINGS.getPayload(inclDebug=True)
-        if   not payload.get('debug',{}): return DIALOG.notificationDialog(LANGUAGE(32187))
-        elif not DIALOG.yesnoDialog(message=LANGUAGE(32188)): return
+        with Globals.BUILTIN.busy_dialog():
+            payload = Globals.SETTINGS.getPayload(inclDebug=True)
+        if   not payload.get('debug',{}): return Globals.DIALOG.notificationDialog(LANGUAGE(32187))
+        elif not Globals.DIALOG.yesnoDialog(message=LANGUAGE(32188)): return
         
-        with BUILTIN.busy_dialog():
+        with Globals.BUILTIN.busy_dialog():
             succes, data = __postLog(FileAccess.dumpJSON(__cleanPayload(payload),idnt=4))
             
-        if succes: DIALOG.qrDialog(data,LANGUAGE(32189)%(data))
-        else:      DIALOG.okDialog(LANGUAGE(32190)%(data))
+        if succes: Globals.DIALOG.qrDialog(data,LANGUAGE(32189)%(data))
+        else:      Globals.DIALOG.okDialog(LANGUAGE(32190)%(data))
        
     @staticmethod
     def _runLogger():
-        with BUILTIN.busy_dialog():
-            if SETTINGS.hasAddon('script.kodi.loguploader', notify=True):
-                return BUILTIN.executebuiltin('RunScript(script.kodi.loguploader)')
+        with Globals.BUILTIN.busy_dialog():
+            if Globals.SETTINGS.hasAddon('script.kodi.loguploader', notify=True):
+                return Globals.BUILTIN.executebuiltin('RunScript(script.kodi.loguploader)')
         
     @staticmethod
     def _runUpdate(full=False):
         log('Utilities: _runUpdate, full = %s'%(full))
-        PROPERTIES.setPropTimer('chkChanged')# Refresh Channel Changed!
+        Globals.PROPERTIES.setPropTimer('chkChanged')# Refresh Channel Changed!
               
     @staticmethod
     def openPositionUtil(idx):
         log('Utilities: openPositionUtil, idx = %s'%(idx))
-        if not PROPERTIES.isRunning('Utilities.openPositionUtil'):
-            with PROPERTIES.chkRunning('Utilities.openPositionUtil'):
-                with BUILTIN.busy_dialog():
+        if not Globals.PROPERTIES.isRunning('Utilities.openPositionUtil'):
+            with Globals.PROPERTIES.chkRunning('Utilities.openPositionUtil'):
+                with Globals.BUILTIN.busy_dialog():
                     from overlaytool import OverlayTool
                 try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
                 except Exception as e: log("Utilities: openPositionUtil, failed! %s"%(e), xbmc.LOGERROR)
@@ -235,7 +235,7 @@ class Utilities(object):
 # @threadit      
 # def _clrLibrary():
     # #elif mode == 'clear_autotune' : _clrLibrary()
-    # DIALOG.notificationDialog(LANGUAGE(32025))
+    # Globals.DIALOG.notificationDialog(LANGUAGE(32025))
     # manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
     # manager.clrLibraryCache()
     # del manager       
@@ -243,13 +243,13 @@ class Utilities(object):
 # @threadit   
 # def _clrBlacklist():
     # # elif mode == 'clear_blackList': _clrBlacklist()
-    # DIALOG.notificationDialog(LANGUAGE(32025))
-    # SETTINGS.setSetting('Clear_BlackList','')
+    # Globals.DIALOG.notificationDialog(LANGUAGE(32025))
+    # Globals.SETTINGS.setSetting('Clear_BlackList','')
         
             
     @threadit
     def _run(self, sysARG):
-        with BUILTIN.busy_dialog():
+        with Globals.BUILTIN.busy_dialog():
             ctl = (0,1)
             try:              param = sysARG[1]
             except Exception: param = None

@@ -17,9 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import traceback
-
-from constants     import *
+from kodi_six  import xbmc, xbmcaddon
+from constants import *
 
 def log(event, level=xbmc.LOGDEBUG):
     """
@@ -56,6 +55,9 @@ def log(event, level=xbmc.LOGDEBUG):
     Returns:
         None
     """
+    ADDON_ID      = 'plugin.video.pseudotv.live'
+    REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+    ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
     if REAL_SETTINGS.getSetting('Debug_Enable') == 'true' or level >= 3:
         DEBUG_NAMES  = {0: 'LOGDEBUG', 1: 'LOGINFO', 2: 'LOGWARNING', 3: 'LOGERROR', 4: 'LOGFATAL'}
         DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}

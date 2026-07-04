@@ -21,8 +21,9 @@
 import os, sys, re, struct
 import json, pickle, ctypes, platform
 import random, base64, binascii, hashlib, heapq, zlib
-import time, datetime, calendar
-import requests
+import time, datetime, calendar, sqlite3
+import requests, traceback, threading
+import codecs, shutil, errno
 
 from functools             import partial, reduce, update_wrapper, wraps, lru_cache
 from difflib               import SequenceMatcher
@@ -32,7 +33,7 @@ from collections           import Counter, OrderedDict, defaultdict, deque
 from ast                   import literal_eval
 from six.moves             import urllib 
 from io                    import StringIO, BytesIO
-from threading             import Lock, RLock, Thread, Event, Timer, BoundedSemaphore, enumerate as thread_enumerate
+from threading             import Lock, RLock, Thread, Event, Timer, BoundedSemaphore, current_thread, enumerate as thread_enumerate
 from xml.dom.minidom       import parse, parseString, Document
 from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstringlist, fromstring, tostring, parse as ETparse
 from typing                import Dict, List, Union, Optional, Any
@@ -45,6 +46,16 @@ from operator              import itemgetter
 from six.moves             import urllib 
 from math                  import ceil, floor, sqrt
 from requests.adapters     import HTTPAdapter, Retry
+from concurrent.futures    import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+
+import platform, pyqrcode, threading, copy
+
+from ast                 import literal_eval
+from uuid                import uuid1, uuid4, UUID
+from infotagger.listitem import ListItemInfoTag
+from json2html           import Json2Html
+
+
 
 DEFAULT_ENCODING    = "utf-8"
 

@@ -17,43 +17,40 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import platform, pyqrcode, threading, copy
+from variables   import *
+from fileaccess  import FileAccess
+from cache       import cacheit
+from pool        import debounceit, timerit, poolit, threadit
+from instances   import Instances
+from _services   import _Service
 
-from ast                 import literal_eval
-from uuid                import uuid1, uuid4, UUID
-from constants           import *
-from logger              import log
-from cache               import Cache, cacheit
-from fileaccess          import FileAccess, FileLock
-from infotagger.listitem import ListItemInfoTag
-from json2html           import Json2Html
-from pool                import debounceit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
+def _getJsonRPC():
+    from jsonrpc import JSONRPC
+    return JSONRPC
 
-
-def _getGlobals():
-    """Resolve dynamic helpers after variables.py has finished initializing."""
-    from variables import Globals
-    return Globals
+def _getChannels():
+    from channels import Channels
+    return Channels
 
 class Settings(object):
     dialog = None
-    def __init__(self, service):
-        from instances import Instances
+    
+    def __init__(self, service=None):
+        if service is None: service = _Service()
         self.pool      = service.pool
-        self.jsonRPC   = service.jsonRPC
         self.cache     = service.cache
+        self.jsonRPC   = service.jsonRPC
         self.monitor   = service.monitor
         self.instances = Instances(settings=self)
-        
+
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def getRealSettings(self, id=ADDON_ID):
+    def _getRealSettings(self, id=ADDON_ID):
         try:              return xbmcaddon.Addon(id)
         except Exception: return REAL_SETTINGS
-
 
     #GET
     def _getSetting(self, func, key):
@@ -65,23 +62,23 @@ class Settings(object):
       
       
     def getSetting(self, key):
-        return self._getSetting(self.getRealSettings().getSetting,key)
+        return self._getSetting(self._getRealSettings().getSetting,key)
         
         
     def getSettingBool(self, key):
-        return self._getSetting(self.getRealSettings().getSettingBool,key)
+        return self._getSetting(self._getRealSettings().getSettingBool,key)
 
 
     def getSettingInt(self, key):
-        return self._getSetting(self.getRealSettings().getSettingInt,key)
+        return self._getSetting(self._getRealSettings().getSettingInt,key)
               
               
     def getSettingNumber(self, key): 
-        return self._getSetting(self.getRealSettings().getSettingNumber,key)
+        return self._getSetting(self._getRealSettings().getSettingNumber,key)
         
         
     def getSettingString(self, key):
-        return self._getSetting(self.getRealSettings().getSettingString,key)
+        return self._getSetting(self._getRealSettings().getSettingString,key)
 
 
     def getSettingFloat(self, key):
@@ -112,7 +109,8 @@ class Settings(object):
         return FileAccess._decodeString(self.getSetting(key))
     
     
-    def getCacheSetting(self, key, checksum=ADDON_VERSION, default=None):
+    def getCacheSetting(self, key, checksum=None, default=None):
+        if checksum is None: checksum = ADDON_VERSION
         value = self.cache.get(key, checksum)
         self.log(f'[{ADDON_ID}] getCacheSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return (value or default)
@@ -138,24 +136,24 @@ class Settings(object):
             
         
     def setSetting(self, key, value=""):
-        self._setSetting(self.getRealSettings().setSetting,key,str(value))
+        self._setSetting(self._getRealSettings().setSetting,key,str(value))
         return value
             
             
     def setSettingBool(self, key, value):
-        return self._setSetting(self.getRealSettings().setSettingBool,key,value)
+        return self._setSetting(self._getRealSettings().setSettingBool,key,value)
         
         
     def setSettingInt(self, key, value):  
-        return self._setSetting(self.getRealSettings().setSettingInt,key,value)
+        return self._setSetting(self._getRealSettings().setSettingInt,key,value)
                    
                    
     def setSettingNumber(self, key, value):  
-        return self._setSetting(self.getRealSettings().setSettingNumber,key,value)
+        return self._setSetting(self._getRealSettings().setSettingNumber,key,value)
         
              
     def setSettingString(self, key, value):  
-        return self._setSetting(self.getRealSettings().setSettingString,key,value)
+        return self._setSetting(self._getRealSettings().setSettingString,key,value)
 
 
     def setSettingBoolList(self, key, value):
@@ -182,7 +180,8 @@ class Settings(object):
         return self.setSetting(key,FileAccess._encodeString(values))
             
             
-    def setCacheSetting(self, key, value=None, checksum=ADDON_VERSION, life=datetime.timedelta(days=28)):
+    def setCacheSetting(self, key, value=None, checksum=None, life=datetime.timedelta(days=28)):
+        if checksum is None: checksum = ADDON_VERSION
         self.log(f'[{ADDON_ID}] setCacheSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return self.cache.set(key, value, checksum, life)
   
@@ -242,8 +241,7 @@ class Settings(object):
             properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
             return dict([(property,addon.getAddonInfo(property)) for property in properties])
         except Exception:
-            from jsonrpc import JSONRPC
-            return JSONRPC().getAddonDetails(id)
+            return _getJsonRPC().getAddonDetails(id)
 
 
     def getMYUUID(self):
@@ -267,10 +265,9 @@ class Settings(object):
             return ['http://%s/filelist/%s'%(remote,key) for key in keys]
             
         def __getChannels():
-            from channels import Channels
-            return Channels().getChannels()
+            return _getChannels().getChannels()
             
-        host    = self.property.getRemoteHost()
+        host    = self.dialog.properties.getRemoteHost()
         payload = {'id'       :ADDON_ID,
                    'host'     :host,
                    'uuid'     :self.getMYUUID(),
@@ -317,7 +314,7 @@ class Settings(object):
             # recordings = xmltv.getRecordings()
             # payload['xmltv']   = {'stations'  :[{'id':station.get('id'),'display-name':station.get('display-name',[['','']])[0][0],'icon':station.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for station in stations],
                                   # 'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in recordings], 
-                                  # 'programmes':[{'id':key,'end-time':epochTime(time.time(),tz=False).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
+                                  # 'programmes':[{'id':key,'end-time':Globals._epochTime(time.time(),tz=False).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
             # payload['library'] = Library().getLibrary()
             # payload['servers'] = Multiroom().getServers()
             # del xmltv
@@ -340,16 +337,7 @@ class Settings(object):
         
         
     def setAutotuned(self, state=True):
-        max_guide_days = int(REAL_SETTINGS.getSetting('Max_Days') or "3")
-        return self.dialog.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned', state, life=datetime.timedelta(days=max_guide_days)))
-
-
-    def hasPVRInstance(self, instanceName=ADDON_NAME):
-        instancePath = self.instances.getPVRInstancePath(instanceName)
-        if FileAccess.exists(instancePath):
-            self.log('[%s] hasPVRInstance, instanceName = %s, path = %s'%(PVR_CLIENT_ID,instanceName, instancePath))
-            return instancePath
-        
+        return self.dialog.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned', state, life=datetime.timedelta(days=MAX_GUIDEDAYS)))
 
     def setPVRPath(self, path, instanceName=ADDON_NAME):
         settings  = self.instances.getSettings(instanceName)
@@ -416,7 +404,7 @@ class Settings(object):
     def chkPVRChanges(self, instanceName=ADDON_NAME, nsettings={}, prompt=None):
         if prompt is None: prompt = not bool(self.getSettingBool('Enable_Kodi_Access'))
         changes = []
-        if self.hasPVRInstance(instanceName):
+        if self.instances.hasPVRInstance(instanceName):
             xsettings = self.instances.getSettings(instanceName)
             for setting, value in list(nsettings.items()):
                 if    str(value).lower() == str(xsettings.get(setting,'')).lower(): nsettings.pop(setting)
@@ -482,7 +470,8 @@ class Settings(object):
             
 class Properties(object):
     dialog = None
-    def __init__(self, service, winID=10131):
+    def __init__(self, service=None, winID=10131):
+        if service is None: service = _Service()
         self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
@@ -490,6 +479,7 @@ class Properties(object):
         self.winID      = winID
         self.window     = xbmcgui.Window(winID)
         self._memory_cache = OrderedDict()
+
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -541,6 +531,7 @@ class Properties(object):
 
     #GET
     def getProperty(self, key, default=''):
+        thid = None
         try:
             key, thid = self._getKey(key)
             if key in self._memory_cache: 
@@ -634,7 +625,7 @@ class Properties(object):
         else:     self.clrEXTProperty('script.trakt.paused')
 
 
-    @debounceit(SERVICE_INTERVAL)
+    @debounceit()
     def setPropTimer(self, key, state=True):
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
         return self.setEXTProperty(key,state)
@@ -847,8 +838,7 @@ class Properties(object):
     def getFriendlyName(self):
         friendly = self.getEXTProperty('%s.Instance_Name'%(ADDON_ID))
         if not friendly or friendly == LANGUAGE(32105):
-            from jsonrpc import JSONRPC
-            friendly = self.setEXTProperty('%s.Instance_Name'%(ADDON_ID), JSONRPC().inputFriendlyName())
+            friendly = self.setEXTProperty('%s.Instance_Name'%(ADDON_ID), self.jsonRPC.inputFriendlyName())
         return friendly
         
         
@@ -881,12 +871,14 @@ class Properties(object):
 
 class ListItems(object):
     dialog = None
-    def __init__(self, service):
+    def __init__(self, service=None):
+        if service is None: service = _Service()
         self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
         self.monitor    = service.monitor
-    
+
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
@@ -904,7 +896,7 @@ class ListItems(object):
 
 
     def buildDictListItem(self, listitem):
-        item = {'label'       : listitem.getLabel(),
+        item = {'label'       : listitem.Globals._getLabel(),
                 'label2'      : listitem.getLabel2(),
                 'file'        : listitem.getPath(),
                 'isFolder'    : listitem.isFolder(),
@@ -955,8 +947,8 @@ class ListItems(object):
             if 'pvritem' in info: properties.update({'pvritem':info.pop('pvritem')}) # write dump to single key
           
             if media != 'video': #unify default artwork for music.
-                art['poster'] = _getGlobals()._getThumb(info,opt=1)
-                art['fanart'] = _getGlobals()._getThumb(info)
+                art['poster'] = Globals._getThumb(info,opt=1)
+                art['fanart'] = Globals._getThumb(info)
                 
             listitem = self.getListItem(info.pop('label',''), info.pop('label2',''), info.pop('file',''), offscreen=offscreen)
             listitem.setArt(art)
@@ -1023,14 +1015,15 @@ class ListItems(object):
     
 class Builtin(object):
     dialog = None
-    def __init__(self, service):
+    def __init__(self, service=None):
+        if service is None: service = _Service()
         self.lock       = Lock()
         self.busy       = None
         self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
         self.monitor    = service.monitor
-    
+        
     
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -1115,6 +1108,14 @@ class Builtin(object):
     def isBusyDialog(self):
         return any([self.dialog.properties.isRunning('BUSY_OVERLAY'),self.getInfoBool('Window.IsActive(busydialognocancel)'),self.getInfoBool('Window.IsActive(busydialog)')])
 
+        
+    def _isScanning(self):
+        return (self.getInfoBool('Library.IsScanningVideo') &  self.getInfoBool('Library.IsScanningMusic'))
+
+
+    def _isSettingsOpened(self) -> bool:
+        return any([ self.getInfoBool('Window.IsVisible(addonsettings)'), self.getInfoBool('Window.IsVisible(selectdialog)')])
+
 
     def closeBusyDialog(self):
         if hasattr(self.busy, 'close'):
@@ -1130,10 +1131,12 @@ class Builtin(object):
         if not self.isBusyDialog() and not cancel:
             try: 
                 if self.busy is None:
-                    from overlay import Busy 
+                    from overlay import Busy
                     try:               self.busy = Busy(BUSY_XML, ADDON_PATH, "default", isLocked=lock)
                     except Exception:  self.busy = None
-                    finally: self.busy.show()
+                    finally:
+                        if hasattr(self.busy, 'show'): 
+                            self.busy.show()
                 elif cancel and hasattr(self.busy, 'close'):
                     self.busy = self.busy.close()
                 yield
@@ -1209,26 +1212,29 @@ class Builtin(object):
 
 
 class Dialog(object):
-    dialog = xbmcgui.Dialog()
-    dialog_lock = Lock()
+    _dialog_count = 0
+    _dialog_lock  = Lock()
+    _update_lock  = Lock()
+    _count_lock   = Lock()
+    dialog        = xbmcgui.Dialog()
     
-    def __init__(self):
-        from _services import Service
-        self.service    = Service()
-        self.pool       = self.service.pool
-        self.jsonRPC    = self.service.jsonRPC
-        self.cache      = self.service.cache
-        self.monitor    = self.service.monitor
-        self.settings   = Settings(self.service)
-        self.properties = Properties(self.service)
-        self.listitems  = ListItems(self.service)
-        self.builtin    = Builtin(self.service)
+    def __init__(self, service=None):
+        if service is None: service = _Service()
+        self.service    = service
+        self.pool       = service.pool
+        self.jsonRPC    = service.jsonRPC
+        self.cache      = service.cache
+        self.monitor    = service.monitor
+        self.settings   = Settings(service)
+        self.properties = Properties(service)
+        self.listitems  = ListItems(service)
+        self.builtin    = Builtin(service)
 
         self.settings.dialog   = self
         self.properties.dialog = self
         self.listitems.dialog  = self
         self.builtin.dialog    = self
-        
+
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -1243,7 +1249,7 @@ class Dialog(object):
     def doInfoMonitor(self):
         self.properties.clrEXTProperty('%s.montiorList'%(ADDON_ID))
         while not self.monitor.abortRequested() and self.properties.isRunning('Kodi.toggleInfoMonitor'):
-            if self.monitor.waitForAbort(float(self.SETTINGS.getSetting('API_Delay'))): break
+            if self.monitor.waitForAbort(float(self.Globals.SETTINGS.getSetting('API_Delay'))): break
             self.fillInfoMonitor()
                     
 
@@ -1277,7 +1283,7 @@ class Dialog(object):
     
     
     def setInfoMonitor(self, items):
-        return self.properties.setEXTProperty('%s.montiorList'%(ADDON_ID),{'info':list(_getGlobals()._setDictLST(items))})
+        return self.properties.setEXTProperty('%s.montiorList'%(ADDON_ID),{'info':list(Globals.Globals._setDictLST(items))})
 
 
     def colorDialog(self, colorlist=[], preselect="", colorfile="", heading=ADDON_NAME):
@@ -1399,110 +1405,118 @@ class Dialog(object):
             return self.dialog.yesno(heading, message, nolabel, yeslabel, (autoclose*1000))
 
 
-    def _notificationWait(self, message, header, wait):
-        return timerit(self.notificationWait)(0.1,*(message, header, wait))
-
-
     def notificationWait(self, message, header=ADDON_NAME, wait=4, silent=None, usethread=False):
         if silent is None: silent = not self.settings.showDialog(silent)
-        if usethread: return self._notificationWait(message, header, wait)
-        else:
-            with self._progressDialog(message, header, silent) as pDialog:
-                for idx in range(int(wait)):
-                    pDialog = self._updateProgress(pDialog,int(idx*100//wait))
-                    if pDialog is None or self.monitor.waitForAbort(1.0): break
-                if hasattr(pDialog, 'close'): pDialog.close()
-        return True
-        
+        if usethread: return timerit(self.notificationWait)(0.1, *(message, header, wait))
+        with self._progressDialog(message, header, silent) as pDialog:
+            if pDialog is None: return
+            remaning = int(wait)
+            while not self.monitor.abortRequested() and remaning > 0:
+                self._updateProgress(pDialog, int(int(wait) - remaning * 100 // wait))
+                if self.monitor.waitForAbort(1.0): break
+                if isinstance(pDialog, xbmcgui.DialogProgress) and pDialog.iscanceled(): break
+                if isinstance(pDialog, xbmcgui.DialogProgressBG) and pDialog.isFinished(): break
+                remaning -= 1
+            if hasattr(pDialog, 'close'): 
+                pDialog.close()
 
     @contextmanager
     def _progressDialog(self, message='', header=ADDON_NAME, silent=None, background=True):
         if silent is None: silent = not self.settings.showDialog(silent)
         dlg = None
-        with self.dialog_lock:
-            if not silent and not self.properties.isRunning('_progressDialog'):
-                self.properties.setRunning('_progressDialog', True) 
+        if not silent and dlg is None:
+            with self._count_lock:
+                Dialog._dialog_count += 1
+                self.properties.setRunning('_progressDialog', True)
+            try:
                 if background: dlg = xbmcgui.DialogProgressBG()
                 else:          dlg = xbmcgui.DialogProgress()
-                try:
-                    dlg.create(header, message)
-                    self.log(f'_progressDialog [0% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
-                except Exception as e:
-                    self.log(f'_progressDialog, failed! to create dialog: {e}')
-                    self.properties.setRunning('_progressDialog', False)
-                    dlg = None
+                dlg.create(header, message)
+                self.log(f'_progressDialog [0% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
+            except Exception as e:
+                self.log(f'_progressDialog, failed! to create dialog: {e}')
+                dlg = None
         try:
-            if dlg is not None: yield dlg
+            if not dlg is None: yield dlg
             else:               yield True
+        except Exception as e: self.log(f'_progressDialog, failed! {e}')
         finally:
-            if dlg is not None:
-                with self.dialog_lock:
-                    try:
-                        dlg.close()
-                        self.log(f'_progressDialog [100% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
-                    except Exception: pass
-                    finally: self.properties.setRunning('_progressDialog', False)
+            if hasattr(dlg, 'close'): dlg.close()
+            self.log(f'_progressDialog [100% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
+            with self._count_lock:
+                Dialog._dialog_count = max(0, Dialog._dialog_count - 1)
+                if Dialog._dialog_count <= 0:
+                    Dialog._dialog_count = 0
+                    self.properties.setRunning('_progressDialog', False)
 
 
     def _updateProgress(self, dlg=None, percent=1, message='', header=ADDON_NAME):
         if dlg is None or isinstance(dlg, bool): return dlg
-        try:
-            if isinstance(dlg, xbmcgui.DialogProgressBG):
-                if dlg.isFinished(): return None
-                elif hasattr(dlg, 'update'):
-                    self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
-                    dlg.update(percent, header, message)
-                    
-            elif isinstance(dlg, xbmcgui.DialogProgress):
-                if dlg.iscanceled(): return None
-                elif hasattr(dlg, 'update'):
-                    try:
-                        match = re.compile(r'(.*?): (.*?)\%', re.IGNORECASE).search(message)
-                        if match:
-                            message = '%s: %s' % (header.replace('%s, ' % (ADDON_NAME), ''), match.group(1))
-                            percent = int(match.group(2))
-                    except Exception: pass
-                    self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
-                    dlg.update(percent, message)
-        except Exception as e:
-            self.log(f'_updateProgress, failed! Thread error during progress update: {e}')
-            return None
+        with self._update_lock:
+            try:
+                if isinstance(dlg, xbmcgui.DialogProgressBG):
+                    if dlg.isFinished(): return None
+                    elif hasattr(dlg, 'update'):
+                        self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
+                        dlg.update(percent, header, message)
+                        
+                elif isinstance(dlg, xbmcgui.DialogProgress):
+                    if dlg.iscanceled(): return None
+                    elif hasattr(dlg, 'update'):
+                        try:
+                            match = re.compile(r'(.*?): (.*?)\%', re.IGNORECASE).search(message)
+                            if match:
+                                message = '%s: %s' % (header.replace('%s, ' % (ADDON_NAME), ''), match.group(1))
+                                percent = int(match.group(2))
+                        except Exception: pass
+                        self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
+                        dlg.update(percent, message)
+            except Exception as e:
+                self.log(f'_updateProgress, failed! Thread error during progress update: {e}')
+                return None
+        return dlg
+        
+        
+    def _updateProgressThrottled(self, dlg=None, percent=1, message='', header=ADDON_NAME, min_interval=0.1):
+        if dlg is None or isinstance(dlg, bool): return dlg
+        now = time.time()
+        if not hasattr(dlg, '_last_update') or (now - getattr(dlg, '_last_update', 0)) >= min_interval:
+            dlg._last_update = now
+            return self._updateProgress(dlg, percent, message, header)
         return dlg
         
         
     def progressDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
         if control is None and int(percent) == 0:
-            with self.dialog_lock:
-                control = xbmcgui.DialogProgress()
-                control.create(header, message)  
+            control = xbmcgui.DialogProgress()
+            control.create(header, message)  
         elif control:
-            try:
-                if int(percent) == 100 or control.iscanceled(): 
-                    with self.dialog_lock:
+            with self._update_lock:
+                try:
+                    if int(percent) == 100 or control.iscanceled(): 
                         control.close()
                         return None
-                elif hasattr(control, 'update'): 
-                    control.update(int(percent), message)
-            except Exception:
-                return None
+                    elif hasattr(control, 'update'): 
+                        control.update(int(percent), message)
+                except Exception:
+                    return None
         return control
         
         
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
         if control is None and int(percent) == 0:
-            with self.dialog_lock:
-                control = xbmcgui.DialogProgressBG()
-                control.create(header, message)
+            control = xbmcgui.DialogProgressBG()
+            control.create(header, message)
         elif control:
-            try:
-                if int(percent) == 100 or control.isFinished(): 
-                    with self.dialog_lock:
+            with self._update_lock:
+                try:
+                    if int(percent) == 100 or control.isFinished(): 
                         control.close()
                         return None
-                elif hasattr(control, 'update'): 
-                    control.update(int(percent), header, message)
-            except Exception:
-                return None
+                    elif hasattr(control, 'update'): 
+                        control.update(int(percent), header, message)
+                except Exception:
+                    return None
         return control
 
                 
@@ -1555,13 +1569,13 @@ class Dialog(object):
         if custom: return self.customSelect(items, header, preselect, useDetails, autoclose, multi)
         elif multi == True:
             if not preselect: preselect = [-1]
-            with self.dialog_lock:
+            with self._dialog_lock:
                 select = self.dialog.multiselect(header, items, (autoclose*1000), preselect, useDetails)
             if select == [-1]: return
         else:
             if not preselect: preselect = -1
             elif isinstance(preselect,list) and len(preselect) > 0: preselect = preselect[0]
-            with self.dialog_lock:
+            with self._dialog_lock:
                 select = self.dialog.select(header, items, (autoclose*1000), preselect, useDetails)
             if select == -1: return
         return select
@@ -1576,7 +1590,7 @@ class Dialog(object):
         ## - key: xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
         ## - opt: xbmcgui.PASSWORD_VERIFY (verifies an existing (default) md5 hashed password)
         ## - opt: xbmcgui.ALPHANUM_HIDE_INPUT (masks input)
-        with self.dialog_lock:
+        with self._dialog_lock:
             return self.dialog.input(message, default, key, opt, close)
         
 
@@ -1611,14 +1625,13 @@ class Dialog(object):
         def __getResources():
             return jsonRPC.getAddons({"enabled":True})
         
-        from jsonrpc import JSONRPC
         lizLST  = []
-        jsonRPC = JSONRPC()
+        jsonRPC = _getJsonRPC()
         with self.builtin.busy_dialog():
             lizLST.extend(poolit(__buildMenuItem)([result for result in __getResources() if result.get('addonid').startswith('resource.%s.%s'%(content,ftype))]))
             del jsonRPC
             
-        selects = self.selectDialog(lizLST, 'Select one or more resources', preselect=_getGlobals()._findItemsInLST(lizLST,ids,'getPath'), multi=multi)
+        selects = self.selectDialog(lizLST, 'Select one or more resources', preselect=Globals._findItemsInLST(lizLST,ids,'getPath'), multi=multi)
         if selects is None:                return
         elif not isinstance(selects,list): return lizLST[selects].getPath()
         else:                              return [lizLST[select].getPath() for select in selects]
@@ -1627,7 +1640,7 @@ class Dialog(object):
     def browseSources(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, include=[], exclude=[]):
         self.log('browseSources, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s, mask= %s, include= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,len(include),exclude))
         def __buildMenuItem(option):
-            return self.listitems.buildMenuListItem(option['label'],option['label2'],_getGlobals()._getDummyIcon(str(option['idx'])))
+            return self.listitems.buildMenuListItem(option['label'],option['label2'],Globals._getDummyIcon(str(option['idx'])))
 
         with self.builtin.busy_dialog():
             optlabel = "%s"%({'0':'Folders','1':'Files'}[str(type)]) if multi else "%s"%({'0':'Folder','1':'File'}[str(type)])
@@ -1646,7 +1659,7 @@ class Dialog(object):
 
             options = include.copy()
             options.extend([opt for opt in opts if not opt.get('idx',-1) in exclude])
-            options = _getGlobals()._setDictLST(options)
+            options = Globals.Globals._setDictLST(options)
             if default: options.insert(0,{"idx":0, "label":LANGUAGE(32203), "label2":default, "default":default, "shares":shares, "mask":mask, "type":type, "multi":multi})
             
             lizLST = []
@@ -1673,7 +1686,7 @@ class Dialog(object):
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#gafa1e339e5a98ae4ea4e3d3bb3e1d028c
         self.toggleInfoMonitor(monitor)
-        with self.dialog_lock:
+        with self._dialog_lock:
             if multi == True and type > 0:  retval = self.dialog.browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
             else:                           retval = self.dialog.browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
         self.toggleInfoMonitor(False)
@@ -1685,7 +1698,7 @@ class Dialog(object):
         self.log('multiBrowse, IN paths = %s'%(paths))
         def __buildListItem(item): #label: str="", label2: str="", icon: str=LOGO_COLOR, paths: list=[], items: dict={}
             idx = pathLST.index(item)
-            return self.listitems.buildMenuListItem('%s|'%(idx+1), item, _getGlobals()._getDummyIcon(str(idx+1)), url='|'.join(item), props={'idx':idx+1})
+            return self.listitems.buildMenuListItem('%s|'%(idx+1), item, Globals._getDummyIcon(str(idx+1)), url='|'.join(item), props={'idx':idx+1})
 
         select  = -1
         epaths  = paths.copy()
@@ -1783,7 +1796,7 @@ class Dialog(object):
         def __getRule(params={}, rule={"field":"","operator":"","value":[]}):
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=_getGlobals()._getDummyIcon(_getGlobals()._getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=Globals._getDummyIcon(Globals._getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
                 enumSEL = self.selectDialog(enumLST,header="Select method",preselect=-1, multi=False)
                 if not enumSEL is None: rule.update({enumLST[enumSEL].getProperty('key'):({"field":field,"operator":operator,"value":value}[enumLST[enumSEL].getProperty('key')])(params,rule)})
             return rule
@@ -1792,15 +1805,15 @@ class Dialog(object):
             enumSEL = -1
             eparams = params.copy()
             while not self.monitor.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),FileAccess.dumpJSON(params.get('rules',{}).get(key,[])),icon=_getGlobals()._getDummyIcon(_getGlobals()._getAbbr(key.title())),props={'key':key}) for key in ["and","or"]]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),FileAccess.dumpJSON(params.get('rules',{}).get(key,[])),icon=Globals._getDummyIcon(Globals._getAbbr(key.title())),props={'key':key}) for key in ["and","or"]]
                 enumSEL = self.selectDialog(enumLST,header="Edit Rules",multi=False)
                 if not enumSEL is None:
-                    if enumLST[enumSEL].getLabel() in ['And','Or']:
+                    if enumLST[enumSEL].Globals._getLabel() in ['And','Or']:
                         CONSEL  = -1
                         CONLKEY = enumLST[enumSEL].getProperty('key')
                         ruleLST = params.get('rules',{}).get(CONLKEY,[])
                         while not self.monitor.abortRequested() and not CONSEL is None:
-                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),FileAccess.dumpJSON(value),icon=_getGlobals()._getDummyIcon(str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
+                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),FileAccess.dumpJSON(value),icon=Globals._getDummyIcon(str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
                             andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,props={'key':'add'}))
                             if len(ruleLST) > 0 and eparams != params: andLST.insert(1,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save'}))
                             CONSEL = self.selectDialog(andLST,header="Edit Rules",multi=False)
@@ -1819,18 +1832,17 @@ class Dialog(object):
         def __getOrder(params={}):
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=_getGlobals()._getDummyIcon(_getGlobals()._getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=Globals._getDummyIcon(Globals._getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
                 enumLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save'}))
                 enumSEL = self.selectDialog(enumLST,header="Edit Selection",preselect=-1,multi=False)
                 if not enumSEL is None:
-                    if   enumLST[enumSEL].getLabel() == 'Direction': params['order'].update({'direction':__order(params)})
-                    elif enumLST[enumSEL].getLabel() == 'Method':    params['order'].update({'method':__method(params)})
+                    if   enumLST[enumSEL].Globals._getLabel() == 'Direction': params['order'].update({'direction':__order(params)})
+                    elif enumLST[enumSEL].Globals._getLabel() == 'Method':    params['order'].update({'method':__method(params)})
                     elif enumLST[enumSEL].getProperty('key') == 'save': break
-                    else: params['order'].update({enumLST[enumSEL].getLabel().lower(): not enumLST[enumSEL].getLabel2() == 'True'})
+                    else: params['order'].update({enumLST[enumSEL].Globals._getLabel().lower(): not enumLST[enumSEL].getLabel2() == 'True'})
             return params
 
-        from jsonrpc import JSONRPC
-        jsonRPC = JSONRPC()
+        jsonRPC = _getJsonRPC()
         try:
             path, params = path.split('?xsp=')
             params = FileAccess.loadJSON(params)
@@ -1843,10 +1855,9 @@ class Dialog(object):
             enumLST = [self.listitems.buildMenuListItem('Path',path,icon=ICON),self.listitems.buildMenuListItem('Order',FileAccess.dumpJSON(params.get('order',{})),icon=ICON),self.listitems.buildMenuListItem('Rules',FileAccess.dumpJSON(params.get('rules',{})),icon=ICON)]
             enumSEL = self.selectDialog(enumLST,header="Edit Dynamic Path", multi=False)
             if not enumSEL is None:
-                if   enumLST[enumSEL].getLabel() == 'Path':  path, params = __mtype(params)
-                elif enumLST[enumSEL].getLabel() == 'Order': params = __getOrder(params)
-                elif enumLST[enumSEL].getLabel() == 'Rules': params = __getRules(params)
-        del jsonRPC
+                if   enumLST[enumSEL].Globals._getLabel() == 'Path':  path, params = __mtype(params)
+                elif enumLST[enumSEL].Globals._getLabel() == 'Order': params = __getOrder(params)
+                elif enumLST[enumSEL].Globals._getLabel() == 'Rules': params = __getRules(params)
         
         if len(params.get('rules',{}).get('and',[]) or params.get('rules',{}).get('and',[])) > 0:
             url = '%s?xsp=%s'%(path,FileAccess.dumpJSON(params))
@@ -1894,18 +1905,27 @@ class Dialog(object):
                              # "random"         : (),
                              # "tvshowstatus"   : (),
                              # "playlist"       : (),
-                             # "genre"          : (self.selectDialog,({list=jsonRPC.getVideoGenres,jsonRPC.getMusicGenres)),
-                             # "tvshowtitle"    : (self.selectDialog,(jsonRPC.getTVshows,)),
-                             # "title"          : (self.selectDialog,(jsonRPC.getMovies)),
-                             # "artist"         : (self.selectDialog,jsonRPC.getArtists),
-                             # "album"          : (self.selectDialog,jsonRPC.getAlbums),
-                             # "studio"         : (self.selectDialog,(jsonRPC.getMovieStudios,jsonRPC.getNetworks))}
+                             # "genre"          : (self.selectDialog,({list=self.jsonRPC.getVideoGenres,self.jsonRPC.getMusicGenres)),
+                             # "tvshowtitle"    : (self.selectDialog,(self.jsonRPC.getTVshows,)),
+                             # "title"          : (self.selectDialog,(self.jsonRPC.getMovies)),
+                             # "artist"         : (self.selectDialog,self.jsonRPC.getArtists),
+                             # "album"          : (self.selectDialog,self.jsonRPC.getAlbums),
+                             # "studio"         : (self.selectDialog,(self.jsonRPC.getMovieStudios,self.jsonRPC.getNetworks))}
 
-        def __getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([_getGlobals()._unquoteString(value) for value in rule.get('value',[])]))
-        def __getBrowse(): return self.browseSources(default='|'.join([_getGlobals()._unquoteString(value) for value in rule.get('value',[])]))
+        def __getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([Globals._unquoteString(value) for value in rule.get('value',[])]))
+        def __getBrowse(): return self.browseSources(default='|'.join([Globals._unquoteString(value) for value in rule.get('value',[])]))
         def __getSelect(): return self.notificationDialog(LANGUAGE(32020))
         enumLST = sorted(['Enter', 'Browse', 'Select'])
         enumKEY = {'Enter':{'func':__getInput},'Browse':{'func':__getBrowse},'Select':{'func':__getSelect}}
         enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
-        if not enumSEL is None: return [_getGlobals()._quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
+        if not enumSEL is None: return [Globals._quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
         
+class Kodi(object):
+    def __init__(self, service=None):
+        if service is None: service = _Service()
+        self.dialog     = Dialog(service)
+        self.settings   = self.dialog.settings
+        self.properties = self.dialog.properties
+        self.listitems  = self.dialog.listitems
+        self.builtin    = self.dialog.builtin
+

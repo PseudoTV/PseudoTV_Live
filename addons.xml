@@ -22,12 +22,11 @@
 		<import addon="script.module.web-pdb" optional="true" version="1.5.6"/>
         <import addon="script.module.youtube.dl" optional="true" version="23.04.01+matrix.1"/>
         <import addon="script.module.pil" optional="true" version="5.1.0"/>
-
     </requires>
     <extension point="xbmc.python.pluginsource" library="resources/lib/default.py">
         <provides>video</provides>
     </extension>
-    <extension point="xbmc.service" library="resources/lib/service.py"/>
+    <extension point="xbmc.service" library="resources/lib/_services.py"/>
     <extension point="kodi.context.item">
         <menu id="kodi.core.main">
             <menu>

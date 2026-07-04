@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from globals import *
-from typing import Union, Optional
+from variables import *
 
 class VFSParser:
     def determineLength(self, filename: str, fileitem: Optional[dict] = None, jsonRPC=None) -> Union[int, float]:

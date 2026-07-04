@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
-from globals    import *
+from variables  import *
 from resources  import Resources
 
 class Fillers(object):
@@ -31,9 +31,9 @@ class Fillers(object):
         self.trailers   = builder.getTrailers()
         self.service    = builder.service
         self.resources  = Resources(service=builder.service)
-        self.processID  = PROPERTIES.getProcessID()
-        self.accurate   = bool(SETTINGS.getSettingInt('Duration_Type'))
-        try:              self.fbuild = re.search(r'^(\d{2})\.', BUILTIN.getInfoLabel("System.BuildVersion")).group(1)
+        self.processID  = Globals.PROPERTIES.getProcessID()
+        self.accurate   = bool(Globals.SETTINGS.getSettingInt('Duration_Type'))
+        try:              self.fbuild = re.search(r'^(\d{2})\.', Globals.BUILTIN.getInfoLabel("System.BuildVersion")).group(1)
         except Exception: self.fbuild = '22'
         self.fillSources()
 
@@ -45,7 +45,7 @@ class Fillers(object):
     def fillSources(self):
         def _build(ftype, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
             self.log('[%s] fillSources _build, type = %s, path = %s'%(self.citem.get('id'),ftype, path))
-            data    = self.jsonRPC.walkFileDirectory(path, 'video', None, PAGE_LIMIT, checksum, expiration)
+            data    = self.jsonRPC.walkFileDirectory(path, 'video', None, self.builder.pageLimit, checksum, expiration)
             tmpDICT = {}
             for path, items in list(data.items()):
                 if self.service.pendingInterrupt: break
@@ -66,13 +66,13 @@ class Fillers(object):
         for ftype, values in list(self.bctTypes.items()):
             if self.service.pendingInterrupt: break
             if not values.get('enabled', False): continue
-            self.builder.pDialog = DIALOG._updateProgress(pDialog, pCount, message='%s %s' % (LANGUAGE(30014), ftype.title()), header='%s, %s' % (ADDON_NAME, pMSG))
+            self.builder.pDialog = Globals.DIALOG._updateProgressThrottled(pDialog, pCount, message='%s %s' % (LANGUAGE(30014), ftype.title()), header='%s, %s' % (ADDON_NAME, pMSG))
             
             # resources
             for id in values.get("sources",{}).get("ids",[]):
                 if self.service.pendingInterrupt: break
-                if not SETTINGS.hasAddon(id): continue
-                values.setdefault('items',{}).update(_build(ftype, os.path.join('special://home/addons/%s'%id), SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION), datetime.timedelta(days=MAX_GUIDEDAYS)))
+                if not Globals.SETTINGS.hasAddon(id): continue
+                values.setdefault('items',{}).update(_build(ftype, os.path.join('special://home/addons/%s'%id), Globals.SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION), datetime.timedelta(days=MAX_GUIDEDAYS)))
 
             # vfs
             for path in values.get("sources", {}).get("paths",[]):
@@ -125,14 +125,14 @@ class Fillers(object):
         for key in keys:
             if not key: continue
             elif isinstance(key, list):
-                tmpLST.extend(self._getFillterItem(ftype, count, key, chanceBool(filler.get('chance', 0)), passes))
+                tmpLST.extend(self._getFillterItem(ftype, count, key, Globals._chanceBool(filler.get('chance', 0)), passes))
                 continue
             items = Globals._randomSamples(filler.get('items', {}).get(key.lower(),[]), count)
             tmpLST.extend(items)
             self.log('[%s] _getFillterItem [%s (%s)] %s/%s, total = %s, chance = %s'%(self.citem.get('id'), ftype, key, len(items), count, len(tmpLST), chance))
         
         if (len(tmpLST) < count and chance) and 'resources' not in keys:
-            tmpLST.extend(self._getFillterItem(ftype, count, ['resources'], chanceBool(filler.get('chance', 0)), passes - 1))
+            tmpLST.extend(self._getFillterItem(ftype, count, ['resources'], Globals._chanceBool(filler.get('chance', 0)), passes - 1))
         return tmpLST
 
 
@@ -154,12 +154,12 @@ class Fillers(object):
             ignore = {'bumpers': IGNORE_CHTYPE + MOVIE_CHTYPE, 'ratings': IGNORE_CHTYPE + TV_CHTYPE}[ftype]
             keys   = {'bumpers':[self.citem.get('name'), fileItem.get('genre'), self.citem.get('group',[]), self.fbuild],'ratings':[(self.convertMPAA(fileItem.get('mpaa')) or 'NR'), (fileItem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')]}[ftype]
             if filler.get('enabled', False) and self.citem.get('type') not in ignore:
-                items = self._getFillterItem(ftype, 1, keys, chanceBool(filler.get('chance', 0)))
+                items = self._getFillterItem(ftype, 1, keys, Globals._chanceBool(filler.get('chance', 0)))
                 # iterate and add pre-rolls
                 for i, item in enumerate(items):
                     dur = item.get('duration', 0)
                     if not item.get('file') or dur == 0: continue
-                    self.builder.pDialog = DIALOG._updateProgress(self.builder.pDialog, self.builder.pCount, message='Filling Pre-Rolls %s%%' % (int((i + 1) * 100 // max(1, len(items)))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
+                    self.builder.pDialog = Globals.DIALOG._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Filling Pre-Rolls %s%%' % (int((i + 1) * 100 // max(1, len(items)))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
                     item.update({'title'       : item.get('label'),
                                  'episodetitle': 'Pre-Roll',
                                  'plot'        : item.get('plot', item.get('file')),
@@ -168,7 +168,7 @@ class Fillers(object):
                                  'art'         : {"thumb":LOGO,"poster":LOGO_POSTER,"fanart":LOGO_LANDSCAPE,"landscape":LOGO_LANDSCAPE,"logo":LOGO,"icon":LOGO}})
                     self.log('[%s] injectFillers [%s: Pre-Roll (%s)] %s, %s'%(self.citem.get('id'), i, ftype, dur, item.get('file')))
                     nfileList.extend(self.builder.buildCells(self.citem, dur, entries=1, info=item))
-        return Globals._setDictLST(nfileList)
+        return Globals.Globals._setDictLST(nfileList)
         
         
     def _getPostRoll(self, fileItem, nextItem={}, remaining_seconds=0):
@@ -179,20 +179,20 @@ class Fillers(object):
             filler = self.bctTypes.get(ftype, {})
             ignore = {'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_CHTYPE}.get(ftype, IGNORE_CHTYPE)
             if filler.get('enabled', False) and self.citem.get('type') not in ignore:
-                if filler.get('auto', False): numberToFetch = filler.get('max',PAGE_LIMIT)
-                else:                         numberToFetch = filler.get('min',SETTINGS.getSettingInt('Enable_Postroll'))
+                if filler.get('auto', False): numberToFetch = filler.get('max',self.builder.pageLimit)
+                else:                         numberToFetch = filler.get('min',Globals.SETTINGS.getSettingInt('Enable_Postroll'))
                 for item in [fileItem, nextItem]:
                     if not item: continue
                     keys = [self.citem.get('name',''), item.get('genre',''), self.citem.get('group',[])]
                     if numberToFetch > 0:
-                        items.extend(self._getFillterItem(ftype, numberToFetch, keys, chanceBool(filler.get('chance', 0))))
+                        items.extend(self._getFillterItem(ftype, numberToFetch, keys, Globals._chanceBool(filler.get('chance', 0))))
                     if ftype == 'extras' and filler.get('incKODI',False) and ('movieid' in item or 'tvshowid' in item):
                         items.extend(self._getExtras(item))
                         
         if items:
             iteration     = 0
             post_counter  = 0
-            post_queue    = deque(Globals._randomShuffle(Globals._setDictLST(items)))
+            post_queue    = deque(Globals._randomShuffle(Globals.Globals._setDictLST(items)))
             post_auto     = (self.bctTypes.get('adverts', {}).get('auto', False) or self.bctTypes.get('trailers', {}).get('auto', False))
             total_queue   = len(post_queue)
             post_runtime  = remaining_seconds if post_auto else MIN_EPG_DURATION
@@ -203,7 +203,7 @@ class Fillers(object):
                 if 0 < dur <= post_runtime:
                     post_counter = 0
                     post_runtime -= dur
-                    self.builder.pDialog = DIALOG._updateProgress(self.builder.pDialog, self.builder.pCount, message='Filling Post-Rolls %s%%' % (int(iteration * 100 // max(1, total_queue))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
+                    self.builder.pDialog = Globals.DIALOG._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Filling Post-Rolls %s%%' % (int(iteration * 100 // max(1, total_queue))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
                     item.update({'title'       : item.get('label'),
                                  'episodetitle': 'Post-Roll',
                                  'plot'        : item.get('plot', item.get('file')),

@@ -18,10 +18,11 @@
 
 # -*- coding: utf-8 -*-
 
-from globals      import *
+from variables    import *
 from seasonal     import Seasonal 
 from intergration import OpenRouter
-from variables    import DIALOG, PROPERTIES, SETTINGS, LISTITEMS, BUILTIN
+from cache        import cacheit
+from _services    import _Service
 
 # Tunable: maximum number of entries to keep in the in-memory image cache.
 IMAGE_CACHE_MAX = CHANNEL_LIMIT
@@ -35,28 +36,27 @@ _MULTI_WS_RE  = re.compile(r'\s+')
 
 class Resources(object):
     def __init__(self, service=None):
-        if service is None: 
-            from _services import Service
-            service = Service()   
+        if service is None: service = _Service()
+        self.remoteHost  = Globals.PROPERTIES.getRemoteHost()
+        self.processID   = Globals.PROPERTIES.getProcessID()
+        
+        try:
+            self.imageCache = service.imageCache 
+            self.pruneimageCache()
+        except:
+            self.imageCache = OrderedDict(Globals.SETTINGS.getCacheSetting('imageCache',default={}))
+        
         self.service     = service
         self.monitor     = service.monitor
         self.jsonRPC     = service.jsonRPC
         self.cache       = service.cache
         self.seasonal    = Seasonal(service)
         self.holiday     = self.seasonal.getHoliday()
-        self.remoteHost  = PROPERTIES.getRemoteHost()
-        self.processID   = PROPERTIES.getProcessID()
         self.openRouter  = OpenRouter(service)
-        
-        try:
-            self.imageCache = service.imageCache 
-            self.pruneimageCache()
-        except:
-            self.imageCache = OrderedDict(SETTINGS.getCacheSetting('imageCache',default={}))
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def selectLogo(self, citem: dict) -> list:
@@ -132,11 +132,11 @@ class Resources(object):
     def _buildWebImage(self, name, image=None, fallback=LOGO):
         image = Globals._cleanImage(image)
         if name and image is None: 
-            return Globals._buildWebImage(None, OrderedDict(SETTINGS.getCacheSetting('imageCache', default={})).get(name), f'http://{PROPERTIES.getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logo/{Globals._quoteString(name)}')
+            return Globals._buildWebImage(None, OrderedDict(Globals.SETTINGS.getCacheSetting('imageCache', default={})).get(name), f'http://{Globals.PROPERTIES.getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logo/{Globals._quoteString(name)}')
         elif image.startswith(('image://')):
-            image = f'{PROPERTIES.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
+            image = f'{Globals.PROPERTIES.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
         elif not image.startswith(('http','resource')):
-            image = f'http://{PROPERTIES.getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
+            image = f'http://{Globals.PROPERTIES.getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
         elif fallback:
             image = fallback
         return image
@@ -160,13 +160,13 @@ class Resources(object):
         self.log('getLogoResources, chname = %s, type = %s, select = %s'%(citem.get('name'), citem.get('type'),select))
 
         def __getResources(type):
-            return SETTINGS.getSetting('Resource_Logos').split('|')
+            return Globals.SETTINGS.getSetting('Resource_Logos').split('|')
 
         def __exists(path):
             return FileAccess.exists(path)
 
         resources     = __getResources(citem.get('type','Custom'))
-        checksum      = FileAccess._getMD5('|'.join([SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if SETTINGS.hasAddon(id)]))
+        checksum      = FileAccess._getMD5('|'.join([Globals.SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if Globals.SETTINGS.hasAddon(id)]))
         cacheName     = 'getLogoResources.%s.%s' % (FileAccess._getMD5(citem.get('name')), select)
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
@@ -174,7 +174,7 @@ class Resources(object):
             names = self.getNames(citem.get('name'), citem.get('type'))
             for name in names:
                 for id in resources:
-                    if SETTINGS.hasAddon(id):
+                    if Globals.SETTINGS.hasAddon(id):
                         logo = f'resource://{id}/{name}.png'
                         if __exists(logo):
                             self.log('getLogoResources, found %s'%(logo))
@@ -214,7 +214,7 @@ class Resources(object):
     def getNames(self, chname: str, type: str="Custom") -> list:
         if not chname: return []
         variations = {chname} # original name
-        variations.add(cleanChannelSuffix(chname, type)) # Remove Suffix
+        variations.add(Globals._cleanChannelSuffix(chname, type)) # Remove Suffix
         if isinstance(chname,str): 
             variations.add(_NON_ALNUM_RE.sub(' ', chname)) # Remove Non-Alphanumeric (except spaces and &)
             if '&' in chname: variations.add(chname.replace('&', ' and '))  # '&' to 'and' replacement
@@ -235,7 +235,7 @@ class Resources(object):
         elif file.startswith('http'):
             # network check would require streaming; skip to avoid allocation unless explicitly requested
             pass
-        elif SETTINGS.hasAddon('script.module.pil'):
+        elif Globals.SETTINGS.hasAddon('script.module.pil'):
             try:
                 from PIL import Image, ImageStat
                 # translate Kodi resource/image path to filesystem path
@@ -267,7 +267,7 @@ class Resources(object):
         Returns:
             Path to generated image in TEMP_LOC or None on failure.
         """
-        if not text is None and SETTINGS.hasAddon('script.module.pil'):
+        if not text is None and Globals.SETTINGS.hasAddon('script.module.pil'):
             try:
                 from PIL import Image, ImageDraw, ImageFont
                 try: 
@@ -305,7 +305,7 @@ class Resources(object):
 
     def generateOnline(self, citem, select=False):
         if self.openRouter:
-            try: return self.openRouter.getImage(citem, 3 if select else 1, SETTINGS.getSetting('Generative_Image_Model'), select)
+            try: return self.openRouter.getImage(citem, 3 if select else 1, Globals.SETTINGS.getSetting('Generative_Image_Model'), select)
             except Exception as e: self.log(f'generateOnline failed!: {e}', xbmc.LOGERROR)
                 
                 
@@ -318,7 +318,7 @@ class Resources(object):
         
 
     def setTexture(self, url):
-        image = f'{PROPERTIES.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'
+        image = f'{Globals.PROPERTIES.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'
         self.log('setTexture, url = %s\nimage = %s'%(url,image))
         self.jsonRPC.requestURL(image)
         return image

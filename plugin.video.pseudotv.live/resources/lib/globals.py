@@ -18,7 +18,22 @@
 #
 # -*- coding: utf-8 -*-
 from variables   import *
-from pool        import debounceit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
+
+def _getEXTProperty(key, default=''):
+    try:
+        value = xbmcgui.Window(10000).getProperty(key)
+        if not value: return default
+        try: value = literal_eval(value)
+        except (ValueError, SyntaxError): pass
+        return value
+    except Exception as e: 
+        return default
+        
+def _isScanning():
+    return (xbmc.getCondVisibility('Library.IsScanningVideo') &  xbmc.getCondVisibility('Library.IsScanningMusic'))
+
+def _isSettingsOpened() -> bool:
+    return any([ xbmc.getCondVisibility('Window.IsVisible(addonsettings)'), xbmc.getCondVisibility('Window.IsVisible(selectdialog)')])
 
 def validString(s):
     return "".join(x for x in s if (x.isalnum() or x not in '\\/:*?"<>|'))
@@ -35,13 +50,13 @@ def chanceBool(percent=25):
     return random.randrange(100) < percent
 
 def getChannelID(name, path, number, uuid=None):
-    if uuid is None: uuid = SETTINGS.getMYUUID()
+    if uuid is None: uuid = Globals.SETTINGS.getMYUUID()
     if isinstance(path, list): path = '|'.join(path)
     tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
     return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
     
 def getRecordID(name, path, number, uuid=None):
-    if uuid is None: uuid = SETTINGS.getMYUUID()
+    if uuid is None: uuid = Globals.SETTINGS.getMYUUID()
     if isinstance(path, list): path = '|'.join(path)
     tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
     return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:16]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
@@ -82,7 +97,7 @@ def getLabel(item, addYear=False):
    
 def hasFile(file):
     if not file.startswith(tuple(VFS_TYPES + WEB_TYPES)): state = FileAccess.exists(file)
-    elif   file.startswith('plugin://'):                  state = SETTINGS.hasAddon(file)
+    elif   file.startswith('plugin://'):                  state = Globals.SETTINGS.hasAddon(file)
     else:                                                 state = True
     log("Globals: hasFile, file = %s (%s)"%(file,state))
     return state    
@@ -115,13 +130,6 @@ def getUTCstamp():
 def getGMTstamp():
     return time.time()
 
-def isStack(path): #is path a stack
-    return path.startswith('stack://')
-
-def splitStacks(path): #split stack path for indv. files.
-    if not isStack(path): return [path]
-    return [_f for _f in ((path.split('stack://')[1]).split(' , ')) if _f]
-
 def escapeDirJSON(path):
     mydir = path
     if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
@@ -152,22 +160,6 @@ def cleanLabel(text):
     text = text.replace("[B]",'').replace("[/B]",'')
     text = text.replace("[I]",'').replace("[/I]",'')
     return text.replace(":",'')
-
-def cleanMPAA(mpaa):
-    orgMPA = mpaa
-    mpaa = mpaa.lower()
-    if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex
-    if 'rated ' in mpaa: mpaa = re.split('rated ',mpaa)[1]  #todo prop. regex
-    #todo regex, detect other region rating formats
-    # re.compile(':(.*)', re.IGNORECASE).search(text))
-    text = mpaa.upper()
-    try:
-        text = re.sub('/ US', ''  , text)
-        text = re.sub('Rated ', '', text)
-        mpaa = text.strip()
-    except Exception: 
-        mpaa = mpaa.strip()
-    return mpaa
 
 def combineDicts(dict1={}, dict2={}):
     return {**dict1, **dict2}
@@ -245,11 +237,7 @@ def interleave(seqs, sets=1, repeats=False):
         seqs = [list(zip_longest(*[iter(seqs)] * sets, fillvalue=None)) for seqs in seqs]
         return list([_f for _f in sum([_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f], ()) if _f])
     else: return list(chain.from_iterable(seqs))
-        
-def percentDiff(org, new):
-    try: return (abs(round(org) - round(new)) / round(new)) * 100.0
-    except ZeroDivisionError: return -1
-        
+
 def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
@@ -259,19 +247,13 @@ def isCenterlized():
     if REAL_SETTINGS.getSetting('User_Folder') == default: return True
     return False
     
-def isFiller(item={}):
-    lowers = map(str.lower, ROLL_TYPES)
-    genres = item.get('genre',[])
-    if not isinstance(genres,list) and ' / ' in genres: genres = genres.split(' / ')
-    return any(genre.lower() in lowers for genre in genres)
-
 def isShort(item={}, minDuration=None):
-    if minDuration is None: minDuration = SETTINGS.getSettingInt('Seek_Tolerance')
+    if minDuration is None: minDuration = Globals.SETTINGS.getSettingInt('Seek_Tolerance')
     if item.get('duration', minDuration) < minDuration: return True
     else: return False
    
 def isEnding(progress=100):
-    if progress >= SETTINGS.getSettingInt('Seek_Threshold'): return True
+    if progress >= Globals.SETTINGS.getSettingInt('Seek_Threshold'): return True
     else: return False
 
 def chkLogo(old, new=LOGO):

@@ -18,8 +18,8 @@
 
 # -*- coding: utf-8 -*-
 
-from globals          import *
-from library          import Library
+from variables import *
+from library   import Library
 
 class XSP(object):
     library = Library()
@@ -30,7 +30,7 @@ class XSP(object):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
     
     
     def isNode(self, path: str) -> bool:
@@ -128,7 +128,7 @@ class XSP(object):
         if filters is None:
             filters = {}
         if incExtras is None:
-            incExtras = SETTINGS.getSettingBool('Enable_Extras')
+            incExtras = Globals.SETTINGS.getSettingBool('Enable_Extras')
         self.log("[%s] parseDXSP, IN = %s, filters = %s, incExtras = %s"%(id,file,filters,incExtras))
         try:
             path, params = str(file).split('?xsp=')
@@ -145,7 +145,7 @@ class XSP(object):
                                                                  {"field":"episode","operator":"greaterthan","value":"0"}])
                 else:
                     params['rules']['and'] = [r for r in params['rules'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
-                    params['rules']['and'] = Globals._setDictLST(params['rules']['and'])
+                    params['rules']['and'] = Globals.Globals._setDictLST(params['rules']['and'])
             file = '%s?xsp=%s'%(path,FileAccess.dumpJSON(params))
             self.log("[%s] parseDXSP, OUT = %s"%(id,file))
         except Exception as e: self.log("[%s] parseDXSP, failed! %s"%(id,e), xbmc.LOGERROR)

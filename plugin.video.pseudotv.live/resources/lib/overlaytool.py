@@ -19,10 +19,10 @@
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
-from globals   import *
+from variables import *
 from jsonrpc   import JSONRPC
 
-WH, WIN = BUILTIN.getResolution()
+WH, WIN = Globals.BUILTIN.getResolution()
 
 class OverlayTool(xbmcgui.WindowXMLDialog):
     focusControl   = None
@@ -35,9 +35,9 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.log('__init__, args = %s, kwargs = %s'%(args,kwargs))
-        with BUILTIN.busy_dialog():
+        with Globals.BUILTIN.busy_dialog():
             self.jsonRPC = JSONRPC()
-            if BUILTIN.getInfoBool('Player.Playing'): self.window = xbmcgui.Window(12005) 
+            if Globals.BUILTIN.getInfoBool('Player.Playing'): self.window = xbmcgui.Window(12005) 
             else:                                     self.window = xbmcgui.Window(10000) 
             self.window_w, self.window_h = WH
             self.advRule  = (kwargs.get("ADV_RULES") or False)
@@ -46,23 +46,23 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             self.defaultView = {}#self.jsonRPC.getViewMode()
             self.vinView     = (kwargs.get("Vignette_VideoMode") or self.defaultView)
             self.vinImage    = (kwargs.get("Vignette_Image")     or os.path.join(MEDIA_LOC,'overlays','ratio.png'))
-            self.channelBugColor = '0x%s'%((kwargs.get("ChannelBug_Color") or SETTINGS.getSetting('ChannelBug_Color')))
+            self.channelBugColor = '0x%s'%((kwargs.get("ChannelBug_Color") or Globals.SETTINGS.getSetting('ChannelBug_Color')))
             
             try:
                 self.autoBugX, self.autoBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128 #auto
-                self.channelBugX, self.channelBugY = literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
+                self.channelBugX, self.channelBugY = literal_eval(Globals.SETTINGS.getSetting("Channel_Bug_Position_XY")) #user
             except Exception:
                 self.channelBugX, self.channelBugY = self.autoBugX, self.autoBugY
 
             try:    
                 self.autoNextX, self.autoNextY = abs(int(self.window_w // 9)), abs(int(self.window_h // 16) - self.window_h) - 356 #auto
-                self.onNextX, self.onNextY = literal_eval(kwargs.get("OnNext_Position_XY",SETTINGS.getSetting("OnNext_Position_XY")))
+                self.onNextX, self.onNextY = literal_eval(kwargs.get("OnNext_Position_XY",Globals.SETTINGS.getSetting("OnNext_Position_XY")))
             except Exception: self.onNextX, self.onNextY = self.autoNextX, self.autoNextY
             
         try: 
             # self.runActions(RULES_ACTION_OVERLAY_OPEN, self.sysInfo.get('citem',{}), inherited=self)
             # if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,self.vinView)
-            if BUILTIN.getInfoBool('Player.Playing'): BUILTIN.executewindow('ActivateWindow(fullscreenvideo)')
+            if Globals.BUILTIN.getInfoBool('Player.Playing'): Globals.BUILTIN.executewindow('ActivateWindow(fullscreenvideo)')
             self.doModal()
         except Exception as e: 
             self.log("__init__, failed! %s"%(e), xbmc.LOGERROR)
@@ -70,12 +70,12 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
 
     def onInit(self):
-        if not BUILTIN.getInfoBool('System.IsFullscreen'):
-            DIALOG.okDialog(LANGUAGE(32097)%(BUILTIN.getInfoLabel('System.ScreenResolution')))
+        if not Globals.BUILTIN.getInfoBool('System.IsFullscreen'):
+            Globals.DIALOG.okDialog(LANGUAGE(32097)%(Globals.BUILTIN.getInfoLabel('System.ScreenResolution')))
             
         self.posx, self.posy = 0, 0
         
@@ -139,7 +139,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
           
         if changes:
             self.log('save, saving %s'%(changes))
-            if DIALOG.yesnoDialog(LANGUAGE(32096)): 
+            if Globals.DIALOG.yesnoDialog(LANGUAGE(32096)): 
                 for cntrl, value in list(changes.items()): self.set(cntrl,value[0],value[1],value[2])
         # if self.vinView != self.defaultView: timerit(self.jsonRPC.setViewMode)(0.5,self.defaultView)
         self.close()
@@ -147,8 +147,8 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
     
     def set(self, cntrl, posx, posy, auto=False):
         self.log('set, cntrl = %s, posx,posy = (%s,%s) %s? %s'%(cntrl, posx, posy, LANGUAGE(30022), auto))
-        if self.advRule: save = PROPERTIES.setProperty
-        else:            save = SETTINGS.setSetting
+        if self.advRule: save = Globals.PROPERTIES.setProperty
+        else:            save = Globals.SETTINGS.setSetting
         
         if cntrl == self.channelBug:
             if auto: save("Channel_Bug_Position_XY",LANGUAGE(30022))

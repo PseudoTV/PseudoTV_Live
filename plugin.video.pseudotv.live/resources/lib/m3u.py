@@ -19,7 +19,7 @@
 
 # -*- coding: utf-8 -*-
 
-from globals     import *
+from variables     import *
 from channels    import Channels
 from fileaccess  import FileAccess, FileLock
 
@@ -61,13 +61,14 @@ class M3U(object):
     _RE_XPLAYLIST = re.compile(r'^#EXT-X-PLAYLIST-TYPE:(.*)$', re.IGNORECASE)
 
     def __init__(self, file=M3UFLEPATH, writable=False):
+        self.EPGArtwork  = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
         self.writable    = writable
         self.stationFile = file
         self.M3UDATA     = {}
         
         stations, recordings = self.cleanSelf(list(self._load()))
         self.M3UDATA = { 'data': '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
-                         'http://%s/%s' % (PROPERTIES.getRemoteHost(), XMLTVFLE) ),
+                         'http://%s/%s' % (Globals.PROPERTIES.getRemoteHost(), XMLTVFLE) ),
                          'stations': stations,
                          'recordings': recordings }
 
@@ -88,7 +89,7 @@ class M3U(object):
             pass
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
     def _load(self):
         self.log('_load, file = %s' % self.stationFile)
@@ -212,7 +213,7 @@ class M3U(object):
 
     def _save(self):
         self.M3UDATA['data'] = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
-                               'http://%s/%s' % (PROPERTIES.getRemoteHost(), XMLTVFLE) )
+                               'http://%s/%s' % (Globals.PROPERTIES.getRemoteHost(), XMLTVFLE) )
         self.M3UDATA['stations'] = self.sortStations(self.M3UDATA.get('stations', []))
         self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings', []), key='name')
         
@@ -273,7 +274,7 @@ class M3U(object):
 
     def _verify(self, stations=None, recordings=None, chkPath=None):
         if chkPath is None:
-            chkPath = SETTINGS.getSettingBool('Clean_Recordings')
+            chkPath = Globals.SETTINGS.getSettingBool('Clean_Recordings')
             
         if stations:
             channels = Channels().getChannels()
@@ -290,7 +291,7 @@ class M3U(object):
                     parsed_query = dict(urllib.parse.parse_qsl(url))
                     vid_param = parsed_query.get('vid', '').replace('.pvr', '')
                     decoded_path = FileAccess._decodeString(vid_param) if vid_param else ''
-                    if decoded_path and hasFile(decoded_path):
+                    if decoded_path and Globals._hasFile(decoded_path):
                         verified_recordings.append(recording)
                 else:
                     if recording.get('media', False):
@@ -381,18 +382,18 @@ class M3U(object):
     def getRecordItem(self, fitem, seek=0):
         group = LANGUAGE(30119) if seek <= 0 else LANGUAGE(30152)
         ritem = self.getMitem()
-        ritem['provider'] = '%s (%s)' % (ADDON_NAME, PROPERTIES.getFriendlyName())
+        ritem['provider'] = '%s (%s)' % (ADDON_NAME, Globals.PROPERTIES.getFriendlyName())
         ritem['provider-type'] = 'video'
         ritem['provider-logo'] = LOGO_HOST
         ritem['label'] = (fitem.get('showlabel') or '%s%s' % (fitem.get('label', ''), ' - %s' % (fitem.get('episodelabel', '')) if fitem.get('episodelabel', '') else ''))
         ritem['name'] = ritem['label']
         ritem['number'] = random.Random(str(fitem.get('id', 1))).random()
-        ritem['logo'] = Globals._getThumb(fitem, opt=EPG_ARTWORK)
+        ritem['logo'] = Globals._getThumb(fitem, opt=self.EPGArtwork)
         ritem['media'] = True
         ritem['media-size'] = str(fitem.get('size', 0))
         ritem['media-dir'] = ''
         ritem['group'] = ['%s (%s)' % (group, ADDON_NAME)]
-        ritem['id'] = getRecordID(ritem['name'], (fitem.get('originalfile') or fitem.get('file', '')), ritem['number'], SETTINGS.getMYUUID())
+        ritem['id'] = Globals._getRecordID(ritem['name'], (fitem.get('originalfile') or fitem.get('file', '')), ritem['number'], Globals.SETTINGS.getMYUUID())
         ritem['url'] = DVR_URL.format(addon=ADDON_ID, title=Globals._quoteString(ritem['label']), chid=Globals._quoteString(ritem['id']), vid=(FileAccess._encodeString((fitem.get('originalfile') or fitem.get('file', '')))), seek=seek, duration=fitem.get('duration', 0))
         return ritem
         
@@ -424,7 +425,7 @@ class M3U(object):
         mitem['label'] = citem['name'] 
         mitem['logo'] = citem['logo']
         mitem['realtime'] = False
-        mitem['provider'] = '%s (%s)' % (ADDON_NAME, PROPERTIES.getFriendlyName())
+        mitem['provider'] = '%s (%s)' % (ADDON_NAME, Globals.PROPERTIES.getFriendlyName())
         mitem['provider-type'] = 'audio' if citem.get('radio', False) else 'video'
         mitem['provider-logo'] = LOGO_HOST
         

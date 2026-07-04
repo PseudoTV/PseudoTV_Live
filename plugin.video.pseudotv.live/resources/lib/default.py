@@ -17,8 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals    import *
-from logger     import log
+from variables  import *
 from plugin     import Plugin
 from pool       import threadit, debounceit
 
@@ -29,7 +28,7 @@ def _run(mode, sysInfo={}):
     
 if __name__ == '__main__':
     try:
-        with PROPERTIES.suspendActivity():
+        with Globals.PROPERTIES.suspendActivity():
             try: 
                 sysARG  = sys.argv
                 sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
@@ -39,20 +38,20 @@ if __name__ == '__main__':
             
             if sysInfo.get('mode') is None:
                 xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
-                if PROPERTIES.getEXTProperty('%s.%s'%(ADDON_ID, 'has.Channels')) == "true":
+                if Globals.PROPERTIES.getEXTProperty('%s.%s'%(ADDON_ID, 'has.Channels')) == "true":
                     Globals._openGuide()
                 else:
                     Globals._openSettings()
                     
             elif any(item in sysARG[2] for item in ['{catchup-id}', '{utc}', '{duration}', '{utcend}']):
                 name = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ListItem.ChannelName') or ADDON_NAME)
-                DIALOG.notificationDialog(LANGUAGE(32265)%(name))
-                PROPERTIES.setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
+                Globals.DIALOG.notificationDialog(LANGUAGE(32265)%(name))
+                Globals.PROPERTIES.setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
                 xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())
                 log(f'Default: __main__, failed! {sysARG[2]}', xbmc.LOGERROR)
                 
             else:
-                try:    fitem, nitem = LISTITEMS.buildDictListItem(sys.listitem), {}
+                try:    fitem, nitem = Globals.LISTITEMS.buildDictListItem(sys.listitem), {}
                 except: fitem, nitem = Globals._decodePlot(Globals._getInfoLabel('ListItem.Plot')), Globals._decodePlot(Globals._getInfoLabel('ListItem.NextPlot'))
                 chid, vid   = (sysInfo.get("chid")  or fitem.get('citem',{}).get('id')), FileAccess._decodeString(sysInfo.get("vid",""))
                 name, title = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ListItem.ChannelName')), (Globals._unquoteString(sysInfo.get('title','')) or Globals._getInfoLabel('ListItem.label'))
@@ -60,4 +59,4 @@ if __name__ == '__main__':
                 _run(sysInfo.get('mode'), sysInfo)
     except Exception as e: 
         log(f'Default: __main__, failed! {e}', xbmc.LOGERROR)
-        DIALOG.notificationDialog(LANGUAGE(30079))
+        Globals.DIALOG.notificationDialog(LANGUAGE(30079))

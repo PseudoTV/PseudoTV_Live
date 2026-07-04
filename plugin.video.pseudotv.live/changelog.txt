@@ -175,7 +175,7 @@ v.0.5.8
 - Fixed "Restart Percentage" setting to allow 0% (i.e., disable restart prompt).
 
 v.0.5.7
-- Enhanced stability by replacing Kodi's segfault-prone busy dialog with a custom busy dialog.
+- Enhanced stability by replacing Kodi's segfault-prone busy dialog with a custom busy Globals.DIALOG.
 - Improved "ON Next" options to include artwork or text-based prompts.
 - Enhanced background overlay.
 - Fixed channel manager path duplication issue.
@@ -249,7 +249,7 @@ v.0.5.5
 - Improved settings; reordered and cleaned in preparation for Kodi repository submission.
   - Debugging now disabled by default.
   - Automatic IPTV-Simple PVR refresh/configuration disabled by default.
-- Added QR-Code dialog.
+- Added QR-Code Globals.DIALOG.
 - Updated September/October seasonal channels.
 - Optimized cache initialization.
 - Improved STRM duration detection and playback.

@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from globals    import *
+from variables  import *
 from parsers    import MP4Parser
 from parsers    import AVIParser
 from parsers    import MKVParser

@@ -17,16 +17,9 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import codecs, shutil, errno
+from variables   import *
 
-from constants   import *
-from logger      import log
-
-#constants 
-DEFAULT_ENCODING = "utf-8"
-
-class FileAccess:
-
+class FileAccess(object):
     @staticmethod
     def _getMD5(data):
         if not isinstance(data, (str, bytes, bytearray)):
@@ -397,9 +390,8 @@ class FileAccess:
 
 
 class VFSFile:
-    monitor = MONITOR()
-    
     def __init__(self, filename, mode):
+        self.monitor  = MONITOR()
         self.filename = filename
         if mode == 'w':
             parent_dir = os.path.split(filename)[0]
@@ -470,10 +462,11 @@ class VFSFile:
 
 
 class FileLock:
-    monitor = MONITOR()
-    thread_lock = Lock()
- 
-    def __init__(self, filename, timeout=LOCK_MAX_FILE_TIMEOUT, delay=LOCK_MAX_FILE_DELAY):
+    def __init__(self, filename, timeout=None, delay=None):
+        if timeout is None: timeout = LOCK_MAX_FILE_TIMEOUT
+        if delay is None: delay = LOCK_MAX_FILE_DELAY
+        self.monitor = MONITOR()
+        self.thread_lock = Lock()
         self.is_locked = False
         self.lockfile = f"{os.path.splitext(filename.strip('\\'))[0]}.lock"
         self.timeout = timeout

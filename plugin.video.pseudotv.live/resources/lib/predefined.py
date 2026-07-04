@@ -18,7 +18,7 @@
 
 # -*- coding: utf-8 -*--
 
-from globals    import *
+from variables import *
 
 class Predefined(object):
     @staticmethod

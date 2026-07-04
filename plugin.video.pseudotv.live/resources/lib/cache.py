@@ -17,18 +17,16 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import sqlite3
+from variables   import *
+from fileaccess  import FileAccess
 
-from constants   import *
-from logger      import log
-from fileaccess  import FileAccess, FileLock
-
-def cacheit(expiration=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
-    # checksum=PROPERTIES.getProcessID()
+def cacheit(expiration=datetime.timedelta(minutes=15), checksum=None):
     def internal(method):
         @wraps(method)
         def wrapper(*args, **kwargs):
+            nonlocal checksum
             instance = args[0]
+            if checksum is None: checksum = ADDON_VERSION# checksum=Globals.PROPERTIES.getProcessID()
             cache_checksum = checksum() if callable(checksum) else checksum
             cache_segments = [f"{instance.__class__.__name__}.{method.__name__}"]
             for item in args[1:]:
@@ -67,32 +65,30 @@ class Cache(object):
         self.disable_cache = (disable_cache or REAL_SETTINGS.getSetting('Disable_Cache'))
         self.log('__init__, mem_cache = %s, disable_cache = %s' % (mem_cache, disable_cache))
 
-
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s [%s]: %s' % (self.__class__.__name__, {True:'MEM|DB',False:'DB'}[self.cache.enable_mem_cache], msg), level)
 
-
-    def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def set(self, name, value, checksum=None, expiration=datetime.timedelta(minutes=15)):
+        if checksum is None: checksum = ADDON_VERSION# checksum=Globals.PROPERTIES.getProcessID()
         if not any([self.disable_cache,value is None]):
-            self.cache.set(name, value, checksum, expiration)
+            self.cache._set(name, value, checksum, expiration)
             self.log('set, name = %s, value = %s, type = %s' % (name, '%s...'%(str(value)[:128]),type(value).__name__))
         return value
 
-
-    def get(self, name, checksum=ADDON_VERSION):
+    def get(self, name, checksum=None):
+        if checksum is None: checksum = ADDON_VERSION# checksum=Globals.PROPERTIES.getProcessID()
         if not self.disable_cache:
             try:
-                value = self.cache.get(name, checksum)
+                value = self.cache._get(name, checksum)
                 self.log('get, name = %s, value = %s, type = %s' % (name, '%s...'%(str(value)[:128]),type(value).__name__))
                 return value
             except Exception as e:
                 self.log("get, name = %s failed! %s" % (name, e), xbmc.LOGERROR)
-                self.cache.clr(name)
+                self.cache._clr(name)
 
-
-    def clr(self, name):
+    def clear(self, name):
         self.log('clr, name = %s' % name)
-        self.cache.clr(name)
+        self.cache._clr(name)
 
     def checkpoint(self):
         self.cache._checkpoint()
@@ -111,23 +107,13 @@ class _Cache(object):
     global_checksum  = '1.0.0'
     enable_mem_cache = False
 
-    @staticmethod
-    def _getFreeMEM():
-        try:
-            raw_mem = xbmc.getInfoLabel('System.FreeMemory')
-            free = int("".join(c for c in raw_mem if c.isdigit()))
-        except Exception: 
-            free = 1024 
-        pct = int(REAL_SETTINGS.getSetting('Cache_MEM_Limit') or "10")
-        return floor(free * (pct / 100)) * 1024 * 1024
-        
     def __init__(self, monitor=None, winID=10000):
-        self.monitor   = monitor
-        self.window    = xbmcgui.Window(winID)
-        self.max_bytes = _Cache._getFreeMEM()
-        self.dbfile    = FileAccess.translatePath(CACHE_FLE)
-        self.timeout   = int(REAL_SETTINGS.getSetting('API_Timeout'))
-        self._auto_clean_interval = int(REAL_SETTINGS.getSetting('Max_Days') or "3") * 86400 
+        self.monitor        = monitor
+        self.window         = xbmcgui.Window(winID)
+        self.max_bytes      = self.getFreeMEM()
+        self.dbfile         = FileAccess.translatePath(CACHE_FLE)
+        self.timeout        = int(REAL_SETTINGS.getSetting('API_Timeout'))
+        self.clean_interval = MAX_GUIDEDAYS * 86400
 
     def __del__(self):
         self._chkClean()
@@ -185,7 +171,7 @@ class _Cache(object):
                     self.log(f"SQL Error during [{query[:48]}]: {e}", xbmc.LOGERROR)
                     return None
 
-    def get(self, endpoint, checksum=""):
+    def _get(self, endpoint, checksum=""):
         checksum = self.getChecksum(checksum)
         cur_time = self.getTimestamp(datetime.datetime.now())
         with self._lock:
@@ -194,7 +180,7 @@ class _Cache(object):
                 if result is not None: return result
             return self._getDB(endpoint, checksum, cur_time)
 
-    def set(self, endpoint, data, checksum="", delta_time=-1):
+    def _set(self, endpoint, data, checksum="", delta_time=-1):
         checksum = self.getChecksum(checksum)
         expires  = delta_time
         if isinstance(delta_time, datetime.timedelta):
@@ -205,7 +191,7 @@ class _Cache(object):
             query = "INSERT OR REPLACE INTO cache(id, expires, data, checksum) VALUES (?, ?, ?, ?)"
             self._execute_sql(query, (endpoint, expires, FileAccess.dumpPICKLE(data), checksum))
 
-    def clr(self, endpoint):
+    def _clr(self, endpoint):
         query = "DELETE FROM cache WHERE id LIKE ?"
         self._execute_sql(query, (endpoint + '%',))
 
@@ -258,7 +244,7 @@ class _Cache(object):
         except Exception:
             lastexec = cur_time
             
-        if (lastexec + self._auto_clean_interval) < cur_time: 
+        if (lastexec + self.clean_interval) < cur_time: 
             self._cleanDB()
         else:                                                 
             self._trimMEM()
@@ -336,3 +322,14 @@ class _Cache(object):
     def getTimestamp(date_time):
         try:              return int(date_time.timestamp())
         except Exception: return int(time.mktime(date_time.timetuple()))
+
+    @staticmethod
+    def getFreeMEM():
+        try:
+            raw_mem = xbmc.getInfoLabel('System.FreeMemory')
+            free = int("".join(c for c in raw_mem if c.isdigit()))
+        except Exception: 
+            free = 1024 
+        pct = int(REAL_SETTINGS.getSetting('Cache_MEM_Limit') or "10")
+        return floor(free * (pct / 100)) * 1024 * 1024
+        

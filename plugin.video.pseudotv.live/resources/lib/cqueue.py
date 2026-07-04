@@ -17,9 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from globals     import *
-from fileaccess  import FileAccess
-from variables   import DIALOG, PROPERTIES, SETTINGS, LISTITEMS, BUILTIN
+from variables     import *
 
 class Task(object):
     def __init__(self, func, args=(), kwargs=None, priority=3, execute_at=0):
@@ -29,15 +27,19 @@ class Task(object):
         self.priority     = priority
         self.execute_at   = execute_at
         self.is_cancelled = False
+        self.created_at   = time.time()
 
     def cancel(self):
         self.is_cancelled = True
 
     def __lt__(self, other):
-        # Tie-breaker logic (won't be reached if counters are unique, but standard safety)
         return self.priority < other.priority
 
 class CustomQueue(object):
+    AGE_BOOST_INTERVAL = 20  # seconds between priority aging ticks
+    AGE_BOOST_STEP     = 1.0 # priority levels boosted per interval
+    MAX_HEAP_SIZE      = 500 # hard limit to prevent memory growth
+
     def __init__(self, service, workers=THREAD_WORKERS):
         self.service  = service
         self.monitor  = service.monitor
@@ -50,11 +52,11 @@ class CustomQueue(object):
         self.pending  = {}
         self.counter  = 0
         
-        self.useExecutor = SETTINGS.getSettingBool('Enable_Executor')
+        self.useExecutor = Globals.SETTINGS.getSettingBool('Enable_Executor')
         self.queueThread = Thread(target=self.execute, name=f"{ADDON_ID}.priorityQUE")
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f'{self.__class__.__name__}: {msg}', level)
+        return Globals._log(f'{self.__class__.__name__}: {msg}', level)
         
     def _freeze(self, obj):
         if isinstance(obj, list): return tuple(self._freeze(item) for item in obj)
@@ -64,6 +66,24 @@ class CustomQueue(object):
         
     def _get_task_key(self, func, args, kwargs):
         return (func.__name__, tuple(self._freeze(arg) for arg in args), tuple(sorted((k, self._freeze(v)) for k, v in kwargs.items())) if kwargs else ())
+
+    def _compute_score(self, task):
+        wait_time    = max(0.0, time.time() - task.created_at)
+        aging_boost  = (wait_time / self.AGE_BOOST_INTERVAL) * self.AGE_BOOST_STEP
+        eff_priority = max(1.0, task.priority - aging_boost)
+        return task.execute_at + (eff_priority * 2.0)
+
+    def _evict_lowest(self):
+        if not self.heap: return
+        worst_idx = max(range(len(self.heap)), key=lambda i: self.heap[i][0])
+        _, _, task = self.heap[worst_idx]
+        self.log(f"_evict_lowest, Dropping {task.func.__name__} (Priority: {task.priority}).", xbmc.LOGWARNING)
+        task.cancel()
+        task_key = self._get_task_key(task.func, task.args, task.kwargs)
+        self.pending.pop(task_key, None)
+        self.heap[worst_idx] = self.heap[-1]
+        self.heap.pop()
+        if self.heap: heapq.heapify(self.heap)
 
     def push(self, package: tuple, priority: int = 3, delay: int = 0, timer: int = 0):
         now = time.time()
@@ -79,24 +99,25 @@ class CustomQueue(object):
             with self.lock:
                 if task_key in self.pending:
                     existing_task = self.pending[task_key]
-                    # Lower numerical value means HIGHER priority (1 is highest, 5 is lowest)
+                    # Lower numerical value = HIGHER priority (1=highest, 5=lowest)
                     if priority < existing_task.priority:
                         self.log(f"push, Upgrading {func.__name__} priority from {existing_task.priority} to {priority}.", xbmc.LOGDEBUG)
-                        existing_task.cancel()  # Cancel lower-priority duplicate
+                        existing_task.cancel()
                         new_task = Task(func, args, kwargs, priority, execute_at)
                         self.pending[task_key] = new_task
                         self.counter += 1
-                        heapq.heappush(self.heap, (priority, self.counter, new_task))
+                        heapq.heappush(self.heap, (self._compute_score(new_task), self.counter, new_task))
                     else: self.log(f"push, Task {func.__name__} ignored (already queued with higher/equal priority {existing_task.priority}).", xbmc.LOGDEBUG)
                 else:
+                    if len(self.heap) >= self.MAX_HEAP_SIZE: self._evict_lowest()
                     new_task = Task(func, args, kwargs, priority, execute_at)
                     self.pending[task_key] = new_task
                     self.counter += 1
-                    heapq.heappush(self.heap, (priority, self.counter, new_task))
+                    heapq.heappush(self.heap, (self._compute_score(new_task), self.counter, new_task))
                     self.log(f"push, Pushed task {func.__name__} (Priority: {priority}).", xbmc.LOGDEBUG)
 
             if not self.monitor.abortRequested() and not self.queueThread.is_alive():
-                self.useExecutor = SETTINGS.getSettingBool('Enable_Executor')
+                self.useExecutor = Globals.SETTINGS.getSettingBool('Enable_Executor')
                 self.queueThread = Thread(target=self.execute, name=f"{ADDON_ID}.queueThread")
                 self.queueThread.daemon = True
                 self.queueThread.start()
@@ -105,9 +126,10 @@ class CustomQueue(object):
         with self.lock:
             while not self.monitor.abortRequested() and self.heap:
                 _, _, task = heapq.heappop(self.heap)
-                self.counter -= 1
                 task_key = self._get_task_key(task.func, task.args, task.kwargs)
-                if task.is_cancelled: continue
+                if task.is_cancelled:
+                    self.pending.pop(task_key, None)
+                    continue
                 if self.pending.get(task_key) is task:
                     self.pending.pop(task_key, None)
                 return task
@@ -133,31 +155,29 @@ class CustomQueue(object):
                 if task is None:
                     self.monitor.waitForAbort(SERVICE_INTERVAL)
                     continue
-                    
-                if task.execute_at and task.execute_at > time.time():
+                
+                now = time.time()
+                if task.execute_at and task.execute_at > now:
                     with self.lock:
-                        new_task = Task(task.func, task.args, task.kwargs, task.priority, task.execute_at)
-                        self.counter += 1
-                        heapq.heappush(self.heap, (task.priority, self.counter, new_task))
-                        continue
+                        self.push((task.func, task.args, task.kwargs), task.priority, 0, task.execute_at)
+                    continue
                         
                 self.log(f"execute, Dispatching {task.func.__name__} (Priority: {task.priority}) to ThreadPool.", xbmc.LOGDEBUG)
                 try:
                     with timeit(task.func):
                         if self.useExecutor:
                             future = self.pool._executor.submit(task.func, *task.args, **task.kwargs)
-                            return future.add_done_callback(lambda fut: self._future_callback(fut))
+                            future.add_done_callback(self._future_callback)
                         else: 
-                            return task.func(*task.args, **task.kwargs)
+                            task.func(*task.args, **task.kwargs)
                 except Exception as e: self.log(f"execute, failed! {e}", xbmc.LOGERROR)
         self.shutdown()
         self.log("execute, finished: shutting down...")
 
-    def _future_callback(self, future):
+    def _future_callback(self, future, timeout=900):
         try: 
-            return future.result()
+            future.result(float(timeout))
         except Exception as e: 
-            return future.cancel()
             self.log(f"_future_callback, failed! {e}", xbmc.LOGERROR)
 
     def shutdown(self, wait=False, cancel=True):

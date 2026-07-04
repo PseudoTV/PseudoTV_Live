@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from globals     import *
+from variables import *
 
 class MP4DataBlock:
     def __init__(self):
@@ -35,9 +35,8 @@ class MP4MovieHeader:
         self.duration = 0
 
 class MP4Parser:
-    monitor = MONITOR()
-    
     def __init__(self):
+        self.monitor = MONITOR()
         self.MovieHeader = MP4MovieHeader()
 
 

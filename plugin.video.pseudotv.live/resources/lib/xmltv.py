@@ -36,7 +36,7 @@ with this software; if not, see <http://www.gnu.org/licenses/>.
 """
 # https://github.com/kodi-pvr/pvr.iptvsimple#supported-m3u-and-xmltv-elements
 
-from globals import *
+from variables import *
 VERSION = "1.4.5_PSEUDOTV"
 
 # The date format used in XMLTV (the %Z will go away in 0.6)

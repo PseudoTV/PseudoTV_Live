@@ -18,16 +18,15 @@
 
 # -*- coding: utf-8 -*-
 
-from globals    import *
+from variables    import *
 from multiroom  import Multiroom
-from variables  import SETTINGS
 
 #todo create dataclasses for all jsons
 # https://pypi.org/project/dataclasses-json/
 class Channels(object):
     
     def __init__(self, key=None, writable=False):
-        if key is None: key = CHANNELAUTOTUNE_KEY if SETTINGS.getSettingBool('Enable_Autotune') else CHANNEL_KEY
+        if key is None: key = CHANNELAUTOTUNE_KEY if Globals.SETTINGS.getSettingBool('Enable_Autotune') else CHANNEL_KEY
         self.writable    = writable
         self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
         self.channelKEY  = f'{key}.{self.channelDATA.get("version",ADDON_VERSION)}'
@@ -62,8 +61,8 @@ class Channels(object):
 
 
     def _load(self) -> dict:
-        channelDATA = SETTINGS.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY), default={})
-        if CHANNELAUTOTUNE_KEY not in self.channelKEY: SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
+        channelDATA = Globals.SETTINGS.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY), default={})
+        if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
         self.log('_load channels = %s'%(len(channelDATA.get('channels',[]))))
         return channelDATA
     
@@ -82,7 +81,7 @@ class Channels(object):
                 expiration = datetime.timedelta(days=MAX_GUIDEDAYS)
                 FileAccess.setJSON(CHANNEL_EXPORT_FLE,self.channelDATA)
             self.log('_save channels = %s, expiration = %s'%(len(self.channelDATA['channels']),expiration))
-            return SETTINGS.setCacheSetting(self.channelKEY, self.channelDATA, FileAccess._getMD5(self.channelKEY), expiration)
+            return Globals.SETTINGS.setCacheSetting(self.channelKEY, self.channelDATA, FileAccess._getMD5(self.channelKEY), expiration)
             
 
     def getTemplate(self) -> dict: 
@@ -109,11 +108,11 @@ class Channels(object):
     
     def setChannels(self, channels=None) -> bool:
         if channels is None: channels = self.channelDATA['channels']
-        self.channelDATA['name']     = PROPERTIES.getFriendlyName()
-        self.channelDATA['uuid']     = SETTINGS.getMYUUID()
+        self.channelDATA['name']     = Globals.PROPERTIES.getFriendlyName()
+        self.channelDATA['uuid']     = Globals.SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(list(self._verify(channels)))
-        if len(self.channelDATA['channels']) > 0: PROPERTIES.setHasChannels(self.channelKEY, self.channelDATA)
-        if CHANNELAUTOTUNE_KEY not in self.channelKEY: SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
+        if len(self.channelDATA['channels']) > 0: Globals.PROPERTIES.setHasChannels(self.channelKEY, self.channelDATA)
+        if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
         self.log('setChannels channels = %s'%(len(self.channelDATA.get('channels',[]))))
         return self._save()
         
@@ -150,7 +149,7 @@ class Channels(object):
         
     def findChannel(self, citem: dict={}, channels=None) -> tuple:
         if channels is None: channels = self.channelDATA['channels']
-        if citem.get('id') is None: citem['id'] = getChannelID(citem.get('name'), citem.get('path'), citem.get('number'), uuid=self.channelDATA.get('uuid'))
+        if citem.get('id') is None: citem['id'] = Globals._getChannelID(citem.get('name'), citem.get('path'), citem.get('number'), uuid=self.channelDATA.get('uuid'))
         return tuple(next(((idx, eitem) for idx, eitem in enumerate(channels) if citem['id'] == eitem.get('id', str(random.random()))), (None,{})))
                     
                     
@@ -159,6 +158,6 @@ class Channels(object):
             html_content = fle.read()
         html_content = html_content.replace("{{ channel_limit }}", str(CHANNEL_LIMIT))
         html_content = html_content.replace("{{ media_loc }}"    , MEDIA_LOC)
-        html_content = html_content.replace("{{ remote_host }}"  , PROPERTIES.getRemoteHost())
+        html_content = html_content.replace("{{ remote_host }}"  , Globals.PROPERTIES.getRemoteHost())
         return html_content.encode(encoding=DEFAULT_ENCODING)
         

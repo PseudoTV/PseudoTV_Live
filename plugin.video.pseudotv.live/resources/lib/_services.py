@@ -17,42 +17,30 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from globals    import *
 
-def _getEXTProperty(key, default=''):
-    try:
-        value = xbmcgui.Window(10000).getProperty(key)
-        if not value: return default
-        try: value = literal_eval(value)
-        except (ValueError, SyntaxError): pass
-        return value
-    except Exception as e: 
-        return default
-        
-def _isScanning():
-    return (xbmc.getCondVisibility('Library.IsScanningVideo') &  xbmc.getCondVisibility('Library.IsScanningMusic'))
+# --- imports needed BEFORE globals to define Service class early ---
+from kodi_six  import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
+from threading import Thread
+from variables import *
 
-def _isSettingsOpened() -> bool:
-    return any([ xbmc.getCondVisibility('Window.IsVisible(addonsettings)'), xbmc.getCondVisibility('Window.IsVisible(selectdialog)')])
-
-class Service(object):
+class _Service(object):
+    """Lightweight dummy service - used by Dialog when full services.Service isn't required."""
     def __init__(self):
-        self.log('__init__')
         from jsonrpc import JSONRPC
         from pool    import ExecutorPool
         from cache   import Cache
-        self.player  = PLAYER()
-        self.monitor = MONITOR()
-        self.pool    = ExecutorPool()
-        self.cache   = Cache(mem_cache=True)
-        self.jsonRPC = JSONRPC(service=self)
-
+        self.player           = xbmc.Player()
+        self.monitor          = xbmc.Monitor()
+        self.pool             = ExecutorPool()
+        self.kodi             = Kodi(self)
+        self.cache            = Cache(mem_cache=True)
+        self.jsonRPC          = JSONRPC(service=self)
         self.pendingShutdown  = False
         self.pendingRestart   = False
         self.pendingInterrupt = False
         self.pendingSuspend   = False
         self.serviceThread    = Thread(target=self._run, name=f"{ADDON_ID}.serviceThread")
-        
+
         if self.serviceThread.is_alive():
             try: self.serviceThread.join(SERVICE_INTERVAL)
             except Exception: pass
@@ -61,8 +49,8 @@ class Service(object):
             self.serviceThread.start()
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
-        
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+
     def _shutdown(self) -> bool:
         return _getEXTProperty('%s.pendingShutdown'%(ADDON_ID),False) or self.monitor.abortRequested()
 
@@ -70,12 +58,13 @@ class Service(object):
         return _getEXTProperty('%s.pendingRestart'%(ADDON_ID),False)
 
     def _interrupt(self) -> bool:
-        return any([_getEXTProperty('%s.pendingInterrupt'%(ADDON_ID),False), _isScanning()])
+        return any([_getEXTProperty('%s.pendingInterrupt'%(ADDON_ID),False), self.Kodi.builtin._isScanning()])
 
     def _suspend(self) -> bool:
-        return any([_getEXTProperty('%s.pendingSuspend'%(ADDON_ID),False), _isSettingsOpened()])
+        return any([_getEXTProperty('%s.pendingSuspend'%(ADDON_ID),False), self.kodi.builtin._isSettingsOpened()])
 
-    def _sleep(self, wait=CPU_CYCLE):
+    def _sleep(self, wait=None):
+        if wait is None: wait = CPU_CYCLE
         while not self.monitor.abortRequested() and wait > 0:
             if any([self.monitor.waitForAbort(CPU_CYCLE), self._interrupt()]):
                 return True
@@ -94,4 +83,25 @@ class Service(object):
         self.pool.shutdown()
         self.cache.shutdown()
         self.log('_run, stopping...')
-            
+
+def _start():
+    try:
+        from services import Service
+        monitor = xbmc.Monitor()
+        while not monitor.abortRequested():
+            restart = Service()._start()
+            if monitor.waitForAbort(CPU_CYCLE) or not restart: 
+                Globals.DIALOG.notificationDialog(LANGUAGE(32141))
+                log("Services: _start, shutting down...")
+                break
+            elif restart:
+                Globals.DIALOG.notificationDialog(LANGUAGE(32124))
+                log("Services: _start, restarting...")
+        del monitor
+    except Exception as e:
+         log("Services: _start, failed! %s"%(e), xbmc.LOGERROR)
+         Globals.DIALOG.notificationDialog(LANGUAGE(30079))
+    finally:
+        sys.exit()
+   
+if __name__ == '__main__': _start()

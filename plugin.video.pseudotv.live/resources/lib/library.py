@@ -18,11 +18,12 @@
 
 # -*- coding: utf-8 -*-
 
-from globals     import *
+from variables   import *
 from predefined  import Predefined
 from resources   import Resources
 from channels    import Channels
-from variables   import DIALOG, PROPERTIES, SETTINGS, LISTITEMS, BUILTIN
+from cache       import cacheit
+from _services   import _Service
 
 #constants
 REG_KEY = 'PseudoTV_Recommended.%s'
@@ -32,16 +33,6 @@ class Library(object):
     predefined = Predefined()
     
     def __init__(self, service=None, writable=False):
-        if service is None: 
-            from _services import Service
-            service = Service()            
-        self.writable    = writable
-        self.service     = service
-        self.pool        = service.pool
-        self.jsonRPC     = service.jsonRPC
-        self.cache       = service.cache
-        self.resources   = Resources(service=self.service)
-        
         self.pCount      = 0
         self.pDialog     = None
         self.pMSG        = ''
@@ -65,19 +56,27 @@ class Library(object):
                             "Services"     :{'func':self.getServices    ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)},
                             "Music Genres" :{'func':self.getMusicGenres ,'life':datetime.timedelta(hours=MAX_GUIDEDAYS)}}
 
+        if service is None: service = _Service()
+        self.writable    = writable
+        self.service     = service
+        self.pool        = service.pool
+        self.jsonRPC     = service.jsonRPC
+        self.cache       = service.cache
+        self.resources   = Resources(service)
+        
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
         
 
     def _load(self):
-        return SETTINGS.getCacheSetting(self.libraryKEY, FileAccess._getMD5(self.libraryKEY), default={})
+        return Globals.SETTINGS.getCacheSetting(self.libraryKEY, FileAccess._getMD5(self.libraryKEY), default={})
     
     
     def _save(self):
         if self.writable:
             self.log('_save, writable = %s'%(self.writable))
-            return SETTINGS.setCacheSetting(self.libraryKEY, self.libraryDATA, FileAccess._getMD5(self.libraryKEY), -1)
+            return Globals.SETTINGS.setCacheSetting(self.libraryKEY, self.libraryDATA, FileAccess._getMD5(self.libraryKEY), -1)
         
   
     def getLibrary(self, type=None):
@@ -88,9 +87,9 @@ class Library(object):
         
     def setLibrary(self, type, items=[]):
         self.log('setLibrary, type = %s, items = %s'%(type,len(items)))
-        self.libraryDATA['uuid'] = SETTINGS.getMYUUID()
+        self.libraryDATA['uuid'] = Globals.SETTINGS.getMYUUID()
         self.libraryDATA['library'][type] = items
-        PROPERTIES.setHasLibrary(type,len(items) > 0)
+        Globals.PROPERTIES.setHasLibrary(type,len(items) > 0)
         return True if self._save() else False
 
 
@@ -100,16 +99,16 @@ class Library(object):
         
     def updateLibrary(self, types, silent=None):
         complete = set()
-        if silent is None: silent = not SETTINGS.showDialog(silent)
-        if not PROPERTIES.isRunning('Library.updateLibrary'):
-            with PROPERTIES.chkRunning('Library.updateLibrary'):
+        if silent is None: silent = not Globals.SETTINGS.showDialog(silent)
+        if not Globals.PROPERTIES.isRunning('Library.updateLibrary'):
+            with Globals.PROPERTIES.chkRunning('Library.updateLibrary'):
                 for type in types:
                     items = self.jsonRPC.cache.get("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__))
                     if items is None: 
                         self.pCount  = 0
                         self.pMSG    = type
                         self.pHeader = '%s, %s %s'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(32041))
-                        with DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
+                        with Globals.DIALOG._progressDialog(self.pMSG, self.pHeader, silent) as self.pDialog:
                             items = self.AUTOTUNE[type]['func']()
                     if items:
                         complete.add(self.setLibrary(type,items))
@@ -119,8 +118,8 @@ class Library(object):
 
     def clrLibraryCache(self, type):
         self.log('clrLibraryCache, type = %s'%(type))
-        with BUILTIN.busy_dialog():
-            DIALOG.notificationDialog(LANGUAGE(30070)%(type),time=5)
+        with Globals.BUILTIN.busy_dialog():
+            Globals.DIALOG.notificationDialog(LANGUAGE(30070)%(type),time=5)
             self.cache.clr("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__),wait=5)
 
 
@@ -130,7 +129,7 @@ class Library(object):
         types = ['video','music']#,'mixed'
         for i, type in enumerate(types):
             self.pCount  = int(i*100//len(types))
-            self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
+            self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
             
             nPlayList = []
             results   = self.jsonRPC.getSmartPlaylists(type)
@@ -140,7 +139,7 @@ class Library(object):
                     return
                 elif not result.get('label'): continue
                 else:
-                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s (%s): %s%%'%(self.pMSG,type.title(),int((idx)*100//len(results))), header=self.pHeader)
+                    self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s (%s): %s%%'%(self.pMSG,type.title(),int((idx)*100//len(results))), header=self.pHeader)
                     nPlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':self.resources.getLogo({'name':result.get('label'),'type':"Custom"},fallback=result.get('thumbnail',LOGO))})
             self.log('getPlaylists, type = %s, PlayList = %s'%(type,len(nPlayList)))
             PlayList.extend(nPlayList)
@@ -215,7 +214,7 @@ class Library(object):
         return []
         # PluginList = []
         # WhiteList  = self.getWhiteList()
-        # self.pDialog  = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
+        # self.pDialog  = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
         # AddonsList = self.searchRecommended()
         # for addonid, item in list(AddonsList.items()):
             # if addonid not in WhiteList: continue
@@ -245,7 +244,7 @@ class Library(object):
  
     def getPVRRecordings(self):
         recordList    = []
-        self.pDialog  = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
+        self.pDialog  = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
         json_response = self.jsonRPC.getPVRRecordings()
         paths = [item.get('file') for idx, item in enumerate(json_response) if item.get('label','').endswith('(%s)'%(ADDON_NAME))]
         if len(paths) > 0: recordList.append({'name':LANGUAGE(32003),'type':"Mixed Video",'path':[paths],'logo':self.resources.getLogo({'name':LANGUAGE(32003),'type':"Mixed Video"})})
@@ -256,7 +255,7 @@ class Library(object):
     def getPVRSearches(self):
         searchList = []
         json_response = self.jsonRPC.getPVRSearches()
-        self.pDialog  = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
+        self.pDialog  = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
         for idx, item in enumerate(json_response):
             if self.service.pendingInterrupt:
                 self.log("getPVRSearches, _interrupt")
@@ -272,12 +271,12 @@ class Library(object):
     def getTVInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getTVInfo')
         NetworkList = ShowGenreList = TVShowList = []
-        if BUILTIN.hasTV():
+        if Globals.BUILTIN.hasTV():
             TVShowList    = Counter()
             NetworkList   = Counter()
             ShowGenreList = Counter()
             
-            self.pDialog  = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
+            self.pDialog  = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
             json_response = self.jsonRPC.getTVshows()
             for idx, info in enumerate(json_response):
                 if self.service.pendingInterrupt:
@@ -306,7 +305,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32005)#"TV Shows"
                     self.pCount  = int(idx*100//len(TVShowList)) // 3
-                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(TVShowList))), header=self.pHeader)
+                    self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(TVShowList))), header=self.pHeader)
                     nTVShowList.append({'name': show.get('label'), 'type':"TV Shows", 'path': self.predefined.createShowPlaylist(show.get('label')), 'logo': self.resources.getLogo({'name':show.get('label'),'type':"TV Shows"},show.get('art', {}).get('clearlogo', ''))})
             TVShowList = nTVShowList
 
@@ -318,7 +317,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32004)#"TV Networks"
                     self.pCount  = 33 + int(idx*100//len(NetworkList)) // 3
-                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(NetworkList))), header=self.pHeader)
+                    self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(NetworkList))), header=self.pHeader)
                     nNetworkList.append({'name':network, 'type':"TV Networks", 'path': self.predefined.createNetworkPlaylist(network),'logo':self.resources.getLogo({'name':network,'type':"TV Networks"})})
             NetworkList = nNetworkList
             
@@ -330,7 +329,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32006)#"TV Genres"
                     self.pCount  = 66 + int(idx*100//len(ShowGenreList)) // 3
-                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(ShowGenreList))), header=self.pHeader)
+                    self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(ShowGenreList))), header=self.pHeader)
                     nShowGenreList.append({'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createTVGenrePlaylist(tvgenre),'logo':self.resources.getLogo({'name':tvgenre,'type':"TV Genres"})})
             ShowGenreList = nShowGenreList
         self.log('getTVInfo, networks = %s, genres = %s, shows = %s' % (len(NetworkList), len(ShowGenreList), len(TVShowList)))
@@ -340,10 +339,10 @@ class Library(object):
     def getMovieInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getMovieInfo')
         StudioList = MovieGenreList = []
-        if BUILTIN.hasMovie(): 
+        if Globals.BUILTIN.hasMovie(): 
             StudioList     = Counter()
             MovieGenreList = Counter()
-            self.pDialog   = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
+            self.pDialog   = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
             json_response  = self.jsonRPC.getMovies() #we can't parse for genres directly from Kodi json ie.getGenres; because we need the weight of each genre to prioritize list.
 
             for idx, info in enumerate(json_response):
@@ -370,7 +369,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32008)#"Movie Studios"
                     self.pCount  = int(idx*100//len(StudioList)) // 2
-                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(StudioList))), header=self.pHeader)
+                    self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(StudioList))), header=self.pHeader)
                     nStudioList.append({'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio) ,'logo':self.resources.getLogo({'name':studio,'type':"Movie Studios"})})
             StudioList = nStudioList
             
@@ -382,7 +381,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32007)#"Movie Genres"
                     self.pCount  = 50 + int(idx*100//len(MovieGenreList)) // 2
-                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(MovieGenreList))), header=self.pHeader)
+                    self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(MovieGenreList))), header=self.pHeader)
                     nMovieGenreList.append({'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre) ,'logo':self.resources.getLogo({'name':genre,'type':"Movie Genres"})})   
             MovieGenreList = nMovieGenreList
         self.log('getMovieInfo, studios = %s, genres = %s' % (len(StudioList), len(MovieGenreList)))
@@ -392,9 +391,9 @@ class Library(object):
     def getMusicInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
         self.log('getMusicInfo')
         MusicGenreList = []
-        if BUILTIN.hasMusic(): 
+        if Globals.BUILTIN.hasMusic(): 
             MusicGenreList = Counter()
-            self.pDialog   = DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
+            self.pDialog   = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
             json_response  = self.jsonRPC.getMusicGenres()
             
             for idx, info in enumerate(json_response):
@@ -416,7 +415,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32011)#"Music Genres"
                     self.pCount  = int(idx*100//len(MusicGenreList))
-                    self.pDialog = DIALOG._updateProgress(self.pDialog, self.pCount, self.pMSG, header=self.pHeader)
+                    self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, self.pMSG, header=self.pHeader)
                     nMusicGenreList.append({'name':genre, 'type':"Music Genres", 'path': self.predefined.createMusicGenrePlaylist(genre),'logo':self.resources.getLogo({'name':genre,'type':"Music Genres"})})
             MusicGenreList = nMusicGenreList
         self.log('getMusicInfo, found genres = %s' % (len(MusicGenreList)))
@@ -433,8 +432,8 @@ class Library(object):
         # library.importPrompt() 
         # def _search(addonid):
             # cacheName = 'searchRecommended.%s'%(FileAccess._getMD5(addonid))
-            # addonMeta = SETTINGS.getAddonDetails(addonid)
-            # payload   = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
+            # addonMeta = Globals.SETTINGS.getAddonDetails(addonid)
+            # payload   = Globals.PROPERTIES.getEXTProperty(REG_KEY%(addonid))
             # if not payload: #startup services may not be broadcasting beacon; use last cached beacon instead.
                 # payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION))
             # else:
@@ -474,7 +473,7 @@ class Library(object):
         whiteList = self.getWhiteList()
         whiteList.append(addonid)
         whiteList = sorted(set(whiteList))
-        if len(whiteList) > 0: PROPERTIES.setProperty('has.WhiteList',len(whiteList) > 0)
+        if len(whiteList) > 0: Globals.PROPERTIES.setProperty('has.WhiteList',len(whiteList) > 0)
         return self.setWhiteList(whiteList)
         
 
@@ -499,7 +498,7 @@ class Library(object):
         
         try:
             if len(addonNames) > 1:
-                retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056))
+                retval = Globals.DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056))
                 self.log('importPrompt, prompt retval = %s'%(retval))
                 if   retval == 1: raise Exception('Single Entry')
                 elif retval == 2: 
@@ -511,11 +510,11 @@ class Library(object):
             self.log('importPrompt, %s'%(e))
             for addonid, item in list(addonList.items()):
                 if item.get('meta',{}).get('name') in addonNames:
-                    if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name','')))):
+                    if not Globals.DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name','')))):
                         self.addBlackList(addonid)
                     else:
                         self.addWhiteList(addonid)
                 
-        PROPERTIES.setProperty('has.WhiteList',len(self.getWhiteList()) > 0)
-        PROPERTIES.setProperty('has.BlackList',len(self.getBlackList()) > 0)
-        SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))
+        Globals.PROPERTIES.setProperty('has.WhiteList',len(self.getWhiteList()) > 0)
+        Globals.PROPERTIES.setProperty('has.BlackList',len(self.getBlackList()) > 0)
+        Globals.SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))

@@ -24,9 +24,9 @@
 # https://tvtropes.org/pmwiki/pmwiki.php/Main/PopCultureHoliday
 # https://fanlore.org/wiki/List_of_Annual_Holidays,_Observances,_and_Events_in_Fandom
 
-from globals   import *
-from cache     import Cache, cacheit
-from variables import SETTINGS
+from variables   import *
+from cache       import Cache, cacheit
+from _services   import _Service
 
 KEY_QUERY   = {"method":"","order":"","field":'',"operator":'',"value":[]}
 LIMITS      = {"end":-1,"start":0,"total":0}
@@ -37,78 +37,30 @@ MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMov
 
 class Seasonal(object):
     def __init__(self, service=None):
-        if service is None: 
-            from _services import Service
-            service = Service()   
+        if service is None: return
         self.service = service
         self.pool    = service.pool
         self.cache   = service.cache
-    
-    
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        """
-        Logs a message to the system log with the specified logging level.
 
-        :param msg: The message to log.
-        :param level: The log level (default: xbmc.LOGDEBUG).
-        """
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
 
     def getYear(self):
-        """
-        Get the current year.
-
-        This function retrieves the current year using the `datetime` module.
-
-        returns:
-        int: The current year.
-        """
         return datetime.datetime.now().year
 
 
     def getMonth(self, name=False):
-        """
-        Get the current month in either name or numeric format.
-
-        Args:
-            name (bool): If True, returns the full name of the current month (e.g., 'April').
-                         If False, returns the numeric representation of the current month (e.g., 4).
-
-        Returns:
-            str/int: The current month as a string (full name) or as an integer (numeric format).
-        """
         if name: return datetime.datetime.now().strftime('%B')  # Full month name
         else:    return datetime.datetime.now().month           # Numeric month
 
 
     def getDay(self):
-        """
-        Calculate and return the adjusted day of the month.
-
-        This function adds the current day of the month to the weekday of the first day of the current month.
-        The result can be used to determine the week number or other date-based calculations.
-
-        Returns:
-            int: Adjusted day of the month.
-        """
         return datetime.datetime.now().day
 
 
     def getDOM(self, year, month):
-        """
-        Get all days of the specified month for a given year.
-
-        This function uses the `calendar.Calendar` class to iterate through all days of the specified month and year.
-        It extracts only the valid days (ignoring placeholder zeros for days outside the month) and returns them as a list.
-
-        Args:
-            year (int): The year of the desired month.
-            month (int): The month (1-12) for which to retrieve the days.
-
-        Returns:
-            list: A list of integers representing the days in the specified month.
-        """
         cal = calendar.Calendar()
         days_in_month = []
         for day in cal.itermonthdays2(year, month):
@@ -129,25 +81,14 @@ class Seasonal(object):
 
     @cacheit(expiration=datetime.timedelta(minutes=15))
     def getHoliday(self, nearest=None):
-        """
-        Retrieves the current or nearest holiday based on user settings.
-
-        :param nearest: Boolean indicating whether to return the nearest holiday (default: True).
-        :return: A dictionary representing the holiday details.
-        """
         if nearest is None:
-            nearest = SETTINGS.getSettingBool('Nearest_Holiday')
+            nearest = Globals.SETTINGS.getSettingBool('Nearest_Holiday')
         self.log('getHoliday, nearest = %s' % (nearest))
         if nearest: return self.getNearestHoliday()
         else:       return self.getCurrentHoliday()
 
 
     def getCurrentHoliday(self):
-        """
-        Retrieves the holiday for the current month and week.
-
-        :return: A dictionary representing the holiday details for the current month and week.
-        """
         return self.getSeasons(self.getMonth(name=True)).get(self.getDay(),{})
 
 
@@ -156,13 +97,6 @@ class Seasonal(object):
     
 
     def getNearestHoliday(self, fallback=True):
-        """
-        Retrieves the nearest holiday. If no holiday is found in the current week, it searches
-        forward and optionally backward for the nearest holiday.
-
-        :param fallback: Boolean indicating whether to search backward if no holiday is found forward (default: True).
-        :return: A dictionary representing the nearest holiday.
-        """
         holiday = {}
         month = self.getMonth(name=True)
         day   = self.getDay()
@@ -183,12 +117,6 @@ class Seasonal(object):
 
 
     def buildSeasonal(self, holiday=None):
-        """
-        Builds a generator that provides seasonal content queries. Each query is augmented
-        with holiday-specific metadata, including sorting and filtering options.
-
-        :yield: A dictionary representing a seasonal content query.
-        """
         if holiday is None: holiday = self.getHoliday()
         season  = self.getSeason(holiday.get('keyword'))
         for type, params in list(season.items()):

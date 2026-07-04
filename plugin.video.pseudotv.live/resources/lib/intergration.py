@@ -17,8 +17,10 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
-from globals     import *
+from variables   import *
 from fileaccess  import FileAccess, FileLock
+from cache       import cacheit
+from _services   import _Service
 
 BASE_HEADER = {"Authorization": "",
                "Content-Type" : "application/json",
@@ -27,24 +29,22 @@ BASE_HEADER = {"Authorization": "",
            
 class OpenRouter(object):
     def __init__(self, service=None):
-        if service is None: 
-            from _services import Service
-            service = Service()   
+        if service is None: service = _Service()
         self.service = service
         self.pool    = service.pool
         self.cache   = service.cache
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log(f"{self.__class__.__name__}: {msg}", level)
+        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
 
 
     @cacheit(expiration=datetime.timedelta(minutes=15))
     def _request(self, url, params={}, payload={}, header=HEADER, timeout=15):
-        if SETTINGS.getSettingBool('Allow_Artificial_Intelligence'):
+        if Globals.SETTINGS.getSettingBool('Allow_Artificial_Intelligence'):
             req_header = BASE_HEADER.copy()
             if header: req_header.update(header)
-            req_header.update({"Authorization": f"Bearer {SETTINGS.getSetting('Open_Router_APIKEY')}"})
+            req_header.update({"Authorization": f"Bearer {Globals.SETTINGS.getSetting('Open_Router_APIKEY')}"})
             if hasattr(self.jsonRPC, 'requestURL'):
                 return self.jsonRPC.requestURL(url, params, payload, req_header, timeout)
         return None
@@ -71,9 +71,9 @@ class OpenRouter(object):
                 self.log("_getImageModels: No image models available.")
                 return
             names = [item.get('name', 'Unknown') for item in image_models]
-            preselect_id = Globals._findItemsInLST(image_models, SETTINGS.getSetting('Generative_Image_Model'), 'id')
-            select = DIALOG.selectDialog(names, header=ADDON_NAME, preselect=preselect_id, useDetails=False, multi=False)
-            if not select is None: SETTINGS.setSetting('Generative_Image_Model', image_models[select].get('id'))
+            preselect_id = Globals._findItemsInLST(image_models, Globals.SETTINGS.getSetting('Generative_Image_Model'), 'id')
+            select = Globals.DIALOG.selectDialog(names, header=ADDON_NAME, preselect=preselect_id, useDetails=False, multi=False)
+            if not select is None: Globals.SETTINGS.setSetting('Generative_Image_Model', image_models[select].get('id'))
         except Exception as e: 
             self.log("_getImageModels, failed! %s" % (e), xbmc.LOGERROR)
             
@@ -85,9 +85,9 @@ class OpenRouter(object):
                 self.log("_getContextModels: No context models available.")
                 return
             names = [item.get('name', 'Unknown') for item in text_models]
-            preselect_id = Globals._findItemsInLST(text_models, SETTINGS.getSetting('Generative_Contextual_Model'), 'id')
-            select = DIALOG.selectDialog(names, header=ADDON_NAME, preselect=preselect_id, useDetails=False, multi=False)
-            if not select is None: SETTINGS.setSetting('Generative_Contextual_Model', text_models[select].get('id'))
+            preselect_id = Globals._findItemsInLST(text_models, Globals.SETTINGS.getSetting('Generative_Contextual_Model'), 'id')
+            select = Globals.DIALOG.selectDialog(names, header=ADDON_NAME, preselect=preselect_id, useDetails=False, multi=False)
+            if not select is None: Globals.SETTINGS.setSetting('Generative_Contextual_Model', text_models[select].get('id'))
         except Exception as e: self.log("_getContextModels, failed! %s" % (e), xbmc.LOGERROR)
         
             
@@ -102,7 +102,7 @@ class OpenRouter(object):
                     "messages": [
                         { 
                             "role": "user",
-                            "content": SETTINGS.getSetting('Generative_Image_Prompt').format(name=chname, group=group_str)
+                            "content": Globals.SETTINGS.getSetting('Generative_Image_Prompt').format(name=chname, group=group_str)
                         }
                     ],
                     "modalities": ["image"],
@@ -160,7 +160,7 @@ class OpenRouter(object):
             self.log(f"_alphaImage, Error: Source file missing at {input_file_path}", xbmc.LOGERROR)
             return file_name
             
-        if SETTINGS.hasAddon('script.module.pil'):
+        if Globals.SETTINGS.hasAddon('script.module.pil'):
             try:
                 def __nearest(color1, color2, tolerance=50):
                     r1, g1, b1 = color1[:3]
@@ -197,7 +197,7 @@ class OpenRouter(object):
                     # 'https://api.remove.bg/v1.0/removebg',
                     # files={'image_file': img_file},
                     # data={'size': 'auto'},
-                    # headers={'X-Api-Key': SETTINGS.getSetting('Remove_BG_APIKEY')},
+                    # headers={'X-Api-Key': Globals.SETTINGS.getSetting('Remove_BG_APIKEY')},
                     # timeout=30
                 # )
             # if response.status_code == requests.codes.ok:
@@ -212,7 +212,7 @@ class OpenRouter(object):
             
     @staticmethod
     def _run(sysARG):
-        with BUILTIN.busy_dialog():
+        with Globals.BUILTIN.busy_dialog():
             ctl = (5,1)
             try:              param = sysARG[1]
             except Exception: param = None
