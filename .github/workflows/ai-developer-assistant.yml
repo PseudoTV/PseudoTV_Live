@@ -30,64 +30,90 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check for Python Changes
         id: check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.ref }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          SKIP_AI="false"
+          echo "Event: $EVENT_NAME"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
           
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null || echo "")
-            DIFF_STAT=$(git diff --stat origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null || echo "")
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            CHANGED=$(git diff --name-only HEAD~1 -- '*.py' 2>/dev/null || echo "")
-            DIFF_STAT=$(git diff --stat HEAD~1 -- '*.py' 2>/dev/null || echo "")
+          SKIP_AI="false"
+          CHANGED=""
+          FILE_COUNT=0
+          DIFF_LINES=0
+          
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "PR: Comparing $PR_BASE...$PR_SHA"
+            git fetch origin $PR_BASE --depth=1 2>/dev/null || true
+            CHANGED=$(git diff --name-only origin/$PR_BASE...$PR_SHA -- '*.py' 2>/dev/null || true)
+            DIFF_LINES=$(git diff origin/$PR_BASE...$PR_SHA -- '*.py' 2>/dev/null | wc -l || true)
+            
+          elif [ "$EVENT_NAME" = "push" ]; then
+            echo "Push: Comparing HEAD~1...HEAD"
+            CHANGED=$(git diff --name-only HEAD~1 HEAD -- '*.py' 2>/dev/null || true)
+            DIFF_LINES=$(git diff HEAD~1 HEAD -- '*.py' 2>/dev/null | wc -l || true)
+            
           else
-            CHANGED=""
+            echo "Manual trigger: No diff available"
             SKIP_AI="true"
           fi
           
+          echo "Changed files: $CHANGED"
+          echo "Diff lines: $DIFF_LINES"
+          
           # Count changed files
-          FILE_COUNT=$(echo "$CHANGED" | grep -c '\.py$' || echo "0")
-          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+          if [ -n "$CHANGED" ]; then
+            FILE_COUNT=$(echo "$CHANGED" | grep -c '\.py$' || true)
+          fi
+          FILE_COUNT=${FILE_COUNT:-0}
+          
+          echo "python=false" >> $GITHUB_OUTPUT
+          echo "skip_ai=true" >> $GITHUB_OUTPUT
+          echo "file_count=0" >> $GITHUB_OUTPUT
           
           # Guard: Skip if no Python changes
           if [ -z "$CHANGED" ] || [ "$FILE_COUNT" -eq 0 ]; then
-            echo "python=false" >> $GITHUB_OUTPUT
-            echo "skip_ai=true" >> $GITHUB_OUTPUT
             echo "No Python file changes detected"
             exit 0
           fi
           
           # Guard: Skip if too many files changed (limit to 10)
           if [ "$FILE_COUNT" -gt 10 ]; then
-            echo "python=true" >> $GITHUB_OUTPUT
-            echo "skip_ai=true" >> $GITHUB_OUTPUT
             echo "Too many files changed ($FILE_COUNT > 10), skipping AI analysis"
             exit 0
           fi
           
-          # Guard: Check diff size and skip if too large (>500 lines)
-          DIFF_LINES=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null | wc -l || echo "0")
+          # Guard: Diff too large
+          DIFF_LINES=${DIFF_LINES:-0}
           if [ "$DIFF_LINES" -gt 500 ]; then
-            echo "python=true" >> $GITHUB_OUTPUT
-            echo "skip_ai=true" >> $GITHUB_OUTPUT
             echo "Diff too large ($DIFF_LINES lines > 500), skipping AI analysis"
             exit 0
           fi
           
           # Guard: Check if changes are only whitespace/comments
-          ACTUAL_CHANGES=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null | grep -E "^[+-]" | grep -v "^[+-][+-][+-]" | grep -vE "^\s*[+-]\s*#" | grep -vE "^\s*[+-]\s*$" | wc -l || echo "0")
+          ACTUAL_CHANGES=0
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            ACTUAL_CHANGES=$(git diff origin/$PR_BASE...$PR_SHA -- '*.py' 2>/dev/null | grep -E "^[+-]" | grep -v "^[+-][+-][+-]" | grep -vE "^\s*[+-]\s*#" | grep -vE "^\s*[+-]\s*$" | wc -l || true)
+          else
+            ACTUAL_CHANGES=$(git diff HEAD~1 HEAD -- '*.py' 2>/dev/null | grep -E "^[+-]" | grep -v "^[+-][+-][+-]" | grep -vE "^\s*[+-]\s*#" | grep -vE "^\s*[+-]\s*$" | wc -l || true)
+          fi
+          ACTUAL_CHANGES=${ACTUAL_CHANGES:-0}
+          
           if [ "$ACTUAL_CHANGES" -eq 0 ]; then
-            echo "python=true" >> $GITHUB_OUTPUT
-            echo "skip_ai=true" >> $GITHUB_OUTPUT
             echo "Only whitespace/comment changes, skipping AI analysis"
             exit 0
           fi
           
           echo "python=true" >> $GITHUB_OUTPUT
           echo "skip_ai=false" >> $GITHUB_OUTPUT
-          echo "Python changes detected ($FILE_COUNT files, $DIFF_LINES diff lines):"
+          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+          echo "Python changes detected ($FILE_COUNT files, $DIFF_LINES diff lines)"
           echo "$CHANGED"
 
   addon-check:
@@ -108,25 +134,36 @@ jobs:
       - name: Run Kodi Addon Checker
         id: kodi-check
         run: |
-          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 | tee kodi-check-output.txt
-          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 | tee kodi-raw-output.txt || true
+          
+          # # Format output to match other checkers
+          # ERRORS=$(grep -c "^ERROR:" kodi-raw-output.txt 2>/dev/null | tr -d '[:space:]' || true)
+          # WARNINGS=$(grep -c "^WARN:" kodi-raw-output.txt 2>/dev/null | tr -d '[:space:]' || true)
+          # ERRORS=${ERRORS:-0}
+          # WARNINGS=${WARNINGS:-0}
+          
+          # echo "Kodi Addon Checker" > kodi-check-output.txt
+          # echo "============================================" >> kodi-check-output.txt
+          
+          # if [ "$ERRORS" -gt 0 ] 2>/dev/null || [ "$WARNINGS" -gt 0 ] 2>/dev/null; then
+            # echo "ERRORS & WARNINGS: $ERRORS error(s), $WARNINGS warning(s) found" >> kodi-check-output.txt
+            # echo "============================================" >> kodi-check-output.txt
+            # echo "" >> kodi-check-output.txt
+            
+            # if [ "$ERRORS" -gt 0 ] 2>/dev/null; then
+              # grep "^ERROR:" kodi-raw-output.txt >> kodi-check-output.txt || true
+            # fi
+            # if [ "$WARNINGS" -gt 0 ] 2>/dev/null; then
+              # grep "^WARN:" kodi-raw-output.txt >> kodi-check-output.txt || true
+            # fi
+          # else
+            # echo "No issues found" >> kodi-check-output.txt
+          # fi
+          
+          # cat kodi-check-output.txt
+          # echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+          # echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
         continue-on-error: true
-
-      - name: Parse Kodi Check Results
-        id: parse-kodi
-        if: always()
-        run: |
-          if [ -f kodi-check-output.txt ]; then
-            ERRORS=$(grep -c "^ERROR:" kodi-check-output.txt || true)
-            WARNINGS=$(grep -c "^WARN:" kodi-check-output.txt || true)
-            echo "errors=$ERRORS" >> $GITHUB_OUTPUT
-            echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
-            echo "has_errors=$( [ $ERRORS -gt 0 ] && echo true || echo false )" >> $GITHUB_OUTPUT
-          else
-            echo "errors=0" >> $GITHUB_OUTPUT
-            echo "warnings=0" >> $GITHUB_OUTPUT
-            echo "has_errors=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Upload Kodi Check Report
         if: always()
@@ -136,11 +173,122 @@ jobs:
           path: kodi-check-output.txt
           retention-days: 30
 
+  lint-ruff:
+    name: Ruff Linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff
+        run: |
+          ruff check plugin.video.pseudotv.live/resources/lib --select=E,F,W --output-format=concise 2>&1 | tee ruff-output.txt || true
+        continue-on-error: true
+
+      - name: Upload Ruff Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ruff-report
+          path: ruff-output.txt
+          retention-days: 30
+
+  lint-xml:
+    name: XML Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Validate XML Files
+        run: |
+          python -c "
+          import xml.etree.ElementTree as ET
+          import glob
+          import sys
+          
+          errors = []
+          for f in glob.glob('**/*.xml', recursive=True):
+              try:
+                  ET.parse(f)
+                  print(f'OK: {f}')
+              except ET.ParseError as e:
+                  print(f'ERROR: {f} - {e}')
+                  errors.append(f'{f}: {e}')
+          
+          if errors:
+              sys.exit(1)
+          print('All XML files valid')
+          " 2>&1 | tee xml-output.txt || true
+        continue-on-error: true
+
+      - name: Upload XML Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: xml-report
+          path: xml-output.txt
+          retention-days: 30
+
+  lint-json:
+    name: JSON Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Validate JSON Files
+        run: |
+          python -c "
+          import json
+          import glob
+          import sys
+          
+          errors = []
+          for f in glob.glob('**/*.json', recursive=True):
+              try:
+                  with open(f) as fh:
+                      json.load(fh)
+                  print(f'OK: {f}')
+              except json.JSONDecodeError as e:
+                  print(f'ERROR: {f} - {e}')
+                  errors.append(f'{f}: {e}')
+          
+          if errors:
+              sys.exit(1)
+          print('All JSON files valid')
+          " 2>&1 | tee json-output.txt || true
+        continue-on-error: true
+
+      - name: Upload JSON Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: json-report
+          path: json-output.txt
+          retention-days: 30
+
   fstring-check:
     name: F-String Validation
     runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.python == 'true'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -181,10 +329,14 @@ jobs:
         id: get-diff
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git diff --name-only origin/${{ github.base_ref }}...HEAD -- '*.py' > lint_files.txt 2>/dev/null || true
-          else
-            git diff --name-only HEAD~1 -- '*.py' > lint_files.txt 2>/dev/null || true
+            BASE="${{ github.event.pull_request.base.ref }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+            git fetch origin $BASE --depth=1 2>/dev/null || true
+            git diff --name-only origin/$BASE...$HEAD -- '*.py' > lint_files.txt 2>/dev/null || true
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            git diff --name-only HEAD~1 HEAD -- '*.py' > lint_files.txt 2>/dev/null || true
           fi
+          echo "Files to lint: $(cat lint_files.txt 2>/dev/null | wc -l)"
 
       - name: Run OpenCode Lint
         env:
@@ -207,7 +359,7 @@ jobs:
   ai-review:
     name: AI Code Review & Test Generation
     runs-on: ubuntu-latest
-    needs: [changes, addon-check, fstring-check, lint]
+    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint]
     if: needs.changes.outputs.python == 'true' && needs.changes.outputs.skip_ai == 'false'
     steps:
       - name: Checkout Code
@@ -231,13 +383,17 @@ jobs:
       - name: Get Changes
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git diff origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
-          else
-            git diff HEAD~1 -- '*.py' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
+            BASE="${{ github.event.pull_request.base.ref }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+            git fetch origin $BASE --depth=1 2>/dev/null || true
+            git diff origin/$BASE...$HEAD -- '*.py' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
+            git diff --name-only origin/$BASE...$HEAD -- '*.py' 2>/dev/null | head -5 > changed_files.txt || true
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            git diff HEAD~1 HEAD -- '*.py' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
+            git diff --name-only HEAD~1 HEAD -- '*.py' 2>/dev/null | head -5 > changed_files.txt || true
           fi
-          git diff --name-only HEAD~1 2>/dev/null | grep '\.py$' | head -5 > changed_files.txt || true
-          echo "Changed files: $(cat changed_files.txt | wc -l)"
-          echo "Diff size: $(wc -c < changes.diff) bytes"
+          echo "Changed files: $(cat changed_files.txt 2>/dev/null | wc -l)"
+          echo "Diff size: $(wc -c < changes.diff 2>/dev/null || echo 0) bytes"
 
       - name: AI Code Review
         id: ai-review
@@ -287,7 +443,7 @@ jobs:
     name: Generate Report
     runs-on: ubuntu-latest
     if: always()
-    needs: [changes, addon-check, fstring-check, lint, ai-review]
+    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, ai-review]
     steps:
       - name: Download All Reports
         uses: actions/download-artifact@v7
@@ -316,11 +472,17 @@ jobs:
           echo "--------------------------------------------"
           ADDON="${{ needs.addon-check.result }}"
           FSTRING="${{ needs.fstring-check.result }}"
+          RUFF="${{ needs.lint-ruff.result }}"
+          XML="${{ needs.lint-xml.result }}"
+          JSON="${{ needs.lint-json.result }}"
           LINT="${{ needs.lint.result }}"
           AI="${{ needs.ai-review.result }}"
           
           echo "Kodi Addon Checker: $(echo $ADDON | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
           echo "F-String Validation: $(echo $FSTRING | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
+          echo "Ruff Linter: $(echo $RUFF | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
+          echo "XML Validation: $(echo $XML | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
+          echo "JSON Validation: $(echo $JSON | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
           echo "OpenCode Lint: $(echo $LINT | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
           echo "AI Code Review: $(echo $AI | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
           echo ""
@@ -328,8 +490,39 @@ jobs:
           # Errors Summary
           echo "ERRORS & WARNINGS"
           echo "--------------------------------------------"
-          TOTAL_ERRORS=0
-          TOTAL_WARNINGS=0
+          
+          # Ruff
+          if [ -f reports/ruff-report/ruff-output.txt ]; then
+            RUFF_ISSUES=$(grep -cE "^(warning|error)" reports/ruff-report/ruff-output.txt 2>/dev/null || echo "0")
+            if [ "$RUFF_ISSUES" -gt 0 ]; then
+              echo "Ruff: $RUFF_ISSUES issue(s)"
+              grep -E "^(warning|error)" reports/ruff-report/ruff-output.txt | head -10 || true
+            else
+              echo "Ruff: No issues"
+            fi
+          fi
+          
+          # XML
+          if [ -f reports/xml-report/xml-output.txt ]; then
+            XML_ERRORS=$(grep -c "^ERROR:" reports/xml-report/xml-output.txt 2>/dev/null || echo "0")
+            if [ "$XML_ERRORS" -gt 0 ]; then
+              echo "XML: $XML_ERRORS error(s)"
+              grep "^ERROR:" reports/xml-report/xml-output.txt || true
+            else
+              echo "XML: No issues"
+            fi
+          fi
+          
+          # JSON
+          if [ -f reports/json-report/json-output.txt ]; then
+            JSON_ERRORS=$(grep -c "^ERROR:" reports/json-report/json-output.txt 2>/dev/null || echo "0")
+            if [ "$JSON_ERRORS" -gt 0 ]; then
+              echo "JSON: $JSON_ERRORS error(s)"
+              grep "^ERROR:" reports/json-report/json-output.txt || true
+            else
+              echo "JSON: No issues"
+            fi
+          fi
           
           # F-String
           if [ -f reports/fstring-report/fstring-output.txt ]; then
@@ -337,7 +530,9 @@ jobs:
             FSTRING_WARNINGS=$(grep -c "^WARNINGS:" reports/fstring-report/fstring-output.txt 2>/dev/null | head -1 || echo "0")
             if [ "$FSTRING_ERRORS" -gt 0 ] || [ "$FSTRING_WARNINGS" -gt 0 ]; then
               echo "F-String: $FSTRING_ERRORS error(s), $FSTRING_WARNINGS warning(s)"
-              grep -E "(ERRORS|WARNINGS):" reports/fstring-report/fstring-output.txt || true
+              grep -E "^(ERRORS|WARNINGS):" reports/fstring-report/fstring-output.txt || true
+            else
+              echo "F-String: No issues"
             fi
           fi
           
@@ -345,14 +540,12 @@ jobs:
           if [ -f reports/kodi-addon-check-report/kodi-check-output.txt ]; then
             KODI_ERRORS=$(grep -c "^ERROR:" reports/kodi-addon-check-report/kodi-check-output.txt 2>/dev/null || echo "0")
             KODI_WARNINGS=$(grep -c "^WARN:" reports/kodi-addon-check-report/kodi-check-output.txt 2>/dev/null || echo "0")
-            echo "Kodi Checker: $KODI_ERRORS error(s), $KODI_WARNINGS warning(s)"
-            if [ "$KODI_ERRORS" -gt 0 ]; then
-              echo "  Errors:"
+            if [ "$KODI_ERRORS" -gt 0 ] || [ "$KODI_WARNINGS" -gt 0 ]; then
+              echo "Kodi Checker: $KODI_ERRORS error(s), $KODI_WARNINGS warning(s)"
               grep "^ERROR:" reports/kodi-addon-check-report/kodi-check-output.txt | head -5 || true
-            fi
-            if [ "$KODI_WARNINGS" -gt 0 ]; then
-              echo "  Warnings:"
               grep "^WARN:" reports/kodi-addon-check-report/kodi-check-output.txt | head -5 || true
+            else
+              echo "Kodi Checker: No issues"
             fi
           fi
           
@@ -391,6 +584,9 @@ jobs:
           |-------|--------|
           | Kodi Addon Checker | ${{ needs.addon-check.result == 'success' && '✅ Passed' || needs.addon-check.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
           | F-String Validation | ${{ needs.fstring-check.result == 'success' && '✅ Passed' || needs.fstring-check.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
+          | Ruff Linter | ${{ needs.lint-ruff.result == 'success' && '✅ Passed' || needs.lint-ruff.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
+          | XML Validation | ${{ needs.lint-xml.result == 'success' && '✅ Passed' || needs.lint-xml.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
+          | JSON Validation | ${{ needs.lint-json.result == 'success' && '✅ Passed' || needs.lint-json.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
           | OpenCode Lint | ${{ needs.lint.result == 'success' && '✅ Passed' || needs.lint.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
           | AI Code Review | ${{ needs.ai-review.result == 'success' && '✅ Passed' || needs.ai-review.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
           
@@ -399,6 +595,33 @@ jobs:
           - **Files Changed:** ${{ needs.changes.outputs.file_count || '0' }}
           - **AI Analysis:** ${{ needs.changes.outputs.skip_ai == 'true' && 'Skipped (guard rails)' || 'Run' }}
           EOF
+          
+          # Add ruff details
+          if [ -f reports/ruff-report/ruff-output.txt ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Ruff Linter" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            head -50 reports/ruff-report/ruff-output.txt >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add XML details
+          if [ -f reports/xml-report/xml-output.txt ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### XML Validation" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat reports/xml-report/xml-output.txt >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add JSON details
+          if [ -f reports/json-report/json-output.txt ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### JSON Validation" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat reports/json-report/json-output.txt >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
           
           # Add f-string details
           if [ -f reports/fstring-report/fstring-output.txt ]; then
@@ -436,6 +659,9 @@ jobs:
             
             const addonResult = '${{ needs.addon-check.result }}';
             const fstringResult = '${{ needs.fstring-check.result }}';
+            const ruffResult = '${{ needs.lint-ruff.result }}';
+            const xmlResult = '${{ needs.lint-xml.result }}';
+            const jsonResult = '${{ needs.lint-json.result }}';
             const lintResult = '${{ needs.lint.result }}';
             const aiResult = '${{ needs.ai-review.result }}';
             
@@ -446,8 +672,42 @@ jobs:
             report += `| Check | Status |\n|-------|--------|\n`;
             report += `| Kodi Addon Checker | ${statusIcon(addonResult)} ${addonResult} |\n`;
             report += `| F-String Validation | ${statusIcon(fstringResult)} ${fstringResult} |\n`;
+            report += `| Ruff Linter | ${statusIcon(ruffResult)} ${ruffResult} |\n`;
+            report += `| XML Validation | ${statusIcon(xmlResult)} ${xmlResult} |\n`;
+            report += `| JSON Validation | ${statusIcon(jsonResult)} ${jsonResult} |\n`;
             report += `| OpenCode Lint | ${statusIcon(lintResult)} ${lintResult} |\n`;
             report += `| AI Code Review | ${statusIcon(aiResult)} ${aiResult} |\n\n`;
+            
+            // Add ruff issues
+            try {
+              const ruff = fs.readFileSync('reports/ruff-report/ruff-output.txt', 'utf8');
+              const ruffIssues = (ruff.match(/^(warning|error)/gm) || []).length;
+              if (ruffIssues > 0) {
+                report += `### Ruff Linter\n`;
+                report += '- **Issues:** ' + ruffIssues + '\n';
+                report += '```\n' + ruff.substring(0, 500) + '\n```\n\n';
+              }
+            } catch(e) {}
+            
+            // Add XML issues
+            try {
+              const xml = fs.readFileSync('reports/xml-report/xml-output.txt', 'utf8');
+              const xmlErrors = (xml.match(/^ERROR:/gm) || []).length;
+              if (xmlErrors > 0) {
+                report += `### XML Validation\n`;
+                report += '```\n' + xml.substring(0, 500) + '\n```\n\n';
+              }
+            } catch(e) {}
+            
+            // Add JSON issues
+            try {
+              const json = fs.readFileSync('reports/json-report/json-output.txt', 'utf8');
+              const jsonErrors = (json.match(/^ERROR:/gm) || []).length;
+              if (jsonErrors > 0) {
+                report += `### JSON Validation\n`;
+                report += '```\n' + json.substring(0, 500) + '\n```\n\n';
+              }
+            } catch(e) {}
             
             // Add kodi errors
             try {
