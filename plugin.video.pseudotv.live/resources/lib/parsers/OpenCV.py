@@ -27,7 +27,7 @@ class OpenCV:
         """
         try:
             import cv2
-            log("OpenCV: determineLength %s"%(filename))
+            LOG("OpenCV: determineLength %s"%(filename))
             # CAP_PROP_POS_MSEC returns milliseconds, convert to seconds
             dur_ms = cv2.VideoCapture(FileAccess.translatePath(filename)).get(cv2.CAP_PROP_FRAME_COUNT)
             if dur_ms <= 0:
@@ -42,11 +42,11 @@ class OpenCV:
                     return 0
             else:
                 dur = int(dur_ms)
-            log('OpenCV: Duration is %s seconds'%(dur))
+            LOG('OpenCV: Duration is %s seconds'%(dur))
             return dur
         except ImportError:
-            log("OpenCV: cv2 module not available", xbmc.LOGERROR)
+            LOG("OpenCV: cv2 module not available", xbmc.LOGERROR)
             return 0
         except Exception as e:
-            log("OpenCV: failed! %s"%(e), xbmc.LOGERROR)
+            LOG("OpenCV: failed! %s"%(e), xbmc.LOGERROR)
             return 0

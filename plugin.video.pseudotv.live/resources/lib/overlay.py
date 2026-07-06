@@ -28,24 +28,24 @@ class Busy(xbmcgui.WindowXMLDialog):
         super().__init__(*args, **kwargs)
                 
     def onInit(self):
-        log(f"Busy: onInit, isLocked = {self.isLocked}")
+        LOG(f"Busy: onInit, isLocked = {self.isLocked}")
         
         try:
             spinner = self.getControl(41)
             diffuse_color = "0xC0FF0000" if self.isLocked else "0xFF01416b"
             spinner.setColorDiffuse(diffuse_color)
         except Exception as e:
-            log(f"Busy: Failed to modify UI Control 41 spinner element: {str(e)}", xbmc.LOGERROR)
+            LOG(f"Busy: Failed to modify UI Control 41 spinner element: {str(e)}", xbmc.LOGERROR)
 
     def onAction(self, act):
         actionId = act.getId()
         if actionId == 0 or not actionId: return
-        log(f"Busy: onAction, actionId = {actionId}, isLocked = {self.isLocked}")
+        LOG(f"Busy: onAction, actionId = {actionId}, isLocked = {self.isLocked}")
         if actionId in ACTION_PREVIOUS_MENU:
             if not self.isLocked:
                 self.close()
             else:
-                Globals.DIALOG.notificationDialog(LANGUAGE(32260))
+                Globals.dialog.notificationDialog(LANGUAGE(32260))
                 
 class Background(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
@@ -60,16 +60,16 @@ class Background(xbmcgui.WindowXMLDialog):
         self.nitem = playing_item.get('nitem', {})
       
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def onInit(self):
         try:
             self.log(f"onInit: citem={self.citem}\nfitem={self.fitem}\nnitem={self.nitem}")
-            WH, WIN   = Globals.BUILTIN.getResolution()
-            logo      = self.citem.get('logo') or Globals.BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO
-            chname    = self.citem.get('name') or Globals.BUILTIN.getInfoLabel('VideoPlayer.ChannelName')
-            nowTitle  = self.fitem.get('label') or Globals.BUILTIN.getInfoLabel('VideoPlayer.Title')
-            nextTitle = self.nitem.get('showlabel') or Globals.BUILTIN.getInfoLabel('VideoPlayer.NextTitle') or chname
+            WH, WIN   = Globals.builtin.getResolution()
+            logo      = self.citem.get('logo') or Globals.builtin.getInfoLabel('Player.Art(icon)') or LOGO
+            chname    = self.citem.get('name') or Globals.builtin.getInfoLabel('VideoPlayer.ChannelName')
+            nowTitle  = self.fitem.get('label') or Globals.builtin.getInfoLabel('VideoPlayer.Title')
+            nextTitle = self.nitem.get('showlabel') or Globals.builtin.getInfoLabel('VideoPlayer.NextTitle') or chname
 
             nextTime = ""
             start_val = self.nitem.get('start')
@@ -77,7 +77,7 @@ class Background(xbmcgui.WindowXMLDialog):
                 try:              nextTime = Globals._epochTime(start_val).strftime('%I:%M%p')
                 except Exception: nextTime = ""
                     
-            if not nextTime: nextTime = Globals.BUILTIN.getInfoLabel('VideoPlayer.NextStartTime')
+            if not nextTime: nextTime = Globals.builtin.getInfoLabel('VideoPlayer.NextStartTime')
             if not nextTime:
                 self.log("onInit: Time markers missing. Aborting overlay instantiation.", xbmc.LOGDEBUG)
                 self.close()
@@ -127,7 +127,7 @@ class Replay(xbmcgui.WindowXMLDialog):
         self.fitem   = playing_item.get('fitem', {})
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
         
     def show_dialog(self):
         if not self.player or not self.fitem:  return False
@@ -149,9 +149,9 @@ class Replay(xbmcgui.WindowXMLDialog):
         try:              
             return control.isVisible()
         except Exception: 
-            is_playing    = Globals.BUILTIN.getInfoBool('Player.Playing')
-            info_visible  = Globals.BUILTIN.getInfoBool('Window.IsVisible(fullscreeninfo)')
-            video_visible = Globals.BUILTIN.getInfoBool('Window.IsVisible(fullscreenvideo)')
+            is_playing    = Globals.builtin.getInfoBool('Player.Playing')
+            info_visible  = Globals.builtin.getInfoBool('Window.IsVisible(fullscreeninfo)')
+            video_visible = Globals.builtin.getInfoBool('Window.IsVisible(fullscreenvideo)')
             return (is_playing and not info_visible) or video_visible
         
     def onInit(self):
@@ -198,19 +198,19 @@ class Replay(xbmcgui.WindowXMLDialog):
         actionId = act.getId()
         self.log(f"onAction: actionId = {actionId}")
         self.closing = True
-        if   actionId == ACTION_MOVE_UP:       Globals.BUILTIN.executebuiltin('AlarmClock(up,Action(up),.5,true,false)')
-        elif actionId == ACTION_MOVE_DOWN:     Globals.BUILTIN.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
-        elif actionId in ACTION_PREVIOUS_MENU: Globals.BUILTIN.executebuiltin('AlarmClock(back,Action(back),.5,true,false)')
+        if   actionId == ACTION_MOVE_UP:       Globals.builtin.executebuiltin('AlarmClock(up,Action(up),.5,true,false)')
+        elif actionId == ACTION_MOVE_DOWN:     Globals.builtin.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
+        elif actionId in ACTION_PREVIOUS_MENU: Globals.builtin.executebuiltin('AlarmClock(back,Action(back),.5,true,false)')
         elif actionId in ACTION_SELECT_ITEM and self.getFocusId() == 40001: 
             if self.player.playingItem.get('isPlaylist', False): self.player.seekTime(0)
             elif self.fitem: 
-                with Globals.BUILTIN.busy_dialog():
-                    liz = Globals.LISTITEMS.buildItemListItem(self.fitem)
+                with Globals.builtin.busy_dialog():
+                    liz = Globals.listitems.buildItemListItem(self.fitem)
                     liz.setProperty('sysInfo', FileAccess._encodeString(self.player.playingItem))
                     timerit(self.player.play)(0.5, *(self.fitem.get('catchup-id'), liz))
                     self.player.stop()
             else: 
-                Globals.DIALOG.notificationDialog(LANGUAGE(30154))
+                Globals.dialog.notificationDialog(LANGUAGE(30154))
 
     def onClose(self):
         self.log("onClose")
@@ -238,7 +238,7 @@ class Overlay:
         self.onnext       = None
         
         # Kodi Fullscreen Video
-        WH, WIN     = Globals.BUILTIN.getResolution()
+        WH, WIN     = Globals.builtin.getResolution()
         self.window = xbmcgui.Window(12005) 
         self.window_w, self.window_h = WH
         
@@ -249,19 +249,19 @@ class Overlay:
         self.vinImage = ''
         
         # Watermark
-        self.enableChannelBug = Globals.SETTINGS.getSettingBool('Enable_ChannelBug')
-        self.forceBugDiffuse  = Globals.SETTINGS.getSettingBool('Force_Diffuse')
+        self.enableChannelBug = Globals.settings.getSettingBool('Enable_ChannelBug')
+        self.forceBugDiffuse  = Globals.settings.getSettingBool('Force_Diffuse')
         
-        self.channelBugColor = f"0x{Globals.SETTINGS.getSetting('ChannelBug_Color') or 'FFFFFFFF'}"
-        self.channelBugFade  = Globals.SETTINGS.getSettingInt('ChannelBug_Transparency')
+        self.channelBugColor = f"0x{Globals.settings.getSetting('ChannelBug_Color') or 'FFFFFFFF'}"
+        self.channelBugFade  = Globals.settings.getSettingInt('ChannelBug_Transparency')
         
         try:    
-            self.channelBugX, self.channelBugY = literal_eval(Globals.SETTINGS.getSetting("Channel_Bug_Position_XY"))
+            self.channelBugX, self.channelBugY = literal_eval(Globals.settings.getSetting("Channel_Bug_Position_XY"))
         except Exception: 
             self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def _hasControl(self, control):
         return control in self.cntrlManager
@@ -296,8 +296,8 @@ class Overlay:
             self.cntrlManager.pop(control, None)  
             
     def open(self):
-        if Globals.PROPERTIES.isRunning('Overlay'): return
-        Globals.PROPERTIES.setRunning('Overlay', True)
+        if Globals.properties.isRunning('Overlay'): return
+        Globals.properties.setRunning('Overlay', True)
         if not self.citem: return self.close()
         if self.runActions: self.runActions(RULES_ACTION_OVERLAY_OPEN, self.citem, inherited=self)
         self.log(f"open: enableVignette={self.enableVignette}, enableChannelBug={self.enableChannelBug}")
@@ -315,7 +315,7 @@ class Overlay:
             self._addControl(self.channelBug)
             
             id   = self.channelBug.getId()
-            logo = self.citem.get('logo',(Globals.BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO))
+            logo = self.citem.get('logo',(Globals.builtin.getInfoLabel('Player.Art(icon)') or LOGO))
             wait = 900 #15mins todo add user settings
             
             if   self.forceBugDiffuse:        self.channelBug.setColorDiffuse(self.channelBugColor)
@@ -330,7 +330,7 @@ class Overlay:
             
         
     def toggleOnNext(self, state: bool = None):
-        if state is None: state = bool(Globals.SETTINGS.getSettingInt('OnNext_Mode'))
+        if state is None: state = bool(Globals.settings.getSettingInt('OnNext_Mode'))
         if state and self.onnext is None and self.jsonRPC:
             next_item = self.jsonRPC.getNextItem(self.citem, self.nitem)
             self.onnext = OnNext(ONNEXT_XML, ADDON_PATH, "default", "1080i", 
@@ -354,7 +354,7 @@ class Overlay:
             
         if self.vinView != self.defaultView and self.jsonRPC: 
             timerit(self.jsonRPC.setViewMode)(0.5, self.defaultView)
-        Globals.PROPERTIES.setRunning('Overlay', False)
+        Globals.properties.setRunning('Overlay', False)
        
 class OnNext(xbmcgui.WindowXMLDialog):
     closing   = False
@@ -368,8 +368,8 @@ class OnNext(xbmcgui.WindowXMLDialog):
         
         self.service        = kwargs.pop('service', None)
         self.nitem          = kwargs.pop('next', {})
-        self.onNextMode     = kwargs.pop('mode', Globals.SETTINGS.getSettingInt('OnNext_Mode'))
-        self.onNextPosition = kwargs.pop('position', Globals.SETTINGS.getSetting("OnNext_Position_XY"))
+        self.onNextMode     = kwargs.pop('mode', Globals.settings.getSettingInt('OnNext_Mode'))
+        self.onNextPosition = kwargs.pop('position', Globals.settings.getSetting("OnNext_Position_XY"))
         
         self.monitor = self.service.monitor if self.service else None
         self.player  = self.service.player if self.service else None
@@ -379,7 +379,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         self.citem = self.pitem.get('citem', {})
         self.fitem = self.pitem.get('fitem', {})
                 
-        WH, WIN     = Globals.BUILTIN.getResolution()
+        WH, WIN     = Globals.builtin.getResolution()
         self.window = xbmcgui.Window(12005) 
         self.window_w, self.window_h = WH 
                 
@@ -407,7 +407,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         return False
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def onInit(self):
         try:
@@ -419,15 +419,15 @@ class OnNext(xbmcgui.WindowXMLDialog):
     def _run(self):
         try:
             if self.onNextMode in [1, 2]: 
-                logo      = self.citem.get('logo') or Globals.BUILTIN.getInfoLabel('Player.Art(icon)') or LOGO
-                chname    = self.citem.get('name') or Globals.BUILTIN.getInfoLabel('VideoPlayer.ChannelName')
-                nowTitle  = self.fitem.get('label') or Globals.BUILTIN.getInfoLabel('VideoPlayer.Title')
-                nextTitle = self.nitem.get('showlabel') or Globals.BUILTIN.getInfoLabel('VideoPlayer.NextTitle') or chname
+                logo      = self.citem.get('logo') or Globals.builtin.getInfoLabel('Player.Art(icon)') or LOGO
+                chname    = self.citem.get('name') or Globals.builtin.getInfoLabel('VideoPlayer.ChannelName')
+                nowTitle  = self.fitem.get('label') or Globals.builtin.getInfoLabel('VideoPlayer.Title')
+                nextTitle = self.nitem.get('showlabel') or Globals.builtin.getInfoLabel('VideoPlayer.NextTitle') or chname
 
                 try: 
                     nextTime = Globals._epochTime(self.nitem['start']).strftime('%I:%M%p') 
                 except Exception:
-                    nextTime = Globals.BUILTIN.getInfoLabel('VideoPlayer.NextStartTime')
+                    nextTime = Globals.builtin.getInfoLabel('VideoPlayer.NextStartTime')
 
                 if not nextTime: return
                 onNow  = nowTitle if chname in Globals._validString(nowTitle) else f"{nowTitle} on {chname}"

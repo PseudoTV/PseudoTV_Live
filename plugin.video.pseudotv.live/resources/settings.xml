@@ -1251,7 +1251,7 @@
                 </setting>
                 <setting id="API_Timeout" type="integer" label="30201" help="33201">
                     <level>3</level>
-                    <default>30</default>
+                    <default>90</default>
                     <constraints>
                         <minimum>15</minimum>
                         <step>1</step>

@@ -499,7 +499,8 @@ class DNSIncoming(object):
 
                 if rec is not None:
                     self.answers.append(rec)
-            except Exception: pass
+            except Exception as e:
+                xbmc.log('Zeroconf: DNS record parse failed: %s' % e, xbmc.LOGDEBUG)
             
     def isQuery(self):
         """Returns true if this is a query"""
@@ -777,7 +778,7 @@ class Engine(threading.Thread):
         self.zc = zc
         self.readers   = {} # maps socket to reader
         self.condition = threading.Condition()
-        self.timeout   = int(REAL_SETTINGS.getSetting('API_Timeout'))
+        self.timeout   = int(Globals.settings.getSetting('API_Timeout'))
         self.start()
 
     def run(self):

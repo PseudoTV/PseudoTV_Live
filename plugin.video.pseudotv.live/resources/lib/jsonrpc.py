@@ -29,11 +29,16 @@ class JSONRPC(object):
         self.pool        = service.pool
         self.cache       = service.cache
         self.videoParser = VideoParser()
+        self._session    = requests.Session()
+        retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+        adapter = HTTPAdapter(max_retries=retries)
+        self._session.mount("http://", adapter)
+        self._session.mount("https://", adapter)
 
 
     def log(self, msg, level=None):
         if level is None: level = xbmc.LOGDEBUG
-        return log('%s: %s' % (self.__class__.__name__, msg), level)
+        LOG('%s: %s' % (self.__class__.__name__, msg), level)
 
 
     def requestURL(self, url, params=None, payload=None, header=None, timeout=None, file=None, life=None):
@@ -43,7 +48,9 @@ class JSONRPC(object):
         if timeout is None: timeout = REAL_SETTINGS.getSettingInt('API_Timeout')
         if life is None:    life = datetime.timedelta(minutes=15)
 
-        def __error(result={}): return result
+        def __error(result=None):
+            if result is None: result = {}
+            return result
         def __getCache():       return (self.cache.get('requestURL.%s'%(FileAccess._getMD5((url,params,payload,file)))) or {})
         def __setCache():       return self.cache.set('requestURL.%s'%(FileAccess._getMD5((url,params,payload,file))), results, expiration=life)
         def __setQueue(): 
@@ -51,25 +58,20 @@ class JSONRPC(object):
                 self.service.postQue.add((url, params, payload, header, timeout, file, life))
             
         results = None
-        session = requests.Session()
-        retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-        adapter = HTTPAdapter(max_retries=retries)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
 
         try:
             headers = HEADER.copy()
             headers.update(header)
-            if payload: response = session.post(url, json=payload, files=file, headers=headers, timeout=timeout)
-            else:       response = session.get(url, params=params, headers=headers, timeout=timeout)
+            if payload: response = self._session.post(url, json=payload, files=file, headers=headers, timeout=timeout)
+            else:       response = self._session.get(url, params=params, headers=headers, timeout=timeout)
             response.raise_for_status()  # Raise an exception for HTTP errors
             content_type = response.headers.get('Content-Type', '').lower()
             if 'application/json' in content_type: results = response.json()
             else:                                  results = response.content
-            self.log("requestURL\nurl = %s, status = %s\nparams = %s\npayload = %s\nreturn type = %s"%(url,response.status_code,params,payload,type(results)))
+            self.log("requestURL %s, status=%s, type=%s" % (url, response.status_code, type(results).__name__))
             if results: return __setCache()
         except Exception as e: 
-            self.log("requestURL, failed! %s"%(e))
+            self.log("requestURL %s failed: %s" % (url, e))
             __getCache()
         finally: #retry failed post
             if results is None and payload: __setQueue()
@@ -89,7 +91,7 @@ class JSONRPC(object):
             sock.sendall(command.encode(DEFAULT_ENCODING))
             return FileAccess.loadJSON(sock.recv(4096).decode(DEFAULT_ENCODING))
         except socket.timeout:
-            self.log("sendRPC, JSONRPC Timed out!", xbmc.LOGERROR)
+            self.log("sendRemote to %s timed out (timeout=%ds)" % (ip, timeout), xbmc.LOGERROR)
             return None
         finally:
             sock.close()
@@ -102,7 +104,7 @@ class JSONRPC(object):
         if timeout is None: timeout = REAL_SETTINGS.getSettingInt('API_Timeout')
         response = FileAccess.loadJSON(self.pool.executor(xbmc.executeJSONRPC,timeout,FileAccess.dumpJSON(command)))
         if response and response.get('error'):
-            self.log('sendJSON, failed! error = %s\n%s'%(response.get('error',{}).get('message',LANGUAGE(30079)),param), xbmc.LOGWARNING)
+            self.log('sendJSON %s error: %s' % (param.get('method','?'), response.get('error',{}).get('message',LANGUAGE(30079))), xbmc.LOGWARNING)
             response.setdefault('result',{})['error'] = response.pop('error') #move to result for processing in builder.
         return response
 
@@ -114,6 +116,7 @@ class JSONRPC(object):
     def cacheJSON(self, param, life=None, checksum=None, timeout=None):
         if checksum is None: checksum = ADDON_VERSION
         if life is None: life = datetime.timedelta(minutes=5)
+        if timeout is None: timeout = REAL_SETTINGS.getSettingInt('API_Timeout')
         cacheName = 'cacheJSON.%s'%(FileAccess._getMD5(FileAccess.dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
@@ -122,7 +125,8 @@ class JSONRPC(object):
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, media='video', limit=None, depth=None, checksum=None, expiration=None, dir={'label':'resources'}):
+    def walkFileDirectory(self, path, media='video', limit=None, depth=None, checksum=None, expiration=None, dir=None):
+        if dir is None: dir = {'label':'resources'}
         if limit is None: limit = CHANNEL_LIMIT * depth
         if depth is None: depth = REAL_SETTINGS.getSettingInt('Recursive_Depth')
         if checksum is None: checksum = ADDON_VERSION
@@ -149,18 +153,20 @@ class JSONRPC(object):
         return walk
                 
 
-    def walkListDirectory(self, path, exts=[], depth=None, checksum=None, expiration=None):
+    def walkListDirectory(self, path, exts=None, depth=None, checksum=None, expiration=None):
+        if exts is None: exts = []
         if checksum is None: checksum = ADDON_VERSION
         if expiration is None: expiration = datetime.timedelta(minutes=15)
         accurate_duration = bool(REAL_SETTINGS.getSettingInt('Duration_Type'))
         if depth is None: depth = REAL_SETTINGS.getSettingInt('Recursive_Depth')
         def __(path, f):
             if exts and f.lower().endswith(tuple(exts)): return
+            fullpath = os.path.join(path,f)
             return {'label': os.path.basename(path.rstrip('/')),
                     'filetype': 'file',
                     'title': path,
-                    'file': os.path.join(path,f),
-                    'duration':self.getDuration(os.path.join(path,f), accurate=accurate_duration)}
+                    'file': fullpath,
+                    'duration':self.getDuration(fullpath, accurate=accurate_duration)}
         walk = {}
         path = path.replace('\\','/')
         subs, files = self.getListDirectory(path,checksum,expiration)
@@ -207,7 +213,8 @@ class JSONRPC(object):
         return self.sendJSON(param).get('result') == 'OK'
 
 
-    def playerOpen(self, params={}):
+    def playerOpen(self, params=None):
+        if params is None: params = {}
         param = {"method":"Player.Open","params":params}
         return self.sendJSON(param).get('result') == 'OK'
 
@@ -247,7 +254,8 @@ class JSONRPC(object):
         else:     return self.sendJSON(param).get('result',{}).get('addon', {})
 
 
-    def getAddons(self, param={"content":"video","enabled":True,"installed":True}, cache=True):
+    def getAddons(self, param=None, cache=True):
+        if param is None: param = {"content":"video","enabled":True,"installed":True}
         param["properties"] = self.getEnums("Addon.Fields", type='items')
         param = {"method":"Addons.GetAddons","params":param}
         if cache: return self.cacheJSON(param).get('result',{}).get('addons', [])
@@ -256,20 +264,23 @@ class JSONRPC(object):
 
     def getSongs(self, cache=True):
         param = {"method":"AudioLibrary.GetSongs","params":{"properties":self.getEnums("Audio.Fields.Song", type='items')}}
-        if cache: return self.cacheJSON(param, timeout=120).get('result',{}).get('songs', [])
-        else:     return self.sendJSON(param, timeout=120).get('result',{}).get('songs', [])
+        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('songs', [])
+        else:     return self.sendJSON(param, timeout).get('result',{}).get('songs', [])
 
 
     def getArtists(self, cache=True):
         param = {"method":"AudioLibrary.GetArtists","params":{"properties":self.getEnums("Audio.Fields.Artist", type='items')}}
-        if cache: return self.cacheJSON(param, timeout=120).get('result',{}).get('artists', [])
-        else:     return self.sendJSON(param, timeout=120).get('result',{}).get('artists', [])
+        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('artists', [])
+        else:     return self.sendJSON(param, timeout).get('result',{}).get('artists', [])
 
 
     def getAlbums(self, cache=True):
         param = {"method":"AudioLibrary.GetAlbums","params":{"properties":self.getEnums("Audio.Fields.Album", type='items')}}
-        if cache: return self.cacheJSON(param, timeout=120).get('result',{}).get('albums', [])
-        else:     return self.sendJSON(param, timeout=120).get('result',{}).get('albums', [])
+        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('albums', [])
+        else:     return self.sendJSON(param, timeout).get('result',{}).get('albums', [])
 
      
     def getEpisode(self, tvshowid, season, episode=None, cache=True):
@@ -282,14 +293,16 @@ class JSONRPC(object):
   
     def getEpisodes(self, cache=True):
         param = {"method":"VideoLibrary.GetEpisodes","params":{"properties":self.getEnums("Video.Fields.Episode", type='items')}}
-        if cache: return self.cacheJSON(param, timeout=120).get('result',{}).get('episodes', [])
-        else:     return self.sendJSON(param, timeout=120).get('result',{}).get('episodes', [])
+        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('episodes', [])
+        else:     return self.sendJSON(param, timeout).get('result',{}).get('episodes', [])
 
 
     def getTVshows(self, cache=True):
         param = {"method":"VideoLibrary.GetTVShows","params":{"properties":self.getEnums("Video.Fields.TVShow", type='items')}}
-        if cache: return self.cacheJSON(param, timeout=120).get('result',{}).get('tvshows', [])
-        else:     return self.sendJSON(param, timeout=120).get('result',{}).get('tvshows', [])
+        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('tvshows', [])
+        else:     return self.sendJSON(param, timeout).get('result',{}).get('tvshows', [])
 
 
     def getMovie(self, uniqueid, title, year, cache=True):
@@ -300,8 +313,9 @@ class JSONRPC(object):
 
     def getMovies(self, cache=True):
         param = {"method":"VideoLibrary.GetMovies","params":{"properties":self.getEnums("Video.Fields.Movie", type='items')}}
-        if cache: return self.cacheJSON(param, timeout=120).get('result',{}).get('movies', [])
-        else:     return self.sendJSON(param, timeout=120).get('result',{}).get('movies', [])
+        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('movies', [])
+        else:     return self.sendJSON(param, timeout).get('result',{}).get('movies', [])
 
 
     def getVideoGenres(self, type="movie", cache=True): #type = "movie"/"tvshow"
@@ -322,21 +336,25 @@ class JSONRPC(object):
         else:     return self.sendJSON(param).get('result',{}).get('textures', [])
             
         
-    def getDirectory(self, param={}, cache=True, checksum=None, expiration=None):
+    def getDirectory(self, param=None, cache=True, checksum=None, expiration=None):
+        if param is None: param = {}
         if checksum is None: checksum = ADDON_VERSION
         if expiration is None: expiration = datetime.timedelta(minutes=15)
         param["properties"] = self.getEnums("List.Fields.Files", type='items') #todo change enums from files to media specific? 
-        param = {"method":"Files.GetDirectory","params":param}
-        if cache: results = self.cacheJSON(param, expiration, checksum, timeout=120).get('result',{})
-        else:     results = self.sendJSON(param, timeout=120).get('result',{})
+        param   = {"method":"Files.GetDirectory","params":param}
+        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        if cache: results = self.cacheJSON(param, expiration, checksum, timeout).get('result',{})
+        else:     results = self.sendJSON(param, timeout).get('result',{})
         if 'filedetails' in results: return results.get('filedetails',[]), results.get('limits',{}), results.get('error',{})
         else:                        return results.get('files',[]), results.get('limits',{}), results.get('error',{})
 
 
-    def getLibrary(self, method, param={}, key=None, cache=True):
-        param = {"method":method,"params":param}
-        if cache: results = self.cacheJSON(param, timeout=120).get('result',{})
-        else:     results = self.sendJSON(param, timeout=120).get('result',{})
+    def getLibrary(self, method, param=None, key=None, cache=True):
+        if param is None: param = {}
+        param   = {"method":method,"params":param}
+        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        if cache: results = self.cacheJSON(param, timeout).get('result',{})
+        else:     results = self.sendJSON(param, timeout).get('result',{})
         return results.get((key or list(results.keys())[0]),[]), results.get('limits',{}), results.get('error',{})
         
         
@@ -363,7 +381,8 @@ class JSONRPC(object):
         return self.cacheJSON({"method":"Player.GetViewMode","params":{}},datetime.timedelta(seconds=15)).get('result',default)
         
 
-    def setViewMode(self, params={}):
+    def setViewMode(self, params=None):
+        if params is None: params = {}
         return self.sendJSON({"method":"Player.SetViewMode","params":params})
 
 
@@ -474,34 +493,44 @@ class JSONRPC(object):
         return path
         
         
-    def _setRuntime(self, item={}, runtime=0, save=None): #set runtime collected by player, accurate meta.
+    def _setRuntime(self, item=None, runtime=0, save=None): #set runtime collected by player, accurate meta.
+        if item is None: item = {}
         if save is None: save = REAL_SETTINGS.getSettingBool('Store_Duration')
         runtime = round(runtime)
-        self.cache.set('getRuntime.%s'%(FileAccess._getMD5(item.get('file'))), runtime, checksum=FileAccess._getMD5(item.get('file')), expiration=datetime.timedelta(days=28))
+        md5 = FileAccess._getMD5(item.get('file'))
+        self.cache.set('getRuntime.%s'%(md5), runtime, checksum=md5, expiration=datetime.timedelta(days=28))
         if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)) and save and runtime > 0: self.queDuration(item, runtime=runtime)
     
         
-    def _getRuntime(self, item={}): #get runtime collected by player, else less accurate provider meta
-        runtime = self.cache.get('getRuntime.%s'%(FileAccess._getMD5(item.get('file'))), checksum=FileAccess._getMD5(item.get('file')))
+    def _getRuntime(self, item=None): #get runtime collected by player, else less accurate provider meta
+        if item is None: item = {}
+        file_key = item.get('file')
+        md5 = FileAccess._getMD5(file_key)
+        runtime = self.cache.get('getRuntime.%s'%(md5), checksum=md5)
         return round(runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         
 
-    def _setDuration(self, path, item={}, duration=0, save=None):#set VideoParser cache
+    def _setDuration(self, path, item=None, duration=0, save=None):#set VideoParser cache
+        if item is None: item = {}
         if save is None: save = REAL_SETTINGS.getSettingBool('Store_Duration')
         duration = round(duration)
-        self.cache.set('getDuration.%s'%(FileAccess._getMD5(path)), duration, checksum=FileAccess._getMD5(path), expiration=datetime.timedelta(days=28))
+        md5 = FileAccess._getMD5(path)
+        self.cache.set('getDuration.%s'%(md5), duration, checksum=md5, expiration=datetime.timedelta(days=28))
         if save and item: self.queDuration(item, duration)
         return duration
 
     
     def _getDuration(self, path): #get VideoParser cache
-        return round(self.cache.get('getDuration.%s'%(FileAccess._getMD5(path)), checksum=FileAccess._getMD5(path)) or self._getRuntime({'file':path}))
+        md5 = FileAccess._getMD5(path)
+        return round(self.cache.get('getDuration.%s'%(md5), checksum=md5) or self._getRuntime({'file':path}))
 
 
-    def getDuration(self, path, item={}, accurate=None, save=None):
+    def getDuration(self, path, item=None, accurate=None, save=None):
+        if item is None: item = {}
         if accurate is None: accurate = bool(REAL_SETTINGS.getSettingInt('Duration_Type'))
         if save is None: save = REAL_SETTINGS.getSettingBool('Store_Duration')
-        def __parseDuration(runtime, path, item={}, save=False):
+        def __parseDuration(runtime, path, item=None, save=False):
+            if item is None: item = {}
             duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
             if   runtime == 0: runtime = duration
             elif round(Globals._percentDiff(runtime, duration)) <= self.runtimeThreshold: runtime = duration
@@ -520,14 +549,16 @@ class JSONRPC(object):
         return runtime
 
 
-    def getTotDuration(self, items=[], accurate=None):
+    def getTotDuration(self, items=None, accurate=None):
+        if items is None: items = []
         if accurate is None: accurate = bool(REAL_SETTINGS.getSettingInt('Duration_Type'))
         total = sum((self.getDuration(item.get('file'),item,accurate) for item in items))
         self.log("getTotDuration, items = %s, total = %s" % (len(items), total))
         return total
 
 
-    def queDuration(self, item={}, duration=0, runtime=0):
+    def queDuration(self, item=None, duration=0, runtime=0):
+        if item is None: item = {}
         mtypes = {'video'      : {"method":"Files.SetFileDetails"             ,"params":{"file"        :item.get('file',"")         ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
                   'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
                   'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      ,"runtime": runtime,"resume": {"position": item.get('position',0.0),"total": duration}}},
@@ -550,7 +581,8 @@ class JSONRPC(object):
             except Exception as e: self.log("queDuration, failed! %s\nmtype = %s\nitem = %s"%(e,mtype,item), xbmc.LOGERROR)
         
         
-    def quePlaycount(self, item={}, save=None):
+    def quePlaycount(self, item=None, save=None):
+        if item is None: item = {}
         if save is None: save = REAL_SETTINGS.getSettingBool('Rollback_Watched')
         param = {'video'      : {"method":"Files.SetFileDetails"             ,"params":{"file"        :item.get('file',"")         ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
                  'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
@@ -567,7 +599,7 @@ class JSONRPC(object):
                 params = param.get(item.get('type'))
                 self.log('quePlaycount, params = %s'%(params.get('params',{})))
                 if hasattr(self.service, 'jsonQue'): self.service.jsonQue.add(params)
-            except Exception: pass
+            except Exception as e: self.log('quePlaycount failed: %s' % e, xbmc.LOGDEBUG)
                 
                 
     def requestList(self, citem: dict, path: str, media: str = 'video', page: int = None, sort: dict = None, filter: dict = None, limits: dict = None, query: dict = None):
@@ -641,16 +673,21 @@ class JSONRPC(object):
             return items, limits, errors
 
 
-    def resetPagination(self, id, path, query={}, limits={"end": 0, "start": 0, "total":0}):
+    def resetPagination(self, id, path, query=None, limits=None):
+        if query is None: query = {}
+        if limits is None: limits = {"end": 0, "start": 0, "total":0}
         return self.autoPagination(id, path, query, limits)
             
             
-    def autoPagination(self, id, path, query={}, limits={}):
+    def autoPagination(self, id, path, query=None, limits=None):
+        if query is None: query = {}
+        if limits is None: limits = {}
         if not limits: return (self.cache.get('autoPagination.%s.%s.%s'%(id,FileAccess._getMD5(path),FileAccess._getMD5(FileAccess.dumpJSON(query))), checksum=id) or {"end": 0, "start": 0, "total":0})
         else:          return  self.cache.set('autoPagination.%s.%s.%s'%(id,FileAccess._getMD5(path),FileAccess._getMD5(FileAccess.dumpJSON(query))), limits, checksum=id, expiration=datetime.timedelta(days=28))
             
              
-    def randomPagination(self, page=None, limits={}, start=0):
+    def randomPagination(self, page=None, limits=None, start=0):
+        if limits is None: limits = {}
         if page is None: page = REAL_SETTINGS.getSettingInt('Page_Limit')
         if limits.get('total',0) > page: start = random.randrange(0, (limits.get('total',0)-page), page)
         return {"end": start, "start": start, "total":limits.get('total',0)}
@@ -658,11 +695,11 @@ class JSONRPC(object):
 
     @contextmanager
     def detectRPCCrash(self, citem):
-        Globals.SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',citem)
+        Globals.settings.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',citem)
         try: yield
-        except Exception:pass
+        except Exception as e: self.log('detectRPCCrash: %s' % e, xbmc.LOGDEBUG)
         finally:
-            Globals.SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
+            Globals.settings.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
 
 
     def getLocalHost(self, local=False):
@@ -712,9 +749,7 @@ class JSONRPC(object):
         self.log("inputFriendlyName, name = %s"%(friendly))
         if not friendly or friendly.lower() == 'kodi':
             if Dialog().okDialog(LANGUAGE(32132)%(friendly)):
-                with Globals.PROPERTIES.interruptActivity():
-                    friendly = Dialog().inputDialog(LANGUAGE(30122), friendly)
-                    print(friendly)
+                friendly = Dialog().inputDialog(LANGUAGE(30122), friendly)
                 if not friendly or friendly.lower() == 'kodi':
                     return self.inputFriendlyName()
                 else:
@@ -749,7 +784,7 @@ class JSONRPC(object):
             for result in results:
                 label = result.get('label', '')
                 if label.startswith(ADDON_NAME) or label.startswith('All channels'):
-                    channels, _, _ = self.getDirectory(param={"directory": result.get('file')},checksum=Globals.PROPERTIES.getProcessID(),expiration=datetime.timedelta(minutes=15))
+                    channels, _, _ = self.getDirectory(param={"directory": result.get('file')},checksum=ADDON_VERSION,expiration=datetime.timedelta(minutes=15))
                     
                     for item in channels:
                         fitem_id = Globals._decodePlot(item.get('plot', '')).get('citem', {}).get('id')
@@ -765,7 +800,7 @@ class JSONRPC(object):
     def matchChannel(self, chname: str, id: str, radio: bool=False, extend=True):
         self.log('[%s] matchChannel, chname = %s, radio = %s' % (id, chname, radio))
         cacheName     = 'matchChannel.%s' % (FileAccess._getMD5('%s.%s.%s.%s' % (chname, id, radio, extend)))
-        cacheResponse = (self.cache.get(cacheName, checksum=Globals.PROPERTIES.getProcessID()) or {})
+        cacheResponse = (self.cache.get(cacheName, checksum=ADDON_VERSION) or {})
         if cacheResponse: return cacheResponse
             
         pvrItem  = None
@@ -801,7 +836,7 @@ class JSONRPC(object):
                 pvrItem['broadcastnext'] = broadcastnext
             elif 'broadcastnext' in pvrItem: pass 
             self.log('matchChannel: __extend, broadcastnext = %s entries' % len(pvrItem.get('broadcastnext', [])))
-        self.cache.set(cacheName, pvrItem, checksum=Globals.PROPERTIES.getProcessID(), expiration=datetime.timedelta(seconds=15))
+        self.cache.set(cacheName, pvrItem, checksum=ADDON_VERSION, expiration=datetime.timedelta(seconds=15))
         return pvrItem
         
         
@@ -838,7 +873,7 @@ class JSONRPC(object):
         elif 'tvshowid'in item: key = 'tvshows'
         else: return
         fitem = item.copy()
-        dur = self.getDuration(fitem.get('trailer'), accurate=bool(Globals.SETTINGS.getSettingInt('Duration_Type')), save=False)
+        dur = self.getDuration(fitem.get('trailer'), accurate=bool(REAL_SETTINGS.getSettingInt('Duration_Type')), save=False)
         if dur > 0:
             trailers = self.getTrailers()
             if 'streamdetails' in fitem: fitem.pop('streamdetails')
@@ -855,15 +890,16 @@ class JSONRPC(object):
             return self.setTrailers(trailers)
                 
                 
-    def setTrailers(self, trailers={'movies':{},'tvshows':{}}):
+    def setTrailers(self, trailers=None):
+        if trailers is None: trailers = {'movies':{},'tvshows':{}}
         self.log(f'setTrailers [Movies] = {len(trailers.get('movies',{}))}')
         self.log(f'setTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
-        return Globals.SETTINGS.setCacheSetting('trailers', trailers)
+        return Globals.settings.setCacheSetting('trailers', trailers)
                                 
                         
     def getTrailers(self, genre=None):
         #todo clean old trailers by "added" epoch
-        trailers = Globals.SETTINGS.getCacheSetting('trailers', default={'movies':{},'tvshows':{}})
+        trailers = Globals.settings.getCacheSetting('trailers', default={'movies':{},'tvshows':{}})
         self.log(f'getTrailers [Movies] = {len(trailers.get('movies',{}))}')
         self.log(f'getTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
         if not genre is None: return trailers.get(genre,[])

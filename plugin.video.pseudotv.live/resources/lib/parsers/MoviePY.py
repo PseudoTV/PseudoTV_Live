@@ -26,15 +26,15 @@ class MoviePY:
         """
         try:
             from moviepy.editor import VideoFileClip
-            log("MoviePY: determineLength %s"%(filename))
+            LOG("MoviePY: determineLength %s"%(filename))
             clip = VideoFileClip(FileAccess.translatePath(filename))
             dur = int(clip.duration)
             clip.close()
-            log('MoviePY: Duration is %s seconds'%(dur))
+            LOG('MoviePY: Duration is %s seconds'%(dur))
             return dur
         except ImportError:
-            log("MoviePY: moviepy module not available", xbmc.LOGERROR)
+            LOG("MoviePY: moviepy module not available", xbmc.LOGERROR)
             return 0
         except Exception as e:
-            log("MoviePY: failed! %s"%(e), xbmc.LOGERROR)
+            LOG("MoviePY: failed! %s"%(e), xbmc.LOGERROR)
             return 0

@@ -34,11 +34,11 @@ class MediaInfo:
             
             try:
                 if xml is None: raise Exception('no xml found!, directly parsing file.')
-                log("MediaInfo: parsing XML %s"%(xml))
+                LOG("MediaInfo: parsing XML %s"%(xml))
                 fle = FileAccess.open(xml, 'rb')
                 mi  = MediaInfo(fle.read())
             except Exception: 
-                log("MediaInfo: parsing %s"%(FileAccess.translatePath(filename)))
+                LOG("MediaInfo: parsing %s"%(FileAccess.translatePath(filename)))
                 mi = MediaInfo.parse(FileAccess.translatePath(filename))
             finally:
                 if hasattr(fle, 'close'): 
@@ -50,10 +50,10 @@ class MediaInfo:
                         dur = track.duration / 1000
                         break
             
-            log("MediaInfo: determineLength %s Duration is %s"%(filename,dur))
+            LOG("MediaInfo: determineLength %s Duration is %s"%(filename,dur))
             return dur
         except Exception as e:
-            log("MediaInfo: failed! %s"%(e), xbmc.LOGERROR)
+            LOG("MediaInfo: failed! %s"%(e), xbmc.LOGERROR)
             return 0
             
             

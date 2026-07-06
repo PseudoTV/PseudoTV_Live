@@ -19,7 +19,7 @@
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
-from globals   import *
+from variables  import *
 
 # https://github.com/PseudoTV/PseudoTV_Live/issues/68
 
@@ -40,20 +40,20 @@ class Wizard(xbmcgui.WindowXMLDialog):
     
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)    
-        with BUILTIN.busy_dialog():
+        with Globals.builtin.busy_dialog():
             self.tasks   = kwargs.get('inherited')
-            self.cache   = SETTINGS.cache    
-            self.cacheDB = SETTINGS.cacheDB
+            self.cache   = Globals.settings.cache    
+            self.cacheDB = Globals.settings.cacheDB
             self.player  = PLAYER()
             self.monitor = MONITOR()
             
-        if not PROPERTIES.isRunning('chkWizard'):
-            with PROPERTIES.chkRunning('chkWizard'):
+        if not Globals.properties.isRunning('chkWizard'):
+            with Globals.properties.chkRunning('chkWizard'):
                 self.doModal()
             
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
         
         
     def onInit(self):
@@ -61,25 +61,25 @@ class Wizard(xbmcgui.WindowXMLDialog):
 
         
     def isLocked(self):
-        return PROPERTIES.getProperty('Wizard.isLocked',False)
+        return Globals.properties.getProperty('Wizard.isLocked',False)
         
         
     def setLocked(self, state=True):
-        self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[PROPERTIES.setProperty('Wizard.isLocked',state)])
+        self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[Globals.properties.setProperty('Wizard.isLocked',state)])
 
 
     @contextmanager
     def toggleSpinner(self, state=True, lock=True, condition=None):
         self.log('toggleSpinner, state = %s, condition = %s, lock = %s'%(state,condition,lock))
         if not condition is None and condition:
-            PROPERTIES.setRunning('Manager.toggleSpinner',state)
+            Globals.properties.setRunning('Manager.toggleSpinner',state)
             self.setVisibility(self.spinner,state)
             if lock: self.setLocked(True)
             try: yield
             finally:
                 if self.isLocked(): self.setLocked(False)
                 self.setVisibility(self.spinner,False)
-                PROPERTIES.setRunning('Manager.toggleSpinner',False)
+                Globals.properties.setRunning('Manager.toggleSpinner',False)
         else: yield
 
 
@@ -92,9 +92,9 @@ class Wizard(xbmcgui.WindowXMLDialog):
         if (time.time() - self.lastActionTime) < .5 and actionId not in ACTION_PREVIOUS_MENU: action = ACTION_INVALID # during certain times we just want to discard all input
         else:
             if actionId in ACTION_PREVIOUS_MENU:
-                if self.isLocked(): DIALOG.notificationDialog(LANGUAGE(32260))
+                if self.isLocked(): Globals.dialog.notificationDialog(LANGUAGE(32260))
             else:
-                with self.toggleSpinner(condition=PROPERTIES.isRunning('Wizard.toggleSpinner')==False):
+                with self.toggleSpinner(condition=Globals.properties.isRunning('Wizard.toggleSpinner')==False):
                     self.log('onAction: actionId = %s, locked = %s'%(actionId,self.isLocked()))
 
             
@@ -103,8 +103,8 @@ class Wizard(xbmcgui.WindowXMLDialog):
 
         
     def onClick(self, controlId):
-        if (self.isLocked() or (time.time() - self.lastActionTime) < .5): DIALOG.notificationDialog(LANGUAGE(32260))
+        if (self.isLocked() or (time.time() - self.lastActionTime) < .5): Globals.dialog.notificationDialog(LANGUAGE(32260))
         else:
-            with self.toggleSpinner(condition=PROPERTIES.isRunning('Wizard.toggleSpinner')==False):
+            with self.toggleSpinner(condition=Globals.properties.isRunning('Wizard.toggleSpinner')==False):
                 self.log('onClick: controlId = %s, locked = %s'%(controlId,self.isLocked()))
                 if controlId == 0: self.onClose()

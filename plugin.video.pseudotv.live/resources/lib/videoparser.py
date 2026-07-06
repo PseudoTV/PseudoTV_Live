@@ -32,32 +32,32 @@ try:
     import pymediainfo
     from parsers import MediaInfo
     EXTERNAL_PARSER.append(MediaInfo.MediaInfo)
-except Exception: pass
+except Exception as e: xbmc.log('pymediainfo not available: %s' % e, xbmc.LOGDEBUG)
     
 try:
     import ffmpeg
     from parsers import FFProbe
     EXTERNAL_PARSER.append(FFProbe.FFProbe)
-except Exception: pass
+except Exception as e: xbmc.log('ffmpeg not available: %s' % e, xbmc.LOGDEBUG)
     
 try:
     import hachoir
     from parsers import Hachoir
     EXTERNAL_PARSER.append(Hachoir.Hachoir)
-except Exception: pass
+except Exception as e: xbmc.log('hachoir not available: %s' % e, xbmc.LOGDEBUG)
 
 try:
     import moviepy
     from parsers import MoviePY
     from numpy.core._multiarray_umath import *
     EXTERNAL_PARSER.append(MoviePY.MoviePY)
-except Exception: pass
+except Exception as e: xbmc.log('moviepy not available: %s' % e, xbmc.LOGDEBUG)
 
 try:
     import cv2
     from parsers import OpenCV
     EXTERNAL_PARSER.append(OpenCV.OpenCV)
-except Exception: pass
+except Exception as e: xbmc.log('cv2 not available: %s' % e, xbmc.LOGDEBUG)
     
 class VideoParser(object):
     def __init__(self):
@@ -74,7 +74,7 @@ class VideoParser(object):
     def getVideoLength(self, filename: str, fileitem: dict={}, jsonRPC=None) -> int and float:
         duration = jsonRPC._getDuration(filename)
         if duration == 0:
-            if not filename: log("VideoParser: getVideoLength, no filename.")
+            if not filename: xbmc.log("VideoParser: getVideoLength, no filename.")
             elif filename.lower().startswith(tuple(self.VFSPaths)):
                 if filename.lower().startswith(tuple(self.YTPaths)):
                     duration = YTParser.YTParser().determineLength(filename)
@@ -83,7 +83,7 @@ class VideoParser(object):
             else:
                 ext = os.path.splitext(filename)[1].lower()
                 if not FileAccess.exists(filename):
-                    log("VideoParser: getVideoLength, Unable to find the file")
+                    xbmc.log("VideoParser: getVideoLength, Unable to find the file")
                     duration = 0
                 elif ext in self.AVIExts:
                     duration = AVIParser.AVIParser().determineLength(filename)
@@ -108,5 +108,5 @@ class VideoParser(object):
                     del monitor
             
             if duration > 0: duration = jsonRPC._setDuration(filename, fileitem, round(duration))
-        log("VideoParser: getVideoLength duration = %s, filename = %s"%(duration,filename))
+        xbmc.log("VideoParser: getVideoLength duration = %s, filename = %s"%(duration,filename))
         return duration

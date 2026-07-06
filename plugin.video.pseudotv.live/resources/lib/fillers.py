@@ -28,18 +28,18 @@ class Fillers(object):
         self.runActions = builder.runActions
         self.jsonRPC    = builder.jsonRPC
         self.cache      = builder.cache
-        self.trailers   = builder.getTrailers()
+        self.trailers   = self.jsonRPC.getTrailers()
         self.service    = builder.service
         self.resources  = Resources(service=builder.service)
-        self.processID  = Globals.PROPERTIES.getProcessID()
-        self.accurate   = bool(Globals.SETTINGS.getSettingInt('Duration_Type'))
-        try:              self.fbuild = re.search(r'^(\d{2})\.', Globals.BUILTIN.getInfoLabel("System.BuildVersion")).group(1)
+        self.processID  = Globals.properties.getProcessID()
+        self.accurate   = bool(Globals.settings.getSettingInt('Duration_Type'))
+        try:              self.fbuild = re.search(r'^(\d{2})\.', Globals.builtin.getInfoLabel("System.BuildVersion")).group(1)
         except Exception: self.fbuild = '22'
         self.fillSources()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s' % (self.__class__.__name__, msg), level)
+        LOG('%s: %s' % (self.__class__.__name__, msg), level)
 
 
     def fillSources(self):
@@ -66,13 +66,13 @@ class Fillers(object):
         for ftype, values in list(self.bctTypes.items()):
             if self.service.pendingInterrupt: break
             if not values.get('enabled', False): continue
-            self.builder.pDialog = Globals.DIALOG._updateProgressThrottled(pDialog, pCount, message='%s %s' % (LANGUAGE(30014), ftype.title()), header='%s, %s' % (ADDON_NAME, pMSG))
+            self.builder.pDialog = Globals.dialog._updateProgressThrottled(pDialog, pCount, message='%s %s' % (LANGUAGE(30014), ftype.title()), header='%s, %s' % (ADDON_NAME, pMSG))
             
             # resources
             for id in values.get("sources",{}).get("ids",[]):
                 if self.service.pendingInterrupt: break
-                if not Globals.SETTINGS.hasAddon(id): continue
-                values.setdefault('items',{}).update(_build(ftype, os.path.join('special://home/addons/%s'%id), Globals.SETTINGS.getAddonDetails(id).get('version',ADDON_VERSION), datetime.timedelta(days=MAX_GUIDEDAYS)))
+                if not Globals.settings.hasAddon(id): continue
+                values.setdefault('items',{}).update(_build(ftype, os.path.join('special://home/addons/%s'%id), Globals.settings.getAddonDetails(id).get('version',ADDON_VERSION), datetime.timedelta(days=MAX_GUIDEDAYS)))
 
             # vfs
             for path in values.get("sources", {}).get("paths",[]):
@@ -141,7 +141,7 @@ class Fillers(object):
         try:# https://kodi.wiki/view/Video_extras
             if   'movieid'  in fileItem: items = self.getDirectory({"directory":'%s/%s'%(os.path.split(fileItem.get('file'))[0],'extras'),"media":'video'})
             elif 'tvshowid' in fileItem: items = self.jsonRPC.getEpisode(fileItem.get('tvshowid'),season=0)
-        except Exception: pass
+        except Exception as e: self.log('_getExtras failed: %s' % e, xbmc.LOGDEBUG)
         self.log('[%s] _getExtras, items = %s'%(self.citem.get('id'), len(items)))
         return items
         
@@ -159,7 +159,7 @@ class Fillers(object):
                 for i, item in enumerate(items):
                     dur = item.get('duration', 0)
                     if not item.get('file') or dur == 0: continue
-                    self.builder.pDialog = Globals.DIALOG._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Filling Pre-Rolls %s%%' % (int((i + 1) * 100 // max(1, len(items)))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
+                    self.builder.pDialog = Globals.dialog._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Filling Pre-Rolls %s%%' % (int((i + 1) * 100 // max(1, len(items)))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
                     item.update({'title'       : item.get('label'),
                                  'episodetitle': 'Pre-Roll',
                                  'plot'        : item.get('plot', item.get('file')),
@@ -168,7 +168,7 @@ class Fillers(object):
                                  'art'         : {"thumb":LOGO,"poster":LOGO_POSTER,"fanart":LOGO_LANDSCAPE,"landscape":LOGO_LANDSCAPE,"logo":LOGO,"icon":LOGO}})
                     self.log('[%s] injectFillers [%s: Pre-Roll (%s)] %s, %s'%(self.citem.get('id'), i, ftype, dur, item.get('file')))
                     nfileList.extend(self.builder.buildCells(self.citem, dur, entries=1, info=item))
-        return Globals.Globals._setDictLST(nfileList)
+        return Globals._setDictLST(nfileList)
         
         
     def _getPostRoll(self, fileItem, nextItem={}, remaining_seconds=0):
@@ -180,7 +180,7 @@ class Fillers(object):
             ignore = {'adverts': IGNORE_CHTYPE + MOVIE_CHTYPE, 'trailers': IGNORE_CHTYPE + TV_CHTYPE}.get(ftype, IGNORE_CHTYPE)
             if filler.get('enabled', False) and self.citem.get('type') not in ignore:
                 if filler.get('auto', False): numberToFetch = filler.get('max',self.builder.pageLimit)
-                else:                         numberToFetch = filler.get('min',Globals.SETTINGS.getSettingInt('Enable_Postroll'))
+                else:                         numberToFetch = filler.get('min',Globals.settings.getSettingInt('Enable_Postroll'))
                 for item in [fileItem, nextItem]:
                     if not item: continue
                     keys = [self.citem.get('name',''), item.get('genre',''), self.citem.get('group',[])]
@@ -192,7 +192,7 @@ class Fillers(object):
         if items:
             iteration     = 0
             post_counter  = 0
-            post_queue    = deque(Globals._randomShuffle(Globals.Globals._setDictLST(items)))
+            post_queue    = deque(Globals._randomShuffle(Globals._setDictLST(items)))
             post_auto     = (self.bctTypes.get('adverts', {}).get('auto', False) or self.bctTypes.get('trailers', {}).get('auto', False))
             total_queue   = len(post_queue)
             post_runtime  = remaining_seconds if post_auto else MIN_EPG_DURATION
@@ -203,7 +203,7 @@ class Fillers(object):
                 if 0 < dur <= post_runtime:
                     post_counter = 0
                     post_runtime -= dur
-                    self.builder.pDialog = Globals.DIALOG._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Filling Post-Rolls %s%%' % (int(iteration * 100 // max(1, total_queue))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
+                    self.builder.pDialog = Globals.dialog._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Filling Post-Rolls %s%%' % (int(iteration * 100 // max(1, total_queue))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
                     item.update({'title'       : item.get('label'),
                                  'episodetitle': 'Post-Roll',
                                  'plot'        : item.get('plot', item.get('file')),

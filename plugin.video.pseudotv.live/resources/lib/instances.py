@@ -19,13 +19,16 @@
 # -*- coding: utf-8 -*-
 from variables   import *
 from fileaccess  import FileAccess
+
+_INSTANCE_NAME_RE = re.compile(r'<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE)
+_INSTANCE_NAME2_RE = re.compile(r'<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE)
         
 class Instances(object):
     def __init__(self, settings):
         self.settings = settings
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def _load(self, file=INSTANCEFLE_DEFAULT):
         settings = self.IPTV_SIMPLE_SETTINGS()
@@ -43,7 +46,8 @@ class Instances(object):
                 if hasattr(xml,'close'): xml.close()
         return settings
             
-    def _save(self, file, nsettings={}):
+    def _save(self, file, nsettings=None):
+        if nsettings is None: nsettings = {}
         self.log(f"_save {file}")
         
         doc  = Document()
@@ -88,14 +92,14 @@ class Instances(object):
                 # instancePath = self.getPVRInstancePath(self.settings.properties.getFriendlyName())
                 # if FileAccess.exists(instancePath): FileAccess.delete(instancePath)
                 # if FileAccess.move(PVR_SETTINGS_XML, instancePath):
-                    # self.settings.Globals.DIALOG.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
+                    # self.settings.Globals.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
                     # self.settings.properties.setPropTimer('chkPVRRefresh')
         ###
         if silent is None: silent = self.settings.getSettingBool('Enable_Kodi_Access')
         addon = self.settings.hasAddon(PVR_CLIENT_ID,notify=True)
         if self._save(self.getPVRInstancePath(instanceName),settings):
             if not silent: 
-                self.settings.Globals.DIALOG.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
+                Globals.dialog.notificationDialog((LANGUAGE(32037)%(addon.getAddonInfo('name'))))
             self.settings.properties.setPropTimer('chkPVRRefresh')
         
     def getPVRInstanceID(self, instanceName=ADDON_NAME):
@@ -124,10 +128,10 @@ class Instances(object):
                         fle = FileAccess.open(os.path.join(PVR_CLIENT_LOC,file), "r")
                         xml = fle.read()
                         fle.close()
-                        match = re.compile(r'<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(xml)
+                        match = _INSTANCE_NAME_RE.search(xml)
                         try: name = match.group(1)
                         except Exception:
-                            match = re.compile(r'<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(xml)
+                            match = _INSTANCE_NAME2_RE.search(xml)
                             try: name = match.group(1)
                             except Exception: name = ""
                             

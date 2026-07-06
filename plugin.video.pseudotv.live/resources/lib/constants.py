@@ -19,120 +19,128 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, re, struct
-import json, pickle, ctypes, platform
+import json, pickle, platform
 import random, base64, binascii, hashlib, heapq, zlib
 import time, datetime, calendar, sqlite3
 import requests, traceback, threading
-import codecs, shutil, errno
+import codecs, shutil, errno, copy
 
-from functools             import partial, reduce, update_wrapper, wraps, lru_cache
-from difflib               import SequenceMatcher
+from functools             import partial, reduce, update_wrapper, wraps
 from six.moves             import urllib 
-from contextlib            import ContextDecorator, contextmanager, closing
+from contextlib            import contextmanager, closing
 from collections           import Counter, OrderedDict, defaultdict, deque
 from ast                   import literal_eval
-from six.moves             import urllib 
-from io                    import StringIO, BytesIO
-from threading             import Lock, RLock, Thread, Event, Timer, BoundedSemaphore, current_thread, enumerate as thread_enumerate
-from xml.dom.minidom       import parse, parseString, Document
-from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstringlist, fromstring, tostring, parse as ETparse
+from io                    import BytesIO
+from threading             import Lock, RLock, Thread, Event, Timer, current_thread
+from xml.dom.minidom       import parse, Document
+from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstring, parse as ETparse
 from typing                import Dict, List, Union, Optional, Any
 from kodi_six              import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
-from contextlib            import contextmanager, closing
 from socket                import gethostbyname, gethostname
 from itertools             import cycle, chain, zip_longest, islice, repeat, count
 from xml.sax.saxutils      import escape, unescape
 from operator              import itemgetter
-from six.moves             import urllib 
 from math                  import ceil, floor, sqrt
 from requests.adapters     import HTTPAdapter, Retry
-from concurrent.futures    import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+from concurrent.futures    import ThreadPoolExecutor, as_completed
 
-import platform, pyqrcode, threading, copy
+import pyqrcode
 
-from ast                 import literal_eval
 from uuid                import uuid1, uuid4, UUID
 from infotagger.listitem import ListItemInfoTag
-from json2html           import Json2Html
 
 
-
-DEFAULT_ENCODING    = "utf-8"
-
-#info
-ADDON_ID            = 'plugin.video.pseudotv.live'
-REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')
-ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
-ICON                = REAL_SETTINGS.getAddonInfo('icon')
-FANART              = REAL_SETTINGS.getAddonInfo('fanart')
-SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
-ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
-ADDON_AUTHOR        = REAL_SETTINGS.getAddonInfo('author')
+# =============================================================================
+# Addon Identity
+# =============================================================================
+ADDON_ID            = 'plugin.video.pseudotv.live'   # Unique Kodi addon identifier
+REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)  # Raw xbmcaddon handle for addon settings
+ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')   # Human-readable addon name
+ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version') # Semver version string
+ICON                = REAL_SETTINGS.getAddonInfo('icon')    # Addon icon path
+FANART              = REAL_SETTINGS.getAddonInfo('fanart')  # Addon fanart path
+SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile') # User profile directory (special://)
+ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')    # Addon installation directory
+ADDON_AUTHOR        = REAL_SETTINGS.getAddonInfo('author')  # Addon author name
 ADDON_URL           = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/plugin.video.pseudotv.live/addon.xml'
-LANGUAGE            = REAL_SETTINGS.getLocalizedString
+LANGUAGE            = REAL_SETTINGS.getLocalizedString      # Localized string lookup function
 
-#api
-MONITOR             = xbmc.Monitor
-PLAYER              = xbmc.Player
+# =============================================================================
+# Kodi API References
+# =============================================================================
+MONITOR             = xbmc.Monitor  # Kodi Monitor class reference (for instantiation)
+PLAYER              = xbmc.Player   # Kodi Player class reference (for instantiation)
 
-#constants
-CPU_COUNT           = os.cpu_count() or 1
-CPU_CYCLE           = 0.016 # ~60Hz
-THREAD_WORKERS      = min(16, CPU_COUNT * 4)
-BATCH_SIZE          = min(16, max(4, THREAD_WORKERS * 2))
-QUEUE_CHUNK         = max(2, 16 // CPU_COUNT)
-MAX_CACHE_SIZE      = 1000
-DISCOVERY_TIMER     = 60    #secs
-DISCOVER_INTERVAL   = 30    #secs
-SERVICE_INTERVAL    = 5.0   #secs
-TASK_INTERVAL       = 30.0  #secs
-SUSPEND_INTERVAL    = 2.5   #secs
-MIN_EPG_DURATION    = 10800 #secs
-TIMEOUT_EXECUTOR    = 1800
-TIMEOUT_EXECUTORS   = 10800
-ONNEXT_TIMER        = 15
-AUTOTUNE_LIMIT      = 25
-DTFORMAT            = '%Y%m%d%H%M%S'
-DTZFORMAT           = '%Y%m%d%H%M%S +%z'
-DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'
-BACKUP_TIME_FORMAT  = '%Y-%m-%d %I:%M %p'
+# =============================================================================
+# Performance & Threading
+# =============================================================================
+CPU_COUNT           = os.cpu_count() or 1                    # Number of CPU cores
+CPU_CYCLE           = 0.016                                  # Minimum sleep interval (~60Hz)
+THREAD_WORKERS      = min(16, CPU_COUNT * 4)                 # Max thread pool workers (capped at 16)
+BATCH_SIZE          = min(16, max(4, THREAD_WORKERS * 2))   # Batch size for parallel operations
+QUEUE_CHUNK         = max(2, 16 // CPU_COUNT)                # Chunk size for queue processing
+MAX_CACHE_SIZE      = 1000                                   # LRU cache maximum entries
 
-LOCK_MAX_FILE_TIMEOUT = 30
-LOCK_MAX_FILE_DELAY   = 0.5
+# =============================================================================
+# Service Timing (all values in seconds)
+# =============================================================================
+DISCOVERY_TIMER     = 60     # Zeroconf network discovery broadcast interval
+DISCOVER_INTERVAL   = 30     # Time between discovery scans
+SERVICE_INTERVAL    = 5.0    # Main service loop tick interval
+TASK_INTERVAL       = 30.0   # Background task runner tick interval
+SUSPEND_INTERVAL    = 2.5    # Pause/suspend polling interval
+MIN_EPG_DURATION    = 10800  # Minimum EPG guide duration (3 hours in seconds)
+TIMEOUT_EXECUTOR    = 1800   # Single executor task timeout (30 min)
+TIMEOUT_EXECUTORS   = 10800  # Total executor shutdown timeout (3 hours)
+ONNEXT_TIMER        = 15     # OnNext notification display duration (seconds)
+DEBUG_TIMEOUT       = 900    # Debug log retention timeout (15 min)
 
-LANG                = 'en' #todo parse kodi region settings
+# =============================================================================
+# User-configurable Settings (read from addon settings)
+# =============================================================================
+MIN_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Min_Days')  or "1"))  # Minimum EPG guide days to fetch
+MAX_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Max_Days')  or "3"))  # Maximum EPG guide days to fetch
+OSD_TIMER           = int((REAL_SETTINGS.getSetting('OSD_Timer') or "5"))  # On-screen display timeout
+
+# =============================================================================
+# Date/Time Format Strings
+# =============================================================================
+DTFORMAT            = '%Y%m%d%H%M%S'        # Compact datetime (20090405231604)
+DTZFORMAT           = '%Y%m%d%H%M%S +%z'    # Compact datetime with timezone
+DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'   # ISO-like format for JSON serialization
+BACKUP_TIME_FORMAT  = '%Y-%m-%d %I:%M %p'   # Human-readable backup timestamp
+
+# =============================================================================
+# File Locking
+# =============================================================================
+LOCK_MAX_FILE_TIMEOUT = 30   # Max seconds to wait for file lock acquisition
+LOCK_MAX_FILE_DELAY   = 0.5  # Delay between file lock retry attempts
+
+# =============================================================================
+# UI Timing & Limits
+# =============================================================================
+LANG                = 'en'   # Default language (todo: parse kodi region settings)
 DEFAULT_ENCODING    = "utf-8"
-PROMPT_DELAY        = 4    #secs
-AUTOCLOSE_DELAY     = 300  #secs
-SELECT_DELAY        = 900  #secs
-RADIO_ITEM_LIMIT    = 250
-CHANNEL_LIMIT       = 999
-AUTOTUNE_CHANNEL_LIMIT = 25
-AUTOTUNE_CHANNEL_DEFAULT = 2
-FILLER_LIMIT        = 250
-M3U_REFRESH         = 15
-M3U_INTERVAL        = 30
-M3U_TIMEOUT         = 60
-DEBUG_TIMEOUT       = 900
+PROMPT_DELAY        = 4      # Dialog prompt auto-close delay (seconds)
+AUTOCLOSE_DELAY     = 300    # Auto-close timeout for dialogs (5 minutes)
+SELECT_DELAY        = 900    # Selection dialog timeout (15 minutes)
+RADIO_ITEM_LIMIT    = 250    # Maximum radio/music items per channel
+CHANNEL_LIMIT       = 999    # Maximum number of channels allowed
+AUTOTUNE_CHANNEL_LIMIT = 25  # Max channels per autotune category
+AUTOTUNE_CHANNEL_DEFAULT = 2 # Default channel count for autotune
+FILLER_LIMIT        = 250    # Maximum filler items per channel
+M3U_REFRESH         = 15     # M3U file refresh check interval (seconds)
+M3U_INTERVAL        = 30     # M3U full reload interval (seconds)
+M3U_TIMEOUT         = 60     # M3U network request timeout (seconds)
 
-ROLL_TYPES          = ['Fillers',
+# =============================================================================
+# Media Type Classifications
+# =============================================================================
+ROLL_TYPES          = ['Fillers',     # Genre labels that trigger filler roll detection
                        'Pre-Roll',
                        'Post-Roll']
 
-FILLER_TYPE         = ['Rating',
-                       'Bumper',
-                       'Advert',
-                       'Trailer',
-                       'Extra']
-                       
-FILLER_TYPES        = ['Ratings',
-                       'Bumpers',
-                       'Adverts',
-                       'Trailers',
-                       'Extras']
-                       
-AUTOTUNE_TYPES      = ["Playlists",
+AUTOTUNE_TYPES      = ["Playlists",   # Autotune source categories (order matches UI)
                        "TV Networks",
                        "TV Shows",
                        "TV Genres",
@@ -145,7 +153,7 @@ AUTOTUNE_TYPES      = ["Playlists",
                        "Recommended",
                        "Services"]
 
-GROUP_TYPES         = ['Addon', 
+GROUP_TYPES         = ['Addon',       # Channel grouping categories (includes autotune types)
                        'Custom',
                        'Directory', 
                        'TV', 
@@ -159,64 +167,76 @@ GROUP_TYPES         = ['Addon',
                        'UPNP', 
                        'IPTV'] + AUTOTUNE_TYPES
 
-DB_TYPES            = ["videodb://",
+DB_TYPES            = ["videodb://",  # Kodi library database URL prefixes
                        "musicdb://",
                        "library://",
                        "special://"]
 
-WEB_TYPES           = ["http",
+WEB_TYPES           = ["http",        # Remote/web URL prefixes
                        "ftp://",
                        "pvr://"
                        "upnp://",]
 
-VFS_TYPES           = ["plugin://",
+VFS_TYPES           = ["plugin://",   # Kodi virtual filesystem URL prefixes
                        "pvr://",
                        "resource://",
                        "special://home/addons/resource"]
                        
-TV_TYPES            = ['episode',
+TV_TYPES            = ['episode',     # Kodi media types for TV content
                        'episodes',
                        'tvshow',
                        'tvshows']
                        
-MOVIE_TYPES         = ['movie',
+MOVIE_TYPES         = ['movie',       # Kodi media types for movie content
                        'movies']
                        
-MUSIC_TYPES         = ['songs',
+MUSIC_TYPES         = ['songs',       # Kodi media types for music content
                        'albums',
                        'artists',
                        'music']
-            
-HTML_ESCAPE         = {"&": "&amp;",
-                       '"': "&quot;",
-                       "'": "&apos;",
-                       ">": "&gt;",
-                       "<": "&lt;"}    
 
-KODI_PLAYLISTS      = [".xsp", #smartplaylist
-                       ".xml"] #node
+# =============================================================================
+# Playlist File Extensions
+# =============================================================================
+KODI_PLAYLISTS      = [".xsp",        # Kodi smart playlist extensions
+                       ".xml"]        # Kodi playlist node
                                            
-BASIC_PLAYLISTS     = [".cue",
+BASIC_PLAYLISTS     = [".cue",        # Standard playlist file extensions
                        ".m3u",
                        ".m3u8",
                        ".strm",
                        ".pls",
                        ".wpl"] 
 
-IGNORE_CHTYPE       = ['TV Shows',
+# =============================================================================
+# HTML Entity Encoding
+# =============================================================================
+HTML_ESCAPE         = {"&": "&amp;",
+                       '"': "&quot;",
+                       "'": "&apos;",
+                       ">": "&gt;",
+                       "<": "&lt;"}    
+
+# =============================================================================
+# Channel Builder Types
+# =============================================================================
+IGNORE_CHTYPE       = ['TV Shows',    # Channel types excluded from certain build operations
                        'Mixed Video',
                        'Mixed Music',
                        'Recommended',
                        'Services',
                        'Music Genres']
                  
-MOVIE_CHTYPE        = ["Movie Genres",
+MOVIE_CHTYPE        = ["Movie Genres",# Channel types that contain movie content
                        "Movie Studios"]
                  
-TV_CHTYPE           = ["TV Networks",
+TV_CHTYPE           = ["TV Networks", # Channel types that contain TV content
                        "TV Genres",
                        "Mixed Genre"]
 
+# =============================================================================
+# Plugin URL Templates (mode= parameter dispatches to handler)
+# =============================================================================
 TV_URL              = 'plugin://{addon}/?mode=tv&name={name}&chid={chid}.pvr'
 RESUME_URL          = 'plugin://{addon}/?mode=resume&name={name}&chid={chid}.pvr'
 RADIO_URL           = 'plugin://{addon}/?mode=radio&name={name}&chid={chid}&radio={radio}&vid={vid}.pvr'
@@ -224,129 +244,139 @@ LIVE_URL            = 'plugin://{addon}/?mode=live&name={name}&chid={chid}&vid={
 BROADCAST_URL       = 'plugin://{addon}/?mode=broadcast&name={name}&chid={chid}&vid={vid}.pvr'
 VOD_URL             = 'plugin://{addon}/?mode=vod&title={title}&chid={chid}&vid={vid}&name={name}.pvr'
 DVR_URL             = 'plugin://{addon}/?mode=dvr&title={title}&chid={chid}&vid={vid}&seek={seek}&duration={duration}.pvr'
-              
-PTVL_REPO           = 'repository.pseudotv'
-PVR_CLIENT_ID       = 'pvr.iptvsimple'
-PVR_CLIENT_NAME     = 'IPTV Simple Client'
-PVR_CLIENT_LOC      = 'special://profile/addon_data/%s'%(PVR_CLIENT_ID)
-PVR_SETTINGS_XML    = os.path.join(PVR_CLIENT_LOC,'settings.xml')
 
-#docs
+# =============================================================================
+# PVR / IPTV Simple Client
+# =============================================================================
+PTVL_REPO           = 'repository.pseudotv'              # Kodi repository for PTVL
+PVR_CLIENT_ID       = 'pvr.iptvsimple'                   # IPTV Simple Client addon ID
+PVR_CLIENT_NAME     = 'IPTV Simple Client'               # Human-readable PVR client name
+PVR_CLIENT_LOC      = 'special://profile/addon_data/%s'%(PVR_CLIENT_ID) # PVR addon data dir
+PVR_SETTINGS_XML    = os.path.join(PVR_CLIENT_LOC,'settings.xml')        # PVR settings file
+
+# =============================================================================
+# Documentation Files
+# =============================================================================
 README_FLE          = os.path.join(ADDON_PATH,'README.md')
 CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
-#files
-MANAGERFLE          = 'manager.html'
-M3UFLE              = 'pseudotv.m3u'
-XMLTVFLE            = 'pseudotv.xml'
-GENREFLE            = 'genres.xml'
-BONJOURFLE          = 'bonjour.json'
-LOGSFLE             = 'logs.json'
-SERVERFLE           = 'servers.json'
-CHANNELFLE          = 'channels.json'
-LIBRARYFLE          = 'library.json'
-TVGROUPFLE          = 'tv_groups.xml'
-RADIOGROUPFLE       = 'radio_groups.xml'
-PROVIDERFLE         = 'providers.xml'
+# =============================================================================
+# Core Data File Names
+# =============================================================================
+MANAGERFLE          = 'manager.html'    # Channel manager HTML UI
+M3UFLE              = 'pseudotv.m3u'    # M3U playlist export
+XMLTVFLE            = 'pseudotv.xml'    # XMLTV EPG export
+GENREFLE            = 'genres.xml'      # Genre mapping definitions
+BONJOURFLE          = 'bonjour.json'    # Bonjour/Zeroconf service cache
+LOGSFLE             = 'logs.json'       # Diagnostic log export
+SERVERFLE           = 'servers.json'    # Multiroom server registry
+CHANNELFLE          = 'channels.json'   # Channel configuration database
+LIBRARYFLE          = 'library.json'    # Library content index
+TVGROUPFLE          = 'tv_groups.xml'    # TV channel group mappings
+RADIOGROUPFLE       = 'radio_groups.xml' # Radio channel group mappings
+PROVIDERFLE         = 'providers.xml'   # Content provider definitions
 
-CHANNEL_KEY         = 'Channels'
-CHANNELBACKUP_KEY   = f'{CHANNEL_KEY}.Backup'
-CHANNELCHANGED_KEY  = f'{CHANNEL_KEY}.Changed'
-CHANNELLATEST_KEY   = f'{CHANNEL_KEY}.Latest'
-CHANNELAUTOTUNE_KEY = f'{CHANNEL_KEY}.Autotune'
-RESUME_INDEX        = 'Resume.Filelist.Index'
+# =============================================================================
+# Property / Setting Keys (used with Kodi Properties and settings cache)
+# =============================================================================
+CHANNEL_KEY         = 'Channels'                    # Root property key for channel data
+CHANNELBACKUP_KEY   = f'{CHANNEL_KEY}.Backup'       # Backup snapshot key
+CHANNELCHANGED_KEY  = f'{CHANNEL_KEY}.Changed'      # Dirty flag for pending changes
+CHANNELLATEST_KEY   = f'{CHANNEL_KEY}.Latest'       # Latest build timestamp
+CHANNELAUTOTUNE_KEY = f'{CHANNEL_KEY}.Autotune'     # Autotune status key
+RESUME_INDEX        = 'Resume.Filelist.Index'       # Playback resume position index
 
-#exts
-VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')[:-1]
-MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')[:-1]
-IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')[:-1]
-IMG_EXTS            = ['.png','.jpg','.gif']
-TEXTURES            = 'Textures.xbt'
+# =============================================================================
+# Supported File Extensions (queried from Kodi at import time)
+# =============================================================================
+VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')[:-1]  # Video file extensions
+MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')[:-1]  # Music file extensions
+IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')[:-1] # Image file extensions
+IMG_EXTS            = ['.png','.jpg','.gif']  # Common image extensions for downloads
+TEXTURES            = 'Textures.xbt'         # Kodi texture atlas bundle
 
-#folders
-REMOTE_LOC          = os.path.join(ADDON_PATH,'remotes')
-IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
-MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
-SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')
-TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
-BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
+# =============================================================================
+# Directory Paths (relative to addon installation)
+# =============================================================================
+REMOTE_LOC          = os.path.join(ADDON_PATH,'remotes')                               # Remote/default config files
+IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')                    # Bundled images
+MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')   # Skin media assets
+SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')                                    # Sound effects
+TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')                                # Temporary file cache
+BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')                              # User backup directory
 
-#file paths
-CHANNEL_EXPORT_FLE  = os.path.join(BACKUP_LOC,CHANNELFLE)
-CHANNEL_BACKUP_FLE  = os.path.join(BACKUP_LOC,'%s.json'%(CHANNELBACKUP_KEY.lower()))
-SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
-CACHE_FLE           = os.path.join(SETTINGS_LOC,'cache.db')
-YOUTUBE_COOKIES     = os.path.join(SETTINGS_LOC,'www.youtube.com_cookies.txt')
+# =============================================================================
+# Resolved File Paths
+# =============================================================================
+CHANNEL_EXPORT_FLE  = os.path.join(BACKUP_LOC,CHANNELFLE)                                    # Channel export path
+CHANNEL_BACKUP_FLE  = os.path.join(BACKUP_LOC,'%s.json'%(CHANNELBACKUP_KEY.lower()))         # Channel backup path
+SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')                              # Kodi settings override
+CACHE_FLE           = os.path.join(SETTINGS_LOC,'cache.db')                                  # SQLite cache database
+YOUTUBE_COOKIES     = os.path.join(SETTINGS_LOC,'www.youtube.com_cookies.txt')               # YouTube auth cookies
 
-#sfx
-BING_WAV            = os.path.join(SFX_LOC,'bing.wav')
-NOTE_WAV            = os.path.join(SFX_LOC,'notify.wav')
+# =============================================================================
+# Sound Effects
+# =============================================================================
+BING_WAV            = os.path.join(SFX_LOC,'bing.wav')   # Notification alert sound
+NOTE_WAV            = os.path.join(SFX_LOC,'notify.wav') # Subtle notification sound
 
-#remotes
-M3UFLE_ITEM         = os.path.join(REMOTE_LOC,'m3u.json')
-SEASONS             = os.path.join(REMOTE_LOC,'seasons.json')
-HOLIDAYS            = os.path.join(REMOTE_LOC,'holidays.json')
-GROUPFLE_DEFAULT    = os.path.join(REMOTE_LOC,'groups.xml')
-MANAGERPATH         = os.path.join(REMOTE_LOC,MANAGERFLE)
-CHANNELFLE_DEFAULT  = os.path.join(REMOTE_LOC,CHANNELFLE)
-SERVERFLE_DEFAULT   = os.path.join(REMOTE_LOC,SERVERFLE)
-LIBRARYFLE_DEFAULT  = os.path.join(REMOTE_LOC,LIBRARYFLE)
-GENREFLE_DEFAULT    = os.path.join(REMOTE_LOC,GENREFLE)
-PROVIDERFLE_DEFAULT = os.path.join(REMOTE_LOC,PROVIDERFLE)
-INSTANCEFLE_DEFAULT = os.path.join(REMOTE_LOC,'instance-settings-1.xml')
+# =============================================================================
+# Remote/Default Config Files (shipped with addon)
+# =============================================================================
+M3UFLE_ITEM         = os.path.join(REMOTE_LOC,'m3u.json')          # M3U item template
+SEASONS             = os.path.join(REMOTE_LOC,'seasons.json')      # Seasonal content definitions
+HOLIDAYS            = os.path.join(REMOTE_LOC,'holidays.json')     # Holiday content definitions
+GROUPFLE_DEFAULT    = os.path.join(REMOTE_LOC,'groups.xml')        # Default channel groups
+MANAGERPATH         = os.path.join(REMOTE_LOC,MANAGERFLE)          # Default manager HTML
+CHANNELFLE_DEFAULT  = os.path.join(REMOTE_LOC,CHANNELFLE)          # Default channel config
+SERVERFLE_DEFAULT   = os.path.join(REMOTE_LOC,SERVERFLE)           # Default server config
+LIBRARYFLE_DEFAULT  = os.path.join(REMOTE_LOC,LIBRARYFLE)          # Default library config
+GENREFLE_DEFAULT    = os.path.join(REMOTE_LOC,GENREFLE)            # Default genre mappings
+PROVIDERFLE_DEFAULT = os.path.join(REMOTE_LOC,PROVIDERFLE)         # Default provider config
+INSTANCEFLE_DEFAULT = os.path.join(REMOTE_LOC,'instance-settings-1.xml') # Default instance settings
 
-#colors
-PRIMARY_BACKGROUND        = 'FF11375C'
-SECONDARY_BACKGROUND      = '334F4F9E'
-DIALOG_TINT               = 'FF181B1E'
-BUTTON_FOCUS              = 'FF2866A4'
-SELECTED                  = 'FF5BE5EE'
+# =============================================================================
+# UI Colors (ARGB hex or named)
+# =============================================================================
+PRIMARY_BACKGROUND        = 'FF11375C'   # Primary UI background color
+SECONDARY_BACKGROUND      = '334F4F9E'   # Secondary/overlay background (semi-transparent)
+DIALOG_TINT               = 'FF181B1E'   # Dialog window tint color
+BUTTON_FOCUS              = 'FF2866A4'   # Focused button highlight color
+SELECTED                  = 'FF5BE5EE'   # Selected item highlight color
 
-COLOR_BACKGROUND          = '01416b'
-COLOR_TEXT                = 'FFFFFF'
-COLOR_UNAVAILABLE_CHANNEL = 'dimgray'
-COLOR_AVAILABLE_CHANNEL   = 'white'
-COLOR_LOCKED_CHANNEL      = 'orange'
-COLOR_WARNING_CHANNEL     = 'red'
-COLOR_NEW_CHANNEL         = 'green'
-COLOR_RADIO_CHANNEL       = 'cyan'
-COLOR_FAVORITE_CHANNEL    = 'yellow'
-#https://github.com/xbmc/xbmc/blob/656052d108297e4dd8c5c6fc7db86606629e457e/system/colors.xml
+COLOR_BACKGROUND          = '01416b'     # Default image placeholder background
+COLOR_TEXT                = 'FFFFFF'     # Default text color (white)
+COLOR_UNAVAILABLE_CHANNEL = 'dimgray'    # Channel status: unavailable
+COLOR_AVAILABLE_CHANNEL   = 'white'      # Channel status: available
+COLOR_LOCKED_CHANNEL      = 'orange'     # Channel status: locked by rule
+COLOR_WARNING_CHANNEL     = 'red'        # Channel status: error/warning
+COLOR_NEW_CHANNEL         = 'green'      # Channel status: newly created
+COLOR_RADIO_CHANNEL       = 'cyan'       # Channel type: radio/music
+COLOR_FAVORITE_CHANNEL    = 'yellow'     # Channel status: user favorite
 
-#urls
+# =============================================================================
+# External URLs
+# =============================================================================
 URL_WIKI                  = 'https://github.com/PseudoTV/PseudoTV_Live/wiki'
 URL_SUPPORT               = 'https://forum.kodi.tv/showthread.php?tid=346803'
 URL_WIN_BONJOUR           = 'https://support.apple.com/en-us/106380'
 URL_README                = 'https://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/README.md'
 
+# =============================================================================
+# Skin XML Dialog Filenames
+# =============================================================================
+BUSY_XML        = '%s.busy.xml'%(ADDON_ID)          # Busy spinner dialog
+ONNEXT_XML      = '%s.onnext.xml'%(ADDON_ID)        # OnNext notification dialog
+REPLAY_XML      = '%s.restart.xml'%(ADDON_ID)       # Replay/restart prompt dialog
+BACKGROUND_XML  = '%s.background.xml'%(ADDON_ID)    # Background dialog
+MANAGER_XML     = '%s.manager.xml'%(ADDON_ID)       # Channel manager dialog
+OVERLAYTOOL_XML = '%s.overlaytool.xml'%(ADDON_ID)   # Overlay tool dialog
+DIALOG_SELECT   = '%s.dialogselect.xml'%(ADDON_ID)  # Custom select dialog
 
-# https://github.com/xbmc/xbmc/blob/master/system/colors.xml
-
-#images
-LOGO                = os.path.join(MEDIA_LOC,'wlogo.png')
-LOGO_DIM            = os.path.join(MEDIA_LOC,'dimlogo.png')
-LOGO_COLOR          = os.path.join(MEDIA_LOC,'logo.png')
-FANART_COLOR        = os.path.join(MEDIA_LOC,'fanart.jpg')
-LOGO_POSTER         = os.path.join(MEDIA_LOC,'poster.png')
-LOGO_LANDSCAPE      = os.path.join(MEDIA_LOC,'landscape.png')
-LOGO_SEASONAL       = os.path.join(MEDIA_LOC,'Seasonal.png')
-ICON_WEB            = os.path.join(MEDIA_LOC,'logo.ico')
-LOGO_HOST           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
-
-#skins
-BUSY_XML        = '%s.busy.xml'%(ADDON_ID)
-ONNEXT_XML      = '%s.onnext.xml'%(ADDON_ID)
-REPLAY_XML     = '%s.restart.xml'%(ADDON_ID)
-ONNEXT_XML      = '%s.onnext.xml'%(ADDON_ID)
-BACKGROUND_XML  = '%s.background.xml'%(ADDON_ID)
-MANAGER_XML     = '%s.manager.xml'%(ADDON_ID)
-OVERLAYTOOL_XML = '%s.overlaytool.xml'%(ADDON_ID)
-DIALOG_SELECT   = '%s.dialogselect.xml'%(ADDON_ID)
-
-# https://github.com/xbmc/xbmc/blob/master/xbmc/addons/kodi-dev-kit/include/kodi/c-api/gui/input/action_ids.h
-
-# Actions
+# =============================================================================
+# Kodi Action IDs (https://github.com/xbmc/xbmc/blob/master/xbmc/addons/kodi-dev-kit/include/kodi/c-api/gui/input/action_ids.h)
+# =============================================================================
 ACTION_MOVE_LEFT     = 1
 ACTION_MOVE_RIGHT    = 2
 ACTION_MOVE_UP       = 3
@@ -355,108 +385,68 @@ ACTION_INVALID       = 999
 ACTION_SELECT_ITEM   = [7,135]
 ACTION_PREVIOUS_MENU = [92,10,110,521,ACTION_SELECT_ITEM]
 
-#rules
-##builder
-RULES_VERSION                              = 0.1
-RULES_ACTION_CHANNEL_CITEM                 = 1 #Persistent citem changes
-RULES_ACTION_CHANNEL_START                 = 2 #Set channel global
-RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE   = 3 #Initial FileArray (build bypass)
-RULES_ACTION_CHANNEL_BUILD_PATH            = 4 #Alter parsing directory prior to build
-RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE    = 5 #Initial FileList prior to fillers, after interleaving
-RULES_ACTION_CHANNEL_BUILD_FILELIST_POST   = 6 #Final FileList after fillers
-RULES_ACTION_CHANNEL_BUILD_TIME_PRE        = 7 #FileList prior to scheduling
-RULES_ACTION_CHANNEL_BUILD_TIME_POST       = 8 #FileList after scheduling
-RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST  = 9 #FileArray prior to interleaving and fillers
-RULES_ACTION_CHANNEL_STOP                  = 10#restore channel global
-RULES_ACTION_CHANNEL_TEMP_CITEM            = 11 #Temporary citem changes, rule injection
-RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN = 12
-RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE  = 13
-RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST = 14
-##player
-RULES_ACTION_PLAYER_START  = 20 #Playback started
-RULES_ACTION_PLAYER_CHANGE = 21 #Playback changed/ended
-RULES_ACTION_PLAYER_STOP   = 22 #Playback stopped
-##overlay/background
-RULES_ACTION_OVERLAY_OPEN  = 30 #Overlay opened
-RULES_ACTION_OVERLAY_CLOSE = 31 #Overlay closed
-##playback
-RULES_ACTION_PLAYBACK_RESUME = 40 #Prior to playback trigger resume to received a FileList
+# =============================================================================
+# Rules System Action IDs
+# Actions are dispatched by the Builder/Player/Overlay via runActions().
+# Each constant defines a lifecycle hook where rule callbacks execute.
+# =============================================================================
+RULES_VERSION                              = 0.1  # Rules schema version
 
+# --- Channel Builder Actions ---
+RULES_ACTION_CHANNEL_CITEM                 = 1   # Persistent channel item modifications
+RULES_ACTION_CHANNEL_START                 = 2   # Channel build start (set channel globals)
+RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE   = 3   # Pre-build: initial file array (build bypass check)
+RULES_ACTION_CHANNEL_BUILD_PATH            = 4   # Pre-parse: alter directory path before scanning
+RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE    = 5   # Mid-build: file list before fillers/interleave
+RULES_ACTION_CHANNEL_BUILD_FILELIST_POST   = 6   # Post-build: file list after fillers applied
+RULES_ACTION_CHANNEL_BUILD_TIME_PRE        = 7   # Pre-schedule: file list before time-slot assignment
+RULES_ACTION_CHANNEL_BUILD_TIME_POST       = 8   # Post-schedule: file list after time-slot assignment
+RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST  = 9   # Post-build: file array before interleave/fillers
+RULES_ACTION_CHANNEL_STOP                  = 10  # Channel build complete (restore channel globals)
+RULES_ACTION_CHANNEL_TEMP_CITEM            = 11  # Temporary channel item modifications (rule injection)
+RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN = 12  # Final file list return point
+RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE  = 13  # Pre-request: file list before external fetch
+RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST = 14  # Post-request: file list after external fetch
+
+# --- Player Actions ---
+RULES_ACTION_PLAYER_START  = 20  # Playback started
+RULES_ACTION_PLAYER_CHANGE = 21  # Playback changed or ended
+RULES_ACTION_PLAYER_STOP   = 22  # Playback stopped
+
+# --- Overlay/Background Actions ---
+RULES_ACTION_OVERLAY_OPEN  = 30  # Overlay window opened
+RULES_ACTION_OVERLAY_CLOSE = 31  # Overlay window closed
+
+# --- Playback Actions ---
+RULES_ACTION_PLAYBACK_RESUME = 40  # Pre-resume: trigger resume to receive a FileList
+
+# =============================================================================
+# HTTP Headers
+# =============================================================================
 HEADER = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246"}
 
-MUSIC_LISTITEM_TYPES =   {'tracknumber'             : (int,),  #integer (8)
-                          'discnumber'              : (int,),  #integer (2)
-                          'duration'                : (int,),  #integer (245) - duration in seconds
-                          'year'                    : (int,),  #integer (1998)
-                          'genre'                   : (tuple,list),  
-                          'album'                   : (str,),  
-                          'artist'                  : (str,),  
-                          'title'                   : (str,),  
-                          'rating'                  : (float,),#float - range is between 0 and 10
-                          'userrating'              : (int,),  #integer - range is 1..10
-                          'lyrics'                  : (str,),
-                          'playcount'               : (int,),  #integer (2) - number of times this item has been played
-                          'lastplayed'              : (str,),  #string (Y-m-d h:m:s = 2009-04-05 23:16:04)
-                          'mediatype'               : (str,),  #string - "music", "song", "album", "artist"
-                          'dbid'                    : (int,),  #integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
-                          'listeners'               : (int,),  #integer (25614)
-                          'musicbrainztrackid'      : (str,list),
-                          'musicbrainzartistid'     : (str,list),
-                          'musicbrainzalbumid'      : (str,list),
-                          'musicbrainzalbumartistid': (str,list),
-                          'comment'                 : (str,),  
-                          'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
-                          # 'size'                    : (int,), #long (1024) - size in bytes
-                          'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
 
-VIDEO_LISTITEM_TYPES =   {'genre'                   : (tuple,list),
-                          'country'                 : (str,list),
-                          'year'                    : (int,),  #integer (2009)
-                          'episode'                 : (int,),  #integer (4)
-                          'season'                  : (int,),  #integer (1)
-                          'sortepisode'             : (int,),  #integer (4)
-                          'sortseason'              : (int,),  #integer (1)
-                          'episodeguide'            : (str,),
-                          'showlink'                : (str,list),
-                          'top250'                  : (int,),  #integer (192)
-                          'setid'                   : (int,),  #integer (14)
-                          'tracknumber'             : (int,),  #integer (3)
-                          'rating'                  : (float,),#float (6.4) - range is 0..10
-                          'userrating'              : (int,),  #integer (9) - range is 1..10 (0 to reset)
-                          'playcount'               : (int,),  #integer (2) - number of times this item has been played
-                          'overlay'                 : (int,),  #integer (2) - range is 0..7. See Overlay icon types for values
-                          'cast'                    : (list,),
-                          'castandrole'             : (list,tuple),
-                          'director'                : (str,list),
-                          'mpaa'                    : (str,),
-                          'plot'                    : (str,),
-                          'plotoutline'             : (str,),
-                          'title'                   : (str,),
-                          'originaltitle'           : (str,),
-                          'sorttitle'               : (str,),
-                          'duration'                : (int,),  #integer (245) - duration in seconds
-                          'studio'                  : (str,list),
-                          'tagline'                 : (str,),
-                          'writer'                  : (str,list),
-                          'tvshowtitle'             : (str,list),
-                          'premiered'               : (str,),  #string (2005-03-04)
-                          'status'                  : (str,),
-                          'set'                     : (str,),
-                          'setoverview'             : (str,),
-                          'tag'                     : (str,list),
-                          'imdbnumber'              : (str,),  #string (tt0110293) - IMDb code
-                          'code'                    : (str,),  #string (101) - Production code
-                          'aired'                   : (str,),  #string (2008-12-07) 
-                          'credits'                 : (str,list),
-                          'lastplayed'              : (str,),  #string (Y-m-d h:m:s = 2009-04-05 23:16:04)
-                          'album'                   : (str,),
-                          'artist'                  : (list,),
-                          'votes'                   : (str,),
-                          'path'                    : (str,),
-                          'trailer'                 : (str,),
-                          'dateadded'               : (str,),  #string (Y-m-d h:m:s = 2009-04-05 23:16:04)
-                          'mediatype'               : (str,),  #mediatype	string - "video", "movie", "tvshow", "season", "episode" or "musicvideo"
-                          'dbid'                    : (int,),  #integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
-                          'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
-                          # 'size'                    : (int,),  #long (1024) - size in bytes
-                          'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
+# =============================================================================
+# Logging
+# =============================================================================
+_LOG_THROTTLE = {}  # {(event, level): last_log_timestamp} - for throttled log dedup
+
+@staticmethod
+def LOG(event, level=xbmc.LOGDEBUG, throttle=0):
+    """Central logging function. Checks Debug_Enable and Debug_Level settings.
+    When level >= 3 (LOGERROR), appends traceback.format_exc() to the message.
+    When throttle > 0, suppresses duplicate (event, level) pairs within the interval."""
+    if REAL_SETTINGS.getSetting('Debug_Enable') == 'true' or level >= 3:
+        DEBUG_NAMES  = {0: 'LOGDEBUG', 1: 'LOGINFO', 2: 'LOGWARNING', 3: 'LOGERROR', 4: 'LOGFATAL'}
+        DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}
+        DEBUG_LEVEL  = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
+        if level >= 3: event = '%s\n%s' % (event, traceback.format_exc())
+        if throttle > 0:
+            now  = time.time()
+            key  = (event, level)
+            last = _LOG_THROTTLE.get(key, 0)
+            if (now - last) < throttle: return
+            _LOG_THROTTLE[key] = now
+        event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
+        if level >= DEBUG_LEVEL:
+            xbmc.log(event, level)

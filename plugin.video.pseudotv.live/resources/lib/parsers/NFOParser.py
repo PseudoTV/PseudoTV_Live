@@ -48,20 +48,20 @@ class NFOParser:
         fleName += '.nfo'
         
         if not FileAccess.exists(fleName):
-            log("NFOParser: Unable to locate NFO %s"%(fleName), xbmc.LOGERROR)
+            LOG("NFOParser: Unable to locate NFO %s"%(fleName), xbmc.LOGERROR)
             return 0
             
-        log("NFOParser: determineLength, file = %s, nfo = %s"%(filename, fleName))
+        LOG("NFOParser: determineLength, file = %s, nfo = %s"%(filename, fleName))
         
         try:
             File = FileAccess.open(fleName, "rb")
             dom = parse(File)
             File.close()
         except IOError as e:
-            log("NFOParser: Unable to open the file %s: %s"%(fleName, e), xbmc.LOGERROR)
+            LOG("NFOParser: Unable to open the file %s: %s"%(fleName, e), xbmc.LOGERROR)
             return 0
         except Exception as e:
-            log("NFOParser: Failed to parse XML: %s"%(e), xbmc.LOGERROR)
+            LOG("NFOParser: Failed to parse XML: %s"%(e), xbmc.LOGERROR)
             return 0
         
         # Try durationinseconds first (already in seconds)
@@ -69,9 +69,9 @@ class NFOParser:
             xmldurationinseconds = dom.getElementsByTagName('durationinseconds')[0].toxml()
             duration = int(xmldurationinseconds.replace('<durationinseconds>','').replace('</durationinseconds>','').strip())
             if duration > 0:
-                log("NFOParser: Found durationinseconds: %s"%(duration))
+                LOG("NFOParser: Found durationinseconds: %s"%(duration))
         except (IndexError, ValueError):
-            log("NFOParser: <durationinseconds> not found or invalid")
+            LOG("NFOParser: <durationinseconds> not found or invalid")
         
         # Fallback to runtime in minutes
         if duration == 0:
@@ -80,9 +80,9 @@ class NFOParser:
                 runtime_str = xmlruntime.replace('<runtime>','').replace('</runtime>','').replace(' min.','').strip()
                 duration = int(float(runtime_str)) * 60  # Convert minutes to seconds
                 if duration > 0:
-                    log("NFOParser: Found runtime (minutes): %s"%(runtime_str))
+                    LOG("NFOParser: Found runtime (minutes): %s"%(runtime_str))
             except (IndexError, ValueError):
-                log("NFOParser: <runtime> not found or invalid")
+                LOG("NFOParser: <runtime> not found or invalid")
         
         # Fallback to duration tag (interpret as seconds)
         if duration == 0:    
@@ -91,9 +91,9 @@ class NFOParser:
                 duration_str = xmlduration.replace('<duration>','').replace('</duration>','').strip()
                 duration = int(float(duration_str))
                 if duration > 0:
-                    log("NFOParser: Found duration (seconds): %s"%(duration_str))
+                    LOG("NFOParser: Found duration (seconds): %s"%(duration_str))
             except (IndexError, ValueError):
-                log("NFOParser: <duration> not found or invalid")
+                LOG("NFOParser: <duration> not found or invalid")
                 
-        log("NFOParser: Duration is %s seconds"%(duration))
+        LOG("NFOParser: Duration is %s seconds"%(duration))
         return duration

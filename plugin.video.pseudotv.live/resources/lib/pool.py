@@ -24,12 +24,13 @@ class ExecutorPool:
         if workers is None: workers = THREAD_WORKERS
         self._workers  = workers
         self._executor = ThreadPoolExecutor(max_workers=workers)
+        self.log('__init__, workers=%d' % workers, xbmc.LOGINFO)
     
     def __del__(self):
         self.shutdown()
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        xbmc.log('%s-%s-%s: %s' % (ADDON_ID, ADDON_VERSION, self.__class__.__name__, msg), level)
 
     def isShutdown(self):
         return getattr(self._executor, "_shutdown", False)
@@ -37,8 +38,8 @@ class ExecutorPool:
     def shutdown(self, wait=False, cancel=True):
         try: 
             self._executor.shutdown(wait=wait, cancel_futures=cancel)
-            self.log("_shutdown, _executor")
-        except Exception: pass
+            self.log("shutdown, executor stopped (wait=%s, cancel=%s)" % (wait, cancel), xbmc.LOGINFO)
+        except Exception as e: self.log("shutdown failed: %s" % e, xbmc.LOGWARNING)
             
     def executor(self, func, timeout=None, *args, **kwargs):
         if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout'))
@@ -46,6 +47,7 @@ class ExecutorPool:
         if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
             if self.isShutdown(): 
+                self.log('executor, pool was shutdown, recreating (workers=%d)' % self._workers, xbmc.LOGINFO)
                 self._executor = ThreadPoolExecutor(max_workers=self._workers)
                 
             with timeit(func):
@@ -53,10 +55,10 @@ class ExecutorPool:
                     future = self._executor.submit(func, *args, **kwargs)
                     return future.result(timeout=float(timeout) )
                 except TimeoutError:
-                    self.log(f"executor, func = {func.__name__} timed out after {timeout}s", xbmc.LOGWARNING)
+                    self.log("executor, %s timed out after %ds" % (func.__name__, timeout), xbmc.LOGWARNING)
                     future.cancel()
                 except Exception as e: 
-                    self.log(f"executor, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
+                    self.log("executor, %s failed: %s" % (func.__name__, e), xbmc.LOGERROR)
         return self.execute(func, *args, **kwargs)
 
     def execute(self, func, *args, **kwargs):
@@ -70,7 +72,8 @@ class ExecutorPool:
         update_wrapper(partial_func, func)
         return partial_func
         
-    def executors(self, func, items=[], timeout=None, *args, **kwargs):
+    def executors(self, func, items=None, timeout=None, *args, **kwargs):
+        if items is None: items = []
         if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout'))
         useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
         if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
@@ -87,7 +90,8 @@ class ExecutorPool:
                 if results: return results
         return self.generator(func, items, *args, **kwargs)
 
-    def generator(self, func, items=[], *args, **kwargs):
+    def generator(self, func, items=None, *args, **kwargs):
+        if items is None: items = []
         self.log("generator, items = %s"%(len(items)))
         try:
             with timeit(func):
@@ -101,8 +105,7 @@ def timeit(method):
     start_time = time.time()
     try: yield
     finally:
-        end_time = time.time()
-        log('%s timeit => %.2f ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
+        xbmc.log('%s timeit => %.2f ms'%(method.__qualname__.replace('.',': '),(time.time()-start_time)*1000))
 
 def debounceit(wait=None, monitor=None):
     if wait is None: wait = 5.0 #secs
@@ -147,6 +150,8 @@ def debounceit(wait=None, monitor=None):
         return wrapper
     return decorator
     
+_EXECUTOR_POOL = ExecutorPool()
+    
 def executeit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
@@ -155,7 +160,7 @@ def executeit(method):
             if monitor.abortRequested(): return None
             readable_name = method.__qualname__.replace('.', ': ')
             xbmc.log(f"executeit => {readable_name}", xbmc.LOGINFO)
-            return ExecutorPool().executor(method, TIMEOUT_EXECUTOR, *args, **kwargs)
+            return _EXECUTOR_POOL.executor(method, TIMEOUT_EXECUTOR, *args, **kwargs)
         except (RuntimeError, KeyError) as pool_err:
             xbmc.log(f"executeit => Pool infrastructure error running {method.__name__}: {pool_err}", xbmc.LOGERROR)
             return None
@@ -261,7 +266,7 @@ def poolit(method):
         def __worker():
             try:
                 if monitor.abortRequested(): return
-                execution_state['result'] = ExecutorPool().executors(method, items, wait, *args, **kwargs)
+                execution_state['result'] = _EXECUTOR_POOL.executors(method, items, wait, *args, **kwargs)
                 xbmc.log(f"{method.__qualname__} pool completed on {current_thread().name}", xbmc.LOGINFO)
             except Exception: execution_state['error'] = traceback.format_exc()
 

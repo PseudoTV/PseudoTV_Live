@@ -22,37 +22,49 @@ from fileaccess  import FileAccess, FileLock
 from kodi        import Kodi, Settings, Properties, ListItems, Builtin, Dialog
 from pool        import debounceit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
 
-MIN_GUIDEDAYS   = int((REAL_SETTINGS.getSetting('Min_Days')    or "1"))
-MAX_GUIDEDAYS   = int((REAL_SETTINGS.getSetting('Max_Days')    or "3"))
-OSD_TIMER       = int((REAL_SETTINGS.getSetting('OSD_Timer')   or "5"))
+# =============================================================================
+# Runtime Cache Paths (resolved from user settings at import time)
+# =============================================================================
+CACHE_LOC       = os.path.join(REAL_SETTINGS.getSetting('User_Folder')) # Root cache directory
+LOGO_LOC        = os.path.join(CACHE_LOC,'logos')                       # Cached logo images
+FILLER_LOC      = os.path.join(CACHE_LOC,'fillers')                     # Cached filler content
+M3UFLEPATH      = os.path.join(CACHE_LOC,M3UFLE)                        # Active M3U playlist path
+XMLTVFLEPATH    = os.path.join(CACHE_LOC,XMLTVFLE)                      # Active XMLTV EPG path
+GENREFLEPATH    = os.path.join(CACHE_LOC,GENREFLE)                      # Active genre mappings path
+PROVIDERFLEPATH = os.path.join(CACHE_LOC,PROVIDERFLE)                   # Active provider config path
 
-CACHE_LOC       = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
-LOGO_LOC        = os.path.join(CACHE_LOC,'logos')
-FILLER_LOC      = os.path.join(CACHE_LOC,'fillers')
-M3UFLEPATH      = os.path.join(CACHE_LOC,M3UFLE)
-XMLTVFLEPATH    = os.path.join(CACHE_LOC,XMLTVFLE)
-GENREFLEPATH    = os.path.join(CACHE_LOC,GENREFLE)
-PROVIDERFLEPATH = os.path.join(CACHE_LOC,PROVIDERFLE)
 
 class Globals:
+    """Central service hub and utility collection.
+    
+    Holds singleton instances of Kodi services (dialog, properties, settings, etc.)
+    and provides static utility methods for string manipulation, media handling,
+    time operations, channel management, and Kodi integration.
+    
+    Attributes:
+        kodi       : Kodi() singleton — main Kodi interface
+        dialog     : Dialog wrapper — progress dialogs, notifications
+        properties : Properties wrapper — Kodi property get/set with caching
+        settings   : Settings wrapper — addon settings with typed accessors
+        listitems  : ListItems wrapper — ListItem creation helpers
+        builtin    : Builtin wrapper — Kodi built-in function executor
+    """
+    
     kodi       = Kodi()
-    dialog     = KODI.dialog
-    properties = KODI.properties
-    settings   = KODI.settings
-    listitems  = KODI.listitems
-    builtin    = KODI.builtin
+    dialog     = kodi.dialog
+    properties = kodi.properties
+    settings   = kodi.settings
+    listitems  = kodi.listitems
+    builtin    = kodi.builtin
+    
+    # Compiled regex patterns (class-level to avoid recompilation per call)
+    _SPLIT_YEAR_RE = re.compile(r'(.*) \((.*)\)', re.IGNORECASE)  # Extracts "(year)" suffix from labels
+    _PARSE_SE_RE   = re.compile(                                    # Parses SxxExx season/episode from filenames
+        r'(?:s|season)\s*(?P<s>\d+)\s*(?:e|x|episode)\s*(?P<e>\d+)|'
+        r'(?P<s2>\d{1,2})[xX](?P<e2>\d{1,2})|'
+        r'(?<!\d)(?P<s3>\d)(?P<e3>\d{2})(?!\d)',
+        re.IGNORECASE)
 
-    @staticmethod
-    def _log(event, level=xbmc.LOGDEBUG):
-        if REAL_SETTINGS.getSetting('Debug_Enable') == 'true' or level >= 3:
-            DEBUG_NAMES  = {0: 'LOGDEBUG', 1: 'LOGINFO', 2: 'LOGWARNING', 3: 'LOGERROR', 4: 'LOGFATAL'}
-            DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}
-            DEBUG_LEVEL  = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
-            if level >= 3: event = '%s\n%s' % (event, traceback.format_exc())
-            event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
-            if level >= DEBUG_LEVEL:
-                xbmc.log(event, level)
-                
     @staticmethod
     def _encodePlot(plot, text):
         return '%s [COLOR item="%s"][/COLOR]'%(plot,FileAccess._encodeString(text))
@@ -63,7 +75,10 @@ class Globals:
             plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
             if plot: return FileAccess._decodeString(plot.group(1))
         return {}
-        
+    
+    # =========================================================================
+    # String Encoding/Decoding Utilities
+    # =========================================================================
     @staticmethod
     def _escapeString(text, table=HTML_ESCAPE):
         return escape(text,table)
@@ -94,15 +109,14 @@ class Globals:
         s = re.sub(r'[\s_-]+', '_', s)
         s = re.sub(r'^-+|-+$', '', s)
         return s
-            
+    
+    # =========================================================================
+    # Kodi UI / Dialog Helpers
+    # =========================================================================
     @staticmethod
     def _notificationDialog(msg, header=ADDON_NAME, time=PROMPT_DELAY, logo=LOGO_COLOR):
         xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, msg, time*1000, logo))
-        
-    @staticmethod
-    def _getInfoBool(key, param='Library'):
-        return (xbmc.getCondVisibility('%s.%s'%(param,key)) or False)
-        
+
     @staticmethod
     def _getInfoLabel(key, default=''):
         return (xbmc.getInfoLabel(key) or default)
@@ -120,16 +134,19 @@ class Globals:
     def _openGuide(instanceName=ADDON_NAME):
         def __match(match):
             for name in FileAccess.listdir('pvr://channels/tv/')[0]:
-                if name.lower().startswith(self._quoteString(match.lower())):
+                if name.lower().startswith(urllib.parse.quote(match.lower())):
                     return match, 'pvr://channels/tv/%s'%(name)
             return match, __match('All channels')
-        if self._getInfoBool('HasTVChannels','Pvr'):
+        if xbmc.getCondVisibility('Pvr.HasTVChannels') or False:
             try:
                 instanceName, path = __match(instanceName)
                 xbmc.executebuiltin("ReplaceWindow(TVGuide,%s)"%(path))
             except Exception: xbmc.executebuiltin("ReplaceWindow(TVGuide)")
-        else: self._openSettings()
-          
+        else: Globals._openSettings()
+    
+    # =========================================================================
+    # Media / Artwork Helpers
+    # =========================================================================
     @staticmethod  
     def _getThumb(item={}, opt=0): #unify thumbnail artwork
         art  = None
@@ -149,7 +166,7 @@ class Globals:
     @staticmethod
     def _getDummyIcon(text, background=COLOR_BACKGROUND, color=COLOR_TEXT):
         if not isinstance(text, (str,bytes)): text = str(text)
-        url  = f'https://dummyimage.com/512x512/{background}/{color}.png&text={self._quoteString(text)}'
+        url  = f'https://dummyimage.com/512x512/{background}/{color}.png&text={urllib.parse.quote(text)}'
         file = os.path.join(TEMP_LOC,f'{FileAccess._getMD5(url)}.png')
         if   FileAccess.exists(file):      return file
         elif FileAccess.setURL(url, file): return file
@@ -166,6 +183,9 @@ class Globals:
                 image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
         return image.strip('/')
 
+    # =========================================================================
+    # List / Dict Utilities
+    # =========================================================================
     @staticmethod  
     def _findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
         if not values: return [-1]
@@ -182,7 +202,7 @@ class Globals:
             for idx, item in enumerate(items): 
                 if isinstance(item,xbmcgui.ListItem): 
                     if item_key == 'getLabel':  
-                        _match(item.self._getLabel() ,value)
+                        _match(item.getLabel() ,value)
                     elif item_key == 'getLabel2': 
                         _match(item.getLabel2(),value)
                     elif item_key == 'getPath': 
@@ -206,14 +226,14 @@ class Globals:
         # dict = { "key": [], "key": []}
         for k, v in list(dict2.items()):
             dict1.setdefault(k,[]).extend(v)
-            self.self._setDictLST(dict1)
+            Globals._setDictLST(dict1)
         return dict1
         
     @staticmethod  
     def _lstSetDictLst(lst=[]):
         items = dict()
         for key, dictlst in list(lst.items()):
-            if isinstance(dictlst, list): dictlst = self.self._setDictLST(dictlst)
+            if isinstance(dictlst, list): dictlst = Globals._setDictLST(dictlst)
             items[key] = dictlst
         return items
         
@@ -225,7 +245,7 @@ class Globals:
             
     @staticmethod  
     def _cleanGroups(citem={}):
-        if REAL_SETTINGS.getSetting('Enable_Grouping') == "true":
+        if Globals.settings.getSetting('Enable_Grouping') == "true":
             #Default
             if ADDON_NAME not in citem.get('group'): citem.setdefault('group',[]).append(ADDON_NAME)
             #Favorites
@@ -243,11 +263,11 @@ class Globals:
     @staticmethod
     def _randomShuffle(items):
         if isinstance(items, dict):
-            return {key: self._randomShuffle(items[key]) for key in self._randomShuffle(list(items.keys()))}
+            return {key: Globals._randomShuffle(items[key]) for key in Globals._randomShuffle(list(items.keys()))}
         elif isinstance(items, (list, tuple)):
             if not items: return [] if isinstance(items, list) else ()
             shuffled_list = random.sample(items, len(items))
-            result = [self._randomShuffle(item) for item in shuffled_list]
+            result = [Globals._randomShuffle(item) for item in shuffled_list]
             return tuple(result) if isinstance(items, tuple) else result
         return items
 
@@ -260,8 +280,8 @@ class Globals:
         
     @staticmethod
     def double_urlencode(text):
-        text = self.single_urlencode(text)
-        text = self.single_urlencode(text)
+        text = Globals.single_urlencode(text)
+        text = Globals.single_urlencode(text)
         return text
 
     @staticmethod  
@@ -311,7 +331,7 @@ class Globals:
 
     @staticmethod
     def _splitStacks(path): #split stack path for indv. files.
-        if not self._isStack(path): return [path]
+        if not Globals._isStack(path): return [path]
         return [_f for _f in ((path.split('stack://')[1]).split(' , ')) if _f]
 
     @staticmethod
@@ -331,42 +351,45 @@ class Globals:
     
     @staticmethod
     def _stripRegion(s):
-        match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(s)
+        match = Globals._SPLIT_YEAR_RE.search(s)
         try:    return match.group(1)
         except Exception: return s
 
     @staticmethod
     def _splitYear(label):
         try:
-            match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(label)
+            match = Globals._SPLIT_YEAR_RE.search(label)
             if match and match.group(2):
                 label, year = match.groups()
                 if year.isdigit():
                     return label, int(year)
-        except Exception: pass
+        except Exception as e: log('_splitYear failed: %s' % e, xbmc.LOGDEBUG)
         return label, None
 
     @staticmethod
     def _chanceBool(percent=25):
         return random.randrange(100) < percent
 
+    # =========================================================================
+    # Channel ID / Name Utilities
+    # =========================================================================
     @staticmethod
     def _getChannelID(name, path, number, uuid=None):
-        if uuid is None: uuid = self.SETTINGS.getMYUUID()
+        if uuid is None: uuid = Globals.settings.getMYUUID()
         if isinstance(path, list): path = '|'.join(path)
         tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
-        return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),self._slugify(ADDON_NAME))
+        return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
     
     @staticmethod
     def _getRecordID(name, path, number, uuid=None):
-        if uuid is None: uuid = self.SETTINGS.getMYUUID()
+        if uuid is None: uuid = Globals.settings.getMYUUID()
         if isinstance(path, list): path = '|'.join(path)
         tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
-        return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:16]).decode(DEFAULT_ENCODING),self._slugify(ADDON_NAME))
+        return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:16]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
 
     @staticmethod
     def _getChannelSuffix(name, type):
-        name = self._validString(name)
+        name = Globals._validString(name)
         if   type == "TV Genres"    and not LANGUAGE(32014).lower() in name.lower(): suffix = LANGUAGE(32014) #TV
         elif type == "Movie Genres" and not LANGUAGE(32015).lower() in name.lower(): suffix = LANGUAGE(32015) #Movies
         elif type == "Mixed Genres" and not LANGUAGE(32010).lower() in name.lower(): suffix = LANGUAGE(32010) #Mixed
@@ -386,7 +409,7 @@ class Globals:
     def _getLabel(item, addYear=False):
         label = (item.get('name') or item.get('label') or item.get('showtitle') or item.get('title'))
         if not label: return ''
-        label, year = self._splitYear(label)
+        label, year = Globals._splitYear(label)
         year = (item.get('year') or year)
         if year and addYear: return '%s (%s)'%(label, year)
         return label
@@ -394,11 +417,14 @@ class Globals:
     @staticmethod
     def _hasFile(file):
         if not file.startswith(tuple(VFS_TYPES + WEB_TYPES)): state = FileAccess.exists(file)
-        elif   file.startswith('plugin://'):                  state = self.SETTINGS.hasAddon(file)
+        elif   file.startswith('plugin://'):                  state = Globals.settings.hasAddon(file)
         else:                                                 state = True
-        log("Globals: hasFile, file = %s (%s)"%(file,state))
+        LOG("Globals: hasFile, file = %s (%s)"%(file,state))
         return state    
 
+    # =========================================================================
+    # Time / DateTime Utilities
+    # =========================================================================
     @staticmethod
     def _roundTimeDown(dt=None, offset=30): # round the given time down to the nearest
         if dt is None: dt = time.time()
@@ -414,12 +440,12 @@ class Globals:
     @staticmethod
     def _strpTime(datestring, format=DTJSONFORMAT): #convert pvr infolabel datetime string to datetime obj, thread safe!
         try:              return datetime.datetime.strptime(datestring, format)
-        except TypeError: return datetime.datetime.fromtimestamp(ime.mktime(time.strptime(datestring, format)))
+        except TypeError: return datetime.datetime.fromtimestamp(time.mktime(time.strptime(datestring, format)))
         except Exception:           return ''
        
     @staticmethod
     def _epochTime(timestamp, tz=True): #convert pvr json datetime string to datetime obj
-        if tz: timestamp -= self._getTimeoffset()
+        if tz: timestamp -= Globals._getTimeoffset()
         return datetime.datetime.fromtimestamp(timestamp)
 
     @staticmethod
@@ -428,7 +454,7 @@ class Globals:
         
     @staticmethod
     def _getUTCstamp():
-        return time.time() - self._getTimeoffset()
+        return time.time() - Globals._getTimeoffset()
 
     @staticmethod
     def _getGMTstamp():
@@ -472,14 +498,6 @@ class Globals:
     @staticmethod
     def _combineDicts(dict1={}, dict2={}):
         return {**dict1, **dict2}
-        
-    @staticmethod
-    def _setDictLST(lst=[]):
-        items = {}
-        for key, dictlst in list(lst.items()):
-            if isinstance(dictlst, list): dictlst = self.self._setDictLST(dictlst)
-            items[key] = dictlst
-        return items
         
     @staticmethod
     def _compareDict(dict1,dict2,sortKey):
@@ -560,23 +578,23 @@ class Globals:
     @staticmethod
     def _pagination(list, end):
         for start in range(0, len(list), end):
-            yield seq[start:start+end]
+            yield list[start:start+end]
 
     @staticmethod
     def _isCenterlized():
         default = f'special://profile/addon_data/{ADDON_ID}/cache'
-        if REAL_SETTINGS.getSetting('User_Folder') == default: return True
+        if Globals.settings.getSetting('User_Folder') == default: return True
         return False
     
     @staticmethod
     def _isShort(item={}, minDuration=None):
-        if minDuration is None: minDuration = self.SETTINGS.getSettingInt('Seek_Tolerance')
+        if minDuration is None: minDuration = Globals.settings.getSettingInt('Seek_Tolerance')
         if item.get('duration', minDuration) < minDuration: return True
         else: return False
    
     @staticmethod
     def _isEnding(progress=100):
-        if progress >= self.SETTINGS.getSettingInt('Seek_Threshold'): return True
+        if progress >= Globals.settings.getSettingInt('Seek_Threshold'): return True
         else: return False
 
     @staticmethod
@@ -586,12 +604,7 @@ class Globals:
         
     @staticmethod
     def _parseSE(filename):
-        pattern = re.compile(
-            r'(?:s|season)\s*(?P<s>\d+)\s*(?:e|x|episode)\s*(?P<e>\d+)|' # S01E01
-            r'(?P<s2>\d{1,2})[xX](?P<e2>\d{1,2})|'                       # 1x01
-            r'(?<!\d)(?P<s3>\d)(?P<e3>\d{2})(?!\d)',                     # 101 (excludes 4-digit years)
-            re.IGNORECASE)
-        match = pattern.search(filename)
+        match = Globals._PARSE_SE_RE.search(filename)
         if match:
             res = {k: v for k, v in match.groupdict().items() if v is not None}
             if 's'  in res: return int(res['s']), int(res['e'])

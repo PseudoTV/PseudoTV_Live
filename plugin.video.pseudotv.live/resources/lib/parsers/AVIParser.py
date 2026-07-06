@@ -34,7 +34,8 @@ class AVIChunk:
         data = thefile.readBytes(4)
         try:    
             self.size = struct.unpack('<i', data)[0]
-        except: 
+        except Exception as e: 
+            LOG('AVIParser: struct.unpack failed: %s' % e, xbmc.LOGDEBUG)
             self.size = 0
         # Putting an upper limit on the chunk size, in case the file is corrupt
         if self.size > 0 and self.size < 10000: 
@@ -57,7 +58,8 @@ class AVIList:
         data = thefile.readBytes(4)
         try:    
             self.size = struct.unpack('<i', data)[0]
-        except: 
+        except Exception as e: 
+            LOG('AVIParser: ListChunk.struct.unpack failed: %s' % e, xbmc.LOGDEBUG)
             self.size = 0
         self.fourcc = thefile.read(4)
 
@@ -114,50 +116,50 @@ class AVIParser:
         Determines video length from AVI file.
         Returns duration in seconds.
         """
-        log("AVIParser: determineLength %s"%filename)
+        LOG("AVIParser: determineLength %s"%filename)
 
         try: 
             self.File = FileAccess.open(filename, "rb", None)
         except IOError as e:
-            log("AVIParser: Unable to open the file: %s"%e)
+            LOG("AVIParser: Unable to open the file: %s"%e)
             return 0
 
         try:
             dur = int(self.readHeader())
-            log('AVIParser: Duration is %s seconds'%(dur))
+            LOG('AVIParser: Duration is %s seconds'%(dur))
             return dur
         except Exception as e:
-            log("AVIParser: Error reading header: %s"%e)
+            LOG("AVIParser: Error reading header: %s"%e)
             return 0
         finally:
             try:
                 self.File.close()
-            except:
-                pass
+            except Exception as e:
+                LOG('AVIParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
 
     def readHeader(self):
         # AVI Chunk
         data = self.getChunkOrList()
         
         if data.datatype != 2:
-            log("AVIParser: Not an avi")
+            LOG("AVIParser: Not an avi")
             return 0
         
         if data.fourcc[0:4] != "AVI ":
-            log("AVIParser: Wrong FourCC")
+            LOG("AVIParser: Wrong FourCC")
             return 0
 
         # Header List
         data = self.getChunkOrList()
         if data.fourcc != "hdrl":
-            log("AVIParser: Header not found")
+            LOG("AVIParser: Header not found")
             return 0
 
         # Header chunk
         data = self.getChunkOrList()
 
         if data.fourcc != 'avih':
-            log('Header chunk not found')
+            LOG('Header chunk not found')
             return 0
 
         self.parseHeader(data)
@@ -169,7 +171,7 @@ class AVIParser:
 
         for i in range(self.Header.dwStreams):
             if data.datatype != 2:
-                log("AVIParser: Unable to find streams")
+                LOG("AVIParser: Unable to find streams")
                 return 0
 
             listsize = data.size
@@ -177,7 +179,7 @@ class AVIParser:
             data = self.getChunkOrList()
 
             if data.datatype != 1:
-                log("AVIParser: Broken stream header")
+                LOG("AVIParser: Broken stream header")
                 return 0
 
             self.StreamHeader.empty()
@@ -195,9 +197,9 @@ class AVIParser:
 
                 data = self.getChunkOrList()
             except Exception as e:
-                log("AVIParser: Unable to seek: %s"%e)
+                LOG("AVIParser: Unable to seek: %s"%e)
 
-        log("AVIParser: Video stream not found")
+        LOG("AVIParser: Video stream not found")
         return 0
 
 
@@ -208,7 +210,7 @@ class AVIParser:
                 return 0
             return int(self.StreamHeader.dwLength / (float(self.StreamHeader.dwRate) / float(self.StreamHeader.dwScale)))
         except (ZeroDivisionError, TypeError):
-            log("AVIParser: Error calculating duration", xbmc.LOGERROR)
+            LOG("AVIParser: Error calculating duration", xbmc.LOGERROR)
             return 0
 
 
@@ -227,7 +229,7 @@ class AVIParser:
             self.Header.dwHeight = header[9]
         except Exception as e:
             self.Header.empty()
-            log("AVIParser: Unable to parse the header: %s"%e)
+            LOG("AVIParser: Unable to parse the header: %s"%e)
 
 
     def parseStreamHeader(self, data):
@@ -249,13 +251,14 @@ class AVIParser:
             self.StreamHeader.rcFrame = ''
         except Exception as e:
             self.StreamHeader.empty()
-            log("AVIParser: Error reading stream header: %s"%e)
+            LOG("AVIParser: Error reading stream header: %s"%e)
 
 
     def getChunkOrList(self):
         try: 
             data = self.File.readBytes(4).decode(DEFAULT_ENCODING)
-        except: 
+        except Exception as e: 
+            LOG('AVIParser: getChunkOrList decode failed: %s, using read fallback' % e, xbmc.LOGDEBUG)
             data = self.File.read(4)
         
         if data == "RIFF" or data == "LIST":

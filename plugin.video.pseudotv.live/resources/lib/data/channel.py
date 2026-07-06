@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals   import *
+from variables import *
 
 class Channel():
     def __init__(self, id: str="", type: str="", number: int=0, name: str="", logo: str="", path: list=[], group: list=[], rules: list=[], catchup: str="vod", radio: bool=False, favorite: bool=False):

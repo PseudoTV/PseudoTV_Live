@@ -23,6 +23,19 @@ from kodi_six  import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
 from threading import Thread
 from variables import *
 
+def _getProp(key, default=None):
+    return xbmcgui.Window(10000).getProperty(key) or default
+    
+def _log(event, level=xbmc.LOGDEBUG):
+    if REAL_SETTINGS.getSetting('Debug_Enable') == 'true' or level >= 3:
+        DEBUG_NAMES  = {0: 'LOGDEBUG', 1: 'LOGINFO', 2: 'LOGWARNING', 3: 'LOGERROR', 4: 'LOGFATAL'}
+        DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}
+        DEBUG_LEVEL  = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
+        if level >= 3: event = '%s\n%s' % (event, traceback.format_exc())
+        event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
+        if level >= DEBUG_LEVEL:
+            xbmc.log(event, level)
+            
 class _Service(object):
     """Lightweight dummy service - used by Dialog when full services.Service isn't required."""
     def __init__(self):
@@ -32,7 +45,6 @@ class _Service(object):
         self.player           = xbmc.Player()
         self.monitor          = xbmc.Monitor()
         self.pool             = ExecutorPool()
-        self.kodi             = Kodi(self)
         self.cache            = Cache(mem_cache=True)
         self.jsonRPC          = JSONRPC(service=self)
         self.pendingShutdown  = False
@@ -42,26 +54,28 @@ class _Service(object):
         self.serviceThread    = Thread(target=self._run, name=f"{ADDON_ID}.serviceThread")
 
         if self.serviceThread.is_alive():
+            self.log('__init__, serviceThread already alive, joining for %.1fs' % SERVICE_INTERVAL, xbmc.LOGINFO)
             try: self.serviceThread.join(SERVICE_INTERVAL)
-            except Exception: pass
+            except Exception as e: self.log('__init__, serviceThread join failed: %s' % e, xbmc.LOGWARNING)
         else:
             self.serviceThread.daemon = True
             self.serviceThread.start()
+            self.log('__init__, serviceThread started (daemon=%s)' % self.serviceThread.daemon, xbmc.LOGINFO)
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        _log(f"{self.__class__.__name__}: {msg}", level)
 
     def _shutdown(self) -> bool:
-        return _getEXTProperty('%s.pendingShutdown'%(ADDON_ID),False) or self.monitor.abortRequested()
+        return _getProp('%s.pendingShutdown'%(ADDON_ID),'false') == 'true' or self.monitor.abortRequested()
 
     def _restart(self) -> bool:
-        return _getEXTProperty('%s.pendingRestart'%(ADDON_ID),False)
+        return _getProp('%s.pendingRestart'%(ADDON_ID),'false') == 'true'
 
     def _interrupt(self) -> bool:
-        return any([_getEXTProperty('%s.pendingInterrupt'%(ADDON_ID),False), self.Kodi.builtin._isScanning()])
+        return any([_getProp('%s.pendingInterrupt'%(ADDON_ID),'false') == 'true', self.monitor.abortRequested()])
 
     def _suspend(self) -> bool:
-        return any([_getEXTProperty('%s.pendingSuspend'%(ADDON_ID),False), self.kodi.builtin._isSettingsOpened()])
+        return any([_getProp('%s.pendingSuspend'%(ADDON_ID),'false') == 'true', self.monitor.abortRequested()])
 
     def _sleep(self, wait=None):
         if wait is None: wait = CPU_CYCLE
@@ -72,7 +86,7 @@ class _Service(object):
         return False
 
     def _run(self):
-        self.log('_run, starting')
+        self.log('_run, starting service loop (interval=%.1fs)' % SERVICE_INTERVAL, xbmc.LOGINFO)
         while not self.monitor.abortRequested():
             self.pendingShutdown  = self._shutdown()
             self.pendingRestart   = self._restart()
@@ -82,26 +96,28 @@ class _Service(object):
                 break
         self.pool.shutdown()
         self.cache.shutdown()
-        self.log('_run, stopping...')
+        self.log('_run, service loop ended (shutdown=%s, restart=%s)' % (self.pendingShutdown, self.pendingRestart), xbmc.LOGINFO)
 
 def _start():
     try:
         from services import Service
         monitor = xbmc.Monitor()
+        _log("_start, importing Service and entering main loop", xbmc.LOGINFO)
         while not monitor.abortRequested():
             restart = Service()._start()
             if monitor.waitForAbort(CPU_CYCLE) or not restart: 
-                Globals.DIALOG.notificationDialog(LANGUAGE(32141))
-                log("Services: _start, shutting down...")
+                xbmcgui.Dialog().notification(ADDON_NAME, LANGUAGE(32141))
+                _log("_start, shutting down (restart=%s, abort=%s)" % (restart, monitor.abortRequested()), xbmc.LOGINFO)
                 break
             elif restart:
-                Globals.DIALOG.notificationDialog(LANGUAGE(32124))
-                log("Services: _start, restarting...")
+                xbmcgui.Dialog().notification(ADDON_NAME, LANGUAGE(32124))
+                _log("_start, restarting service loop", xbmc.LOGINFO)
         del monitor
     except Exception as e:
-         log("Services: _start, failed! %s"%(e), xbmc.LOGERROR)
-         Globals.DIALOG.notificationDialog(LANGUAGE(30079))
+         _log("_start, failed! %s" % (e), xbmc.LOGERROR)
+         xbmcgui.Dialog().notification(ADDON_NAME, LANGUAGE(30079))
     finally:
+        _log("_start, exiting (sys.exit)", xbmc.LOGINFO)
         sys.exit()
    
 if __name__ == '__main__': _start()

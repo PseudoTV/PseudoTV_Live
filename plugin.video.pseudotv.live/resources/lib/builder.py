@@ -46,25 +46,25 @@ class Builder(object):
         self.pErrors = []
         
         # Global rules setup
-        self.accurateDuration = bool(Globals.SETTINGS.getSettingInt('Duration_Type'))
-        self.interleaveSet    = Globals.SETTINGS.getSettingInt('Interleave_Set')
-        self.interleaveRepeat = Globals.SETTINGS.getSettingBool('Interleave_Repeat')
-        self.incStrms         = Globals.SETTINGS.getSettingBool('Enable_Strms')
-        self.inc3D            = Globals.SETTINGS.getSettingBool('Enable_3D')
-        self.incExtras        = Globals.SETTINGS.getSettingBool('Enable_Extras') 
-        self.incStrmDetails   = Globals.SETTINGS.getSettingBool('Enable_Details')
-        self.enableBCTs       = Globals.SETTINGS.getSettingBool('Enable_Fillers')
-        self.saveDuration     = Globals.SETTINGS.getSettingBool('Store_Duration')
-        self.minDuration      = Globals.SETTINGS.getSettingInt('Seek_Tolerance')
-        self.limit            = Globals.SETTINGS.getSettingInt('Page_Limit')
-        self.recursiveLimit   = Globals.SETTINGS.getSettingInt('Recursive_Depth')
+        self.accurateDuration = bool(Globals.settings.getSettingInt('Duration_Type'))
+        self.interleaveSet    = Globals.settings.getSettingInt('Interleave_Set')
+        self.interleaveRepeat = Globals.settings.getSettingBool('Interleave_Repeat')
+        self.incStrms         = Globals.settings.getSettingBool('Enable_Strms')
+        self.inc3D            = Globals.settings.getSettingBool('Enable_3D')
+        self.incExtras        = Globals.settings.getSettingBool('Enable_Extras') 
+        self.incStrmDetails   = Globals.settings.getSettingBool('Enable_Details')
+        self.enableBCTs       = Globals.settings.getSettingBool('Enable_Fillers')
+        self.saveDuration     = Globals.settings.getSettingBool('Store_Duration')
+        self.minDuration      = Globals.settings.getSettingInt('Seek_Tolerance')
+        self.limit            = Globals.settings.getSettingInt('Page_Limit')
+        self.recursiveLimit   = Globals.settings.getSettingInt('Recursive_Depth')
         self.padScheduling    = False #TODO Adv. Rules 
         self.padFilelist      = False #TODO Adv. Rules 
-        self.enableEven       = bool(Globals.SETTINGS.getSettingInt('Enable_Even'))
-        self.evenEpisode      = Globals.SETTINGS.getSettingBool('Enable_Even_Force_Episode')
-        self.evenShuffle      = Globals.SETTINGS.getSettingBool('Enable_Even_Force_Random')
-        self.enableChanged    = Globals.SETTINGS.getSettingBool('Enable_Changed')
-        self.pageLimit        = Globals.SETTINGS.getSettingInt('Page_Limit')
+        self.enableEven       = bool(Globals.settings.getSettingInt('Enable_Even'))
+        self.evenEpisode      = Globals.settings.getSettingBool('Enable_Even_Force_Episode')
+        self.evenShuffle      = Globals.settings.getSettingBool('Enable_Even_Force_Random')
+        self.enableChanged    = Globals.settings.getSettingBool('Enable_Changed')
+        self.pageLimit        = Globals.settings.getSettingInt('Page_Limit')
         
         self.filter           = {}
         self.sort             = {}
@@ -72,36 +72,36 @@ class Builder(object):
         self.query            = {}
         
         # Pre-cache constant configuration lookups to minimize setting poll overhead
-        preroll_max = Globals.SETTINGS.getSettingInt('Enable_Preroll')
-        postroll_min = Globals.SETTINGS.getSettingInt('Enable_Postroll')
-        post_chance = Globals.SETTINGS.getSettingInt('Random_Post_Chance')
-        include_trailers = Globals.SETTINGS.getSettingBool('Include_Trailers_KODI')
+        preroll_max = Globals.settings.getSettingInt('Enable_Preroll')
+        postroll_min = Globals.settings.getSettingInt('Enable_Postroll')
+        post_chance = Globals.settings.getSettingInt('Random_Post_Chance')
+        include_trailers = Globals.settings.getSettingBool('Include_Trailers_KODI')
 
         self.bctTypes = {
             "bumpers": {
                 "min": -1, "max": preroll_max, "auto": preroll_max == -1, "enabled": bool(preroll_max), 
-                "chance": Globals.SETTINGS.getSettingInt('Random_Pre_Chance'),
-                "sources": {"ids": Globals.SETTINGS.getSetting('Resource_Bumpers').split('|'), "paths": [os.path.join(FILLER_LOC, 'Bumpers', '')]}, "items": {}
+                "chance": Globals.settings.getSettingInt('Random_Pre_Chance'),
+                "sources": {"ids": Globals.settings.getSetting('Resource_Bumpers').split('|'), "paths": [os.path.join(FILLER_LOC, 'Bumpers', '')]}, "items": {}
             },
             "ratings": {
                 "min": -1, "max": preroll_max, "auto": preroll_max == -1, "enabled": bool(preroll_max), 
-                "chance": Globals.SETTINGS.getSettingInt('Random_Pre_Chance'),
-                "sources": {"ids": Globals.SETTINGS.getSetting('Resource_Ratings').split('|'), "paths": [os.path.join(FILLER_LOC, 'Ratings', '')]}, "items": {}
+                "chance": Globals.settings.getSettingInt('Random_Pre_Chance'),
+                "sources": {"ids": Globals.settings.getSetting('Resource_Ratings').split('|'), "paths": [os.path.join(FILLER_LOC, 'Ratings', '')]}, "items": {}
             },
             "adverts": {
                 "min": postroll_min, "max": self.pageLimit, "auto": postroll_min == -1, "enabled": bool(postroll_min), 
                 "chance": post_chance,
-                "sources": {"ids": Globals.SETTINGS.getSetting('Resource_Adverts').split('|'), "paths": [os.path.join(FILLER_LOC, 'Adverts', '')]}, "items": {}, "incKODI": include_trailers
+                "sources": {"ids": Globals.settings.getSetting('Resource_Adverts').split('|'), "paths": [os.path.join(FILLER_LOC, 'Adverts', '')]}, "items": {}, "incKODI": include_trailers
             },
             "trailers": {
                 "min": postroll_min, "max": self.pageLimit, "auto": postroll_min == -1, "enabled": bool(postroll_min), 
                 "chance": post_chance,
-                "sources": {"ids": Globals.SETTINGS.getSetting('Resource_Trailers').split('|'), "paths": [os.path.join(FILLER_LOC, 'Trailers', '')]}, "items": {}, "incKODI": include_trailers
+                "sources": {"ids": Globals.settings.getSetting('Resource_Trailers').split('|'), "paths": [os.path.join(FILLER_LOC, 'Trailers', '')]}, "items": {}, "incKODI": include_trailers
             },
             "extras": {
                 "min": postroll_min, "max": self.pageLimit, "auto": postroll_min == -1, "enabled": bool(postroll_min), 
                 "chance": post_chance,
-                "sources": {"ids": [], "paths": []}, "items": {}, "incKODI": Globals.SETTINGS.getSettingBool('Include_Extras_KODI')
+                "sources": {"ids": [], "paths": []}, "items": {}, "incKODI": Globals.settings.getSettingBool('Include_Extras_KODI')
             }
         }
         self.service   = service
@@ -115,7 +115,7 @@ class Builder(object):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
         
 
     def getVerifiedChannels(self, channels=None):
@@ -138,7 +138,7 @@ class Builder(object):
                 continue
             else:
                 if not citem.get('id'): 
-                    citem['id'] = Globals._getChannelID(citem['name'], citem['path'], citem['number'], Globals.SETTINGS.getMYUUID())
+                    citem['id'] = Globals._getChannelID(citem['name'], citem['path'], citem['number'], Globals.settings.getMYUUID())
                 citem['logo'] = self.resources.getLogo(citem, fallback=self.resources.getImageCache(citem['name']), lookup=True)
                 self.log(f"[{citem['id']}] VERIFIED - channel {citem['number']}: {citem['name']} changed = {citem.get('changed', False)}", xbmc.LOGINFO)
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, Globals._cleanGroups(citem), inherited=self)
@@ -168,11 +168,11 @@ class Builder(object):
 
     def buildChannels(self, channels: list = None, preview=False, silent=None, write=True):
         if channels is None: channels = []
-        if silent is None:   silent = not Globals.SETTINGS.showDialog(silent)
-        self.log(f"buildChannels, channels = {len(channels)}")
+        if silent is None:   silent = not Globals.settings.showDialog(silent)
+        self.log('buildChannels, channels=%d, preview=%s, silent=%s, write=%s' % (len(channels), preview, silent, write))
         
-        if Globals.PROPERTIES.isRunning('Builder.buildChannels'): return
-        with Globals.PROPERTIES.legacy(), Globals.PROPERTIES.chkRunning('Builder.buildChannels'):
+        if Globals.properties.isRunning('Builder.buildChannels'): return
+        with Globals.properties.legacy(), Globals.properties.chkRunning('Builder.buildChannels'):
             channels = self.getVerifiedChannels(channels)
             if not channels: return
             changes  = set()
@@ -214,7 +214,7 @@ class Builder(object):
                         raw_start = all_stop_times.get(citem.get('id'), fallback_epoch)
                         
                         if isinstance(raw_start, str):
-                            start_epoch = float(string_to_epoch(raw_start))
+                            start_epoch = float(datetime.datetime.strptime(raw_start, DTFORMAT).timestamp())
                             start_timestamp_str = raw_start
                         else:
                             start_epoch = float(raw_start)
@@ -227,7 +227,7 @@ class Builder(object):
                         if not _changed and getattr(self, 'enableChanged', False):
                             paths = citem.get('path', [])
                             valid_extensions = tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)
-                            _changed = any(Globals.SETTINGS.getFileCRC(f) for f in paths if f.endswith(valid_extensions))
+                            _changed = any(Globals.settings.getFileCRC(f) for f in paths if f.endswith(valid_extensions))
                         
                         if _changed:
                             self.log(f"[{citem.get('id')}] Playlist signature mutation caught; flushing target datasets.")
@@ -242,7 +242,7 @@ class Builder(object):
                             self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
 
                             if start_epoch > 0:
-                                with Globals.DIALOG._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
+                                with Globals.dialog._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
                                     self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
                                     fileList = self.buildMusic(citem) if citem.get('radio', False) else self.buildVideo(citem)
                                     
@@ -270,7 +270,7 @@ class Builder(object):
                                         if self.pErrors:
                                             if has_progs: self.pErrors.append(LANGUAGE(32033))
                                             chanErrors = ' | '.join(sorted(set(self.pErrors)))
-                                            self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}: {chanErrors}', header=f'{ADDON_NAME}, Errors detected.')
+                                            self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}: {chanErrors}', header=f'{ADDON_NAME}, Errors detected.')
                                     self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                         else:
                             has_progs = has_programmes.get(citem.get('id'), False)
@@ -317,7 +317,7 @@ class Builder(object):
             self.log(f" [{citem.get('id')}] buildVideo: Seasonal Content, new rules = {nrules}")
             
         if self.enableEven and not tmp_citem.get('rules', {}).get(1000):
-            nrules = {1000: {"values": {0: Globals.SETTINGS.getSettingInt('Enable_Even'), 1: self.evenEpisode, 2: self.evenShuffle}}}
+            nrules = {1000: {"values": {0: Globals.settings.getSettingInt('Enable_Even'), 1: self.evenEpisode, 2: self.evenShuffle}}}
             tmp_citem.setdefault('rules', {}).update(nrules)
             self.log(f" [{citem.get('id')}] buildVideo: Even Show Distribution, new rules = {nrules}")
             
@@ -330,7 +330,7 @@ class Builder(object):
             for idx, base_path in enumerate(paths):
                 if self.service.pendingInterrupt:
                     self.log(f"[{citem.get('id')}] buildVideo, _interrupt")
-                    self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                     return []
                 elif self.service.pendingSuspend:
                     self.log(f"[{citem.get('id')}] buildVideo, _suspend")
@@ -348,7 +348,7 @@ class Builder(object):
                     if sub_path_len > 1:
                         self.pName = f"{citem.get('name', '')} {idx + 1}/{path_len}\n{cnt + 1}/{sub_path_len}"
                         
-                    self.pDialog = Globals.DIALOG._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}', header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}', header=self.pHeader)
                     processed_path = self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, path, inherited=self)
                     fileList = self.buildFileList(citem, processed_path, 'video', self.limit, self.sort, self.limits, self.query)
                     
@@ -379,7 +379,7 @@ class Builder(object):
 
 
     def buildFileList(self, citem: dict, path: str, media: str = 'video', page: int = None, sort = None, limits = None, query = None) -> list:
-        if page is None:   page   = Globals.SETTINGS.getSettingInt('Page_Limit')
+        if page is None:   page   = Globals.settings.getSettingInt('Page_Limit')
         if sort is None:   sort   = {}
         if limits is None: limits = {"end": -1, "start": 0, "total": 0}
         if query is None:  query  = {}
@@ -397,12 +397,12 @@ class Builder(object):
         while not self.monitor.abortRequested():
             if self.service.pendingInterrupt:
                 self.log(f"[{citem.get('id')}] buildFileList, _interrupt")
-                self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
+                self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                 return []
             
             elif self.service.pendingSuspend:
                 self.log(f"[{citem.get('id')}] buildFileList, _suspend")
-                self.pDialog = Globals.DIALOG._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
+                self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
                 if not self.service._sleep(CPU_CYCLE): 
                     continue
             
@@ -414,7 +414,7 @@ class Builder(object):
                     remainder  = page % list_len
                     paddedList = fileList * multiplier
                     if remainder > 0: paddedList.extend(fileList[:remainder])
-                    self.pDialog = Globals.DIALOG._updateProgressThrottled(self.pDialog, self.pCount, message=f'padding {remainder} files', header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'padding {remainder} files', header=self.pHeader)
                     fileList = paddedList
                     
                 elif list_len < page and len(dirList) > dirCount: self.pErrors.append(LANGUAGE(32262))
@@ -427,7 +427,7 @@ class Builder(object):
                 current_path = folder.get('file')
                 
                 if folder.get("label"): 
-                    self.pDialog = Globals.DIALOG._updateProgressThrottled(self.pDialog, self.pCount, message=f'parsing folder: {folder.get("label")}', header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'parsing folder: {folder.get("label")}', header=self.pHeader)
                 
                 remaining_needed = abs(page - len(fileList))
                 subfileList, subdirList, limits, errors = self.buildList(citem, current_path, media, remaining_needed, sort, limits, folder, query)
@@ -441,14 +441,14 @@ class Builder(object):
                     
                 if isinstance(subdirList, list):  
                     dirList.extend(subdirList)
-                    dirList = Globals.Globals._setDictLST(dirList)
+                    dirList = Globals._setDictLST(dirList)
                 self.log(f"[{citem.get('id')}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], adding fileList [{len(fileList)}/{page}] remaining sub-directories [{len(dirList)}]\npath = {current_path}, limits = {limits}")
         self.log(f"[{citem.get('id')}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], returning fileList [{len(fileList)}/{page}]")
         return fileList
 
 
     def buildList(self, citem: dict, path: str, media: str = 'video', page: int = None, sort = None, limits = None, dirItem = None, query = None):
-        if page is None:    page    = Globals.SETTINGS.getSettingInt('Page_Limit')
+        if page is None:    page    = Globals.settings.getSettingInt('Page_Limit')
         if sort is None:    sort    = {}
         if limits is None:  limits  = {"end": -1, "start": 0, "total": 0}
         if dirItem is None: dirItem = {}
@@ -492,7 +492,7 @@ class Builder(object):
 
     def buildFiles(self, citem: dict, path: str, items: list = None, media: str = 'video', page: int = None, sort = None, limits = None, dirItem = None, query = None):
         if items is None:   items   = []
-        if page is None:    page    = Globals.SETTINGS.getSettingInt('Page_Limit')
+        if page is None:    page    = Globals.settings.getSettingInt('Page_Limit')
         if sort is None:    sort    = {}
         if limits is None:  limits  = {"end": -1, "start": 0, "total": 0}
         if dirItem is None: dirItem = {}
@@ -526,7 +526,7 @@ class Builder(object):
 
             if self.service.pendingInterrupt or self.service.pendingSuspend:
                 self.log(f"[{citem.get('id')}] buildFiles, _interrupt/_suspend")
-                self.pDialog = Globals.DIALOG._updateProgressThrottled(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
+                self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                 break
 
             if fileType == 'directory':
@@ -536,7 +536,7 @@ class Builder(object):
                 continue
 
             suffix = "" if self.fCount < 0 else f": {self.fCount}%"
-            self.pDialog = Globals.DIALOG._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
+            self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
 
             if file.startswith('pvr://'):
                 self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx}, PVR item => FileItem! file = {file}", xbmc.LOGINFO)
@@ -599,13 +599,13 @@ class Builder(object):
             # Duration Validation
             dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
             if dur > self.minDuration:
-                self.pDialog = Globals.DIALOG._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
+                self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
                 item.update({
                     'duration'    : dur,
                     'media'       : media,
                     'originalpath': path,
-                    'friendly'    : Globals.PROPERTIES.getFriendlyName(),
-                    'remote'      : Globals.PROPERTIES.getRemoteHost()
+                    'friendly'    : Globals.properties.getFriendlyName(),
+                    'remote'      : Globals.properties.getRemoteHost()
                 })
                     
                 if item.get("year", 0) == 1601: 

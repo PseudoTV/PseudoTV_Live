@@ -26,7 +26,6 @@
 
 from variables   import *
 from cache       import Cache, cacheit
-from _services   import _Service
 
 KEY_QUERY   = {"method":"","order":"","field":'',"operator":'',"value":[]}
 LIMITS      = {"end":-1,"start":0,"total":0}
@@ -37,14 +36,16 @@ MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMov
 
 class Seasonal(object):
     def __init__(self, service=None):
-        if service is None: return
+        if service is None:
+            from kodi import _get_Service
+            service = _get_Service()
         self.service = service
         self.pool    = service.pool
         self.cache   = service.cache
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s' % (self.__class__.__name__, msg), level)
+        LOG('%s: %s' % (self.__class__.__name__, msg), level)
 
 
     def getYear(self):
@@ -82,7 +83,7 @@ class Seasonal(object):
     @cacheit(expiration=datetime.timedelta(minutes=15))
     def getHoliday(self, nearest=None):
         if nearest is None:
-            nearest = Globals.SETTINGS.getSettingBool('Nearest_Holiday')
+            nearest = Globals.settings.getSettingBool('Nearest_Holiday')
         self.log('getHoliday, nearest = %s' % (nearest))
         if nearest: return self.getNearestHoliday()
         else:       return self.getCurrentHoliday()

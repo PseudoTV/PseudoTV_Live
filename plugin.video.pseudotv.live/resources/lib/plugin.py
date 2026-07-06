@@ -39,11 +39,11 @@ class Plugin(object):
             
         self.sysInfo['isVOD']      = False#self.sysInfo.get('fitem').get('file','-1') != self.sysInfo.get('vid','-1')
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
-        self.sysInfo['isPlaylist'] = bool(Globals.SETTINGS.getSettingInt('Playback_Method'))
+        self.sysInfo['isPlaylist'] = bool(Globals.settings.getSettingInt('Playback_Method'))
         mode = 'playlist' if any([self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist']]) else sysInfo.get('mode')
         self.log(f'__init__, mode = {mode}, sysInfo = {self.sysInfo}')
         
-        with Globals.BUILTIN.busy_dialog():
+        with Globals.builtin.busy_dialog():
             if   mode == 'live':                    self.playLive()
             elif mode == 'radio':                   self.playRadio()
             elif mode == 'resume':                  self.playPaused()
@@ -52,19 +52,19 @@ class Plugin(object):
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
             
     def _updateSysInfo(self):
         self.log('[%s] _updateSysInfo'%(self.sysInfo.get('chid')))
-        if not self.player.isPlaying() and Globals.SETTINGS.getSettingBool('Debug_Enable'): Globals.DIALOG.notificationDialog('%s %s\n%s'%(LANGUAGE(32248),LANGUAGE(30223),LANGUAGE(32140)))
-        with Globals.PROPERTIES.suspendActivity():
+        if not self.player.isPlaying() and Globals.settings.getSettingBool('Debug_Enable'): Globals.dialog.notificationDialog('%s %s\n%s'%(LANGUAGE(32248),LANGUAGE(30223),LANGUAGE(32140)))
+        with Globals.properties.suspendActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
         if pvritem:
             self.sysInfo['fitem'] = Globals._decodePlot(pvritem.get('broadcastnow',{}).get('plot',''))
             self.sysInfo['nitem'] = Globals._decodePlot(pvritem.get('broadcastnext',[{}])[0].get('plot',''))
         else:
-            Globals.DIALOG.notificationDialog(LANGUAGE(32000))
+            Globals.dialog.notificationDialog(LANGUAGE(32000))
                 
             
     def _quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=None):
@@ -74,7 +74,7 @@ class Plugin(object):
                 
         if listitems:
             self.sysInfo['isPlaylist'] = True
-            if shuffle is None: shuffle = Globals.BUILTIN.isPlaylistRandom()
+            if shuffle is None: shuffle = Globals.builtin.isPlaylistRandom()
             self.log('[%s] _quePlaylist, listitems = %s, shuffle = %s'%(self.sysInfo.get('chid'), len(listitems), shuffle))
             playlist = xbmc.PlayList(pltype)
             playlist.clear()
@@ -102,24 +102,24 @@ class Plugin(object):
                     # Offset start based on user configured tolerances. 
                     nowitem = items.pop(0)
                     # content almost concluded, move to next queued item
-                    if round(nowitem['progresspercentage']) > Globals.SETTINGS.getSettingInt('Seek_Threshold'):
+                    if round(nowitem['progresspercentage']) > Globals.settings.getSettingInt('Seek_Threshold'):
                         self.log('[%s] __buildPlaylist, __findCurrent progress past threshold advance to nextitem'%(self.sysInfo.get('chid')))
                         nowitem = items.pop(0)
                     # content just started, reset seek and progress to the beginning. 
-                    if round(nowitem['progress']) < Globals.SETTINGS.getSettingInt('Seek_Tolerance'):
+                    if round(nowitem['progress']) < Globals.settings.getSettingInt('Seek_Tolerance'):
                         self.log('[%s] __buildPlaylist, __findCurrent progress start at the beginning'%(self.sysInfo.get('chid')))
                         nowitem['progress']           = 0
                         nowitem['progresspercentage'] = 0
-                    with Globals.PROPERTIES.suspendActivity():
+                    with Globals.properties.suspendActivity():
                         self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)
-                    items = items[:Globals.SETTINGS.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
+                    items = items[:Globals.settings.getSettingInt('Page_Limit')]# list of upcoming items, truncate for speed
                     items.insert(0,nowitem)
                 Globals._combineDicts(self.sysInfo['fitem'],items[0].get('fitem',{}))
             self.log('[%s] __buildPlaylist, __findCurrent building nextitems (%s)'%(self.sysInfo.get('chid'),len(items)))
             return items
             
         self.log('[%s] _getPVRItems'%(self.sysInfo.get('chid')))
-        with Globals.PROPERTIES.suspendActivity():
+        with Globals.properties.suspendActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=True)
         
         if pvritem:
@@ -132,13 +132,13 @@ class Plugin(object):
             if   self.sysInfo['fitem'].get('file'): nextitems = __findCurrent(nextitems)
             else:                                   nextitems = __findCurrent(nextitems, byFile=False)
             if len(nextitems) > 0: return nextitems
-            else: Globals.DIALOG.notificationDialog(LANGUAGE(32164))
-        else: Globals.DIALOG.notificationDialog(LANGUAGE(32000))
+            else: Globals.dialog.notificationDialog(LANGUAGE(32164))
+        else: Globals.dialog.notificationDialog(LANGUAGE(32000))
         return []
                    
                    
     def _setResume(self, listitem):
-        if self.sysInfo.get('seek',0) > Globals.SETTINGS.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
+        if self.sysInfo.get('seek',0) > Globals.settings.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
             self.log('[%s] _setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), listitem.getPath()))
             listitem.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
             infoTag = ListItemInfoTag(listitem,'video')
@@ -157,15 +157,15 @@ class Plugin(object):
                 self.sysInfo["progresspercentage"] = -1
                 self.sysInfo['name'] = self.sysInfo['fitem'].get('label')
                 self.sysInfo['vid']  = self.sysInfo['fitem'].get('file')
-                Globals.DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Channel')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
-                listitem = Globals.LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+                Globals.dialog.notificationDialog(f"{LANGUAGE(32185)%('Channel')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
+                listitem = Globals.listitems.buildItemListItem(self.sysInfo.get('fitem'))
             else:
                 #STRM called from Guide, presumably live; workaround for Kodi bug w/strm handling in setResolvedUrl.
-                listitem = self._setResume(Globals.LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+                listitem = self._setResume(Globals.listitems.buildItemListItem(self.sysInfo.get('fitem')))
             listitem.setProperty('sysInfo',FileAccess._encodeString(self.sysInfo))
             self._play(listitem.getPath(),listitem)
         else:#LIVE called from Guide/Channels.
-            listitem = self._setResume(Globals.LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+            listitem = self._setResume(Globals.listitems.buildItemListItem(self.sysInfo.get('fitem')))
             listitem.setProperty('sysInfo',FileAccess._encodeString(self.sysInfo))
             self._resolveURL(True, listitem)
     
@@ -175,13 +175,13 @@ class Plugin(object):
         def __buildfItem(item: dict={}):
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
-            listitem = Globals.LISTITEMS.buildItemListItem(item,'music')
+            listitem = Globals.listitems.buildItemListItem(item,'music')
             listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
             return listitem
             
         def __buildPlaylist(chid, name):
-            with Globals.PROPERTIES.suspendActivity():
-                return Globals._randomShuffle(Globals._interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in self.sysInfo.get('vid').split('|')], Globals.SETTINGS.getSettingInt('Interleave_Set'), Globals.SETTINGS.getSettingBool('Interleave_Repeat')))
+            with Globals.properties.suspendActivity():
+                return Globals._randomShuffle(Globals._interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in self.sysInfo.get('vid').split('|')], Globals.settings.getSettingInt('Interleave_Set'), Globals.settings.getSettingBool('Interleave_Repeat')))
         
         self.log('[%s] playRadio, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
         listitems = poolit(__buildfItem)(__buildPlaylist(self.sysInfo.get('chid'),self.sysInfo.get('name')))
@@ -193,7 +193,7 @@ class Plugin(object):
         def __buildfItem(item: dict={}):
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
-            listitem = Globals.LISTITEMS.buildItemListItem(item,'video')
+            listitem = Globals.listitems.buildItemListItem(item,'video')
             if FileAccess.exists(listitem.getPath()):  #todo insert missing media placeholder
                 if item.get('file') == item.get('resume',{}).get('file',str(random.random())):
                     seektime = int(item.get('resume',{}).get('position',0.0))
@@ -210,10 +210,10 @@ class Plugin(object):
         def __buildPlaylist(chid, name):
             lizLST = RulesList([self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid}))
             if lizLST:
-                lizLST = nextitems[:Globals.SETTINGS.getSettingInt('Page_Limit')]
+                lizLST = nextitems[:Globals.settings.getSettingInt('Page_Limit')]
                 self.log('[%s] __buildPlaylist, building lizLST (%s)'%(chid, len(lizLST)))
                 return poolit(__buildfItem)(lizLST)
-            else: Globals.DIALOG.notificationDialog(LANGUAGE(32000))
+            else: Globals.dialog.notificationDialog(LANGUAGE(32000))
             return []
         
         self.log('[%s] playPaused, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
@@ -226,8 +226,8 @@ class Plugin(object):
         self.log('[%s] playVOD, vid = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('vid')))
         self.sysInfo["seek"] = -1
         self.sysInfo["progresspercentage"] = -1
-        Globals.DIALOG.notificationDialog(f"{LANGUAGE(32185)%('VOD')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
-        self._resolveURL(True, Globals.LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+        Globals.dialog.notificationDialog(f"{LANGUAGE(32185)%('VOD')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
+        self._resolveURL(True, Globals.listitems.buildItemListItem(self.sysInfo.get('fitem')))
             
             
     @threadit
@@ -237,16 +237,16 @@ class Plugin(object):
             sysInfo['isPlaylist'] = True
             idx      = nextitems.index(nextitem)
             fitem    = Globals._decodePlot(nextitem.get('plot',''))
-            listitem = Globals.LISTITEMS.buildItemListItem(fitem,'video')
+            listitem = Globals.listitems.buildItemListItem(fitem,'video')
             if FileAccess.exists(listitem.getPath()): #todo insert missing media placeholder
                 if not self.sysInfo['isVOD']:
-                    listitem = self._setResume(Globals.LISTITEMS.buildItemListItem(self.sysInfo.get('fitem')))
+                    listitem = self._setResume(Globals.listitems.buildItemListItem(self.sysInfo.get('fitem')))
                 sysInfo.update({'fitem':fitem,'resume':{"idx":idx}})
                 listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
                 return listitem
             
         self.log('[%s] playPlaylist, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
-        Globals.DIALOG.notificationDialog(f"{LANGUAGE(32185)%('Playlist')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem'].get('label')}")
+        Globals.dialog.notificationDialog(f"{LANGUAGE(32185)%('Playlist')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem'].get('label')}")
         nextitems = self._getPVRItems()
         listitems = poolit(__buildfItem)(nextitems)
         self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
@@ -254,15 +254,15 @@ class Plugin(object):
             
     def _playCheck(self, path, found, listitem=None):
         def __findMissing(listitem):
-            label = (self.sysInfo['fitem'].get('label') or listitem.Globals._getLabel())
+            label = (self.sysInfo['fitem'].get('label') or listitem.getLabel())
             file  = (self.sysInfo['fitem'].get('file')  or listitem.getPath())
             if file.startswith(tuple(VFS_TYPES)): found = True
             else:
                 folder, filename  = os.path.split(file)
                 oSeason, oEpisode = Globals._parseSE(filename)
                 self.log(f"[{self.sysInfo.get('chid')}] _playCheck, __findMissing searching {label}: {filename} in {folder}")
-                Globals.DIALOG.notificationDialog(f"Missing: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
-                with Globals.PROPERTIES.suspendActivity():
+                Globals.dialog.notificationDialog(f"Missing: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
+                with Globals.properties.suspendActivity():
                     items, limits, errors = self.jsonRPC.getDirectory({"directory":folder,"media": "video"})
                     
                 found = False
@@ -279,7 +279,7 @@ class Plugin(object):
                     Globals._combineDicts(self.sysInfo['fitem'],item)
                     listitem.setPath(self.sysInfo['fitem']['file'])
                     self.log(f"[{self.sysInfo.get('chid')}] _playCheck, __findMissing found {self.sysInfo['fitem']['file']}")
-                    Globals.DIALOG.notificationDialog(f"Found: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
+                    Globals.dialog.notificationDialog(f"Found: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
                 #else: listitem.setPath(insert missing media placeholder)
             return found, listitem
             
@@ -311,7 +311,7 @@ class Plugin(object):
             
         if self.player.isPlayingAudio(): window = 'visualisation'
         else:                            window = 'fullscreenvideo'
-        timerit(Globals.BUILTIN.executewindow)(1.0,*('ActivateWindow(%s)'%(window),True,False,self.player.isPlaying))
+        timerit(Globals.builtin.executewindow)(1.0,*('ActivateWindow(%s)'%(window),True,False,self.player.isPlaying))
 
 
     def _resolveURL(self, found=False, listitem=None):

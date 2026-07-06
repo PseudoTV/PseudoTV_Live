@@ -44,13 +44,13 @@ class TSParser:
         Determines video length from TS file by reading PTS timestamps.
         Returns duration in seconds.
         """
-        log("TSParser: determineLength %s"%filename)
+        LOG("TSParser: determineLength %s"%filename)
         self.pid = -1
 
         try: 
             self.File = FileAccess.open(filename, "rb", None)
         except IOError as e:
-            log("TSParser: Unable to open the file: %s"%e)
+            LOG("TSParser: Unable to open the file: %s"%e)
             return 0
 
         try:
@@ -58,13 +58,13 @@ class TSParser:
             self.packetLength = self.findPacketLength()
 
             if self.packetLength <= 0:
-                log("TSParser: Invalid packet length")
+                LOG("TSParser: Invalid packet length")
                 return 0
 
             start = self.getStartTime()
-            log('TSParser: Start %s'%(start))
+            LOG('TSParser: Start %s'%(start))
             end = self.getEndTime()
-            log('TSParser: End - %s'%(end))
+            LOG('TSParser: End - %s'%(end))
 
             if end > start:
                 # 90000 is the PTS clock frequency (90 kHz)
@@ -72,17 +72,17 @@ class TSParser:
             else:
                 dur = 0
 
-            log("TSParser: Duration is %s seconds"%(dur))
+            LOG("TSParser: Duration is %s seconds"%(dur))
             return dur
         finally:
             try:
                 self.File.close()
-            except:
-                pass
+            except Exception as e:
+                LOG('TSParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
         
 
     def findPacketLength(self):
-        log('TSParser: findPacketLength')
+        LOG('TSParser: findPacketLength')
         maxbytes = 600
         start = 0
         self.packetLength = 0
@@ -104,11 +104,11 @@ class TSParser:
                         # A minimum of 188, so skip the rest
                         self.File.seek(187, 1)
             except Exception as e:
-                log('TSParser: Exception in findPacketLength: %s'%e)
+                LOG('TSParser: Exception in findPacketLength: %s'%e)
                 return 0
 
         if (start > 0) and (end > start):
-            log('TSParser: Packet Length: %s'%(end - start))
+            LOG('TSParser: Packet Length: %s'%(end - start))
             return (end - start)
 
         return 0
@@ -122,7 +122,7 @@ class TSParser:
             size = self.File.tell()
             self.File.seek(pos, 0)
         except Exception as e:
-            log("TSParser: Error getting file size: %s"%e)
+            LOG("TSParser: Error getting file size: %s"%e)
 
         return size
 
@@ -132,12 +132,12 @@ class TSParser:
         # A reasonably high number of retries in case the PES starts in the middle
         # and is it's maximum length
         maxpackets = 12000
-        log('TSParser: getStartTime')
+        LOG('TSParser: getStartTime')
 
         try:
             self.File.seek(0, 0)
         except Exception as e:
-            log("TSParser: Error seeking to start: %s"%e)
+            LOG("TSParser: Error seeking to start: %s"%e)
             return 0
 
         while not self.monitor.abortRequested() and maxpackets > 0:
@@ -152,7 +152,7 @@ class TSParser:
 
                 if ret > 0:
                     self.pid = packet.pid
-                    log('TSParser: PID: %s'%(self.pid))
+                    LOG('TSParser: PID: %s'%(self.pid))
                     return ret
 
         return 0
@@ -160,7 +160,7 @@ class TSParser:
 
     def getEndTime(self):
         """Find the last valid PTS timestamp in the file."""
-        log('TSParser: getEndTime')
+        LOG('TSParser: getEndTime')
         if self.packetLength <= 0:
             return 0
         
@@ -169,7 +169,7 @@ class TSParser:
         try:
             self.File.seek((packetcount * self.packetLength) - self.packetLength, 0)
         except Exception as e:
-            log("TSParser: Error seeking to end: %s"%e)
+            LOG("TSParser: Error seeking to end: %s"%e)
             return 0
 
         maxpackets = 12000
@@ -179,30 +179,30 @@ class TSParser:
             maxpackets -= 1
 
             if packet == None:
-                log('TSParser: getEndTime got a null packet')
+                LOG('TSParser: getEndTime got a null packet')
                 return 0
 
             if packet.errorbit == 0 and packet.pesstartbit == 1 and packet.pid == self.pid:
                 ret = self.getPTS(packet)
 
                 if ret > 0:
-                    log('TSParser: getEndTime returning time')
+                    LOG('TSParser: getEndTime returning time')
                     return ret
             else:
                 try:
                     self.File.seek(-1 * (self.packetLength * 2), 1)
                 except Exception as e:
-                    log('TSParser: exception seeking: %s'%e)
+                    LOG('TSParser: exception seeking: %s'%e)
                     return 0
 
-        log('TSParser: getEndTime no found end time')
+        LOG('TSParser: getEndTime no found end time')
         return 0
 
 
     def getPTS(self, packet):
         """Extract PTS (Presentation TimeStamp) from packet data."""
         timestamp = 0
-        log('TSParser: getPTS')
+        LOG('TSParser: getPTS')
 
         try:
             data = struct.unpack('19B', packet.pesdata[:19])
@@ -224,9 +224,9 @@ class TSParser:
                     timestamp = timestamp | (data[13 + offset] >> 1)
                     return timestamp
         except Exception as e:
-            log('TSParser: exception in getPTS: %s'%e)
+            LOG('TSParser: exception in getPTS: %s'%e)
 
-        log('TSParser: getPTS returning 0')
+        LOG('TSParser: getPTS returning 0')
         return 0
 
 
@@ -267,7 +267,7 @@ class TSParser:
                         # read the PES data
                         packet.pesdata = self.File.readBytes(self.packetLength - pos)
         except Exception as e:
-            log('TSParser: readTSPacket exception: %s'%e)
+            LOG('TSParser: readTSPacket exception: %s'%e)
             return None
 
         return packet

@@ -20,6 +20,9 @@
 from variables   import *
 
 class FileAccess(object):
+    _JSON_CACHE_MAX = 512
+    _json_cache = OrderedDict()
+
     @staticmethod
     def _getMD5(data):
         if not isinstance(data, (str, bytes, bytearray)):
@@ -37,7 +40,7 @@ class FileAccess(object):
             compressed = zlib.compress(normalized_str.encode(DEFAULT_ENCODING), level=1)
             return base64.urlsafe_b64encode(compressed).decode('ascii')
         except Exception as e:
-            log(f"_encodeString failed! {e}", xbmc.LOGERROR)
+            LOG(f"_encodeString failed! {e}", xbmc.LOGERROR)
         return ""
 
     @staticmethod
@@ -52,7 +55,7 @@ class FileAccess(object):
             decompressed_str = zlib.decompress(raw_bytes).decode(DEFAULT_ENCODING)
             return FileAccess.loadJSON(decompressed_str)
         except Exception as e:
-            log(f"_decodeString failed! {e}", xbmc.LOGERROR)
+            LOG(f"_decodeString failed! {e}", xbmc.LOGERROR)
         return ""
 
     @staticmethod
@@ -67,7 +70,7 @@ class FileAccess(object):
                 return bytes(item)
             return pickle.dumps(item, protocol=4)
         except Exception as e:
-            log(f"dumpPICKLE failed! {e}", xbmc.LOGERROR)
+            LOG(f"dumpPICKLE failed! {e}", xbmc.LOGERROR)
         return b""
 
     @staticmethod
@@ -83,7 +86,7 @@ class FileAccess(object):
         except pickle.UnpicklingError:
             pass
         except Exception as e:
-            log(f"loadPICKLE failed! {e}", xbmc.LOGERROR)
+            LOG(f"loadPICKLE failed! {e}", xbmc.LOGERROR)
         return None
 
     @staticmethod
@@ -102,7 +105,7 @@ class FileAccess(object):
         except (TypeError, ValueError):
             return '{}'
         except Exception as e:
-            log(f"dumpJSON failed! {e}", xbmc.LOGERROR)
+            LOG(f"dumpJSON failed! {e}", xbmc.LOGERROR)
         return '{}'
 
     @staticmethod
@@ -114,11 +117,21 @@ class FileAccess(object):
                 return json.load(item) or {}
             if isinstance(item, (bytes, bytearray)):
                 item = item.decode('utf-8')
+            if isinstance(item, str) and len(item) < 8192:
+                cached = FileAccess._json_cache.get(item)
+                if cached is not None:
+                    FileAccess._json_cache.move_to_end(item)
+                    return cached.copy()
+                result = json.loads(item)
+                FileAccess._json_cache[item] = result
+                if len(FileAccess._json_cache) > FileAccess._JSON_CACHE_MAX:
+                    FileAccess._json_cache.popitem(last=False)
+                return result
             return json.loads(item)
         except (json.JSONDecodeError, TypeError):
             return item
         except Exception as e:
-            log(f"loadJSON failed! {e}", xbmc.LOGERROR)
+            LOG(f"loadJSON failed! {e}", xbmc.LOGERROR)
         return item
 
     @staticmethod
@@ -127,7 +140,7 @@ class FileAccess(object):
             with FileAccess.stream(file_path, 'r') as fle:
                 return FileAccess.loadJSON(fle.read())
         except Exception as e:
-            log(f"getJSON failed! {e}\nfile = {file_path}", xbmc.LOGERROR)
+            LOG(f"getJSON failed! {e}\nfile = {file_path}", xbmc.LOGERROR)
         return {}
 
     @staticmethod
@@ -138,7 +151,7 @@ class FileAccess(object):
                     fle.write(FileAccess.dumpJSON(data, idnt=4, sortkey=False))
                 return True
             except Exception as e:
-                log(f"setJSON failed! {e}\nfile = {file_path}", xbmc.LOGERROR)
+                LOG(f"setJSON failed! {e}\nfile = {file_path}", xbmc.LOGERROR)
         return False
 
     @staticmethod
@@ -155,7 +168,7 @@ class FileAccess(object):
                         f.write(chunk)
             return True
         except Exception as e:
-            log(f"setURL failed! {e}\nfile = {file_path}", xbmc.LOGERROR)
+            LOG(f"setURL failed! {e}\nfile = {file_path}", xbmc.LOGERROR)
         return False
 
     @staticmethod
@@ -206,7 +219,7 @@ class FileAccess(object):
 
     @staticmethod
     def copyFolder(src, dest_dir, dia=None, move=False):
-        log(f"copyFolder {src} to {dest_dir}")
+        LOG(f"copyFolder {src} to {dest_dir}")
         if not FileAccess.exists(dest_dir):
             FileAccess.mkdirs(dest_dir)
         
@@ -244,14 +257,14 @@ class FileAccess(object):
         elif FileAccess.exists(newfilename):
             FileAccess.delete(newfilename)
             
-        log(f"copying {orgfilename} to {newfilename}")
+        LOG(f"copying {orgfilename} to {newfilename}")
         if xbmcvfs.copy(orgfilename, newfilename):
             return FileAccess.exists(newfilename)
         return False
 
     @staticmethod
     def move(orgfilename, newfilename):
-        log(f"moving {orgfilename} to {newfilename}")
+        LOG(f"moving {orgfilename} to {newfilename}")
         if FileAccess.copy(orgfilename, newfilename):
             return FileAccess.delete(orgfilename)
         return False
@@ -261,10 +274,10 @@ class FileAccess(object):
         try:
             if not FileAccess.exists(filename):
                 return False
-            log(f"delete {filename}", xbmc.LOGINFO)
+            LOG(f"delete {filename}", xbmc.LOGINFO)
             return xbmcvfs.delete(filename)
         except Exception as e:
-            log(f"delete failed via VFS! {e}. Attempting native os.remove", xbmc.LOGERROR)
+            LOG(f"delete failed via VFS! {e}. Attempting native os.remove", xbmc.LOGERROR)
             translated = FileAccess.translatePath(filename)
             if os.path.exists(translated):
                 os.remove(translated)
@@ -276,15 +289,15 @@ class FileAccess(object):
         if filepath.startswith('stack://'):
             try:
                 filepath = (filepath.split('stack://')[1].split(' , '))[0]
-            except Exception:
-                pass
+            except Exception as e:
+                LOG("exists stack:// parse failed: %s" % e, xbmc.LOGDEBUG)
         
         exists = xbmcvfs.exists(filepath)
         if not exists and not filepath.endswith('\\'):
             filepath_slashed = os.path.join(filepath, '')
             exists = os.path.exists(filepath_slashed) or os.path.exists(FileAccess.translatePath(filepath_slashed))
             
-        log(f"path = {path}, exists = {exists}")
+        LOG(f"path = {path}, exists = {exists}")
         return exists
 
     @staticmethod
@@ -293,8 +306,8 @@ class FileAccess(object):
             newname = '\\\\' + filename[6:]
             try:
                 return codecs.open(newname, mode, encoding)
-            except Exception:
-                pass
+            except Exception as e:
+                LOG("openSMB %s failed: %s" % (newname, e), xbmc.LOGDEBUG)
         return None
 
     @staticmethod
@@ -305,7 +318,7 @@ class FileAccess(object):
 
     @staticmethod
     def rename(path, newpath, force=True):
-        log(f"rename {path} to {newpath}, force = {force}")
+        LOG(f"rename {path} to {newpath}, force = {force}")
         if not FileAccess.exists(path):
             return False
         
@@ -313,13 +326,13 @@ class FileAccess(object):
             if xbmcvfs.rename(path, newpath):
                 return FileAccess.exists(newpath)
         except Exception as e:
-            log(f"xbmcvfs.rename failed! {e}", xbmc.LOGERROR)
+            LOG(f"xbmcvfs.rename failed! {e}", xbmc.LOGERROR)
             
         try:
             if FileAccess.move(path, newpath):
                 return True
         except Exception as e:
-            log(f"Fallback move failed! {e}", xbmc.LOGERROR)
+            LOG(f"Fallback move failed! {e}", xbmc.LOGERROR)
            
         if os.name.lower() == 'nt':
             if path.lower().startswith('smb://'): 
@@ -337,19 +350,19 @@ class FileAccess(object):
             os.rename(trans_path, trans_newpath)
             return True
         except Exception as e:
-            log(f"os.rename failed! {e}", xbmc.LOGERROR)
+            LOG(f"os.rename failed! {e}", xbmc.LOGERROR)
      
         try:
             shutil.move(trans_path, trans_newpath)
             return True
         except Exception as e:
-            log(f"shutil.move failed! {e}", xbmc.LOGERROR)
+            LOG(f"shutil.move failed! {e}", xbmc.LOGERROR)
             
         return False
 
     @staticmethod
     def removedirs(path, force=True):
-        log(f"removedirs, path = {path}, force = {force}")
+        LOG(f"removedirs, path = {path}, force = {force}")
         if not path:
             return False
         try:
@@ -361,13 +374,13 @@ class FileAccess(object):
                 os.rmdir(translated)
                 return not os.path.exists(translated)
             except Exception:
-                log("removedirs completely failed!", xbmc.LOGERROR)
+                LOG("removedirs completely failed!", xbmc.LOGERROR)
         return False
             
     @staticmethod
     def makedirs(path):
         try:
-            log(f"makedirs, path = {path}")
+            LOG(f"makedirs, path = {path}")
             translated = FileAccess.translatePath(path)
             os.makedirs(translated, exist_ok=True)
             return os.path.exists(translated)
@@ -401,9 +414,9 @@ class VFSFile:
         else:
             self.currentFile = xbmcvfs.File(filename, 'r')
             
-        log(f"VFSFile Opening {filename}", xbmc.LOGDEBUG)
+        LOG(f"VFSFile Opening {filename}", xbmc.LOGDEBUG)
         if self.currentFile is None:
-            log(f"VFSFile Couldn't open {filename}", xbmc.LOGERROR)
+            LOG(f"VFSFile Couldn't open {filename}", xbmc.LOGERROR)
 
     def __enter__(self):
         return self
@@ -451,7 +464,7 @@ class VFSFile:
         try:
             yield from self.read_in_chunks()
         except Exception as e:
-            log(f"VFSFile: readline failed! {e}", xbmc.LOGERROR)
+            LOG(f"VFSFile: readline failed! {e}", xbmc.LOGERROR)
         
     def read_in_chunks(self, chunk_size=1024):
         while not self.monitor.abortRequested():
@@ -476,8 +489,8 @@ class FileLock:
     def __del__(self):
         try:
             self.release()
-        except Exception:
-            pass
+        except Exception as e:
+            LOG("FileLock.__del__ release failed: %s" % e, xbmc.LOGDEBUG)
         
     def acquire(self):
         with self.thread_lock:
@@ -485,7 +498,7 @@ class FileLock:
             while not self.monitor.abortRequested():
                 if FileAccess.exists(self.lockfile):
                     if (time.time() - start_time) >= self.timeout:
-                        log("FileLock Timeout occurred waiting for lock to release.", xbmc.LOGWARNING)
+                        LOG("FileLock Timeout occurred waiting for lock to release.", xbmc.LOGWARNING)
                         break
                     self.monitor.waitForAbort(self.delay)
                     continue
@@ -495,7 +508,7 @@ class FileLock:
                     self.is_locked = True
                     break
                 except Exception as e:
-                    log(f"FileLock acquiring failed! {e}", xbmc.LOGERROR)
+                    LOG(f"FileLock acquiring failed! {e}", xbmc.LOGERROR)
                     break
  
     def release(self):

@@ -34,33 +34,33 @@ class MKVParser:
         Determines video length from MKV file.
         Returns duration in seconds.
         """
-        log("MKVParser: determineLength %s"%filename)
+        LOG("MKVParser: determineLength %s"%filename)
         try: 
             self.File = FileAccess.open(filename, "rb", None)
         except IOError as e:
-            log("MKVParser: Unable to open the file: %s"%e)
+            LOG("MKVParser: Unable to open the file: %s"%e)
             return 0
 
         try:
             size = self.findHeader()
 
             if size == 0:
-                log('MKVParser: Unable to find the segment info')
+                LOG('MKVParser: Unable to find the segment info')
                 dur = 0
             else:
                 dur = int(round(self.parseHeader(size)))
 
-            log("MKVParser: Duration is %s seconds"%(dur))
+            LOG("MKVParser: Duration is %s seconds"%(dur))
             return dur
         except Exception as e:
-            log("MKVParser: Error: %s"%e, xbmc.LOGERROR)
-            log(traceback.format_exc(), xbmc.LOGERROR)
+            LOG("MKVParser: Error: %s"%e, xbmc.LOGERROR)
+            LOG(traceback.format_exc(), xbmc.LOGERROR)
             return 0
         finally:
             try:
                 self.File.close()
-            except:
-                pass
+            except Exception as e:
+                LOG('MKVParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
         
 
     def parseHeader(self, size):
@@ -82,7 +82,7 @@ class MKVParser:
                     for x in range(datasize):
                         timecode = (timecode << 8) + struct.unpack('B', self.getData(1))[0]
                 except Exception as e:
-                    log("MKVParser: Error reading timecode: %s"%e)
+                    LOG("MKVParser: Error reading timecode: %s"%e)
                     timecode = 0
 
                 if duration != 0 and timecode != 0:
@@ -95,7 +95,7 @@ class MKVParser:
                     else:
                         duration = int(struct.unpack('>d', self.getData(datasize))[0])
                 except Exception as e:
-                    log("MKVParser: Error getting duration in header, size is %s: %s"%(datasize, e))
+                    LOG("MKVParser: Error getting duration in header, size is %s: %s"%(datasize, e))
                     duration = 0
 
                 if timecode != 0 and duration != 0:
@@ -104,7 +104,7 @@ class MKVParser:
                 try:    
                     self.File.seek(datasize, 1)
                 except Exception as e:
-                    log('MKVParser: Error while seeking: %s'%e)
+                    LOG('MKVParser: Error while seeking: %s'%e)
                     return 0
 
         if duration > 0 and timecode > 0:
@@ -117,17 +117,17 @@ class MKVParser:
 
     def findHeader(self):
         """Locate the segment info header in the MKV file."""
-        log("MKVParser: findHeader")
+        LOG("MKVParser: findHeader")
         filesize = self.getFileSize()
         if filesize == 0:
-            log("MKVParser: Empty file")
+            LOG("MKVParser: Empty file")
             return 0
 
         data = self.getEBMLId()
 
         # Check for EBML element ID (1A 45 DF A3)
         if data != 0x1A45DFA3:
-            log("MKVParser: Not a proper MKV")
+            LOG("MKVParser: Not a proper MKV")
             return 0
 
         datasize = self.getDataSize()
@@ -135,7 +135,7 @@ class MKVParser:
         try:
             self.File.seek(datasize, 1)
         except Exception as e:
-            log('MKVParser: Error while seeking: %s'%e)
+            LOG('MKVParser: Error while seeking: %s'%e)
             return 0
 
         data = self.getEBMLId()
@@ -147,7 +147,7 @@ class MKVParser:
             try:
                 self.File.seek(datasize, 1)
             except Exception as e:
-                log('MKVParser: Error while seeking: %s'%e)
+                LOG('MKVParser: Error while seeking: %s'%e)
                 return 0
 
             data = self.getEBMLId()
@@ -162,7 +162,7 @@ class MKVParser:
             try:
                 self.File.seek(datasize, 1)
             except Exception as e:
-                log('MKVParser: Error while seeking: %s'%e)
+                LOG('MKVParser: Error while seeking: %s'%e)
                 return 0
 
             data = self.getEBMLId()
@@ -184,7 +184,7 @@ class MKVParser:
             size = self.File.tell()
             self.File.seek(pos, 0)
         except Exception as e:
-            log("MKVParser: Error getting file size: %s"%e)
+            LOG("MKVParser: Error getting file size: %s"%e)
         return size
 
 
@@ -194,7 +194,7 @@ class MKVParser:
             data = self.File.readBytes(datasize)
             return data
         except Exception as e:
-            log("MKVParser: Error reading data: %s"%e)
+            LOG("MKVParser: Error reading data: %s"%e)
             return b''
 
 
@@ -220,7 +220,7 @@ class MKVParser:
                     if firstbyte >> (7 - i) == 1:
                         break
         except Exception as e:
-            log("MKVParser: Error in getDataSize: %s"%e)
+            LOG("MKVParser: Error in getDataSize: %s"%e)
             datasize = 0
 
         return datasize
@@ -240,6 +240,6 @@ class MKVParser:
                     if firstbyte >> (7 - i) == 1:
                         break
         except Exception as e:
-            log("MKVParser: Error in getEBMLId: %s"%e)
+            LOG("MKVParser: Error in getEBMLId: %s"%e)
             ID = 0
         return ID

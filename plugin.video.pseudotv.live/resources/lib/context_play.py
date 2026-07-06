@@ -22,19 +22,19 @@ from plugin    import Plugin
      
 @threadit
 def _run(sysARG, fitem: dict={}, nitem: dict={}):
-    with Globals.BUILTIN.busy_dialog():
+    with Globals.builtin.busy_dialog():
         mode                 = sysARG[1]
         params               = {}
         params['fitem']      = fitem
         params['nitem']      = nitem
         params['vid']        = FileAccess._decodeString(params.get("vid",''))
         params["chid"]       = (params.get("chid")  or fitem.get('citem',{}).get('id'))
-        params['title']      = (params.get('title') or Globals.BUILTIN.getInfoLabel('ListItem.label'))
-        params['name']       = (Globals._unquoteString(params.get("name",'')) or fitem.get('citem',{}).get('name') or Globals.BUILTIN.getInfoLabel('ListItem.ChannelName'))
+        params['title']      = (params.get('title') or Globals.builtin.getInfoLabel('ListItem.label'))
+        params['name']       = (Globals._unquoteString(params.get("name",'')) or fitem.get('citem',{}).get('name') or Globals.builtin.getInfoLabel('ListItem.ChannelName'))
         params['isPlaylist'] = (mode == 'playlist')
-        log("Context_Play: _run, params = %s"%(params))
+        LOG("Context_Play: _run, params = %s"%(params))
         
         if   mode == 'play':     threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
         elif mode == 'playlist': threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
             
-if __name__ == '__main__': _run(sys.argv, Globals._decodePlot(Globals.BUILTIN.getInfoLabel('ListItem.Plot')), Globals._decodePlot(Globals.BUILTIN.getInfoLabel('ListItem.NextPlot')))
+if __name__ == '__main__': _run(sys.argv, Globals._decodePlot(Globals.builtin.getInfoLabel('ListItem.Plot')), Globals._decodePlot(Globals.builtin.getInfoLabel('ListItem.NextPlot')))

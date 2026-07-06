@@ -18,15 +18,16 @@
 #
 # -*- coding: utf-8 -*-
 
-from variables  import *
-from m3u        import M3U
-from backup     import Backup
-from library    import Library
-from builder    import Builder
-from channels   import Channels
-from multiroom  import Multiroom
-from server     import HTTP, Discovery
+from variables      import *
+from m3u            import M3U
+from backup         import Backup
+from library        import Library
+from builder        import Builder
+from channels       import Channels
 
+_VERSION_RE = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME))
+from multiroom      import Multiroom
+from server         import HTTP, Discovery
 from context_create import _autotune
 
 class Tasks(object):
@@ -42,7 +43,7 @@ class Tasks(object):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
 
     def _client(self):
@@ -74,17 +75,17 @@ class Tasks(object):
         new_path = os.path.join(new,CHANNELFLE)
         if FileAccess.exists(old_path):
             self.log('migrate, importing %s...'%(old_path))
-            if Backup().importChannels(old_path): Globals.PROPERTIES.setPendingRestart(True)
-            if FileAccess.move(old_path,new_path): Globals.DIALOG.notificationDialog(LANGUAGE(32025))
+            if Backup().importChannels(old_path): Globals.properties.setPendingRestart(True)
+            if FileAccess.move(old_path,new_path): Globals.dialog.notificationDialog(LANGUAGE(32025))
                   
    
     def chkPVRBackend(self): 
-        instanceName = Globals.PROPERTIES.getFriendlyName()
-        hasPVR       = Globals.SETTINGS.hasAddon(PVR_CLIENT_ID,enable=True,notify=True)
+        instanceName = Globals.properties.getFriendlyName()
+        hasPVR       = Globals.settings.hasAddon(PVR_CLIENT_ID,enable=True,notify=True)
         self.log('chkPVRBackend, instanceName = %s, hasPVR = %s'%(instanceName,hasPVR))
         if hasPVR:
-            Globals.SETTINGS.instances.chkInstances(instanceName)
-            Globals.SETTINGS.setPVRLocal(Globals.PROPERTIES.getRemoteHost(),instanceName)
+            Globals.settings.instances.chkInstances(instanceName)
+            Globals.settings.setPVRLocal(Globals.properties.getRemoteHost(),instanceName)
             
 
     def chkHTTP(self):
@@ -94,17 +95,17 @@ class Tasks(object):
         
     def chkDebugging(self, disable=False):
         self.log('chkDebugging, disable = %s'%(disable))
-        if Globals.SETTINGS.getSettingBool('Debug_Enable'):
-            kodi_access = Globals.SETTINGS.getSettingBool('Enable_Kodi_Access')
-            keep_debug  = Globals.SETTINGS.getSettingBool('Debug_Keep_Enable')
-            if disable: Globals.SETTINGS.setSettingBool('Debug_Enable',False)
-            elif Globals.DIALOG.yesnoDialog(LANGUAGE(32142) if kodi_access else '%s\n%s'%(LANGUAGE(32142),LANGUAGE(32266)%(DEBUG_TIMEOUT//60)) ,autoclose=4):
+        if Globals.settings.getSettingBool('Debug_Enable'):
+            kodi_access = Globals.settings.getSettingBool('Enable_Kodi_Access')
+            keep_debug  = Globals.settings.getSettingBool('Debug_Keep_Enable')
+            if disable: Globals.settings.setSettingBool('Debug_Enable',False)
+            elif Globals.dialog.yesnoDialog(LANGUAGE(32142) if kodi_access else '%s\n%s'%(LANGUAGE(32142),LANGUAGE(32266)%(DEBUG_TIMEOUT//60)) ,autoclose=4):
                 self.log('_chkDebugging, disabling debugging.')
-                Globals.SETTINGS.setSettingBool('Debug_Enable',False)
-                Globals.DIALOG.notificationDialog(LANGUAGE(32025))
+                Globals.settings.setSettingBool('Debug_Enable',False)
+                Globals.dialog.notificationDialog(LANGUAGE(32025))
             elif kodi_access and not keep_debug: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True)
         #Force enable Kodi Debugging when enabled in PseudoTV via JSONRPC only if Kodi access allowed by user.
-        if kodi_access: self.jsonRPC.toggleShowLog(Globals.SETTINGS.getSettingBool('Debug_Enable'))
+        if kodi_access: self.jsonRPC.toggleShowLog(Globals.settings.getSettingBool('Debug_Enable'))
                     
              
     def chkDiscovery(self):
@@ -114,17 +115,17 @@ class Tasks(object):
          
 
     def chkCrash(self):
-        citem = Globals.SETTINGS.getCacheSetting('KODI.CRASH.JSONRPC.CITEM', default={})
-        Globals.SETTINGS.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
+        citem = Globals.settings.getCacheSetting('KODI.CRASH.JSONRPC.CITEM', default={})
+        Globals.settings.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
         if citem:
             self.log('chkCrash\n%s'%(citem))
-            # with Globals.BUILTIN.busy_dialog(), Globals.PROPERTIES.suspendActivity():
+            # with Globals.builtin.busy_dialog(), Globals.properties.suspendActivity():
                 # channels = Channels(writable=True)
                 # chanLST  = channels.getChannels()
                 # idx, channel = channels.findChannel(citem, chanLST)
                 # chanLST[idx].update({'enabled':False})
                 # if channels.setChannels(chanLST):
-                    # Globals.DIALOG.okDialog(f'Kodi encountered a fatal crash while parsing a [B]{ADDON_NAME}[\B] channel.\nPlease check the channel configuration for [B]{citem.get('name')}[\B]\n Channel [B]{citem.get('number')}[\B] temporarily disabled!', usethread=False)
+                    # Globals.dialog.okDialog(f'Kodi encountered a fatal crash while parsing a [B]{ADDON_NAME}[\B] channel.\nPlease check the channel configuration for [B]{citem.get('name')}[\B]\n Channel [B]{citem.get('number')}[\B] temporarily disabled!', usethread=False)
                 # del channels
   
   
@@ -136,33 +137,33 @@ class Tasks(object):
         
      #_chkPropTimer trigger - True == Run
     def _chkPropTimer(self, key, func, priority=-1, *args, **kwargs):
-        if Globals.PROPERTIES.getPropTimer(key):
+        if Globals.properties.getPropTimer(key):
             self.log('_chkPropTimer, key = %s'%(key))
-            Globals.PROPERTIES.clrEXTProperty(key)
+            Globals.properties.clrEXTProperty(key)
             self.service._que(func, priority, 0, 0, *args, **kwargs)
 
  
     def chkVersion(self):
-        try:              ONLINE_VERSION = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(self.jsonRPC.requestURL(ADDON_URL)))[0]
+        try:              ONLINE_VERSION = _VERSION_RE.findall(str(self.jsonRPC.requestURL(ADDON_URL)))[0]
         except Exception: ONLINE_VERSION = ADDON_VERSION
         UPDATE_AVAILABLE = False
-        LAST_VERSION = Globals.SETTINGS.getCacheSetting('chkVersion.LAST_VERSION', default='0.0.0')
+        LAST_VERSION = Globals.settings.getCacheSetting('chkVersion.LAST_VERSION', default='0.0.0')
         if ADDON_VERSION < ONLINE_VERSION:
             UPDATE_AVAILABLE = True
-            Globals.DIALOG.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
+            Globals.dialog.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
         elif ADDON_VERSION != LAST_VERSION:
-            Globals.SETTINGS.setCacheSetting('chkVersion.LAST_VERSION', ADDON_VERSION)
-            Globals.BUILTIN.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
-        Globals.SETTINGS.setSetting('Update_Status',{True:'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),False:'None'}[UPDATE_AVAILABLE])
+            Globals.settings.setCacheSetting('chkVersion.LAST_VERSION', ADDON_VERSION)
+            Globals.builtin.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
+        Globals.settings.setSetting('Update_Status',{True:'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),False:'None'}[UPDATE_AVAILABLE])
         self.log('chkVersion, installed = %s, online = %s, last = %s'%(ADDON_VERSION,ONLINE_VERSION,LAST_VERSION))
         self.service._que(self.chkVersion,1,43200)#12HRS
 
 
     def chkKodiSettings(self):
         self.log('chkKodiSettings')
-        MIN_GUIDEDAYS = Globals.SETTINGS.setSettingInt('Min_Days' ,self.jsonRPC.getSettingValue('epg.pastdaystodisplay'     ,default=1))
-        MAX_GUIDEDAYS = Globals.SETTINGS.setSettingInt('Max_Days' ,self.jsonRPC.getSettingValue('epg.futuredaystodisplay'   ,default=3))
-        OSD_TIMER     = Globals.SETTINGS.setSettingInt('OSD_Timer',self.jsonRPC.getSettingValue('pvrmenu.displaychannelinfo',default=5))
+        MIN_GUIDEDAYS = Globals.settings.setSettingInt('Min_Days' ,self.jsonRPC.getSettingValue('epg.pastdaystodisplay'     ,default=1))
+        MAX_GUIDEDAYS = Globals.settings.setSettingInt('Max_Days' ,self.jsonRPC.getSettingValue('epg.futuredaystodisplay'   ,default=3))
+        OSD_TIMER     = Globals.settings.setSettingInt('OSD_Timer',self.jsonRPC.getSettingValue('pvrmenu.displaychannelinfo',default=5))
         self.service._que(self.chkKodiSettings,1,10800)#3HRS
          
 
@@ -171,7 +172,7 @@ class Tasks(object):
 
 
     def chkFiles(self):
-        if not Globals.PROPERTIES.isRunning('Builder.buildChannels'):
+        if not Globals.properties.isRunning('Builder.buildChannels'):
             if any(not bool(FileAccess.exists(file)) for file in [M3UFLEPATH,XMLTVFLEPATH,GENREFLEPATH]): 
                 self.log('chkFiles, missing files! running chkChannels to rebuild.')
                 self.service._que(self.chkChannels,3)
@@ -179,7 +180,7 @@ class Tasks(object):
 
 
     def chkFillers(self, channels=None, silent=None):
-        with Globals.DIALOG._progressDialog(f'{ADDON_NAME}, {LANGUAGE(32179)}', ADDON_NAME, silent=silent, background=True) as pDialog:
+        with Globals.dialog._progressDialog(f'{ADDON_NAME}, {LANGUAGE(32179)}', ADDON_NAME, silent=silent, background=True) as pDialog:
             if channels is None: channels = self.getChannels()
             if not isinstance(channels, list) or len(channels) == 0:
                 self.log("chkFillers: No valid channels provided. Exiting tree scaffolding.")
@@ -187,7 +188,7 @@ class Tasks(object):
 
             def __create(idx, total, label, path):
                 FileAccess.makedirs(path)
-                return Globals.DIALOG._updateProgress(pDialog, int((idx / max(1, total)) * 100), message=label, header=f'{ADDON_NAME}, {LANGUAGE(32179)}')
+                return Globals.dialog._updateProgress(pDialog, int((idx / max(1, total)) * 100), message=label, header=f'{ADDON_NAME}, {LANGUAGE(32179)}')
 
             genres = Globals._mergeDict(self.jsonRPC.getVideoGenres(type="movie"), self.jsonRPC.getVideoGenres(type="tvshow"), 'label')
             mpaas  = Globals._mergeDict(self.jsonRPC.getMPAA(type="movie"), self.jsonRPC.getMPAA(type="tvshow"), 'label')
@@ -253,21 +254,21 @@ class Tasks(object):
     def chkTrailers(self, movies=None, tvshows=None, silent=None):
         if movies is None: movies = self.jsonRPC.getMovies()
         if tvshows is None: tvshows = self.jsonRPC.getTVshows()
-        if silent is None: silent = not Globals.SETTINGS.showDialog(silent)
+        if silent is None: silent = not Globals.settings.showDialog(silent)
         self.log('chkTrailers, movies = %s, tvshows = %s, silent = %s'%(len(movies),len(tvshows), silent))
-        if not Globals.PROPERTIES.isRunning('Tasks.chkTrailers') and Globals.SETTINGS.getSettingBool('Include_Trailers_KODI'):
-            with Globals.PROPERTIES.chkRunning('Tasks.chkTrailers'):
+        if not Globals.properties.isRunning('Tasks.chkTrailers') and Globals.settings.getSettingBool('Include_Trailers_KODI'):
+            with Globals.properties.chkRunning('Tasks.chkTrailers'):
                 pDialog  = None
                 pHeader  = '%s, %s %ss'%(ADDON_NAME,LANGUAGE(32022),LANGUAGE(30187))
-                with Globals.DIALOG._progressDialog('%ss: %s'%(LANGUAGE(32208),LANGUAGE(32015)), pHeader, silent) as pDialog:
+                with Globals.dialog._progressDialog('%ss: %s'%(LANGUAGE(32208),LANGUAGE(32015)), pHeader, silent) as pDialog:
                     for midx, movie in enumerate(movies):
                         if movie.get('trailer'):
-                            pDialog = Globals.DIALOG._updateProgress(pDialog,int(midx*100)//len(movies))
+                            pDialog = Globals.dialog._updateProgress(pDialog,int(midx*100)//len(movies))
                             self.service.trailerQue.add(FileAccess.dumpJSON(movie,sortkey=True))
-                with Globals.DIALOG._progressDialog('%ss: %s'%(LANGUAGE(32208),LANGUAGE(32014)), pHeader, silent) as pDialog:
+                with Globals.dialog._progressDialog('%ss: %s'%(LANGUAGE(32208),LANGUAGE(32014)), pHeader, silent) as pDialog:
                     for tidx, tvshow in enumerate(tvshows):
                         if tvshow.get('trailer'):
-                            pDialog = Globals.DIALOG._updateProgress(pDialog,int(tidx*100)//len(tvshows))
+                            pDialog = Globals.dialog._updateProgress(pDialog,int(tidx*100)//len(tvshows))
                             self.service.trailerQue.add(FileAccess.dumpJSON(tvshow,sortkey=True))
         self.service._que(self.chkTrailers,5,259200)#3DAYS
                 
@@ -276,8 +277,8 @@ class Tasks(object):
         if channels is None: channels = self.getChannels()
         if channels:
             programmes = []
-            if Globals.BUILTIN.getInfoBool("Pvr.HasTVChannels"):    programmes.extend(self.jsonRPC.getPVRChannels())
-            if Globals.BUILTIN.getInfoBool("Pvr.HasRadioChannels"): programmes.extend(self.jsonRPC.getPVRChannels(radio=True))
+            if Globals.builtin.getInfoBool("Pvr.HasTVChannels"):    programmes.extend(self.jsonRPC.getPVRChannels())
+            if Globals.builtin.getInfoBool("Pvr.HasRadioChannels"): programmes.extend(self.jsonRPC.getPVRChannels(radio=True))
             if not programmes: return self.service._que(self.chkStations,1,30)#30SECS
             broadcasts = { Globals._decodePlot(b.get('plot', '')).get('citem', {}).get('name') for b in programmes if 'broadcastnow' in b and b.get('plot')}
             remove = [c for c in channels if c.get('name') not in broadcasts]
@@ -285,25 +286,29 @@ class Tasks(object):
             with M3U(writable=len(remove)>0) as m3u:
                 for channel in remove: m3u.delStation(channel)
             self.service._que(self.chkStations,-1,MIN_EPG_DURATION)#3HRS
-            Globals.PROPERTIES.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
+            Globals.properties.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
                 
 
     def chkLibrary(self, types=None, silent=None):
-        if silent is None: silent = not Globals.SETTINGS.showDialog(silent)
+        if types is None: types = AUTOTUNE_TYPES
+        if silent is None: silent = not Globals.settings.showDialog(silent)
         self.log("chkLibrary, types = %s, silent = %s"%(types,silent))
         complete = set()
         library  = Library(service=self.service, writable=True)
-        library.searchRecommended()
-        if types is None: types = AUTOTUNE_TYPES
+        # library.searchRecommended()
         for idx, type in enumerate(types):
+            self.log("chkLibrary, processing [%d/%d] %s" % (idx+1,len(types),type))
             items = library.getLibrary(type)
             if items:
                 self.log("chkLibrary, %s library found! Setting items (%s), queuing update."%(type,len(items)))
                 complete.add(library.setLibrary(type, items))
+                self.log("chkLibrary, %s setLibrary done, queuing updateLibrary."%(type))
                 self.service._que(library.updateLibrary,-1,0,0,*([type],True))
+                self.log("chkLibrary, %s updateLibrary queued."%(type))
             else:
                 self.log("chkLibrary, %s library not found! starting update."%(type))
                 complete.add(library.updateLibrary([type],silent))
+            self.log("chkLibrary, %s done. complete=%s" % (type,complete))
         del library
         if any(complete): self.service._que(self.chkChannels,3,0,0,*(None,silent))
         self.service._que(self.chkLibrary,2,1800,0,0,*(None,True))#30MINS
@@ -312,12 +317,12 @@ class Tasks(object):
         
     def chkChanged(self, channels=None, silent=None):
         if channels is None: channels = self.getChannels()
-        if silent is None: silent = not Globals.SETTINGS.showDialog(silent)
+        if silent is None: silent = not Globals.settings.showDialog(silent)
         self.log("chkChanged, channels = %s, silent = %s"%(len(channels),silent))
         changed = [ch for ch in channels if isinstance(ch, dict) and ch.get('changed', False)]
         if not changed: return self.log("chkChanged: No channel modifications detected. Skipping batch allocation.")
         self.log(f"chkChanged: Distributing {len(changed)} modified channels across concurrent batches.")
-        if Globals.SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers, 3, 0, 0, changed, silent)
+        if Globals.settings.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers, 3, 0, 0, changed, silent)
         chunk_size = max(1, len(changed) // QUEUE_CHUNK)
         for i in range(0, len(changed), chunk_size):
             self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, changed[i:i + chunk_size], False, silent, True)
@@ -325,66 +330,65 @@ class Tasks(object):
 
     def chkChannels(self, channels=None, silent=None):
         if channels is None: channels = self.getChannels()
-        if silent is None: silent = not Globals.SETTINGS.showDialog(silent)
+        if silent is None: silent = not Globals.settings.showDialog(silent)
         self.log("chkChannels, channels = %s, silent = %s"%(len(channels),silent))
         if len(channels) > 0:
             self.log(f"chkChannels, processing channels count = {len(channels)}")
-            if Globals.SETTINGS.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers, 3, 0, 0, channels, silent)
+            if Globals.settings.getSettingBool('Build_Filler_Folders'): self.service._que(self.chkFillers, 3, 0, 0, channels, silent)
             chunk_size = max(1, len(channels) // QUEUE_CHUNK)
             for i in range(0, len(channels), chunk_size):
                 self.service._que(Builder(service=self.service).buildChannels, 3, 0, 0, channels[i:i + chunk_size], False, silent, True)
         else:
-            self.log('chkChannels, No Channels Configured!')
-            run_autotune = Globals.SETTINGS.getSettingBool('Enable_Autotune')
-            if run_autotune or not Globals.SETTINGS.hasAutotuned():
-                self.log('chkChannels, Auto-tuning Channels.')
-                if Globals.SETTINGS.setAutotuned(_autotune(automatic=run_autotune)): 
-                    Globals.PROPERTIES.setPropTimer('chkChanged')# Refresh Channel Changed!
-            elif Globals.PROPERTIES.hasEnabledServers():                     
-                Globals.PROPERTIES.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
+            run_autotune = Globals.settings.getSettingBool('Enable_Autotune')
+            self.log(f'chkChannels, No Channels Configured! AutoTuning {run_autotune}')
+            if run_autotune or not Globals.settings.hasAutotuned():
+                if Globals.settings.setAutotuned(_autotune()): 
+                    Globals.properties.setPropTimer('chkChanged')# Refresh Channel Changed!
+            elif Globals.properties.hasEnabledServers():                     
+                Globals.properties.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
 
 
     @debounceit(M3U_REFRESH)
     def chkPVRRefresh(self, brute: bool = None):
-        if brute is None: brute = Globals.SETTINGS.getSettingBool('Enable_PVR_RELOAD')
+        if brute is None: brute = Globals.settings.getSettingBool('Enable_PVR_RELOAD')
         self.log(f"chkPVRRefresh, brute force reload state = {brute}")
         def __toggle(state: bool):
-            current_state = Globals.BUILTIN.getInfoBool(f"System.AddonIsEnabled({PVR_CLIENT_ID})")
+            current_state = Globals.builtin.getInfoBool(f"System.AddonIsEnabled({PVR_CLIENT_ID})")
             if current_state == state: return
             self.log(f"chkPVRRefresh: __toggle transitioning target state to = {state}")
             
-            with Globals.BUILTIN.busy_dialog(lock=True):
+            with Globals.builtin.busy_dialog(lock=True):
                 notification_msg = f"{PVR_CLIENT_NAME}: {LANGUAGE(32125)}"
-                Globals.DIALOG.notificationWait(notification_msg, wait=M3U_REFRESH // 2, usethread=True)
+                Globals.dialog.notificationWait(notification_msg, wait=M3U_REFRESH // 2, usethread=True)
                 payload = { "method": "Addons.SetAddonEnabled", "params": {"addonid": PVR_CLIENT_ID, "enabled": state} }
                 self.service.jsonRPC.sendJSON(payload)
 
-        if not Globals.PROPERTIES.isRunning('Tasks.chkPVRRefresh'):
-            with Globals.PROPERTIES.chkRunning('Tasks.chkPVRRefresh'):
+        if not Globals.properties.isRunning('Tasks.chkPVRRefresh'):
+            with Globals.properties.chkRunning('Tasks.chkPVRRefresh'):
                 if brute:
                     if not self.service.player.isPlaying(): 
                         __toggle(False),self.service._sleep(M3U_REFRESH // 2),__toggle(True)
-                    else: Globals.PROPERTIES.setPropTimer('chkPVRRefresh')
+                    else: Globals.properties.setPropTimer('chkPVRRefresh')
                 try: 
                     client_id = self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid', -1)
                     if client_id != -1: self.jsonRPC.PVRScan(client_id)
                 except Exception as e: 
-                    Globals.PROPERTIES.setEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),True)
+                    Globals.properties.setEXTProperty('%s.HTTP.pendingRestart'%(ADDON_ID),True)
                     self.log(f"chkPVRRefresh: PVR backend scanning trigger unsupported or failed! restarting HTTP Server... {str(e)}", xbmc.LOGDEBUG)
             
             
     def chkSettingsChange(self, old_settings={}):
         #if cleanstart ie del settings.xml, restore important values.
-        if Globals.SETTINGS.restoreSettings(Globals.SETTINGS.getCacheSetting('Utilities._runCleanup',default={})):
-            Globals.SETTINGS.setCacheSetting('Utilities._runCleanup',None)
+        if Globals.settings.restoreSettings(Globals.settings.getCacheSetting('Utilities._runCleanup',default={})):
+            Globals.settings.setCacheSetting('Utilities._runCleanup',None)
             
         #settings changed actions.
-        new_settings = Globals.SETTINGS.getCurrentSettings()
+        new_settings = Globals.settings.getCurrentSettings()
         for setting, old_value in list(old_settings.items()):
             new_value = new_settings.get(setting)
             actions = {'User_Folder'     :{'func':self.setUserPath ,'args':(old_value,new_value)},
                        'Debug_Enable'    :{'func':self.chkDebugging,'args':(new_value)},
-                       'TCP_PORT'        :{'func':Globals.PROPERTIES.setPendingRestart},
+                       'TCP_PORT'        :{'func':Globals.properties.setPendingRestart},
                        'Enable_Autotune' :{'func':self.chkLibrary}}
                        
             if setting in actions and old_value != new_value:
@@ -427,11 +431,11 @@ class Tasks(object):
      
     def setUserPath(self, old, new):
         self.log('setUserPath, old = %s, new = %s'%(old,new))
-        dia = Globals.DIALOG.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
-        with Globals.PROPERTIES.interruptActivity():
+        dia = Globals.dialog.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
+        with Globals.properties.interruptActivity():
             FileAccess.copyFolder(old, new, dia)
-        Globals.PROPERTIES.setPendingRestart()
-        Globals.DIALOG.progressDialog(100, dia)
+        Globals.properties.setPendingRestart()
+        Globals.dialog.progressDialog(100, dia)
 
 
     def getChannels(self):

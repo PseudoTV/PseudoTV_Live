@@ -2,7 +2,7 @@ from dataclasses import asdict
 from typing import List, Dict
 import random
 from operator import itemgetter
-from globals import getJSON, setJSON, SETTINGS, PROPERTIES, LANGUAGE, xbmc, log
+from variables import FileAccess, Globals, SETTINGS, PROPERTIES, LANGUAGE, xbmc, log, CHANNELFLE_DEFAULT, CHANNEL_LIMIT
 
 @dataclass
 class Channel:
@@ -20,15 +20,15 @@ class Channel:
 
 class Channels:
     def __init__(self):
-        self.channelDATA: Dict[str, List[Channel]] = getJSON(CHANNELFLE_DEFAULT)
-        self.channelTEMP: Dict = getJSON(CHANNEL_ITEM)
+        self.channelDATA: Dict[str, List[Channel]] = FileAccess.getJSON(CHANNELFLE_DEFAULT)
+        self.channelTEMP: Dict = FileAccess.getJSON(CHANNEL_ITEM)
         self.channelDATA.update(self._load())
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s' % (self.__class__.__name__, msg), level)
+        LOG('%s: %s' % (self.__class__.__name__, msg), level)
 
     def _load(self, file=CHANNELFLEPATH) -> Dict[str, List[Channel]]:
-        channelDATA = getJSON(file)
+        channelDATA = FileAccess.getJSON(file)
         self.log('_load, channels = %s' % (len(channelDATA.get('channels', []))))
         return channelDATA
 
@@ -44,7 +44,7 @@ class Channels:
         self.channelDATA['uuid'] = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
         self.log('_save, channels = %s' % (len(self.channelDATA['channels'])))
-        return setJSON(file, self.channelDATA)
+        return FileAccess.setJSON(file, self.channelDATA)
 
     def getTemplate(self) -> Dict:
         return self.channelTEMP.copy()
@@ -74,7 +74,8 @@ class Channels:
     def sortChannels(self, channels: List[Channel]) -> List[Channel]:
         try:
             return sorted(channels, key=itemgetter('number'))
-        except:
+        except Exception as e:
+            LOG('ChannelsDataclass: sortChannels failed: %s' % e, xbmc.LOGDEBUG)
             return channels
 
     def setChannels(self, channels: List[Channel] = []) -> bool:

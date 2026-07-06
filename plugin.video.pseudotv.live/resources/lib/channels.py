@@ -26,12 +26,13 @@ from multiroom  import Multiroom
 class Channels(object):
     
     def __init__(self, key=None, writable=False):
-        if key is None: key = CHANNELAUTOTUNE_KEY if Globals.SETTINGS.getSettingBool('Enable_Autotune') else CHANNEL_KEY
+        if key is None: key = CHANNELAUTOTUNE_KEY if Globals.settings.getSettingBool('Enable_Autotune') else CHANNEL_KEY
         self.writable    = writable
         self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
         self.channelKEY  = f'{key}.{self.channelDATA.get("version",ADDON_VERSION)}'
-        self.channelTEMP = self.channelDATA.get('channels',[{}]).pop(0)
-        self.channelRULE = self.channelTEMP.pop('rules')
+        channels = self.channelDATA.get('channels') or []
+        self.channelTEMP = channels.pop(0) if channels else {}
+        self.channelRULE = self.channelTEMP.pop('rules', {})
         self.channelTEMP['rules'] = {}
         self.channelDATA.update(self._load())
         self.channelDATA_OLD = self.channelDATA.copy()
@@ -45,25 +46,25 @@ class Channels(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
             if self.writable: self._save()
-        except Exception: pass
+        except Exception as e: self.log("__exit__ save failed: %s" % e, xbmc.LOGDEBUG)
             
             
     def __del__(self):
         try:
             if getattr(self, 'writable', False): self._save()
             self.log('__del__, writable = %s' % (getattr(self, 'writable', False)))
-        except Exception: 
-            pass
+        except Exception as e: 
+            self.log("__del__ save failed: %s" % e, xbmc.LOGDEBUG)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: [%s] %s'%(self.__class__.__name__,self.channelKEY,msg),level)
+        LOG('%s: [%s] %s'%(self.__class__.__name__,self.channelKEY,msg),level)
 
 
     def _load(self) -> dict:
-        channelDATA = Globals.SETTINGS.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY), default={})
-        if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
-        self.log('_load channels = %s'%(len(channelDATA.get('channels',[]))))
+        channelDATA = Globals.settings.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY), default={})
+        if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
+        self.log('_load, channels=%d' % len(channelDATA.get('channels',[])))
         return channelDATA
     
         
@@ -80,8 +81,8 @@ class Channels(object):
             if CHANNELAUTOTUNE_KEY in self.channelKEY:
                 expiration = datetime.timedelta(days=MAX_GUIDEDAYS)
                 FileAccess.setJSON(CHANNEL_EXPORT_FLE,self.channelDATA)
-            self.log('_save channels = %s, expiration = %s'%(len(self.channelDATA['channels']),expiration))
-            return Globals.SETTINGS.setCacheSetting(self.channelKEY, self.channelDATA, FileAccess._getMD5(self.channelKEY), expiration)
+            self.log('_save, channels=%d, expiration=%s' % (len(self.channelDATA['channels']), expiration))
+            return Globals.settings.setCacheSetting(self.channelKEY, self.channelDATA, FileAccess._getMD5(self.channelKEY), expiration)
             
 
     def getTemplate(self) -> dict: 
@@ -89,7 +90,7 @@ class Channels(object):
         
         
     def getChannels(self) -> list:
-        self.log('getChannels channels = %s'%(len(self.channelDATA.get('channels',[]))))
+        self.log('getChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
         return sorted(self.channelDATA['channels'], key=itemgetter('number'))
         
         
@@ -108,12 +109,12 @@ class Channels(object):
     
     def setChannels(self, channels=None) -> bool:
         if channels is None: channels = self.channelDATA['channels']
-        self.channelDATA['name']     = Globals.PROPERTIES.getFriendlyName()
-        self.channelDATA['uuid']     = Globals.SETTINGS.getMYUUID()
+        self.channelDATA['name']     = Globals.properties.getFriendlyName()
+        self.channelDATA['uuid']     = Globals.settings.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(list(self._verify(channels)))
-        if len(self.channelDATA['channels']) > 0: Globals.PROPERTIES.setHasChannels(self.channelKEY, self.channelDATA)
-        if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.SETTINGS.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
-        self.log('setChannels channels = %s'%(len(self.channelDATA.get('channels',[]))))
+        if len(self.channelDATA['channels']) > 0: Globals.properties.setHasChannels(self.channelKEY, self.channelDATA)
+        if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
+        self.log('setChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
         return self._save()
         
 
@@ -130,13 +131,14 @@ class Channels(object):
         self.channelDATA['channels'] = []
         
 
-    def delChannel(self, citem: dict={}) -> bool:
+    def delChannel(self, citem: dict=None) -> bool:
+        if citem is None: citem = {}
         if isinstance(citem,list): return any([self.delChannel(channel) for channel in citem])
         try: 
             self.channelDATA['channels'].pop(self.findChannel(citem)[0])
             self.log('[%s] delChannel channel deleted!'%(citem['id']), xbmc.LOGINFO)
             return True
-        except Exception: pass
+        except Exception as e: self.log('[%s] delChannel failed: %s'%(citem.get('id',''), e), xbmc.LOGDEBUG)
     
     
     def addChannel(self, citem: dict={}) -> bool:
@@ -158,6 +160,6 @@ class Channels(object):
             html_content = fle.read()
         html_content = html_content.replace("{{ channel_limit }}", str(CHANNEL_LIMIT))
         html_content = html_content.replace("{{ media_loc }}"    , MEDIA_LOC)
-        html_content = html_content.replace("{{ remote_host }}"  , Globals.PROPERTIES.getRemoteHost())
+        html_content = html_content.replace("{{ remote_host }}"  , Globals.properties.getRemoteHost())
         return html_content.encode(encoding=DEFAULT_ENCODING)
         

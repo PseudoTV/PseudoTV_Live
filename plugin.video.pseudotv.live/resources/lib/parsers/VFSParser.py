@@ -27,7 +27,7 @@ class VFSParser:
         Priority: resume.total > runtime > duration > streamdetails.video.duration
         """
         if fileitem is None: fileitem = {}
-        log("VFSParser: determineLength, file = %s\nitem = %s"%(filename, fileitem))
+        LOG("VFSParser: determineLength, file = %s\nitem = %s"%(filename, fileitem))
         # Try to extract duration from fileitem metadata (assumed to be in seconds)
         duration = (fileitem.get('resume', {}).get('total') or fileitem.get('runtime') or 
                     fileitem.get('duration') or (fileitem.get('streamdetails', {}).get('video', []) or [{}])[0].get('duration') or 0)
@@ -40,12 +40,12 @@ class VFSParser:
                     duration = (metadata.get('resume', {}).get('total') or  metadata.get('runtime') or 
                                 metadata.get('duration') or (metadata.get('streamdetails', {}).get('video', []) or [{}])[0].get('duration') or 0)
             except Exception as e:
-                log("VFSParser: Failed to get metadata via JSON-RPC: %s"%(e), xbmc.LOGERROR)
+                LOG("VFSParser: Failed to get metadata via JSON-RPC: %s"%(e), xbmc.LOGERROR)
         
         try:
             duration = round(duration)
         except (ValueError, TypeError):
             duration = 0
         
-        log("VFSParser: Duration is %s seconds"%(duration))
+        LOG("VFSParser: Duration is %s seconds"%(duration))
         return duration

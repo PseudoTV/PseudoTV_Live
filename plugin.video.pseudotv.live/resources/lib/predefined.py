@@ -20,6 +20,8 @@
 
 from variables import *
 
+_SHOW_YEAR_RE = re.compile(r'(.*) \((.*)\)', re.IGNORECASE)
+
 class Predefined(object):
     @staticmethod
     def getTemplete():
@@ -63,7 +65,7 @@ class Predefined(object):
         param["type"] = "episodes"
         param["order"]["method"] = method
         try:
-            match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(show)
+            match = _SHOW_YEAR_RE.search(show)
             year, title = int(match.group(2)), match.group(1)
             param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":"is","value":[year]},{"field":"tvshow","operator":"is","value":[Globals._quoteString(title)]}])
         except Exception:

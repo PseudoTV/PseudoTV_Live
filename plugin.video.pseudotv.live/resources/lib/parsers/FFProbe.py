@@ -27,17 +27,17 @@ class FFProbe:
         """
         try:
             import ffmpeg
-            log("FFProbe: determineLength %s"%(filename))
+            LOG("FFProbe: determineLength %s"%(filename))
             dur = ffmpeg.probe(FileAccess.translatePath(filename))["format"]["duration"]
             dur = int(float(dur))  # Ensure integer seconds
-            log('FFProbe: Duration is %s seconds'%(dur))
+            LOG('FFProbe: Duration is %s seconds'%(dur))
             return dur
         except ImportError:
-            log("FFProbe: ffmpeg-python module not available", xbmc.LOGERROR)
+            LOG("FFProbe: ffmpeg-python module not available", xbmc.LOGERROR)
             return 0
         except (KeyError, ValueError, TypeError) as e:
-            log("FFProbe: failed to parse duration! %s"%(e), xbmc.LOGERROR)
+            LOG("FFProbe: failed to parse duration! %s"%(e), xbmc.LOGERROR)
             return 0
         except Exception as e:
-            log("FFProbe: failed! %s"%(e), xbmc.LOGERROR)
+            LOG("FFProbe: failed! %s"%(e), xbmc.LOGERROR)
             return 0

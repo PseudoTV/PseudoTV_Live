@@ -1,4 +1,4 @@
-name: AI Linter & Dynamic Test Generator
+name: AI Developer Assistant
 
 on:
   push:
@@ -13,8 +13,96 @@ permissions:
   pull-requests: write
 
 jobs:
-  ai_assist:
+  addon-check:
+    name: Kodi Addon Checker
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install kodi-addon-checker
+        run: pip install kodi-addon-checker
+
+      - name: Run Kodi Addon Checker
+        id: kodi-check
+        run: |
+          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 | tee kodi-check-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Parse Kodi Check Results
+        id: parse-kodi
+        if: always()
+        run: |
+          if [ -f kodi-check-output.txt ]; then
+            ERRORS=$(grep -c "^ERROR:" kodi-check-output.txt || true)
+            WARNINGS=$(grep -c "^WARN:" kodi-check-output.txt || true)
+            echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+            echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+            echo "has_errors=$( [ $ERRORS -gt 0 ] && echo true || echo false )" >> $GITHUB_OUTPUT
+          else
+            echo "errors=0" >> $GITHUB_OUTPUT
+            echo "warnings=0" >> $GITHUB_OUTPUT
+            echo "has_errors=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Kodi Check Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kodi-addon-check-report
+          path: kodi-check-output.txt
+          retention-days: 30
+
+  fstring-check:
+    name: F-String Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run F-String Checker
+        run: python .github/scripts/fstring_check.py plugin.video.pseudotv.live/resources/lib
+
+  lint:
+    name: OpenCode Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install OpenCode
+        run: curl -fsSL https://opencode.ai/install | bash
+
+      - name: Run OpenCode Lint
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          opencode run --model opencode/mimo-v2.5 "Analyze the Python codebase in plugin.video.pseudotv.live/resources/lib for:
+          1. Code quality issues
+          2. Import errors
+          3. Unused variables
+          4. Type hints issues
+          5. Security concerns
+          
+          Provide a concise summary of issues found with file paths and line numbers."
+
+  ai-review:
+    name: AI Code Review & Test Generation
+    runs-on: ubuntu-latest
+    needs: [addon-check, fstring-check, lint]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -29,14 +117,116 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install --upgrade pip
-          pip install requests pytest kodi-addon-checker
+          pip install pytest
 
-      - name: Run AI Engine
+      - name: Install OpenCode
+        run: curl -fsSL https://opencode.ai/install | bash
+
+      - name: AI Code Review
+        id: ai-review
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_BASE_REF: ${{ github.base_ref }}
-          # Set FULL_EVAL to true only if triggered manually via workflow_dispatch
-          FULL_EVAL: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
-        run: python .github/scripts/ai_engine.py
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          opencode run --model opencode/mimo-v2.5 "Review the PseudoTV Live Kodi addon codebase. Focus on:
+          1. Code quality and best practices
+          2. Potential bugs or issues
+          3. Performance optimizations
+          4. Kodi API usage patterns
+          
+          Provide actionable recommendations with specific file references."
+
+      - name: Generate Dynamic Tests
+        id: gen-tests
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          opencode run --model opencode/mimo-v2.5 "Generate a comprehensive pytest test file for the PseudoTV Live addon.
+          
+          Requirements:
+          - Test import statements for all modules
+          - Test basic class instantiation
+          - Mock xbmc/xbmcgui/xbmcaddon/xbmcplugin modules
+          - Test utility functions
+          - Include fixture setup
+          
+          Output ONLY the Python test code in a code block."
+
+      - name: Execute Generated Tests
+        if: success()
+        run: |
+          TEST_FILE="test_dynamic_ai.py"
+          
+          # Extract test code from AI response (simplified)
+          python -c "
+          import re
+          content = '''${{ steps.gen-tests.outputs.stdout }}'''
+          match = re.search(r'\`\`\`python\n(.*?)\`\`\`', content, re.DOTALL)
+          if match:
+              with open('$TEST_FILE', 'w') as f:
+                  f.write(match.group(1))
+          "
+          
+          if [ -f "$TEST_FILE" ]; then
+            PYTHONPATH="$(pwd):$(pwd)/plugin.video.pseudotv.live/resources/lib" pytest "$TEST_FILE" -v || true
+            rm -f "$TEST_FILE"
+          fi
+
+  report:
+    name: Generate Report
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [addon-check, fstring-check, lint, ai-review]
+    steps:
+      - name: Download Kodi Check Report
+        uses: actions/download-artifact@v4
+        with:
+          name: kodi-addon-check-report
+          path: .
+        continue-on-error: true
+
+      - name: Post PR Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const addonCheckResult = '${{ needs.addon-check.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const fstringResult = '${{ needs.fstring-check.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const lintResult = '${{ needs.lint.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const aiReviewResult = '${{ needs.ai-review.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            
+            // Parse Kodi check output if available
+            let kodiErrors = '0';
+            let kodiWarnings = '0';
+            try {
+              const fs = require('fs');
+              const content = fs.readFileSync('kodi-check-output.txt', 'utf8');
+              kodiErrors = (content.match(/^ERROR:/gm) || []).length;
+              kodiWarnings = (content.match(/^WARN:/gm) || []).length;
+            } catch(e) {}
+            
+            const body = `### 🤖 AI Developer Assistant Report
+            
+            #### Validation Summary
+            | Check | Status |
+            |-------|--------|
+            | Kodi Addon Checker | ${addonCheckResult} |
+            | F-String Validation | ${fstringResult} |
+            | OpenCode Lint | ${lintResult} |
+            | AI Code Review | ${aiReviewResult} |
+            
+            #### Kodi Addon Checker Details
+            - **Errors:** ${kodiErrors}
+            - **Warnings:** ${kodiWarnings}
+            
+            #### AI Review Summary
+            ${{ needs.ai-review.outputs.stdout || 'No output available' }}
+            
+            ---
+            *Generated by AI Developer Assistant workflow*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

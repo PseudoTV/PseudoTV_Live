@@ -21,6 +21,8 @@
 from variables import *
 from library   import Library
 
+_SHOW_YEAR_RE = re.compile(r'(.*) \((.*)\)', re.IGNORECASE)
+
 class XSP(object):
     library = Library()
     
@@ -30,7 +32,7 @@ class XSP(object):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
     
     
     def isNode(self, path: str) -> bool:
@@ -54,9 +56,8 @@ class XSP(object):
             key  = 'name'
             if self.isNode(fle): key = 'label' #node not playlist
             fle = fle.strip('/').replace('library://','special://userdata/library/')
-            xml = FileAccess.open(fle, "r")
-            string = xml.read()
-            xml.close()
+            with FileAccess.open(fle, "r") as xml:
+                string = xml.read()
             match = re.compile(r'<%s>(.*?)\</%s>'%(key,key), re.IGNORECASE).search(string)
             if match: name = Globals._unescapeString(match.group(1))
             self.log("getName, fle = %s, name = %s"%(fle,name))
@@ -75,10 +76,11 @@ class XSP(object):
       
 
     def parseXSP(self, id, file):
-        def _createDXSP(tvshow, sort={'order':'ascending','method':'episode'}, operator='is'):
+        def _createDXSP(tvshow, sort=None, operator='is'):
+            if sort is None: sort = {'order':'ascending','method':'episode'}
             param = {"type":"episodes","rules":{"and":[],"or":[]},"order":{"direction":sort.get('order','ascending'),"method":sort.get('method','episode'),"ignorearticle":True,"useartistsortname":True}}
             try:
-                match = re.compile(r'(.*) \((.*)\)', re.IGNORECASE).search(tvshow)
+                match = _SHOW_YEAR_RE.search(tvshow)
                 year, title = int(match.group(2)), match.group(1)
                 param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":f"{operator}","value":[year]},{"field":"tvshow","operator":"is","value":[Globals._quoteString(title)]}])
             except Exception:
@@ -101,9 +103,9 @@ class XSP(object):
                     order = dom.getElementsByTagName("order")
                     if order: 
                         try: sort.update({'order':order[0].getAttribute("direction")})
-                        except Exception: pass
+                        except Exception as e: self.log('parseXSP order direction failed: %s' % e, xbmc.LOGDEBUG)
                         try: sort.update({'method':order[0].firstChild.data})
-                        except Exception: pass
+                        except Exception as e: self.log('parseXSP order method failed: %s' % e, xbmc.LOGDEBUG)
 
                     paths = []
                     for rule in dom.getElementsByTagName("rule"):
@@ -128,7 +130,7 @@ class XSP(object):
         if filters is None:
             filters = {}
         if incExtras is None:
-            incExtras = Globals.SETTINGS.getSettingBool('Enable_Extras')
+            incExtras = Globals.settings.getSettingBool('Enable_Extras')
         self.log("[%s] parseDXSP, IN = %s, filters = %s, incExtras = %s"%(id,file,filters,incExtras))
         try:
             path, params = str(file).split('?xsp=')
@@ -145,7 +147,7 @@ class XSP(object):
                                                                  {"field":"episode","operator":"greaterthan","value":"0"}])
                 else:
                     params['rules']['and'] = [r for r in params['rules'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
-                    params['rules']['and'] = Globals.Globals._setDictLST(params['rules']['and'])
+                    params['rules']['and'] = Globals._setDictLST(params['rules']['and'])
             file = '%s?xsp=%s'%(path,FileAccess.dumpJSON(params))
             self.log("[%s] parseDXSP, OUT = %s"%(id,file))
         except Exception as e: self.log("[%s] parseDXSP, failed! %s"%(id,e), xbmc.LOGERROR)

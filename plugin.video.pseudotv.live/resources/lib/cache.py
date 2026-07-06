@@ -26,7 +26,7 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=None):
         def wrapper(*args, **kwargs):
             nonlocal checksum
             instance = args[0]
-            if checksum is None: checksum = ADDON_VERSION# checksum=Globals.PROPERTIES.getProcessID()
+            if checksum is None: checksum = ADDON_VERSION# checksum=Globals.properties.getProcessID()
             cache_checksum = checksum() if callable(checksum) else checksum
             cache_segments = [f"{instance.__class__.__name__}.{method.__name__}"]
             for item in args[1:]:
@@ -47,10 +47,10 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=None):
             
             results = instance.cache.get(cacheName, cache_checksum)
             if results is not None:
-                log(f'{method.__qualname__.replace(".", ": ")}, cacheit returning cache')
+                xbmc.log(f'{method.__qualname__.replace(".", ": ")}, cacheit returning cache', xbmc.LOGDEBUG)
                 return results
                 
-            log(f'{method.__qualname__.replace(".", ": ")}, cacheit saving results')
+            xbmc.log(f'{method.__qualname__.replace(".", ": ")}, cacheit saving results', xbmc.LOGDEBUG)
             value = method(*args, **kwargs)
             instance.cache.set(cacheName, value, cache_checksum, expiration)
             return value
@@ -62,28 +62,28 @@ class Cache(object):
         self.monitor = xbmc.Monitor()
         self.cache   = _Cache(monitor=self.monitor)
         self.cache.enable_mem_cache = mem_cache
-        self.disable_cache = (disable_cache or REAL_SETTINGS.getSetting('Disable_Cache'))
-        self.log('__init__, mem_cache = %s, disable_cache = %s' % (mem_cache, disable_cache))
+        self.disable_cache = (disable_cache or REAL_SETTINGS.getSetting('Disable_Cache') == 'true')
+        self.log('__init__, mem_cache=%s, disable_cache=%s, db=%s' % (mem_cache, self.disable_cache, self.cache.dbfile), xbmc.LOGINFO)
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s [%s]: %s' % (self.__class__.__name__, {True:'MEM|DB',False:'DB'}[self.cache.enable_mem_cache], msg), level)
+        xbmc.log('%s [%s]: %s' % (self.__class__.__name__, {True:'MEM|DB',False:'DB'}[self.cache.enable_mem_cache], msg), level)
 
     def set(self, name, value, checksum=None, expiration=datetime.timedelta(minutes=15)):
-        if checksum is None: checksum = ADDON_VERSION# checksum=Globals.PROPERTIES.getProcessID()
+        if checksum is None: checksum = ADDON_VERSION
         if not any([self.disable_cache,value is None]):
             self.cache._set(name, value, checksum, expiration)
-            self.log('set, name = %s, value = %s, type = %s' % (name, '%s...'%(str(value)[:128]),type(value).__name__))
+            self.log('set [%s], type=%s, expires=%s, value=%.64s' % (name, type(value).__name__, expiration, str(value)))
         return value
 
     def get(self, name, checksum=None):
-        if checksum is None: checksum = ADDON_VERSION# checksum=Globals.PROPERTIES.getProcessID()
+        if checksum is None: checksum = ADDON_VERSION
         if not self.disable_cache:
             try:
                 value = self.cache._get(name, checksum)
-                self.log('get, name = %s, value = %s, type = %s' % (name, '%s...'%(str(value)[:128]),type(value).__name__))
+                self.log('get [%s], type=%s, hit=%s' % (name, type(value).__name__ if value is not None else 'None', value is not None))
                 return value
             except Exception as e:
-                self.log("get, name = %s failed! %s" % (name, e), xbmc.LOGERROR)
+                self.log("get [%s] failed: %s" % (name, e), xbmc.LOGERROR)
                 self.cache._clr(name)
 
     def clear(self, name):
@@ -98,14 +98,9 @@ class Cache(object):
 
 class _Cache(object):
     _lock            = RLock() 
-    _trim            = False
-    _clean           = False
-    _exit            = False
-    _checkpointing   = False
-    _database        = None
-    _cache_idx       = deque()
     global_checksum  = '1.0.0'
     enable_mem_cache = False
+    clean_interval   = MAX_GUIDEDAYS * 86400
 
     def __init__(self, monitor=None, winID=10000):
         self.monitor        = monitor
@@ -113,19 +108,26 @@ class _Cache(object):
         self.max_bytes      = self.getFreeMEM()
         self.dbfile         = FileAccess.translatePath(CACHE_FLE)
         self.timeout        = int(REAL_SETTINGS.getSetting('API_Timeout'))
-        self.clean_interval = MAX_GUIDEDAYS * 86400
+        self._trim          = False
+        self._clean         = False
+        self._exit          = False
+        self._checkpointing = False
+        self._database      = None
+        self._cache_idx     = deque()
 
     def __del__(self):
-        self._chkClean()
+        try: self._chkClean()
+        except AttributeError: pass
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s' % (self.__class__.__name__, msg), level)
+        xbmc.log('%s: %s' % (self.__class__.__name__, msg), level)
 
     def _open(self):
         with self._lock:
             retries = 0
             while not self.monitor.abortRequested() and retries < LOCK_MAX_FILE_TIMEOUT:
                 try:
+                    self.log('_open, connecting to %s (timeout=%ds, attempt=%d)' % (self.dbfile, self.timeout, retries + 1), xbmc.LOGINFO)
                     conn = sqlite3.connect(self.dbfile, timeout=self.timeout, check_same_thread=False)
                     conn.execute("PRAGMA journal_mode=WAL;")
                     conn.execute("PRAGMA synchronous=NORMAL;")
@@ -137,8 +139,10 @@ class _Cache(object):
                             checksum BLOB
                         )""")
                     conn.commit()
+                    self.log('_open, connected successfully', xbmc.LOGINFO)
                     return conn
                 except sqlite3.OperationalError:
+                    self.log('_open, database locked, retrying in 1s (attempt %d/%d)' % (retries + 1, LOCK_MAX_FILE_TIMEOUT), xbmc.LOGDEBUG)
                     if self.monitor.waitForAbort(1.0): break
                     retries += 1
                 except Exception as e: 
@@ -221,8 +225,8 @@ class _Cache(object):
             cache_data = FileAccess._decodeString(raw_data)
             if (cache_data[0] < 0 or cache_data[0] > cur_time) and (not checksum or cache_data[2] == checksum): 
                 return cache_data[1]
-        except Exception: 
-            pass
+        except Exception as e:
+            self.log("_getMEM [%s]: %s" % (endpoint, e), xbmc.LOGDEBUG)
         return None
 
     def _setMEM(self, endpoint, checksum, expires, data):
@@ -254,10 +258,13 @@ class _Cache(object):
             try:
                 self._trim = True
                 current_total = sum(size for _, size in self._cache_idx)
+                initial_count = len(self._cache_idx)
                 while not self.monitor.abortRequested() and current_total > self.max_bytes and self._cache_idx:
                     endpoint, size = self._cache_idx.popleft()
                     self.window.clearProperty('%s.%s' % (ADDON_ID, endpoint))
                     current_total -= size
+                trimmed = initial_count - len(self._cache_idx)
+                if trimmed: self.log('_trimMEM, evicted %d entries (%.1fMB -> %.1fMB, max=%.1fMB)' % (trimmed, (current_total + sum(s for _, s in self._cache_idx)) / 1048576, current_total / 1048576, self.max_bytes / 1048576), xbmc.LOGDEBUG)
             except Exception as e: 
                 self.log("_trimMEM failed: %s" % e, xbmc.LOGERROR)
             finally: 
@@ -302,6 +309,7 @@ class _Cache(object):
         with self._lock:
             if self._database and not self._exit:
                 try:
+                    self.log('_shutdown, committing and closing database', xbmc.LOGINFO)
                     self._exit = True
                     self._database.commit()
                     self._database.execute("PRAGMA wal_checkpointing(TRUNCATE);")
@@ -309,9 +317,10 @@ class _Cache(object):
                     self.log("_shutdown SQL commands failed: %s" % e, xbmc.LOGERROR)
                 finally:
                     try: self._database.close()
-                    except Exception: pass
+                    except Exception as e: self.log("_shutdown close failed: %s" % e, xbmc.LOGDEBUG)
                     self._database = None
                     self._exit = False
+                    self.log('_shutdown, database closed', xbmc.LOGINFO)
 
     def getChecksum(self, stringinput):
         if not stringinput and not self.global_checksum: return ADDON_VERSION

@@ -23,40 +23,43 @@ from pool       import threadit, debounceit
 
 @debounceit(float(REAL_SETTINGS.getSetting('API_Delay')))
 def _run(mode, sysInfo={}):
-    log(f'Default: _run, mode = {mode}, sysInfo = {sysInfo}')
+    LOG(f'Default: _run, mode = {mode}, sysInfo = {sysInfo}')
     Plugin(mode, sysInfo)
     
 if __name__ == '__main__':
     try:
-        with Globals.PROPERTIES.suspendActivity():
+        with Globals.properties.suspendActivity():
             try: 
                 sysARG  = sys.argv
                 sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-            except: 
+            except Exception as e: 
+                LOG('Default: sys.argv parse failed: %s' % e, xbmc.LOGDEBUG)
                 sysARG  = ['plugin://plugin.video.pseudotv.live/', '1', sys.argv[1], 'resume:false']
                 sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
             
             if sysInfo.get('mode') is None:
                 xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
-                if Globals.PROPERTIES.getEXTProperty('%s.%s'%(ADDON_ID, 'has.Channels')) == "true":
+                if Globals.properties.getEXTProperty('%s.%s'%(ADDON_ID, 'has.Channels')) == "true":
                     Globals._openGuide()
                 else:
                     Globals._openSettings()
                     
             elif any(item in sysARG[2] for item in ['{catchup-id}', '{utc}', '{duration}', '{utcend}']):
-                name = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ListItem.ChannelName') or ADDON_NAME)
-                Globals.DIALOG.notificationDialog(LANGUAGE(32265)%(name))
-                Globals.PROPERTIES.setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
+                name = (Globals._unquoteString(sysInfo.get("name",'')) or Globals.builtin.getInfoLabel('ListItem.ChannelName') or ADDON_NAME)
+                Globals.dialog.notificationDialog(LANGUAGE(32265)%(name))
+                Globals.properties.setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
                 xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())
-                log(f'Default: __main__, failed! {sysARG[2]}', xbmc.LOGERROR)
+                LOG(f'Default: __main__, failed! {sysARG[2]}', xbmc.LOGERROR)
                 
             else:
-                try:    fitem, nitem = Globals.LISTITEMS.buildDictListItem(sys.listitem), {}
-                except: fitem, nitem = Globals._decodePlot(Globals._getInfoLabel('ListItem.Plot')), Globals._decodePlot(Globals._getInfoLabel('ListItem.NextPlot'))
+                try:    fitem, nitem = Globals.listitems.buildDictListItem(sys.listitem), {}
+                except Exception as e: 
+                    LOG('Default: buildDictListItem failed: %s' % e, xbmc.LOGDEBUG)
+                    fitem, nitem = Globals._decodePlot(Globals.builtin.getInfoLabel('ListItem.Plot')), Globals._decodePlot(Globals.builtin.getInfoLabel('ListItem.NextPlot'))
                 chid, vid   = (sysInfo.get("chid")  or fitem.get('citem',{}).get('id')), FileAccess._decodeString(sysInfo.get("vid",""))
-                name, title = (Globals._unquoteString(sysInfo.get("name",'')) or Globals._getInfoLabel('ListItem.ChannelName')), (Globals._unquoteString(sysInfo.get('title','')) or Globals._getInfoLabel('ListItem.label'))
+                name, title = (Globals._unquoteString(sysInfo.get("name",'')) or Globals.builtin.getInfoLabel('ListItem.ChannelName')), (Globals._unquoteString(sysInfo.get('title','')) or Globals.builtin.getInfoLabel('ListItem.label'))
                 sysInfo.update({'mode':sysInfo.get('mode'),'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':vid,'name':name,'title':title,'radio':sysInfo.get('mode') == "radio"})
                 _run(sysInfo.get('mode'), sysInfo)
     except Exception as e: 
-        log(f'Default: __main__, failed! {e}', xbmc.LOGERROR)
-        Globals.DIALOG.notificationDialog(LANGUAGE(30079))
+        LOG(f'Default: __main__, failed! {e}', xbmc.LOGERROR)
+        Globals.dialog.notificationDialog(LANGUAGE(30079))

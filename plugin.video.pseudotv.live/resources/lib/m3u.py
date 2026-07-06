@@ -61,14 +61,15 @@ class M3U(object):
     _RE_XPLAYLIST = re.compile(r'^#EXT-X-PLAYLIST-TYPE:(.*)$', re.IGNORECASE)
 
     def __init__(self, file=M3UFLEPATH, writable=False):
-        self.EPGArtwork  = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
+        self._lock        = RLock()
+        self.EPGArtwork  = int((Globals.settings.getSetting('EPG_Artwork') or "0"))
         self.writable    = writable
         self.stationFile = file
         self.M3UDATA     = {}
         
         stations, recordings = self.cleanSelf(list(self._load()))
         self.M3UDATA = { 'data': '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
-                         'http://%s/%s' % (Globals.PROPERTIES.getRemoteHost(), XMLTVFLE) ),
+                         'http://%s/%s' % (Globals.properties.getRemoteHost(), XMLTVFLE) ),
                          'stations': stations,
                          'recordings': recordings }
 
@@ -79,20 +80,20 @@ class M3U(object):
         try:
             if getattr(self, 'writable', False): self._save()
             self.log('__exit__, writable = %s' % (getattr(self, 'writable', False)))
-        except Exception: pass
+        except Exception as e: self.log('__exit__ save failed: %s' % e, xbmc.LOGDEBUG)
             
     def __del__(self):
         try:
             if getattr(self, 'writable', False): self._save()
             self.log('__del__, writable = %s' % (getattr(self, 'writable', False)))
-        except Exception: 
-            pass
+        except Exception as e: 
+            self.log('__del__ save failed: %s' % e, xbmc.LOGDEBUG)
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def _load(self):
-        self.log('_load, file = %s' % self.stationFile)
+        self.log('_load, file=%s' % self.stationFile)
         lines = []
         if FileAccess.exists(self.stationFile): 
             fle = None
@@ -213,57 +214,56 @@ class M3U(object):
 
     def _save(self):
         self.M3UDATA['data'] = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
-                               'http://%s/%s' % (Globals.PROPERTIES.getRemoteHost(), XMLTVFLE) )
+                               'http://%s/%s' % (Globals.properties.getRemoteHost(), XMLTVFLE) )
         self.M3UDATA['stations'] = self.sortStations(self.M3UDATA.get('stations', []))
         self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings', []), key='name')
         
-        self.log('_save, writable = %s, file = %s\nstations = %s recordings = %s' % (
+        self.log('_save, writable=%s, file=%s, stations=%d, recordings=%d' % (
             self.writable, self.stationFile, len(self.M3UDATA['stations']), len(self.M3UDATA['recordings'])
         ))
         
         if self.writable:
             with FileLock(self.stationFile):
-                fle = None
                 try:
-                    fle = FileAccess.open(self.stationFile, 'w')
-                    fle.write('%s\n' % (self.M3UDATA['data']))
-                    opts = list(self.getMitem().keys())
-                    line_template = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
-                    
-                    for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
-                        try:
-                            optional  = ''
-                            kodiprops = station.get('kodiprops', [])
-                            extvlcopt = station.get('extvlcopt', [])
-                            xplaylist = station.get('x-playlist-type', '')
-                            
-                            for key, value in station.items():
-                                if key not in ['kodiprops', 'extvlcopt', 'x-playlist-type'] and key in opts and str(value):
-                                    optional += '%s="%s" ' % (key, value)
-
-                            fle.write(line_template % (
-                                station.get('number', ''),
-                                station.get('id', ''),
-                                station.get('name', ''),
-                                station.get('logo', ''),
-                                ';'.join(station.get('group', [])),
-                                str(station.get('radio', False)),
-                                station.get('catchup', ''),
-                                optional,
-                                station.get('label', '')
-                            ))
-                                    
-                            if kodiprops: 
-                                fle.write('%s\n' % ('\n'.join(['#KODIPROP:%s' % prop for prop in kodiprops])))
-                            if extvlcopt: 
-                                fle.write('%s\n' % ('\n'.join(['#EXTVLCOPT:%s' % prop for prop in extvlcopt])))
-                            if xplaylist: 
-                                fle.write('#EXT-X-PLAYLIST-TYPE:%s\n' % xplaylist)
+                    with FileAccess.open(self.stationFile, 'w') as fle:
+                        fle.write('%s\n' % (self.M3UDATA['data']))
+                        opts = list(self.getMitem().keys())
+                        line_template = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+                        
+                        for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
+                            try:
+                                optional  = ''
+                                kodiprops = station.get('kodiprops', [])
+                                extvlcopt = station.get('extvlcopt', [])
+                                xplaylist = station.get('x-playlist-type', '')
                                 
-                            fle.write('%s\n' % (station.get('url', '')))
-                        except Exception as e:
-                            self.log("_save, loop record entry failed! %s" % e, xbmc.LOGERROR)
-                            continue
+                                for key, value in station.items():
+                                    if key not in ['kodiprops', 'extvlcopt', 'x-playlist-type'] and key in opts and str(value):
+                                        optional += '%s="%s" ' % (key, value)
+
+                                fle.write(line_template % (
+                                    station.get('number', ''),
+                                    station.get('id', ''),
+                                    station.get('name', ''),
+                                    station.get('logo', ''),
+                                    ';'.join(station.get('group', [])),
+                                    str(station.get('radio', False)),
+                                    station.get('catchup', ''),
+                                    optional,
+                                    station.get('label', '')
+                                ))
+                                        
+                                if kodiprops: 
+                                    fle.write('%s\n' % ('\n'.join(['#KODIPROP:%s' % prop for prop in kodiprops])))
+                                if extvlcopt: 
+                                    fle.write('%s\n' % ('\n'.join(['#EXTVLCOPT:%s' % prop for prop in extvlcopt])))
+                                if xplaylist: 
+                                    fle.write('#EXT-X-PLAYLIST-TYPE:%s\n' % xplaylist)
+                                    
+                                fle.write('%s\n' % (station.get('url', '')))
+                            except Exception as e:
+                                self.log("_save, loop record entry failed! %s" % e, xbmc.LOGERROR)
+                                continue
                     return True
                 except Exception as e: 
                     self.log("_save, global write process failed! %s" % e, xbmc.LOGERROR)
@@ -274,13 +274,13 @@ class M3U(object):
 
     def _verify(self, stations=None, recordings=None, chkPath=None):
         if chkPath is None:
-            chkPath = Globals.SETTINGS.getSettingBool('Clean_Recordings')
+            chkPath = Globals.settings.getSettingBool('Clean_Recordings')
             
         if stations:
             channels = Channels().getChannels()
             chan_ids = {channel.get('id') for channel in channels if channel.get('id')}
             verified_stations = [station for station in stations if station.get('id') in chan_ids]
-            self.log('_verify, stations = %s' % (len(verified_stations)))
+            self.log('_verify, stations %d -> %d (matched active channels)' % (len(stations), len(verified_stations)))
             return verified_stations
             
         elif recordings:
@@ -382,7 +382,7 @@ class M3U(object):
     def getRecordItem(self, fitem, seek=0):
         group = LANGUAGE(30119) if seek <= 0 else LANGUAGE(30152)
         ritem = self.getMitem()
-        ritem['provider'] = '%s (%s)' % (ADDON_NAME, Globals.PROPERTIES.getFriendlyName())
+        ritem['provider'] = '%s (%s)' % (ADDON_NAME, Globals.properties.getFriendlyName())
         ritem['provider-type'] = 'video'
         ritem['provider-logo'] = LOGO_HOST
         ritem['label'] = (fitem.get('showlabel') or '%s%s' % (fitem.get('label', ''), ' - %s' % (fitem.get('episodelabel', '')) if fitem.get('episodelabel', '') else ''))
@@ -393,52 +393,56 @@ class M3U(object):
         ritem['media-size'] = str(fitem.get('size', 0))
         ritem['media-dir'] = ''
         ritem['group'] = ['%s (%s)' % (group, ADDON_NAME)]
-        ritem['id'] = Globals._getRecordID(ritem['name'], (fitem.get('originalfile') or fitem.get('file', '')), ritem['number'], Globals.SETTINGS.getMYUUID())
+        ritem['id'] = Globals._getRecordID(ritem['name'], (fitem.get('originalfile') or fitem.get('file', '')), ritem['number'], Globals.settings.getMYUUID())
         ritem['url'] = DVR_URL.format(addon=ADDON_ID, title=Globals._quoteString(ritem['label']), chid=Globals._quoteString(ritem['id']), vid=(FileAccess._encodeString((fitem.get('originalfile') or fitem.get('file', '')))), seek=seek, duration=fitem.get('duration', 0))
         return ritem
         
     def delStation(self, citem):
-        try: 
-            idx, _ = self.findStation(citem)
-            if idx is not None:
-                self.M3UDATA['stations'].pop(idx)
-                self.log('[%s] delStation, channel deleted!' % (citem['id']), xbmc.LOGINFO)
-                return True
-        except Exception: 
-            pass
-        return False
+        with self._lock:
+            try: 
+                idx, _ = self.findStation(citem)
+                if idx is not None:
+                    self.M3UDATA['stations'].pop(idx)
+                    self.log('[%s] delStation, channel deleted!' % (citem['id']), xbmc.LOGINFO)
+                    return True
+            except Exception as e: 
+                self.log('[%s] delStation failed: %s' % (citem.get('id',''), e), xbmc.LOGDEBUG)
+            return False
 
     def delRecording(self, ritem):
-        try: 
-            idx, _ = self.findRecording(ritem)
-            if idx is not None:
-                self.M3UDATA['recordings'].pop(idx)
-                self.log('[%s] delRecording, channel deleted!' % (ritem['id']), xbmc.LOGINFO)
-                return True
-        except Exception: 
-            pass
-        return False
+        with self._lock:
+            try: 
+                idx, _ = self.findRecording(ritem)
+                if idx is not None:
+                    self.M3UDATA['recordings'].pop(idx)
+                    self.log('[%s] delRecording, channel deleted!' % (ritem['id']), xbmc.LOGINFO)
+                    return True
+            except Exception as e: 
+                self.log('[%s] delRecording failed: %s' % (ritem.get('id',''), e), xbmc.LOGDEBUG)
+            return False
             
     def addStation(self, citem):
-        mitem = self.getMitem()
-        mitem.update(citem)            
-        mitem['label'] = citem['name'] 
-        mitem['logo'] = citem['logo']
-        mitem['realtime'] = False
-        mitem['provider'] = '%s (%s)' % (ADDON_NAME, Globals.PROPERTIES.getFriendlyName())
-        mitem['provider-type'] = 'audio' if citem.get('radio', False) else 'video'
-        mitem['provider-logo'] = LOGO_HOST
-        
-        self.delStation(citem)
-        self.M3UDATA.setdefault('stations', []).append(mitem)
-        self.log('addStation, [%s] adding channel %s' % (citem["id"], citem["name"]), xbmc.LOGINFO)
-        return True
+        with self._lock:
+            mitem = self.getMitem()
+            mitem.update(citem)            
+            mitem['label'] = citem['name'] 
+            mitem['logo'] = citem['logo']
+            mitem['realtime'] = False
+            mitem['provider'] = '%s (%s)' % (ADDON_NAME, Globals.properties.getFriendlyName())
+            mitem['provider-type'] = 'audio' if citem.get('radio', False) else 'video'
+            mitem['provider-logo'] = LOGO_HOST
+            
+            self.delStation(citem)
+            self.M3UDATA.setdefault('stations', []).append(mitem)
+            self.log('addStation, [%s] adding channel %s' % (citem["id"], citem["name"]), xbmc.LOGINFO)
+            return True
         
     def addRecording(self, ritem):
-        self.delRecording(ritem)
-        self.M3UDATA.setdefault('recordings', []).append(ritem)
-        self.log('addRecording, [%s] adding recording %s' % (ritem["id"], ritem["name"]), xbmc.LOGINFO)
-        return True
+        with self._lock:
+            self.delRecording(ritem)
+            self.M3UDATA.setdefault('recordings', []).append(ritem)
+            self.log('addRecording, [%s] adding recording %s' % (ritem["id"], ritem["name"]), xbmc.LOGINFO)
+            return True
         
     def findStation(self, citem):
         c_id = citem.get('id')

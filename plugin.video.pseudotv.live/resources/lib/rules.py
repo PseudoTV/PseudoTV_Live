@@ -20,6 +20,9 @@
 from variables  import *
 from jsonrpc    import JSONRPC
 from channels   import Channels
+
+_DAY_RE   = re.compile(r'\_Day(.*?)', re.IGNORECASE)
+_NIGHT_RE = re.compile(r'\_Night(.*?)', re.IGNORECASE)
 #todo pinlock
         
 
@@ -72,7 +75,7 @@ class RulesList(object):
                          
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def getTemplate(self) -> dict: 
@@ -182,7 +185,7 @@ class BaseRule(object):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
 
 
     def validate(self):
@@ -239,12 +242,12 @@ class BaseRule(object):
     def validateRange(self, optionindex, minimum, maximum, default):
         if int(self.optionValues[optionindex]) < minimum:
             self.log("Invalid minimum range")
-            self.Globals.DIALOG.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
+            Globals.dialog.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
             self.optionValues[optionindex] = default
             return
         elif int(self.optionValues[optionindex]) > maximum:
             self.log("Invalid maximum range")
-            self.Globals.DIALOG.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
+            Globals.dialog.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
             self.optionValues[optionindex] = default
             return
 
@@ -256,8 +259,8 @@ class BaseRule(object):
             if val >= minimum and val <= maximum:
                 self.optionValues[optionindex] = val
             return
-        except Exception: pass
-        self.Globals.DIALOG.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
+        except Exception as e: self.log('validateDigitBox failed: %s' % e, xbmc.LOGDEBUG)
+        Globals.dialog.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
         self.optionValues[optionindex] = default
 
     
@@ -274,25 +277,25 @@ class BaseRule(object):
 
     def onActionPickColor(self, optionindex, colorlist=[], colorfile=""):
         self.log("onActionPickColor")
-        value = self.Globals.DIALOG.colorDialog(colorlist, self.optionValues[optionindex], colorfile, self.name)
+        value = Globals.dialog.colorDialog(colorlist, self.optionValues[optionindex], colorfile, self.name)
         if value: self.optionValues[optionindex] = value
         
 
     def onActionTextBox(self, optionindex):
         self.log("onActionTextBox")
-        value = self.Globals.DIALOG.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
+        value = Globals.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
         if value: self.optionValues[optionindex] = value
 
 
     def onActionDigitBox(self, optionindex):
         self.log("onActionDigitBox")
-        info =  self.Globals.DIALOG.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        info =  Globals.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None: self.optionValues[optionindex] = info
 
 
     def onActionTimeBox(self, optionindex):
         self.log("onActionTimeBox")
-        info = self.Globals.DIALOG.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        info = Globals.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None:
             if info[0] == ' ': info = info[1:]
             if len(info) == 4: info = "0" + info
@@ -308,7 +311,7 @@ class BaseRule(object):
         if isinstance(self.selectBoxOptions[optionindex],dict): values, options = list(self.selectBoxOptions[optionindex].values()), list(self.selectBoxOptions[optionindex].keys())
         else:                                                   values, options = self.selectBoxOptions[optionindex], self.optionValues[optionindex]
         items  = [str(v).title() for v in self.selectBoxOptions[optionindex]]
-        select = self.Globals.DIALOG.selectDialog(items, header, Globals._findItemsInLST(values, options), useDetails, autoclose, multi)
+        select = Globals.dialog.selectDialog(items, header, Globals._findItemsInLST(values, options), useDetails, autoclose, multi)
         if not select is None: 
             if   isinstance(self.selectBoxOptions[optionindex],dict): self.optionValues[optionindex] = self.selectBoxOptions[optionindex].get(self.selectBoxOptions[optionindex][select])
             elif isinstance(select,list):                             self.optionValues[optionindex] = [self.selectBoxOptions[optionindex][idx] for idx in select]
@@ -318,19 +321,19 @@ class BaseRule(object):
           
     def onActionBrowse(self, optionindex, type=0, heading=ADDON_NAME, shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, options=[], exclude=[]):
         self.log("onActionBrowse")
-        info = self.Globals.DIALOG.browseSources(type, heading, self.optionValues[optionindex], shares, mask, useThumbs, treatAsFolder, multi, monitor, options, exclude)
+        info = Globals.dialog.browseSources(type, heading, self.optionValues[optionindex], shares, mask, useThumbs, treatAsFolder, multi, monitor, options, exclude)
         if info is not None: self.optionValues[optionindex] = info 
     
     
     def onActionMultiBrowse(self, optionindex, header=ADDON_NAME, exclude=[], monitor=True):
         self.log("onActionMultiBrowse")
-        info = self.Globals.DIALOG.multiBrowse(self.optionValues[optionindex], header, exclude, monitor)
+        info = Globals.dialog.multiBrowse(self.optionValues[optionindex], header, exclude, monitor)
         if info is not None: self.optionValues[optionindex] = info 
 
 
     def onActionResources(self, optionindex, ftype=''):
-        log("onActionResources")
-        info = self.Globals.DIALOG.browseResources(self.optionValues[optionindex].split('|'), ftype=ftype)
+        LOG("onActionResources")
+        info = Globals.dialog.browseResources(self.optionValues[optionindex].split('|'), ftype=ftype)
         if not info is None: self.optionValues[optionindex] = '|'.join(info)
 
 #Rules apply sequentially by myId
@@ -340,7 +343,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
         self.name               = LANGUAGE(30143)
         self.description        = LANGUAGE(30144)
         self.optionLabels       = [LANGUAGE(30043),LANGUAGE(30112),LANGUAGE(30044),LANGUAGE(30208)]
-        self.optionValues       = [Globals.SETTINGS.getSettingBool('Enable_ChannelBug'),Globals.SETTINGS.getSetting("Channel_Bug_Position_XY"),Globals.SETTINGS.getSetting('ChannelBug_Color'),Globals.SETTINGS.getSettingBool('Force_Diffuse'),Globals.SETTINGS.getSettingInt('ChannelBug_Transparency')]
+        self.optionValues       = [Globals.settings.getSettingBool('Enable_ChannelBug'),Globals.settings.getSetting("Channel_Bug_Position_XY"),Globals.settings.getSetting('ChannelBug_Color'),Globals.settings.getSettingBool('Force_Diffuse'),Globals.settings.getSettingInt('ChannelBug_Transparency')]
         self.optionDescriptions = [LANGUAGE(33043),LANGUAGE(33112),LANGUAGE(33044),LANGUAGE(33209)]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
         self.selectBoxOptions   = [[True,False],[LANGUAGE(30022),LANGUAGE(32136)],"","",list(range(15,51,5))]
@@ -348,7 +351,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -367,8 +370,8 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
             try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=1, Channel_Bug_Position_XY=self.optionValues[optionindex], ChannelBug_Color=self.optionValues[3])
             except Exception as e: self.log("getPosition, failed! %s"%(e), xbmc.LOGERROR)
             finally: del overlaytool
-            value = Globals.PROPERTIES.getProperty("Channel_Bug_Position_XY")
-            Globals.PROPERTIES.clrProperty("Channel_Bug_Position_XY")
+            value = Globals.properties.getProperty("Channel_Bug_Position_XY")
+            Globals.properties.clrProperty("Channel_Bug_Position_XY")
             if value: self.optionValues[optionindex] = value
             else:     self.optionValues[optionindex] = orgvalue
         elif self.optionValues[optionindex] != self.selectBoxOptions[optionindex][0]:
@@ -415,7 +418,7 @@ class ShowOnNext(BaseRule):
         self.name               = LANGUAGE(30045)
         self.description        = LANGUAGE(33045)
         self.optionLabels       = [LANGUAGE(30045),LANGUAGE(32229),LANGUAGE(30044),LANGUAGE(30196)]
-        self.optionValues       = [bool(Globals.SETTINGS.getSettingInt('OnNext_Mode')),Globals.SETTINGS.getSetting("OnNext_Position_XY"),Globals.SETTINGS.getSettingInt('OnNext_Mode')]
+        self.optionValues       = [bool(Globals.settings.getSettingInt('OnNext_Mode')),Globals.settings.getSetting("OnNext_Position_XY"),Globals.settings.getSettingInt('OnNext_Mode')]
         self.optionDescriptions = [LANGUAGE(30045),LANGUAGE(33229),LANGUAGE(30196)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = ["",[LANGUAGE(30022),LANGUAGE(32136)],"",{LANGUAGE(30021):0,LANGUAGE(30193):1,LANGUAGE(30194):2,LANGUAGE(30197):3,LANGUAGE(30195):4}]
@@ -423,7 +426,7 @@ class ShowOnNext(BaseRule):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -442,8 +445,8 @@ class ShowOnNext(BaseRule):
             try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=0, OnNext_Position_XY=self.optionValues[optionindex], OnNext_Color=self.optionValues[2])
             except Exception as e: self.log("getPosition, failed! %s"%(e), xbmc.LOGERROR)
             finally: del overlaytool
-            value = Globals.PROPERTIES.getProperty("OnNext_Position_XY")
-            Globals.PROPERTIES.clrProperty("OnNext_Position_XY")
+            value = Globals.properties.getProperty("OnNext_Position_XY")
+            Globals.properties.clrProperty("OnNext_Position_XY")
             if value: self.optionValues[optionindex] = value
             else:     self.optionValues[optionindex] = orgvalue
         elif self.optionValues[optionindex] != self.selectBoxOptions[optionindex][0]:
@@ -487,7 +490,7 @@ class SetScreenVingette(BaseRule):
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -499,13 +502,13 @@ class SetScreenVingette(BaseRule):
             
             # todo set viewmode as {} response from json.
     def getPosition(self, optionindex):#todo vin utility to adjust zoom,vshift,pratio and nls
-        self.Globals.DIALOG.notificationDialog(LANGUAGE(32020))
+        Globals.dialog.notificationDialog(LANGUAGE(32020))
 
 
     def getImage(self, image=''):
         self.log('getImage, In image = %s'%(image))
-        day    = re.compile(r'\_Day(.*?)', re.IGNORECASE).search(image)
-        night  = re.compile(r'\_Night(.*?)', re.IGNORECASE).search(image)
+        day    = _DAY_RE.search(image)
+        night  = _NIGHT_RE.search(image)
         mytime = time.localtime()
         if mytime.tm_hour < 6 or mytime.tm_hour > 18:
             if day:
@@ -560,7 +563,7 @@ class MST3k(BaseRule):
 
    
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -610,7 +613,7 @@ class MST3k(BaseRule):
             if self.threadTimer.is_alive():
                 if hasattr(self.threadTimer, 'cancel'): self.threadTimer.cancel()
                 try: self.threadTimer.join()
-                except Exception: pass
+                except Exception as e: self.log('threadTimer join failed: %s' % e, xbmc.LOGDEBUG)
         return parameter
         
 
@@ -620,14 +623,14 @@ class DisableOverlay(BaseRule): #PLAYER RULES [50-99]
         self.name               = LANGUAGE(30042)
         self.description        = LANGUAGE(33042)
         self.optionLabels       = [LANGUAGE(30042)]
-        self.optionValues       = [Globals.SETTINGS.getSettingBool('Overlay_Enable')]
+        self.optionValues       = [Globals.settings.getSettingBool('Overlay_Enable')]
         self.optionDescriptions = [LANGUAGE(33042)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.storedValues       = [[]]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -661,14 +664,14 @@ class ForceSubtitles(BaseRule):
         self.name               = "Force Subtitles"
         self.description        = "Show Subtitles"
         self.optionLabels       = ['Force Subtitles?']
-        self.optionValues       = [Globals.BUILTIN.isSubtitle()]
+        self.optionValues       = [Globals.builtin.isSubtitle()]
         self.optionDescriptions = [""]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.storedValues       = [[]]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -702,14 +705,14 @@ class DisableTrakt(BaseRule):
         self.name               = "Trakt scrobbling"
         self.description        = "Disable Trakt scrobbling."
         self.optionLabels       = [LANGUAGE(30131)]
-        self.optionValues       = [Globals.SETTINGS.getSettingBool('Disable_Trakt')]
+        self.optionValues       = [Globals.settings.getSettingBool('Disable_Trakt')]
         self.optionDescriptions = [LANGUAGE(33131)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.storedValues       = [[]]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -743,14 +746,14 @@ class RollbackPlaycount(BaseRule):
         self.name               = "Rollback Playcount"
         self.description        = "Passive Playback w/o playcount & progress tracking."
         self.optionLabels       = [LANGUAGE(30132)]
-        self.optionValues       = [Globals.SETTINGS.getSettingBool('Rollback_Watched')]
+        self.optionValues       = [Globals.settings.getSettingBool('Rollback_Watched')]
         self.optionDescriptions = [LANGUAGE(33132)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.storedValues       = [[]]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -784,7 +787,7 @@ class DisableRestart(BaseRule):
         self.name               = "Restart Button"
         self.description        = LANGUAGE(33153)
         self.optionLabels       = [LANGUAGE(30153)]
-        self.optionValues       = [Globals.SETTINGS.getSettingInt('Replay_Percentage')]
+        self.optionValues       = [Globals.settings.getSettingInt('Replay_Percentage')]
         self.optionDescriptions = [LANGUAGE(33153)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [list(range(25,100,5))]
@@ -792,7 +795,7 @@ class DisableRestart(BaseRule):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -826,14 +829,14 @@ class DisableOnChange(BaseRule):
         self.name               = LANGUAGE(30170)
         self.description        = LANGUAGE(33171)
         self.optionLabels       = [LANGUAGE(30170)]
-        self.optionValues       = [Globals.SETTINGS.getSettingBool('Enable_OnInfo')]
+        self.optionValues       = [Globals.settings.getSettingBool('Enable_OnInfo')]
         self.optionDescriptions = [LANGUAGE(33171)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.storedValues       = [[]]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -874,7 +877,7 @@ class ForceRebuild(BaseRule):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -903,7 +906,7 @@ class DurationOptions(BaseRule): #PRE-BUILD RULES [500-599]
         self.name               = "Duration Options"
         self.description        = "Duration Options"
         self.optionLabels       = [LANGUAGE(30049),LANGUAGE(30052),LANGUAGE(32233)]
-        self.optionValues       = [Globals.SETTINGS.getSettingInt('Duration_Type'),Globals.SETTINGS.getSettingBool('Store_Duration'),Globals.SETTINGS.getSettingInt('Seek_Tolerance')]
+        self.optionValues       = [Globals.settings.getSettingInt('Duration_Type'),Globals.settings.getSettingBool('Store_Duration'),Globals.settings.getSettingInt('Seek_Tolerance')]
         self.optionDescriptions = [LANGUAGE(33015),LANGUAGE(33049),LANGUAGE(33052),LANGUAGE(32233)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30050):0,LANGUAGE(30051):1},[],list(range(0,900,5))]
@@ -911,7 +914,7 @@ class DurationOptions(BaseRule): #PRE-BUILD RULES [500-599]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -955,14 +958,14 @@ class IncludeOptions(BaseRule):
         self.name               = "Include Options"
         self.description        = "Include Options"
         self.optionLabels       = [LANGUAGE(30053),LANGUAGE(30054),LANGUAGE(30055),LANGUAGE(30225)]
-        self.optionValues       = [Globals.SETTINGS.getSettingBool('Enable_Extras'),Globals.SETTINGS.getSettingBool('Enable_Strms'),Globals.SETTINGS.getSettingBool('Enable_3D'),Globals.SETTINGS.getSettingBool('Enable_Details')]
+        self.optionValues       = [Globals.settings.getSettingBool('Enable_Extras'),Globals.settings.getSettingBool('Enable_Strms'),Globals.settings.getSettingBool('Enable_3D'),Globals.settings.getSettingBool('Enable_Details')]
         self.optionDescriptions = [LANGUAGE(33053),LANGUAGE(33054),LANGUAGE(33055),LANGUAGE(33225)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.storedValues       = [[],[],[],[]]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -1005,7 +1008,7 @@ class PreRoll(BaseRule):
         self.name               = "Pre-Roll"
         self.description        = "Pre-Roll Options"
         self.optionLabels       = [LANGUAGE(30017),LANGUAGE(30139),LANGUAGE(30029),LANGUAGE(30028),"Bumpers Folder","Ratings Folder"]
-        self.optionValues       = [Globals.SETTINGS.getSettingInt('Enable_Preroll'),Globals.SETTINGS.getSettingInt('Random_Pre_Chance'),Globals.SETTINGS.getSetting('Resource_Bumpers'),Globals.SETTINGS.getSetting('Resource_Ratings'),[os.path.join(FILLER_LOC,'Bumpers','')],[os.path.join(FILLER_LOC,'Ratings','')]]
+        self.optionValues       = [Globals.settings.getSettingInt('Enable_Preroll'),Globals.settings.getSettingInt('Random_Pre_Chance'),Globals.settings.getSetting('Resource_Bumpers'),Globals.settings.getSetting('Resource_Ratings'),[os.path.join(FILLER_LOC,'Bumpers','')],[os.path.join(FILLER_LOC,'Ratings','')]]
         self.optionDescriptions = [LANGUAGE(30018),LANGUAGE(33134),LANGUAGE(33029),LANGUAGE(33028),"",""]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0},list(range(0,101,1)),"","","",""]
@@ -1013,7 +1016,7 @@ class PreRoll(BaseRule):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -1052,7 +1055,7 @@ class PostRoll(BaseRule):
         self.name               = "Post-Roll"
         self.description        = "Post-Roll Options"
         self.optionLabels       = [LANGUAGE(30019),LANGUAGE(30134),LANGUAGE(30030),"Adverts Folder",LANGUAGE(30031),"Trailers Folder",LANGUAGE(30126),LANGUAGE(30053)]
-        self.optionValues       = [Globals.SETTINGS.getSettingInt('Enable_Postroll'),Globals.SETTINGS.getSettingInt('Random_Post_Chance'),Globals.SETTINGS.getSetting('Resource_Adverts'),[os.path.join(FILLER_LOC,'Adverts','')],Globals.SETTINGS.getSetting('Resource_Trailers'),[os.path.join(FILLER_LOC,'Trailers','')],Globals.SETTINGS.getSettingBool('Include_Trailers_KODI'),Globals.SETTINGS.getSettingBool('Include_Extras_KODI')]
+        self.optionValues       = [Globals.settings.getSettingInt('Enable_Postroll'),Globals.settings.getSettingInt('Random_Post_Chance'),Globals.settings.getSetting('Resource_Adverts'),[os.path.join(FILLER_LOC,'Adverts','')],Globals.settings.getSetting('Resource_Trailers'),[os.path.join(FILLER_LOC,'Trailers','')],Globals.settings.getSettingBool('Include_Trailers_KODI'),Globals.settings.getSettingBool('Include_Extras_KODI')]
         self.optionDescriptions = [LANGUAGE(30020),LANGUAGE(33134),LANGUAGE(33030),"",LANGUAGE(33031),"",LANGUAGE(33126),LANGUAGE(33233)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0,LANGUAGE(30026):1,LANGUAGE(30024):2,LANGUAGE(30025):3},list(range(0,101,1)),[]]
@@ -1060,7 +1063,7 @@ class PostRoll(BaseRule):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -1101,7 +1104,7 @@ class InterleaveValue(BaseRule):
         self.name               = LANGUAGE(30192)
         self.description        = LANGUAGE(33215)
         self.optionLabels       = [LANGUAGE(30179),LANGUAGE(30211)]
-        self.optionValues       = [Globals.SETTINGS.getSettingInt('Interleave_Set'), Globals.SETTINGS.getSettingBool('Interleave_Repeat')]
+        self.optionValues       = [Globals.settings.getSettingInt('Interleave_Set'), Globals.settings.getSettingBool('Interleave_Repeat')]
         self.optionDescriptions = [LANGUAGE(33215),LANGUAGE(33211)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(0,26,1))]
@@ -1109,7 +1112,7 @@ class InterleaveValue(BaseRule):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -1158,7 +1161,7 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self): 
@@ -1173,7 +1176,7 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
             if self.optionValues[0][0].get('holiday',{}):
                 try:
-                    if builder.pDialog: builder.pDialog = Globals.DIALOG._updateProgressThrottled(builder.pDialog, builder.pCount, message=f"{builder.pName}: {LANGUAGE(32209)} {self.name}",header=builder.pHeader)
+                    if builder.pDialog: builder.pDialog = Globals.dialog._updateProgressThrottled(builder.pDialog, builder.pCount, message=f"{builder.pName}: {LANGUAGE(32209)} {self.name}",header=builder.pHeader)
                     self.log(f"[{citem['id']}] runAction, {self.optionValues[0][0]['holiday']['name']}")
                     for query in self.optionValues[0]:
                         citem['logo'] = (query.get('holiday',{}).get('logo') or LOGO_SEASONAL)
@@ -1183,7 +1186,7 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
                                                                              {"field":"episode","operator":"greaterthan","value":"0"}])
                             else:
                                 query['filter']['and'] = [r for r in params['filter'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
-                                query['filter']['and'] = Globals.Globals._setDictLST(params['filter']['and'])
+                                query['filter']['and'] = Globals._setDictLST(params['filter']['and'])
                         # subfileList, subdirList, limits, errors = builder.buildList(citem, query.get('path',''), 'video', (query.get('limit') or builder.limit), query.get('sort',{}), builder.limits, {'file':query.get('path')}, query) #parse all directories under root. Flattened hierarchies recommended to stream line channel building.
                         self.storedValues[0].append(builder.buildFileList(citem, query.get('path',''), 'video', (query.get('limit') or builder.limit), query.get('sort',{}), builder.limits, query))
                     return [fileList for fileList in self.storedValues[0] if fileList] #fileArray
@@ -1206,7 +1209,7 @@ class HandleMethodOrder(BaseRule):
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -1250,15 +1253,15 @@ class HandleLimits(BaseRule):
         self.name               = LANGUAGE(32263)
         self.description        = LANGUAGE(33015)
         self.optionLabels       = ['Limit','Limits End','Limits Start']
-        self.optionValues       = [Globals.SETTINGS.getSettingInt('Page_Limit'),-1,0]
-        self.optionDescriptions = [f"Force Limit [{Globals.SETTINGS.getSettingInt('Page_Limit')}:Default]","Force End [-1:Auto, 0:Unlimited]","Force Start [-1:Unlimited, 0:Auto]"]
+        self.optionValues       = [Globals.settings.getSettingInt('Page_Limit'),-1,0]
+        self.optionDescriptions = [f"Force Limit [{Globals.settings.getSettingInt('Page_Limit')}:Default]","Force End [-1:Auto, 0:Unlimited]","Force Start [-1:Unlimited, 0:Auto]"]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [[0,10,25,50,100,250,500,1000]]
         self.storedValues       = [[],{}]
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -1307,7 +1310,7 @@ class ForceEpisodeOrder(BaseRule):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -1381,7 +1384,7 @@ class ForceRandom(BaseRule):
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self):
@@ -1415,7 +1418,7 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
         self.name               = LANGUAGE(30121)
         self.description        = LANGUAGE(33121)
         self.optionLabels       = [LANGUAGE(30180),LANGUAGE(30181),LANGUAGE(30182)]
-        self.optionValues       = [Globals.SETTINGS.getSettingInt('Enable_Even'),Globals.SETTINGS.getSettingBool('Enable_Even_Force_Episode'),Globals.SETTINGS.getSettingBool('Enable_Even_Force_Random')]
+        self.optionValues       = [Globals.settings.getSettingInt('Enable_Even'),Globals.settings.getSettingBool('Enable_Even_Force_Episode'),Globals.settings.getSettingBool('Enable_Even_Force_Random')]
         self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33230),LANGUAGE(30182)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(0,26,1))]
@@ -1423,7 +1426,7 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self): 
@@ -1529,7 +1532,7 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
                 
             elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
                 if len(parameter) > 0:
-                    builder.pDialog = Globals.DIALOG._updateProgressThrottled(builder.pDialog, builder.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    builder.pDialog = Globals.dialog._updateProgressThrottled(builder.pDialog, builder.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,builder.pMSG))
                     episode_order = False if self.optionValues[2] else self.optionValues[1]
                     random_order  = False if self.optionValues[1] else self.optionValues[2]
                     if episode_order: 
@@ -1564,7 +1567,7 @@ class PadScheduling(BaseRule):
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self): 
@@ -1605,7 +1608,7 @@ class PadScheduling(BaseRule):
                         start = item['stop']
                         totDur += item['duration']
                         parameter.append(item)
-                        inherited.pDialog = Globals.DIALOG._updateProgressThrottled(inherited.pDialog, inherited.pCount, message=f"{inherited.pName}: {LANGUAGE(33085)} {totDur}/{MIN_EPG_DURATION}",header=inherited.pHeader)
+                        inherited.pDialog = Globals.dialog._updateProgressThrottled(inherited.pDialog, inherited.pCount, message=f"{inherited.pName}: {LANGUAGE(33085)} {totDur}/{MIN_EPG_DURATION}",header=inherited.pHeader)
                         self.log("[%s] addScheduling, ADD fileList = %s, totDur = %s/%s, stop = %s"%(citem['id'],len(parameter),totDur,MIN_EPG_DURATION,parameter[-1].get('stop')))
         
         elif actionid == RULES_ACTION_CHANNEL_STOP:
@@ -1628,7 +1631,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        log('%s: %s'%(self.__class__.__name__,msg),level)
+        LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
     def copy(self): 
@@ -1644,30 +1647,30 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         
         
     def _getURL(self, id):
-        return 'http://%s/filelist/%s'%(Globals.PROPERTIES.getRemoteHost(),self._getKey(id))
+        return 'http://%s/filelist/%s'%(Globals.properties.getRemoteHost(),self._getKey(id))
         
         
     def _addIDX(self, key):
-        keys = set(Globals.SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
+        keys = set(Globals.settings.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
         keys.add(key)
-        return Globals.SETTINGS.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
+        return Globals.settings.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
         
         
     def _delIDX(self, key):
-        keys = set(Globals.SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
+        keys = set(Globals.settings.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
         if key in list(keys): keys.pop(key)
-        return Globals.SETTINGS.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
+        return Globals.settings.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
         
         
     def _chkIDX(self):
-        keys = set(Globals.SETTINGS.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
+        keys = set(Globals.settings.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
         for key in list(keys):
-            if not Globals.SETTINGS.getCacheSetting(key, FileAccess._getMD5(key), default={}): keys.pop(key)
-        return Globals.SETTINGS.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
+            if not Globals.settings.getCacheSetting(key, FileAccess._getMD5(key), default={}): keys.pop(key)
+        return Globals.settings.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
         
         
     def _getKey(self, id):
-        return '%s.json'%(FileAccess._getMD5('%s.%s'%(Globals.PROPERTIES.getFriendlyName(),id)))
+        return '%s.json'%(FileAccess._getMD5('%s.%s'%(Globals.properties.getFriendlyName(),id)))
         
         
     def _getTotDuration(self, id, filelist=[]):
@@ -1689,16 +1692,16 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         key = self._getKey(id)
         self._addIDX(key)
         self.log("[%s] runAction, _setResume: filelist = %s, resume = %s, key = %s, url = %s"%(id,len(filelist),resume,key,self.optionValues[1]))
-        friendly = Globals.PROPERTIES.getFriendlyName()
-        if resume.get('updated',{}).get('instance') == friendly: return Globals.SETTINGS.setCacheSetting(key, {'resume':resume,'filelist':filelist}, FileAccess._getMD5(key), datetime.timedelta(days=84))
-        elif self.optionValues[1]:                               return builder.jsonRPC.requestURL(self.optionValues[1],payload={'uuid':Globals.SETTINGS.getMYUUID(),'name':friendly,'payload':{'resume':resume,'filelist':filelist}},
-                                                                                                   cache={"cache":Globals.SETTINGS.cache, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
+        friendly = Globals.properties.getFriendlyName()
+        if resume.get('updated',{}).get('instance') == friendly: return Globals.settings.setCacheSetting(key, {'resume':resume,'filelist':filelist}, FileAccess._getMD5(key), datetime.timedelta(days=84))
+        elif self.optionValues[1]:                               return builder.jsonRPC.requestURL(self.optionValues[1],payload={'uuid':Globals.settings.getMYUUID(),'name':friendly,'payload':{'resume':resume,'filelist':filelist}},
+                                                                                                   cache={"cache":Globals.settings.cache, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
 
     def _getResume(self, id):
         key = self._getKey(id)
         self.log("[%s] runAction, _getResume: key = %s, url = %s"%(id,key,self.optionValues[1]))
         if self.optionValues[1]: return builder.jsonRPC.requestURL(self.optionValues[1])
-        else:                    return Globals.SETTINGS.getCacheSetting(key, FileAccess._getMD5(key), default={})
+        else:                    return Globals.settings.getCacheSetting(key, FileAccess._getMD5(key), default={})
 
 
     def _getResume(self, id):

@@ -261,11 +261,11 @@ def read_error(msg, fp, e):
     try:
         line   = int(e.args[0].split(':')[0].split('line ')[1])
         column = int(e.args[0].split(':')[1].split('column ')[1])
-        log(f"{msg}, Error at line: {line}, column: {column}")
+        LOG(f"{msg}, Error at line: {line}, column: {column}")
         try:    lines = fp.readlines()
         except Exception: lines = []
-        if len(lines) >= line: log(f"{msg}, Line {line}: {lines[line-1].strip()}")
-    except Exception: log(f"{msg}, {e}")
+        if len(lines) >= line: LOG(f"{msg}, Line {line}: {lines[line-1].strip()}")
+    except Exception: LOG(f"{msg}, {e}")
 
 def _parse_tree(fp, tree):
     if tree is not None:

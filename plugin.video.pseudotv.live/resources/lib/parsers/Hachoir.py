@@ -29,7 +29,7 @@ class Hachoir:
             meta = {}
             from hachoir.parser   import createParser
             from hachoir.metadata import extractMetadata
-            log("Hachoir: determineLength %s"%(filename))
+            LOG("Hachoir: determineLength %s"%(filename))
             
             file_obj = FileAccess.open(filename, 'rb')
             parser = createParser(file_obj)
@@ -47,11 +47,11 @@ class Hachoir:
                 raise Exception('Duration not found in metadata')
             
             dur = int(duration.total_seconds())
-            log('Hachoir: Duration is %s seconds'%(dur))
+            LOG('Hachoir: Duration is %s seconds'%(dur))
             return dur
         except ImportError:
-            log("Hachoir: hachoir module not available", xbmc.LOGERROR)
+            LOG("Hachoir: hachoir module not available", xbmc.LOGERROR)
             return 0
         except Exception as e:
-            log("Hachoir: failed! %s"%(e), xbmc.LOGERROR)
+            LOG("Hachoir: failed! %s"%(e), xbmc.LOGERROR)
             return 0

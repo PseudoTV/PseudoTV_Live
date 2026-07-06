@@ -45,19 +45,19 @@ class Player(xbmc.Player):
         self.playingThread  = None
         # self.playingStopped = Event()
         
-        self.enableOverlay     = Globals.SETTINGS.getSettingBool('Overlay_Enable')
-        self.infoOnChange      = Globals.SETTINGS.getSettingBool('Enable_OnInfo')
-        self.disableTrakt      = Globals.SETTINGS.getSettingBool('Disable_Trakt')
-        self.rollbackPlaycount = Globals.SETTINGS.getSettingBool('Rollback_Watched')
-        self.saveDuration      = Globals.SETTINGS.getSettingBool('Store_Duration')
-        self.minDuration       = Globals.SETTINGS.getSettingInt('Seek_Tolerance')
-        self.maxProgress       = Globals.SETTINGS.getSettingInt('Seek_Threshold')
-        self.sleepTime         = Globals.SETTINGS.getSettingInt('Idle_Timer')
-        self.runWhilePlaying   = Globals.SETTINGS.getSettingBool('Run_While_Playing')
-        self.replayPercentage  = Globals.SETTINGS.getSettingInt('Replay_Percentage')
-        self.OnNextMode        = Globals.SETTINGS.getSettingInt('OnNext_Mode')
-        self.onNextPosition    = Globals.SETTINGS.getSetting("OnNext_Position_XY")	
-        self.playbackTimeout   = Globals.SETTINGS.getSettingInt('Playback_Timeout')
+        self.enableOverlay     = Globals.settings.getSettingBool('Overlay_Enable')
+        self.infoOnChange      = Globals.settings.getSettingBool('Enable_OnInfo')
+        self.disableTrakt      = Globals.settings.getSettingBool('Disable_Trakt')
+        self.rollbackPlaycount = Globals.settings.getSettingBool('Rollback_Watched')
+        self.saveDuration      = Globals.settings.getSettingBool('Store_Duration')
+        self.minDuration       = Globals.settings.getSettingInt('Seek_Tolerance')
+        self.maxProgress       = Globals.settings.getSettingInt('Seek_Threshold')
+        self.sleepTime         = Globals.settings.getSettingInt('Idle_Timer')
+        self.runWhilePlaying   = Globals.settings.getSettingBool('Run_While_Playing')
+        self.replayPercentage  = Globals.settings.getSettingInt('Replay_Percentage')
+        self.OnNextMode        = Globals.settings.getSettingInt('OnNext_Mode')
+        self.onNextPosition    = Globals.settings.getSetting("OnNext_Position_XY")	
+        self.playbackTimeout   = Globals.settings.getSettingInt('Playback_Timeout')
         
         self.monitor = monitor
         self.service = service
@@ -65,7 +65,7 @@ class Player(xbmc.Player):
         self.jsonRPC = service.jsonRPC
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def onPlayBackStarted(self):
         self.pendingItem.update({'invoked': time.time(), 'pending': True, 'item': {}})
@@ -108,8 +108,8 @@ class Player(xbmc.Player):
         try: 
             playingItem = FileAccess._decodeString(self.getPlayerItem().getProperty('sysInfo')) or {}
             if f"@{Globals._slugify(ADDON_NAME)}" in playingItem.get('chid', ''):
-                fitem = Globals._combineDicts(playingItem.get('fitem', {}), Globals._decodePlot(Globals.BUILTIN.getInfoLabel('VideoPlayer.Plot')))
-                nitem = Globals._combineDicts(playingItem.get('nitem', {}), Globals._decodePlot(Globals.BUILTIN.getInfoLabel('VideoPlayer.NextPlot')))
+                fitem = Globals._combineDicts(playingItem.get('fitem', {}), Globals._decodePlot(Globals.builtin.getInfoLabel('VideoPlayer.Plot')))
+                nitem = Globals._combineDicts(playingItem.get('nitem', {}), Globals._decodePlot(Globals.builtin.getInfoLabel('VideoPlayer.NextPlot')))
                 citem = Globals._combineDicts(fitem.get('citem', {}), next((item for item in getattr(self.service, 'curchannels', []) if item.get('id', -1) == playingItem.get('chid', 0)), {}))
                 
                 fitem['runtime']  = self.getPlayerTime()
@@ -117,12 +117,12 @@ class Player(xbmc.Player):
                 nitem['isfiller'] = Globals._isFiller(nitem)
                 
                 playingItem['isPseudoTV'] = True
-                playingItem['chfile']     = Globals.BUILTIN.getInfoLabel('Player.Filename')
-                playingItem['chfolder']   = Globals.BUILTIN.getInfoLabel('Player.Folderpath')
-                playingItem['chpath']     = Globals.BUILTIN.getInfoLabel('Player.Filenameandpath')
+                playingItem['chfile']     = Globals.builtin.getInfoLabel('Player.Filename')
+                playingItem['chfolder']   = Globals.builtin.getInfoLabel('Player.Folderpath')
+                playingItem['chpath']     = Globals.builtin.getInfoLabel('Player.Filenameandpath')
                 playingItem['callback']   = self.jsonRPC.getCallback(playingItem)
                 playingItem.update({'fitem': fitem, 'nitem': nitem, 'citem': citem})
-                Globals.PROPERTIES.setProperty('lastPlayed.sysInfo', playingItem)
+                Globals.properties.setProperty('lastPlayed.sysInfo', playingItem)
             return playingItem
         except Exception as e: 
             self.log(f"getplayingItem compilation failed: {str(e)}", xbmc.LOGERROR)
@@ -152,17 +152,17 @@ class Player(xbmc.Player):
         if self.isPlaying(): 
             try: return abs(int((self.getRemainingTime() / self.getPlayerTime()) * 100) - 100)
             except ZeroDivisionError: return 0
-        return int(Globals.BUILTIN.getInfoLabel('Player.Progress') or '-1')
+        return int(Globals.builtin.getInfoLabel('Player.Progress') or '-1')
 
     def getTimeLabel(self, prop: str = 'TimeRemaining'):
-        return Globals._timeString2Seconds(Globals.BUILTIN.getInfoLabel(f"Player.{prop}(hh:mm:ss)")) if self.isPlaying() else -1
+        return Globals._timeString2Seconds(Globals.builtin.getInfoLabel(f"Player.{prop}(hh:mm:ss)")) if self.isPlaying() else -1
 
     def isPlayingFiller(self):
-        if self.isPlaying(): return Globals._isFiller({'genre': Globals.BUILTIN.getInfoLabel('VideoPlayer.Genre(slash)').split(' / ')})
+        if self.isPlaying(): return Globals._isFiller({'genre': Globals.builtin.getInfoLabel('VideoPlayer.Genre(slash)').split(' / ')})
         return Globals._isFiller(self.playingItem.get('fitem', {}))
         
     def isNextFiller(self):
-        if self.isPlaying(): return Globals._isFiller({'genre': Globals.BUILTIN.getInfoLabel('VideoPlayer.NextGenre(slash)').split(' / ')})
+        if self.isPlaying(): return Globals._isFiller({'genre': Globals.builtin.getInfoLabel('VideoPlayer.NextGenre(slash)').split(' / ')})
         return Globals._isFiller(self.playingItem.get('nitem', {}))
 
     def isPlaylist(self):
@@ -175,8 +175,8 @@ class Player(xbmc.Player):
         return self.isPlaying() and self.isPseudoTV() and self.pendingItem.get('playing',False)
 
     def setSubtitles(self, state: bool = None):
-        if not Globals.BUILTIN.hasSubtitle(): state = False
-        elif state is None:           state = Globals.BUILTIN.isSubtitle()
+        if not Globals.builtin.hasSubtitle(): state = False
+        elif state is None:           state = Globals.builtin.isSubtitle()
         self.showSubtitles(state)
   
     # @debounceit(OSD_TIMER)
@@ -189,7 +189,7 @@ class Player(xbmc.Player):
                     resume = { "file"    : playingFile,
                                "position": ceil(self.getPlayedTime()),
                                "total"   : self.getPlayerTime(),
-                               "updated" : {'instance': Globals.PROPERTIES.getFriendlyName(), 'time': Globals._getUTCstamp()} }
+                               "updated" : {'instance': Globals.properties.getFriendlyName(), 'time': Globals._getUTCstamp()} }
                     self.playingItem.setdefault('resume',{}).update(resume)
                     self.log(f"_onCheckpoint, {resume}")
 
@@ -222,7 +222,7 @@ class Player(xbmc.Player):
         self.toggleInfo(False)
         self.toggleOverlay(False)
         self.toggleBackground(False)
-        self.lastSubState = Globals.BUILTIN.isSubtitle()
+        self.lastSubState = Globals.builtin.isSubtitle()
         
         if playingItem.get('isPseudoTV'):
             oldInfo = self.playingItem
@@ -234,7 +234,7 @@ class Player(xbmc.Player):
             if newChan:
                 self.runActions  = RulesList([playingItem.get('citem', {})]).runActions
                 self.playingItem = self._runActions(RULES_ACTION_PLAYER_START, playingItem.get('citem', {}), playingItem, inherited=self)
-                Globals.PROPERTIES.setTrakt(self.disableTrakt)
+                Globals.properties.setTrakt(self.disableTrakt)
                 self.setSubtitles(self.lastSubState)
                 self.toggleReplay(bool(self.replayPercentage))
                 
@@ -245,15 +245,15 @@ class Player(xbmc.Player):
             else:
                 self.playingItem = playingItem
                 if playingItem.get('radio', False): 
-                    Globals.BUILTIN.executebuiltin('Action(back)')
-                    Globals.BUILTIN.executewindow('ReplaceWindow(visualisation)')
+                    Globals.builtin.executebuiltin('Action(back)')
+                    Globals.builtin.executewindow('ReplaceWindow(visualisation)')
                 elif playingItem.get('isPlaylist', False): 
-                    Globals.BUILTIN.executewindow('ReplaceWindow(fullscreenvideo)')
+                    Globals.builtin.executewindow('ReplaceWindow(fullscreenvideo)')
             self.toggleInfo(self.infoOnChange)   
             
             if not self.playingItem.get('callback') and self.jsonRPC:
                 self.playingItem['callback'] = self.jsonRPC.getCallback(self.playingItem)
-                Globals.PROPERTIES.setProperty('lastPlayed.sysInfo', self.playingItem)
+                Globals.properties.setProperty('lastPlayed.sysInfo', self.playingItem)
                       
     def _onChange(self, playingItem=None):
         self.log(f"_onChange")
@@ -262,7 +262,7 @@ class Player(xbmc.Player):
         if playingItem:
             if not playingItem.get('isPlaylist', False):
                 self.toggleBackground(self.enableOverlay)
-                Globals.BUILTIN.executebuiltin(f"PlayMedia({playingItem.get('callback')})")
+                Globals.builtin.executebuiltin(f"PlayMedia({playingItem.get('callback')})")
             self._runActions(RULES_ACTION_PLAYER_CHANGE, playingItem.get('citem', {}), playingItem, inherited=self)
         else:
             self.toggleBackground(False)
@@ -270,8 +270,8 @@ class Player(xbmc.Player):
     def _onError(self, playingItem=None):
         self.log(f"_onError")
         if playingItem is None: playingItem = {}
-        if self.isPseudoTV() and Globals.SETTINGS.getSettingBool('Debug_Enable'):
-            Globals.DIALOG.notificationDialog(LANGUAGE(32000))
+        if self.isPseudoTV() and Globals.settings.getSettingBool('Debug_Enable'):
+            Globals.dialog.notificationDialog(LANGUAGE(32000))
             self.onPlayBackStopped()
            
     def _onStop(self, playingItem=None):
@@ -282,7 +282,7 @@ class Player(xbmc.Player):
         self.toggleBackground(False)
         
         if playingItem:
-            Globals.PROPERTIES.setTrakt(False)
+            Globals.properties.setTrakt(False)
             if playingItem.get('isPlaylist', False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             if self.jsonRPC: self.jsonRPC.quePlaycount(playingItem.get('fitem', {}), self.rollbackPlaycount)
             self._runActions(RULES_ACTION_PLAYER_STOP, playingItem.get('citem', {}), playingItem, inherited=self)
@@ -297,7 +297,7 @@ class Player(xbmc.Player):
     def _onSleep(self):
         self.log('_onSleep')
         # xbmc.playSFX(NOTE_WAV)
-        # dia = Globals.DIALOG.progressDialog(message=LANGUAGE(30078))
+        # dia = Globals.dialog.progressDialog(message=LANGUAGE(30078))
         # inc = int(100 / 15)
         # cnx = False
         
@@ -306,15 +306,15 @@ class Player(xbmc.Player):
                 # cnx = True
                 # break
             # msg = f"{LANGUAGE(32039)}\n{LANGUAGE(32040) % (15 - sec)}"
-            # dia = Globals.DIALOG.progressDialog((inc * sec), dia, msg)
-        # if dia: Globals.DIALOG.progressDialog(100, dia)
+            # dia = Globals.dialog.progressDialog((inc * sec), dia, msg)
+        # if dia: Globals.dialog.progressDialog(100, dia)
         # return not cnx
 
     def toggleBackground(self, state: bool=False):
         self.log(f"toggleBackground, state = {state}")
         # if state and self.background is None:
             # if self.overlay: self.toggleOverlay(False)
-            # # Globals.BUILTIN.executebuiltin("Globals.DIALOG.Close(all)")
+            # # Globals.builtin.executebuiltin("Globals.dialog.Close(all)")
             # self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", service=self.service)
             # self.background.show()
         # elif not state:
@@ -345,13 +345,13 @@ class Player(xbmc.Player):
     # @debounceit(OSD_TIMER)
     def toggleInfo(self, state: bool=False):
         self.log(f"toggleInfo, state = {state}")
-        # if state and not Globals.BUILTIN.getInfoBool('Window.IsVisible(fullscreeninfo)'):
-            # Globals.BUILTIN.executewindow('ActivateWindow(fullscreeninfo)')
+        # if state and not Globals.builtin.getInfoBool('Window.IsVisible(fullscreeninfo)'):
+            # Globals.builtin.executewindow('ActivateWindow(fullscreeninfo)')
             # timerit(self.toggleInfo)(float(OSD_TIMER), False)
         # elif not state:
-            # if Globals.BUILTIN.getInfoBool('Window.IsVisible(fullscreeninfo)'):
-                # Globals.BUILTIN.executebuiltin('Action(back)')
-            # Globals.BUILTIN.executebuiltin('Globals.DIALOG.Close(fullscreeninfo)')
+            # if Globals.builtin.getInfoBool('Window.IsVisible(fullscreeninfo)'):
+                # Globals.builtin.executebuiltin('Action(back)')
+            # Globals.builtin.executebuiltin('Globals.dialog.Close(fullscreeninfo)')
            
 class Monitor(xbmc.Monitor):
     def __init__(self, service):
@@ -365,16 +365,16 @@ class Monitor(xbmc.Monitor):
         self.player     = Player(monitor=self, service=service)
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def _onIdle(self):
         #chkidle
-        self.idleTime = Globals.BUILTIN.getIdle()
+        self.idleTime = Globals.builtin.getIdle()
         self.isIdle   = self.idleTime > OSD_TIMER
         self.log(f"__onIdle, isIdle = {self.isIdle}")
         if self.player.isPlayingPseudoTV():
             #chkerror
-            if self.player.pendingItem.get('invoked', -1) > 0 and not Globals.BUILTIN.isBusyDialog():
+            if self.player.pendingItem.get('invoked', -1) > 0 and not Globals.builtin.isBusyDialog():
                 if (time.time() - self.player.pendingItem.get('invoked', -1)) > self.player.playbackTimeout:
                     self.player.onPlayBackError()
             #chksleep
@@ -400,18 +400,18 @@ class Monitor(xbmc.Monitor):
        
     def _updatePlayerSettings(self):
         self.log('_updatePlayerSettings')
-        self.player.enableOverlay      = Globals.SETTINGS.getSettingBool('Overlay_Enable')
-        self.player.infoOnChange       = Globals.SETTINGS.getSettingBool('Enable_OnInfo')
-        self.player.disableTrakt       = Globals.SETTINGS.getSettingBool('Disable_Trakt')
-        self.player.rollbackPlaycount  = Globals.SETTINGS.getSettingBool('Rollback_Watched')
-        self.player.saveDuration       = Globals.SETTINGS.getSettingBool('Store_Duration')
-        self.player.minDuration        = Globals.SETTINGS.getSettingInt('Seek_Tolerance')
-        self.player.maxProgress        = Globals.SETTINGS.getSettingInt('Seek_Threshold')
-        self.player.sleepTime          = Globals.SETTINGS.getSettingInt('Idle_Timer')
-        self.player.runWhilePlaying    = Globals.SETTINGS.getSettingBool('Run_While_Playing')
-        self.player.replayPercentage   = Globals.SETTINGS.getSettingInt('Replay_Percentage')
-        self.player.OnNextMode         = Globals.SETTINGS.getSettingInt('OnNext_Mode')
-        self.player.onNextPosition     = Globals.SETTINGS.getSetting("OnNext_Position_XY")
+        self.player.enableOverlay      = Globals.settings.getSettingBool('Overlay_Enable')
+        self.player.infoOnChange       = Globals.settings.getSettingBool('Enable_OnInfo')
+        self.player.disableTrakt       = Globals.settings.getSettingBool('Disable_Trakt')
+        self.player.rollbackPlaycount  = Globals.settings.getSettingBool('Rollback_Watched')
+        self.player.saveDuration       = Globals.settings.getSettingBool('Store_Duration')
+        self.player.minDuration        = Globals.settings.getSettingInt('Seek_Tolerance')
+        self.player.maxProgress        = Globals.settings.getSettingInt('Seek_Threshold')
+        self.player.sleepTime          = Globals.settings.getSettingInt('Idle_Timer')
+        self.player.runWhilePlaying    = Globals.settings.getSettingBool('Run_While_Playing')
+        self.player.replayPercentage   = Globals.settings.getSettingInt('Replay_Percentage')
+        self.player.OnNextMode         = Globals.settings.getSettingInt('OnNext_Mode')
+        self.player.onNextPosition     = Globals.settings.getSetting("OnNext_Position_XY")
         
 class Service(object):
     pendingShutdown  = False
@@ -421,12 +421,12 @@ class Service(object):
     
     def __init__(self):
         self.log("Initializing core system service layers...")
-        self.isClient    = Globals.SETTINGS.getSettingBool('Enable_Client')
-        self.jsonQue     = set(Globals.SETTINGS.getCacheSetting('jsonQue', default=[]))
-        self.postQue     = set(Globals.SETTINGS.getCacheSetting('postQue', default=[]))
-        self.logoQue     = set(Globals.SETTINGS.getCacheSetting('logoQue', default=[]))
-        self.trailerQue  = set(Globals.SETTINGS.getCacheSetting('trailerQue', default=[]))
-        self.imageCache  = OrderedDict(Globals.SETTINGS.getCacheSetting('imageCache', default={}))
+        self.isClient    = Globals.settings.getSettingBool('Enable_Client')
+        self.jsonQue     = set(Globals.settings.getCacheSetting('jsonQue', default=[]))
+        self.postQue     = set(Globals.settings.getCacheSetting('postQue', default=[]))
+        self.logoQue     = set(Globals.settings.getCacheSetting('logoQue', default=[]))
+        self.trailerQue  = set(Globals.settings.getCacheSetting('trailerQue', default=[]))
+        self.imageCache  = OrderedDict(Globals.settings.getCacheSetting('imageCache', default={}))
         
         self.pool        = ExecutorPool()
         self.cache       = Cache(mem_cache=True)
@@ -437,13 +437,13 @@ class Service(object):
         self.queue       = CustomQueue(service=self)
         
         self.curchannels = self.tasks.getChannels()
-        self.cursettings = Globals.SETTINGS.getCurrentSettings()
+        self.cursettings = Globals.settings.getCurrentSettings()
 
     def __del__(self):
         self._save()
 
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return Globals._log(f"{self.__class__.__name__}: {msg}", level)
+        LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def _que(self, func, priority=3, delay=0, timer=0, *args, **kwargs):
         self.queue.push((func, args, kwargs), priority, delay, timer)
@@ -454,42 +454,42 @@ class Service(object):
         
     def _save(self):
         try:
-            Globals.SETTINGS.setCacheSetting('jsonQue'   , list(self.jsonQue))
-            Globals.SETTINGS.setCacheSetting('postQue'   , list(self.postQue))
-            Globals.SETTINGS.setCacheSetting('logoQue'   , list(self.logoQue))
-            Globals.SETTINGS.setCacheSetting('trailerQue', list(self.trailerQue))
-            Globals.SETTINGS.setCacheSetting('imageCache', dict(self.imageCache))
+            Globals.settings.setCacheSetting('jsonQue'   , list(self.jsonQue))
+            Globals.settings.setCacheSetting('postQue'   , list(self.postQue))
+            Globals.settings.setCacheSetting('logoQue'   , list(self.logoQue))
+            Globals.settings.setCacheSetting('trailerQue', list(self.trailerQue))
+            Globals.settings.setCacheSetting('imageCache', dict(self.imageCache))
         except Exception as e: self.log(f"_save, failed! {str(e)}", xbmc.LOGERROR)
         return True
 
     def _shutdown(self, wait=None) -> bool:
         if wait is None: wait = SERVICE_INTERVAL
-        pending_state = any([Globals.PROPERTIES.isPendingShutdown(), self.monitor.waitForAbort(wait)])
+        pending_state = any([Globals.properties.isPendingShutdown(), self.monitor.waitForAbort(wait)])
         if self.pendingShutdown != pending_state:
             self.pendingShutdown = pending_state
-            Globals.PROPERTIES.clrEXTProperty(f'{ADDON_ID}.SERVICE.pendingShutdown')
+            Globals.properties.clrEXTProperty(f'{ADDON_ID}.SERVICE.pendingShutdown')
             self.log(f"_shutdown flag mutated: state={self.pendingShutdown}, lock_delay={wait}")
         return self.pendingShutdown
         
     def _restart(self) -> bool:
-        pending_state = Globals.PROPERTIES.isPendingRestart()
+        pending_state = Globals.properties.isPendingRestart()
         if self.pendingRestart != pending_state:
             self.pendingRestart = pending_state
-            Globals.PROPERTIES.clrEXTProperty(f'{ADDON_ID}.SERVICE.pendingRestart')
+            Globals.properties.clrEXTProperty(f'{ADDON_ID}.SERVICE.pendingRestart')
             self.log(f"_restart flag mutated: state={self.pendingRestart}")
         return self.pendingRestart
          
     def _interrupt(self) -> bool:
-        pending_state = any([Globals.PROPERTIES.isInterruptActivity(), self.pendingShutdown, self.pendingRestart, Globals.BUILTIN.isScanning(), self._isPlaying()])
+        pending_state = any([Globals.properties.isInterruptActivity(), self.pendingShutdown, self.pendingRestart, Globals.builtin.isScanning(), self._isPlaying()])
         if pending_state != self.pendingInterrupt:
-            self.pendingInterrupt = Globals.PROPERTIES.setPendingInterrupt(pending_state)
+            self.pendingInterrupt = Globals.properties.setPendingInterrupt(pending_state)
             self.log(f"_interrupt boundary changed: active={self.pendingInterrupt}")
         return self.pendingInterrupt
 
     def _suspend(self) -> bool:
-        pending_state = any([Globals.PROPERTIES.isSuspendActivity(), Globals.BUILTIN.isSettingsOpened()])
+        pending_state = any([Globals.properties.isSuspendActivity(), Globals.builtin.isSettingsOpened()])
         if pending_state != self.pendingSuspend:
-            self.pendingSuspend = Globals.PROPERTIES.setPendingSuspend(pending_state)
+            self.pendingSuspend = Globals.properties.setPendingSuspend(pending_state)
             self.log(f"_suspend boundary changed: active={self.pendingSuspend}")
         return self.pendingSuspend
         
@@ -501,40 +501,38 @@ class Service(object):
         return False
                
     def _tasks(self):
-        self._que(self.tasks.chkQueTimer, 1, 30.0)
+        self._que(self.tasks.chkQueTimer, 3, 30.0)
 
     def _initialize(self):
-        Globals.DIALOG.notificationDialog(f"{LANGUAGE(32054)}...")
-        self.monitor.waitForAbort(15)
         self._que(self.tasks._client if self.isClient else self.tasks._host, 1)
-        Globals.PROPERTIES.setEXTProperty(f'{ADDON_ID}.Local_Host', self.jsonRPC.getLocalHost())
+        Globals.properties.setEXTProperty(f'{ADDON_ID}.Local_Host', self.jsonRPC.getLocalHost())
         if self.player.isPlayingPseudoTV(): self.player.onAVStarted()
                 
     def _start(self):
         self.log("_start, service started")
-        self._initialize()
+        if Globals.dialog.notificationWait(f"{LANGUAGE(32054)}...", wait=15):
+            self._initialize()
         while not self.monitor.abortRequested():
             if self._shutdown() or self._restart(): break
-            else:
-                self._interrupt(), self._suspend()
-                if not self._isPlaying(): self._tasks()
+            self._interrupt(), self._suspend()
+            if not self._isPlaying(): self._tasks()
         self.monitor.waitForAbort(SERVICE_INTERVAL)
         return self._stop(self.pendingRestart)
 
     def _stop(self, pendingRestart: bool = False) -> bool:
         if self.player.isPlayingPseudoTV(): self.player.onPlayBackStopped()
-        with Globals.PROPERTIES.interruptActivity():
+        with Globals.properties.interruptActivity():
             for thread in threading.enumerate():
                 if thread.name != "MainThread" and thread.is_alive():
                     if thread.name.startswith(f"{ADDON_ID}"):
                         self.log(f"_stop, Terminating Thread: {thread.name}")
                         if hasattr(thread, 'cancel'): thread.cancel()
                         try:  thread.join(timeout=0.5)
-                        except Exception: pass
+                        except Exception as e: self.log('_stop thread join failed: %s' % e, xbmc.LOGDEBUG)
         if self._save(): 
-            Globals.SETTINGS.cache.shutdown()
+            Globals.settings.cache.shutdown()
             self.pool.shutdown()
-        Globals.PROPERTIES._clrTrash(Globals.PROPERTIES.getProcessID())
+        Globals.properties._clrTrash(Globals.properties.getProcessID())
         self.log(f"_stop, service shutdown sequence. Restart state: {pendingRestart}")
         return pendingRestart
         
