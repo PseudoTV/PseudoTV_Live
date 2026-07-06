@@ -134,7 +134,7 @@ jobs:
       - name: Run Kodi Addon Checker
         id: kodi-check
         run: |
-          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 | tee kodi-raw-output.txt || true
+          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 | tee kodi-check-output.txt || true
           
           # # Format output to match other checkers
           # ERRORS=$(grep -c "^ERROR:" kodi-raw-output.txt 2>/dev/null | tr -d '[:space:]' || true)
