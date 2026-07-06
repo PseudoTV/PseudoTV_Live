@@ -355,7 +355,16 @@ jobs:
         run: |
           DIFF=$(cat changes.diff)
           FILES=$(cat changed_files.txt 2>/dev/null || echo "None")
-          opencode run --model opencode/mimo-v2.5-free "Analyze the following code changes from a recent push to PseudoTV Live (Kodi addon). CHANGED FILES: $FILES CODE DIFF: $DIFF Focus on: 1. Does this change break existing functionality? 2. Are there any bugs or logic errors in the diff? 3. Does it follow the existing code patterns in the project? 4. Are there any missing imports or undefined variables? 5. Could this change cause issues with Kodi API compatibility? Provide a brief risk assessment (LOW/MEDIUM/HIGH) and specific findings if any issues exist." 2>&1 | tee ai-review-output.txt
+          
+          echo "AI Code Review" > ai-review-output.txt
+          echo "============================================" >> ai-review-output.txt
+          
+          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Analyze the following code changes from a recent push to PseudoTV Live (Kodi addon). CHANGED FILES: $FILES CODE DIFF: $DIFF Focus on: 1. Does this change break existing functionality? 2. Are there any bugs or logic errors in the diff? 3. Does it follow the existing code patterns in the project? 4. Are there any missing imports or undefined variables? 5. Could this change cause issues with Kodi API compatibility? Provide a brief risk assessment (LOW/MEDIUM/HIGH) and specific findings if any issues exist." 2>&1 || true)
+          
+          # Clean output - remove non-ASCII
+          echo "$OPENCODE_OUTPUT" | sed 's/[^[[:alnum:][:space:]._-]//g' >> ai-review-output.txt || true
+          
+          cat ai-review-output.txt
         continue-on-error: true
 
       - name: Generate Dynamic Tests
@@ -365,7 +374,16 @@ jobs:
         run: |
           DIFF=$(cat changes.diff)
           FILES=$(cat changed_files.txt 2>/dev/null || echo "None")
-          opencode run --model opencode/mimo-v2.5-free "Generate pytest tests specifically for these changed files in PseudoTV Live. CHANGED FILES: $FILES CODE DIFF: $DIFF Requirements: Test only the functions/classes that were modified, Mock xbmc/xbmcgui/xbmcaddon/xbmcplugin modules, Focus on edge cases in the changed code, Include tests that verify the change doesn't break existing behavior. Output ONLY the Python test code in a code block." 2>&1 | tee gen-tests-output.txt
+          
+          echo "AI Test Generation" > gen-tests-output.txt
+          echo "============================================" >> gen-tests-output.txt
+          
+          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Generate pytest tests specifically for these changed files in PseudoTV Live. CHANGED FILES: $FILES CODE DIFF: $DIFF Requirements: Test only the functions/classes that were modified, Mock xbmc/xbmcgui/xbmcaddon/xbmcplugin modules, Focus on edge cases in the changed code, Include tests that verify the change doesn't break existing behavior. Output ONLY the Python test code in a code block." 2>&1 || true)
+          
+          # Clean output - remove non-ASCII
+          echo "$OPENCODE_OUTPUT" | sed 's/[^[[:alnum:][:space:]._-]//g' >> gen-tests-output.txt || true
+          
+          cat gen-tests-output.txt
         continue-on-error: true
 
       - name: Upload AI Review Reports
@@ -392,6 +410,85 @@ jobs:
             rm -f "$TEST_FILE"
           fi
 
+      - name: Update Changelog
+        if: success()
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          DIFF=$(cat changes.diff)
+          FILES=$(cat changed_files.txt 2>/dev/null || echo "None")
+          CHANGELOG="plugin.video.pseudotv.live/changelog.txt"
+          VERSION="v.0.7.5+nightly"
+          
+          if [ -z "$DIFF" ] || [ "$DIFF" = "" ]; then
+            echo "No changes to add to changelog"
+            exit 0
+          fi
+          
+          echo "Generating changelog entry..."
+          
+          # Use AI to generate changelog entry with project's keywords
+          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Generate a changelog entry for these code changes to PseudoTV Live Kodi addon. You MUST use ONE of these EXACT keywords to start: Improved, Added, Tweaked, Refactored, Fixed, Resolved, Optimized, Moved, Introduced, Enhanced, Refined, Implemented, Replaced, Removed. Follow the dash with a space then the keyword. Keep it concise (1-2 lines max). Focus on user-facing changes, new features, improvements, or bug fixes. Do not include file names or technical details. CHANGED FILES: $FILES CODE DIFF: $DIFF Output ONLY the changelog line starting with dash, nothing else." 2>&1 || true)
+          
+          # Clean the output - remove non-ASCII and extract the changelog line
+          CHANGELOG_ENTRY=$(echo "$OPENCODE_OUTPUT" | grep "^-" | head -1 | sed 's/[^[[:alnum:][:space:]._/-]//g')
+          
+          # Validate it starts with a valid keyword
+          if echo "$CHANGELOG_ENTRY" | grep -qE "^- (Improved|Added|Tweaked|Refactored|Fixed|Resolved|Optimized|Moved|Introduced|Enhanced|Refined|Implemented|Replaced|Removed)"; then
+            echo "Generated entry: $CHANGELOG_ENTRY"
+            
+            # Check if version header exists
+            if grep -q "^$VERSION" "$CHANGELOG"; then
+              echo "Version $VERSION found, adding entry under it"
+              
+              # Add new entry after version header (at top of that version's entries)
+              TEMP_FILE=$(mktemp)
+              awk -v ver="$VERSION" -v entry="$CHANGELOG_ENTRY" '
+                /^### NOTICE/ { print; next }
+                $0 == ver { print; print entry; next }
+                { print }
+              ' "$CHANGELOG" > "$TEMP_FILE"
+              
+              mv "$TEMP_FILE" "$CHANGELOG"
+            else
+              echo "Version $VERSION not found, adding new version section"
+              
+              # Create temp file with new version section at top
+              TEMP_FILE=$(mktemp)
+              echo "### NOTICE: The nightly branch is in alpha; things will break! ####" > "$TEMP_FILE"
+              echo "$VERSION" >> "$TEMP_FILE"
+              echo "$CHANGELOG_ENTRY" >> "$TEMP_FILE"
+              echo "" >> "$TEMP_FILE"
+              grep -v "^### NOTICE:" "$CHANGELOG" | grep -v "^$VERSION$" >> "$TEMP_FILE" || true
+              
+              mv "$TEMP_FILE" "$CHANGELOG"
+            fi
+            
+            echo "Changelog updated successfully"
+            head -15 "$CHANGELOG"
+          else
+            echo "Invalid changelog entry format, skipping"
+            echo "Entry was: $CHANGELOG_ENTRY"
+          fi
+        continue-on-error: true
+
+      - name: Commit Changelog
+        if: success() && github.event_name == 'push'
+        run: |
+          CHANGELOG="plugin.video.pseudotv.live/changelog.txt"
+          
+          if git diff --quiet "$CHANGELOG" 2>/dev/null; then
+            echo "No changelog changes to commit"
+            exit 0
+          fi
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add "$CHANGELOG"
+          git commit -m "Update changelog with AI-generated summary [skip ci]" || true
+          git push || true
+        continue-on-error: true
+
   report:
     name: Generate Report
     runs-on: ubuntu-latest
@@ -415,9 +512,9 @@ jobs:
           # Change Detection
           echo "CHANGE DETECTION"
           echo "--------------------------------------------"
-          echo "Python Changes: ${{ needs.changes.outputs.python == 'true' && 'YES' || 'NO' }}"
-          echo "Files Changed: ${{ needs.changes.outputs.file_count }}"
-          echo "AI Analysis: ${{ needs.changes.outputs.skip_ai == 'true' && 'SKIPPED' || 'RUN' }}"
+          echo "Python Changes: ${{ needs.changes.outputs.python == 'true' && 'YES' || 'NO' }}" | sed 's/^/  /'
+          echo "Files Changed: ${{ needs.changes.outputs.file_count }}" | sed 's/^/  /'
+          echo "AI Analysis: ${{ needs.changes.outputs.skip_ai == 'true' && 'SKIPPED' || 'RUN' }}" | sed 's/^/  /'
           echo ""
           
           # Status Overview
@@ -431,13 +528,13 @@ jobs:
           LINT="${{ needs.lint.result }}"
           AI="${{ needs.ai-review.result }}"
           
-          echo "Kodi Addon Checker: $(echo $ADDON | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
-          echo "F-String Validation: $(echo $FSTRING | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
-          echo "Ruff Linter: $(echo $RUFF | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
-          echo "XML Validation: $(echo $XML | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
-          echo "JSON Validation: $(echo $JSON | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
-          echo "OpenCode Lint: $(echo $LINT | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
-          echo "AI Code Review: $(echo $AI | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
+          echo "Kodi Addon Checker: $(echo $ADDON | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
+          echo "F-String Validation: $(echo $FSTRING | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
+          echo "Ruff Linter: $(echo $RUFF | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
+          echo "XML Validation: $(echo $XML | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
+          echo "JSON Validation: $(echo $JSON | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
+          echo "OpenCode Lint: $(echo $LINT | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
+          echo "AI Code Review: $(echo $AI | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
           echo ""
           
           # Errors Summary
@@ -542,12 +639,16 @@ jobs:
           | JSON Validation | ${{ needs.lint-json.result == 'success' && '✅ Passed' || needs.lint-json.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
           | OpenCode Lint | ${{ needs.lint.result == 'success' && '✅ Passed' || needs.lint.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
           | AI Code Review | ${{ needs.ai-review.result == 'success' && '✅ Passed' || needs.ai-review.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
-          
-          ### Change Detection
-          - **Python Changes:** ${{ needs.changes.outputs.python == 'true' && 'Yes' || 'No' }}
-          - **Files Changed:** ${{ needs.changes.outputs.file_count || '0' }}
-          - **AI Analysis:** ${{ needs.changes.outputs.skip_ai == 'true' && 'Skipped (guard rails)' || 'Run' }}
           EOF
+          
+          # Add change detection details
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Change Detection" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "Python Changes: ${{ needs.changes.outputs.python == 'true' && 'YES' || 'NO' }}" >> $GITHUB_STEP_SUMMARY
+          echo "Files Changed: ${{ needs.changes.outputs.file_count || '0' }}" >> $GITHUB_STEP_SUMMARY
+          echo "AI Analysis: ${{ needs.changes.outputs.skip_ai == 'true' && 'SKIPPED' || 'RUN' }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
           
           # Add ruff details
           if [ -f reports/ruff-report/ruff-output.txt ]; then
