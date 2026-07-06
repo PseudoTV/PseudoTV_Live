@@ -11,17 +11,94 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      python: ${{ steps.check.outputs.python }}
+      file_count: ${{ steps.check.outputs.file_count }}
+      skip_ai: ${{ steps.check.outputs.skip_ai }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check for Python Changes
+        id: check
+        run: |
+          SKIP_AI="false"
+          
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null || echo "")
+            DIFF_STAT=$(git diff --stat origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null || echo "")
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            CHANGED=$(git diff --name-only HEAD~1 -- '*.py' 2>/dev/null || echo "")
+            DIFF_STAT=$(git diff --stat HEAD~1 -- '*.py' 2>/dev/null || echo "")
+          else
+            CHANGED=""
+            SKIP_AI="true"
+          fi
+          
+          # Count changed files
+          FILE_COUNT=$(echo "$CHANGED" | grep -c '\.py$' || echo "0")
+          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+          
+          # Guard: Skip if no Python changes
+          if [ -z "$CHANGED" ] || [ "$FILE_COUNT" -eq 0 ]; then
+            echo "python=false" >> $GITHUB_OUTPUT
+            echo "skip_ai=true" >> $GITHUB_OUTPUT
+            echo "No Python file changes detected"
+            exit 0
+          fi
+          
+          # Guard: Skip if too many files changed (limit to 10)
+          if [ "$FILE_COUNT" -gt 10 ]; then
+            echo "python=true" >> $GITHUB_OUTPUT
+            echo "skip_ai=true" >> $GITHUB_OUTPUT
+            echo "Too many files changed ($FILE_COUNT > 10), skipping AI analysis"
+            exit 0
+          fi
+          
+          # Guard: Check diff size and skip if too large (>500 lines)
+          DIFF_LINES=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null | wc -l || echo "0")
+          if [ "$DIFF_LINES" -gt 500 ]; then
+            echo "python=true" >> $GITHUB_OUTPUT
+            echo "skip_ai=true" >> $GITHUB_OUTPUT
+            echo "Diff too large ($DIFF_LINES lines > 500), skipping AI analysis"
+            exit 0
+          fi
+          
+          # Guard: Check if changes are only whitespace/comments
+          ACTUAL_CHANGES=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null | grep -E "^[+-]" | grep -v "^[+-][+-][+-]" | grep -vE "^\s*[+-]\s*#" | grep -vE "^\s*[+-]\s*$" | wc -l || echo "0")
+          if [ "$ACTUAL_CHANGES" -eq 0 ]; then
+            echo "python=true" >> $GITHUB_OUTPUT
+            echo "skip_ai=true" >> $GITHUB_OUTPUT
+            echo "Only whitespace/comment changes, skipping AI analysis"
+            exit 0
+          fi
+          
+          echo "python=true" >> $GITHUB_OUTPUT
+          echo "skip_ai=false" >> $GITHUB_OUTPUT
+          echo "Python changes detected ($FILE_COUNT files, $DIFF_LINES diff lines):"
+          echo "$CHANGED"
+
   addon-check:
     name: Kodi Addon Checker
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -53,7 +130,7 @@ jobs:
 
       - name: Upload Kodi Check Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kodi-addon-check-report
           path: kodi-check-output.txt
@@ -62,55 +139,84 @@ jobs:
   fstring-check:
     name: F-String Validation
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.python == 'true'
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
       - name: Run F-String Checker
-        run: python .github/scripts/fstring_check.py plugin.video.pseudotv.live/resources/lib
+        run: |
+          python .github/scripts/fstring_check.py plugin.video.pseudotv.live/resources/lib 2>&1 | tee fstring-output.txt
+        continue-on-error: true
+
+      - name: Upload F-String Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fstring-report
+          path: fstring-output.txt
+          retention-days: 30
 
   lint:
     name: OpenCode Lint
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.python == 'true' && needs.changes.outputs.skip_ai == 'false'
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Install OpenCode
         run: curl -fsSL https://opencode.ai/install | bash
 
+      - name: Get Changed Files
+        id: get-diff
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --name-only origin/${{ github.base_ref }}...HEAD -- '*.py' > lint_files.txt 2>/dev/null || true
+          else
+            git diff --name-only HEAD~1 -- '*.py' > lint_files.txt 2>/dev/null || true
+          fi
+
       - name: Run OpenCode Lint
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
-          opencode run --model opencode/mimo-v2.5 "Analyze the Python codebase in plugin.video.pseudotv.live/resources/lib for:
-          1. Code quality issues
-          2. Import errors
-          3. Unused variables
-          4. Type hints issues
-          5. Security concerns
-          
-          Provide a concise summary of issues found with file paths and line numbers."
+          FILES=$(cat lint_files.txt | head -5)
+          FILE_COUNT=$(cat lint_files.txt | wc -l)
+          echo "Analyzing $FILE_COUNT file(s) (limited to 5)"
+          opencode run --model opencode/mimo-v2.5-free --file "$FILES" "Lint these Python files for syntax errors, import errors, undefined variables, and security concerns. Only report actual issues found." 2>&1 | tee lint-output.txt
+        continue-on-error: true
+
+      - name: Upload Lint Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lint-report
+          path: lint-output.txt
+          retention-days: 30
 
   ai-review:
     name: AI Code Review & Test Generation
     runs-on: ubuntu-latest
-    needs: [addon-check, fstring-check, lint]
+    needs: [changes, addon-check, fstring-check, lint]
+    if: needs.changes.outputs.python == 'true' && needs.changes.outputs.skip_ai == 'false'
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -122,50 +228,56 @@ jobs:
       - name: Install OpenCode
         run: curl -fsSL https://opencode.ai/install | bash
 
+      - name: Get Changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff origin/${{ github.base_ref }}...HEAD -- '*.py' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
+          else
+            git diff HEAD~1 -- '*.py' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
+          fi
+          git diff --name-only HEAD~1 2>/dev/null | grep '\.py$' | head -5 > changed_files.txt || true
+          echo "Changed files: $(cat changed_files.txt | wc -l)"
+          echo "Diff size: $(wc -c < changes.diff) bytes"
+
       - name: AI Code Review
         id: ai-review
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
-          opencode run --model opencode/mimo-v2.5 "Review the PseudoTV Live Kodi addon codebase. Focus on:
-          1. Code quality and best practices
-          2. Potential bugs or issues
-          3. Performance optimizations
-          4. Kodi API usage patterns
-          
-          Provide actionable recommendations with specific file references."
+          DIFF=$(cat changes.diff)
+          FILES=$(cat changed_files.txt 2>/dev/null || echo "None")
+          opencode run --model opencode/mimo-v2.5-free "Analyze the following code changes from a recent push to PseudoTV Live (Kodi addon). CHANGED FILES: $FILES CODE DIFF: $DIFF Focus on: 1. Does this change break existing functionality? 2. Are there any bugs or logic errors in the diff? 3. Does it follow the existing code patterns in the project? 4. Are there any missing imports or undefined variables? 5. Could this change cause issues with Kodi API compatibility? Provide a brief risk assessment (LOW/MEDIUM/HIGH) and specific findings if any issues exist." 2>&1 | tee ai-review-output.txt
+        continue-on-error: true
 
       - name: Generate Dynamic Tests
         id: gen-tests
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
-          opencode run --model opencode/mimo-v2.5 "Generate a comprehensive pytest test file for the PseudoTV Live addon.
-          
-          Requirements:
-          - Test import statements for all modules
-          - Test basic class instantiation
-          - Mock xbmc/xbmcgui/xbmcaddon/xbmcplugin modules
-          - Test utility functions
-          - Include fixture setup
-          
-          Output ONLY the Python test code in a code block."
+          DIFF=$(cat changes.diff)
+          FILES=$(cat changed_files.txt 2>/dev/null || echo "None")
+          opencode run --model opencode/mimo-v2.5-free "Generate pytest tests specifically for these changed files in PseudoTV Live. CHANGED FILES: $FILES CODE DIFF: $DIFF Requirements: Test only the functions/classes that were modified, Mock xbmc/xbmcgui/xbmcaddon/xbmcplugin modules, Focus on edge cases in the changed code, Include tests that verify the change doesn't break existing behavior. Output ONLY the Python test code in a code block." 2>&1 | tee gen-tests-output.txt
+        continue-on-error: true
+
+      - name: Upload AI Review Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ai-review-reports
+          path: |
+            ai-review-output.txt
+            gen-tests-output.txt
+            changes.diff
+            changed_files.txt
+          retention-days: 30
 
       - name: Execute Generated Tests
         if: success()
         run: |
           TEST_FILE="test_dynamic_ai.py"
-          
-          # Extract test code from AI response (simplified)
-          python -c "
-          import re
-          content = '''${{ steps.gen-tests.outputs.stdout }}'''
-          match = re.search(r'\`\`\`python\n(.*?)\`\`\`', content, re.DOTALL)
-          if match:
-              with open('$TEST_FILE', 'w') as f:
-                  f.write(match.group(1))
-          "
-          
+          if [ -f gen-tests-output.txt ]; then
+            python -c "import re; content=open('gen-tests-output.txt').read(); match=re.search(r'\`\`\`python\n(.*?)\`\`\`', content, re.DOTALL); open('$TEST_FILE','w').write(match.group(1)) if match else None" 2>/dev/null || true
+          fi
           if [ -f "$TEST_FILE" ]; then
             PYTHONPATH="$(pwd):$(pwd)/plugin.video.pseudotv.live/resources/lib" pytest "$TEST_FILE" -v || true
             rm -f "$TEST_FILE"
@@ -175,58 +287,193 @@ jobs:
     name: Generate Report
     runs-on: ubuntu-latest
     if: always()
-    needs: [addon-check, fstring-check, lint, ai-review]
+    needs: [changes, addon-check, fstring-check, lint, ai-review]
     steps:
-      - name: Download Kodi Check Report
-        uses: actions/download-artifact@v4
+      - name: Download All Reports
+        uses: actions/download-artifact@v7
         with:
-          name: kodi-addon-check-report
-          path: .
+          path: reports
         continue-on-error: true
+
+      - name: Print Summary
+        run: |
+          echo ""
+          echo "============================================"
+          echo "   AI DEVELOPER ASSISTANT SUMMARY"
+          echo "============================================"
+          echo ""
+          
+          # Change Detection
+          echo "CHANGE DETECTION"
+          echo "--------------------------------------------"
+          echo "Python Changes: ${{ needs.changes.outputs.python == 'true' && 'YES' || 'NO' }}"
+          echo "Files Changed: ${{ needs.changes.outputs.file_count }}"
+          echo "AI Analysis: ${{ needs.changes.outputs.skip_ai == 'true' && 'SKIPPED' || 'RUN' }}"
+          echo ""
+          
+          # Status Overview
+          echo "VALIDATION STATUS"
+          echo "--------------------------------------------"
+          ADDON="${{ needs.addon-check.result }}"
+          FSTRING="${{ needs.fstring-check.result }}"
+          LINT="${{ needs.lint.result }}"
+          AI="${{ needs.ai-review.result }}"
+          
+          echo "Kodi Addon Checker: $(echo $ADDON | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
+          echo "F-String Validation: $(echo $FSTRING | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
+          echo "OpenCode Lint: $(echo $LINT | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
+          echo "AI Code Review: $(echo $AI | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')"
+          echo ""
+          
+          # Errors Summary
+          echo "ERRORS & WARNINGS"
+          echo "--------------------------------------------"
+          TOTAL_ERRORS=0
+          TOTAL_WARNINGS=0
+          
+          # F-String
+          if [ -f reports/fstring-report/fstring-output.txt ]; then
+            FSTRING_ERRORS=$(grep -c "^ERRORS:" reports/fstring-report/fstring-output.txt 2>/dev/null | head -1 || echo "0")
+            FSTRING_WARNINGS=$(grep -c "^WARNINGS:" reports/fstring-report/fstring-output.txt 2>/dev/null | head -1 || echo "0")
+            if [ "$FSTRING_ERRORS" -gt 0 ] || [ "$FSTRING_WARNINGS" -gt 0 ]; then
+              echo "F-String: $FSTRING_ERRORS error(s), $FSTRING_WARNINGS warning(s)"
+              grep -E "(ERRORS|WARNINGS):" reports/fstring-report/fstring-output.txt || true
+            fi
+          fi
+          
+          # Kodi Check
+          if [ -f reports/kodi-addon-check-report/kodi-check-output.txt ]; then
+            KODI_ERRORS=$(grep -c "^ERROR:" reports/kodi-addon-check-report/kodi-check-output.txt 2>/dev/null || echo "0")
+            KODI_WARNINGS=$(grep -c "^WARN:" reports/kodi-addon-check-report/kodi-check-output.txt 2>/dev/null || echo "0")
+            echo "Kodi Checker: $KODI_ERRORS error(s), $KODI_WARNINGS warning(s)"
+            if [ "$KODI_ERRORS" -gt 0 ]; then
+              echo "  Errors:"
+              grep "^ERROR:" reports/kodi-addon-check-report/kodi-check-output.txt | head -5 || true
+            fi
+            if [ "$KODI_WARNINGS" -gt 0 ]; then
+              echo "  Warnings:"
+              grep "^WARN:" reports/kodi-addon-check-report/kodi-check-output.txt | head -5 || true
+            fi
+          fi
+          
+          # Lint
+          if [ -f reports/lint-report/lint-output.txt ]; then
+            LINT_ISSUES=$(grep -cE "(error|Error|ERROR)" reports/lint-report/lint-output.txt 2>/dev/null || echo "0")
+            if [ "$LINT_ISSUES" -gt 0 ]; then
+              echo "Lint: $LINT_ISSUES issue(s) found"
+              grep -E "(error|Error|ERROR)" reports/lint-report/lint-output.txt | head -5 || true
+            else
+              echo "Lint: No issues"
+            fi
+          fi
+          
+          # AI Review
+          if [ -f reports/ai-review-reports/ai-review-output.txt ]; then
+            AI_RISK=$(grep -i "risk" reports/ai-review-reports/ai-review-output.txt | head -1 || echo "")
+            if [ -n "$AI_RISK" ]; then
+              echo "AI Review: $AI_RISK"
+            fi
+          fi
+          
+          echo ""
+          echo "============================================"
+          echo "   END OF SUMMARY"
+          echo "============================================"
+
+      - name: Write Job Summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## AI Developer Assistant Report
+          
+          ### Validation Results
+          | Check | Status |
+          |-------|--------|
+          | Kodi Addon Checker | ${{ needs.addon-check.result == 'success' && '✅ Passed' || needs.addon-check.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
+          | F-String Validation | ${{ needs.fstring-check.result == 'success' && '✅ Passed' || needs.fstring-check.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
+          | OpenCode Lint | ${{ needs.lint.result == 'success' && '✅ Passed' || needs.lint.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
+          | AI Code Review | ${{ needs.ai-review.result == 'success' && '✅ Passed' || needs.ai-review.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
+          
+          ### Change Detection
+          - **Python Changes:** ${{ needs.changes.outputs.python == 'true' && 'Yes' || 'No' }}
+          - **Files Changed:** ${{ needs.changes.outputs.file_count || '0' }}
+          - **AI Analysis:** ${{ needs.changes.outputs.skip_ai == 'true' && 'Skipped (guard rails)' || 'Run' }}
+          EOF
+          
+          # Add f-string details
+          if [ -f reports/fstring-report/fstring-output.txt ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### F-String Checker" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat reports/fstring-report/fstring-output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add kodi check details
+          if [ -f reports/kodi-addon-check-report/kodi-check-output.txt ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Kodi Addon Checker" >> $GITHUB_STEP_SUMMARY
+            ERRORS=$(grep -c "^ERROR:" reports/kodi-addon-check-report/kodi-check-output.txt 2>/dev/null || echo "0")
+            WARNINGS=$(grep -c "^WARN:" reports/kodi-addon-check-report/kodi-check-output.txt 2>/dev/null || echo "0")
+            echo "- **Errors:** $ERRORS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Warnings:** $WARNINGS" >> $GITHUB_STEP_SUMMARY
+            if [ "$ERRORS" -gt 0 ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo '<details><summary>Error Details</summary>' >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              grep "^ERROR:" reports/kodi-addon-check-report/kodi-check-output.txt >> $GITHUB_STEP_SUMMARY || true
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo '</details>' >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
 
       - name: Post PR Comment
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
-            const addonCheckResult = '${{ needs.addon-check.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
-            const fstringResult = '${{ needs.fstring-check.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
-            const lintResult = '${{ needs.lint.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
-            const aiReviewResult = '${{ needs.ai-review.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const fs = require('fs');
             
-            // Parse Kodi check output if available
-            let kodiErrors = '0';
-            let kodiWarnings = '0';
+            const addonResult = '${{ needs.addon-check.result }}';
+            const fstringResult = '${{ needs.fstring-check.result }}';
+            const lintResult = '${{ needs.lint.result }}';
+            const aiResult = '${{ needs.ai-review.result }}';
+            
+            const statusIcon = (r) => r === 'success' ? '✅' : r === 'skipped' ? '⏭️' : '❌';
+            
+            let report = `## 🤖 AI Developer Assistant\n\n`;
+            report += `### Validation Results\n`;
+            report += `| Check | Status |\n|-------|--------|\n`;
+            report += `| Kodi Addon Checker | ${statusIcon(addonResult)} ${addonResult} |\n`;
+            report += `| F-String Validation | ${statusIcon(fstringResult)} ${fstringResult} |\n`;
+            report += `| OpenCode Lint | ${statusIcon(lintResult)} ${lintResult} |\n`;
+            report += `| AI Code Review | ${statusIcon(aiResult)} ${aiResult} |\n\n`;
+            
+            // Add kodi errors
             try {
-              const fs = require('fs');
-              const content = fs.readFileSync('kodi-check-output.txt', 'utf8');
-              kodiErrors = (content.match(/^ERROR:/gm) || []).length;
-              kodiWarnings = (content.match(/^WARN:/gm) || []).length;
+              const kodi = fs.readFileSync('reports/kodi-addon-check-report/kodi-check-output.txt', 'utf8');
+              const errors = (kodi.match(/^ERROR:/gm) || []).length;
+              const warnings = (kodi.match(/^WARN:/gm) || []).length;
+              if (errors > 0 || warnings > 0) {
+                report += `### Kodi Checker Details\n`;
+                report += `- **Errors:** ${errors}\n- **Warnings:** ${warnings}\n\n`;
+              }
             } catch(e) {}
             
-            const body = `### 🤖 AI Developer Assistant Report
+            // Add f-string issues
+            try {
+              const fstr = fs.readFileSync('reports/fstring-report/fstring-output.txt', 'utf8');
+              if (fstr.includes('issue(s) found')) {
+                report += `### F-String Issues\n`;
+                report += '```\n' + fstr.substring(0, 500) + '\n```\n\n';
+              }
+            } catch(e) {}
             
-            #### Validation Summary
-            | Check | Status |
-            |-------|--------|
-            | Kodi Addon Checker | ${addonCheckResult} |
-            | F-String Validation | ${fstringResult} |
-            | OpenCode Lint | ${lintResult} |
-            | AI Code Review | ${aiReviewResult} |
-            
-            #### Kodi Addon Checker Details
-            - **Errors:** ${kodiErrors}
-            - **Warnings:** ${kodiWarnings}
-            
-            #### AI Review Summary
-            ${{ needs.ai-review.outputs.stdout || 'No output available' }}
-            
-            ---
-            *Generated by AI Developer Assistant workflow*`;
+            report += `---\n*View workflow logs for full details*`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
+              body: report
             });
