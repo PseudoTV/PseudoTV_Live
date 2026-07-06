@@ -1092,7 +1092,7 @@ class ListItems(object):
             (ninfo, properties) tuple
         """
         if properties is None: properties = {}
-        schema = ListitemTypes.MUSIC if media == 'music' else ListitemTypes.VIDEO
+        schema = ListItems.ListitemTypes.MUSIC if media == 'music' else ListItems.ListitemTypes.VIDEO
         keys_to_pop = []
         for key, value in list(ninfo.items()):
             types = schema.get(key)

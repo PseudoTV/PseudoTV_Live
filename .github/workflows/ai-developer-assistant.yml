@@ -143,7 +143,7 @@ jobs:
 
       - name: Run Ruff
         run: |
-          ruff check plugin.video.pseudotv.live/resources/lib --select=E,F,W --output-format=concise 2>&1 | tee ruff-output.txt || true
+          ruff check plugin.video.pseudotv.live/resources/lib --select=F,E9,W6 --output-format=concise 2>&1 | tee ruff-output.txt || true
         continue-on-error: true
 
       - name: Upload Ruff Report

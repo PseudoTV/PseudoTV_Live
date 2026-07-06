@@ -311,7 +311,7 @@ class Tasks(object):
             self.log("chkLibrary, %s done. complete=%s" % (type,complete))
         del library
         if any(complete): self.service._que(self.chkChannels,3,0,0,*(None,silent))
-        self.service._que(self.chkLibrary,2,1800,0,0,*(None,True))#30MINS
+        self.service._que(self.chkLibrary,2,1800,0,*(None,True))#30MINS
         self.log("chkLibrary, complete = %s"%(any(complete)))
         
         
