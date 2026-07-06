@@ -21,6 +21,14 @@ from variables   import *
 from videoparser import VideoParser
 from _services   import _Service
 
+# Lazy import to avoid circular dependency (variables.py defines Globals after kodi.py loads)
+_Globals = None
+def _globals():
+    global _Globals
+    if _Globals is None:
+        from variables import Globals as _Globals
+    return _Globals
+
 class JSONRPC(object):
     def __init__(self, service=None):
         self.runtimeThreshold = 15 #todo user setting % of allowed difference between runtime and duration before overriding runtime.
@@ -361,13 +369,13 @@ class JSONRPC(object):
     def getMPAA(self, type='movie', incItem=False):
         def __parse(items): 
             for item in items:
-                yield {'label':Globals._cleanMPAA(item.get("mpaa","NR")),'item':item if incItem else {}}
+                yield {'label':_globals()._cleanMPAA(item.get("mpaa","NR")),'item':item if incItem else {}}
         if   type == 'movie':  return list(__parse(self.getMovies()))
         elif type == 'tvshow': return list(__parse(self.getTVshows()))
 
 
     def getStreamDetails(self, path, media='video'):
-        if Globals._isStack(path): path = Globals._splitStacks(path)[0]
+        if _globals()._isStack(path): path = _globals()._splitStacks(path)[0]
         param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}
         return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=FileAccess._getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
@@ -533,7 +541,7 @@ class JSONRPC(object):
             if item is None: item = {}
             duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
             if   runtime == 0: runtime = duration
-            elif round(Globals._percentDiff(runtime, duration)) <= self.runtimeThreshold: runtime = duration
+            elif round(_globals()._percentDiff(runtime, duration)) <= self.runtimeThreshold: runtime = duration
             if save and duration != runtime: self.queDuration(item, runtime)
             return runtime
             
@@ -541,8 +549,8 @@ class JSONRPC(object):
         runtime = self._getRuntime(item) #player runtime, fallback meta provider runtime
         if runtime == 0 or accurate:
             duration = 0
-            if Globals._isStack(path):# handle "stacked" videos
-                for file in Globals._splitStacks(path): duration += __parseDuration(runtime, file)
+            if _globals()._isStack(path):# handle "stacked" videos
+                for file in _globals()._splitStacks(path): duration += __parseDuration(runtime, file)
             else: duration = __parseDuration(runtime, path, item, save)
             if duration > 0: runtime = duration
         self.log(f"getDuration [{runtime}], {path}, accurate = {accurate}, save ={save}")
@@ -695,11 +703,11 @@ class JSONRPC(object):
 
     @contextmanager
     def detectRPCCrash(self, citem):
-        Globals.settings.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',citem)
+        REAL_SETTINGS.setSetting('KODI.CRASH.JSONRPC.CITEM', FileAccess.dumpJSON(citem))
         try: yield
         except Exception as e: self.log('detectRPCCrash: %s' % e, xbmc.LOGDEBUG)
         finally:
-            Globals.settings.setCacheSetting('KODI.CRASH.JSONRPC.CITEM',None)
+            REAL_SETTINGS.setSetting('KODI.CRASH.JSONRPC.CITEM', '')
 
 
     def getLocalHost(self, local=False):
@@ -787,7 +795,7 @@ class JSONRPC(object):
                     channels, _, _ = self.getDirectory(param={"directory": result.get('file')},checksum=ADDON_VERSION,expiration=datetime.timedelta(minutes=15))
                     
                     for item in channels:
-                        fitem_id = Globals._decodePlot(item.get('plot', '')).get('citem', {}).get('id')
+                        fitem_id = _globals()._decodePlot(item.get('plot', '')).get('citem', {}).get('id')
                         if fitem_id == target_id:
                             callback = item.get('file')
                             self.log('[%s] getCallback: matched file' % chid)
@@ -809,7 +817,7 @@ class JSONRPC(object):
             if channel.get('label', '').lower() == chname.lower():
                 for key in ('broadcastnow', 'broadcastnext'):
                     b_info = channel.get(key)
-                    if b_info and Globals._decodePlot(b_info.get('plot', '')).get('citem', {}).get('id') == id:
+                    if b_info and _globals()._decodePlot(b_info.get('plot', '')).get('citem', {}).get('id') == id:
                         channel['broadcastnext'] = [channel.get('broadcastnext', {})]
                         self.log('[%s] matchChannel: __match, found pvritem' % id)
                         pvrItem = channel
@@ -843,13 +851,13 @@ class JSONRPC(object):
     def getNextItem(self, citem=None, nitem=None):
         if citem is None: citem = {}
         if nitem is None: nitem = {}
-        if not Globals._isFiller(nitem): return nitem
+        if not _globals()._isFiller(nitem): return nitem
             
-        n_id = Globals._decodePlot(nitem.get('plot', '')).get('id')
+        n_id = _globals()._decodePlot(nitem.get('plot', '')).get('id')
         next_items = self.matchChannel(citem.get('name', ''), citem.get('id', ''), citem.get('radio', False)).get('broadcastnext', [])
         found_idx = -1
         for i, item in enumerate(next_items):
-            fitem = Globals._decodePlot(item.get('plot', ''))
+            fitem = _globals()._decodePlot(item.get('plot', ''))
             if fitem.get('start') == nitem.get('start') and fitem.get('id') == n_id:
                 found_idx = i
                 break
@@ -857,8 +865,8 @@ class JSONRPC(object):
         if found_idx != -1:
             for i in range(found_idx, len(next_items)):
                 candidate = next_items[i]
-                if not Globals._isFiller(candidate):
-                    return Globals._decodePlot(candidate.get('plot', ''))
+                if not _globals()._isFiller(candidate):
+                    return _globals()._decodePlot(candidate.get('plot', ''))
         return {}
         
 
@@ -894,12 +902,12 @@ class JSONRPC(object):
         if trailers is None: trailers = {'movies':{},'tvshows':{}}
         self.log(f'setTrailers [Movies] = {len(trailers.get('movies',{}))}')
         self.log(f'setTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
-        return Globals.settings.setCacheSetting('trailers', trailers)
+        return self.cache.set('trailers', trailers, life=-1)
                                 
                         
     def getTrailers(self, genre=None):
         #todo clean old trailers by "added" epoch
-        trailers = Globals.settings.getCacheSetting('trailers', default={'movies':{},'tvshows':{}})
+        trailers = self.cache.get('trailers') or {'movies':{},'tvshows':{}}
         self.log(f'getTrailers [Movies] = {len(trailers.get('movies',{}))}')
         self.log(f'getTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
         if not genre is None: return trailers.get(genre,[])

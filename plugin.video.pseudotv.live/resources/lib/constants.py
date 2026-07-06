@@ -364,6 +364,19 @@ URL_WIN_BONJOUR           = 'https://support.apple.com/en-us/106380'
 URL_README                = 'https://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/README.md'
 
 # =============================================================================
+# Bundled Images / Media Assets
+# =============================================================================
+LOGO                = os.path.join(MEDIA_LOC,'wlogo.png')          # Default addon logo
+LOGO_DIM            = os.path.join(MEDIA_LOC,'dimlogo.png')        # Dimmed logo for overlays
+LOGO_COLOR          = os.path.join(MEDIA_LOC,'logo.png')           # Color logo for notifications
+FANART_COLOR        = os.path.join(MEDIA_LOC,'fanart.jpg')         # Default fanart image
+LOGO_POSTER         = os.path.join(MEDIA_LOC,'poster.png')         # Poster artwork
+LOGO_LANDSCAPE      = os.path.join(MEDIA_LOC,'landscape.png')      # Landscape artwork
+LOGO_SEASONAL       = os.path.join(MEDIA_LOC,'Seasonal.png')       # Seasonal/themed logo
+ICON_WEB            = os.path.join(MEDIA_LOC,'logo.ico')           # Web favicon
+LOGO_HOST           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
+
+# =============================================================================
 # Skin XML Dialog Filenames
 # =============================================================================
 BUSY_XML        = '%s.busy.xml'%(ADDON_ID)          # Busy spinner dialog
