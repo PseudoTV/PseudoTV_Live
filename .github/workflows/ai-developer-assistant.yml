@@ -39,82 +39,55 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.ref }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          echo "=== Change Detection ==="
           echo "Event: $EVENT_NAME"
           echo "Ref: ${{ github.ref }}"
           echo "SHA: ${{ github.sha }}"
+          echo "PR Base: $PR_BASE"
+          echo "PR SHA: $PR_SHA"
           
-          SKIP_AI="false"
           CHANGED=""
-          FILE_COUNT=0
-          DIFF_LINES=0
           
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            echo "PR: Comparing $PR_BASE...$PR_SHA"
-            git fetch origin $PR_BASE --depth=1 2>/dev/null || true
-            CHANGED=$(git diff --name-only origin/$PR_BASE...$PR_SHA -- '*.py' 2>/dev/null || true)
-            DIFF_LINES=$(git diff origin/$PR_BASE...$PR_SHA -- '*.py' 2>/dev/null | wc -l || true)
+            echo "Fetching base branch: $PR_BASE"
+            git fetch origin $PR_BASE 2>&1 || true
+            echo "Comparing: origin/$PR_BASE...HEAD"
+            CHANGED=$(git diff --name-only origin/$PR_BASE...HEAD -- '*.py' 2>&1 || true)
             
           elif [ "$EVENT_NAME" = "push" ]; then
-            echo "Push: Comparing HEAD~1...HEAD"
-            CHANGED=$(git diff --name-only HEAD~1 HEAD -- '*.py' 2>/dev/null || true)
-            DIFF_LINES=$(git diff HEAD~1 HEAD -- '*.py' 2>/dev/null | wc -l || true)
+            echo "Comparing: HEAD~1...HEAD"
+            CHANGED=$(git diff --name-only HEAD~1 HEAD -- '*.py' 2>&1 || true)
             
           else
-            echo "Manual trigger: No diff available"
-            SKIP_AI="true"
+            echo "Manual trigger"
           fi
           
-          echo "Changed files: $CHANGED"
-          echo "Diff lines: $DIFF_LINES"
+          echo ""
+          echo "Raw git diff output:"
+          echo "${CHANGED:-<empty>}"
+          echo ""
           
-          # Count changed files
+          # Count Python files
+          FILE_COUNT=0
           if [ -n "$CHANGED" ]; then
             FILE_COUNT=$(echo "$CHANGED" | grep -c '\.py$' || true)
           fi
           FILE_COUNT=${FILE_COUNT:-0}
           
-          echo "python=false" >> $GITHUB_OUTPUT
-          echo "skip_ai=true" >> $GITHUB_OUTPUT
-          echo "file_count=0" >> $GITHUB_OUTPUT
+          echo "Python files changed: $FILE_COUNT"
           
-          # Guard: Skip if no Python changes
-          if [ -z "$CHANGED" ] || [ "$FILE_COUNT" -eq 0 ]; then
-            echo "No Python file changes detected"
-            exit 0
-          fi
-          
-          # Guard: Skip if too many files changed (limit to 10)
-          if [ "$FILE_COUNT" -gt 10 ]; then
-            echo "Too many files changed ($FILE_COUNT > 10), skipping AI analysis"
-            exit 0
-          fi
-          
-          # Guard: Diff too large
-          DIFF_LINES=${DIFF_LINES:-0}
-          if [ "$DIFF_LINES" -gt 500 ]; then
-            echo "Diff too large ($DIFF_LINES lines > 500), skipping AI analysis"
-            exit 0
-          fi
-          
-          # Guard: Check if changes are only whitespace/comments
-          ACTUAL_CHANGES=0
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            ACTUAL_CHANGES=$(git diff origin/$PR_BASE...$PR_SHA -- '*.py' 2>/dev/null | grep -E "^[+-]" | grep -v "^[+-][+-][+-]" | grep -vE "^\s*[+-]\s*#" | grep -vE "^\s*[+-]\s*$" | wc -l || true)
+          # Set outputs
+          if [ "$FILE_COUNT" -gt 0 ]; then
+            echo "python=true" >> $GITHUB_OUTPUT
+            echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+            echo "skip_ai=false" >> $GITHUB_OUTPUT
+            echo "RESULT: Python changes detected, proceeding with analysis"
           else
-            ACTUAL_CHANGES=$(git diff HEAD~1 HEAD -- '*.py' 2>/dev/null | grep -E "^[+-]" | grep -v "^[+-][+-][+-]" | grep -vE "^\s*[+-]\s*#" | grep -vE "^\s*[+-]\s*$" | wc -l || true)
+            echo "python=false" >> $GITHUB_OUTPUT
+            echo "file_count=0" >> $GITHUB_OUTPUT
+            echo "skip_ai=true" >> $GITHUB_OUTPUT
+            echo "RESULT: No Python changes, skipping AI analysis"
           fi
-          ACTUAL_CHANGES=${ACTUAL_CHANGES:-0}
-          
-          if [ "$ACTUAL_CHANGES" -eq 0 ]; then
-            echo "Only whitespace/comment changes, skipping AI analysis"
-            exit 0
-          fi
-          
-          echo "python=true" >> $GITHUB_OUTPUT
-          echo "skip_ai=false" >> $GITHUB_OUTPUT
-          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
-          echo "Python changes detected ($FILE_COUNT files, $DIFF_LINES diff lines)"
-          echo "$CHANGED"
 
   addon-check:
     name: Kodi Addon Checker
@@ -134,35 +107,15 @@ jobs:
       - name: Run Kodi Addon Checker
         id: kodi-check
         run: |
-          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 | tee kodi-check-output.txt || true
+          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 | sed 's/[^[[:alnum:][:space:]._-]//g' > kodi-check-output.txt || true
           
-          # # Format output to match other checkers
-          # ERRORS=$(grep -c "^ERROR:" kodi-raw-output.txt 2>/dev/null | tr -d '[:space:]' || true)
-          # WARNINGS=$(grep -c "^WARN:" kodi-raw-output.txt 2>/dev/null | tr -d '[:space:]' || true)
-          # ERRORS=${ERRORS:-0}
-          # WARNINGS=${WARNINGS:-0}
+          ERRORS=$(grep -c "^ERROR:" kodi-check-output.txt 2>/dev/null | tr -d '[:space:]' || true)
+          WARNINGS=$(grep -c "^WARN:" kodi-check-output.txt 2>/dev/null | tr -d '[:space:]' || true)
+          ERRORS=${ERRORS:-0}
+          WARNINGS=${WARNINGS:-0}
           
-          # echo "Kodi Addon Checker" > kodi-check-output.txt
-          # echo "============================================" >> kodi-check-output.txt
-          
-          # if [ "$ERRORS" -gt 0 ] 2>/dev/null || [ "$WARNINGS" -gt 0 ] 2>/dev/null; then
-            # echo "ERRORS & WARNINGS: $ERRORS error(s), $WARNINGS warning(s) found" >> kodi-check-output.txt
-            # echo "============================================" >> kodi-check-output.txt
-            # echo "" >> kodi-check-output.txt
-            
-            # if [ "$ERRORS" -gt 0 ] 2>/dev/null; then
-              # grep "^ERROR:" kodi-raw-output.txt >> kodi-check-output.txt || true
-            # fi
-            # if [ "$WARNINGS" -gt 0 ] 2>/dev/null; then
-              # grep "^WARN:" kodi-raw-output.txt >> kodi-check-output.txt || true
-            # fi
-          # else
-            # echo "No issues found" >> kodi-check-output.txt
-          # fi
-          
-          # cat kodi-check-output.txt
-          # echo "errors=$ERRORS" >> $GITHUB_OUTPUT
-          # echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
         continue-on-error: true
 
       - name: Upload Kodi Check Report
@@ -315,7 +268,7 @@ jobs:
     name: OpenCode Lint
     runs-on: ubuntu-latest
     needs: [changes]
-    if: needs.changes.outputs.python == 'true' && needs.changes.outputs.skip_ai == 'false'
+    if: needs.changes.outputs.python == 'true'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -360,7 +313,7 @@ jobs:
     name: AI Code Review & Test Generation
     runs-on: ubuntu-latest
     needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint]
-    if: needs.changes.outputs.python == 'true' && needs.changes.outputs.skip_ai == 'false'
+    if: needs.changes.outputs.python == 'true'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
