@@ -53,7 +53,7 @@ class JSONRPC(object):
         if params is None:  params  = {}
         if payload is None: payload = {}
         if header is None:  header  = {}
-        if timeout is None: timeout = REAL_SETTINGS.getSettingInt('API_Timeout')
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
         if life is None:    life = datetime.timedelta(minutes=15)
 
         def __error(result=None):
@@ -88,7 +88,7 @@ class JSONRPC(object):
         
     def sendRemote(self, param, ip=None, timeout=None):
         if ip is None: ip = (xbmc.getIPAddress() or gethostbyname(gethostname()) or '0.0.0.0')
-        if timeout is None: timeout = REAL_SETTINGS.getSettingInt('API_Timeout')
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
         try:
             command = param
             command["jsonrpc"] = "2.0"
@@ -109,7 +109,7 @@ class JSONRPC(object):
         command = param
         command["jsonrpc"] = "2.0"
         command["id"] = f"{ADDON_ID}.local"
-        if timeout is None: timeout = REAL_SETTINGS.getSettingInt('API_Timeout')
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
         response = FileAccess.loadJSON(self.pool.executor(xbmc.executeJSONRPC,timeout,FileAccess.dumpJSON(command)))
         if response and response.get('error'):
             self.log('sendJSON %s error: %s' % (param.get('method','?'), response.get('error',{}).get('message',LANGUAGE(30079))), xbmc.LOGWARNING)
@@ -124,7 +124,7 @@ class JSONRPC(object):
     def cacheJSON(self, param, life=None, checksum=None, timeout=None):
         if checksum is None: checksum = ADDON_VERSION
         if life is None: life = datetime.timedelta(minutes=5)
-        if timeout is None: timeout = REAL_SETTINGS.getSettingInt('API_Timeout')
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
         cacheName = 'cacheJSON.%s'%(FileAccess._getMD5(FileAccess.dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
@@ -136,7 +136,7 @@ class JSONRPC(object):
     def walkFileDirectory(self, path, media='video', limit=None, depth=None, checksum=None, expiration=None, dir=None):
         if dir is None: dir = {'label':'resources'}
         if limit is None: limit = CHANNEL_LIMIT * depth
-        if depth is None: depth = REAL_SETTINGS.getSettingInt('Recursive_Depth')
+        if depth is None: depth = int(REAL_SETTINGS.getSetting('Recursive_Depth') or "0")
         if checksum is None: checksum = ADDON_VERSION
         if expiration is None: expiration = datetime.timedelta(minutes=15)
         walk = {}
@@ -148,7 +148,7 @@ class JSONRPC(object):
             if self.service.pendingInterrupt: break
             elif item.get('filetype') == 'file' and limit > 0:
                 limit -= 1
-                accurate = bool(REAL_SETTINGS.getSettingInt('Duration_Type'))
+                accurate = bool(int(REAL_SETTINGS.getSetting('Duration_Type') or "0"))
                 item['duration'] = self.getDuration(item.get('file'),item,accurate)
                 walk.setdefault(dir.get('label','root'),[]).append(item)
             elif item.get('filetype') == 'directory' and walk_depth > 0:
@@ -165,8 +165,8 @@ class JSONRPC(object):
         if exts is None: exts = []
         if checksum is None: checksum = ADDON_VERSION
         if expiration is None: expiration = datetime.timedelta(minutes=15)
-        accurate_duration = bool(REAL_SETTINGS.getSettingInt('Duration_Type'))
-        if depth is None: depth = REAL_SETTINGS.getSettingInt('Recursive_Depth')
+        accurate_duration = bool(int(REAL_SETTINGS.getSetting('Duration_Type') or "0"))
+        if depth is None: depth = int(REAL_SETTINGS.getSetting('Recursive_Depth') or "0")
         def __(path, f):
             if exts and f.lower().endswith(tuple(exts)): return
             fullpath = os.path.join(path,f)
@@ -272,21 +272,21 @@ class JSONRPC(object):
 
     def getSongs(self, cache=True):
         param = {"method":"AudioLibrary.GetSongs","params":{"properties":self.getEnums("Audio.Fields.Song", type='items')}}
-        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         if cache: return self.cacheJSON(param, timeout).get('result',{}).get('songs', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('songs', [])
 
 
     def getArtists(self, cache=True):
         param = {"method":"AudioLibrary.GetArtists","params":{"properties":self.getEnums("Audio.Fields.Artist", type='items')}}
-        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         if cache: return self.cacheJSON(param, timeout).get('result',{}).get('artists', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('artists', [])
 
 
     def getAlbums(self, cache=True):
         param = {"method":"AudioLibrary.GetAlbums","params":{"properties":self.getEnums("Audio.Fields.Album", type='items')}}
-        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         if cache: return self.cacheJSON(param, timeout).get('result',{}).get('albums', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('albums', [])
 
@@ -301,14 +301,14 @@ class JSONRPC(object):
   
     def getEpisodes(self, cache=True):
         param = {"method":"VideoLibrary.GetEpisodes","params":{"properties":self.getEnums("Video.Fields.Episode", type='items')}}
-        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         if cache: return self.cacheJSON(param, timeout).get('result',{}).get('episodes', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('episodes', [])
 
 
     def getTVshows(self, cache=True):
         param = {"method":"VideoLibrary.GetTVShows","params":{"properties":self.getEnums("Video.Fields.TVShow", type='items')}}
-        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         if cache: return self.cacheJSON(param, timeout).get('result',{}).get('tvshows', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('tvshows', [])
 
@@ -321,7 +321,7 @@ class JSONRPC(object):
 
     def getMovies(self, cache=True):
         param = {"method":"VideoLibrary.GetMovies","params":{"properties":self.getEnums("Video.Fields.Movie", type='items')}}
-        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         if cache: return self.cacheJSON(param, timeout).get('result',{}).get('movies', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('movies', [])
 
@@ -350,7 +350,7 @@ class JSONRPC(object):
         if expiration is None: expiration = datetime.timedelta(minutes=15)
         param["properties"] = self.getEnums("List.Fields.Files", type='items') #todo change enums from files to media specific? 
         param   = {"method":"Files.GetDirectory","params":param}
-        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         if cache: results = self.cacheJSON(param, expiration, checksum, timeout).get('result',{})
         else:     results = self.sendJSON(param, timeout).get('result',{})
         if 'filedetails' in results: return results.get('filedetails',[]), results.get('limits',{}), results.get('error',{})
@@ -360,7 +360,7 @@ class JSONRPC(object):
     def getLibrary(self, method, param=None, key=None, cache=True):
         if param is None: param = {}
         param   = {"method":method,"params":param}
-        timeout = REAL_SETTINGS.getSettingInt('API_Timeout') * 2
+        timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         if cache: results = self.cacheJSON(param, timeout).get('result',{})
         else:     results = self.sendJSON(param, timeout).get('result',{})
         return results.get((key or list(results.keys())[0]),[]), results.get('limits',{}), results.get('error',{})
@@ -503,7 +503,7 @@ class JSONRPC(object):
         
     def _setRuntime(self, item=None, runtime=0, save=None): #set runtime collected by player, accurate meta.
         if item is None: item = {}
-        if save is None: save = REAL_SETTINGS.getSettingBool('Store_Duration')
+        if save is None: save = REAL_SETTINGS.getSetting('Store_Duration') == 'true'
         runtime = round(runtime)
         md5 = FileAccess._getMD5(item.get('file'))
         self.cache.set('getRuntime.%s'%(md5), runtime, checksum=md5, expiration=datetime.timedelta(days=28))
@@ -520,7 +520,7 @@ class JSONRPC(object):
 
     def _setDuration(self, path, item=None, duration=0, save=None):#set VideoParser cache
         if item is None: item = {}
-        if save is None: save = REAL_SETTINGS.getSettingBool('Store_Duration')
+        if save is None: save = REAL_SETTINGS.getSetting('Store_Duration') == 'true'
         duration = round(duration)
         md5 = FileAccess._getMD5(path)
         self.cache.set('getDuration.%s'%(md5), duration, checksum=md5, expiration=datetime.timedelta(days=28))
@@ -535,8 +535,8 @@ class JSONRPC(object):
 
     def getDuration(self, path, item=None, accurate=None, save=None):
         if item is None: item = {}
-        if accurate is None: accurate = bool(REAL_SETTINGS.getSettingInt('Duration_Type'))
-        if save is None: save = REAL_SETTINGS.getSettingBool('Store_Duration')
+        if accurate is None: accurate = bool(int(REAL_SETTINGS.getSetting('Duration_Type') or "0"))
+        if save is None: save = REAL_SETTINGS.getSetting('Store_Duration') == 'true'
         def __parseDuration(runtime, path, item=None, save=False):
             if item is None: item = {}
             duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
@@ -559,7 +559,7 @@ class JSONRPC(object):
 
     def getTotDuration(self, items=None, accurate=None):
         if items is None: items = []
-        if accurate is None: accurate = bool(REAL_SETTINGS.getSettingInt('Duration_Type'))
+        if accurate is None: accurate = bool(int(REAL_SETTINGS.getSetting('Duration_Type') or "0"))
         total = sum((self.getDuration(item.get('file'),item,accurate) for item in items))
         self.log("getTotDuration, items = %s, total = %s" % (len(items), total))
         return total
@@ -591,7 +591,7 @@ class JSONRPC(object):
         
     def quePlaycount(self, item=None, save=None):
         if item is None: item = {}
-        if save is None: save = REAL_SETTINGS.getSettingBool('Rollback_Watched')
+        if save is None: save = REAL_SETTINGS.getSetting('Rollback_Watched') == 'true'
         param = {'video'      : {"method":"Files.SetFileDetails"             ,"params":{"file"        :item.get('file',"")         ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
                  'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
                  'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
@@ -611,7 +611,7 @@ class JSONRPC(object):
                 
                 
     def requestList(self, citem: dict, path: str, media: str = 'video', page: int = None, sort: dict = None, filter: dict = None, limits: dict = None, query: dict = None):
-        if page is None:   page = REAL_SETTINGS.getSettingInt('Page_Limit')
+        if page is None:   page = int(REAL_SETTINGS.getSetting('Page_Limit') or "50")
         if sort is None:   sort = {}
         if filter is None: filter = {}
         if limits is None: limits = {"end": -1, "start": 0, "total": 0}
@@ -696,7 +696,7 @@ class JSONRPC(object):
              
     def randomPagination(self, page=None, limits=None, start=0):
         if limits is None: limits = {}
-        if page is None: page = REAL_SETTINGS.getSettingInt('Page_Limit')
+        if page is None: page = int(REAL_SETTINGS.getSetting('Page_Limit') or "50")
         if limits.get('total',0) > page: start = random.randrange(0, (limits.get('total',0)-page), page)
         return {"end": start, "start": start, "total":limits.get('total',0)}
         
@@ -736,7 +736,7 @@ class JSONRPC(object):
 
 
     def padItems(self, files, page=None):
-        if page is None: page = REAL_SETTINGS.getSettingInt('Page_Limit')
+        if page is None: page = int(REAL_SETTINGS.getSetting('Page_Limit') or "50")
         # Balance media limits, by filling with duplicates to meet min. pagination.
         self.log("padItems; files In = %s"%(len(files)))
         if len(files) < page:
@@ -881,7 +881,7 @@ class JSONRPC(object):
         elif 'tvshowid'in item: key = 'tvshows'
         else: return
         fitem = item.copy()
-        dur = self.getDuration(fitem.get('trailer'), accurate=bool(REAL_SETTINGS.getSettingInt('Duration_Type')), save=False)
+        dur = self.getDuration(fitem.get('trailer'), accurate=bool(int(REAL_SETTINGS.getSetting('Duration_Type') or "0")), save=False)
         if dur > 0:
             trailers = self.getTrailers()
             if 'streamdetails' in fitem: fitem.pop('streamdetails')
@@ -902,7 +902,7 @@ class JSONRPC(object):
         if trailers is None: trailers = {'movies':{},'tvshows':{}}
         self.log(f'setTrailers [Movies] = {len(trailers.get('movies',{}))}')
         self.log(f'setTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
-        return self.cache.set('trailers', trailers, life=-1)
+        return self.cache.set('trailers', trailers, expiration=datetime.timedelta(days=365))
                                 
                         
     def getTrailers(self, genre=None):

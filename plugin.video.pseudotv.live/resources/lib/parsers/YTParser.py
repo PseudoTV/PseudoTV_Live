@@ -25,6 +25,7 @@ class YTParser(object):
     def determineLength(self, filename: str) -> int and float:
         try:
             dur = 0
+            from variables import Globals
             if Globals.settings.hasAddon('script.module.youtube.dl'):
                 from youtube_dl import YoutubeDL
                 if   'videoid'  in filename: vID = _VIDEOID_RE.search(filename).group(1)

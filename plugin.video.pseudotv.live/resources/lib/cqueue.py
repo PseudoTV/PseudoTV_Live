@@ -214,7 +214,7 @@ class CustomQueue(object):
         self.log("execute, finished: shutting down...")
 
     def _future_callback(self, future, timeout=900):
-        if timeout is None: timeout = REAL_SETTINGS.getSettingInt('API_Timeout')
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
         try: 
             future.result(float(timeout))
         except Exception as e: 

@@ -636,18 +636,9 @@ jobs:
           if [ -f reports/kodi-addon-check-report/kodi-check-output.txt ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Kodi Addon Checker" >> $GITHUB_STEP_SUMMARY
-            ERRORS=$(grep -c "^ERROR:" reports/kodi-addon-check-report/kodi-check-output.txt 2>/dev/null || echo "0")
-            WARNINGS=$(grep -c "^WARN:" reports/kodi-addon-check-report/kodi-check-output.txt 2>/dev/null || echo "0")
-            echo "- **Errors:** $ERRORS" >> $GITHUB_STEP_SUMMARY
-            echo "- **Warnings:** $WARNINGS" >> $GITHUB_STEP_SUMMARY
-            if [ "$ERRORS" -gt 0 ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo '<details><summary>Error Details</summary>' >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              grep "^ERROR:" reports/kodi-addon-check-report/kodi-check-output.txt >> $GITHUB_STEP_SUMMARY || true
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              echo '</details>' >> $GITHUB_STEP_SUMMARY
-            fi
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat reports/kodi-addon-check-report/kodi-check-output.txt >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Post PR Comment

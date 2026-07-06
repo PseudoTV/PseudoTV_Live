@@ -42,8 +42,8 @@ class ExecutorPool:
         except Exception as e: self.log("shutdown failed: %s" % e, xbmc.LOGWARNING)
             
     def executor(self, func, timeout=None, *args, **kwargs):
-        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout'))
-        useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
+        useExecutor = REAL_SETTINGS.getSetting('Enable_Executor') == 'true'
         if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
             if self.isShutdown(): 
@@ -74,8 +74,8 @@ class ExecutorPool:
         
     def executors(self, func, items=None, timeout=None, *args, **kwargs):
         if items is None: items = []
-        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout'))
-        useExecutor = REAL_SETTINGS.getSettingBool('Enable_Executor')
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
+        useExecutor = REAL_SETTINGS.getSetting('Enable_Executor') == 'true'
         if not useExecutor and xbmc.getCondVisibility('Player.Playing'): useExecutor = True
         if useExecutor:
             if self.isShutdown(): 
