@@ -3,6 +3,8 @@
 
 # PseudoTV Live for Kodi™
 
+> **Note:** All code in this project is written by a human developer. AI tools are used solely for linting, code review, and quality assurance purposes.
+
 ## What is it?
 
 PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) into linear TV similar to broadcast television, complete with configurable channels & Advanced channel rules. Interface provided by Kodi via IPTV Simple PVR Backend.
@@ -37,6 +39,17 @@ PseudoTV Live is not an IPTV service, it does not provide content or support liv
 - @phunkyfish for his continued work and help with IPTV Simple.
 - @IAmJayFord for awesome PseudoTV Live Icon/Fanart sets.
 - @preroller for fantastic PseudoTV Live Bumpers.
+
+# GitHub Sponsors
+
+A huge thank you to our generous sponsors who help keep PseudoTV Live development going!
+
+[![Sponsors](https://img.shields.io/github/sponsors/PseudoTV?label=Sponsors&style=for-the-badge)](https://github.com/sponsors/PseudoTV)
+
+<!-- AUTO-SPONSORS-START -->
+<!-- This section is auto-updated by GitHub Actions -->
+*Sponsor list available on the [Sponsors page](https://github.com/sponsors/PseudoTV)*
+<!-- AUTO-SPONSORS-END -->
 
 ### License
 

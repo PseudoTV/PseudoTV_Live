@@ -33,20 +33,20 @@ class Station():
         self.media              = media
         self.label              = label
         self.url                = url
-        self.tvg-shift          = tvg-shift
-        self.x-tvg-url          = x-tvg-url
-        self.media-dir          = media-dir
-        self.media-size         = media-size
-        self.media-type         = media-type
-        self.catchup-source     = catchup-source
-        self.catchup-days       = catchup-days
-        self.catchup-correction = catchup-correction
+        self.tvg_shift          = tvg_shift
+        self.x_tvg_url          = x_tvg_url
+        self.media_dir          = media_dir
+        self.media_size         = media_size
+        self.media_type         = media_type
+        self.catchup_source     = catchup_source
+        self.catchup_days       = catchup_days
+        self.catchup_correction = catchup_correction
         self.provider           = provider
-        self.provider-type      = provider-type
-        self.provider-logo      = provider-logo
-        self.provider-countries = provider-countries
-        self.provider-languages = provider-languages
-        self.x-playlist-type    = x-playlist-type
+        self.provider_type      = provider_type
+        self.provider_logo      = provider_logo
+        self.provider_countries = provider_countries
+        self.provider_languages = provider_languages
+        self.x_playlist_type    = x_playlist_type
         self.kodiprops          = kodiprops
         
 #todo convert json to dataclasses https://dataclass-wizard.readthedocs.io/en/latest/

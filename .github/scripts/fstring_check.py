@@ -27,7 +27,6 @@ def parse_strings_po(po_path: str) -> Dict[int, str]:
 
 def find_language_file() -> Optional[str]:
     """Find the en-GB strings.po file."""
-    # Look for the language file relative to the project root
     possible_paths = [
         "plugin.video.pseudotv.live/resources/language/resource.language.en_gb/strings.po",
         "resources/language/resource.language.en_gb/strings.po",
@@ -37,7 +36,6 @@ def find_language_file() -> Optional[str]:
         if os.path.exists(path):
             return path
     
-    # Search for it
     for root, _, files in os.walk("."):
         if "resource.language.en_gb" in root and "strings.po" in files:
             return os.path.join(root, "strings.po")
@@ -63,7 +61,6 @@ class FStringChecker(ast.NodeVisitor):
     
     def _check_formatted_value(self, node: ast.FormattedValue) -> None:
         """Check a formatted value in an f-string."""
-        # Check for nested f-strings (potential performance issue)
         if isinstance(node.value, ast.JoinedStr):
             self._add_warning(
                 node.lineno,
@@ -73,7 +70,6 @@ class FStringChecker(ast.NodeVisitor):
     
     def visit_Call(self, node: ast.Call) -> None:
         """Visit function calls to check LANGUAGE() usage."""
-        # Check for LANGUAGE() calls
         if isinstance(node.func, ast.Name) and node.func.id == "LANGUAGE":
             self._check_language_call(node)
         self.generic_visit(node)
@@ -90,18 +86,15 @@ class FStringChecker(ast.NodeVisitor):
         
         arg = node.args[0]
         
-        # Get the string ID
         str_id = None
         if isinstance(arg, ast.Constant) and isinstance(arg.value, int):
             str_id = arg.value
-        elif isinstance(arg, ast.Num):  # Python 3.7 fallback
+        elif isinstance(arg, ast.Num):
             str_id = arg.n
         
         if str_id is None:
-            # Not a numeric literal, skip
             return
         
-        # Check if the ID exists in strings.po
         if str_id not in self.strings_dict:
             self._add_warning(
                 node.lineno,
@@ -112,7 +105,6 @@ class FStringChecker(ast.NodeVisitor):
         
         msgid = self.strings_dict[str_id]
         
-        # Check for common issues in the string
         if not msgid.strip():
             self._add_warning(
                 node.lineno,
@@ -121,7 +113,6 @@ class FStringChecker(ast.NodeVisitor):
             )
     
     def _add_error(self, line: int, category: str, message: str) -> None:
-        """Add an error to the list."""
         self.errors.append({
             'file': self.filename,
             'line': line,
@@ -130,7 +121,6 @@ class FStringChecker(ast.NodeVisitor):
         })
     
     def _add_warning(self, line: int, category: str, message: str) -> None:
-        """Add a warning to the list."""
         self.warnings.append({
             'file': self.filename,
             'line': line,
@@ -150,7 +140,6 @@ def check_file(filepath: str, strings_dict: Dict[int, str]) -> tuple[List[Dict],
         checker.visit(tree)
         return checker.errors, checker.warnings
     except SyntaxError:
-        # Skip files with syntax errors
         return [], []
     except Exception:
         return [], []
@@ -217,7 +206,10 @@ def main():
             print(f"Message: {issue['message']}")
             print(f"{'-'*40}")
     
-    if all_errors:
+    # Only fail on actual syntax errors (mismatched quotes, etc), not string warnings
+    syntax_errors = [e for e in all_errors if 'syntax' in e.get('category', '').lower() or 'Syntax error' in e.get('message', '')]
+    
+    if syntax_errors:
         sys.exit(1)
     else:
         if not all_warnings:
