@@ -19,6 +19,7 @@
 
 # -*- coding: utf-8 -*-
 
+from typing import Any, Generator, List, Tuple, Optional, Dict
 from variables     import *
 from channels    import Channels
 from fileaccess  import FileAccess, FileLock
@@ -60,7 +61,7 @@ class M3U(object):
     _RE_WEBPROP   = re.compile(r'^#WEBPROP:(.*)$', re.IGNORECASE)
     _RE_XPLAYLIST = re.compile(r'^#EXT-X-PLAYLIST-TYPE:(.*)$', re.IGNORECASE)
 
-    def __init__(self, file=M3UFLEPATH, writable=False):
+    def __init__(self, file: str = M3UFLEPATH, writable: bool = False):
         self._lock        = RLock()
         self.EPGArtwork  = int((Globals.settings.getSetting('EPG_Artwork') or "0"))
         self.writable    = writable
@@ -73,10 +74,10 @@ class M3U(object):
                          'stations': stations,
                          'recordings': recordings }
 
-    def __enter__(self):
+    def __enter__(self) -> 'M3U':
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any):
         try:
             if getattr(self, 'writable', False): self._save()
             self.log('__exit__, writable = %s' % (getattr(self, 'writable', False)))
@@ -89,10 +90,10 @@ class M3U(object):
         except Exception as e: 
             self.log('__del__ save failed: %s' % e, xbmc.LOGDEBUG)
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
-    def _load(self):
+    def _load(self) -> Generator[Dict[str, Any], None, None]:
         self.log('_load, file=%s' % self.stationFile)
         lines = []
         if FileAccess.exists(self.stationFile): 
@@ -212,7 +213,7 @@ class M3U(object):
                     self.log('_load, m3u item = %s' % mitem)
                     yield mitem
 
-    def _save(self):
+    def _save(self) -> bool:
         self.M3UDATA['data'] = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
                                'http://%s/%s' % (Globals.properties.getRemoteHost(), XMLTVFLE) )
         self.M3UDATA['stations'] = self.sortStations(self.M3UDATA.get('stations', []))
@@ -272,7 +273,7 @@ class M3U(object):
                         fle.close()
         return False
 
-    def _verify(self, stations=None, recordings=None, chkPath=None):
+    def _verify(self, stations: Optional[List[Dict[str, Any]]] = None, recordings: Optional[List[Dict[str, Any]]] = None, chkPath: Optional[bool] = None) -> List[Dict[str, Any]]:
         if chkPath is None:
             chkPath = Globals.settings.getSettingBool('Clean_Recordings')
             
@@ -300,7 +301,7 @@ class M3U(object):
             return verified_recordings
         return []
         
-    def cleanSelf(self, items, key='id', slug=None):
+    def cleanSelf(self, items: List[Dict[str, Any]], key: str = 'id', slug: Optional[str] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         if slug is None:
             slug = '@%s' % (Globals._slugify(ADDON_NAME))
         if not slug: 
@@ -315,16 +316,16 @@ class M3U(object):
         self.log('cleanSelf, slug = %s, key = %s: returning: stations = %s, recordings = %s' % (slug, key, len(stations), len(recordings)))
         return stations, recordings
 
-    def sortStations(self, stations, key='number'):
+    def sortStations(self, stations: List[Dict[str, Any]], key: str = 'number') -> List[Dict[str, Any]]:
         try:              
             return sorted(stations, key=itemgetter(key))
         except Exception: 
             return stations
         
-    def getM3U(self):
+    def getM3U(self) -> Dict[str, Any]:
         return self.M3UDATA
         
-    def getMitem(self):
+    def getMitem(self) -> Dict[str, Any]:
         return {"id"                : "",
                 "number"            : 0,
                 "name"              : "",
@@ -353,21 +354,21 @@ class M3U(object):
                 "x-playlist-type"   : "",
                 "kodiprops"         : []}.copy()
             
-    def getTZShift(self):
+    def getTZShift(self) -> float:
         self.log('getTZShift')
         return ((time.mktime(time.localtime()) - time.mktime(time.gmtime())) / 60.0 / 60.0)
 
-    def getStations(self):
+    def getStations(self) -> List[Dict[str, Any]]:
         stations = self.sortStations(self.M3UDATA.get('stations', []))
         self.log('getStations, stations = %s' % (len(stations)))
         return stations
               
-    def getRecordings(self):
+    def getRecordings(self) -> List[Dict[str, Any]]:
         recordings = self.sortStations(self.M3UDATA.get('recordings', []), key='name')
         self.log('getRecordings, recordings = %s' % (len(recordings)))
         return recordings
                
-    def getStationItem(self, sitem):
+    def getStationItem(self, sitem: Dict[str, Any]) -> Dict[str, Any]:
         if 3000 in list(sitem.get('rules', {}).keys()): 
             sitem['url'] = RESUME_URL.format(addon=ADDON_ID, name=Globals._quoteString(sitem['name']), chid=Globals._quoteString(sitem['id']))
         elif sitem.get('radio'): 
@@ -379,7 +380,7 @@ class M3U(object):
             sitem['url'] = TV_URL.format(addon=ADDON_ID, name=Globals._quoteString(sitem['name']), chid=Globals._quoteString(sitem['id']))
         return sitem
     
-    def getRecordItem(self, fitem, seek=0):
+    def getRecordItem(self, fitem: Dict[str, Any], seek: int = 0) -> Dict[str, Any]:
         group = LANGUAGE(30119) if seek <= 0 else LANGUAGE(30152)
         ritem = self.getMitem()
         ritem['provider'] = '%s (%s)' % (ADDON_NAME, Globals.properties.getFriendlyName())
@@ -397,7 +398,7 @@ class M3U(object):
         ritem['url'] = DVR_URL.format(addon=ADDON_ID, title=Globals._quoteString(ritem['label']), chid=Globals._quoteString(ritem['id']), vid=(FileAccess._encodeString((fitem.get('originalfile') or fitem.get('file', '')))), seek=seek, duration=fitem.get('duration', 0))
         return ritem
         
-    def delStation(self, citem):
+    def delStation(self, citem: Dict[str, Any]) -> bool:
         with self._lock:
             try: 
                 idx, _ = self.findStation(citem)
@@ -409,7 +410,7 @@ class M3U(object):
                 self.log('[%s] delStation failed: %s' % (citem.get('id',''), e), xbmc.LOGDEBUG)
             return False
 
-    def delRecording(self, ritem):
+    def delRecording(self, ritem: Dict[str, Any]) -> bool:
         with self._lock:
             try: 
                 idx, _ = self.findRecording(ritem)
@@ -421,7 +422,7 @@ class M3U(object):
                 self.log('[%s] delRecording failed: %s' % (ritem.get('id',''), e), xbmc.LOGDEBUG)
             return False
             
-    def addStation(self, citem):
+    def addStation(self, citem: Dict[str, Any]) -> bool:
         with self._lock:
             mitem = self.getMitem()
             mitem.update(citem)            
@@ -437,14 +438,14 @@ class M3U(object):
             self.log('addStation, [%s] adding channel %s' % (citem["id"], citem["name"]), xbmc.LOGINFO)
             return True
         
-    def addRecording(self, ritem):
+    def addRecording(self, ritem: Dict[str, Any]) -> bool:
         with self._lock:
             self.delRecording(ritem)
             self.M3UDATA.setdefault('recordings', []).append(ritem)
             self.log('addRecording, [%s] adding recording %s' % (ritem["id"], ritem["name"]), xbmc.LOGINFO)
             return True
         
-    def findStation(self, citem):
+    def findStation(self, citem: Dict[str, Any]) -> Tuple[Optional[int], Dict[str, Any]]:
         c_id = citem.get('id')
         c_url_lower = citem.get('url', '').lower() if citem.get('url') else None
         
@@ -455,7 +456,7 @@ class M3U(object):
                 return idx, eitem
         return None, {}
         
-    def findRecording(self, ritem):
+    def findRecording(self, ritem: Dict[str, Any]) -> Tuple[Optional[int], Dict[str, Any]]:
         r_id = ritem.get('id')
         r_label_lower = ritem.get('label', '').lower() if ritem.get('label') else None
         r_path = ritem.get('path', '')

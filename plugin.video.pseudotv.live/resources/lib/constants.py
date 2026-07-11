@@ -53,34 +53,67 @@ from infotagger.listitem import ListItemInfoTag
 # =============================================================================
 # Addon Identity
 # =============================================================================
-ADDON_ID            = 'plugin.video.pseudotv.live'   # Unique Kodi addon identifier
-REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)  # Raw xbmcaddon handle for addon settings
-ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')   # Human-readable addon name
+ADDON_ID            = 'plugin.video.pseudotv.live'          # Unique Kodi addon identifier
+REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)          # Raw xbmcaddon handle for addon settings
+LANGUAGE            = REAL_SETTINGS.getLocalizedString      # Localized string lookup function
+ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')    # Human-readable addon name
 ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version') # Semver version string
 ICON                = REAL_SETTINGS.getAddonInfo('icon')    # Addon icon path
 FANART              = REAL_SETTINGS.getAddonInfo('fanart')  # Addon fanart path
 SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile') # User profile directory (special://)
 ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')    # Addon installation directory
 ADDON_AUTHOR        = REAL_SETTINGS.getAddonInfo('author')  # Addon author name
-ADDON_URL           = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/plugin.video.pseudotv.live/addon.xml'
-LANGUAGE            = REAL_SETTINGS.getLocalizedString      # Localized string lookup function
+ADDON_BRANCH        = 'master' if 'nightly' not in ADDON_VERSION else 'nightly'
+ADDON_URL           = f'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/{ADDON_BRANCH}/plugin.video.pseudotv.live/addon.xml'
+CHANGELOG_URL       = f'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/{ADDON_BRANCH}/plugin.video.pseudotv.live/changelog.txt'
 
 # =============================================================================
 # Kodi API References
 # =============================================================================
-MONITOR             = xbmc.Monitor  # Kodi Monitor class reference (for instantiation)
-PLAYER              = xbmc.Player   # Kodi Player class reference (for instantiation)
+PLAYER = xbmc.Player   # Kodi Player class reference (for instantiation)
+_MONITOR_INSTANCE: Optional[xbmc.Monitor] = None
 
+def MONITOR() -> xbmc.Monitor:
+    """Singleton xbmc.Monitor — Kodi only allows one per process."""
+    global _MONITOR_INSTANCE
+    if _MONITOR_INSTANCE is None:
+        _MONITOR_INSTANCE = xbmc.Monitor()
+    return _MONITOR_INSTANCE
+
+def _getTotalMEM() -> float:
+    try:
+        raw = xbmc.getInfoLabel('System.Memory')
+        num = float("".join(c for c in raw if c.isdigit() or c == '.'))
+        return num / 1024 if 'gb' in raw.lower() else num
+    except Exception:
+        return 4.0
+
+def _getFreeMEM() -> int:
+    try:
+        raw_mem = xbmc.getInfoLabel('System.FreeMemory')
+        return int("".join(c for c in raw_mem if c.isdigit()))
+    except Exception as e:
+        return 1024
 # =============================================================================
 # Performance & Threading
 # =============================================================================
-CPU_COUNT           = os.cpu_count() or 1                    # Number of CPU cores
-CPU_CYCLE           = 0.016                                  # Minimum sleep interval (~60Hz)
-THREAD_WORKERS      = min(16, CPU_COUNT * 4)                 # Max thread pool workers (capped at 16)
-BATCH_SIZE          = min(16, max(4, THREAD_WORKERS * 2))   # Batch size for parallel operations
-QUEUE_CHUNK         = max(2, 16 // CPU_COUNT)                # Chunk size for queue processing
-MAX_CACHE_SIZE      = 1000                                   # LRU cache maximum entries
 
+TOTAL_RAM_GB        = _getTotalMEM()
+IS_CONSTRAINED_SOC  = TOTAL_RAM_GB <= 3.5
+CPU_COUNT           = os.cpu_count() or 1                   # Number of CPU cores
+if IS_CONSTRAINED_SOC:                                      # SoC Mode: Cap threads strictly to core count to protect limited RAM
+    CPU_CYCLE      = 0.016
+    THREAD_WORKERS = min(4, CPU_COUNT)
+    QUEUE_CHUNK    = 8
+    BATCH_SIZE     = 4
+    MAX_CACHE_SIZE = 5000
+else:                                                       # High-Performance Mode: Scale smoothly up to 32 threads
+    CPU_CYCLE      = 0.016 if CPU_COUNT < 4 else 0.008      # Minimum sleep interval (~60Hz) Faster polling loops on multi-core systems
+    THREAD_WORKERS = min(32, CPU_COUNT * 2)                 # Max thread pool workers (capped at 32) 2 threads per core, scaling smoothly up to a maximum of 32
+    QUEUE_CHUNK    = max(4, 32 // CPU_COUNT)                # Queue Chunking: High-core machines grab smaller, nimbler chunks to avoid lock contention; Low-core machines grab larger chunks to minimize the overhead of fetching. 
+    BATCH_SIZE     = 128 // QUEUE_CHUNK                     # Batch size for parallel operations Fewer cores run small, conservative batches; higher cores run larger parallel bursts.
+    MAX_CACHE_SIZE = 1000 * CPU_COUNT                       # LRU cache Scale with available RAM/cores
+    
 # =============================================================================
 # Service Timing (all values in seconds)
 # =============================================================================
@@ -132,6 +165,7 @@ FILLER_LIMIT        = 250    # Maximum filler items per channel
 M3U_REFRESH         = 15     # M3U file refresh check interval (seconds)
 M3U_INTERVAL        = 30     # M3U full reload interval (seconds)
 M3U_TIMEOUT         = 60     # M3U network request timeout (seconds)
+HTTP_TIMEOUT        = 30     # HTTP server file serving timeout (seconds)
 
 # =============================================================================
 # Media Type Classifications
@@ -257,9 +291,9 @@ PVR_SETTINGS_XML    = os.path.join(PVR_CLIENT_LOC,'settings.xml')        # PVR s
 # =============================================================================
 # Documentation Files
 # =============================================================================
-README_FLE          = os.path.join(ADDON_PATH,'README.md')
-CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
-LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
+README_FLE    = os.path.join(ADDON_PATH,'README.md')
+CHANGELOG_FLE = os.path.join(ADDON_PATH,'changelog.txt')
+LICENSE_FLE   = os.path.join(ADDON_PATH,'LICENSE')
 
 # =============================================================================
 # Core Data File Names
@@ -442,24 +476,36 @@ HEADER = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 # =============================================================================
 # Logging
 # =============================================================================
-_LOG_THROTTLE = {}  # {(event, level): last_log_timestamp} - for throttled log dedup
+_LOG_THROTTLE  = {}  # {(event, level): (last_log_timestamp, skip_count)} - for throttled log dedup
+_LOG_LAST_KEY  = None  # last (event, level) key that was logged - for consecutive duplicate detection
+LOG_MAX_LENGTH = 500  # max characters for log message string (traceback excluded)
 
-@staticmethod
-def LOG(event, level=xbmc.LOGDEBUG, throttle=0):
+def LOG(event: Any, level: int = xbmc.LOGDEBUG, throttle: float = float(SERVICE_INTERVAL)):
     """Central logging function. Checks Debug_Enable and Debug_Level settings.
     When level >= 3 (LOGERROR), appends traceback.format_exc() to the message.
-    When throttle > 0, suppresses duplicate (event, level) pairs within the interval."""
+    When throttle > 0, consecutive identical (event, level) pairs are suppressed,
+    then a 'Skipped N duplicate messages..' line is logged when the sequence ends."""
+    global _LOG_LAST_KEY
     if REAL_SETTINGS.getSetting('Debug_Enable') == 'true' or level >= 3:
         DEBUG_NAMES  = {0: 'LOGDEBUG', 1: 'LOGINFO', 2: 'LOGWARNING', 3: 'LOGERROR', 4: 'LOGFATAL'}
         DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}
         DEBUG_LEVEL  = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
+        if len(str(event)) > LOG_MAX_LENGTH: event = '%s...[TRUNCATED]' % str(event)[:LOG_MAX_LENGTH]
         if level >= 3: event = '%s\n%s' % (event, traceback.format_exc())
         if throttle > 0:
             now  = time.time()
             key  = (event, level)
-            last = _LOG_THROTTLE.get(key, 0)
-            if (now - last) < throttle: return
-            _LOG_THROTTLE[key] = now
+            last_time, skip_count = _LOG_THROTTLE.get(key, (0, 0))
+            if (now - last_time) < throttle:
+                _LOG_THROTTLE[key] = (last_time, skip_count + 1)
+                return
+            elif _LOG_LAST_KEY is not None and _LOG_LAST_KEY != key:
+                prev_time, prev_skip = _LOG_THROTTLE.get(_LOG_LAST_KEY, (0, 0))
+                if prev_skip > 0:
+                    skip_msg = 'Skipped %d duplicate messages..' % (prev_skip)
+                    if level >= DEBUG_LEVEL: xbmc.log(skip_msg, level)
+            _LOG_THROTTLE[key] = (now, 0)
+            _LOG_LAST_KEY = key
         event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
         if level >= DEBUG_LEVEL:
             xbmc.log(event, level)

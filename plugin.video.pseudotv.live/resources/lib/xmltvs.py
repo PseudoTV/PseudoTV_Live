@@ -22,13 +22,14 @@ import xmltv
 from variables   import *
 from m3u         import M3U
 from seasonal    import Seasonal
+from typing       import Generator, Optional
 from fileaccess  import FileAccess, FileLock
 
 _ERROR_RE = re.compile(r'line\ (.*?),\ column\ (.*)', re.IGNORECASE)
 
 class XMLTVS(object):
     
-    def __init__(self, file=XMLTVFLEPATH, writable=False, m3u=None):
+    def __init__(self, file: str = XMLTVFLEPATH, writable: bool = False, m3u: Optional[M3U] = None):
         self._lock       = RLock()
         if m3u is None: m3u = M3U(writable=writable)
         self.m3u        = m3u
@@ -38,11 +39,11 @@ class XMLTVS(object):
         self.XMLTVDATA  = self._load()
         
         
-    def __enter__(self):
+    def __enter__(self) -> 'XMLTVS':
         return self
 
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Optional[Any]):
         try:
             if self.writable: self._save()
             self.log('__exit__, writable = %s'%(self.writable))
@@ -56,7 +57,7 @@ class XMLTVS(object):
         except Exception as e: self.log('__del__ save failed: %s' % e, xbmc.LOGDEBUG)
             
             
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
 
@@ -135,8 +136,9 @@ class XMLTVS(object):
                 return self.buildGenres()
         
     
-    def _error(self, name, e):
+    def _error(self, e: Exception):
         try:
+            name = self.XMLTVFile
             if 'no element found: line 1, column 0' in str(e): return   
             match = _ERROR_RE.search(str(e))
             if match:
@@ -150,7 +152,7 @@ class XMLTVS(object):
             self.log('%s, logging failed! %s' % (name, en), xbmc.LOGERROR)
     
                 
-    def resetData(self):
+    def resetData(self) -> dict:
         self.log('resetData')
         return {'date'                : Globals._epochTime(float(time.time()),tz=False).strftime(DTFORMAT),
                 'generator-info-name' : self.cleanString('%s Guidedata'%(ADDON_NAME)),
@@ -166,7 +168,7 @@ class XMLTVS(object):
             with FileAccess.open(self.XMLTVFile, 'r') as fle:
                 return (xmltv.read_data(fle) or data)
         except Exception as e:
-            self._error('loadData',self.XMLTVFile,e)
+            self._error('loadData',e)
             return data
         
 
@@ -186,11 +188,11 @@ class XMLTVS(object):
             with FileAccess.open(self.XMLTVFile, 'r') as fle:
                 return (xmltv.read_programmes(fle) or [])
         except Exception as e: 
-            self._error('loadProgrammes',self.XMLTVFile,e)
+            self._error('loadProgrammes',e)
             return []
         
         
-    def loadStopTimes(self, channels: list = None, programmes: list = None, fallback=None):
+    def loadStopTimes(self, channels: list = None, programmes: list = None, fallback: Optional[str] = None) -> Generator:
         if channels is None:   channels   = []
         if programmes is None: programmes = []
         if not channels:   channels   = self.getChannels()
@@ -225,22 +227,30 @@ class XMLTVS(object):
                 yield ch_id, datetime.datetime.timestamp(Globals._strpTime(fallback, DTFORMAT))
 
 
-    def hasProgrammes(self, channels: list=None, programmes: list=None, now=None):
+    def hasProgrammes(self, channels: list=None, programmes: list=None, now: Optional[str] = None) -> Generator:
         if channels is None:   channels   = []
         if programmes is None: programmes = []
         if not channels:   channels   = self.getChannels()
         if not programmes: programmes = self.getProgrammes()
         if not now: now = Globals._epochTime(Globals._roundTimeDown(Globals._getUTCstamp(),offset=60),tz=False).strftime(DTFORMAT)
+        # Single-pass: build max stop time per channel
+        max_stops = {}
+        for program in programmes:
+            ch_id = program.get('channel')
+            if ch_id is None: continue
+            p_stop = program.get('stop', '')
+            if p_stop > max_stops.get(ch_id, ''):
+                max_stops[ch_id] = p_stop
         for channel in channels:
+            ch_id = channel.get('id')
             try: 
-                valid = False
-                last_stop = max((program['stop'] for program in programmes if program['channel'] == channel['id']), default=now)
-                if last_stop > now: valid = True
-                self.log('[%s] hasProgrammes, valid = %s'%(channel['id'],valid))
-                yield channel['id'],valid
+                last_stop = max_stops.get(ch_id, now)
+                valid = last_stop > now
+                self.log('[%s] hasProgrammes, valid = %s'%(ch_id, valid))
+                yield ch_id, valid
             except Exception as e:
-                self.log("[%s] hasProgrammes, failed!\nMalformed XMLTV channel/programmes %s! valid = False"%(channel.get('id'),e), xbmc.LOGWARNING)
-                yield channel['id'],False
+                self.log("[%s] hasProgrammes, failed!\nMalformed XMLTV channel/programmes %s! valid = False"%(ch_id, e), xbmc.LOGWARNING)
+                yield ch_id, False
 
 
     def cleanString(self, text: str) -> str:
@@ -248,7 +258,7 @@ class XMLTVS(object):
         return bytes(text,DEFAULT_ENCODING).decode(DEFAULT_ENCODING,'ignore')
 
 
-    def cleanStations(self, programmes: list=None):
+    def cleanStations(self, programmes: list=None) -> list:
         if programmes is None: programmes = []
         if not self.m3u is None:
             programs = dict(self.hasProgrammes(self.getChannels(),programmes))
@@ -260,7 +270,7 @@ class XMLTVS(object):
         return programmes
         
         
-    def cleanRecordings(self, programmes: list=None):
+    def cleanRecordings(self, programmes: list=None) -> list:
         if programmes is None: programmes = []
         if not self.m3u is None:
             programs = dict(self.hasProgrammes(self.getRecordings(), programmes))
@@ -272,7 +282,7 @@ class XMLTVS(object):
         return programmes
         
          
-    def cleanChannels(self, channels: list=None, programmes: list=None, opt='PROGRAMMES') -> list: # remove stations with no guidedata
+    def cleanChannels(self, channels: list=None, programmes: list=None, opt: str = 'PROGRAMMES') -> list: # remove stations with no guidedata
         if channels is None:   channels   = []
         if programmes is None: programmes = []
         stations    = list(set([program.get('channel') for program in programmes]))
@@ -286,7 +296,7 @@ class XMLTVS(object):
         now     = (Globals._epochTime(float(Globals._getUTCstamp()),tz=False) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells
         holiday = Seasonal().getHoliday()
         
-        def __filterProgrammes(program):
+        def __filterProgrammes(program: dict) -> Optional[dict]:
             try:
                 citem    = Globals._decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
                 seasonal = citem.get('rules',{}).get(800,{}).get('values',{}).get(0,[{}])[0].get('holiday',{})
@@ -347,7 +357,7 @@ class XMLTVS(object):
     def findRecording(self, ritem: dict, recordings: list=None) -> tuple:
         if recordings is None: recordings = []
         if not recordings: recordings = self.getRecordings()
-        def __match(eitem):
+        def __match(eitem: dict) -> bool:
             return ritem.get('id') == eitem.get('id',str(random.random())) or (ritem.get('name','').lower() == eitem.get('display-name')[0][0].lower())
         return tuple(next(((idx, eitem) for idx, eitem in enumerate(recordings) if __match(eitem)),(None, {})))
 
@@ -397,7 +407,7 @@ class XMLTVS(object):
         return item
 
 
-    def addRecording(self, ritem: dict, fitem: dict):
+    def addRecording(self, ritem: dict, fitem: dict) -> bool:
         with self._lock:
             self.log('addRecording = %s'%(ritem.get('id')))
             sitem = ({'id'           : ritem['id'],
@@ -405,8 +415,10 @@ class XMLTVS(object):
                       'icon'         : [{'src':ritem['logo']}]})
                       
             self.log('addRecording, sitem = %s'%(sitem))
-            try:              self.XMLTVDATA['recordings'][self.findRecording(ritem)[0]] = sitem
-            except Exception: self.XMLTVDATA['recordings'].append(sitem)
+            try: self.XMLTVDATA['recordings'][self.findRecording(ritem)[0]] = sitem
+            except Exception: 
+                self.log(f'addRecording, findRecording failed for {ritem.get("id")}, appending instead', xbmc.LOGWARNING)
+                self.XMLTVDATA['recordings'].append(sitem)
 
             fitem['start'] = Globals._getUTCstamp()
             fitem['stop']  = fitem['start'] + fitem['duration']
@@ -421,7 +433,9 @@ class XMLTVS(object):
                       'icon'         : [{'src':citem['logo']}]})
             self.log('addChannel, mitem = %s'%(mitem))
             try:              self.XMLTVDATA['channels'][self.findChannel(mitem)[0]] = mitem
-            except Exception: self.XMLTVDATA['channels'].append(mitem)
+            except Exception: 
+                self.log(f'addChannel, findChannel failed for {mitem.get("id")}, appending instead', xbmc.LOGWARNING)
+                self.XMLTVDATA['channels'].append(mitem)
             return True
 
 
@@ -509,7 +523,7 @@ class XMLTVS(object):
             return True
         
         
-    def delRecording(self, ritem: dict):
+    def delRecording(self, ritem: dict) -> bool:
         with self._lock:
             self.log('[%s] delRecording'%((ritem.get('id') or ritem.get('label'))))
             recordings = self.XMLTVDATA['recordings']
@@ -522,9 +536,9 @@ class XMLTVS(object):
                 return True
         
         
-    def buildGenres(self, epggenres=None):
+    def buildGenres(self, epggenres: Optional[dict] = None) -> bool:
         if epggenres is None: epggenres = {}
-        def __parseGenres(plines):
+        def __parseGenres(plines: list) -> dict:
             for line in plines:
                 try:    
                     names = line.childNodes[0].data
@@ -541,7 +555,7 @@ class XMLTVS(object):
             self.log('buildGenres, __parseGenres: epggenres = %s'%(epggenres.keys())) #todo custom user color selector.
             return epggenres
 
-        def __matchGenres(program):
+        def __matchGenres(program: dict):
             categories = [cat[0] for cat in program.get('category',[])]
             catcombo   = ' / '.join(categories)
             for category in categories:
@@ -550,7 +564,7 @@ class XMLTVS(object):
                     genres[catcombo.lower()] = match
                     break
             
-        def __getGenres(file=GENREFLE_DEFAULT):
+        def __getGenres(file: str = GENREFLE_DEFAULT) -> dict:
             if FileAccess.exists(file): 
                 with FileAccess.open(file, "r") as fle:
                     dom = parse(fle)

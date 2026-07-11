@@ -37,6 +37,7 @@ with this software; if not, see <http://www.gnu.org/licenses/>.
 # https://github.com/kodi-pvr/pvr.iptvsimple#supported-m3u-and-xmltv-elements
 
 from variables import *
+from typing import Any, Dict, List, Optional, Tuple
 VERSION = "1.4.5_PSEUDOTV"
 
 # The date format used in XMLTV (the %Z will go away in 0.6)
@@ -44,9 +45,9 @@ locale           = DEFAULT_ENCODING  # 'utf-8'
 date_format      = DTZFORMAT          # '%Y%m%d%H%M%S %Z'
 date_format_notz = DTFORMAT           # '%Y%m%d%H%M%S'
 
-def set_attrs(d, elem, attrs):
+def set_attrs(d: Dict[str, Any], elem: Any, attrs: Tuple[str, ...]):
     """
-    set_attrs(d, elem, attrs) -> None
+    set_attrs(d, elem, attrs)
 
     Add any attributes in 'attrs' found in 'elem' to 'd'
     """
@@ -54,9 +55,9 @@ def set_attrs(d, elem, attrs):
         if attr in elem.attrib:
             d[attr] = elem.get(attr)
 
-def set_boolean(d, name, elem):
+def set_boolean(d: Dict[str, Any], name: str, elem: Any):
     """
-    set_boolean(d, name, elem) -> None
+    set_boolean(d, name, elem)
 
     If element, 'name' is found in 'elem', set 'd'['name'] to a boolean
     from the 'yes' or 'no' content of the node
@@ -69,9 +70,9 @@ def set_boolean(d, name, elem):
         elif val == 'no':
             d[name] = False
 
-def append_text(d, name, elem, with_lang=True):
+def append_text(d: Dict[str, Any], name: str, elem: Any, with_lang: bool = True):
     """
-    append_text(d, name, elem, with_lang=True) -> None
+    append_text(d, name, elem, with_lang=True)
 
     Append any text nodes with 'name' found in 'elem' to 'd'['name']. If
     'with_lang' is 'True', a tuple of ('text', 'lang') is appended
@@ -89,9 +90,9 @@ def append_text(d, name, elem, with_lang=True):
         else:
             d[name].append(node.text or '')
 
-def set_text(d, name, elem, with_lang=True):
+def set_text(d: Dict[str, Any], name: str, elem: Any, with_lang: bool = True):
     """
-    set_text(d, name, elem, with_lang=True) -> None
+    set_text(d, name, elem, with_lang=True)
 
     Set 'd'['name'] to the text found in 'name', if found under 'elem'. If
     'with_lang' is 'True', a tuple of ('text', 'lang') is set
@@ -103,9 +104,9 @@ def set_text(d, name, elem, with_lang=True):
         else:
             d[name] = node.text or ''
 
-def append_icons(d, elem):
+def append_icons(d: Dict[str, Any], elem: Any):
     """
-    append_icons(d, elem) -> None
+    append_icons(d, elem)
 
     Append any icons found under 'elem' to 'd'
     """
@@ -125,7 +126,7 @@ def append_icons(d, elem):
                     icon_dict[attr] = iconnode.get(attr)
             d['icon'].append(icon_dict)
 
-def elem_to_channel(elem):
+def elem_to_channel(elem: Any) -> Dict[str, Any]:
     """
     elem_to_channel(Element) -> dict
 
@@ -139,7 +140,7 @@ def elem_to_channel(elem):
     append_text(d, 'url', elem, with_lang=False)
     return d
 
-def elem_to_programme(elem):
+def elem_to_programme(elem: Any) -> Dict[str, Any]:
     """
     elem_to_programme(Element) -> dict
 
@@ -253,11 +254,11 @@ def elem_to_programme(elem):
 
     return d
          
-def escape_xml_string(text):
+def escape_xml_string(text: str) -> str:
     """Escapes special characters in a string for use in XML."""
     return escape(text)
 
-def read_error(msg, fp, e):
+def read_error(msg: str, fp: Any, e: Exception):
     try:
         line   = int(e.args[0].split(':')[0].split('line ')[1])
         column = int(e.args[0].split(':')[1].split('column ')[1])
@@ -267,7 +268,7 @@ def read_error(msg, fp, e):
         if len(lines) >= line: LOG(f"{msg}, Line {line}: {lines[line-1].strip()}")
     except Exception: LOG(f"{msg}, {e}")
 
-def _parse_tree(fp, tree):
+def _parse_tree(fp: Any, tree: Any) -> Any:
     if tree is not None:
         return tree if hasattr(tree, 'getroot') else tree
     if fp:
@@ -277,7 +278,7 @@ def _parse_tree(fp, tree):
             return ETparse(fp, parser=XMLParser(encoding=locale)).getroot()
     return None
 
-def read_data(fp=None, tree=None):
+def read_data(fp: Any = None, tree: Any = None) -> Dict[str, Any]:
     """
     read_data(fp=None, tree=None) -> dict
     """
@@ -292,7 +293,7 @@ def read_data(fp=None, tree=None):
         read_error('read_data', fp, e)
     return {}
 
-def read_channels(fp=None, tree=None):
+def read_channels(fp: Any = None, tree: Any = None) -> List[Dict[str, Any]]:
     """
     read_channels(fp=None, tree=None) -> list
     """
@@ -308,7 +309,7 @@ def read_channels(fp=None, tree=None):
         read_error('read_channels', fp, e)
     return []
             
-def read_programmes(fp=None, tree=None):
+def read_programmes(fp: Any = None, tree: Any = None) -> List[Dict[str, Any]]:
     """
     read_programmes(fp=None, tree=None) -> list
     """
@@ -320,7 +321,7 @@ def read_programmes(fp=None, tree=None):
         read_error('read_programmes', fp, e)
     return []
             
-def indent(elem, level=0):
+def indent(elem: Any, level: int = 0):
     """
     Indent XML for pretty printing
     """
@@ -342,9 +343,9 @@ class Writer:
     """
     A class for generating XMLTV data
     """
-    def __init__(self, encoding=locale, date=None,
-                 source_info_url=None, source_info_name=None,
-                 generator_info_url=None, generator_info_name=None):
+    def __init__(self, encoding: str = locale, date: Optional[str] = None,
+                 source_info_url: Optional[str] = None, source_info_name: Optional[str] = None,
+                 generator_info_url: Optional[str] = None, generator_info_name: Optional[str] = None):
         self.data = {'date': date,
                      'source-info-url': source_info_url,
                      'source-info-name': source_info_name,
@@ -356,11 +357,11 @@ class Writer:
             if val:
                 self.root.set(attr, val)
 
-    def setattr(self, node, attr, value):
+    def setattr(self, node: Any, attr: str, value: Any):
         if value is not None:
             node.set(attr, str(value))
 
-    def settext(self, node, text, with_lang=True):
+    def settext(self, node: Any, text: Any, with_lang: bool = True):
         if with_lang:
             if isinstance(text, tuple) or isinstance(text, list):
                 node.text = '' if text[0] is None else str(text[0])
@@ -371,7 +372,7 @@ class Writer:
         else:
             node.text = '' if text is None else str(text)
 
-    def seticons(self, node, icons):
+    def seticons(self, node: Any, icons: List[Dict[str, Any]]):
         for icon in icons:
             if 'src' not in icon:
                 raise ValueError("'icon' element requires 'src' attribute")
@@ -380,18 +381,18 @@ class Writer:
                 if attr in icon:
                     self.setattr(i, attr, icon[attr])
 
-    def set_zero_ormore(self, programme, element, p):
+    def set_zero_ormore(self, programme: Dict[str, Any], element: str, p: Any):
         if element in programme and programme[element]:
             for item in programme[element]:
                 e = SubElement(p, element)
                 self.settext(e, item)
 
-    def set_zero_orone(self, programme, element, p):
+    def set_zero_orone(self, programme: Dict[str, Any], element: str, p: Any):
         if element in programme and programme[element] is not None:
             e = SubElement(p, element)
             self.settext(e, programme[element])
 
-    def addProgramme(self, programme):
+    def addProgramme(self, programme: Dict[str, Any]) -> Any:
         """
         Add a single XMLTV 'programme'
         """
@@ -541,7 +542,7 @@ class Writer:
 
         return p
 
-    def addChannel(self, channel):
+    def addChannel(self, channel: Dict[str, Any]) -> Any:
         """
         add a single XMLTV 'channel'
         """
@@ -565,9 +566,9 @@ class Writer:
                 self.settext(u, url, with_lang=False)
         return c
         
-    def write(self, file, pretty_print=False):
+    def write(self, file: Any, pretty_print: bool = False):
         """
-        write(file, pretty_print=False) -> None
+        write(file, pretty_print=False)
         """
         if pretty_print:
             indent(self.root)

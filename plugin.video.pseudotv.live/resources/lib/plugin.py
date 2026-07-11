@@ -17,19 +17,19 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from variables             import *
+from typing              import Optional, Tuple
+from variables           import *
 from _services           import _Service
 from rules               import RulesList
 from infotagger.listitem import ListItemInfoTag
 
 class Plugin(object):
-    def __init__(self, mode='playlist', sysInfo={}):
-        service = _Service()   
-        self.service = service
-        self.pool    = service.pool
-        self.jsonRPC = service.jsonRPC
-        self.cache   = service.cache
-        self.monitor = service.monitor
+    def __init__(self, mode: str = 'playlist', sysInfo: dict = {}):
+        self.service = _Service()   
+        self.pool    = self.service.pool
+        self.jsonRPC = self.service.jsonRPC
+        self.cache   = self.service.cache
+        self.monitor = self.service.monitor
         self.sysInfo = sysInfo
         self.sysInfo['seek'] = (sysInfo.get('seek') or abs(int(sysInfo.get('start',-1)) - int(sysInfo.get('now',-1))) if int(sysInfo.get('start',-1)) > 0 else -1)
         self.sysInfo["progresspercentage"] = round((self.sysInfo["seek"]/int(self.sysInfo["duration"])) * 100, 2) if self.sysInfo['seek'] > 0 else -1 
@@ -40,7 +40,7 @@ class Plugin(object):
         self.sysInfo['isVOD']      = False#self.sysInfo.get('fitem').get('file','-1') != self.sysInfo.get('vid','-1')
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
         self.sysInfo['isPlaylist'] = bool(Globals.settings.getSettingInt('Playback_Method'))
-        mode = 'playlist' if any([self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist']]) else sysInfo.get('mode')
+        mode = 'playlist' if any((self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist'])) else sysInfo.get('mode')
         self.log(f'__init__, mode = {mode}, sysInfo = {self.sysInfo}')
         
         with Globals.builtin.busy_dialog():
@@ -51,24 +51,25 @@ class Plugin(object):
             elif mode in ['playlist','broadcast']:  self.playPlaylist()
         
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
             
     def _updateSysInfo(self):
         self.log('[%s] _updateSysInfo'%(self.sysInfo.get('chid')))
-        if not self.player.isPlaying() and Globals.settings.getSettingBool('Debug_Enable'): Globals.dialog.notificationDialog('%s %s\n%s'%(LANGUAGE(32248),LANGUAGE(30223),LANGUAGE(32140)))
+        if not self.service.player.isPlaying() and Globals.settings.getSettingBool('Debug_Enable'): Globals.dialog.notificationDialog('%s %s\n%s'%(LANGUAGE(32248),LANGUAGE(30223),LANGUAGE(32140)))
         with Globals.properties.suspendActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
         if pvritem:
             self.sysInfo['fitem'] = Globals._decodePlot(pvritem.get('broadcastnow',{}).get('plot',''))
             self.sysInfo['nitem'] = Globals._decodePlot(pvritem.get('broadcastnext',[{}])[0].get('plot',''))
         else:
+            self.log('[%s] _updateSysInfo, channel not found in PVR, may need refresh' % self.sysInfo.get('chid'), xbmc.LOGWARNING)
             Globals.dialog.notificationDialog(LANGUAGE(32000))
                 
             
-    def _quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=None):
-        def __add(listitem):
+    def _quePlaylist(self, listitems: list, pltype: int = xbmc.PLAYLIST_VIDEO, shuffle: Optional[bool] = None) -> Optional[Tuple[xbmc.PlayList, xbmcgui.ListItem]]:
+        def __add(listitem: xbmcgui.ListItem):
             if listitem.getPath():
                 playlist.add(listitem.getPath(),listitem,listitems.index(listitem))
                 
@@ -78,7 +79,7 @@ class Plugin(object):
             self.log('[%s] _quePlaylist, listitems = %s, shuffle = %s'%(self.sysInfo.get('chid'), len(listitems), shuffle))
             playlist = xbmc.PlayList(pltype)
             playlist.clear()
-            xbmc.sleep(100) #give playlist.clear() enough time to clear queue.        
+            xbmc.sleep(100)#give playlist.clear() enough time to clear queue.           
             poolit(__add)(listitems)
             self.log('[%s] _quePlaylist, Playlist size = %s, shuffle = %s'%(self.sysInfo.get('chid'), playlist.size(),shuffle))
             if shuffle: playlist.shuffle()
@@ -86,8 +87,8 @@ class Plugin(object):
             return playlist, listitems[0]
 
 
-    def _getPVRItems(self):
-        def __findCurrent(items, byFile=True, found=-1):
+    def _getPVRItems(self) -> list:
+        def __findCurrent(items: list, byFile: bool = True, found: int = -1) -> list:
             for pos, nextitem in enumerate(items):
                 fitem = Globals._decodePlot(nextitem.get('plot',{}))
                 if byFile and self.sysInfo.get('fitem',{}).get('file').lower() == fitem.get('file','').lower(): found = pos
@@ -137,7 +138,7 @@ class Plugin(object):
         return []
                    
                    
-    def _setResume(self, listitem):
+    def _setResume(self, listitem: xbmcgui.ListItem) -> xbmcgui.ListItem:
         if self.sysInfo.get('seek',0) > Globals.settings.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
             self.log('[%s] _setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), listitem.getPath()))
             listitem.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
@@ -171,15 +172,15 @@ class Plugin(object):
     
             
     @threadit
-    def playRadio(self, limit=RADIO_ITEM_LIMIT):
-        def __buildfItem(item: dict={}):
+    def playRadio(self, limit: int = RADIO_ITEM_LIMIT):
+        def __buildfItem(item: dict = {}) -> xbmcgui.ListItem:
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             listitem = Globals.listitems.buildItemListItem(item,'music')
             listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
             return listitem
             
-        def __buildPlaylist(chid, name):
+        def __buildPlaylist(chid: str, name: str) -> list:
             with Globals.properties.suspendActivity():
                 return Globals._randomShuffle(Globals._interleave([self.jsonRPC.requestList({'id':chid}, path, 'music', page=limit, sort={"method":"random"})[0] for path in self.sysInfo.get('vid').split('|')], Globals.settings.getSettingInt('Interleave_Set'), Globals.settings.getSettingBool('Interleave_Repeat')))
         
@@ -190,7 +191,7 @@ class Plugin(object):
                       
     @threadit         
     def playPaused(self):
-        def __buildfItem(item: dict={}):
+        def __buildfItem(item: dict = {}) -> Optional[xbmcgui.ListItem]:
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             listitem = Globals.listitems.buildItemListItem(item,'video')
@@ -207,7 +208,7 @@ class Plugin(object):
                 listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
                 return listitem
             
-        def __buildPlaylist(chid, name):
+        def __buildPlaylist(chid: str, name: str) -> list:
             lizLST = RulesList([self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid}))
             if lizLST:
                 lizLST = nextitems[:Globals.settings.getSettingInt('Page_Limit')]
@@ -232,7 +233,7 @@ class Plugin(object):
             
     @threadit
     def playPlaylist(self):
-        def __buildfItem(nextitem: dict={}):
+        def __buildfItem(nextitem: dict = {}) -> Optional[xbmcgui.ListItem]:
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             idx      = nextitems.index(nextitem)
@@ -252,8 +253,8 @@ class Plugin(object):
         self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
         
             
-    def _playCheck(self, path, found, listitem=None):
-        def __findMissing(listitem):
+    def _playCheck(self, path: str, found: bool, listitem: Optional[xbmcgui.ListItem] = None) -> Tuple[str, bool, xbmcgui.ListItem]:
+        def __findMissing(listitem: xbmcgui.ListItem) -> Tuple[bool, xbmcgui.ListItem]:
             label = (self.sysInfo['fitem'].get('label') or listitem.getLabel())
             file  = (self.sysInfo['fitem'].get('file')  or listitem.getPath())
             if file.startswith(tuple(VFS_TYPES)): found = True
@@ -291,7 +292,7 @@ class Plugin(object):
         else:                          return listitem.getPath(), found, listitem
 
 
-    def _play(self, file, listitem=None, wait=30):
+    def _play(self, file: str, listitem: Optional[xbmcgui.ListItem] = None, wait: int = 30):
         #PVR Live Channel Detection workaround.
         if listitem is None: listitem = xbmcgui.ListItem()
        
@@ -314,7 +315,7 @@ class Plugin(object):
         timerit(Globals.builtin.executewindow)(1.0,*('ActivateWindow(%s)'%(window),True,False,self.player.isPlaying))
 
 
-    def _resolveURL(self, found=False, listitem=None):
+    def _resolveURL(self, found: bool = False, listitem: Optional[xbmcgui.ListItem] = None):
         self.log(f"[{self.sysInfo.get('chid')}] _resolveURL, found = {found}: {listitem.getPath()}")
         if listitem is None: listitem = xbmcgui.ListItem()
         else: _, found, listitem = self._playCheck(listitem.getPath(), found, listitem)

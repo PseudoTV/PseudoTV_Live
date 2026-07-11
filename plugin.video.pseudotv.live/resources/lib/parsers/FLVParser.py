@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from variables import *
-from typing import Union
+from typing import Any, Optional, Union
 import struct
 
 class FLVTagHeader:
@@ -27,7 +27,7 @@ class FLVTagHeader:
         self.timestamp = 0
         self.timestampext = 0
 
-    def readHeader(self, thefile):
+    def readHeader(self, thefile: Any):
         try:
             data = struct.unpack('B', thefile.readBytes(1))[0]
             self.tagtype = (data & 0x1F)
@@ -91,7 +91,7 @@ class FLVParser:
                 LOG('FLVParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
 
 
-    def verifyFLV(self):
+    def verifyFLV(self) -> bool:
         """Verify the file is a valid FLV by checking file signature."""
         try:
             data = self.File.read(3)
@@ -101,7 +101,7 @@ class FLVParser:
             return False
 
 
-    def findLastVideoTag(self):
+    def findLastVideoTag(self) -> Optional[FLVTagHeader]:
         """Find the last video tag in the FLV file to determine duration."""
         try:
             self.File.seek(0, 2)
@@ -155,7 +155,7 @@ class FLVParser:
         return None
 
 
-    def getDurFromTag(self, tag) -> int:
+    def getDurFromTag(self, tag: FLVTagHeader) -> int:
         """
         Convert FLV tag timestamp to duration in seconds.
         FLV timestamps are in milliseconds.

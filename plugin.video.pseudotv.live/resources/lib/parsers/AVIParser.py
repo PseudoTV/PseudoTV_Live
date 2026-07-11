@@ -17,20 +17,20 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from variables    import *
-from typing import Union
+from typing import Any, Optional, Union
 import struct
 
 class AVIChunk:
     def __init__(self):
         self.empty()
 
-    def empty(self):
+    def empty(self) -> None:
         self.size = 0
         self.fourcc = ''
         self.datatype = 1
         self.chunk = ''
 
-    def read(self, thefile):
+    def read(self, thefile: Any):
         data = thefile.readBytes(4)
         try:    
             self.size = struct.unpack('<i', data)[0]
@@ -49,12 +49,12 @@ class AVIList:
     def __init__(self):
         self.empty()
 
-    def empty(self):
+    def empty(self) -> None:
         self.size = 0
         self.fourcc = ''
         self.datatype = 2
 
-    def read(self, thefile):
+    def read(self, thefile: Any):
         data = thefile.readBytes(4)
         try:    
             self.size = struct.unpack('<i', data)[0]
@@ -68,7 +68,7 @@ class AVIHeader:
     def __init__(self):
         self.empty()
 
-    def empty(self):
+    def empty(self) -> None:
         self.dwMicroSecPerFrame = 0
         self.dwMaxBytesPerSec = 0
         self.dwPaddingGranularity = 0
@@ -85,7 +85,7 @@ class AVIStreamHeader:
     def __init__(self):
         self.empty()
 
-    def empty(self):
+    def empty(self) -> None:
         self.fccType = ''
         self.fccHandler = ''
         self.dwFlags = 0
@@ -137,7 +137,7 @@ class AVIParser:
             except Exception as e:
                 LOG('AVIParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
 
-    def readHeader(self):
+    def readHeader(self) -> int:
         # AVI Chunk
         data = self.getChunkOrList()
         
@@ -203,7 +203,7 @@ class AVIParser:
         return 0
 
 
-    def getStreamDuration(self):
+    def getStreamDuration(self) -> int:
         """Calculate duration from stream header (duration in seconds)."""
         try:
             if self.StreamHeader.dwRate <= 0 or self.StreamHeader.dwScale <= 0:
@@ -214,7 +214,7 @@ class AVIParser:
             return 0
 
 
-    def parseHeader(self, data):
+    def parseHeader(self, data: AVIChunk):
         try:
             header = struct.unpack('<iiiiiiiiiiiiii', data.chunk)
             self.Header.dwMicroSecPerFrame = header[0]
@@ -232,7 +232,7 @@ class AVIParser:
             LOG("AVIParser: Unable to parse the header: %s"%e)
 
 
-    def parseStreamHeader(self, data):
+    def parseStreamHeader(self, data: AVIChunk):
         try:
             self.StreamHeader.fccType = data.chunk[0:4].decode(DEFAULT_ENCODING)
             self.StreamHeader.fccHandler = data.chunk[4:8].decode(DEFAULT_ENCODING)
@@ -254,7 +254,7 @@ class AVIParser:
             LOG("AVIParser: Error reading stream header: %s"%e)
 
 
-    def getChunkOrList(self):
+    def getChunkOrList(self) -> Union[AVIChunk, AVIList]:
         try: 
             data = self.File.readBytes(4).decode(DEFAULT_ENCODING)
         except Exception as e: 

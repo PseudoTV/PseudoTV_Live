@@ -17,16 +17,14 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
+from typing import Any, Optional, Union, Iterator, Callable
 from variables   import *
+from _services   import _Service
 from fileaccess  import FileAccess
 from cache       import cacheit
 from pool        import debounceit, timerit, poolit, threadit
 from instances   import Instances
 import threading
-
-def _get_Service():
-    from _services import _Service
-    return _Service()
 
 _ADDON_DATA_RE  = re.compile(r'special://profile/addon_data/(.*?)', re.IGNORECASE)
 _ADDON_HOME_RE  = re.compile(r'special://home/addons/(.*?)/resources', re.IGNORECASE)
@@ -37,8 +35,8 @@ _PROGRESS_THROTTLE = {}
 class Settings(object):
     dialog = None
     
-    def __init__(self, service=None):
-        if service is None: service = _get_Service()
+    def __init__(self, service: Optional[_Service] = None):
+        if service is None: service = _Service()
         self.pool      = service.pool
         self.cache     = service.cache
         self.jsonRPC   = service.jsonRPC
@@ -46,16 +44,18 @@ class Settings(object):
         self.instances = Instances(settings=self)
 
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def _getRealSettings(self, id=ADDON_ID):
+    def _getRealSettings(self, id: str = ADDON_ID) -> xbmcaddon.Addon:
         try:              return xbmcaddon.Addon(id)
-        except Exception: return REAL_SETTINGS
+        except Exception as e: 
+            self.log(f'_getRealSettings, failed to create Addon({id}), falling back to REAL_SETTINGS: {e}', xbmc.LOGWARNING)
+            return REAL_SETTINGS
 
     #GET
-    def _getSetting(self, func, key):
+    def _getSetting(self, func: Callable, key: str) -> Any:
         try: 
             value = func(key)
             self.log(f'[{ADDON_ID}] {func.__name__}, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
@@ -63,145 +63,145 @@ class Settings(object):
         except Exception as e: self.log("_getSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
       
       
-    def getSetting(self, key):
+    def getSetting(self, key: str) -> str:
         return self._getSetting(self._getRealSettings().getSetting,key)
         
         
-    def getSettingBool(self, key):
+    def getSettingBool(self, key: str) -> bool:
         return self._getSetting(self._getRealSettings().getSettingBool,key)
 
 
-    def getSettingInt(self, key):
+    def getSettingInt(self, key: str) -> int:
         return self._getSetting(self._getRealSettings().getSettingInt,key)
               
               
-    def getSettingNumber(self, key): 
+    def getSettingNumber(self, key: str) -> float:
         return self._getSetting(self._getRealSettings().getSettingNumber,key)
         
         
-    def getSettingString(self, key):
+    def getSettingString(self, key: str) -> str:
         return self._getSetting(self._getRealSettings().getSettingString,key)
 
 
-    def getSettingFloat(self, key):
+    def getSettingFloat(self, key: str) -> float:
         return float(self.getSetting(key))
               
               
-    def getSettingList(self, key):
+    def getSettingList(self, key: str) -> list:
         return [value for value in self.getSetting(key).split('|')]
        
        
-    def getSettingBoolList(self, key):
+    def getSettingBoolList(self, key: str) -> list:
         return [value.lower() == "true" for value in self.getSetting(key).split('|')]
         
         
-    def getSettingIntList(self, key):
+    def getSettingIntList(self, key: str) -> list:
         return [int(value) for value in self.getSetting(key).split('|') if isinstance(value,int)]
         
         
-    def getSettingNumberList(self, key):
+    def getSettingNumberList(self, key: str) -> list:
         return [literal_eval(value) for value in self.getSetting(key).split('|')]
         
 
-    def getSettingFloatList(self, key):
+    def getSettingFloatList(self, key: str) -> list:
         return [float(value) for value in self.getSetting(key).split('|') if isinstance(value,float)]
         
 
-    def getSettingDict(self, key):
+    def getSettingDict(self, key: str) -> dict:
         return FileAccess._decodeString(self.getSetting(key))
     
     
-    def getCacheSetting(self, key, checksum=None, default=None):
+    def getCacheSetting(self, key: str, checksum: Optional[str] = None, default: Any = None) -> Any:
         if checksum is None: checksum = ADDON_VERSION
         value = self.cache.get(key, checksum)
         self.log(f'[{ADDON_ID}] getCacheSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return (value or default)
         
         
-    def getEXTSetting(self, id, key):
+    def getEXTSetting(self, id: str, key: str) -> str:
         value = xbmcaddon.Addon(id).getSetting(key)
         self.log(f'[{ADDON_ID}] getEXTSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return value
         
         
     #CLR
-    def clrCacheSetting(self, key):
+    def clrCacheSetting(self, key: str):
         self.cache.clr(key)
     
     
     #SET
-    def _setSetting(self, func, key, value):
+    def _setSetting(self, func: Callable, key: str, value: Any):
         try:
-            if str(self.getSetting(key)).lower() != str(value).lower(): func(key,value)
+            func(key, value)
             self.log(f'[{ADDON_ID}] {func.__name__}, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         except Exception as e: self.log("_setSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
             
         
-    def setSetting(self, key, value=""):
+    def setSetting(self, key: str, value: str = "") -> str:
         self._setSetting(self._getRealSettings().setSetting,key,str(value))
         return value
             
             
-    def setSettingBool(self, key, value):
+    def setSettingBool(self, key: str, value: bool):
         return self._setSetting(self._getRealSettings().setSettingBool,key,value)
         
         
-    def setSettingInt(self, key, value):  
+    def setSettingInt(self, key: str, value: int):
         return self._setSetting(self._getRealSettings().setSettingInt,key,value)
                    
                    
-    def setSettingNumber(self, key, value):  
+    def setSettingNumber(self, key: str, value: float):
         return self._setSetting(self._getRealSettings().setSettingNumber,key,value)
         
              
-    def setSettingString(self, key, value):  
+    def setSettingString(self, key: str, value: str):
         return self._setSetting(self._getRealSettings().setSettingString,key,value)
 
 
-    def setSettingBoolList(self, key, value):
+    def setSettingBoolList(self, key: str, value: list) -> str:
         return self.setSetting(key,('|').join(value))
         
         
-    def setSettingIntList(self, key, value):  
+    def setSettingIntList(self, key: str, value: list) -> str:
         return self.setSetting(key,('|').join(value))
          
             
-    def setSettingNumberList(self, key, value):  
+    def setSettingNumberList(self, key: str, value: list) -> str:
         return self.setSetting(key,('|').join(value))
         
 
-    def setSettingList(self, key, values):
-        return self.setSetting(key,('|').join(value))
+    def setSettingList(self, key: str, values: list) -> str:
+        return self.setSetting(key,('|').join(values))
                    
                    
-    def setSettingFloat(self, key, value):  
+    def setSettingFloat(self, key: str, value: float) -> str:
         return self.setSetting(key,value)
         
         
-    def setSettingDict(self, key, values):
+    def setSettingDict(self, key: str, values: dict) -> str:
         return self.setSetting(key,FileAccess._encodeString(values))
             
             
-    def setCacheSetting(self, key, value=None, checksum=None, life=datetime.timedelta(days=28)):
+    def setCacheSetting(self, key: str, value: Any = None, checksum: Optional[str] = None, life: datetime.timedelta = datetime.timedelta(days=28)) -> bool:
         if checksum is None: checksum = ADDON_VERSION
         self.log(f'[{ADDON_ID}] setCacheSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return self.cache.set(key, value, checksum, life)
   
   
-    def setEXTSetting(self, id, key, value):
+    def setEXTSetting(self, id: str, key: str, value: str):
         self.log(f'[{ADDON_ID}] setEXTSetting, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         return xbmcaddon.Addon(id).setSetting(key,value)
 
 
     @cacheit(expiration=datetime.timedelta(minutes=15))
-    def getIP(self, default='0.0.0.0'):
+    def getIP(self, default: str = '0.0.0.0') -> str:
         IP = (xbmc.getIPAddress() or gethostbyname(gethostname()) or default)
         self.log('getIP, IP = %s'%(IP))
         return IP
     
     
-    def hasAddon(self, id, install=None, enable=None, force=None, notify=False):
-        def __getIDbyPath(url):
+    def hasAddon(self, id: str, install: Optional[bool] = None, enable: Optional[bool] = None, force: Optional[bool] = None, notify: bool = False) -> bool:
+        def __getIDbyPath(url: str) -> str:
             try:
                 if   url.startswith('special://profile/addon_data/'):      return _ADDON_DATA_RE.search(url).group(1)
                 elif url.startswith('special://home/addons/'):             return _ADDON_HOME_RE.search(url).group(1)
@@ -209,7 +209,7 @@ class Settings(object):
             except Exception as e: self.log('__getIDbyPath regex failed: %s' % e, xbmc.LOGDEBUG)
             return url
             
-        def __hasADDON(id):
+        def __hasADDON(id: str) -> bool:
             if not id: return False
             hasAddon  = self.dialog.builtin.getInfoBool('System.HasAddon(%s)'%(id))
             isEnabled = self.dialog.builtin.getInfoBool('System.AddonIsEnabled(%s)'%(id))
@@ -236,7 +236,7 @@ class Settings(object):
             
             
     @cacheit(expiration=datetime.timedelta(minutes=15))
-    def getAddonDetails(self, id=ADDON_ID):
+    def getAddonDetails(self, id: str = ADDON_ID) -> dict:
         try:
             if not id: raise Exception("Missing ID")
             addon = xbmcaddon.Addon(id)
@@ -246,8 +246,8 @@ class Settings(object):
             return self.jsonRPC.getAddonDetails(id)
 
 
-    def getMYUUID(self):
-        def __genUUID(seed=None):
+    def getMYUUID(self) -> str:
+        def __genUUID(seed: Optional[str] = None) -> str:
             if seed:
                 m = hashlib.md5()
                 m.update(seed.encode(DEFAULT_ENCODING))
@@ -261,12 +261,12 @@ class Settings(object):
 
 
     @cacheit(expiration=datetime.timedelta(minutes=5))
-    def getBonjour(self):
-        def __getResumeURLs(remote):
+    def getBonjour(self) -> dict:
+        def __getResumeURLs(remote: str) -> list:
             keys = self.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={})
             return ['http://%s/filelist/%s'%(remote,key) for key in keys]
             
-        def __getChannels():
+        def __getChannels() -> list:
             from channels import Channels
             return Channels().getChannels()
             
@@ -332,17 +332,17 @@ class Settings(object):
             
     # @cacheit(expiration=datetime.timedelta(minutes=5))
     # def getPayloadUI(self):
-        # return Json2Html().convert(self.getPayload(inclDebug=True))
+        # return self.getPayload(inclDebug=True)
 
 
-    def hasAutotuned(self):
+    def hasAutotuned(self) -> bool:
         return self.dialog.properties.setProperty('has.Autotuned',self.getCacheSetting('has.Autotuned', default=False))
         
         
-    def setAutotuned(self, state=True):
+    def setAutotuned(self, state: bool = True) -> bool:
         return self.dialog.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned', state, life=datetime.timedelta(days=MAX_GUIDEDAYS)))
 
-    def setPVRPath(self, path, instanceName=ADDON_NAME):
+    def setPVRPath(self, path: str, instanceName: str = ADDON_NAME):
         settings  = self.instances.getSettings(instanceName)
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
                      'kodi_addon_instance_enabled':'true',
@@ -362,7 +362,7 @@ class Settings(object):
             return self.instances.setSettings(instanceName, settings)
         
                 
-    def setPVRLocal(self, host, instanceName=ADDON_NAME):
+    def setPVRLocal(self, host: str, instanceName: str = ADDON_NAME):
         settings  = self.instances.getSettings(instanceName)
         processID = self.dialog.properties.getProcessID()
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
@@ -384,7 +384,7 @@ class Settings(object):
             return self.instances.setSettings(instanceName, settings)
         
         
-    def setPVRRemote(self, host, instanceName=ADDON_NAME, cache=True):
+    def setPVRRemote(self, host: str, instanceName: str = ADDON_NAME, cache: bool = True):
         settings  = self.instances.getSettings(instanceName)
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
                      'kodi_addon_instance_enabled':'true',
@@ -404,7 +404,7 @@ class Settings(object):
             return self.instances.setSettings(instanceName, settings)
 
 
-    def chkPVRChanges(self, instanceName=ADDON_NAME, nsettings={}, prompt=None):
+    def chkPVRChanges(self, instanceName: str = ADDON_NAME, nsettings: dict = {}, prompt: Optional[bool] = None) -> bool:
         if prompt is None: prompt = not bool(self.getSettingBool('Enable_Kodi_Access'))
         changes = []
         if self.instances.hasPVRInstance(instanceName):
@@ -425,16 +425,16 @@ class Settings(object):
         return False
         
 
-    def getCurrentSettings(self):
+    def getCurrentSettings(self) -> dict:
         settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT', 'Enable_Autotune', 'Remove_BG_APIKEY', 'Open_Router_APIKEY', 'Enable_Kodi_Access']
         return dict([(setting,self.getSetting(setting)) for setting in settings])
               
               
-    def restoreSettings(self, settings={}):
-        return any([self.setSetting(k,v) for k,v in list(settings.items())])
+    def restoreSettings(self, settings: dict = {}) -> bool:
+        return any(self.setSetting(k,v) for k,v in list(settings.items()))
 
 
-    def getFileCRC(self, file):
+    def getFileCRC(self, file: str) -> bool:
         try:
             fle = FileAccess.open(file,'r')
             crc = binascii.crc32(fle.read().encode(DEFAULT_ENCODING))
@@ -451,19 +451,19 @@ class Settings(object):
         return False
             
             
-    def getLogs(self, time=None):
+    def getLogs(self, time: Optional[datetime.datetime] = None) -> dict:
         if time is None: time = datetime.datetime.fromtimestamp(time.time())
         return self.getCacheSetting('LOGS', FileAccess._getMD5(time.strftime('%Y%m%d')), default={})
         
         
-    def setLogs(self, key, event):
+    def setLogs(self, key: str, event: str):
         time = datetime.datetime.fromtimestamp(time.time())
         logs = self.getLogs(time)
         logs.setdefault(key,[]).append(f'{time.strftime(DTFORMAT)} - {event}')
         self.setCacheSetting('LOGS', logs, FileAccess._getMD5(time.strftime('%Y%m%d')), datetime.timedelta(days=2))
             
             
-    def showDialog(self, silent=None):
+    def showDialog(self, silent: Optional[bool] = None) -> bool:
         #True Show/False Silent
         if self.getSettingBool('Debug_Enable'): return True
         if silent: return False
@@ -473,8 +473,8 @@ class Settings(object):
             
 class Properties(object):
     dialog = None
-    def __init__(self, service=None, winID=10131):
-        if service is None: service = _get_Service()
+    def __init__(self, service: Optional[_Service] = None, winID: int = 10131):
+        if service is None: service = _Service()
         self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
@@ -484,22 +484,23 @@ class Properties(object):
         self._memory_cache = OrderedDict()
 
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getProcessID(self):
+    def getProcessID(self) -> str:
         processID = self.getEXTProperty('%s.ProcessID'%(ADDON_ID))
         if not processID: processID = self.setProcessID()
         return processID
 
 
-    def setProcessID(self):
+    def setProcessID(self) -> str:
         self._clrTrash(self.getEXTProperty('%s.ProcessID'%(ADDON_ID),None))
         return self.setEXTProperty('%s.ProcessID'%(ADDON_ID),FileAccess._getMD5(uuid4()))
         
 
-    def _clrTrash(self, processID=None): #clear abandoned properties after processID change
+    def _clrTrash(self, processID: Optional[str] = None):
+        """Clear abandoned properties after processID change."""
         if processID:
             tmpDCT = self._getTrash()
             if processID in tmpDCT:
@@ -509,21 +510,22 @@ class Properties(object):
                     self.clrProperty(prop)
 
 
-    def _getTrash(self):
+    def _getTrash(self) -> dict:
         try:    return (FileAccess._decodeString(self.getEXTProperty('%s.TRASH'%(ADDON_ID),{})) or {})
         except Exception as e: 
             LOG('Properties: _getTrash failed: %s' % e, xbmc.LOGDEBUG)
             return {}
 
 
-    def _setTrash(self, key, processID): #catalog instance properties that are abandoned
+    def _setTrash(self, key: str, processID: str):
+        """Catalog instance properties that are abandoned."""
         tmpDCT = self._getTrash()
         if key not in tmpDCT.setdefault(processID,[]):
             tmpDCT.setdefault(processID,[]).append(key)
             self.setEXTProperty('%s.TRASH'%(ADDON_ID),str(FileAccess._encodeString(tmpDCT)))
 
         
-    def _getKey(self, key, useInstance=True):
+    def _getKey(self, key: str, useInstance: bool = True) -> tuple:
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID,key)
         if useInstance: 
             thid = threading.get_ident()
@@ -535,7 +537,7 @@ class Properties(object):
 
 
     #GET
-    def getProperty(self, key, default=''):
+    def getProperty(self, key: str, default: str = '') -> str:
         thid = None
         try:
             key, thid = self._getKey(key)
@@ -554,7 +556,7 @@ class Properties(object):
             return default
             
         
-    def getEXTProperty(self, key, default=''):
+    def getEXTProperty(self, key: str, default: Any = '') -> Any:
         try:
             if key in self._memory_cache: 
                 self._memory_cache.move_to_end(key)
@@ -583,21 +585,21 @@ class Properties(object):
         return self.window.clearProperties()
         
         
-    def clrProperty(self, key):
+    def clrProperty(self, key: str):
         key, thid = self._getKey(key)
         self.log(f'[{self.winID}] clrProperty [{thid}], key = {key}')
         self._memory_cache.pop(key, None)
         return self.window.clearProperty(key)
 
 
-    def clrEXTProperty(self, key):
+    def clrEXTProperty(self, key: str):
         self.log('[%s] clrEXTProperty, key = %s'%('10000', key))
         self._memory_cache.pop(key, None)
         return xbmcgui.Window(10000).clearProperty(key)
         
         
     #SET
-    def setProperty(self, key, value):
+    def setProperty(self, key: str, value: Any) -> Any:
         key, thid = self._getKey(key)
         if value is None or value == '':
             self.clrProperty(key)
@@ -613,7 +615,7 @@ class Properties(object):
         return value
         
         
-    def setEXTProperty(self, key, value):
+    def setEXTProperty(self, key: str, value: Any) -> Any:
         if value is None or value == '': return value
         self._memory_cache[key] = copy.deepcopy(value)
         self._memory_cache.move_to_end(key)
@@ -623,7 +625,7 @@ class Properties(object):
         return value
 
 
-    def setTrakt(self, state=False):
+    def setTrakt(self, state: bool = False):
         self.log('setTrakt, disable trakt = %s'%(state))
         # https://github.com/trakt/script.trakt/blob/d45f1363c49c3e1e83dabacb70729cc3dec6a815/resources/lib/kodiUtilities.py#L104
         if state: self.setEXTProperty('script.trakt.paused',state)
@@ -631,27 +633,34 @@ class Properties(object):
 
 
     @debounceit()
-    def setPropTimer(self, key, state=True):
+    def setPropTimer(self, key: str, state: bool = True, args: tuple = (), kwargs: dict = None) -> Any:
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
-        return self.setEXTProperty(key,state)
+        value = FileAccess.dumpJSON({'s': state, 'a': list(args), 'k': kwargs or {}})
+        return self.setEXTProperty(key, value)
 
 
-    def getPropTimer(self, key, state=True, default=False):
+    def getPropTimer(self, key: str, state: bool = True, default: bool = False) -> tuple:
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
-        return self.getEXTProperty(key,default)
+        raw = self.getEXTProperty(key, default)
+        if isinstance(raw, bool): return raw, [], {}
+        try:
+            data = FileAccess.loadJSON(raw)
+            return data.get('s', default), data.get('a', []), data.get('k', {})
+        except Exception:
+            return raw, [], {}
 
 
-    def setRemoteHost(self, value):
+    def setRemoteHost(self, value: str) -> str:
         return self.setEXTProperty('%s.Remote_Host'%(ADDON_ID),value)
         
         
-    def getRemoteHost(self):
+    def getRemoteHost(self) -> str:
         remote = self.getEXTProperty('%s.Remote_Host'%(ADDON_ID))
         if not remote: remote = self.setRemoteHost('%s:%s'%(self.dialog.settings.getIP(),self.dialog.settings.getSettingInt('TCP_PORT')))
         return remote
 
 
-    def setHasChannels(self, key=None, channelDATA=None):
+    def setHasChannels(self, key: Optional[str] = None, channelDATA: Optional[dict] = None) -> Any:
         if key is None: key = CHANNELAUTOTUNE_KEY if self.dialog.settings.getSettingBool('Enable_Autotune') else CHANNEL_KEY
         if channelDATA is None: channelDATA = Channels(key).channelDATA
         chanLST = self.dialog.settings.getCacheSetting('%s.has.Channels'%(ADDON_ID), default={})
@@ -662,7 +671,7 @@ class Properties(object):
         return self.dialog.settings.setCacheSetting('%s.has.Channels'%(ADDON_ID),chanLST,life=-1).get(key)
         
         
-    def hasChannels(self, key=None, path=None):
+    def hasChannels(self, key: Optional[str] = None, path: Optional[str] = None) -> bool:
         if key is None: key = CHANNELAUTOTUNE_KEY if self.dialog.settings.getSettingBool('Enable_Autotune') else CHANNEL_KEY
         if not path is None: 
             if FileAccess.exists(path): channelDATA = FileAccess.getJSON(path)
@@ -670,7 +679,7 @@ class Properties(object):
         return len(channelDATA.get('channels',[])) > 0
         
 
-    def setBackup(self, key=CHANNELBACKUP_KEY, channels=None):
+    def setBackup(self, key: str = CHANNELBACKUP_KEY, channels: Optional[list] = None) -> Any:
         backups = self.dialog.settings.getCacheSetting('%s.has.backups'%(ADDON_ID), default={})
         if channels is None: channels = Channels(key).getChannels()
         if len(channels) > 0: backups.setdefault(key,{}).update({'name':key, 'channels': channels, 'updated':(backups.get(key,{}).get('updated') or datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT))})
@@ -678,61 +687,63 @@ class Properties(object):
         return self.dialog.settings.setCacheSetting('%s.has.backups'%(ADDON_ID),backups,life=-1).get(key)
 
 
-    def hasBackup(self, key=CHANNELBACKUP_KEY, path=None):
+    def hasBackup(self, key: str = CHANNELBACKUP_KEY, path: Optional[str] = None) -> Optional[dict]:
         if not path is None: 
             if FileAccess.exists(path): return FileAccess.getJSON(path)
         else:                           return self.dialog.settings.getCacheSetting('%s.has.backups'%(ADDON_ID), default={}).get(key)
 
 
-    def hasBackups(self):
+    def hasBackups(self) -> bool:
         return len(list(self.dialog.settings.getCacheSetting('%s.has.backups'%(ADDON_ID), default={}).keys())) > 0
 
 
-    def hasLibrary(self, type=None):
+    def hasLibrary(self, type: Optional[str] = None) -> bool:
         if not type is None: return self.getEXTProperty('%s.has.%s'%(ADDON_ID,type),False)
         return any(self.getEXTProperty('%s.has.%s'%(ADDON_ID,t),False) for t in AUTOTUNE_TYPES)
         
         
-    def setHasLibrary(self, type, state=True):
+    def setHasLibrary(self, type: str, state: bool = True) -> Any:
         return self.setEXTProperty('%s.has.%s'%(ADDON_ID,type),state)
         
         
-    def setHasServers(self, state=True):
+    def setHasServers(self, state: bool = True) -> Any:
         return self.setEXTProperty('%s.has.Servers'%(ADDON_ID),state)
         
 
-    def hasServers(self):
+    def hasServers(self) -> bool:
         return self.getEXTProperty('%s.has.Servers'%(ADDON_ID),False)
         
                 
-    def setEnabledServers(self, state=True):
+    def setEnabledServers(self, state: bool = True) -> Any:
         return self.setEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),state)
         
         
-    def hasEnabledServers(self):
+    def hasEnabledServers(self) -> bool:
         return self.getEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),False)
         
         
-    def setPendingShutdown(self, state=True):
+    def setPendingShutdown(self, state: bool = True) -> Any:
         return self.setEXTProperty('%s.SERVICE.pendingShutdown'%(ADDON_ID),state)
         
 
-    def isPendingShutdown(self):
+    def isPendingShutdown(self) -> bool:
         value = self.getEXTProperty('%s.SERVICE.pendingShutdown'%(ADDON_ID),False)
+        self.clrEXTProperty(f'{ADDON_ID}.SERVICE.pendingShutdown')
         return value
         
                 
-    def setPendingRestart(self, state=True):
+    def setPendingRestart(self, state: bool = True) -> Any:
         return self.setEXTProperty('%s.SERVICE.pendingRestart'%(ADDON_ID),state)
 
 
-    def isPendingRestart(self):
+    def isPendingRestart(self) -> bool:
         value = self.getEXTProperty('%s.SERVICE.pendingRestart'%(ADDON_ID),False)
+        self.clrEXTProperty(f'{ADDON_ID}.SERVICE.pendingRestart')
         return value
 
 
     @contextmanager
-    def chkRunning(self, key):
+    def chkRunning(self, key: str) -> Iterator[bool]:
         try:
             if not self.isRunning(key):
                 self.setRunning(key,True)
@@ -743,16 +754,16 @@ class Properties(object):
             self.setRunning(key,False)
             
             
-    def setRunning(self, key, state=True):
+    def setRunning(self, key: str, state: bool = True) -> Any:
         return self.setEXTProperty('%s.%s.Running'%(ADDON_ID,key),state)
         
         
-    def isRunning(self, key):
+    def isRunning(self, key: str) -> bool:
         return self.getEXTProperty('%s.%s.Running'%(ADDON_ID,key),False)
 
 
     @contextmanager
-    def lockActivity(self, state=True):
+    def lockActivity(self, state: bool = True) -> Iterator[bool]:
         try:
             if not self.isLockActivity():
                 self.setLockActivity(True)
@@ -763,18 +774,21 @@ class Properties(object):
             self.setLockActivity(False)
             
 
-    def setLockActivity(self, state=True): # context state
+    def setLockActivity(self, state: bool = True) -> Any:
+        """Context state for locking activity."""
         return self.setEXTProperty('%s.lockActivity'%(ADDON_ID),state)
 
 
-    def isLockActivity(self):# context state
+    def isLockActivity(self) -> bool:
+        """Context state for locking activity."""
         return self.getEXTProperty('%s.lockActivity'%(ADDON_ID),False)
 
 
     @contextmanager
-    def interruptActivity(self, wait=-1): #quit background task
-        while not self.monitor.abortRequested() and (self.isInterruptActivity() or self.isLockActivity()):
-            if wait > 0: wait -= CPU_CYCLE #wait -1 runs indefinitely. 
+    def interruptActivity(self, wait: int = -1) -> Iterator:
+        """Quit background task, wait -1 runs indefinitely."""
+        while not self.monitor.abortRequested() and (self.isInterruptActivity() or self.isLockActivity()) and wait > 0:
+            if wait > 0: wait -= CPU_CYCLE
             if self.monitor.waitForAbort(CPU_CYCLE) or int(wait) == 0: break
         self.setPendingInterrupt(self.setInterruptActivity(True))
         try: yield
@@ -782,50 +796,60 @@ class Properties(object):
             self.setPendingInterrupt(self.setInterruptActivity(False))
         
            
-    def setInterruptActivity(self, state=True): # context state
+    def setInterruptActivity(self, state: bool = True) -> Any:
+        """Context state for interrupting activity."""
         return self.setProperty('%s.interruptActivity'%(ADDON_ID),state)
         
 
-    def isInterruptActivity(self): # context state
+    def isInterruptActivity(self) -> bool:
+        """Context state for interrupting activity."""
         return self.getProperty('%s.interruptActivity'%(ADDON_ID),False)
 
 
-    def setPendingInterrupt(self, state=True): # interrupt state
+    def setPendingInterrupt(self, state: bool = True) -> Any:
+        """Interrupt state."""
         return self.setEXTProperty('%s.pendingInterrupt'%(ADDON_ID),state)
 
 
-    def isPendingInterrupt(self):  # interrupt state
+    def isPendingInterrupt(self) -> bool:
+        """Interrupt state."""
         return self.getEXTProperty('%s.pendingInterrupt'%(ADDON_ID),False)
 
         
     @contextmanager
-    def suspendActivity(self, wait=-1): #pause background task.
+    def suspendActivity(self, wait: int = 30) -> Iterator:
+        """Pause background task, wait seconds before yielding anyway."""
+        deadline = time.time() + max(wait, 0)
         while not self.monitor.abortRequested() and (self.isSuspendActivity() or self.isLockActivity()):
-            if wait > 0: wait -= CPU_CYCLE #wait -1 runs indefinitely. 
-            if self.monitor.waitForAbort(CPU_CYCLE) or int(wait) == 0: break
+            if self.monitor.waitForAbort(CPU_CYCLE) or time.time() >= deadline: break
         self.setPendingSuspend(self.setSuspendActivity(True))
         try: yield
         finally: self.setPendingSuspend(self.setSuspendActivity(False))
 
 
-    def setSuspendActivity(self, state=True): # context state
+    def setSuspendActivity(self, state: bool = True) -> Any:
+        """Context state for suspend activity."""
         return self.setProperty('%s.suspendActivity'%(ADDON_ID),state)
 
 
-    def isSuspendActivity(self): # context state
+    def isSuspendActivity(self) -> bool:
+        """Context state for suspend activity."""
         return self.getProperty('%s.suspendActivity'%(ADDON_ID),False)
         
         
-    def setPendingSuspend(self, state=True): # suspend state
+    def setPendingSuspend(self, state: bool = True) -> Any:
+        """Suspend state."""
         return self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),state)
         
         
-    def isPendingSuspend(self): # suspend state
+    def isPendingSuspend(self) -> bool:
+        """Suspend state."""
         return self.getEXTProperty('%s.pendingSuspend'%(ADDON_ID),False)
 
 
     @contextmanager
-    def legacy(self): #toggle legacy property from older pseudotv project that may still be used by third-party plugins.
+    def legacy(self) -> Iterator[bool]:
+        """Toggle legacy property from older pseudotv project that may still be used by third-party plugins."""
         try: 
             if not self.isPseudoTVRunning():
                 self.setEXTProperty('PseudoTVRunning',True)
@@ -836,18 +860,19 @@ class Properties(object):
             self.setEXTProperty('PseudoTVRunning',False)
 
 
-    def isPseudoTVRunning(self):
+    def isPseudoTVRunning(self) -> bool:
         return self.getEXTProperty('PseudoTVRunning',False)
 
 
-    def getFriendlyName(self):
+    def getFriendlyName(self) -> str:
         friendly = self.getEXTProperty('%s.Instance_Name'%(ADDON_ID))
         if not friendly or friendly == LANGUAGE(32105):
             friendly = self.setEXTProperty('%s.Instance_Name'%(ADDON_ID), self.jsonRPC.inputFriendlyName())
         return friendly
         
         
-    def preemptActivity(self, msg, func, *args, **kwargs):
+    def preemptActivity(self, msg: str, func: Callable, *args: Any, **kwargs: Any) -> Any:
+        """Execute a function while preempting suspend/interrupt activity states."""
         results      = None
         orgSuspend   = self.isPendingSuspend()
         orgInterrupt = self.isPendingInterrupt()
@@ -858,11 +883,11 @@ class Properties(object):
             
             Dialog().notificationDialog(msg)
             self.log('preemptActivity, isInterrupt = %s, isSuspend = %s, isBuilding = %s'%(isInterrupt,isSuspend,isBuilding))
-            if not isInterrupt and any([isSuspend, isBuilding]): #force interrupt.
+            if not isInterrupt and any((isSuspend, isBuilding)): #force interrupt.
                 if isSuspend:  self.setPendingSuspend(False)   #release suspension 
                 if isBuilding: self.setPendingInterrupt(True)  #interrupt building.
             elif isInterrupt and not isBuilding: self.setPendingInterrupt(False)#release interrupt.
-            elif not isInterrupt and not any([isSuspend, isBuilding]):
+            elif not isInterrupt and not any((isSuspend, isBuilding)):
                 with self.lockActivity():
                     try: results = func(*args, **kwargs)
                     except Exception as e: self.log("preemptActivity, failed! %s"%(e), xbmc.LOGERROR)
@@ -962,31 +987,31 @@ class ListItems(object):
                  # 'size'                    : (int,),  #long (1024) - size in bytes
                  'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
     
-    def __init__(self, service=None):
-        if service is None: service = _get_Service()
+    def __init__(self, service: Optional[_Service] = None):
+        if service is None: service = _Service()
         self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
         self.monitor    = service.monitor
 
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
     
     
-    def getListItem(self, label='', label2='', path='', offscreen=False):
+    def getListItem(self, label: str = '', label2: str = '', path: str = '', offscreen: bool = False) -> xbmcgui.ListItem:
         return xbmcgui.ListItem(label,label2,path,offscreen)
 
 
-    def infoTagVideo(self, offscreen=False):
+    def infoTagVideo(self, offscreen: bool = False) -> xbmc.InfoTagVideo:
         return xbmc.InfoTagVideo(offscreen)
 
 
-    def InfoTagMusic(self, offscreen=False):
+    def InfoTagMusic(self, offscreen: bool = False) -> xbmc.InfoTagMusic:
         return xbmc.InfoTagMusic(offscreen)
 
 
-    def buildDictListItem(self, listitem):
+    def buildDictListItem(self, listitem: xbmcgui.ListItem) -> dict:
         item = {'label'       : listitem.getLabel(),
                 'label2'      : listitem.getLabel2(),
                 'file'        : listitem.getPath(),
@@ -1025,7 +1050,7 @@ class ListItems(object):
         return item
 
 
-    def buildItemListItem(self, item, media='video', offscreen=False, playable=True):
+    def buildItemListItem(self, item: dict, media: str = 'video', offscreen: bool = False, playable: bool = True) -> Optional[xbmcgui.ListItem]:
         try:
             info       = item.copy()
             art        = (info.pop('art'              ,{}) or {})
@@ -1061,7 +1086,7 @@ class ListItems(object):
         except Exception as e: LOG("buildItemListItem, failed! %s\n%s"%(e,item), xbmc.LOGERROR)
             
                      
-    def buildMenuListItem(self, label="", label2="", icon=ICON, url="", info={}, art={}, props={}, offscreen=False, media='video'):
+    def buildMenuListItem(self, label: str = "", label2: str = "", icon: str = ICON, url: str = "", info: dict = {}, art: dict = {}, props: dict = {}, offscreen: bool = False, media: str = 'video') -> xbmcgui.ListItem:
         if not art: art = {'thumb':icon,'logo':icon,'icon':icon}
         listitem = self.getListItem(label, label2, url, offscreen=offscreen)
         listitem.setIsFolder(True)
@@ -1075,7 +1100,7 @@ class ListItems(object):
         return listitem
                
            
-    def cleanInfo(self, ninfo, media='video', properties=None):
+    def cleanInfo(self, ninfo: dict, media: str = 'video', properties: Optional[dict] = None) -> tuple:
         """Validate and coerce info dict values to match Kodi InfoTag type schema.
         
         Unknown keys are moved to properties (custom listitem properties).
@@ -1129,7 +1154,7 @@ class ListItems(object):
         return ninfo, properties
 
 
-    def cleanProp(self, pvalue):
+    def cleanProp(self, pvalue: Any) -> str:
         if       isinstance(pvalue,dict): return FileAccess.dumpJSON(pvalue)
         elif     isinstance(pvalue,list): return '|'.join(map(str, pvalue))
         elif not isinstance(pvalue,str):  return str(pvalue)
@@ -1138,8 +1163,8 @@ class ListItems(object):
     
 class Builtin(object):
     dialog = None
-    def __init__(self, service=None):
-        if service is None: service = _get_Service()
+    def __init__(self, service: Optional[_Service] = None):
+        if service is None: service = _Service()
         self.lock       = Lock()
         self.busy       = None
         self.pool       = service.pool
@@ -1148,27 +1173,27 @@ class Builtin(object):
         self.monitor    = service.monitor
         
     
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
-    def hasPVR(self):
+    def hasPVR(self) -> bool:
         return self.getInfoBool('Pvr.HasTVChannels')
         
         
-    def hasRadio(self):
+    def hasRadio(self) -> bool:
         return self.getInfoBool('Pvr.HasRadioChannels')
 
 
-    def hasMusic(self):
+    def hasMusic(self) -> bool:
         return self.getInfoBool('Library.HasContent(Music)')
         
         
-    def hasTV(self):
+    def hasTV(self) -> bool:
         return self.getInfoBool('Library.HasContent(TVShows)')
         
         
-    def hasMovie(self):
+    def hasMovie(self) -> bool:
         return self.getInfoBool('Library.HasContent(Movies)')
                 
 
@@ -1188,56 +1213,56 @@ class Builtin(object):
         return self.getInfoBool('VideoPlayer.HasEpg','')
 
   
-    def hasSubtitle(self):
+    def hasSubtitle(self) -> bool:
         return self.getInfoBool('VideoPlayer.HasSubtitles')
 
 
-    def isSubtitle(self):
+    def isSubtitle(self) -> bool:
         return self.getInfoBool('VideoPlayer.SubtitlesEnabled')
 
 
-    def isPlaylistRandom(self):
+    def isPlaylistRandom(self) -> bool:
         return self.getInfoLabel('Playlist.Random').lower() == 'on' # Disable auto playlist shuffling if it's on
         
         
-    def isPlaylistRepeat(self):
+    def isPlaylistRepeat(self) -> bool:
         return self.getInfoLabel('Playlist.IsRepeat').lower() == 'true' # Disable auto playlist repeat if it's on #todo
 
 
-    def isPaused(self):
+    def isPaused(self) -> bool:
         return self.getInfoBool('Player.Paused')
                 
                 
-    def isRecording(self):
+    def isRecording(self) -> bool:
         return self.getInfoBool('Pvr.IsRecording')
         
         
-    def isScanning(self):
+    def isScanning(self) -> bool:
         return (self.getInfoBool('Library.IsScanningVideo') & self.getInfoBool('Library.IsScanningMusic'))
           
                       
     def isSettingsOpened(self) -> bool:
-        return any([self.getInfoBool('Window.IsVisible(addonsettings)'),self.getInfoBool('Window.IsVisible(selectdialog)')])
+        return any((self.getInfoBool('Window.IsVisible(addonsettings)'),self.getInfoBool('Window.IsVisible(selectdialog)')))
 
 
-    def isPlaying(self):
+    def isPlaying(self) -> bool:
         return self.getInfoBool('Player.Playing')
 
 
     def isPVRPlaying(self) -> bool:
-        return any([self.getInfoBool('Pvr.IsPlayingTv'),self.getInfoBool('Pvr.IsPlayingRadio'),self.getInfoBool('Pvr.IsPlayingRecording'),self.getInfoBool('Pvr.IsPlayingActiveRecording')])
+        return any((self.getInfoBool('Pvr.IsPlayingTv'),self.getInfoBool('Pvr.IsPlayingRadio'),self.getInfoBool('Pvr.IsPlayingRecording'),self.getInfoBool('Pvr.IsPlayingActiveRecording')))
 
 
-    def isBusyDialog(self):
-        return any([self.dialog.properties.isRunning('BUSY_OVERLAY'),self.getInfoBool('Window.IsActive(busydialognocancel)'),self.getInfoBool('Window.IsActive(busydialog)')])
+    def isBusyDialog(self) -> bool:
+        return any((self.dialog.properties.isRunning('BUSY_OVERLAY'),self.getInfoBool('Window.IsActive(busydialognocancel)'),self.getInfoBool('Window.IsActive(busydialog)')))
 
         
-    def _isScanning(self):
+    def _isScanning(self) -> bool:
         return (self.getInfoBool('Library.IsScanningVideo') &  self.getInfoBool('Library.IsScanningMusic'))
 
 
     def _isSettingsOpened(self) -> bool:
-        return any([ self.getInfoBool('Window.IsVisible(addonsettings)'), self.getInfoBool('Window.IsVisible(selectdialog)')])
+        return any((self.getInfoBool('Window.IsVisible(addonsettings)'), self.getInfoBool('Window.IsVisible(selectdialog)')))
 
 
     def closeBusyDialog(self):
@@ -1250,7 +1275,7 @@ class Builtin(object):
 
 
     @contextmanager
-    def busyDialog(self, cancel=False, lock=False):
+    def busyDialog(self, cancel: bool = False, lock: bool = False) -> Iterator:
         if not self.isBusyDialog() and not cancel:
             try: 
                 if self.busy is None:
@@ -1270,13 +1295,13 @@ class Builtin(object):
 
     busy_dialog = busyDialog
 
-    def getIdle(self):
+    def getIdle(self) -> int:
         with self.lock:
             try:              return int(xbmc.getGlobalIdleTime() or '0')
             except Exception: return 0
             
 
-    def getInfoLabel(self, key, default=''):
+    def getInfoLabel(self, key: str, default: str = '') -> str:
         with self.lock:
             value   = None
             pattern = r"^[a-zA-Z0-9]+\.[a-zA-Z0-9]+(?:\(.*\))?$"
@@ -1289,7 +1314,7 @@ class Builtin(object):
             return (value or default)
 
 
-    def getInfoBool(self, key):
+    def getInfoBool(self, key: str) -> bool:
         with self.lock:
             value   = False
             pattern = r"^[a-zA-Z0-9]+\.[a-zA-Z0-9]+(?:\(.*\))?$"
@@ -1300,12 +1325,12 @@ class Builtin(object):
             return value or False
         
         
-    def executewindow(self, key, wait=False, delay=False, condition=None):
+    def executewindow(self, key: str, wait: bool = False, delay: bool = False, condition: Optional[Callable] = None) -> Any:
         with self.lock:
             return self.executebuiltin(key,wait,delay,condition)
         
         
-    def executebuiltin(self, key, wait=False, delay=None, condition=None):
+    def executebuiltin(self, key: str, wait: bool = False, delay: Optional[float] = None, condition: Optional[Callable] = None) -> Any:
         if not condition is None and not condition(): return False
         with self.lock:
             self.log('executebuiltin, key = %s, wait = %s, delay = %s, condition = %s):'%(key,wait,delay,condition))
@@ -1313,7 +1338,7 @@ class Builtin(object):
             return timerit(xbmc.executebuiltin)(delay,*(key,wait,None,condition))
         
         
-    def executescript(self, path, condition=None):
+    def executescript(self, path: str, condition: Optional[Callable] = None) -> bool:
         if not condition is None and not condition(): return False
         with self.lock:
             self.log('executescript, path = %s'%(path))
@@ -1321,7 +1346,7 @@ class Builtin(object):
             return True
 
 
-    def executeJSONRPC(self, request):
+    def executeJSONRPC(self, request: dict) -> str:
         with self.lock:
             response = xbmc.executeJSONRPC(FileAccess.dumpJSON(request))
             self.log('executeJSONRPC\nrequest = %s'%(request))
@@ -1329,9 +1354,72 @@ class Builtin(object):
             return response
     
 
-    def getResolution(self):
+    def getResolution(self) -> tuple:
         WH, WIN = self.getInfoLabel('System.ScreenResolution').split(' - ')
         return (1920,1080), WIN #tuple(int(x) for x in WH.split('x')), WIN
+
+
+    def parseKodiLog(self, lines: int = 500) -> dict:
+        """Parse Kodi log file for project logs and relevant system data."""
+        log_path = FileAccess.translatePath('special://logpath/kodi.log')
+        result = {'project': [], 'errors': [], 'system': {}, 'summary': {}}
+        
+        if not FileAccess.exists(log_path):
+            self.log('parseKodiLog, log file not found: %s' % log_path, xbmc.LOGWARNING)
+            return result
+        try:
+            fle = FileAccess.open(log_path, 'r')
+            all_lines = fle.readlines()[-lines:]  # Read last N lines
+            fle.close()
+        except Exception as e:
+            self.log('parseKodiLog, failed to read log: %s' % e, xbmc.LOGERROR)
+            return result
+
+        project_prefix = f'{ADDON_ID}-'
+        error_count = 0
+        warning_count = 0
+        project_count = 0
+        
+        for line in all_lines:
+            line = line.strip()
+            if not line: continue
+            if 'error' in line.lower():     error_count += 1
+            elif 'warning' in line.lower(): warning_count += 1
+                
+            if project_prefix in line:
+                project_count += 1
+                try:
+                    parts = line.split(project_prefix, 1)
+                    if len(parts) == 2: result['project'].append(re.sub(r'\x1b\[[0-9;]*m', '', parts[1]))
+                except Exception:
+                    result['project'].append(line)
+                    
+            elif 'error' in line.lower() and ('pseudotv' in line.lower() or 'pvr' in line.lower()):
+                try: result['errors'].append(re.sub(r'\x1b\[[0-9;]*m', '', line)[-200:])  # Last 200 chars
+                except Exception: pass
+
+        # System info
+        result['system'] = {
+               'version': ADDON_VERSION,
+               'build': self.getInfoLabel('System.BuildVersion'),
+               'os': self.getInfoLabel('System.OSVersionInfo'),
+               'memory_free': self.getInfoLabel('System.FreeMemory'),
+               'cpu_count': os.cpu_count(),
+               'python': platform.python_version(),
+               'platform': platform.machine(),
+               'log_path': log_path,
+               'log_lines': len(all_lines)
+               }
+        
+        # Summary
+        result['summary'] = {
+               'project_logs': project_count,
+               'total_errors': error_count,
+               'total_warnings': warning_count,
+               'last_modified': datetime.datetime.fromtimestamp(os.path.getmtime(log_path)).strftime(DTFORMAT) if FileAccess.exists(log_path) else None
+               }
+        self.log('parseKodiLog, project=%d, errors=%d, warnings=%d, lines=%d' % (project_count, error_count, warning_count, len(all_lines)))
+        return result
 
 
 
@@ -1342,8 +1430,8 @@ class Dialog(object):
     _count_lock   = Lock()
     dialog        = xbmcgui.Dialog()
     
-    def __init__(self, service=None):
-        if service is None: service = _get_Service()
+    def __init__(self, service: Optional[_Service] = None):
+        if service is None: service = _Service()
         self.service    = service
         self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
@@ -1360,11 +1448,11 @@ class Dialog(object):
         self.builtin.dialog    = self
 
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def toggleInfoMonitor(self, state=False, wait=0.5):
+    def toggleInfoMonitor(self, state: bool = False, wait: float = 0.5):
         self.log('toggleInfoMonitor, state = %s'%(state))
         self.properties.setRunning('Kodi.toggleInfoMonitor',state)
         if state: timerit(self.doInfoMonitor)(0.1)
@@ -1377,7 +1465,7 @@ class Dialog(object):
             self.fillInfoMonitor()
                     
 
-    def fillInfoMonitor(self, type='ListItem'):
+    def fillInfoMonitor(self, type: str = 'ListItem'):
         try:
             item = {'label'       :self.builtin.getInfoLabel('%s.Label'%type),
                     'label2'      :self.builtin.getInfoLabel('%s.Label2'%type),
@@ -1402,15 +1490,15 @@ class Dialog(object):
         except Exception as e: self.log("fillInfoMonitor, failed! %s"%(e), xbmc.LOGERROR)
 
 
-    def getInfoMonitor(self):
+    def getInfoMonitor(self) -> list:
         return self.properties.getEXTProperty('%s.montiorList'%(ADDON_ID),{}).get('info',[])
     
     
-    def setInfoMonitor(self, items):
+    def setInfoMonitor(self, items: list) -> Any:
         return self.properties.setEXTProperty('%s.montiorList'%(ADDON_ID),{'info':list(Globals._setDictLST(items))})
 
 
-    def colorDialog(self, colorlist=[], preselect="", colorfile="", heading=ADDON_NAME):
+    def colorDialog(self, colorlist: list = [], preselect: str = "", colorfile: str = "", heading: str = ADDON_NAME) -> Any:
         return self.dialog.colorpicker(heading, preselect, colorfile, colorlist)
     
     
@@ -1419,20 +1507,20 @@ class Dialog(object):
             self.builtin.executebuiltin('Dialog.Close(okdialog)')
         
         
-    def _okDialog(self, msg, heading, autoclose):
+    def _okDialog(self, msg: str, heading: str, autoclose: int) -> Any:
         return timerit(self.okDialog)(0.1,*(msg, heading, autoclose))
 
 
-    def okDialog(self, msg, heading=ADDON_NAME, autoclose=AUTOCLOSE_DELAY, usethread=False):
+    def okDialog(self, msg: str, heading: str = ADDON_NAME, autoclose: int = AUTOCLOSE_DELAY, usethread: bool = False) -> bool:
         if usethread: return self._okDialog(msg, heading, autoclose)
         else:
             if autoclose > 0: timerit(self._closeOkDialog)(autoclose)
             return self.dialog.ok(heading, msg)
             
             
-    def qrDialog(self, url, msg, heading='%s - %s'%(ADDON_NAME,LANGUAGE(30158)), autoclose=AUTOCLOSE_DELAY):
+    def qrDialog(self, url: str, msg: str, heading: str = '%s - %s'%(ADDON_NAME,LANGUAGE(30158)), autoclose: int = AUTOCLOSE_DELAY) -> Optional[bool]:
         class QRCode(xbmcgui.WindowXMLDialog):
-            def __init__(self, *args, **kwargs):
+            def __init__(self, *args: Any, **kwargs: Any):
                 self.header    = kwargs["header"]
                 self.image     = kwargs["image"]
                 self.text      = kwargs["text"]
@@ -1448,7 +1536,7 @@ class Dialog(object):
                 self.acThread.daemon=True
                 self.acThread.start()
 
-            def onClick(self, controlId):
+            def onClick(self, controlId: int):
                 if controlId == 40003:
                     self.onClose()
 
@@ -1481,7 +1569,7 @@ class Dialog(object):
     def _customTextViewer():
         class TEXTVIEW(xbmcgui.WindowXMLDialog):
             textbox = None
-            def __init__(self, *args, **kwargs):
+            def __init__(self, *args: Any, **kwargs: Any):
                 self.head = kwargs.get('head','')
                 self.text = kwargs.get('text','')
                 self.doModal()
@@ -1490,14 +1578,14 @@ class Dialog(object):
                 self.getControl(1).setLabel(self.head)
                 self.textbox = self.getControl(5)
 
-            def onClick(self, control_id): pass
+            def onClick(self, control_id: int): pass
             
-            def onFocus(self, control_id): pass
+            def onFocus(self, control_id: int): pass
             
-            def onAction(self, action):
+            def onAction(self, action: Any):
                 if action in [xbmcgui.ACTION_PREVIOUS_MENU, xbmcgui.ACTION_NAV_BACK]: self.close()
 
-            def _updateText(self, txt):
+            def _updateText(self, txt: str):
                 try:
                     self.textbox.setText(txt)
                     self.builtin.executebuiltin('SetFocus(3000)')
@@ -1507,11 +1595,11 @@ class Dialog(object):
         return TEXTVIEW("DialogTextViewer.xml", os.getcwd(), "Default")
 
 
-    def _textViewer(self, msg, heading, usemono, autoclose):
+    def _textViewer(self, msg: str, heading: str, usemono: bool, autoclose: int) -> Any:
         return timerit(self.textviewer)(0.1,*(msg, heading, usemono, autoclose))
         
         
-    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=AUTOCLOSE_DELAY, usethread=False, custom=False):
+    def textviewer(self, msg: str, heading: str = ADDON_NAME, usemono: bool = False, autoclose: int = AUTOCLOSE_DELAY, usethread: bool = False, custom: bool = False) -> bool:
         # if custom: return self._customTextViewer(msg,heading,autoclose)
         if usethread: return self._textViewer(msg, heading, usemono, autoclose)
         else:
@@ -1520,7 +1608,7 @@ class Dialog(object):
             return True
             
         
-    def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=AUTOCLOSE_DELAY): 
+    def yesnoDialog(self, message: str, heading: str = ADDON_NAME, nolabel: str = '', yeslabel: str = '', customlabel: str = '', autoclose: int = AUTOCLOSE_DELAY) -> Union[int, bool]:
         if customlabel:
             # Returns the integer value for the selected button (-1:cancelled, 0:no, 1:yes, 2:custom)
             return self.dialog.yesnocustom(heading, message, customlabel, nolabel, yeslabel, (autoclose*1000))
@@ -1529,15 +1617,15 @@ class Dialog(object):
             return self.dialog.yesno(heading, message, nolabel, yeslabel, (autoclose*1000))
 
 
-    def notificationWait(self, message, header=ADDON_NAME, wait=4, silent=None, usethread=False):
+    def notificationWait(self, message: str, header: str = ADDON_NAME, wait: int = 4, silent: Optional[bool] = None, usethread: bool = False) -> bool:
         if silent is None: silent = not self.settings.showDialog(silent)
         if usethread: return timerit(self.notificationWait)(0.1, *(message, header, wait))
         with self._progressDialog(message, header, silent) as pDialog:
             if pDialog is None: return
             remaning = int(wait)
             while not self.monitor.abortRequested() and remaning > 0:
-                self._updateProgress(pDialog, int((abs(wait - remaning) * 100) // remaning))
-                if self.monitor.waitForAbort(1.0): break
+                self._updateProgress(pDialog, int((abs(wait - remaning) * 100) // wait))
+                time.sleep(1.0)
                 if isinstance(pDialog, xbmcgui.DialogProgress) and pDialog.iscanceled(): break
                 if isinstance(pDialog, xbmcgui.DialogProgressBG) and pDialog.isFinished(): break
                 remaning -= 1
@@ -1546,7 +1634,7 @@ class Dialog(object):
         return True
 
     @contextmanager
-    def _progressDialog(self, message='', header=ADDON_NAME, silent=None, background=True):
+    def _progressDialog(self, message: str = '', header: str = ADDON_NAME, silent: Optional[bool] = None, background: bool = True) -> Iterator:
         if silent is None: silent = not self.settings.showDialog(silent)
         dlg = None
         if not silent and dlg is None:
@@ -1558,7 +1646,7 @@ class Dialog(object):
                 else:          dlg = xbmcgui.DialogProgress()
                 dlg.create(header, message)
                 if threading.current_thread() is not threading.main_thread():
-                    time.sleep(0.1)
+                    self.monitor.waitForAbort(0.1)
                 self.log(f'_progressDialog [0% - {dlg}] silent = {silent}\nheader = {header}\nmessage = {message}')
             except Exception as e:
                 self.log(f'_progressDialog, failed! to create dialog: {e}')
@@ -1577,34 +1665,30 @@ class Dialog(object):
                     self.properties.setRunning('_progressDialog', False)
 
 
-    def _updateProgress(self, dlg=None, percent=1, message='', header=ADDON_NAME):
+    def _updateProgress(self, dlg: Optional[Any] = None, percent: int = 1, message: str = '', header: str = ADDON_NAME, wait: int = 0) -> Optional[Any]:
         if dlg is None or isinstance(dlg, bool): return dlg
-        with self._update_lock:
-            try:
-                if isinstance(dlg, xbmcgui.DialogProgressBG):
-                    if dlg.isFinished(): return None
-                    elif hasattr(dlg, 'update'):
-                        self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
-                        dlg.update(percent, header, message)
-                        
-                elif isinstance(dlg, xbmcgui.DialogProgress):
-                    if dlg.iscanceled(): return None
-                    elif hasattr(dlg, 'update'):
-                        try:
-                            match = _PROGRESS_RE.search(message)
-                            if match:
-                                message = '%s: %s' % (header.replace('%s, ' % (ADDON_NAME), ''), match.group(1))
-                                percent = int(match.group(2))
-                        except Exception as e: self.log('_updateProgress regex failed: %s' % e, xbmc.LOGDEBUG)
-                        self.log(f'_updateProgress [{percent}% - {dlg}]\nheader = {header}\nmessage = {message}')
-                        dlg.update(percent, message)
-            except Exception as e:
-                self.log(f'_updateProgress, failed! Thread error during progress update: {e}')
-                return None
+        try:
+            if isinstance(dlg, xbmcgui.DialogProgressBG):
+                if dlg.isFinished(): return None
+                elif hasattr(dlg, 'update'):
+                    dlg.update(percent, header, message)
+                    
+            elif isinstance(dlg, xbmcgui.DialogProgress):
+                if dlg.iscanceled(): return None
+                elif hasattr(dlg, 'update'):
+                    try:
+                        match = _PROGRESS_RE.search(message)
+                        if match:
+                            message = '%s: %s' % (header.replace('%s, ' % (ADDON_NAME), ''), match.group(1))
+                            percent = int(match.group(2))
+                    except Exception as e: pass
+                    dlg.update(percent, message)
+        except Exception as e:
+            return None
         return dlg
         
         
-    def _updateProgressThrottled(self, dlg=None, percent=1, message='', header=ADDON_NAME, min_interval=0.1):
+    def _updateProgressThrottled(self, dlg: Optional[Any] = None, percent: int = 1, message: str = '', header: str = ADDON_NAME, min_interval: float = 0.1) -> Optional[Any]:
         if dlg is None or isinstance(dlg, bool): return dlg
         now = time.time()
         dlg_id = id(dlg)
@@ -1615,7 +1699,7 @@ class Dialog(object):
         return dlg
         
         
-    def progressDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
+    def progressDialog(self, percent: int = 0, control: Optional[xbmcgui.DialogProgress] = None, message: str = '', header: str = ADDON_NAME) -> Optional[xbmcgui.DialogProgress]:
         if control is None and int(percent) == 0:
             control = xbmcgui.DialogProgress()
             control.create(header, message)  
@@ -1632,7 +1716,7 @@ class Dialog(object):
         return control
         
         
-    def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
+    def progressBGDialog(self, percent: int = 0, control: Optional[xbmcgui.DialogProgressBG] = None, message: str = '', header: str = ADDON_NAME) -> Optional[xbmcgui.DialogProgressBG]:
         if control is None and int(percent) == 0:
             control = xbmcgui.DialogProgressBG()
             control.create(header, message)
@@ -1649,15 +1733,15 @@ class Dialog(object):
         return control
 
                 
-    def infoDialog(self, listitem):
+    def infoDialog(self, listitem: xbmcgui.ListItem):
         self.dialog.info(listitem)
         
     
-    def _notificationDialog(self, message, header, sound, time, icon, silent):
+    def _notificationDialog(self, message: str, header: str, sound: bool, time: int, icon: str, silent: bool):
         threadit(self.notificationDialog)(message, header, sound, time, icon, silent)
 
 
-    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=LOGO_COLOR, silent=None, usethread=False):
+    def notificationDialog(self, message: str, header: str = ADDON_NAME, sound: bool = False, time: int = PROMPT_DELAY, icon: str = LOGO_COLOR, silent: Optional[bool] = None, usethread: bool = False) -> bool:
         if silent is None: silent = not self.settings.showDialog(silent)
         self.log('notificationDialog: %s, silent = %s'%(message,silent))
         if not silent:
@@ -1672,16 +1756,17 @@ class Dialog(object):
         return True
         
              
-    def customSelect(self, items, header, preselect, useDetails, autoclose, multi): #todo
+    def customSelect(self, items: list, header: str, preselect: Any, useDetails: bool, autoclose: int, multi: bool):
+        """Custom select dialog placeholder (todo)."""
         class DialogSelect(xbmcgui.WindowXMLDialog):
-            def __init__(self, *args, **kwargs):
+            def __init__(self, *args: Any, **kwargs: Any):
                 xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
 
             def onInit(self):
                 LOG("DialogSelect: onInit")
                 #todo get list control, convert items to listitems, additems to list control.
                
-            def onAction(self, act):
+            def onAction(self, act: Any):
                 actionId = act.getId()
                 LOG('DialogSelect: onAction: actionId = %s'%(actionId))
                 if actionId in ACTION_PREVIOUS_MENU: self.close()
@@ -1693,7 +1778,7 @@ class Dialog(object):
             del dialogSelect
         
 
-    def selectDialog(self, items, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=SELECT_DELAY, multi=True, custom=False):
+    def selectDialog(self, items: list, header: str = ADDON_NAME, preselect: Optional[Any] = None, useDetails: bool = True, autoclose: int = SELECT_DELAY, multi: bool = True, custom: bool = False) -> Optional[Union[int, list]]:
         self.log('selectDialog, items = %s, header = %s, preselect = %s, useDetails = %s, autoclose = %s, multi = %s, custom = %s'%(len(items),header,preselect,useDetails,autoclose,multi,custom))
         if custom: return self.customSelect(items, header, preselect, useDetails, autoclose, multi)
         elif multi == True:
@@ -1710,7 +1795,7 @@ class Dialog(object):
         return select
       
       
-    def inputDialog(self, message, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0):
+    def inputDialog(self, message: str, default: str = '', key: int = xbmcgui.INPUT_ALPHANUM, opt: int = 0, close: int = 0) -> str:
         ## - key: xbmcgui.INPUT_ALPHANUM (standard keyboard)
         ## - key: xbmcgui.INPUT_NUMERIC (format: #)
         ## - key: xbmcgui.INPUT_DATE (format: DD/MM/YYYY)
@@ -1723,7 +1808,7 @@ class Dialog(object):
             return self.dialog.input(message, default, key, opt, close)
         
 
-    def importSTRM(self, strm):
+    def importSTRM(self, strm: str) -> Optional[str]:
         try:
             with self.builtin.busyDialog():
                 fle   = FileAccess.open(strm,'r')
@@ -1737,21 +1822,21 @@ class Dialog(object):
         except Exception as e: self.log("importSTRM, failed! %s\n%s"%(e,strm), xbmc.LOGERROR)
              
                
-    def _resourcePath(self, id=[], content='videos', ftype=''):
+    def _resourcePath(self, id: list = [], content: str = 'videos', ftype: str = '') -> str:
         if not id: id = self.browseResources(id, content, ftype, multi=False)
         path = 'special://home/addons/%s/resources/'%(id)
         self.log("_resourcePath [%s], content = %s, ftype = %s, path = %s"%(id, content, ftype,path))
         return path
         
 
-    def browseResources(self, ids=[], content='videos', ftype='', multi=True):
+    def browseResources(self, ids: list = [], content: str = 'videos', ftype: str = '', multi: bool = True) -> Optional[Union[str, list]]:
         #todo when no resources avail take user to Image Collections repo.
         self.log("browseResources, ids = %s, content = %s, ftype = %s, multi = %s"%(ids, content, ftype, multi))
         #todo selectDialog content and ftype.
-        def __buildMenuItem(resource):
+        def __buildMenuItem(resource: dict) -> xbmcgui.ListItem:
             return self.listitems.buildMenuListItem(resource['name'],resource['description'],resource['thumbnail'],url=resource['addonid'])
              
-        def __getResources():
+        def __getResources() -> list:
             return self.jsonRPC.getAddons({"enabled":True})
         
         lizLST  = []
@@ -1764,9 +1849,9 @@ class Dialog(object):
         else:                              return [lizLST[select].getPath() for select in selects]
 
 
-    def browseSources(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False, include=[], exclude=[]):
+    def browseSources(self, type: int = 0, heading: str = ADDON_NAME, default: str = '', shares: str = '', mask: str = '', useThumbs: bool = True, treatAsFolder: bool = False, multi: bool = False, monitor: bool = False, include: list = [], exclude: list = []) -> Optional[str]:
         self.log('browseSources, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s, mask= %s, include= %s, exclude= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask,len(include),exclude))
-        def __buildMenuItem(option):
+        def __buildMenuItem(option: dict) -> xbmcgui.ListItem:
             return self.listitems.buildMenuListItem(option['label'],option['label2'],Globals._getDummyIcon(str(option['idx'])))
 
         with self.builtin.busyDialog():
@@ -1808,7 +1893,7 @@ class Dialog(object):
         return self.browseDialog(type, heading, default, shares, mask, useThumbs, treatAsFolder, multi, monitor)
             
     
-    def browseDialog(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', useThumbs=True, treatAsFolder=False, multi=False, monitor=False):
+    def browseDialog(self, type: int = 0, heading: str = ADDON_NAME, default: str = '', shares: str = '', mask: str = '', useThumbs: bool = True, treatAsFolder: bool = False, multi: bool = False, monitor: bool = False) -> Optional[str]:
         self.log('browseDialog, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s'%(type,heading,shares,useThumbs,treatAsFolder,default,mask))
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
         # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#gafa1e339e5a98ae4ea4e3d3bb3e1d028c
@@ -1821,9 +1906,9 @@ class Dialog(object):
             return retval
         
 
-    def multiBrowse(self, paths: list=[], header=ADDON_NAME, exclude=[], monitor=True):
+    def multiBrowse(self, paths: list = [], header: str = ADDON_NAME, exclude: list = [], monitor: bool = True) -> list:
         self.log('multiBrowse, IN paths = %s'%(paths))
-        def __buildListItem(item): #label: str="", label2: str="", icon: str=LOGO_COLOR, paths: list=[], items: dict={}
+        def __buildListItem(item: str) -> xbmcgui.ListItem:
             idx = pathLST.index(item)
             return self.listitems.buildMenuListItem('%s|'%(idx+1), item, Globals._getDummyIcon(str(idx+1)), url='|'.join(item), props={'idx':idx+1})
 
@@ -1861,10 +1946,11 @@ class Dialog(object):
         return paths
            
            
-    def buildDXSP(self, path=''):
+    def buildDXSP(self, path: str = '') -> Optional[str]:
         # https://github.com/xbmc/xbmc/blob/master/xbmc/playlists/SmartPlayList.cpp
         
-        def __mtype(params={"type":"","rules":{"and":[],"or":[]},"order":{"direction":"ascending","method":"random","ignorearticle":True,"useartistsortname":True}}):
+        def __mtype(params: dict = None) -> tuple:
+            if params is None: params = {"type":"","rules":{"and":[],"or":[]},"order":{"direction":"ascending","method":"random","ignorearticle":True,"useartistsortname":True}}
             path    = ''
             enumLST = list(sorted(["albums", "artists", "episodes", "mixed", "movies", "musicvideos", "songs", "tvshows"]))
             enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Media Type",preselect=(enumLST.index(params.get('type','')) if params.get('type') else -1),useDetails=False, multi=False)
@@ -1879,48 +1965,50 @@ class Dialog(object):
                 else:                                                      path = ''
             return path, params
             
-        def __andor(params={}):
+        def __andor(params: dict = {}) -> Optional[str]:
             enumLST = list(sorted(['and', 'or']))
             enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Conjunction",preselect=(enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
                   
-        def __order(params={}):
+        def __order(params: dict = {}) -> Optional[str]:
             enums   = self.jsonRPC.getEnums("List.Sort",type="order") 
             enumLST = list(sorted([_f for _f in enums if _f]))
             enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select order",preselect=enumLST.index(params.get('order',{}).get('direction','ascending')),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
             
-        def __method(params={}):
+        def __method(params: dict = {}) -> Optional[str]:
             enums   = self.jsonRPC.getEnums("List.Sort",type="method") 
             enumLST = list(sorted([_f for _f in enums if _f]))
             enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select method",preselect=enumLST.index(params.get('order',{}).get('method','random')),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
             
-        def __field(params={}, rule={}):
+        def __field(params: dict = {}, rule: dict = {}) -> Optional[str]:
             if   params.get('type') == 'songs':       enums = self.jsonRPC.getEnums("List.Filter.Fields.Songs"   , type='items')
             elif params.get('type') == 'albums':      enums = self.jsonRPC.getEnums("List.Filter.Fields.Albums"  , type='items')
             elif params.get('type') == 'artists':     enums = self.jsonRPC.getEnums("List.Filter.Fields.Artists" , type='items')
             elif params.get('type') == 'tvshows':     enums = self.jsonRPC.getEnums("List.Filter.Fields.TVShows" , type='items')
             elif params.get('type') == 'episodes':    enums = self.jsonRPC.getEnums("List.Filter.Fields.Episodes", type='items')
             elif params.get('type') == 'movies':      enums = self.jsonRPC.getEnums("List.Filter.Fields.Movies"  , type='items')
-            elif params.get('type') == 'musicvideos': enums = self.jsonRPC.getEnums("List.Filter.Fields.MusicVideos")
+            elif params.get('type') == 'musicvideos': enums = self.jsonRPC.getEnums("List.Filter.Fields.MusicVideos", type='items')
+            elif params.get('type') == 'mixed':       enums = self.jsonRPC.getEnums("List.Filter.Fields.Movies"  , type='items')
             else: return
             enumLST = list(sorted([_f for _f in enums if _f]))
             enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Filter",preselect=(enumLST.index(rule.get('field')) if rule.get('field') else -1),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
 
-        def __operator(params={}, rule={}):
+        def __operator(params: dict = {}, rule: dict = {}) -> Optional[str]:
             enumLST = sorted(self.jsonRPC.getEnums("List.Filter.Operators"))
-            if rule.get("field") != 'date':
+            date_fields = ['lastplayed','dateadded','datemodified','datenew','airdate','time']
+            if rule.get("field") not in date_fields:
                 if 'inthelast'    in enumLST: enumLST.remove('inthelast')
                 if 'notinthelast' in enumLST: enumLST.remove('notinthelast')
             enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Operator",preselect=(enumLST.index(rule.get('operator')) if rule.get('operator') else -1),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
 
-        def __value(params={}, rule={}):
+        def __value(params: dict = {}, rule: dict = {}) -> Optional[list]:
             return self.getValue(params, rule)
             
-        def __getRule(params={}, rule={"field":"","operator":"","value":[]}):
+        def __getRule(params: dict = {}, rule: dict = {"field":"","operator":"","value":[]}) -> dict:
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=Globals._getDummyIcon(Globals._getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
@@ -1928,7 +2016,7 @@ class Dialog(object):
                 if not enumSEL is None: rule.update({enumLST[enumSEL].getProperty('key'):({"field":field,"operator":operator,"value":value}[enumLST[enumSEL].getProperty('key')])(params,rule)})
             return rule
             
-        def __getRules(params={}):
+        def __getRules(params: dict = {}) -> dict:
             enumSEL = -1
             eparams = params.copy()
             while not self.monitor.abortRequested() and not enumSEL is None:
@@ -1956,7 +2044,7 @@ class Dialog(object):
                                 else:                   ruleLST.append(__getRule(params,FileAccess.loadJSON(andLST[CONSEL].getLabel2())))
             return params
 
-        def __getOrder(params={}):
+        def __getOrder(params: dict = {}) -> dict:
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=Globals._getDummyIcon(Globals._getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
@@ -1985,73 +2073,34 @@ class Dialog(object):
                 elif enumLST[enumSEL].getLabel() == 'Order': params = __getOrder(params)
                 elif enumLST[enumSEL].getLabel() == 'Rules': params = __getRules(params)
         
-        if len(params.get('rules',{}).get('and',[]) or params.get('rules',{}).get('and',[])) > 0:
+        rules = params.get('rules', {})
+        if len(rules.get('and', [])) > 0 or len(rules.get('or', [])) > 0:
             url = '%s?xsp=%s'%(path,FileAccess.dumpJSON(params))
             self.log('buildDXSP, returning %s'%(url))
             return url
 
 
-    def getValue(self, params={}, rule={}):
-        # etype  = params.get("type")
-        # efield = str(rule.get("field")).lower()
-        # evalue = ','.join([Globals._unquoteString(value) for value in rule.get('value',[])])
-        # LIST_SORT_ACTIONS = {"none"           : (),
-                             # "label"          : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
-                             # "albumtype"      : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
-                             # "country"        : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
-                             # "originaltitle"  : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
-                             # "productioncode" : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
-                             # "mpaa"           : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
-                             # "votes"          : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
-                             # "sorttitle"      : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
-                             # "time"           : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_TIME}),
-                             # "date"           : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_DATE})
-                             # "originaldate"   : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_DATE}),
-                             # "dateadded"      : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_DATE}),
-                             # "lastplayed"     : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "listeners"      : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "size"           : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "track"          : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "programcount"   : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "totalepisodes"  : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "watchedepisodes": (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "episode"        : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "season"         : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "playcount"      : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "year"           : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "rating"         : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "userrating"     : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "bpm"            : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "totaldiscs"     : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "bitrate"        : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "top250"         : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
-                             # "file"           : (self.browseDialog,{type=1,heading="",default=rule.get('value',[]),multi=True}),
-                             # "path"           : (self.browseDialog,{type=0,heading="",default=rule.get('value',[]),multi=True}),
-                             # "drivetype"      : (self.browseDialog,{type=0,heading="",default=rule.get('value',[]),multi=True}),
-                             # "random"         : (),
-                             # "tvshowstatus"   : (),
-                             # "playlist"       : (),
-                             # "genre"          : (self.selectDialog,({list=self.jsonRPC.getVideoGenres,self.jsonRPC.getMusicGenres)),
-                             # "tvshowtitle"    : (self.selectDialog,(self.jsonRPC.getTVshows,)),
-                             # "title"          : (self.selectDialog,(self.jsonRPC.getMovies)),
-                             # "artist"         : (self.selectDialog,self.jsonRPC.getArtists),
-                             # "album"          : (self.selectDialog,self.jsonRPC.getAlbums),
-                             # "studio"         : (self.selectDialog,(self.jsonRPC.getMovieStudios,self.jsonRPC.getNetworks))}
-
-        def __getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([Globals._unquoteString(value) for value in rule.get('value',[])]))
-        def __getBrowse(): return self.browseSources(default='|'.join([Globals._unquoteString(value) for value in rule.get('value',[])]))
-        def __getSelect(): return self.notificationDialog(LANGUAGE(32020))
+    def getValue(self, params: dict = {}, rule: dict = {}) -> Optional[list]:
+        def __getInput() -> str:  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([Globals._unquoteString(value) for value in rule.get('value',[])]))
+        def __getBrowse() -> str: return self.browseSources(default='|'.join([Globals._unquoteString(value) for value in rule.get('value',[])]))
+        def __getSelect() -> Any: return self.notificationDialog(LANGUAGE(32020))
         enumLST = sorted(['Enter', 'Browse', 'Select'])
         enumKEY = {'Enter':{'func':__getInput},'Browse':{'func':__getBrowse},'Select':{'func':__getSelect}}
         enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
         if not enumSEL is None: return [Globals._quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
         
 class Kodi(object):
-    def __init__(self, service=None):
-        if service is None: service = _get_Service()
+    _instance = None 
+    
+    def __new__(cls) -> 'Kodi':
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    def __init__(self, service: Optional[_Service] = None):
+        if service is None: service = _Service()
         self.dialog     = Dialog(service)
         self.settings   = self.dialog.settings
         self.properties = self.dialog.properties
         self.listitems  = self.dialog.listitems
         self.builtin    = self.dialog.builtin
-

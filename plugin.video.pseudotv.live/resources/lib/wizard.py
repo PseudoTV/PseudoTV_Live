@@ -19,6 +19,7 @@
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
+from typing import Generator, Optional
 from variables  import *
 
 # https://github.com/PseudoTV/PseudoTV_Live/issues/68
@@ -52,7 +53,7 @@ class Wizard(xbmcgui.WindowXMLDialog):
                 self.doModal()
             
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
         
         
@@ -60,16 +61,17 @@ class Wizard(xbmcgui.WindowXMLDialog):
         self.log('onInit')  
 
         
-    def isLocked(self):
+    def isLocked(self) -> bool:
         return Globals.properties.getProperty('Wizard.isLocked',False)
         
         
-    def setLocked(self, state=True):
+    def setLocked(self, state: bool = True):
         self.getControl(41).setColorDiffuse({True:"0xC0FF0000",False:"0xFFFFFFFF"}[Globals.properties.setProperty('Wizard.isLocked',state)])
 
 
     @contextmanager
-    def toggleSpinner(self, state=True, lock=True, condition=None):
+    def toggleSpinner(self, state: bool = True, lock: bool = True, condition: Optional[bool] = None) -> Generator:
+        # Shows/hides spinner with optional locking; yields if condition is met, else yields immediately
         self.log('toggleSpinner, state = %s, condition = %s, lock = %s'%(state,condition,lock))
         if not condition is None and condition:
             Globals.properties.setRunning('Manager.toggleSpinner',state)
@@ -87,7 +89,7 @@ class Wizard(xbmcgui.WindowXMLDialog):
         self.close()
         
         
-    def onAction(self, act):
+    def onAction(self, act: xbmcgui.Action):
         actionId = act.getId()   
         if (time.time() - self.lastActionTime) < .5 and actionId not in ACTION_PREVIOUS_MENU: action = ACTION_INVALID # during certain times we just want to discard all input
         else:
@@ -98,11 +100,11 @@ class Wizard(xbmcgui.WindowXMLDialog):
                     self.log('onAction: actionId = %s, locked = %s'%(actionId,self.isLocked()))
 
             
-    def onFocus(self, controlId):
+    def onFocus(self, controlId: int):
         self.log('onFocus: controlId = %s'%(controlId))
 
         
-    def onClick(self, controlId):
+    def onClick(self, controlId: int):
         if (self.isLocked() or (time.time() - self.lastActionTime) < .5): Globals.dialog.notificationDialog(LANGUAGE(32260))
         else:
             with self.toggleSpinner(condition=Globals.properties.isRunning('Wizard.toggleSpinner')==False):

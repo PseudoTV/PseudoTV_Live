@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from variables import *
-from typing import Union
+from typing import Optional, Union
 import struct
 
 class TSPacket:
@@ -81,7 +81,7 @@ class TSParser:
                 LOG('TSParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
         
 
-    def findPacketLength(self):
+    def findPacketLength(self) -> int:
         LOG('TSParser: findPacketLength')
         maxbytes = 600
         start = 0
@@ -114,7 +114,7 @@ class TSParser:
         return 0
 
 
-    def getFileSize(self):
+    def getFileSize(self) -> int:
         size = 0
         try:
             pos = self.File.tell()
@@ -127,7 +127,7 @@ class TSParser:
         return size
 
 
-    def getStartTime(self):
+    def getStartTime(self) -> int:
         """Find the first valid PTS timestamp in the file."""
         # A reasonably high number of retries in case the PES starts in the middle
         # and is it's maximum length
@@ -158,7 +158,7 @@ class TSParser:
         return 0
 
 
-    def getEndTime(self):
+    def getEndTime(self) -> int:
         """Find the last valid PTS timestamp in the file."""
         LOG('TSParser: getEndTime')
         if self.packetLength <= 0:
@@ -199,7 +199,7 @@ class TSParser:
         return 0
 
 
-    def getPTS(self, packet):
+    def getPTS(self, packet: TSPacket) -> int:
         """Extract PTS (Presentation TimeStamp) from packet data."""
         timestamp = 0
         LOG('TSParser: getPTS')
@@ -230,7 +230,7 @@ class TSParser:
         return 0
 
 
-    def readTSPacket(self):
+    def readTSPacket(self) -> Optional[TSPacket]:
         """Read and parse a single TS packet from the file."""
         packet = TSPacket()
         pos = 0

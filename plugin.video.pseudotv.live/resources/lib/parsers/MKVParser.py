@@ -63,7 +63,7 @@ class MKVParser:
                 LOG('MKVParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
         
 
-    def parseHeader(self, size):
+    def parseHeader(self, size: int) -> Union[int, float]:
         """Parse MKV header to extract duration and timecode scale."""
         duration = 0
         timecode = 0
@@ -115,7 +115,7 @@ class MKVParser:
         return 0
 
 
-    def findHeader(self):
+    def findHeader(self) -> int:
         """Locate the segment info header in the MKV file."""
         LOG("MKVParser: findHeader")
         filesize = self.getFileSize()
@@ -175,7 +175,7 @@ class MKVParser:
         return 0
 
 
-    def getFileSize(self):
+    def getFileSize(self) -> int:
         """Get the total file size."""
         size = 0
         try:
@@ -188,7 +188,7 @@ class MKVParser:
         return size
 
 
-    def getData(self, datasize):
+    def getData(self, datasize: int) -> bytes:
         """Read the specified number of bytes from the file."""
         try:
             data = self.File.readBytes(datasize)
@@ -198,7 +198,7 @@ class MKVParser:
             return b''
 
 
-    def getDataSize(self):
+    def getDataSize(self) -> int:
         """Read and parse EBML variable-length integer for data size."""
         try:
             data = self.File.readBytes(1)
@@ -226,7 +226,7 @@ class MKVParser:
         return datasize
 
 
-    def getEBMLId(self):
+    def getEBMLId(self) -> int:
         """Read and parse EBML element ID."""
         try:
             data = self.File.readBytes(1)

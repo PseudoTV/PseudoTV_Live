@@ -19,10 +19,12 @@
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
+from typing import Optional
 from variables import *
 from jsonrpc   import JSONRPC
 
-def _getResolution():
+def _getResolution() -> tuple:
+    """Return display resolution as (width, height) tuple."""
     return Globals.builtin.getResolution()
 
 class OverlayTool(xbmcgui.WindowXMLDialog):
@@ -34,6 +36,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
     posx, posy     = 0, 0
     
     def __init__(self, *args, **kwargs):
+        """Initialize overlay tool with XML dialog configuration."""
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.log('__init__, args = %s, kwargs = %s'%(args,kwargs))
         with Globals.builtin.busy_dialog():
@@ -71,11 +74,13 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             self.close()
         
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
+        """Log a message with the class name prefix."""
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
 
     def onInit(self):
+        """Initialize overlay controls and display."""
         if not Globals.builtin.getInfoBool('System.IsFullscreen'):
             Globals.dialog.okDialog(LANGUAGE(32097)%(Globals.builtin.getInfoLabel('System.ScreenResolution')))
             
@@ -98,7 +103,8 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         self.switch(self.focusControl)
         
 
-    def _addCntrl(self, cntrl, incl=True):
+    def _addCntrl(self, cntrl: xbmcgui.Control, incl: bool = True):
+        """Add control to window and optionally include in focus cycle."""
         self.log('_addCntrl cntrl = %s'%(cntrl))
         self.addControl(cntrl)
         cntrl.setVisible(True) 
@@ -106,7 +112,8 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         if not cntrl in self.focusCNTRLST:  self.focusCNTRLST[cntrl] = cntrl.getX(),cntrl.getY()
         
 
-    def switch(self, cntrl=None):
+    def switch(self, cntrl: Optional[xbmcgui.Control] = None):
+        """Switch focus to control with animation effects."""
         self.log('switch cntrl = %s'%(cntrl))
         if not self.focusCycle is None:
             if cntrl is None: self.focusControl = self.focusCycle()
@@ -120,7 +127,8 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
                     cntrl.setAnimations([('Conditional', 'effect=fade start=25 end=100 time=240 delay=160 condition=True reversible=False')])
 
 
-    def move(self, cntrl):
+    def move(self, cntrl: xbmcgui.Control):
+        """Move control to current cursor position."""
         posx, posy = self.focusCNTRLST[cntrl]
         if (self.posx != posx or self.posy != posy):
             cntrl.setPosition(self.posx, self.posy)
@@ -129,6 +137,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             
                       
     def save(self):
+        """Save changed control positions to settings."""
         changes = {}
         for cntrl in self.focusCNTRLST:
             posx, posy = cntrl.getX(), cntrl.getY()
@@ -147,7 +156,8 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         self.close()
 
     
-    def set(self, cntrl, posx, posy, auto=False):
+    def set(self, cntrl: xbmcgui.Control, posx: int, posy: int, auto: bool = False):
+        """Set control position in settings (user or auto)."""
         self.log('set, cntrl = %s, posx,posy = (%s,%s) %s? %s'%(cntrl, posx, posy, LANGUAGE(30022), auto))
         if self.advRule: save = Globals.properties.setProperty
         else:            save = Globals.settings.setSetting
@@ -160,19 +170,22 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             else:    save("OnNext_Position_XY","(%s,%s)"%(posx, posy))
         
 
-    def _setFocus(self, cntrl):
+    def _setFocus(self, cntrl: xbmcgui.Control):
+        """Set focus to specified control with error handling."""
         self.log('_setFocus cntrl = %s'%(cntrl))
         try: self.setFocus(cntrl)
         except Exception as e: self.log('_setFocus failed: %s' % e, xbmc.LOGDEBUG)
         
         
-    def _getFocus(self, cntrl):
+    def _getFocus(self, cntrl: xbmcgui.Control):
+        """Get focus from specified control with error handling."""
         self.log('_getFocus cntrl = %s'%(cntrl))
         try: self.getFocus(cntrl)
         except Exception as e: self.log('_getFocus failed: %s' % e, xbmc.LOGDEBUG)
 
         
-    def onAction(self, act):
+    def onAction(self, act: xbmcgui.Action):
+        """Handle user input actions for control positioning."""
         actionId = act.getId()
         self.log('onAction: actionId = %s'%(actionId))
         lastaction = time.time() - self.lastActionTime

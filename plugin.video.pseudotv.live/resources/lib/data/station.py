@@ -21,32 +21,32 @@ from variables import *
 
 class Station():
     def __init__(self):
-        self.id                 = id
-        self.number             = number
-        self.name               = name
-        self.logo               = logo
-        self.group              = group
-        self.catchup            = catchup
-        self.radio              = radio
-        self.favorite           = favorite
-        self.realtime           = realtime
-        self.media              = media
-        self.label              = label
-        self.url                = url
-        self.tvg_shift          = tvg_shift
-        self.x_tvg_url          = x_tvg_url
-        self.media_dir          = media_dir
-        self.media_size         = media_size
-        self.media_type         = media_type
-        self.catchup_source     = catchup_source
-        self.catchup_days       = catchup_days
-        self.catchup_correction = catchup_correction
-        self.provider           = provider
-        self.provider_type      = provider_type
-        self.provider_logo      = provider_logo
-        self.provider_countries = provider_countries
-        self.provider_languages = provider_languages
-        self.x_playlist_type    = x_playlist_type
-        self.kodiprops          = kodiprops
+        self.id: str = id
+        self.number: int = number
+        self.name: str = name
+        self.logo: str = logo
+        self.group: list = group
+        self.catchup: str = catchup
+        self.radio: bool = radio
+        self.favorite: bool = favorite
+        self.realtime: bool = realtime
+        self.media: str = media
+        self.label: str = label
+        self.url: str = url
+        self.tvg-shift: str = tvg-shift
+        self.x-tvg-url: str = x-tvg-url
+        self.media-dir: str = media-dir
+        self.media-size: str = media-size
+        self.media-type: str = media-type
+        self.catchup-source: str = catchup-source
+        self.catchup-days: int = catchup-days
+        self.catchup-correction: str = catchup-correction
+        self.provider: str = provider
+        self.provider-type: str = provider-type
+        self.provider-logo: str = provider-logo
+        self.provider-countries: list = provider-countries
+        self.provider-languages: list = provider-languages
+        self.x-playlist-type: str = x-playlist-type
+        self.kodiprops: dict = kodiprops
         
 #todo convert json to dataclasses https://dataclass-wizard.readthedocs.io/en/latest/

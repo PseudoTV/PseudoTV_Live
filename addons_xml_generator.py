@@ -24,7 +24,9 @@ https://anarchintosh-projects.googlecode.com/files/addons_xml_generator.py
 """
 
 import os
+import sys
 import hashlib
+import subprocess
 import xml.etree.ElementTree
 from zipfile import ZipFile
 from shutil import copyfile, rmtree
@@ -33,17 +35,67 @@ GITPATH = os.path.dirname(os.path.abspath(__file__))
 ZIPPATH = os.path.join(GITPATH, 'zips')
 DELETE_EXT = ('.pyc', '.pyo', '.db')
 DELETE_FOLDERS = {'__pycache__', '.idea', 'Corel Auto-Preserve', 'venv'}
+ADDON_DIR = os.path.join(GITPATH, 'plugin.video.pseudotv.live')
+TEST_DIR = os.path.join(ADDON_DIR, 'tests')
 
 
 class Generator:
     """Generates addons.xml and addons.xml.md5 from addon.xml files."""
 
-    def __init__(self):
+    def __init__(self, run_tests=True):
         self._clean_addons()
         self._generate_addons_file()
         self._generate_md5_file()
+        if run_tests:
+            if not self._run_local_tests():
+                print("\nTests failed. Aborting build.")
+                sys.exit(1)
         self._zipit(GITPATH)
         print("Finished updating addons xml and md5 files")
+
+    def _run_local_tests(self):
+        """Run pytest on local test suite before building."""
+        if not os.path.isdir(TEST_DIR):
+            print("Test directory not found, skipping tests")
+            return True
+
+        print("\n" + "=" * 60)
+        print("Running local test suite...")
+        print("=" * 60)
+
+        try:
+            result = subprocess.run(
+                [sys.executable, '-m', 'pytest', TEST_DIR, '-v', '--tb=short'],
+                cwd=ADDON_DIR,
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+
+            if result.returncode == 0:
+                print("=" * 60)
+                print("All tests passed!")
+                print("=" * 60 + "\n")
+                return True
+            else:
+                print("=" * 60)
+                print("TESTS FAILED!")
+                print("=" * 60 + "\n")
+                return False
+
+        except subprocess.TimeoutExpired:
+            print("Tests timed out after 120 seconds")
+            return False
+        except FileNotFoundError:
+            print("pytest not found. Install with: pip install pytest")
+            return True
+        except Exception as e:
+            print(f"Error running tests: {e}")
+            return True
 
     def _clean_addons(self):
         for root, dirnames, filenames in os.walk(GITPATH):
@@ -170,4 +222,12 @@ class Generator:
 
 
 if __name__ == "__main__":
-    Generator()
+    run_tests = '--no-tests' not in sys.argv
+    exit_code = 0
+    try:
+        Generator(run_tests=run_tests)
+    except SystemExit as e:
+        exit_code = e.code
+    if exit_code != 0 and sys.stdin.isatty():
+        input("\nPress Enter to exit...")
+    sys.exit(exit_code)

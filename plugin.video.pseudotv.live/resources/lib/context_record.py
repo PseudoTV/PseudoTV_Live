@@ -17,6 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
+from typing import Optional
 from variables  import *
 from m3u        import M3U
 from xmltvs     import XMLTVS
@@ -51,8 +52,8 @@ class Record(object):
                         m3u   = M3U(writable=True)
                         xmltv = XMLTVS(writable=True)
                         ritem = m3u.getRecordItem(self.fitem, seek)
-                        if any([m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)]):
-                            if any([m3u._save(), xmltv._save()]):
+                        if any((m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem))):
+                            if any((m3u._save(), xmltv._save())):
                                 LOG('Record: add, ritem = %s'%(ritem))
                                 Globals.dialog.notificationDialog('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
                                 Globals.properties.setPropTimer('chkPVRRefresh')#refresh pvr guide
@@ -69,8 +70,8 @@ class Record(object):
                         m3u   = M3U(writable=True)
                         xmltv = XMLTVS(writable=True)
                         ritem = (self.fitem.get('citem') or {"name":self.fitem['label'],"path":self.listitem.getPath()})
-                        if any([m3u.delRecording(ritem), xmltv.delRecording(ritem)]):
-                            if any([m3u._save(), xmltv._save()]):
+                        if any((m3u.delRecording(ritem), xmltv.delRecording(ritem))):
+                            if any((m3u._save(), xmltv._save())):
                                 LOG('Record: remove, ritem = %s'%(ritem))
                                 Globals.dialog.notificationDialog('%s\n%s'%(ritem['name'],LANGUAGE(30118)))
                                 Globals.properties.setPropTimer('chkPVRRefresh')#refresh pvr guide

@@ -24,8 +24,11 @@
 # https://tvtropes.org/pmwiki/pmwiki.php/Main/PopCultureHoliday
 # https://fanlore.org/wiki/List_of_Annual_Holidays,_Observances,_and_Events_in_Fandom
 
-from variables   import *
-from cache       import Cache, cacheit
+from typing import List, Dict, Optional, Union, Generator, Any
+
+from variables    import *
+from _services    import _Service
+from cache        import Cache, cacheit
 
 KEY_QUERY   = {"method":"","order":"","field":'',"operator":'',"value":[]}
 LIMITS      = {"end":-1,"start":0,"total":0}
@@ -35,33 +38,31 @@ TV_QUERY    = {"path":"videodb://tvshows/titles/", "method":"VideoLibrary.GetEpi
 MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"  ,"limits":LIMITS,"sort":SORT,"filter":FILTER}
 
 class Seasonal(object):
-    def __init__(self, service=None):
-        if service is None:
-            from kodi import _get_Service
-            service = _get_Service()
+    def __init__(self, service: Optional[_Service] = None):
+        if service is None: service = _Service()
         self.service = service
         self.pool    = service.pool
         self.cache   = service.cache
 
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s' % (self.__class__.__name__, msg), level)
 
 
-    def getYear(self):
+    def getYear(self) -> int:
         return datetime.datetime.now().year
 
 
-    def getMonth(self, name=False):
+    def getMonth(self, name: bool = False) -> Union[str, int]:
         if name: return datetime.datetime.now().strftime('%B')  # Full month name
         else:    return datetime.datetime.now().month           # Numeric month
 
 
-    def getDay(self):
+    def getDay(self) -> int:
         return datetime.datetime.now().day
 
 
-    def getDOM(self, year, month):
+    def getDOM(self, year: int, month: int) -> List[int]:
         cal = calendar.Calendar()
         days_in_month = []
         for day in cal.itermonthdays2(year, month):
@@ -70,18 +71,18 @@ class Seasonal(object):
         return days_in_month
 
 
-    def getSeason(self, key):
+    def getSeason(self, key: str) -> Dict[str, Any]:
         self.log('getSeason, key = %s' % (key))
         return FileAccess.getJSON(HOLIDAYS).get(key,{})
 
 
-    def getSeasons(self, month):
+    def getSeasons(self, month: str) -> Dict[str, Any]:
         self.log('getSeasons, month = %s' % (month))
         return FileAccess.getJSON(SEASONS).get(month,{})
 
 
     @cacheit(expiration=datetime.timedelta(minutes=15))
-    def getHoliday(self, nearest=None):
+    def getHoliday(self, nearest: Optional[bool] = None) -> Dict[str, Any]:
         if nearest is None:
             nearest = Globals.settings.getSettingBool('Nearest_Holiday')
         self.log('getHoliday, nearest = %s' % (nearest))
@@ -89,15 +90,16 @@ class Seasonal(object):
         else:       return self.getCurrentHoliday()
 
 
-    def getCurrentHoliday(self):
+    def getCurrentHoliday(self) -> Dict[str, Any]:
         return self.getSeasons(self.getMonth(name=True)).get(self.getDay(),{})
 
 
-    def getSpecialHolidays(self, month, day): #todo check if month, day of week, day match holiday exceptions.
+    def getSpecialHolidays(self, month: str, day: str) -> Dict[str, Any]: #todo check if month, day of week, day match holiday exceptions.
         return {"Friday":{"13":{ "name": "Friday The 13th", "tagline": "", "keyword": "", "logo": ""}}}
     
 
-    def getNearestHoliday(self, fallback=True):
+    def getNearestHoliday(self, fallback: bool = True) -> Dict[str, Any]:
+        """Find the nearest holiday with a keyword, optionally wrapping to previous days."""
         holiday = {}
         month = self.getMonth(name=True)
         day   = self.getDay()
@@ -117,7 +119,8 @@ class Seasonal(object):
         return holiday
 
 
-    def buildSeasonal(self, holiday=None):
+    def buildSeasonal(self, holiday: Optional[Dict[str, Any]] = None) -> Generator[Dict[str, Any], None, None]:
+        """Build seasonal query items for the given holiday."""
         if holiday is None: holiday = self.getHoliday()
         season  = self.getSeason(holiday.get('keyword'))
         for type, params in list(season.items()):
@@ -128,4 +131,3 @@ class Seasonal(object):
                 item["filter"].update(param.get("filter"))
                 self.log('buildSeasonal, %s - item = %s'%(holiday.get('name'),item))
                 yield item
-       

@@ -1,4 +1,29 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
+v.0.7.7+nightly
+- Fixed Cache shutdown order to prevent database corruption. Queue and pool now shut down before cache.
+- Fixed Cache reconnection bug where _exit flag was reset after shutdown, allowing unintended database access.
+- Fixed jsonQue storage type from set to list to support unhashable dict elements.
+- Fixed Real settings API calls (getSettingInt/Bool) replaced with getSetting for compatibility across jsonrpc, pool, and cqueue modules.
+- Fixed chkLibrary positional argument mismatch in task queue.
+- Fixed ListitemTypes moved into ListItems class to avoid namespace pollution.
+- Fixed missing LOGO_COLOR and image constants accidentally removed during refactor.
+- Fixed cleanInfo type validation with proper coercion, None handling, and mutable default argument fix.
+- Fixed buildMenuListItem tuple unpacking from cleanInfo return value.
+- Fixed Cache.get and Cache.set parameter mismatches (default→or fallback, life→expiration).
+- Fixed YTParser Globals reference using lazy import pattern.
+- Fixed jsonrpc.py Globals references using lazy import pattern to avoid circular dependency.
+- Optimized LOG function with throttled logging support via throttle parameter.
+- Optimized CustomQueue logging with throttled log dedup and peek-based execute loop.
+- Optimized CustomQueue task tracking with running dict to prevent duplicate task submission.
+- Optimized FileAccess.loadJSON with LRU cache.
+- Refactored Constants module with descriptive comments and organized variable groups.
+- Refactored Variables module with section headers and class docstrings for Globals.
+- Replaced bare except handlers with proper exception logging across 18 files.
+- Removed unused imports (xbmcaddon, xbmcplugin, xbmcvfs) from _services.py.
+- Removed unused DEBUG_NAMES variable from _services.py.
+- Added ListitemTypes class for ListItem InfoTag type validation schemas.
+- Added _LOG_THROTTLE dict for global log message deduplication.
+
 v.0.7.5+nightly
 - Refactored CustomQueue and ThreadPoolExecutor.
 - Refactored "Clean Start" Utility Menu option. 

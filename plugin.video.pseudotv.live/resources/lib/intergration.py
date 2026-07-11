@@ -17,7 +17,9 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
+from typing import Any, Optional, Union
 from variables   import *
+from _services   import _Service
 from fileaccess  import FileAccess, FileLock
 from cache       import cacheit
 
@@ -27,21 +29,19 @@ BASE_HEADER = {"Authorization": "",
                "X-Reference"  : f"{ADDON_URL}",}
            
 class OpenRouter(object):
-    def __init__(self, service=None):
-        if service is None:
-            from kodi import _get_Service
-            service = _get_Service()
+    def __init__(self, service: Optional[_Service] = None):
+        if service is None: service = _Service()
         self.service = service
         self.pool    = service.pool
         self.cache   = service.cache
         
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
 
     @cacheit(expiration=datetime.timedelta(minutes=15))
-    def _request(self, url, params={}, payload={}, header=HEADER, timeout=15):
+    def _request(self, url: str, params: dict = {}, payload: dict = {}, header: dict = HEADER, timeout: int = 15) -> Optional[dict]:
         if Globals.settings.getSettingBool('Allow_Artificial_Intelligence'):
             req_header = BASE_HEADER.copy()
             if header: req_header.update(header)
@@ -52,8 +52,9 @@ class OpenRouter(object):
 
 
     @cacheit(expiration=datetime.timedelta(minutes=15))
-    def _getModels(self):
+    def _getModels(self) -> tuple[list, list]:
         response = self._request("https://openrouter.ai/api/v1/models")
+        if not response: return [], []
         image_models = []
         text_models  = []
         if "data" in response:
@@ -61,11 +62,12 @@ class OpenRouter(object):
                 capabilities = model.get("architecture",{}).get("output_modalities", [])
                 if   "image" in capabilities: image_models.append(model)
                 elif "text"  in capabilities: text_models.append(model)
-        self.log('_getModels, image_models = %s, text_models = %s'%(len(image_models),len(text_models)))
+            self.log('_getModels, image_models = %s, text_models = %s'%(len(image_models),len(text_models)))
         return sorted(image_models,key=itemgetter('name')), sorted(text_models,key=itemgetter('name'))
         
         
     def _getImageModels(self):
+        if not Globals.settings.getSettingBool('Allow_Artificial_Intelligence'): return
         try:
             image_models, _ = self._getModels()
             if not image_models:
@@ -80,6 +82,7 @@ class OpenRouter(object):
             
             
     def _getContextModels(self):
+        if not Globals.settings.getSettingBool('Allow_Artificial_Intelligence'): return
         try:
             _, text_models = self._getModels()
             if not text_models:
@@ -89,15 +92,16 @@ class OpenRouter(object):
             preselect_id = Globals._findItemsInLST(text_models, Globals.settings.getSetting('Generative_Contextual_Model'), 'id')
             select = Globals.dialog.selectDialog(names, header=ADDON_NAME, preselect=preselect_id, useDetails=False, multi=False)
             if not select is None: Globals.settings.setSetting('Generative_Contextual_Model', text_models[select].get('id'))
-        except Exception as e: self.log("_getContextModels, failed! %s" % (e), xbmc.LOGERROR)
+        except Exception as e: 
+            self.log("_getContextModels, failed! %s" % (e), xbmc.LOGERROR)
         
             
-    def getImage(self, citem, count=1, model="google/gemini-2.5-flash-image-preview", background_color=(0, 255, 0)):
+    def getImage(self, citem: dict, count: int = 1, model: str = "google/gemini-2.5-flash-image-preview", background_color: tuple = (0, 255, 0)) -> Union[list, str, bool]:
+        if not Globals.settings.getSettingBool('Allow_Artificial_Intelligence'): return False
         chname = citem.get('name', 'unknown_channel')
         self.log('getImage, chname = %s, count = %s, model = %s' % (chname, count, model))
         filtered_groups = [g for g in citem.get('group', []) if g != ADDON_NAME]
         group_str = '%s, %s' % (chname, ', '.join(filtered_groups)) if filtered_groups else chname
-
         payload = { 
                     "model": model,
                     "messages": [
@@ -154,7 +158,7 @@ class OpenRouter(object):
             return False
         
         
-    def _alphaImage(self, file_name, background_color=(0, 255, 0)):
+    def _alphaImage(self, file_name: str, background_color: tuple = (0, 255, 0)) -> str:
         input_file_path  = os.path.join(TEMP_LOC, file_name)
         output_file_path = os.path.join(LOGO_LOC, file_name)
         if not FileAccess.exists(input_file_path):
@@ -163,7 +167,7 @@ class OpenRouter(object):
             
         if Globals.settings.hasAddon('script.module.pil'):
             try:
-                def __nearest(color1, color2, tolerance=50):
+                def __nearest(color1: tuple, color2: tuple, tolerance: int = 50) -> bool:
                     r1, g1, b1 = color1[:3]
                     r2, g2, b2 = color2[:3]
                     return math.sqrt((r1 - r2)**2 + (g1 - g2)**2 + (b1 - b2)**2) <= tolerance
@@ -212,7 +216,7 @@ class OpenRouter(object):
             
             
     @staticmethod
-    def _run(sysARG):
+    def _run(sysARG: list) -> tuple:
         with Globals.builtin.busy_dialog():
             ctl = (5,1)
             try:              param = sysARG[1]

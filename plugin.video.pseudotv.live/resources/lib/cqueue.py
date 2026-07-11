@@ -17,10 +17,11 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
+from typing import Any, Optional, Callable
 from variables     import *
 
 class Task(object):
-    def __init__(self, func, args=(), kwargs=None, priority=3, execute_at=0):
+    def __init__(self, func: Callable, args: tuple = (), kwargs: Optional[dict] = None, priority: int = 3, execute_at: float = 0):
         self.func         = func
         self.args         = args
         self.kwargs       = kwargs if kwargs is not None else {}
@@ -33,7 +34,7 @@ class Task(object):
     def cancel(self):
         self.is_cancelled = True
 
-    def __lt__(self, other):
+    def __lt__(self, other: "Task") -> bool:
         return self.priority < other.priority
 
 class CustomQueue(object):
@@ -42,7 +43,7 @@ class CustomQueue(object):
     MAX_HEAP_SIZE      = 500 # hard limit to prevent memory growth
     LOG_THROTTLE       = 5.0 # seconds between repeated log messages per task
 
-    def __init__(self, service, workers=THREAD_WORKERS):
+    def __init__(self, service: Any, workers: int = THREAD_WORKERS):
         self.service  = service
         self.monitor  = service.monitor
         self.cache    = service.cache
@@ -58,19 +59,19 @@ class CustomQueue(object):
         self.useExecutor = Globals.settings.getSettingBool('Enable_Executor')
         self.queueThread = Thread(target=self.execute, name=f"{ADDON_ID}.priorityQUE")
         
-    def log(self, msg, level=xbmc.LOGDEBUG, throttle=0):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG, throttle: float = 0):
         LOG(f'{self.__class__.__name__}: {msg}', level, throttle=throttle)
         
-    def _freeze(self, obj):
+    def _freeze(self, obj: Any) -> Any:
         if isinstance(obj, list): return tuple(self._freeze(item) for item in obj)
         if isinstance(obj, dict): return tuple(sorted((k, self._freeze(v)) for k, v in obj.items()))
         if isinstance(obj, set):  return frozenset(self._freeze(item) for item in obj)
         return obj
         
-    def _get_task_key(self, func, args, kwargs):
+    def _get_task_key(self, func: Callable, args: tuple, kwargs: dict) -> tuple:
         return (func.__name__, tuple(self._freeze(arg) for arg in args), tuple(sorted((k, self._freeze(v)) for k, v in kwargs.items())) if kwargs else ())
 
-    def _fmt_args(self, args, kwargs, maxlen=60):
+    def _fmt_args(self, args: tuple, kwargs: dict, maxlen: int = 60) -> str:
         parts = []
         for a in args[:3]:
             s = repr(a)
@@ -82,7 +83,7 @@ class CustomQueue(object):
         if len(sig) > maxlen: sig = sig[:maxlen-3] + '...'
         return f'({sig})' if sig else '()'
 
-    def _compute_score(self, task):
+    def _compute_score(self, task: Task) -> float:
         wait_time    = max(0.0, time.time() - task.created_at)
         aging_boost  = (wait_time / self.AGE_BOOST_INTERVAL) * self.AGE_BOOST_STEP
         eff_priority = max(1.0, task.priority - aging_boost)
@@ -140,7 +141,7 @@ class CustomQueue(object):
             self.queueThread.daemon = True
             self.queueThread.start()
 
-    def pop(self):
+    def pop(self) -> Optional[Task]:
         with self.lock:
             while not self.monitor.abortRequested() and self.heap:
                 _, _, task = heapq.heappop(self.heap)
@@ -155,7 +156,7 @@ class CustomQueue(object):
                 return task
             return None
 
-    def _finish(self, task):
+    def _finish(self, task: Task):
         if task and task.task_key:
             with self.lock:
                 self.running.pop(task.task_key, None)
@@ -166,13 +167,14 @@ class CustomQueue(object):
             if self.service.pendingShutdown:
                 self.log("execute, Shutdown/Abort requested. Exiting queue.", xbmc.LOGINFO)
                 break
-            elif self.service.pendingSuspend:
+            elif self.service.suspend():
                 self.log("execute, Suspend detected. Idling execution loop...", xbmc.LOGDEBUG)
-                while self.service.pendingSuspend:
+                while self.service.suspend():
                     if self.service.pendingShutdown: break
+                    if self.monitor.abortRequested(): break
                     self.monitor.waitForAbort(SERVICE_INTERVAL//2)
                 continue
-            elif self.service.pendingInterrupt:
+            elif self.service.interrupt():
                 self.log("execute, Interrupt active. Breaking execution loop.", xbmc.LOGWARNING)
                 break
             else:
@@ -213,14 +215,13 @@ class CustomQueue(object):
         self.shutdown()
         self.log("execute, finished: shutting down...")
 
-    def _future_callback(self, future, timeout=900):
-        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
+    def _future_callback(self, future: Any):
         try: 
-            future.result(float(timeout))
+            future.result(timeout=0)
         except Exception as e: 
             self.log(f"_future_callback, failed! {e}", xbmc.LOGERROR)
 
-    def shutdown(self, wait=False, cancel=True):
+    def shutdown(self, wait: bool = False, cancel: bool = True):
         try: 
             self.pool._executor.shutdown(wait=wait, cancel_futures=cancel)
             self.log("shutdown, pool")

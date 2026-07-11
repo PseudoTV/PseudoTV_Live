@@ -17,6 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
+from collections import deque
+from typing import Any, Optional
 
 from variables    import *
 from channels   import Channels
@@ -27,14 +29,13 @@ from fillers    import Fillers
 from resources  import Resources
 from seasonal   import Seasonal 
 from rules      import RulesList
-from seasonal   import Seasonal
 
 class Builder(object):
     xsp      = XSP()
     seasonal = Seasonal()
     loopback = None
     
-    def __init__(self, service):
+    def __init__(self, service: Any):
         # Global dialog properties
         self.fCount  = 0
         self.pCount  = 0
@@ -64,7 +65,6 @@ class Builder(object):
         self.evenEpisode      = Globals.settings.getSettingBool('Enable_Even_Force_Episode')
         self.evenShuffle      = Globals.settings.getSettingBool('Enable_Even_Force_Random')
         self.enableChanged    = Globals.settings.getSettingBool('Enable_Changed')
-        self.pageLimit        = Globals.settings.getSettingInt('Page_Limit')
         
         self.filter           = {}
         self.sort             = {}
@@ -89,17 +89,17 @@ class Builder(object):
                 "sources": {"ids": Globals.settings.getSetting('Resource_Ratings').split('|'), "paths": [os.path.join(FILLER_LOC, 'Ratings', '')]}, "items": {}
             },
             "adverts": {
-                "min": postroll_min, "max": self.pageLimit, "auto": postroll_min == -1, "enabled": bool(postroll_min), 
+                "min": postroll_min, "max": self.limit, "auto": postroll_min == -1, "enabled": bool(postroll_min), 
                 "chance": post_chance,
                 "sources": {"ids": Globals.settings.getSetting('Resource_Adverts').split('|'), "paths": [os.path.join(FILLER_LOC, 'Adverts', '')]}, "items": {}, "incKODI": include_trailers
             },
             "trailers": {
-                "min": postroll_min, "max": self.pageLimit, "auto": postroll_min == -1, "enabled": bool(postroll_min), 
+                "min": postroll_min, "max": self.limit, "auto": postroll_min == -1, "enabled": bool(postroll_min), 
                 "chance": post_chance,
                 "sources": {"ids": Globals.settings.getSetting('Resource_Trailers').split('|'), "paths": [os.path.join(FILLER_LOC, 'Trailers', '')]}, "items": {}, "incKODI": include_trailers
             },
             "extras": {
-                "min": postroll_min, "max": self.pageLimit, "auto": postroll_min == -1, "enabled": bool(postroll_min), 
+                "min": postroll_min, "max": self.limit, "auto": postroll_min == -1, "enabled": bool(postroll_min), 
                 "chance": post_chance,
                 "sources": {"ids": [], "paths": []}, "items": {}, "incKODI": Globals.settings.getSettingBool('Include_Extras_KODI')
             }
@@ -114,11 +114,11 @@ class Builder(object):
         self.runActions = RulesList(self.channels.getChannels()).runActions
 
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
         
 
-    def getVerifiedChannels(self, channels=None):
+    def getVerifiedChannels(self, channels: Optional[list] = None) -> list:
         if channels is None: 
             channels = self.channels.getChannels()
         channels = sorted(self._verify(channels), key=itemgetter('number'))
@@ -126,7 +126,7 @@ class Builder(object):
         return channels
 
  
-    def _verify(self, channels=None):
+    def _verify(self, channels: Optional[list] = None):
         if channels is None: 
             channels = self.channels.getChannels()
         for idx, citem in enumerate(channels):
@@ -144,7 +144,7 @@ class Builder(object):
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, Globals._cleanGroups(citem), inherited=self)
              
              
-    def buildCells(self, citem: dict, duration: int=10800, type: str='video', entries: int=3, info=None) -> list:
+    def buildCells(self, citem: dict, duration: int = 10800, type: str = 'video', entries: int = 3, info: Optional[dict] = None) -> list:
         if info is None: info = {}
         art = info.setdefault('art', {})
         art['poster'] = art.get('poster') or Globals._getThumb(info, opt=1)
@@ -166,7 +166,7 @@ class Builder(object):
         return [copy_info() for _ in range(entries)]
 
 
-    def buildChannels(self, channels: list = None, preview=False, silent=None, write=True):
+    def buildChannels(self, channels: Optional[list] = None, preview: bool = False, silent: Optional[bool] = None, write: bool = True) -> Optional[dict]:
         if channels is None: channels = []
         if silent is None:   silent = not Globals.settings.showDialog(silent)
         self.log('buildChannels, channels=%d, preview=%s, silent=%s, write=%s' % (len(channels), preview, silent, write))
@@ -191,7 +191,11 @@ class Builder(object):
             preview_results = {}
             with M3U(writable=write) as m3u, XMLTVS(writable=write, m3u=m3u) as epg:
                 all_stop_times = dict(epg.loadStopTimes(channels, fallback=fallback_str))
-                has_programmes = dict(epg.hasProgrammes(channels)) if hasattr(self, 'xmltv') else {}
+                has_programmes = dict(epg.hasProgrammes(channels))
+                
+                if self.enableBCTs:
+                    self.log('buildChannels, pre-computing filler sources')
+                    Fillers({}, self)
                 
                 for idx, citem in enumerate(channels):
                     try:
@@ -201,14 +205,18 @@ class Builder(object):
                         self.pName   = citem.get('name', '')
                         self.pCount  = int(idx * 100) // self.cCount
                         
-                        if self.service.pendingInterrupt:
+                        self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{self.pName}", header=self.pHeader)
+                        
+                        if self.service.interrupt():
                             self.log(f"[{citem.get('id')}] buildChannels, _interrupt")
+                            self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                             if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
                             break
-                        elif self.service.pendingSuspend:
+                        elif self.service.suspend():
                             self.log(f"[{citem.get('id')}] buildChannels, _suspend")
-                            if not self.service._sleep(CPU_CYCLE): 
-                                continue
+                            self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32215)}", header=self.pHeader)
+                            if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                            break
                                 
                         citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
                         raw_start = all_stop_times.get(citem.get('id'), fallback_epoch)
@@ -242,12 +250,17 @@ class Builder(object):
                             self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
 
                             if start_epoch > 0:
-                                with Globals.dialog._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
-                                    self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
-                                    fileList = self.buildMusic(citem) if citem.get('radio', False) else self.buildVideo(citem)
-                                    
-                                    if isinstance(fileList, list) and fileList:
-                                        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)
+                                self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
+                                fileList = self.buildMusic(citem) if citem.get('radio', False) else self.buildVideo(citem)
+                                
+                                if fileList is None:
+                                    self.log(f"[{citem.get('id')}] buildChannels, suspended, requeueing remaining")
+                                    if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                                    break
+                                elif isinstance(fileList, list) and fileList:
+                                    with Globals.dialog._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
+                                        total_dur = sum(item.get('duration', 0) for item in fileList if isinstance(item, dict))
+                                        self.log(f"[{citem.get('id')}] buildChannels, assigning time slots to {len(fileList)} items, total duration = {total_dur}s ({total_dur // 3600}h {(total_dur % 3600) // 60}m)")
                                         for s_idx, item in enumerate(fileList):
                                             duration = item.get('duration')
                                             if not duration: continue
@@ -255,45 +268,48 @@ class Builder(object):
                                             item['start'] = start_epoch
                                             item['stop'] = start_epoch + duration
                                             start_epoch = item['stop']
-                                            
+                                        
                                         fileList = sorted(self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, fileList, inherited=self), key=itemgetter('start'))
                                         if not citem.get('radio', False): fileList = sorted(Fillers(citem, self).injectFillers(fileList), key=itemgetter('start'))
                                         if preview: preview_results[citem.get('id')] = fileList
                                         else:
                                             prog_added = any([epg.addProgram(citem.get('id'), epg.getProgramItem(citem, item)) for item in fileList])
                                             updated.add(prog_added)
-                                            self.log(f"[{citem.get('id')}] Pipeline serialization completed -> Total entries matching: {len(fileList)}")
-                                    
-                                    elif not fileList:
-                                        has_progs = has_programmes.get(citem.get('id'), False)
-                                        updated.add(has_progs)
-                                        if self.pErrors:
-                                            if has_progs: self.pErrors.append(LANGUAGE(32033))
-                                            chanErrors = ' | '.join(sorted(set(self.pErrors)))
-                                            self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f'{self.pName}: {chanErrors}', header=f'{ADDON_NAME}, Errors detected.')
-                                    self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
+                                            self.log(f"[{citem.get('id')}] buildChannels, epg.addProgram: {prog_added}, {len(fileList)} programmes added")
+                                                    
+                                elif not fileList:
+                                    has_progs = has_programmes.get(citem.get('id'), False)
+                                    updated.add(has_progs)
+                                    self.log(f"[{citem.get('id')}] buildChannels, no programmes found (has_existing={has_progs})")
+                                self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                         else:
                             has_progs = has_programmes.get(citem.get('id'), False)
                             updated.add(has_progs)
                         
                         if any(updated): 
                             sitem = m3u.getStationItem(citem)
-                            station_added = any([m3u.addStation(sitem), epg.addChannel(sitem)])
+                            station_added = any((m3u.addStation(sitem), epg.addChannel(sitem)))
                             complete.add(station_added) 
+                            self.log(f"[{citem.get('id')}] buildChannels, station added to m3u/epg: {station_added}")
                         else:
                             self._resetPagination(citem)
                             m3u.delStation(citem)
                             epg.delBroadcast(citem)
+                            self.log(f"[{citem.get('id')}] buildChannels, no programmes, removing station from m3u/epg")
                     except Exception as e: 
                         self.log(f"Channel compiler faulted critically at index execution point: {str(e)}", xbmc.LOGERROR)
 
             if any(changes): self.channels.setChannels()
-            self.log("Channel compilation loop finished successfully.")
+            if any(updated):
+                self.log(f"Channel compilation finished: {len(complete)} stations added, {len(changes)} channels updated, {len(preview_results)} previews", xbmc.LOGINFO)
+                if not self.service.tasks.chkSync():
+                    self.log("buildChannels, post-build sync check failed, triggering refresh")
+                    Globals.properties.setPropTimer('chkPVRRefresh')
             return preview_results if preview else None
 
 
     def buildMusic(self, citem: dict) -> list:
-        self.log(f"[{citem['id']}] buildMusic")
+        self.log(f"[{citem['id']}] buildMusic, generating {MAX_GUIDEDAYS * 8} cells @ {MIN_EPG_DURATION}s each")
         return self.buildCells(
             citem, MIN_EPG_DURATION, 'music', (MAX_GUIDEDAYS * 8), 
             info={
@@ -304,21 +320,22 @@ class Builder(object):
         )
         
         
-    def buildVideo(self, citem: dict, validate: bool = False):
+    def buildVideo(self, citem: dict, validate: bool = False) -> Any:
         paths = citem.get('path', [])
         if isinstance(paths, (str, bytes)):
             paths = [paths]
         path_len = len(paths)
 
         tmp_citem = citem.copy()
+        tmp_citem['rules'] = dict(citem.get('rules', {}))
         if paths == ["{Seasonal}"]:
             nrules = {800: {"values": {0: list(self.seasonal.buildSeasonal(self.holiday))}}}
-            tmp_citem.setdefault('rules', {}).update(nrules)
+            tmp_citem['rules'].update(nrules)
             self.log(f" [{citem.get('id')}] buildVideo: Seasonal Content, new rules = {nrules}")
             
         if self.enableEven and not tmp_citem.get('rules', {}).get(1000):
             nrules = {1000: {"values": {0: Globals.settings.getSettingInt('Enable_Even'), 1: self.evenEpisode, 2: self.evenShuffle}}}
-            tmp_citem.setdefault('rules', {}).update(nrules)
+            tmp_citem['rules'].update(nrules)
             self.log(f" [{citem.get('id')}] buildVideo: Even Show Distribution, new rules = {nrules}")
             
         citem = tmp_citem
@@ -328,14 +345,14 @@ class Builder(object):
         has_valid_files = any(len(sublist) > 0 for sublist in fileArray if isinstance(sublist, list))
         if not has_valid_files: 
             for idx, base_path in enumerate(paths):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log(f"[{citem.get('id')}] buildVideo, _interrupt")
                     self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
-                    return []
-                elif self.service.pendingSuspend:
+                    return None
+                elif self.service.suspend():
                     self.log(f"[{citem.get('id')}] buildVideo, _suspend")
-                    if not self.service._sleep(CPU_CYCLE): 
-                        continue
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32215)}", header=self.pHeader)
+                    return None
                 
                 if path_len > 1: self.pName = f"{citem.get('name', '')} {idx + 1}/{path_len}"
                 sub_paths = self.xsp.parseXSP(citem.get('id'), base_path) if self.xsp.isXSP(base_path) else [base_path]
@@ -363,12 +380,14 @@ class Builder(object):
 
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self) 
         if isinstance(fileArray, list):
-            self.log(f"[{citem.get('id')}] buildVideo, channel post fileArray items = {len(fileArray)}", xbmc.LOGINFO)
+            fileArrayLen = len(fileArray)
+            self.log(f"[{citem.get('id')}] buildVideo, channel post fileArray items = {fileArrayLen}", xbmc.LOGINFO)
             if not any(len(sublist) > 0 for sublist in fileArray if isinstance(sublist, list)):
                 self.log(f"[{citem.get('id')}] buildVideo, channel fileArray In-Valid!", xbmc.LOGINFO)
                 return False
                 
             interleaved = Globals._interleave(fileArray, self.interleaveSet, self.interleaveRepeat)
+            self.log(f"[{citem.get('id')}] buildVideo, interleaved {fileArrayLen} paths -> {len(interleaved)} items (set={self.interleaveSet}, repeat={self.interleaveRepeat})")
             fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, interleaved, inherited=self)
             self.log(f"[{citem.get('id')}] buildVideo, pre fileList items = {len(fileList)}", xbmc.LOGINFO)
             fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, fileList, inherited=self)
@@ -378,7 +397,7 @@ class Builder(object):
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN, citem, fileList, inherited=self)
 
 
-    def buildFileList(self, citem: dict, path: str, media: str = 'video', page: int = None, sort = None, limits = None, query = None) -> list:
+    def buildFileList(self, citem: dict, path: str, media: str = 'video', page: Optional[int] = None, sort: Optional[dict] = None, limits: Optional[dict] = None, query: Optional[dict] = None) -> list:
         if page is None:   page   = Globals.settings.getSettingInt('Page_Limit')
         if sort is None:   sort   = {}
         if limits is None: limits = {"end": -1, "start": 0, "total": 0}
@@ -391,19 +410,19 @@ class Builder(object):
      
         fileList = []
         dirCount = -1
-        dirList  = [{'file': path}]
+        dirList  = deque([{'file': path}])
         self.log(f"[{citem.get('id')}] buildFileList, path = {path}\nsort = {sort}, limits = {limits}, page = {page}")
         
         while not self.monitor.abortRequested():
-            if self.service.pendingInterrupt:
+            if self.service.interrupt():
                 self.log(f"[{citem.get('id')}] buildFileList, _interrupt")
                 self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                 return []
             
-            elif self.service.pendingSuspend:
+            elif self.service.suspend():
                 self.log(f"[{citem.get('id')}] buildFileList, _suspend")
                 self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
-                if not self.service._sleep(CPU_CYCLE): 
+                if not self.service.sleep(CPU_CYCLE): 
                     continue
             
             elif len(dirList) == 0 or dirCount >= self.recursiveLimit:
@@ -423,7 +442,7 @@ class Builder(object):
                 
             else:
                 dirCount += 1
-                folder   = dirList.pop(0)
+                folder   = dirList.popleft()
                 current_path = folder.get('file')
                 
                 if folder.get("label"): 
@@ -441,13 +460,13 @@ class Builder(object):
                     
                 if isinstance(subdirList, list):  
                     dirList.extend(subdirList)
-                    dirList = Globals._setDictLST(dirList)
                 self.log(f"[{citem.get('id')}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], adding fileList [{len(fileList)}/{page}] remaining sub-directories [{len(dirList)}]\npath = {current_path}, limits = {limits}")
-        self.log(f"[{citem.get('id')}] buildFileList, depth [{dirCount}/{self.recursiveLimit}], returning fileList [{len(fileList)}/{page}]")
+        total_dur = sum(item.get('duration', 0) for item in fileList if isinstance(item, dict))
+        self.log(f"[{citem.get('id')}] buildFileList, returning [{len(fileList)}/{page}] files, depth [{dirCount}/{self.recursiveLimit}], total duration = {total_dur}s ({total_dur // 3600}h {(total_dur % 3600) // 60}m)")
         return fileList
 
 
-    def buildList(self, citem: dict, path: str, media: str = 'video', page: int = None, sort = None, limits = None, dirItem = None, query = None):
+    def buildList(self, citem: dict, path: str, media: str = 'video', page: Optional[int] = None, sort: Optional[dict] = None, limits: Optional[dict] = None, dirItem: Optional[dict] = None, query: Optional[dict] = None) -> tuple:
         if page is None:    page    = Globals.settings.getSettingInt('Page_Limit')
         if sort is None:    sort    = {}
         if limits is None:  limits  = {"end": -1, "start": 0, "total": 0}
@@ -490,7 +509,7 @@ class Builder(object):
         return fileList, dirList, nlimits, errors
 
 
-    def buildFiles(self, citem: dict, path: str, items: list = None, media: str = 'video', page: int = None, sort = None, limits = None, dirItem = None, query = None):
+    def buildFiles(self, citem: dict, path: str, items: Optional[list] = None, media: str = 'video', page: Optional[int] = None, sort: Optional[dict] = None, limits: Optional[dict] = None, dirItem: Optional[dict] = None, query: Optional[dict] = None) -> tuple:
         if items is None:   items   = []
         if page is None:    page    = Globals.settings.getSettingInt('Page_Limit')
         if sort is None:    sort    = {}
@@ -524,7 +543,7 @@ class Builder(object):
             if not item.get('type'): 
                 item['type'] = default_type
 
-            if self.service.pendingInterrupt or self.service.pendingSuspend:
+            if self.service.interrupt() or self.service.suspend():
                 self.log(f"[{citem.get('id')}] buildFiles, _interrupt/_suspend")
                 self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
                 break
@@ -599,6 +618,7 @@ class Builder(object):
             # Duration Validation
             dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
             if dur > self.minDuration:
+                self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx} accepted: dur={dur}s, min={self.minDuration}s, file = {file}")
                 self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
                 item.update({
                     'duration'    : dur,
@@ -648,7 +668,8 @@ class Builder(object):
             dirList  = Globals._randomShuffle(dirList)
             fileList = Globals._randomShuffle(fileList)
             
-        self.log(f"[{citem.get('id')}] buildFiles, returning ({len(fileList)}) files, ({len(dirList)}) dirs")
+        total_dur = sum(item.get('duration', 0) for item in fileList if isinstance(item, dict))
+        self.log(f"[{citem.get('id')}] buildFiles, returning [{len(fileList)}] files, [{len(dirList)}] dirs, total duration = {total_dur}s ({total_dur // 3600}h {(total_dur % 3600) // 60}m)")
         return fileList, dirList
 
 
@@ -662,7 +683,7 @@ class Builder(object):
         return False
 
 
-    def _resetPagination(self, citem):
-        if isinstance(citem, list): return any([self.jsonRPC.resetPagination(item) for item in citem])
-        return any([self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id')])
+    def _resetPagination(self, citem: Any) -> bool:
+        if isinstance(citem, list): return any(self.jsonRPC.resetPagination(item) for item in citem)
+        return any(self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id'))
     

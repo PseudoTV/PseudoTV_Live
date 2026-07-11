@@ -18,11 +18,12 @@
 #
 # -*- coding: utf-8 -*-
 
+from typing import Any, Optional
 from variables   import *
 from _services   import _Service
 
 class Multiroom(object):
-    def __init__(self, sysARG=sys.argv, service=None):
+    def __init__(self, sysARG: list = sys.argv, service: Optional[_Service] = None):
         if service is None: service = _Service
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG     = sysARG
@@ -35,11 +36,11 @@ class Multiroom(object):
         self.serverData.update(self._load())
 
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
 
-    def _getStatus(self):
+    def _getStatus(self) -> bool:
         self.log('_getStatus')
         return self.jsonRPC.getSettingValue("services.zeroconf",default=False,cache=True)
 
@@ -57,11 +58,11 @@ class Multiroom(object):
         return Globals.settings.setCacheSetting(self.serverKEY, self.serverData, FileAccess._getMD5(self.serverKEY), -1)
             
             
-    def getServers(self):
+    def getServers(self) -> dict:
         return self.serverData.get('servers',{})
 
 
-    def _setServers(self, servers=None):
+    def _setServers(self, servers: Optional[dict] = None) -> bool:
         if servers is None: servers = self.serverData['servers']
         self.serverData["servers"] = servers
         Globals.properties.setHasServers(len(servers) > 0)
@@ -70,7 +71,7 @@ class Multiroom(object):
         return self._save()
             
             
-    def getEnabled(self, servers=None):
+    def getEnabled(self, servers: Optional[dict] = None) -> list:
         if servers is None: servers = self.getServers()
         enabled = [server for server in list(servers.values()) if server.get('enabled',False)]
         Globals.properties.setEnabledServers(len(enabled) > 0)
@@ -78,12 +79,12 @@ class Multiroom(object):
         return enabled
             
 
-    def getRemote(self, remote):
+    def getRemote(self, remote: str) -> Any:
         self.log("getRemote, remote = %s"%(remote))
         return self.jsonRPC.requestURL(remote, header={'Accept':'application/json'})
         
         
-    def addServer(self, payload={}):
+    def addServer(self, payload: dict = {}):
         if isinstance(payload,dict) and payload.get('name') and payload.get('host'):
             payload['online'] = True
             servers = self.getServers()
@@ -114,7 +115,7 @@ class Multiroom(object):
                     self.log('addServer, updating server = %s'%(payload))
                     self._setServers(servers)
 
-    def _delServer(self, servers={}):
+    def _delServer(self, servers: dict = {}):
         self.log('_delServer')
         def __buildMenuItem(payload):
             idx = list(servers.values()).index(payload)
@@ -187,7 +188,7 @@ class Multiroom(object):
         
     @threadit
     @staticmethod
-    def _run(self):
+    def _run(self) -> Any:
         try:    param = self.sysARG[1]
         except Exception: param = None
         if param == 'Enable_ZeroConf': 
@@ -205,5 +206,5 @@ class Multiroom(object):
         return Globals._openSettings(ctl)
 
 
-if __name__ == '__main__': Multiroom(sys.argv, _Service())._run()
+if __name__ == '__main__': Multiroom(sys.argv,None)._run()
     

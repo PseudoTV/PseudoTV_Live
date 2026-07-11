@@ -17,11 +17,12 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
+from typing import Optional
 from variables import *
 from plugin    import Plugin
      
 @threadit
-def _run(sysARG, fitem: dict={}, nitem: dict={}):
+def _run(sysARG: list, fitem: Optional[dict] = {}, nitem: Optional[dict] = {}):
     with Globals.builtin.busy_dialog():
         mode                 = sysARG[1]
         params               = {}

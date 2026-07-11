@@ -18,6 +18,7 @@
 
 # -*- coding: utf-8 -*-
 
+from typing import Any, Optional
 from variables   import *
 from predefined  import Predefined
 from resources   import Resources
@@ -32,7 +33,7 @@ class Library(object):
     channels   = Channels()
     predefined = Predefined()
     
-    def __init__(self, service=None, writable=False):
+    def __init__(self, service: Optional[_Service] = None, writable: bool = False):
         self.pCount      = 0
         self.pDialog     = None
         self.pMSG        = ''
@@ -66,28 +67,28 @@ class Library(object):
         self.resources   = Resources(service)
         
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
         
 
-    def _load(self):
+    def _load(self) -> dict:
         return Globals.settings.getCacheSetting(self.libraryKEY, FileAccess._getMD5(self.libraryKEY), default={})
     
     
-    def _save(self):
+    def _save(self) -> bool:
         if self.writable:
             self.log('_save, writable = %s'%(self.writable))
             return Globals.settings.setCacheSetting(self.libraryKEY, self.libraryDATA, FileAccess._getMD5(self.libraryKEY), -1)
         
   
-    def getLibrary(self, type=None):
+    def getLibrary(self, type: Optional[str] = None) -> Any:
         if type is None: items = self.libraryDATA.get('library',{})
         else:            items = self.libraryDATA.get('library',{}).get(type,[])
         self.log('getLibrary, type = %s, items = %s'%(type, len(items)))
         return items
         
         
-    def setLibrary(self, type, items=[]):
+    def setLibrary(self, type: str, items: list = []) -> bool:
         self.log('setLibrary, type = %s, items = %s'%(type,len(items)))
         self.libraryDATA['uuid'] = Globals.settings.getMYUUID()
         self.libraryDATA['library'][type] = items
@@ -95,11 +96,11 @@ class Library(object):
         return True if self._save() else False
 
 
-    def hasLibrary(self, type):
+    def hasLibrary(self, type: str) -> bool:
         return len(self.libraryDATA['library'].get(type,[])) > 0
         
         
-    def updateLibrary(self, types, silent=None):
+    def updateLibrary(self, types: list, silent: Optional[bool] = None) -> bool:
         complete = set()
         if silent is None: silent = not Globals.settings.showDialog(silent)
         if not Globals.properties.isRunning('Library.updateLibrary'):
@@ -118,7 +119,7 @@ class Library(object):
         return any(complete)
 
 
-    def clrLibraryCache(self, type):
+    def clrLibraryCache(self, type: str):
         self.log('clrLibraryCache, type = %s'%(type))
         with Globals.builtin.busy_dialog():
             Globals.dialog.notificationDialog(LANGUAGE(30070)%(type),time=5)
@@ -126,7 +127,7 @@ class Library(object):
 
 
     @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
-    def getPlaylists(self):
+    def getPlaylists(self) -> list:
         PlayList = []
         types = ['video','music']#,'mixed'
         for i, type in enumerate(types):
@@ -136,7 +137,7 @@ class Library(object):
             nPlayList = []
             results   = self.jsonRPC.getSmartPlaylists(type)
             for idx, result in enumerate(results):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getPlaylists, _interrupt")
                     return
                 elif not result.get('label'): continue
@@ -151,37 +152,37 @@ class Library(object):
 
     
     @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
-    def getNetworks(self):
+    def getNetworks(self) -> list:
         try:    return self.getTVInfo().get('studios',[])
-        except Exception: return []
+        except Exception as e: self.log(f'getNetworks, failed: {e}', xbmc.LOGERROR); return []
         
         
     @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
-    def getTVShows(self):
+    def getTVShows(self) -> list:
         try:    return self.getTVInfo().get('shows',[])
-        except Exception: return []
+        except Exception as e: self.log(f'getTVShows, failed: {e}', xbmc.LOGERROR); return []
         
         
     @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
-    def getTVGenres(self):
+    def getTVGenres(self) -> list:
         try:    return self.getTVInfo().get('genres',[])
-        except Exception: return []
+        except Exception as e: self.log(f'getTVGenres, failed: {e}', xbmc.LOGERROR); return []
  
-       
+        
     @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
-    def getMovieGenres(self):
+    def getMovieGenres(self) -> list:
         try:    return self.getMovieInfo().get('genres',[])
-        except Exception: return []
+        except Exception as e: self.log(f'getMovieGenres, failed: {e}', xbmc.LOGERROR); return []
               
            
     @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))  
-    def getMovieStudios(self):
+    def getMovieStudios(self) -> list:
         try:    return self.getMovieInfo().get('studios',[])
-        except Exception: return []
+        except Exception as e: self.log(f'getMovieStudios, failed: {e}', xbmc.LOGERROR); return []
         
          
     @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
-    def getMixedGenres(self):
+    def getMixedGenres(self) -> list:
         MixedGenreList = []
         tvGenres    = self.getTVGenres()
         movieGenres = self.getMovieGenres()
@@ -192,7 +193,7 @@ class Library(object):
     
 
     @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
-    def getMixedVideo(self):
+    def getMixedVideo(self) -> list:
         MixedList = []
         MixedList.append({'name':'%s Video'%(LANGUAGE(32001)), 'type':"Mixed Video",'path':self.predefined.createMixedRecent(),'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Video"})}) #"Recently Added"
         MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed Video",'path':self.predefined.createSeasonal(),'logo':self.resources.getLogo({'name':LANGUAGE(32002),'type':"Mixed Video"})}) #"Seasonal"
@@ -203,7 +204,7 @@ class Library(object):
 
 
     @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
-    def getMixedMusic(self):
+    def getMixedMusic(self) -> list:
         MixedList = []
         MixedList.append({'name':'%s Music'%(LANGUAGE(32001)), 'type':"Mixed Music",'path':self.predefined.createMusicRecent()  ,'logo':self.resources.getLogo({'name':LANGUAGE(32001),'type':"Mixed Music"})}) #"Recently Added"
         self.log('getMixedMusic, mixed = %s' % (len(MixedList)))
@@ -211,7 +212,7 @@ class Library(object):
 
 
     @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
-    def getRecommend(self):
+    def getRecommend(self) -> list:
         self.log('getRecommend')
         return []
         # PluginList = []
@@ -233,18 +234,18 @@ class Library(object):
             
 
     @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS))
-    def getServices(self):
+    def getServices(self) -> list:
         self.log('getServices')
         return []
 
 
     @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS))
-    def getMusicGenres(self):
+    def getMusicGenres(self) -> list:
         try: return self.getMusicInfo().get('genres',[])
-        except Exception: return []
+        except Exception as e: self.log(f'getMusicGenres, failed: {e}', xbmc.LOGERROR); return []
  
  
-    def getPVRRecordings(self):
+    def getPVRRecordings(self) -> list:
         recordList    = []
         self.pDialog  = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
         json_response = self.jsonRPC.getPVRRecordings()
@@ -254,12 +255,12 @@ class Library(object):
         return sorted(recordList,key=itemgetter('name'))
 
 
-    def getPVRSearches(self):
+    def getPVRSearches(self) -> list:
         searchList = []
         json_response = self.jsonRPC.getPVRSearches()
         self.pDialog  = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
         for idx, item in enumerate(json_response):
-            if self.service.pendingInterrupt:
+            if self.service.interrupt():
                 self.log("getPVRSearches, _interrupt")
                 return
             elif not item.get('file'): continue
@@ -270,7 +271,7 @@ class Library(object):
         return searchList
                 
 
-    def getTVInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
+    def getTVInfo(self, sortbycount: bool = True, limit: int = AUTOTUNE_CHANNEL_LIMIT) -> dict:
         self.log('getTVInfo')
         NetworkList = ShowGenreList = TVShowList = []
         if Globals.builtin.hasTV():
@@ -281,7 +282,7 @@ class Library(object):
             self.pDialog  = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s'%(self.pMSG,LANGUAGE(32140)), header=self.pHeader)
             json_response = self.jsonRPC.getTVshows()
             for idx, info in enumerate(json_response):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getTVInfo, _interrupt")
                     return
                 elif info.get('label'):
@@ -301,7 +302,7 @@ class Library(object):
             #search resources for studio/genre logos
             nTVShowList = []
             for idx, show in enumerate(TVShowList):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getTVInfo, _interrupt")
                     return
                 else:
@@ -313,7 +314,7 @@ class Library(object):
 
             nNetworkList = []
             for idx, network in enumerate(NetworkList):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getTVInfo, _interrupt")
                     return
                 else:
@@ -325,7 +326,7 @@ class Library(object):
             
             nShowGenreList = []
             for idx, tvgenre in enumerate(ShowGenreList):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getTVInfo, _interrupt")
                     return
                 else:
@@ -338,7 +339,7 @@ class Library(object):
         return {'studios':NetworkList,'genres':ShowGenreList,'shows':TVShowList}
 
 
-    def getMovieInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
+    def getMovieInfo(self, sortbycount: bool = True, limit: int = AUTOTUNE_CHANNEL_LIMIT) -> dict:
         self.log('getMovieInfo')
         StudioList = MovieGenreList = []
         if Globals.builtin.hasMovie(): 
@@ -348,7 +349,7 @@ class Library(object):
             json_response  = self.jsonRPC.getMovies() #we can't parse for genres directly from Kodi json ie.getGenres; because we need the weight of each genre to prioritize list.
 
             for idx, info in enumerate(json_response):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getMovieInfo, _interrupt")
                     return
                 else:
@@ -365,7 +366,7 @@ class Library(object):
             #search resources for studio/genre logos
             nStudioList = []
             for idx, studio in enumerate(StudioList):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getMovieInfo, _interrupt")
                     return
                 else:
@@ -377,7 +378,7 @@ class Library(object):
             
             nMovieGenreList = []
             for idx, genre in enumerate(MovieGenreList):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getMovieInfo, _interrupt")
                     return
                 else:
@@ -390,7 +391,7 @@ class Library(object):
         return {'studios':StudioList,'genres':MovieGenreList}
         
         
-    def getMusicInfo(self, sortbycount=True, limit=AUTOTUNE_CHANNEL_LIMIT):
+    def getMusicInfo(self, sortbycount: bool = True, limit: int = AUTOTUNE_CHANNEL_LIMIT) -> dict:
         self.log('getMusicInfo')
         MusicGenreList = []
         if Globals.builtin.hasMusic(): 
@@ -399,7 +400,7 @@ class Library(object):
             json_response  = self.jsonRPC.getMusicGenres()
             
             for idx, info in enumerate(json_response):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getMusicInfo, _interrupt")
                     return
                 else:
@@ -411,7 +412,7 @@ class Library(object):
             #search resources for studio/genre logos
             nMusicGenreList = []
             for idx, genre in enumerate(MusicGenreList):
-                if self.service.pendingInterrupt:
+                if self.service.interrupt():
                     self.log("getMusicInfo, _interrupt")
                     return
                 else:
@@ -424,12 +425,12 @@ class Library(object):
         return {'genres':MusicGenreList}
         
         
-    def getRecommendInfo(self, addonid):
+    def getRecommendInfo(self, addonid: str) -> dict:
         self.log('getRecommendInfo, addonid = %s'%(addonid))
         return self.searchRecommended().get(addonid,{})
         
 
-    def searchRecommended(self):
+    def searchRecommended(self) -> dict:
         ...#todo refactor feature
         # library.importPrompt() 
         # def _search(addonid):
@@ -450,27 +451,27 @@ class Library(object):
         # return dict([_f for _f in [_search(addonid) for addonid in addonList] if _f])
 
 
-    def getWhiteList(self):
+    def getWhiteList(self) -> list:
         #whitelist - prompt shown, added to import list and/or manager dropdown.
         return self.libraryDATA.get('whitelist',[])
         
         
-    def setWhiteList(self, data=[]):
+    def setWhiteList(self, data: list = []) -> bool:
         self.libraryDATA['whitelist'] = sorted(set(data))
         return self._save()
         
         
-    def getBlackList(self):
+    def getBlackList(self) -> list:
         #blacklist - plugin ignored for the life of the list.
         return self.libraryDATA.get('blacklist',[])
     
         
-    def setBlackList(self, data=[]):
+    def setBlackList(self, data: list = []) -> bool:
         self.libraryDATA['blacklist'] = sorted(set(data))
         return self._save()
         
         
-    def addWhiteList(self, addonid):
+    def addWhiteList(self, addonid: str) -> bool:
         self.log('addWhiteList, addonid = %s'%(addonid))
         whiteList = self.getWhiteList()
         whiteList.append(addonid)
@@ -479,7 +480,7 @@ class Library(object):
         return self.setWhiteList(whiteList)
         
 
-    def addBlackList(self, addonid):
+    def addBlackList(self, addonid: str) -> bool:
         self.log('addBlackList, addonid = %s'%(addonid))
         blackList = self.getBlackList()
         blackList.append(addonid)
@@ -487,7 +488,7 @@ class Library(object):
         return self.setBlackList(blackList)
 
 
-    def clrBlackList(self):
+    def clrBlackList(self) -> bool:
         return self.setBlackList()
 
                

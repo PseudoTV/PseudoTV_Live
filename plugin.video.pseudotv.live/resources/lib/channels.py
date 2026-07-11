@@ -18,14 +18,17 @@
 
 # -*- coding: utf-8 -*-
 
+from typing import Any, Generator, Optional, Union
+
 from variables    import *
 from multiroom  import Multiroom
 
 #todo create dataclasses for all jsons
 # https://pypi.org/project/dataclasses-json/
 class Channels(object):
+    _lock = RLock()
     
-    def __init__(self, key=None, writable=False):
+    def __init__(self, key: Optional[str] = None, writable: bool = False):
         if key is None: key = CHANNELAUTOTUNE_KEY if Globals.settings.getSettingBool('Enable_Autotune') else CHANNEL_KEY
         self.writable    = writable
         self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
@@ -35,15 +38,14 @@ class Channels(object):
         self.channelRULE = self.channelTEMP.pop('rules', {})
         self.channelTEMP['rules'] = {}
         self.channelDATA.update(self._load())
-        self.channelDATA_OLD = self.channelDATA.copy()
         self.log(f'__init__ channelKEY = {self.channelKEY}')
         
         
-    def __enter__(self):
+    def __enter__(self) -> 'Channels':
         return self
 
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]):
         try:
             if self.writable: self._save()
         except Exception as e: self.log("__exit__ save failed: %s" % e, xbmc.LOGDEBUG)
@@ -57,7 +59,7 @@ class Channels(object):
             self.log("__del__ save failed: %s" % e, xbmc.LOGDEBUG)
         
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: [%s] %s'%(self.__class__.__name__,self.channelKEY,msg),level)
 
 
@@ -68,7 +70,8 @@ class Channels(object):
         return channelDATA
     
         
-    def _verify(self, channels: list=[]):
+    def _verify(self, channels: list = []) -> Generator[dict, None, None]:
+        """Filter and yield only valid channel items with required fields."""
         for idx, citem in enumerate(channels):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
                 self.log('[%s] _verify in-valid\n%s'%(citem.get('id'),citem))
@@ -90,31 +93,35 @@ class Channels(object):
         
         
     def getChannels(self) -> list:
-        self.log('getChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
-        return sorted(self.channelDATA['channels'], key=itemgetter('number'))
+        with self._lock:
+            self.log('getChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
+            return sorted(self.channelDATA['channels'], key=itemgetter('number'))
         
         
     def getChannelbyID(self, id: str) -> list:
-        return list([c for c in self.channelDATA['channels'] if c.get('id') == id])
+        return [c for c in self.channelDATA['channels'] if c.get('id') == id]
         
         
-    def getChannelbyType(self, type: str):
-        return list([citem for citem in self.channelDATA['channels'] if citem.get('type') == type])
+    def getChannelbyType(self, type: str) -> list:
+        return [citem for citem in self.channelDATA['channels'] if citem.get('type') == type]
 
 
     def sortChannels(self, channels: list) -> list:
         try:              return sorted(channels, key=itemgetter('number'))
-        except Exception: return channels
+        except Exception as e: 
+            self.log(f'sortChannels, failed to sort by number: {e}', xbmc.LOGDEBUG)
+            return channels
 
     
-    def setChannels(self, channels=None) -> bool:
-        if channels is None: channels = self.channelDATA['channels']
-        self.channelDATA['name']     = Globals.properties.getFriendlyName()
-        self.channelDATA['uuid']     = Globals.settings.getMYUUID()
-        self.channelDATA['channels'] = self.sortChannels(list(self._verify(channels)))
-        if len(self.channelDATA['channels']) > 0: Globals.properties.setHasChannels(self.channelKEY, self.channelDATA)
-        if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
-        self.log('setChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
+    def setChannels(self, channels: Optional[list] = None) -> bool:
+        with self._lock:
+            if channels is None: channels = self.channelDATA['channels']
+            self.channelDATA['name']     = Globals.properties.getFriendlyName()
+            self.channelDATA['uuid']     = Globals.settings.getMYUUID()
+            self.channelDATA['channels'] = self.sortChannels(list(self._verify(channels)))
+            if len(self.channelDATA['channels']) > 0: Globals.properties.setHasChannels(self.channelKEY, self.channelDATA)
+            if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
+            self.log('setChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
         return self._save()
         
 
@@ -131,31 +138,37 @@ class Channels(object):
         self.channelDATA['channels'] = []
         
 
-    def delChannel(self, citem: dict=None) -> bool:
+    def delChannel(self, citem: Optional[Union[dict, list]] = None) -> bool:
+        """Delete channel(s) by ID or dict. Handles single dict or list of dicts."""
         if citem is None: citem = {}
-        if isinstance(citem,list): return any([self.delChannel(channel) for channel in citem])
-        try: 
-            self.channelDATA['channels'].pop(self.findChannel(citem)[0])
-            self.log('[%s] delChannel channel deleted!'%(citem['id']), xbmc.LOGINFO)
+        if isinstance(citem,list): return any(self.delChannel(channel) for channel in citem)
+        with self._lock:
+            try: 
+                self.channelDATA['channels'].pop(self.findChannel(citem)[0])
+                self.log('[%s] delChannel channel deleted!'%(citem['id']), xbmc.LOGINFO)
+                return True
+            except Exception as e: self.log('[%s] delChannel failed: %s'%(citem.get('id',''), e), xbmc.LOGDEBUG)
+    
+    
+    def addChannel(self, citem: Union[dict, list] = {}) -> bool:
+        """Add a channel or list of channels, removing duplicates first."""
+        if isinstance(citem,list): return any(self.addChannel(channel) for channel in citem)
+        with self._lock:
+            self.delChannel(citem)
+            self.log('[%s] addChannel adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
+            self.channelDATA.setdefault('channels',[]).append(Globals._cleanGroups(citem))
             return True
-        except Exception as e: self.log('[%s] delChannel failed: %s'%(citem.get('id',''), e), xbmc.LOGDEBUG)
-    
-    
-    def addChannel(self, citem: dict={}) -> bool:
-        if isinstance(citem,list): return any([self.addChannel(channel) for channel in citem])
-        self.delChannel(citem)
-        self.log('[%s] addChannel adding channel %s'%(citem["id"],citem["name"]), xbmc.LOGINFO)
-        self.channelDATA.setdefault('channels',[]).append(Globals._cleanGroups(citem))
-        return True
         
         
-    def findChannel(self, citem: dict={}, channels=None) -> tuple:
+    def findChannel(self, citem: dict = {}, channels: Optional[list] = None) -> tuple:
+        """Find a channel by ID, returning (index, channel) tuple or (None, {}) if not found."""
         if channels is None: channels = self.channelDATA['channels']
         if citem.get('id') is None: citem['id'] = Globals._getChannelID(citem.get('name'), citem.get('path'), citem.get('number'), uuid=self.channelDATA.get('uuid'))
-        return tuple(next(((idx, eitem) for idx, eitem in enumerate(channels) if citem['id'] == eitem.get('id', str(random.random()))), (None,{})))
+        return tuple(next(((idx, eitem) for idx, eitem in enumerate(channels) if citem['id'] == eitem.get('id', '')), (None,{})))
                     
                     
-    def _channelManager(self):
+    def _channelManager(self) -> bytes:
+        """Load and return the channel manager HTML template with placeholders replaced."""
         with FileAccess.stream(MANAGERPATH, "r") as fle:
             html_content = fle.read()
         html_content = html_content.replace("{{ channel_limit }}", str(CHANNEL_LIMIT))

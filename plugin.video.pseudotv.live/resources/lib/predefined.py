@@ -24,7 +24,7 @@ _SHOW_YEAR_RE = re.compile(r'(.*) \((.*)\)', re.IGNORECASE)
 
 class Predefined(object):
     @staticmethod
-    def getTemplete():
+    def getTemplete() -> dict:
         return {"type":"","rules":{"and":[],"or":[]},"order":{"direction":"ascending","method":"random","ignorearticle":True,"useartistsortname":True}}
 
 

@@ -18,6 +18,7 @@
 
 # -*- coding: utf-8 -*-
 
+from typing import Any, Optional
 from variables import *
 from library   import Library
 
@@ -31,7 +32,7 @@ class XSP(object):
         self.predefined = self.library.predefined
 
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
     
     
@@ -75,8 +76,8 @@ class XSP(object):
         return ""
       
 
-    def parseXSP(self, id, file):
-        def _createDXSP(tvshow, sort=None, operator='is'):
+    def parseXSP(self, id: str, file: str) -> list:
+        def _createDXSP(tvshow: str, sort: Optional[dict] = None, operator: str = 'is') -> dict:
             if sort is None: sort = {'order':'ascending','method':'episode'}
             param = {"type":"episodes","rules":{"and":[],"or":[]},"order":{"direction":sort.get('order','ascending'),"method":sort.get('method','episode'),"ignorearticle":True,"useartistsortname":True}}
             try:
@@ -126,7 +127,7 @@ class XSP(object):
         return [file]
             
 
-    def parseDXSP(self, id, file, filters=None, incExtras=None):
+    def parseDXSP(self, id: str, file: str, filters: Optional[dict] = None, incExtras: Optional[bool] = None) -> str:
         if filters is None:
             filters = {}
         if incExtras is None:

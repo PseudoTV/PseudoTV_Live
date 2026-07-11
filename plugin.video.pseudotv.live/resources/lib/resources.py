@@ -18,8 +18,10 @@
 
 # -*- coding: utf-8 -*-
 
+from typing import Any, Optional
+
 from variables    import *
-from kodi         import _get_Service
+from _services    import _Service
 from seasonal     import Seasonal 
 from intergration import OpenRouter
 from cache        import cacheit
@@ -35,8 +37,8 @@ _NON_ALNUM_RE = re.compile(r'[^a-zA-Z0-9\s&]')
 _MULTI_WS_RE  = re.compile(r'\s+')
 
 class Resources(object):
-    def __init__(self, service=None):
-        if service is None: service = _get_Service()
+    def __init__(self, service: Optional[_Service] = None):
+        if service is None: service = _Service()
         self.remoteHost  = Globals.properties.getRemoteHost()
         self.processID   = Globals.properties.getProcessID()
         
@@ -55,7 +57,7 @@ class Resources(object):
         self.openRouter  = OpenRouter(service)
         
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
 
@@ -71,7 +73,7 @@ class Resources(object):
         return logos
 
 
-    def queueLogo(self, chname):
+    def queueLogo(self, chname: str) -> str:
         if hasattr(self.service,'logoQue'):
             try: self.service.logoQue.add(chname)
             except Exception as e: self.log(f'queueLogo failed!\n{e}', xbmc.LOGWARNING)
@@ -84,7 +86,7 @@ class Resources(object):
             self.log(f'pruneimageCache = {len(self.imageCache)}')
 
 
-    def getImageCache(self, chname, fallback=LOGO):
+    def getImageCache(self, chname: str, fallback: str = LOGO) -> str:
         # Use OrderedDict LRU behavior: move to end on access
         try:
             image = self.imageCache.get(chname)
@@ -99,7 +101,7 @@ class Resources(object):
         except Exception as e: self.log('getImageCache failed: %s' % e, xbmc.LOGWARNING)
 
 
-    def setImageCache(self, chname, image=None):
+    def setImageCache(self, chname: str, image: Optional[str] = None) -> Optional[str]:
         if image:
             try:
                 self.imageCache[chname] = image
@@ -111,7 +113,7 @@ class Resources(object):
         return image
 
 
-    def getLogo(self, citem: dict, fallback=LOGO, lookup=False) -> str:
+    def getLogo(self, citem: dict, fallback: str = LOGO, lookup: bool = False) -> str:
         try:
             logo = None
             if not logo and citem.get('name') == LANGUAGE(32002): logo = self.holiday.get('logo') # seasonal
@@ -129,7 +131,7 @@ class Resources(object):
         return LOGO
 
 
-    def _buildWebImage(self, name, image=None, fallback=LOGO):
+    def _buildWebImage(self, name: Optional[str], image: Optional[str] = None, fallback: str = LOGO) -> str:
         image = Globals._cleanImage(image)
         if name and image is None: 
             return self._buildWebImage(None, OrderedDict(Globals.settings.getCacheSetting('imageCache', default={})).get(name), f'http://{Globals.properties.getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logo/{Globals._quoteString(name)}')
@@ -143,7 +145,7 @@ class Resources(object):
         
         
     @cacheit(expiration=datetime.timedelta(minutes=5))
-    def getLocalLogo(self, chname: str, select: bool=False) -> list:
+    def getLocalLogo(self, chname: str, select: bool = False) -> list:
         logos = []
         for path in LOCAL_FOLDERS:
             for ext in IMG_EXTS:
@@ -156,13 +158,13 @@ class Resources(object):
         return None
 
 
-    def getLogoResources(self, citem: dict, select: bool=False) -> dict and None:
+    def getLogoResources(self, citem: dict, select: bool = False) -> Optional[dict]:
         self.log('getLogoResources, chname = %s, type = %s, select = %s'%(citem.get('name'), citem.get('type'),select))
 
-        def __getResources(type):
+        def __getResources(type: str) -> list:
             return Globals.settings.getSetting('Resource_Logos').split('|')
 
-        def __exists(path):
+        def __exists(path: str) -> bool:
             return FileAccess.exists(path)
 
         resources     = __getResources(citem.get('type','Custom'))
@@ -185,7 +187,7 @@ class Resources(object):
         return cacheResponse
 
 
-    def getTVShowLogo(self, chname: str, select: bool=False):
+    def getTVShowLogo(self, chname: str, select: bool = False) -> Optional[dict]:
         self.log('getTVShowLogo, chname = %s, select = %s'%(chname,select))
         cacheName     = 'getTVShowLogo.%s.%s'%(FileAccess._getMD5(chname),select)
         cacheResponse = self.cache.get(cacheName)
@@ -211,7 +213,7 @@ class Resources(object):
         return cacheResponse
 
 
-    def getNames(self, chname: str, type: str="Custom") -> list:
+    def getNames(self, chname: str, type: str = "Custom") -> list:
         if not chname: return []
         variations = {chname} # original name
         variations.add(Globals._cleanChannelSuffix(chname, type)) # Remove Suffix
@@ -229,7 +231,7 @@ class Resources(object):
         return sorted(list(final_results))
             
         
-    def isMono(self, file: str, mono: bool=False) -> bool:
+    def isMono(self, file: str, mono: bool = False) -> bool:
         if   file.startswith('resource://') and (bool(set([match in file.lower() for match in ['transparent','white','mono']]))):
             return True
         elif file.startswith('http'):
@@ -252,9 +254,9 @@ class Resources(object):
         return mono
 
 
-    def generateLocal(self, text, background=os.path.join(MEDIA_LOC,'blank.png'),
-                      font_path=FileAccess.translatePath(os.path.join('special://skin/fonts','arial.ttf')),
-                      font_size=120, text_color=(255,255,255,255)):
+    def generateLocal(self, text: str, background: str = os.path.join(MEDIA_LOC,'blank.png'),
+                      font_path: str = FileAccess.translatePath(os.path.join('special://skin/fonts','arial.ttf')),
+                      font_size: int = 120, text_color: tuple = (255,255,255,255)) -> Optional[str]:
         """
         Generates a placeholder image with text on a background image.
 
@@ -303,21 +305,21 @@ class Resources(object):
             except Exception as e: self.log(f'generateLocal failed!\n{e}', xbmc.LOGERROR)
 
 
-    def generateOnline(self, citem, select=False):
+    def generateOnline(self, citem: dict, select: bool = False) -> Optional[str]:
         if self.openRouter:
             try: return self.openRouter.getImage(citem, 3 if select else 1, Globals.settings.getSetting('Generative_Image_Model'), select)
             except Exception as e: self.log(f'generateOnline failed!: {e}', xbmc.LOGERROR)
                 
                 
     @cacheit(expiration=datetime.timedelta(minutes=15))
-    def getTexture(self, url):
+    def getTexture(self, url: str) -> Optional[str]:
         textures = self.jsonRPC.getTextures()
         image = next((texture for texture in textures if texture.get('cachedurl','').lower() == url.lower()),None)
         self.log('getTexture, url = %s\nimage = %s'%(url,image))
         if not image is None: return f'special://userdata/Thumbnails/{image}'
         
 
-    def setTexture(self, url):
+    def setTexture(self, url: str) -> str:
         image = f'{Globals.properties.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'
         self.log('setTexture, url = %s\nimage = %s'%(url,image))
         self.jsonRPC.requestURL(image)

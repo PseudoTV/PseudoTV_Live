@@ -19,11 +19,12 @@
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
+from typing import Any, Optional
 from variables import *
 from resources import Resources
 
 class Busy(xbmcgui.WindowXMLDialog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         self.isLocked = kwargs.pop('isLocked', False)
         super().__init__(*args, **kwargs)
                 
@@ -37,7 +38,7 @@ class Busy(xbmcgui.WindowXMLDialog):
         except Exception as e:
             LOG(f"Busy: Failed to modify UI Control 41 spinner element: {str(e)}", xbmc.LOGERROR)
 
-    def onAction(self, act):
+    def onAction(self, act: xbmcgui.Action):
         actionId = act.getId()
         if actionId == 0 or not actionId: return
         LOG(f"Busy: onAction, actionId = {actionId}, isLocked = {self.isLocked}")
@@ -48,7 +49,7 @@ class Busy(xbmcgui.WindowXMLDialog):
                 Globals.dialog.notificationDialog(LANGUAGE(32260))
                 
 class Background(xbmcgui.WindowXMLDialog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         self.service = kwargs.pop('service', None)
         super().__init__(*args, **kwargs)
         
@@ -59,7 +60,7 @@ class Background(xbmcgui.WindowXMLDialog):
         self.fitem = playing_item.get('fitem', {})
         self.nitem = playing_item.get('nitem', {})
       
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def onInit(self):
@@ -75,7 +76,9 @@ class Background(xbmcgui.WindowXMLDialog):
             start_val = self.nitem.get('start')
             if start_val:
                 try:              nextTime = Globals._epochTime(start_val).strftime('%I:%M%p')
-                except Exception: nextTime = ""
+                except Exception: 
+                    self.log(f'onInit, failed to format nextTime from {start_val}', xbmc.LOGDEBUG)
+                    nextTime = ""
                     
             if not nextTime: nextTime = Globals.builtin.getInfoLabel('VideoPlayer.NextStartTime')
             if not nextTime:
@@ -115,7 +118,7 @@ class Background(xbmcgui.WindowXMLDialog):
 class Replay(xbmcgui.WindowXMLDialog):
     closing = False
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         self.service = kwargs.pop('service', None)
         super().__init__(*args, **kwargs)
         
@@ -126,10 +129,10 @@ class Replay(xbmcgui.WindowXMLDialog):
         self.citem   = playing_item.get('citem', {})
         self.fitem   = playing_item.get('fitem', {})
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
         
-    def show_dialog(self):
+    def show_dialog(self) -> bool:
         if not self.player or not self.fitem:  return False
         replay_pct = getattr(self.player, 'replayPercentage', 0)
         max_pct = getattr(self.player, 'maxProgress', 100)
@@ -145,7 +148,7 @@ class Replay(xbmcgui.WindowXMLDialog):
                 self.log(f"show_dialog fallback fail: {str(e)}", xbmc.LOGERROR)
         return False
         
-    def _isVisible(self, control):
+    def _isVisible(self, control: xbmcgui.Control) -> bool:
         try:              
             return control.isVisible()
         except Exception: 
@@ -164,7 +167,7 @@ class Replay(xbmcgui.WindowXMLDialog):
             self.log(f"onInit failed: {str(e)}", xbmc.LOGERROR)
             self.close()
 
-    def _run(self, control):
+    def _run(self, control: xbmcgui.Control):
         try:
             wait = OSD_TIMER * 2
             tot  = wait
@@ -173,7 +176,7 @@ class Replay(xbmcgui.WindowXMLDialog):
             while not self.monitor.abortRequested():
                 if self.service._shutdown(CPU_CYCLE) or self._isVisible(control) or self.closing: 
                     break
-                self.service._sleep(int(CPU_CYCLE * 1000))
+                self.service.sleep(int(CPU_CYCLE * 1000))
                     
             while not self.monitor.abortRequested():
                 if self.service._shutdown(CPU_CYCLE) or wait < 0 or self.closing or not self.player.isPlayingPseudoTV(): 
@@ -184,7 +187,7 @@ class Replay(xbmcgui.WindowXMLDialog):
                     control.setAnimations([('Conditional', f'effect=zoom start={prog-20},100 end={prog},100 time=1000 center={xpos},100 condition=True')])
                 
                 wait -= CPU_CYCLE
-                self.service._sleep(int(CPU_CYCLE * 1000))
+                self.service.sleep(int(CPU_CYCLE * 1000))
             
             control.setAnimations([('Conditional', f'effect=fade start={prog if "prog" in locals() else 100} end=0 time=240 delay=0.240 condition=True')])
             control.setVisible(False)
@@ -194,7 +197,7 @@ class Replay(xbmcgui.WindowXMLDialog):
         finally:
             self.close()
 
-    def onAction(self, act):
+    def onAction(self, act: xbmcgui.Action):
         actionId = act.getId()
         self.log(f"onAction: actionId = {actionId}")
         self.closing = True
@@ -218,7 +221,7 @@ class Replay(xbmcgui.WindowXMLDialog):
 
 
 class Overlay:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         service = kwargs.get('service', None)
         if service is None: return
         self.service    = service
@@ -257,19 +260,20 @@ class Overlay:
         
         try:    
             self.channelBugX, self.channelBugY = literal_eval(Globals.settings.getSetting("Channel_Bug_Position_XY"))
-        except Exception: 
+        except Exception as e: 
+            self.log(f'initOverlays, failed to parse Channel_Bug_Position_XY: {e}', xbmc.LOGDEBUG)
             self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
-    def _hasControl(self, control):
+    def _hasControl(self, control: xbmcgui.Control) -> bool:
         return control in self.cntrlManager
 
-    def _isVisible(self, control):
+    def _isVisible(self, control: str) -> bool:
         return self.cntrlManager.get(control, False)
 
-    def _setVisible(self, control, state: bool = False):
+    def _setVisible(self, control: xbmcgui.Control, state: bool = False) -> bool:
         if control is None: return False
         try:
             control.setVisible(state)
@@ -279,7 +283,7 @@ class Overlay:
             self._delControl(control)
             return False
 
-    def _addControl(self, control):
+    def _addControl(self, control: xbmcgui.Control):
         if control is None: return
         if not self._hasControl(control):
             try: 
@@ -289,7 +293,7 @@ class Overlay:
                 self.log(f"_addControl failed: {str(e)}", xbmc.LOGERROR)
                 self._delControl(control)
         
-    def _delControl(self, control):
+    def _delControl(self, control: xbmcgui.Control):
         if self._hasControl(control):
             try: self.window.removeControl(control)
             except Exception as e: self.log(f"_delControl context ejection failure: {str(e)}", xbmc.LOGERROR)
@@ -329,7 +333,7 @@ class Overlay:
             self.log('enableChannelBug, logo = %s, channelBugColor = %s, window = (%s,%s)'%(logo,self.channelBugColor,self.window_h, self.window_w))
             
         
-    def toggleOnNext(self, state: bool = None):
+    def toggleOnNext(self, state: Optional[bool] = None):
         if state is None: state = bool(Globals.settings.getSettingInt('OnNext_Mode'))
         if state and self.onnext is None and self.jsonRPC:
             next_item = self.jsonRPC.getNextItem(self.citem, self.nitem)
@@ -363,7 +367,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
     remaining = 0
     intTime   = 0
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         
         self.service        = kwargs.pop('service', None)
@@ -385,7 +389,8 @@ class OnNext(xbmcgui.WindowXMLDialog):
                 
         try:    
             self.onNextX, self.onNextY = literal_eval(self.onNextPosition)
-        except Exception: 
+        except Exception as e: 
+            self.log(f'initOverlays, failed to parse OnNext_Position_XY: {e}', xbmc.LOGDEBUG)
             self.onNextX = abs(int(self.window_w // 9))
             self.onNextY = abs(int(self.window_h // 16) - self.window_h) - 356 
     
@@ -406,7 +411,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
             return True
         return False
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
     def onInit(self):
@@ -426,7 +431,8 @@ class OnNext(xbmcgui.WindowXMLDialog):
 
                 try: 
                     nextTime = Globals._epochTime(self.nitem['start']).strftime('%I:%M%p') 
-                except Exception:
+                except Exception as e:
+                    self.log(f'updateItem, failed to format nextTime: {e}', xbmc.LOGDEBUG)
                     nextTime = Globals.builtin.getInfoLabel('VideoPlayer.NextStartTime')
 
                 if not nextTime: return
@@ -463,7 +469,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                         if self.service._shutdown(CPU_CYCLE) or not self.player.isPlayingPseudoTV() or show < 1: 
                             break
                         show -= CPU_CYCLE
-                        self.service._sleep(CPU_CYCLE)
+                        self.service.sleep(CPU_CYCLE)
                         
                     self.onNext_Text.setVisible(False)
                     self.onNext_Artwork.setVisible(False)
@@ -478,19 +484,19 @@ class OnNext(xbmcgui.WindowXMLDialog):
                 if self.service._shutdown(CPU_CYCLE) or not self.player.isPlayingPseudoTV() or wait < 1: 
                     break
                 wait -= CPU_CYCLE
-                self.service._sleep(CPU_CYCLE)
+                self.service.sleep(CPU_CYCLE)
                 
         except Exception as e: self.log(f"_run: notification task loop crash failure: {str(e)}", xbmc.LOGERROR)
 
-    def _updateUpNext(self, nowItem: dict = None, nextItem: dict = None):
+    def _updateUpNext(self, nowItem: Optional[dict] = None, nextItem: Optional[dict] = None):
         if nowItem is None: nowItem = {}
         if nextItem is None: nextItem = {}
         
         self.log('_updateUpNext')
-        data = {}
+        data: dict = {}
         try:
             data["notification_offset"] = int(floor(self.player.getRemainingTime())) + OSD_TIMER
-            def _map(item):
+            def _map(item: dict) -> dict:
                 return {
                     "episodeid" : item.get("id", ""),
                     "tvshowid"  : item.get("tvshowid", ""),
@@ -513,7 +519,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         except Exception as e:
             self.log(f"_updateUpNext structural payload packaging failed: {str(e)}", xbmc.LOGERROR)
 
-    def onAction(self, act):
+    def onAction(self, act: xbmcgui.Action):
         actionId = act.getId()
         self.log(f"onAction: actionId = {actionId}")
         self.closing = True

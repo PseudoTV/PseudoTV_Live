@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from typing import List, Dict
+from typing import List, Dict, Iterator
 import random
 from operator import itemgetter
 from variables import FileAccess, Globals, SETTINGS, PROPERTIES, LANGUAGE, xbmc, log, CHANNELFLE_DEFAULT, CHANNEL_LIMIT
@@ -24,15 +24,15 @@ class Channels:
         self.channelTEMP: Dict = FileAccess.getJSON(CHANNEL_ITEM)
         self.channelDATA.update(self._load())
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s' % (self.__class__.__name__, msg), level)
 
-    def _load(self, file=CHANNELFLEPATH) -> Dict[str, List[Channel]]:
+    def _load(self, file: str = CHANNELFLEPATH) -> Dict[str, List[Channel]]:
         channelDATA = FileAccess.getJSON(file)
         self.log('_load, channels = %s' % (len(channelDATA.get('channels', []))))
         return channelDATA
 
-    def _verify(self, channels: List[Channel] = []):
+    def _verify(self, channels: List[Channel] = []) -> Iterator[Channel]:
         for idx, citem in enumerate(self.channelDATA.get('channels', [])):
             if not citem.name or not citem.id or len(citem.path) == 0:
                 self.log('_verify, in-valid citem [%s]\n%s' % (citem.id, citem))
@@ -40,7 +40,7 @@ class Channels:
             else:
                 yield citem
 
-    def _save(self, file=CHANNELFLEPATH) -> bool:
+    def _save(self, file: str = CHANNELFLEPATH) -> bool:
         self.channelDATA['uuid'] = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
         self.log('_save, channels = %s' % (len(self.channelDATA['channels'])))

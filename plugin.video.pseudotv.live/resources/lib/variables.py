@@ -17,6 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
+from typing import Any, Optional, Sequence
 from constants   import *
 from fileaccess  import FileAccess, FileLock
 from kodi        import Kodi, Settings, Properties, ListItems, Builtin, Dialog
@@ -66,7 +67,7 @@ class Globals:
         re.IGNORECASE)
 
     @staticmethod
-    def _encodePlot(plot, text):
+    def _encodePlot(plot: str, text: str) -> str:
         return '%s [COLOR item="%s"][/COLOR]'%(plot,FileAccess._encodeString(text))
         
     @staticmethod
@@ -80,29 +81,29 @@ class Globals:
     # String Encoding/Decoding Utilities
     # =========================================================================
     @staticmethod
-    def _escapeString(text, table=HTML_ESCAPE):
+    def _escapeString(text: str, table: dict = HTML_ESCAPE) -> str:
         return escape(text,table)
     
     @staticmethod
-    def _unescapeString(text, table=HTML_ESCAPE):
+    def _unescapeString(text: str, table: dict = HTML_ESCAPE) -> str:
         return unescape(text,{v:k for k, v in list(table.items())})
 
     @staticmethod
-    def _quoteString(text):
+    def _quoteString(text: str) -> str:
         return urllib.parse.quote(text)
 
     @staticmethod
-    def _unquoteString(text):
+    def _unquoteString(text: str) -> str:
         return urllib.parse.unquote(text)
     
     @staticmethod
-    def _getAbbr(text):
+    def _getAbbr(text: str) -> str:
         words = text.split(' ')
         if len(words) > 1: return '%s.%s.'%(words[0][0].upper(),words[1][0].upper())
         else:              return words[0][0].upper()
 	   
     @staticmethod
-    def _slugify(s, lowercase=False):
+    def _slugify(s: str, lowercase: bool = False) -> str:
         if lowercase: s = s.lower()
         s = s.strip()
         s = re.sub(r'[^\w\s-]', '', s)
@@ -114,15 +115,15 @@ class Globals:
     # Kodi UI / Dialog Helpers
     # =========================================================================
     @staticmethod
-    def _notificationDialog(msg, header=ADDON_NAME, time=PROMPT_DELAY, logo=LOGO_COLOR):
+    def _notificationDialog(msg: str, header: str = ADDON_NAME, time: int = PROMPT_DELAY, logo: str = LOGO_COLOR):
         xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, msg, time*1000, logo))
 
     @staticmethod
-    def _getInfoLabel(key, default=''):
+    def _getInfoLabel(key: str, default: str = '') -> str:
         return (xbmc.getInfoLabel(key) or default)
         
     @staticmethod
-    def _openSettings(ctl=(0,1), id=ADDON_ID):
+    def _openSettings(ctl: tuple = (0,1), id: str = ADDON_ID) -> bool:
         xbmc.executebuiltin(f'Addon.OpenSettings({id})')
         xbmc.sleep(100)
         xbmc.executebuiltin('SetFocus(%i)'%(ctl[0]-200))
@@ -131,7 +132,7 @@ class Globals:
         return True
 
     @staticmethod
-    def _openGuide(instanceName=ADDON_NAME):
+    def _openGuide(instanceName: str = ADDON_NAME):
         def __match(match):
             for name in FileAccess.listdir('pvr://channels/tv/')[0]:
                 if name.lower().startswith(urllib.parse.quote(match.lower())):
@@ -148,7 +149,7 @@ class Globals:
     # Media / Artwork Helpers
     # =========================================================================
     @staticmethod  
-    def _getThumb(item={}, opt=0): #unify thumbnail artwork
+    def _getThumb(item: dict = {}, opt: int = 0) -> str: #unify thumbnail artwork
         art  = None
         keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
                 1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
@@ -164,7 +165,7 @@ class Globals:
         return {0:LOGO_LANDSCAPE,1:LOGO_POSTER}[opt]
 
     @staticmethod
-    def _getDummyIcon(text, background=COLOR_BACKGROUND, color=COLOR_TEXT):
+    def _getDummyIcon(text: Any, background: str = COLOR_BACKGROUND, color: str = COLOR_TEXT) -> str:
         if not isinstance(text, (str,bytes)): text = str(text)
         url  = f'https://dummyimage.com/512x512/{background}/{color}.png&text={urllib.parse.quote(text)}'
         file = os.path.join(TEMP_LOC,f'{FileAccess._getMD5(url)}.png')
@@ -173,7 +174,7 @@ class Globals:
         return ICON
           
     @staticmethod
-    def _cleanImage(image=''):
+    def _cleanImage(image: str = '') -> str:
         if image is None: image = ''
         if not image.startswith(('image://','resource://','special://','smb://','nfs://','https://','http://')):
             realPath = FileAccess.translatePath('special://home/addons/')
@@ -187,7 +188,7 @@ class Globals:
     # List / Dict Utilities
     # =========================================================================
     @staticmethod  
-    def _findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
+    def _findItemsInLST(items: list, values: Any, item_key: str = 'getLabel', val_key: str = '', index: bool = True) -> list:
         if not values: return [-1]
         if not isinstance(values,list): values = [values]
         matches = []
@@ -213,16 +214,16 @@ class Globals:
         return matches
         
     @staticmethod  
-    def _setDictLST(lst=[]): #set lst of dicts then return
+    def _setDictLST(lst: list = []) -> list: #set lst of dicts then return
         return [FileAccess.loadJSON(s) for s in list(OrderedDict.fromkeys([FileAccess.dumpJSON(d) for d in lst]))]
     
     @staticmethod  
-    def _mergeDict(dict1={},dict2={},key='label'):
+    def _mergeDict(dict1: list = {},dict2: list = {},key: str = 'label') -> list:
         # dict = [{ "key": ""}, {"key": ""}]
         return list({d[key]: d for d in dict1 + dict2}.values())
         
     @staticmethod  
-    def _mergeDictLST(dict1={},dict2={}):
+    def _mergeDictLST(dict1: dict = {},dict2: dict = {}) -> dict:
         # dict = { "key": [], "key": []}
         for k, v in list(dict2.items()):
             dict1.setdefault(k,[]).extend(v)
@@ -230,7 +231,7 @@ class Globals:
         return dict1
         
     @staticmethod  
-    def _lstSetDictLst(lst=[]):
+    def _lstSetDictLst(lst: dict = {}) -> dict:
         items = dict()
         for key, dictlst in list(lst.items()):
             if isinstance(dictlst, list): dictlst = Globals._setDictLST(dictlst)
@@ -238,13 +239,13 @@ class Globals:
         return items
         
     @staticmethod  
-    def diffLSTDICT(old, new):
+    def diffLSTDICT(old: list, new: list) -> dict:
         set1 = {FileAccess.dumpJSON(d, sortkey=True) for d in old}
         set2 = {FileAccess.dumpJSON(d, sortkey=True) for d in new}
         return {"added": [FileAccess.loadJSON(s) for s in set2 - set1], "removed": [FileAccess.loadJSON(s) for s in set1 - set2]}
             
     @staticmethod  
-    def _cleanGroups(citem={}):
+    def _cleanGroups(citem: dict = {}) -> dict:
         if Globals.settings.getSetting('Enable_Grouping') == "true":
             #Default
             if ADDON_NAME not in citem.get('group'): citem.setdefault('group',[]).append(ADDON_NAME)
@@ -261,7 +262,7 @@ class Globals:
         return citem
              
     @staticmethod
-    def _randomShuffle(items):
+    def _randomShuffle(items: Any) -> Any:
         if isinstance(items, dict):
             return {key: Globals._randomShuffle(items[key]) for key in Globals._randomShuffle(list(items.keys()))}
         elif isinstance(items, (list, tuple)):
@@ -279,24 +280,24 @@ class Globals:
         return random.sample(items_list, len(items_list) if x < 0 or x > len(items_list) else x)
         
     @staticmethod
-    def double_urlencode(text):
+    def double_urlencode(text: str) -> str:
         text = Globals.single_urlencode(text)
         text = Globals.single_urlencode(text)
         return text
 
     @staticmethod  
-    def single_urlencode(text):
+    def single_urlencode(text: str) -> str:
         text = urllib.parse.urlencode({'blahblahblah':text})
         text = text[13:]
         return text
         
     @staticmethod
-    def _getCountry(type=xbmc.ISO_639_1):
+    def _getCountry(type: int = xbmc.ISO_639_1) -> str:
         try: return xbmc.getLanguage(type, region=True).split('-')[1].upper() # Results in "US", "GB", etc.
         except Exception: return "GB"
             
     @staticmethod
-    def _getLanguage(type=xbmc.ISO_639_1):
+    def _getLanguage(type: int = xbmc.ISO_639_1) -> str:
         local = xbmc.getLanguage(type, region=True).replace('_', '-')
         parts = local.split('-')
         if len(parts) == 2:
@@ -304,7 +305,7 @@ class Globals:
         return local.lower()
             
     @staticmethod
-    def _cleanMPAA(mpaa):
+    def _cleanMPAA(mpaa: str) -> str:
         orgMPA = mpaa
         mpaa = mpaa.lower()
         if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex
@@ -321,42 +322,42 @@ class Globals:
         return mpaa
         
     @staticmethod
-    def _percentDiff(org, new):
+    def _percentDiff(org: float, new: float) -> float:
         try: return (abs(round(org) - round(new)) / round(new)) * 100.0
         except ZeroDivisionError: return -1
             
     @staticmethod
-    def _isStack(path): #is path a stack
+    def _isStack(path: str) -> bool: #is path a stack
         return path.startswith('stack://')
 
     @staticmethod
-    def _splitStacks(path): #split stack path for indv. files.
+    def _splitStacks(path: str) -> list: #split stack path for indv. files.
         if not Globals._isStack(path): return [path]
         return [_f for _f in ((path.split('stack://')[1]).split(' , ')) if _f]
 
     @staticmethod
-    def _isFiller(item={}):
+    def _isFiller(item: dict = {}) -> bool:
         lowers = map(str.lower, ROLL_TYPES)
         genres = item.get('genre',[])
         if not isinstance(genres,list) and ' / ' in genres: genres = genres.split(' / ')
         return any(genre.lower() in lowers for genre in genres)
 
     @staticmethod
-    def _validString(s):
+    def _validString(s: str) -> str:
         return "".join(x for x in s if (x.isalnum() or x not in '\\/:*?"<>|'))
         
     @staticmethod
-    def _stripNumber(s):
+    def _stripNumber(s: str) -> str:
         return re.sub(r'\d+','',s)
     
     @staticmethod
-    def _stripRegion(s):
+    def _stripRegion(s: str) -> str:
         match = Globals._SPLIT_YEAR_RE.search(s)
         try:    return match.group(1)
         except Exception: return s
 
     @staticmethod
-    def _splitYear(label):
+    def _splitYear(label: str) -> tuple:
         try:
             match = Globals._SPLIT_YEAR_RE.search(label)
             if match and match.group(2):
@@ -367,28 +368,28 @@ class Globals:
         return label, None
 
     @staticmethod
-    def _chanceBool(percent=25):
+    def _chanceBool(percent: int = 25) -> bool:
         return random.randrange(100) < percent
 
     # =========================================================================
     # Channel ID / Name Utilities
     # =========================================================================
     @staticmethod
-    def _getChannelID(name, path, number, uuid=None):
+    def _getChannelID(name: str, path: Any, number: int, uuid: Optional[str] = None) -> str:
         if uuid is None: uuid = Globals.settings.getMYUUID()
         if isinstance(path, list): path = '|'.join(path)
         tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
         return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
     
     @staticmethod
-    def _getRecordID(name, path, number, uuid=None):
+    def _getRecordID(name: str, path: Any, number: int, uuid: Optional[str] = None) -> str:
         if uuid is None: uuid = Globals.settings.getMYUUID()
         if isinstance(path, list): path = '|'.join(path)
         tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
         return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:16]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
 
     @staticmethod
-    def _getChannelSuffix(name, type):
+    def _getChannelSuffix(name: str, type: str) -> str:
         name = Globals._validString(name)
         if   type == "TV Genres"    and not LANGUAGE(32014).lower() in name.lower(): suffix = LANGUAGE(32014) #TV
         elif type == "Movie Genres" and not LANGUAGE(32015).lower() in name.lower(): suffix = LANGUAGE(32015) #Movies
@@ -398,7 +399,7 @@ class Globals:
         return '%s %s'%(name,suffix)
      
     @staticmethod
-    def _cleanChannelSuffix(name, type):
+    def _cleanChannelSuffix(name: str, type: str) -> str:
         if   type == "TV Genres"    : name = name.split(' %s'%LANGUAGE(32014))[0]#TV
         elif type == "Movie Genres" : name = name.split(' %s'%LANGUAGE(32015))[0]#Movies
         elif type == "Mixed Genres" : name = name.split(' %s'%LANGUAGE(32010))[0]#Mixed
@@ -406,7 +407,7 @@ class Globals:
         return name
                 
     @staticmethod
-    def _getLabel(item, addYear=False):
+    def _getLabel(item: dict, addYear: bool = False) -> str:
         label = (item.get('name') or item.get('label') or item.get('showtitle') or item.get('title'))
         if not label: return ''
         label, year = Globals._splitYear(label)
@@ -415,7 +416,7 @@ class Globals:
         return label
        
     @staticmethod
-    def _hasFile(file):
+    def _hasFile(file: str) -> bool:
         if not file.startswith(tuple(VFS_TYPES + WEB_TYPES)): state = FileAccess.exists(file)
         elif   file.startswith('plugin://'):                  state = Globals.settings.hasAddon(file)
         else:                                                 state = True
@@ -426,48 +427,50 @@ class Globals:
     # Time / DateTime Utilities
     # =========================================================================
     @staticmethod
-    def _roundTimeDown(dt=None, offset=30): # round the given time down to the nearest
+    def _roundTimeDown(dt: Optional[float] = None, offset: int = 30) -> float: # round the given time down to the nearest
         if dt is None: dt = time.time()
         offset_seconds = offset * 60
         return (dt // offset_seconds) * offset_seconds
         
     @staticmethod
-    def _roundTimeUp(dt=None, roundTo=60):
+    def _roundTimeUp(dt: Optional[float] = None, roundTo: int = 60) -> float:
         if dt is None: dt = time.time()
         round_seconds = roundTo * 60
         return ((dt + round_seconds - 1) // round_seconds) * round_seconds
        
     @staticmethod
-    def _strpTime(datestring, format=DTJSONFORMAT): #convert pvr infolabel datetime string to datetime obj, thread safe!
+    def _strpTime(datestring: str, format: str = DTJSONFORMAT) -> Any: #convert pvr infolabel datetime string to datetime obj, thread safe!
         try:              return datetime.datetime.strptime(datestring, format)
         except TypeError: return datetime.datetime.fromtimestamp(time.mktime(time.strptime(datestring, format)))
-        except Exception:           return ''
+        except Exception as e: 
+            LOG(f'_strpTime, failed to parse datestring={datestring} format={format}: {e}', xbmc.LOGWARNING)
+            return ''
        
     @staticmethod
-    def _epochTime(timestamp, tz=True): #convert pvr json datetime string to datetime obj
+    def _epochTime(timestamp: float, tz: bool = True) -> Any: #convert pvr json datetime string to datetime obj
         if tz: timestamp -= Globals._getTimeoffset()
         return datetime.datetime.fromtimestamp(timestamp)
 
     @staticmethod
-    def _getTimeoffset():
+    def _getTimeoffset() -> int:
         return (int((datetime.datetime.now() - datetime.datetime.utcnow()).days * 86400 + round((datetime.datetime.now() - datetime.datetime.utcnow()).seconds, -1)))
         
     @staticmethod
-    def _getUTCstamp():
+    def _getUTCstamp() -> float:
         return time.time() - Globals._getTimeoffset()
 
     @staticmethod
-    def _getGMTstamp():
+    def _getGMTstamp() -> float:
         return time.time()
 
     @staticmethod
-    def _escapeDirJSON(path):
+    def _escapeDirJSON(path: str) -> str:
         mydir = path
         if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
         return mydir
 
     @staticmethod
-    def _KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
+    def _KODI_LIVETV_SETTINGS() -> dict: #recommended Kodi LiveTV settings
         return {'pvrmanager.preselectplayingchannel' :'true',
                 'pvrmanager.syncchannelgroups'       :'true',
                 'pvrmanager.backendchannelorder'     :'true',
@@ -481,14 +484,14 @@ class Globals:
                'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
     @staticmethod
-    def _isRadio(item):
+    def _isRadio(item: dict) -> bool:
         if item.get('radio',False) or item.get('type') == "Music Genres": return True
         for path in item.get('path',[item.get('file','')]):
             if path.lower().startswith(('musicdb://','special://profile/playlists/music/','special://musicplaylists/')): return True
         return False
 
     @staticmethod
-    def _cleanLabel(text):
+    def _cleanLabel(text: str) -> str:
         text = re.sub(r'\[COLOR=(.+?)\]', '', text)
         text = re.sub(r'\[/COLOR\]', '', text)
         text = text.replace("[B]",'').replace("[/B]",'')
@@ -496,45 +499,45 @@ class Globals:
         return text.replace(":",'')
 
     @staticmethod
-    def _combineDicts(dict1={}, dict2={}):
+    def _combineDicts(dict1: dict = {}, dict2: dict = {}) -> dict:
         return {**dict1, **dict2}
         
     @staticmethod
-    def _compareDict(dict1,dict2,sortKey):
+    def _compareDict(dict1: list, dict2: list, sortKey: str) -> bool:
         a = sorted(dict1, key=itemgetter(sortKey))
         b = sorted(dict2, key=itemgetter(sortKey))
         return a == b
         
     @staticmethod
-    def _subZoom(number,percentage,multi=100):
+    def _subZoom(number: float, percentage: float, multi: int = 100) -> int:
         return round(number * (percentage*multi) / 100)
         
     @staticmethod
-    def _addZoom(number,percentage,multi=100):
+    def _addZoom(number: float, percentage: float, multi: int = 100) -> int:
         return round((number - (number * (percentage*multi) / 100)) + number)
        
     @staticmethod
-    def _frange(start,stop,inc):
+    def _frange(start: int, stop: int, inc: int) -> list:
         return [x/10.0 for x in range(start,stop,inc)]
         
     @staticmethod
-    def _timeString2Seconds(string): #hh:mm:ss
+    def _timeString2Seconds(string: str) -> int: #hh:mm:ss
         try:    return int(sum(x*y for x, y in zip(list(map(float, string.split(':')[::-1])), (1, 60, 3600, 86400))))
         except Exception: return -1
 
     @staticmethod
-    def _chunkLst(lst, n):
+    def _chunkLst(lst: list, n: int):
         for i in range(0, len(lst), n):
             yield lst[i:i + n]
 
     @staticmethod
-    def _chunkDict(items, n):
+    def _chunkDict(items: dict, n: int):
         it = iter(items)
         for i in range(0, len(items), n):
             yield {k:items[k] for k in islice(it, n)}
         
     @staticmethod
-    def _roundupDIV(p, q):
+    def _roundupDIV(p: int, q: int) -> int:
         try:
             d, r = divmod(p, q)
             if r: d += 1
@@ -543,67 +546,61 @@ class Globals:
             return 1
        
     @staticmethod
-    def _interleave(seqs, sets=1, repeats=False): 
+    def _interleave(seqs: list, sets: int = 1, repeats: bool = False) -> list: 
         #evenly interleave multi-lists of different sizes, while preserving seq order and by sets of x
-        # In         [[1,2,3,4],['a','b','c'],['A','B','C','D','E']]
-        # repeats = False
-        # Out sets=0 [1, 2, 3, 4, 'a', 'b', 'c', 'A', 'B', 'C', 'D', 'E']
-        # Out sets=1 [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'D', 'E']
-        # Out sets=2 [1, 2, 'a', 'b', 'A', 'B', 3, 4, 'c', 'C', 'D', 'E']
-        # repeats = True
-        # Out sets=0 [1, 2, 3, 4, 'a', 'b', 'c', 'A', 'B', 'C', 'D', 'E']
-        # Out sets=1 [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'a', 'D', 1, 'b', 'E']
-        # Out sets=2 [1, 2, 'a', 'b', 'A', 'B', 3, 4, 'c', 'a', 'C', 'D', 1, 2, 'b', 'c', 'E', 'A']
+        # In: [[1,2,3,4],['a','b','c'],['A','B','C','D','E']]
+        # repeats = False:
+        #   sets=0: [1, 2, 3, 4, 'a', 'b', 'c', 'A', 'B', 'C', 'D', 'E']
+        #   sets=1: [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'D', 'E']
+        #   sets=2: [1, 2, 'a', 'b', 'A', 'B', 3, 4, 'c', 'C', 'D', 'E']
+        # repeats = True:
+        #   sets=1: [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'a', 'D', 1, 'b', 'E']
+        #   sets=2: [1, 2, 'a', 'b', 'A', 'B', 3, 4, 'c', 'a', 'C', 'D', 1, 2, 'b', 'c', 'E', 'A']
         if sets > 0:
-            # if repeats:
-                # # Create cyclical iterators for each list
-                # cyclical_iterators = [cycle(lst) for lst in seqs]
-                # interleaved = []
-                # # Determine the length of the longest list
-                # max_len = max((len(lst) for lst in seqs))
-                # # Calculate the number of blocks needed
-                # num_blocks = (max_len + sets - 1) // sets
-                # # Interleave in blocks
-                # for i in range(num_blocks):
-                    # for iterator in cyclical_iterators:
-                        # # Use islice to take a block of elements from the current iterator
-                        # block = list(islice(iterator, sets))
-                        # interleaved.extend(block)
-                # return interleaved
-            # else:
-            seqs = [list(zip_longest(*[iter(seqs)] * sets, fillvalue=None)) for seqs in seqs]
-            return list([_f for _f in sum([_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f], ()) if _f])
+            if repeats:
+                cyclical_iterators = [cycle(lst) for lst in seqs]
+                interleaved = []
+                max_len = max((len(lst) for lst in seqs))
+                num_blocks = (max_len + sets - 1) // sets
+                for i in range(num_blocks):
+                    for iterator in cyclical_iterators:
+                        block = list(islice(iterator, sets))
+                        interleaved.extend(block)
+                return interleaved
+            else:
+                seqs = [list(zip_longest(*[iter(seqs)] * sets, fillvalue=None)) for seqs in seqs]
+                return list([_f for _f in sum([_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f], ()) if _f])
         else: return list(chain.from_iterable(seqs))
 
     @staticmethod
-    def _pagination(list, end):
+    def _pagination(list: list, end: int):
         for start in range(0, len(list), end):
             yield list[start:start+end]
 
     @staticmethod
-    def _isCenterlized():
+    def _isCenterlized() -> bool:
         default = f'special://profile/addon_data/{ADDON_ID}/cache'
         if Globals.settings.getSetting('User_Folder') == default: return True
         return False
     
     @staticmethod
-    def _isShort(item={}, minDuration=None):
+    def _isShort(item: dict = {}, minDuration: Optional[int] = None) -> bool:
         if minDuration is None: minDuration = Globals.settings.getSettingInt('Seek_Tolerance')
         if item.get('duration', minDuration) < minDuration: return True
         else: return False
    
     @staticmethod
-    def _isEnding(progress=100):
+    def _isEnding(progress: int = 100) -> bool:
         if progress >= Globals.settings.getSettingInt('Seek_Threshold'): return True
         else: return False
 
     @staticmethod
-    def _chkLogo(old, new=LOGO):
+    def _chkLogo(old: str, new: str = LOGO) -> str:
         if new.endswith('wlogo.png') and not old.endswith('wlogo.png'): return old
         return new
         
     @staticmethod
-    def _parseSE(filename):
+    def _parseSE(filename: str) -> tuple:
         match = Globals._PARSE_SE_RE.search(filename)
         if match:
             res = {k: v for k, v in match.groupdict().items() if v is not None}
@@ -613,9 +610,9 @@ class Globals:
         return -1, -1
 
     @staticmethod
-    def _hasURLencoding(s):
+    def _hasURLencoding(s: str) -> bool:
         return bool(re.search(r'%[0-9a-fA-F]{2}', s))
     
     @staticmethod
-    def __escape_html(s): 
+    def __escape_html(s: str) -> str: 
         return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")

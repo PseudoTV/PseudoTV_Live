@@ -17,17 +17,20 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
+from typing import Any, Callable, Optional
 from variables   import *
 from fileaccess  import FileAccess
 
-def cacheit(expiration=datetime.timedelta(minutes=15), checksum=None):
-    def internal(method):
+def cacheit(expiration: datetime.timedelta = datetime.timedelta(minutes=15), checksum: Any = None) -> Callable:
+    """Decorator that caches function results in the instance's cache, keyed by arguments."""
+    def internal(method: Callable) -> Callable:
         @wraps(method)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             nonlocal checksum
             instance = args[0]
-            if checksum is None: checksum = ADDON_VERSION# checksum=Globals.properties.getProcessID()
+            if checksum is None: checksum = ADDON_VERSION
             cache_checksum = checksum() if callable(checksum) else checksum
+            cache_checksum = instance.cache.getChecksum(cache_checksum)
             cache_segments = [f"{instance.__class__.__name__}.{method.__name__}"]
             for item in args[1:]:
                 if isinstance(item, (str, int, float, bool)) or item is None:
@@ -47,10 +50,10 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=None):
             
             results = instance.cache.get(cacheName, cache_checksum)
             if results is not None:
-                xbmc.log(f'{method.__qualname__.replace(".", ": ")}, cacheit returning cache', xbmc.LOGDEBUG)
+                LOG(f'{method.__qualname__.replace(".", ": ")}, cacheit returning cache', xbmc.LOGDEBUG)
                 return results
                 
-            xbmc.log(f'{method.__qualname__.replace(".", ": ")}, cacheit saving results', xbmc.LOGDEBUG)
+            LOG(f'{method.__qualname__.replace(".", ": ")}, cacheit saving results', xbmc.LOGDEBUG)
             value = method(*args, **kwargs)
             instance.cache.set(cacheName, value, cache_checksum, expiration)
             return value
@@ -58,24 +61,24 @@ def cacheit(expiration=datetime.timedelta(minutes=15), checksum=None):
     return internal
     
 class Cache(object):
-    def __init__(self, mem_cache=False, disable_cache=False):
-        self.monitor = xbmc.Monitor()
+    def __init__(self, mem_cache: bool = False, disable_cache: bool = False):
+        self.monitor = MONITOR()
         self.cache   = _Cache(monitor=self.monitor)
         self.cache.enable_mem_cache = mem_cache
         self.disable_cache = (disable_cache or REAL_SETTINGS.getSetting('Disable_Cache') == 'true')
         self.log('__init__, mem_cache=%s, disable_cache=%s, db=%s' % (mem_cache, self.disable_cache, self.cache.dbfile), xbmc.LOGINFO)
 
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        xbmc.log('%s [%s]: %s' % (self.__class__.__name__, {True:'MEM|DB',False:'DB'}[self.cache.enable_mem_cache], msg), level)
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
+        LOG('%s [%s]: %s' % (self.__class__.__name__, {True:'MEM|DB',False:'DB'}[self.cache.enable_mem_cache], msg), level)
 
-    def set(self, name, value, checksum=None, expiration=datetime.timedelta(minutes=15)):
+    def set(self, name: str, value: Any, checksum: Any = None, expiration: datetime.timedelta = datetime.timedelta(minutes=15)) -> Any:
         if checksum is None: checksum = ADDON_VERSION
-        if not any([self.disable_cache,value is None]):
+        if not any((self.disable_cache,value is None)):
             self.cache._set(name, value, checksum, expiration)
             self.log('set [%s], type=%s, expires=%s, value=%.64s' % (name, type(value).__name__, expiration, str(value)))
         return value
 
-    def get(self, name, checksum=None):
+    def get(self, name: str, checksum: Any = None) -> Optional[Any]:
         if checksum is None: checksum = ADDON_VERSION
         if not self.disable_cache:
             try:
@@ -86,7 +89,7 @@ class Cache(object):
                 self.log("get [%s] failed: %s" % (name, e), xbmc.LOGERROR)
                 self.cache._clr(name)
 
-    def clear(self, name):
+    def clear(self, name: str):
         self.log('clr, name = %s' % name)
         self.cache._clr(name)
 
@@ -96,18 +99,21 @@ class Cache(object):
     def shutdown(self):
         self.cache._shutdown()
 
+    def getChecksum(self, stringinput: Any) -> int:
+        return self.cache.getChecksum(stringinput)
+
 class _Cache(object):
     _lock            = RLock() 
     global_checksum  = '1.0.0'
     enable_mem_cache = False
     clean_interval   = MAX_GUIDEDAYS * 86400
 
-    def __init__(self, monitor=None, winID=10000):
+    def __init__(self, monitor: Any = None, winID: int = 10000):
         self.monitor        = monitor
         self.window         = xbmcgui.Window(winID)
-        self.max_bytes      = self.getFreeMEM()
+        self.max_entries    = MAX_CACHE_SIZE
         self.dbfile         = FileAccess.translatePath(CACHE_FLE)
-        self.timeout        = int(REAL_SETTINGS.getSetting('API_Timeout'))
+        self.timeout        = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         self._trim          = False
         self._clean         = False
         self._exit          = False
@@ -119,10 +125,11 @@ class _Cache(object):
         try: self._chkClean()
         except AttributeError: pass
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        xbmc.log('%s: %s' % (self.__class__.__name__, msg), level)
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
+        LOG('%s: %s' % (self.__class__.__name__, msg), level)
 
-    def _open(self):
+    def _open(self) -> Optional[sqlite3.Connection]:
+        """Open or connect to the SQLite database, creating the cache table if needed."""
         with self._lock:
             retries = 0
             while not self.monitor.abortRequested() and retries < LOCK_MAX_FILE_TIMEOUT:
@@ -150,7 +157,8 @@ class _Cache(object):
                     break
             return None
                     
-    def _execute_sql(self, query, data=None):
+    def _execute_sql(self, query: str, data: Any = None) -> Optional[sqlite3.Cursor]:
+        """Execute a SQL query with optional data, handling executemany for lists of tuples."""
         with self._lock:
             if self._exit:
                 return None
@@ -175,7 +183,8 @@ class _Cache(object):
                     self.log(f"SQL Error during [{query[:48]}]: {e}", xbmc.LOGERROR)
                     return None
 
-    def _get(self, endpoint, checksum=""):
+    def _get(self, endpoint: str, checksum: Any = "") -> Optional[Any]:
+        """Retrieve a cached value by endpoint, checking memory cache first if enabled."""
         checksum = self.getChecksum(checksum)
         cur_time = self.getTimestamp(datetime.datetime.now())
         with self._lock:
@@ -184,7 +193,8 @@ class _Cache(object):
                 if result is not None: return result
             return self._getDB(endpoint, checksum, cur_time)
 
-    def _set(self, endpoint, data, checksum="", delta_time=-1):
+    def _set(self, endpoint: str, data: Any, checksum: Any = "", delta_time: Any = -1):
+        """Store data in cache, writing to both memory and database if enabled."""
         checksum = self.getChecksum(checksum)
         expires  = delta_time
         if isinstance(delta_time, datetime.timedelta):
@@ -195,11 +205,13 @@ class _Cache(object):
             query = "INSERT OR REPLACE INTO cache(id, expires, data, checksum) VALUES (?, ?, ?, ?)"
             self._execute_sql(query, (endpoint, expires, FileAccess.dumpPICKLE(data), checksum))
 
-    def _clr(self, endpoint):
+    def _clr(self, endpoint: str):
+        """Delete all cache entries matching the endpoint prefix."""
         query = "DELETE FROM cache WHERE id LIKE ?"
         self._execute_sql(query, (endpoint + '%',))
 
-    def _getDB(self, endpoint, checksum, cur_time):
+    def _getDB(self, endpoint: str, checksum: Any, cur_time: int) -> Optional[Any]:
+        """Fetch a value from the database cache, checking expiration and checksum validity."""
         query  = "SELECT expires, data, checksum FROM cache WHERE id = ?"
         cursor = self._execute_sql(query, (endpoint,))
         cache_data = cursor.fetchone() if cursor else None
@@ -217,7 +229,8 @@ class _Cache(object):
             self.log("_getDB [%s]: Decoding failed: %s" % (endpoint, e))
             return None
 
-    def _getMEM(self, endpoint, checksum, cur_time):
+    def _getMEM(self, endpoint: str, checksum: Any, cur_time: int) -> Optional[Any]:
+        """Retrieve a value from the in-memory window property cache."""
         try: 
             raw_data = self.window.getProperty('%s.%s' % (ADDON_ID, endpoint))
             if not raw_data: return None
@@ -229,11 +242,12 @@ class _Cache(object):
             self.log("_getMEM [%s]: %s" % (endpoint, e), xbmc.LOGDEBUG)
         return None
 
-    def _setMEM(self, endpoint, checksum, expires, data):
+    def _setMEM(self, endpoint: str, checksum: Any, expires: int, data: Any):
+        """Store a value in the in-memory window property cache, evicting if entry count limit exceeded."""
         try:
+            if len(self._cache_idx) >= self.max_entries: return
             encoded_data = FileAccess._encodeString((expires, data, checksum))
             item_size = sys.getsizeof(encoded_data)
-            if item_size > self.max_bytes: return
             with self._lock:
                 self.window.setProperty('%s.%s' % (ADDON_ID, endpoint), str(encoded_data))
                 self._cache_idx.append((endpoint, item_size))
@@ -241,6 +255,7 @@ class _Cache(object):
             self.log("_setMEM failed: %s" % e)
 
     def _chkClean(self):
+        """Check if the cache needs periodic cleanup based on last execution time."""
         cur_time = self.getTimestamp(datetime.datetime.now())
         try:
             lastexec = self.window.getProperty("%s.CACHE.LastExecuted" % (ADDON_ID))
@@ -254,23 +269,23 @@ class _Cache(object):
             self._trimMEM()
              
     def _trimMEM(self):
+        """Evict oldest in-memory cache entries until entry count fits within max_entries."""
         if not self._exit and not self._trim:
             try:
                 self._trim = True
-                current_total = sum(size for _, size in self._cache_idx)
                 initial_count = len(self._cache_idx)
-                while not self.monitor.abortRequested() and current_total > self.max_bytes and self._cache_idx:
+                while not self.monitor.abortRequested() and len(self._cache_idx) > self.max_entries:
                     endpoint, size = self._cache_idx.popleft()
                     self.window.clearProperty('%s.%s' % (ADDON_ID, endpoint))
-                    current_total -= size
                 trimmed = initial_count - len(self._cache_idx)
-                if trimmed: self.log('_trimMEM, evicted %d entries (%.1fMB -> %.1fMB, max=%.1fMB)' % (trimmed, (current_total + sum(s for _, s in self._cache_idx)) / 1048576, current_total / 1048576, self.max_bytes / 1048576), xbmc.LOGDEBUG)
+                if trimmed: self.log('_trimMEM, evicted %d entries (count: %d -> %d, max=%d)' % (trimmed, initial_count, len(self._cache_idx), self.max_entries), xbmc.LOGDEBUG)
             except Exception as e: 
                 self.log("_trimMEM failed: %s" % e, xbmc.LOGERROR)
             finally: 
                 self._trim = False
 
-    def purge(self):
+    def purge(self) -> bool:
+        """Drop and recreate the cache table, clearing all persisted data."""
         with self._lock:
             try:
                 if self._database is None:
@@ -294,6 +309,7 @@ class _Cache(object):
                 return False
             
     def _checkpoint(self):
+        """Force a WAL checkpoint to flush the write-ahead log to the main database file."""
         with self._lock:
             if self._database and not self._exit and not self._checkpointing:
                 try:
@@ -306,6 +322,7 @@ class _Cache(object):
                     self._checkpointing = False 
 
     def _shutdown(self):
+        """Commit pending changes, checkpoint WAL, and close the database connection."""
         with self._lock:
             if self._database and not self._exit:
                 try:
@@ -319,26 +336,16 @@ class _Cache(object):
                     try: self._database.close()
                     except Exception as e: self.log("_shutdown close failed: %s" % e, xbmc.LOGDEBUG)
                     self._database = None
-                    self._exit = False
                     self.log('_shutdown, database closed', xbmc.LOGINFO)
 
-    def getChecksum(self, stringinput):
+    def getChecksum(self, stringinput: Any) -> int:
+        """Generate an Adler32 checksum from the global checksum combined with the input string."""
         if not stringinput and not self.global_checksum: return ADDON_VERSION
         combined = "%s-%s" % (self.global_checksum, stringinput) if self.global_checksum else str(stringinput)
         return zlib.adler32(combined.encode(DEFAULT_ENCODING)) & 0xffffffff
         
     @staticmethod
-    def getTimestamp(date_time):
+    def getTimestamp(date_time: datetime.datetime) -> int:
+        """Convert a datetime object to a Unix timestamp integer."""
         try:              return int(date_time.timestamp())
         except Exception: return int(time.mktime(date_time.timetuple()))
-
-    @staticmethod
-    def getFreeMEM():
-        try:
-            raw_mem = xbmc.getInfoLabel('System.FreeMemory')
-            free = int("".join(c for c in raw_mem if c.isdigit()))
-        except Exception: 
-            free = 1024 
-        pct = int(REAL_SETTINGS.getSetting('Cache_MEM_Limit') or "10")
-        return floor(free * (pct / 100)) * 1024 * 1024
-        

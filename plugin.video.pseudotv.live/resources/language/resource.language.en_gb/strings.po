@@ -634,7 +634,7 @@ msgid "Resume Later"
 msgstr ""
 
 msgctxt "#30153"
-msgid "Restart Percentage"
+msgid "Restart (Percentage)"
 msgstr ""
 
 msgctxt "#30154"
@@ -826,7 +826,7 @@ msgid "Received"
 msgstr ""
 
 msgctxt "#30201"
-msgid "JSONRPC Wait"
+msgid "JSONRPC Wait (Seconds)"
 msgstr ""
 
 msgctxt "#30202"
@@ -934,7 +934,7 @@ msgid "Enable Smart Shuffling"
 msgstr ""
 
 msgctxt "#30227"
-msgid "System Memory Limit Percentage."
+msgid "System Memory Limit (Percentage)."
 msgstr ""
 
 msgctxt "#30228"
@@ -2168,11 +2168,11 @@ msgid "PVR Callback - Play channel as if from a PVR backend.\nPlaylist - Queue c
 msgstr ""
 
 msgctxt "#33061"
-msgid "Adjust (in seconds) to ignore differentials between load times and live offset. [60secs Default] *see wiki for details."
+msgid "Adjust (Seconds) to ignore differentials between load times and live offset. [60secs Default] *see wiki for details."
 msgstr ""
 
 msgctxt "#33062"
-msgid "Adjust (by percentage) to ignore loading content near the end of its runtime. [98% Default] / [100% Disables]. *see wiki for details."
+msgid "Adjust (Percentage) to ignore loading content near the end of its runtime. [98% Default] / [100% Disables]. *see wiki for details."
 msgstr ""
 
 msgctxt "#33063"
@@ -2245,7 +2245,7 @@ msgid "Restore the last channel backup."
 msgstr ""
 
 msgctxt "#33109"
-msgid "Adjust delay between Kodi API requests (in seconds) to avoid collisions.\nIncreasing value decreases performance; while adding system stability. [1 Default]"
+msgid "Adjust delay between Kodi API requests (Seconds) to avoid collisions.\nIncreasing value decreases performance; while adding system stability. [1 Default]"
 msgstr ""
 
 msgctxt "#33110"
@@ -2433,7 +2433,7 @@ msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\n
 msgstr ""
 
 msgctxt "#33201"
-msgid "How long to wait for Kodi response in seconds [-1 Disabled Default]\nPervent system hangs while waiting for a lengthy response."
+msgid "How long to wait for Kodi response (Seconds) [-1 Disabled Default]\nPervent system hangs while waiting for a lengthy response."
 msgstr ""
 
 msgctxt "#33202"
@@ -2473,7 +2473,7 @@ msgid "Change the default A.I. generative prompt use {name} and {group} along wi
 msgstr ""
 
 msgctxt "#33222"
-msgid "How long to wait in seconds before PseudoTV attempts to correct failed playback. [90 Default]"
+msgid "How long to wait (Seconds) before PseudoTV attempts to correct failed playback. [90 Default]"
 msgstr ""
 
 msgctxt "#33224"
@@ -2489,7 +2489,7 @@ msgid "Enable Smart Shuffling\nChanges may propagate slowly over time and may no
 msgstr ""
 
 msgctxt "#33227"
-msgid "System Memory limit by percentage cache can utilize."
+msgid "System Memory limit (Percentage) cache can utilize."
 msgstr ""
 
 msgctxt "#33228"

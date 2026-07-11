@@ -17,13 +17,14 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
+from typing import Any, Optional, Tuple, List, Dict
 from variables import *
 
 class Utilities(object):
     
     @staticmethod
-    def buildMenu(select=None):        
-        def __buildMenuItem(item):
+    def buildMenu(select: Optional[int] = None):        
+        def __buildMenuItem(item: Dict[str, Any]):
             return Globals.listitems.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon'))
         
         items = [
@@ -52,7 +53,7 @@ class Utilities(object):
     
     
     @staticmethod
-    def _runCleanup(full=False):
+    def _runCleanup(full: bool = False):
         if Globals.dialog.yesnoDialog('Utilities: %s ?'%( LANGUAGE(32119) if full else LANGUAGE(32120) )): 
             with Globals.builtin.busy_dialog(lock=True), Globals.properties.interruptActivity():
                 LOG('Utilities: _runCleanup, full %s'%(full))
@@ -85,7 +86,7 @@ class Utilities(object):
         Globals.dialog.notificationDialog(LANGUAGE(32025))
             
     @staticmethod
-    def _runRestart():
+    def _runRestart() -> bool:
         return Globals.properties.setPendingRestart()
         
     @staticmethod
@@ -123,7 +124,7 @@ class Utilities(object):
     @staticmethod
     def showChangeLOG():
         try:  
-            def __addColor(text):
+            def __addColor(text: str) -> str:
                 text = text.replace('- Added'      ,'[COLOR=green][B]- Added:[/B][/COLOR]')
                 text = text.replace('- Implemented','[COLOR=green][B]- Implemented:[/B][/COLOR]')
                 text = text.replace('- Introduced' ,'[COLOR=green][B]- Introduced:[/B][/COLOR]')
@@ -157,22 +158,24 @@ class Utilities(object):
                 return text  
                 
             with Globals.builtin.busy_dialog():
-                with FileAccess.stream(CHANGELOG_FLE) as fle:
-                    txt = __addColor(fle.read())
+                try: CHANGELOG_URL
+                except:
+                    with FileAccess.stream(CHANGELOG_FLE) as fle:
+                        txt = __addColor(fle.read())
                 Globals.dialog.textviewer(txt, heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: LOG('Utilities: showChangelog failed! %s'%(e), xbmc.LOGERROR)
 
     @staticmethod
     def qrDebug():
-        def __cleanLog(content):           
+        def __cleanLog(content: str) -> str:           
             content = re.sub('//.+?:.+?@'                  ,'//USER:PASSWORD@'     , content)
             content = re.sub('<user>.+?</user>'            ,'<user>USER</user>'    , content)
             content = re.sub('<pass>.+?</pass>'            ,'<pass>PASSWORD</pass>', content)
             content = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", '0.0.0.0'             , content)
             return content
                 
-        def __cleanPayload(payload):
-            def __getDebug(payload): #only post errors
+        def __cleanPayload(payload: Dict[str, Any]) -> Dict[str, Any]:
+            def __getDebug(payload: Dict[str, Any]) -> Dict[str, Any]: #only post errors
                 debug = payload.get('debug',{})
                 # [debug.pop(key) for key in list(debug.keys()) if key in ['LOGDEBUG','LOGINFO']]
                 return debug
@@ -183,7 +186,7 @@ class Utilities(object):
             [payload.pop(key) for key in ['host','remotes','bonjour','library','servers'] if key in payload]
             return payload
         
-        def __postLog(data):
+        def __postLog(data: str) -> Tuple[bool, str]:
             try:
                 session = requests.Session()
                 response = session.post('https://paste.kodi.tv/' + 'documents', data=data.encode(DEFAULT_ENCODING), headers={'User-Agent':'%s: %s'%(ADDON_ID, ADDON_VERSION)})
@@ -217,12 +220,12 @@ class Utilities(object):
                 return Globals.builtin.executebuiltin('RunScript(script.kodi.loguploader)')
         
     @staticmethod
-    def _runUpdate(full=False):
+    def _runUpdate(full: bool = False):
         LOG('Utilities: _runUpdate, full = %s'%(full))
         Globals.properties.setPropTimer('chkChanged')# Refresh Channel Changed!
               
     @staticmethod
-    def openPositionUtil(idx):
+    def openPositionUtil(idx: int):
         LOG('Utilities: openPositionUtil, idx = %s'%(idx))
         if not Globals.properties.isRunning('Utilities.openPositionUtil'):
             with Globals.properties.chkRunning('Utilities.openPositionUtil'):
@@ -248,7 +251,7 @@ class Utilities(object):
         
             
     @threadit
-    def _run(self, sysARG):
+    def _run(self, sysARG: List[str]):
         with Globals.builtin.busy_dialog():
             ctl = (0,1)
             try:              param = sysARG[1]

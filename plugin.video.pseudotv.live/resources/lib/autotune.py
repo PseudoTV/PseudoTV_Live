@@ -18,27 +18,28 @@
 
 # -*- coding: utf-8 -*-
 
+from typing import Optional
 from variables    import *
 from manager    import Manager
 from library    import Library
 from channels   import Channels
 
 class Autotune(object):    
-    def __init__(self, sysARG=sys.argv):
+    def __init__(self, sysARG: list = sys.argv):
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG  = sysARG 
         
         
-    def log(self, msg, level=xbmc.LOGDEBUG):
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
 
-    def _runTune(self, start=1, count=None):                
+    def _runTune(self, start: int = 1, count: Optional[int] = None) -> bool:                
         autoChannels = Globals.settings.getSettingBool('Autotuned_Channels')
         if not autoChannels:
             hasChannels  = Globals.properties.hasChannels()
             hasLibrary   = any(Globals.properties.hasLibrary(ty) for ty in AUTOTUNE_TYPES)
-            if count is None: count = AUTOTUNE_LIMIT
+            if count is None: count = AUTOTUNE_CHANNEL_LIMIT
             self.log(f'_runTune, Count = {count}, hasChannels = {hasChannels}, hasLibrary = {hasLibrary}')
             
             if not hasChannels and hasLibrary:
@@ -46,7 +47,7 @@ class Autotune(object):
                 hasServers = Globals.properties.hasServers()
                 self.log(f'_runTune, hasBackup = {hasBackup}, hasServers = {hasServers}')
                 while not MONITOR().abortRequested():
-                    retval = Globals.dialog.yesnoDialog(message='%s\n%s'%(LANGUAGE(32042)%(ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254))
+                    retval = Globals.dialog.yesnoDialog(message='%s %s'%(LANGUAGE(32042)%(ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254))
                     if retval == 0: #No
                         return True if hasChannels else Globals._openSettings()
                     elif retval == 1: #Yes

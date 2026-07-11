@@ -1,0 +1,55 @@
+# ============================================
+# Agent / Opencode / Development Tools
+# ============================================
+
+# AGENTS.md - Agent configuration (root)
+AGENTS.md
+
+# Session backups
+SESSION_BACKUP.md
+
+# Test infrastructure
+tests/
+pytest.ini
+.pytest_cache/
+__pycache__/
+
+# Graphify knowledge graph
+graphify-out/
+
+# Code review graph / MCP cache
+code-review-graph/
+
+# Opencode local config
+.opencode/
+.opencode.json
+
+# ============================================
+# Python / Build artifacts
+# ============================================
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# ============================================
+# OS / Editor
+# ============================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# ============================================
+# Kodi / Addon specific
+# ============================================
+*.tmp
+*.bak

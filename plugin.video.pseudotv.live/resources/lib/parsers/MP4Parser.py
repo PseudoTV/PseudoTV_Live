@@ -17,6 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from variables import *
+from typing import Any, Dict, Optional, Tuple, Union
 
 class MP4DataBlock:
     def __init__(self):
@@ -102,7 +103,7 @@ class MP4Parser:
         return dur
 
 
-    def find_boxes(self, f, start_offset=0, end_offset=float("inf")):
+    def find_boxes(self, f: Any, start_offset: int = 0, end_offset: float = float("inf")) -> Dict[bytes, Tuple[int, int]]:
         """Returns a dictionary of all the data boxes and their absolute starting
         and ending offsets inside the mp4 file. Specify a start_offset and end_offset to read sub-boxes.
         
@@ -160,7 +161,7 @@ class MP4Parser:
         return boxes
 
 
-    def scan_mvhd(self, f, offset):
+    def scan_mvhd(self, f: Any, offset: int) -> int:
         """Parse the Movie Header (mvhd) box to extract duration.
         
         Args:
@@ -219,7 +220,7 @@ class MP4Parser:
             return 0
 
 
-    def get_track_duration(self, f, moov_boxes):
+    def get_track_duration(self, f: Any, moov_boxes: Dict[bytes, Tuple[int, int]]) -> int:
         """Fallback method to get duration from track (trak) boxes.
         
         This method is used when mvhd box is missing or fails to provide duration.
@@ -261,7 +262,7 @@ class MP4Parser:
             return 0
 
 
-    def scan_tkhd(self, f, offset):
+    def scan_tkhd(self, f: Any, offset: int) -> int:
         """Parse the Track Header (tkhd) box to extract duration.
         
         The tkhd box contains track-specific information including duration.
@@ -314,7 +315,7 @@ class MP4Parser:
             return 0
 
 
-    def readHeader(self):
+    def readHeader(self) -> int:
         """Legacy header reading method for backward compatibility.
         
         Returns:
@@ -389,7 +390,7 @@ class MP4Parser:
             self.MovieHeader.duration = 0
 
 
-    def readBlock(self):
+    def readBlock(self) -> MP4DataBlock:
         """Read an MP4 box header.
         
         Returns:

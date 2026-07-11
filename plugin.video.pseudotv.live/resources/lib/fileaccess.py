@@ -18,13 +18,14 @@
 #
 # -*- coding: utf-8 -*-
 from variables   import *
+from typing import Any, Generator, Iterator, List, Optional, Tuple, Union
 
 class FileAccess(object):
     _JSON_CACHE_MAX = 512
     _json_cache = OrderedDict()
 
     @staticmethod
-    def _getMD5(data):
+    def _getMD5(data: Any) -> str:
         if not isinstance(data, (str, bytes, bytearray)):
             data = FileAccess.dumpJSON(data, sortkey=True)
         if isinstance(data, str):
@@ -32,7 +33,8 @@ class FileAccess(object):
         return hashlib.md5(data).hexdigest()
 
     @staticmethod
-    def _encodeString(data=''):
+    def _encodeString(data: str = "") -> str:
+        """Compress and base64-encode a value for safe storage."""
         if not data:
             return ""
         try:
@@ -44,7 +46,8 @@ class FileAccess(object):
         return ""
 
     @staticmethod
-    def _decodeString(data=''):
+    def _decodeString(data: str = "") -> Any:
+        """Decode and decompress a base64-encoded value."""
         if not data:
             return ""
         try:
@@ -59,7 +62,8 @@ class FileAccess(object):
         return ""
 
     @staticmethod
-    def dumpPICKLE(item=None):
+    def dumpPICKLE(item: Any = None) -> bytes:
+        """Serialize an object to bytes using pickle protocol 4."""
         if item is None:
             return b""
         try:
@@ -74,7 +78,8 @@ class FileAccess(object):
         return b""
 
     @staticmethod
-    def loadPICKLE(item=None):
+    def loadPICKLE(item: Any = None) -> Any:
+        """Deserialize a pickle bytes stream or string back to an object."""
         if not item:
             return None
         try:
@@ -90,7 +95,8 @@ class FileAccess(object):
         return None
 
     @staticmethod
-    def dumpJSON(item=None, idnt=None, sortkey=False, separators=(',', ':')):
+    def dumpJSON(item: Any = None, idnt: Optional[int] = None, sortkey: bool = False, separators: Tuple[str, str] = (',', ':')) -> str:
+        """Serialize an object to a JSON string with optional indentation and sorting."""
         try:
             if item is None:
                 return '{}'
@@ -109,7 +115,8 @@ class FileAccess(object):
         return '{}'
 
     @staticmethod
-    def loadJSON(item=""):
+    def loadJSON(item: str = "") -> Any:
+        """Deserialize a JSON string with LRU caching for small strings."""
         if not item:
             return {}
         try:
@@ -121,7 +128,7 @@ class FileAccess(object):
                 cached = FileAccess._json_cache.get(item)
                 if cached is not None:
                     FileAccess._json_cache.move_to_end(item)
-                    return cached.copy()
+                    return cached.copy() if hasattr(cached, 'copy') else cached
                 result = json.loads(item)
                 FileAccess._json_cache[item] = result
                 if len(FileAccess._json_cache) > FileAccess._JSON_CACHE_MAX:
@@ -135,7 +142,8 @@ class FileAccess(object):
         return item
 
     @staticmethod
-    def getJSON(file_path):
+    def getJSON(file_path: str) -> dict:
+        """Read a JSON file and return the parsed content."""
         try:
             with FileAccess.stream(file_path, 'r') as fle:
                 return FileAccess.loadJSON(fle.read())
@@ -144,7 +152,8 @@ class FileAccess(object):
         return {}
 
     @staticmethod
-    def setJSON(file_path, data):
+    def setJSON(file_path: str, data: Any) -> bool:
+        """Write data to a JSON file with file locking."""
         with FileLock(file_path):
             try:
                 with FileAccess.stream(file_path, 'w') as fle:
@@ -155,7 +164,8 @@ class FileAccess(object):
         return False
 
     @staticmethod
-    def setURL(url, file_path):
+    def setURL(url: str, file_path: str) -> bool:
+        """Download a URL and save it to a local file."""
         try:
             req = urllib.request.Request(url, headers=HEADER)
             monitor = MONITOR()
@@ -172,7 +182,7 @@ class FileAccess(object):
         return False
 
     @staticmethod
-    def open(filename, mode, encoding=DEFAULT_ENCODING):
+    def open(filename: str, mode: str, encoding: str = DEFAULT_ENCODING) -> 'VFSFile':
         try:
             return VFSFile(filename, mode)
         except UnicodeDecodeError:
@@ -180,7 +190,7 @@ class FileAccess(object):
 
     @staticmethod
     @contextmanager
-    def stream(filename, mode='r', encoding=DEFAULT_ENCODING):
+    def stream(filename: str, mode: str = 'r', encoding: str = DEFAULT_ENCODING) -> Iterator['VFSFile']:
         f = FileAccess.open(filename, mode, encoding)
         try:
             yield f
@@ -188,37 +198,38 @@ class FileAccess(object):
             f.close()
 
     @staticmethod
-    def _getFolderPath(path):
+    def _getFolderPath(path: str) -> str:
         head, tail = os.path.split(path)
         return os.path.join(os.path.basename(head), tail)
 
     @staticmethod
-    def _getShortPath(path, max_parts=3):
+    def _getShortPath(path: str, max_parts: int = 3) -> str:
         parts = path.split(os.sep)
         if len(parts) > max_parts:
             return f"...{os.sep}{os.path.join(*parts[-max_parts:])}"
         return path
 
     @staticmethod
-    def listdir(path):
+    def listdir(path: str) -> Tuple[List[str], List[str]]:
         if FileAccess.exists(path):
             return xbmcvfs.listdir(path)
         return [], []
 
     @staticmethod
-    def mkdirs(path):
+    def mkdirs(path: str) -> bool:
         if not path.endswith(("/", "\\")):
             path = f"{path}/"
         return xbmcvfs.mkdirs(path)
 
     @staticmethod
-    def translatePath(path):
+    def translatePath(path: str) -> str:
         if '@' in path:
             path = path.split('@')[1]
         return xbmcvfs.translatePath(path)
 
     @staticmethod
-    def copyFolder(src, dest_dir, dia=None, move=False):
+    def copyFolder(src: str, dest_dir: str, dia: Any = None, move: bool = False) -> Any:
+        """Recursively copy/move a folder with optional progress dialog."""
         LOG(f"copyFolder {src} to {dest_dir}")
         if not FileAccess.exists(dest_dir):
             FileAccess.mkdirs(dest_dir)
@@ -248,7 +259,7 @@ class FileAccess(object):
         return dia
 
     @staticmethod
-    def copy(orgfilename, newfilename):
+    def copy(orgfilename: str, newfilename: str) -> bool:
         if not FileAccess.exists(orgfilename):
             return False
         parent_dir, _ = os.path.split(newfilename)
@@ -263,14 +274,14 @@ class FileAccess(object):
         return False
 
     @staticmethod
-    def move(orgfilename, newfilename):
+    def move(orgfilename: str, newfilename: str) -> bool:
         LOG(f"moving {orgfilename} to {newfilename}")
         if FileAccess.copy(orgfilename, newfilename):
             return FileAccess.delete(orgfilename)
         return False
 
     @staticmethod
-    def delete(filename):
+    def delete(filename: str) -> bool:
         try:
             if not FileAccess.exists(filename):
                 return False
@@ -284,7 +295,7 @@ class FileAccess(object):
             return not FileAccess.exists(filename)
 
     @staticmethod
-    def exists(path):
+    def exists(path: str) -> bool:
         filepath = path
         if filepath.startswith('stack://'):
             try:
@@ -301,7 +312,7 @@ class FileAccess(object):
         return exists
 
     @staticmethod
-    def openSMB(filename, mode, encoding=DEFAULT_ENCODING):
+    def openSMB(filename: str, mode: str, encoding: str = DEFAULT_ENCODING) -> Optional[Any]:
         if os.name.lower() == 'nt' and filename.lower().startswith('smb://'):
             newname = '\\\\' + filename[6:]
             try:
@@ -311,13 +322,14 @@ class FileAccess(object):
         return None
 
     @staticmethod
-    def existsSMB(filename):
+    def existsSMB(filename: str) -> bool:
         if os.name.lower() == 'nt' and filename.lower().startswith('smb://'):
             return FileAccess.exists('\\\\' + filename[6:])
         return False
 
     @staticmethod
-    def rename(path, newpath, force=True):
+    def rename(path: str, newpath: str, force: bool = True) -> bool:
+        """Rename a file using multiple fallback strategies (xbmcvfs, os, shutil)."""
         LOG(f"rename {path} to {newpath}, force = {force}")
         if not FileAccess.exists(path):
             return False
@@ -361,14 +373,16 @@ class FileAccess(object):
         return False
 
     @staticmethod
-    def removedirs(path, force=True):
+    def removedirs(path: str, force: bool = True) -> bool:
+        """Remove a directory with fallback to native os.rmdir."""
         LOG(f"removedirs, path = {path}, force = {force}")
         if not path:
             return False
         try:
             if xbmcvfs.rmdir(path, force=force):
                 return True
-        except Exception:
+        except Exception as e:
+            LOG(f"removedirs, xbmcvfs.rmdir failed for {path}: {e}", xbmc.LOGWARNING)
             try:
                 translated = FileAccess.translatePath(path)
                 os.rmdir(translated)
@@ -378,17 +392,19 @@ class FileAccess(object):
         return False
             
     @staticmethod
-    def makedirs(path):
+    def makedirs(path: str) -> bool:
         try:
             LOG(f"makedirs, path = {path}")
             translated = FileAccess.translatePath(path)
             os.makedirs(translated, exist_ok=True)
             return os.path.exists(translated)
-        except Exception:
+        except Exception as e:
+            LOG(f"makedirs, os.makedirs failed for {path}: {e}", xbmc.LOGWARNING)
             return FileAccess._makedirs_fallback(path)
             
     @staticmethod
-    def _makedirs_fallback(path):
+    def _makedirs_fallback(path: str) -> bool:
+        """Recursively create directories using xbmcvfs as fallback."""
         if not path:
             return False
         if xbmcvfs.exists(path):
@@ -403,7 +419,7 @@ class FileAccess(object):
 
 
 class VFSFile:
-    def __init__(self, filename, mode):
+    def __init__(self, filename: str, mode: str):
         self.monitor  = MONITOR()
         self.filename = filename
         if mode == 'w':
@@ -418,22 +434,22 @@ class VFSFile:
         if self.currentFile is None:
             LOG(f"VFSFile Couldn't open {filename}", xbmc.LOGERROR)
 
-    def __enter__(self):
+    def __enter__(self) -> 'VFSFile':
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Any):
         self.close()
 
-    def read(self, num_bytes=0):
+    def read(self, num_bytes: int = 0) -> Union[bytes, str]:
         try:
             return self.currentFile.read(num_bytes)
         except Exception:
             return self.currentFile.readBytes(num_bytes)
         
-    def readBytes(self, num_bytes=0):
+    def readBytes(self, num_bytes: int = 0) -> bytes:
         return self.currentFile.readBytes(num_bytes)
         
-    def write(self, buffer):
+    def write(self, buffer: Union[str, bytes, bytearray]) -> int:
         if not isinstance(buffer, (bytes, bytearray)):
             buffer = buffer.encode(DEFAULT_ENCODING, 'backslashreplace')
         return self.currentFile.write(buffer)
@@ -442,31 +458,32 @@ class VFSFile:
         if self.currentFile:
             return self.currentFile.close()
 
-    def seek(self, num_bytes, offset=1):
+    def seek(self, num_bytes: int, offset: int = 1) -> int:
         return self.currentFile.seek(num_bytes, offset)
 
-    def size(self):
+    def size(self) -> int:
         return self.currentFile.size()
 
-    def tell(self):
+    def tell(self) -> int:
         try:
             return self.currentFile.tell()
         except Exception:
             return self.currentFile.seek(0, 1)
 
-    def readlines(self):
+    def readlines(self) -> List[str]:
         try:
             return ''.join(list(self.readline())).split('\n')
         except Exception:
             return self.read().split('\n')
 
-    def readline(self):
+    def readline(self) -> Generator[str, None, None]:
         try:
             yield from self.read_in_chunks()
         except Exception as e:
             LOG(f"VFSFile: readline failed! {e}", xbmc.LOGERROR)
         
-    def read_in_chunks(self, chunk_size=1024):
+    def read_in_chunks(self, chunk_size: int = 1024) -> Generator[str, None, None]:
+        """Read file data in fixed-size chunks."""
         while not self.monitor.abortRequested():
             data = self.read(chunk_size)
             if not data:
@@ -475,7 +492,7 @@ class VFSFile:
 
 
 class FileLock:
-    def __init__(self, filename, timeout=None, delay=None):
+    def __init__(self, filename: str, timeout: Optional[float] = None, delay: Optional[float] = None):
         if timeout is None: timeout = LOCK_MAX_FILE_TIMEOUT
         if delay is None: delay = LOCK_MAX_FILE_DELAY
         self.monitor = MONITOR()
@@ -493,6 +510,7 @@ class FileLock:
             LOG("FileLock.__del__ release failed: %s" % e, xbmc.LOGDEBUG)
         
     def acquire(self):
+        """Acquire a file lock with timeout and delay between retries."""
         with self.thread_lock:
             start_time = time.time()
             while not self.monitor.abortRequested():
@@ -518,10 +536,10 @@ class FileLock:
             self.is_locked = False
             FileAccess.delete(self.lockfile)
  
-    def __enter__(self):
+    def __enter__(self) -> 'FileLock':
         if not self.is_locked:
             self.acquire()
         return self
  
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Any):
         self.release()
