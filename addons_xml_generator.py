@@ -37,6 +37,8 @@ DELETE_EXT = ('.pyc', '.pyo', '.db')
 DELETE_FOLDERS = {'__pycache__', '.idea', 'Corel Auto-Preserve', 'venv'}
 ADDON_DIR = os.path.join(GITPATH, 'plugin.video.pseudotv.live')
 TEST_DIR = os.path.join(ADDON_DIR, 'tests')
+CHANGELOG = os.path.join(ADDON_DIR, 'changelog.txt')
+ADDON_XML = os.path.join(ADDON_DIR, 'addon.xml')
 
 
 class Generator:
@@ -50,6 +52,7 @@ class Generator:
             if not self._run_local_tests():
                 print("\nTests failed. Aborting build.")
                 sys.exit(1)
+            self._update_changelog()
         self._zipit(GITPATH)
         print("Finished updating addons xml and md5 files")
 
@@ -69,6 +72,8 @@ class Generator:
                 cwd=ADDON_DIR,
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='replace',
                 timeout=120
             )
 
@@ -96,6 +101,157 @@ class Generator:
         except Exception as e:
             print(f"Error running tests: {e}")
             return True
+
+    def _update_changelog(self):
+        """Generate changelog entry using AI and update changelog.txt."""
+        if not os.path.exists(CHANGELOG):
+            print("changelog.txt not found, skipping changelog update")
+            return
+
+        # Get git diff for changes
+        try:
+            result = subprocess.run(
+                ['git', 'diff', 'HEAD~1', 'HEAD', '--', '*.py', '*.xml', '*.json'],
+                cwd=GITPATH,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                timeout=10
+            )
+            diff = result.stdout[:20000]
+            if not diff.strip():
+                print("No changes detected for changelog")
+                return
+        except Exception as e:
+            print(f"Could not get git diff: {e}")
+            return
+
+        # Get changed file names
+        try:
+            result = subprocess.run(
+                ['git', 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', '*.py', '*.xml', '*.json'],
+                cwd=GITPATH,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                timeout=10
+            )
+            files = result.stdout.strip() or "None"
+        except Exception:
+            files = "None"
+
+        # Read version from addon.xml
+        try:
+            tree = xml.etree.ElementTree.parse(ADDON_XML)
+            raw_version = tree.getroot().get('version')
+        except Exception as e:
+            print(f"Could not read version from addon.xml: {e}")
+            return
+
+        if not raw_version:
+            print("No version found in addon.xml")
+            return
+
+        version = f"v.{raw_version}"
+        print(f"\nGenerating changelog entry for version {version}...")
+
+        # Use OpenCode AI to generate changelog entry
+        keywords = "Improved|Added|Tweaked|Refactored|Fixed|Resolved|Optimized|Moved|Introduced|Enhanced|Refined|Implemented|Replaced|Removed"
+        prompt = (
+            f"Generate a changelog entry for these code changes to PseudoTV Live Kodi addon. "
+            f"You MUST use ONE of these EXACT keywords to start: {keywords}. "
+            f"Follow the dash with a space then the keyword. Keep it concise (1-2 lines max). "
+            f"Focus on user-facing changes, new features, improvements, or bug fixes. "
+            f"Do not include file names or technical details. "
+            f"CHANGED FILES: {files}\nCODE DIFF: {diff}\n"
+            f"Output ONLY the changelog line starting with dash, nothing else."
+        )
+
+        try:
+            result = subprocess.run(
+                ['opencode', 'run', '--model', 'opencode/mimo-v2.5-free', prompt],
+                cwd=GITPATH,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                timeout=30
+            )
+            raw_output = result.stdout
+        except FileNotFoundError:
+            print("OpenCode not found, skipping changelog generation")
+            return
+        except Exception as e:
+            print(f"Error running OpenCode: {e}")
+            return
+
+        # Extract and validate changelog entry
+        import re
+        lines = raw_output.strip().split('\n')
+        changelog_entry = ""
+        for line in lines:
+            line = line.strip()
+            if line.startswith('- '):
+                changelog_entry = re.sub(r'[^[[:alnum:][:space:]._/-]', '', line)
+                break
+
+        if not changelog_entry:
+            print("No valid changelog entry generated")
+            return
+
+        if not re.match(rf'^- ({keywords})', changelog_entry):
+            print(f"Invalid changelog entry format: {changelog_entry}")
+            return
+
+        print(f"Generated entry: {changelog_entry}")
+
+        # Update changelog.txt
+        with open(CHANGELOG, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        if version in content:
+            # Version exists, append entry
+            print(f"Appending to existing version {version} section")
+            lines = content.split('\n')
+            new_lines = []
+            found = False
+            inserted = False
+            for line in lines:
+                new_lines.append(line)
+                if line.strip() == version and not found:
+                    found = True
+                elif found and line.startswith('- ') and not inserted:
+                    # Insert after existing entries
+                    pass
+                elif found and line.startswith('v.') and not inserted:
+                    new_lines.insert(-1, changelog_entry)
+                    inserted = True
+            if found and not inserted:
+                # Insert before next version or end
+                for i, line in enumerate(new_lines):
+                    if line.strip() == version:
+                        # Find last entry under this version
+                        j = i + 1
+                        while j < len(new_lines) and (new_lines[j].startswith('- ') or new_lines[j].strip() == ''):
+                            j += 1
+                        new_lines.insert(j, changelog_entry)
+                        break
+            content = '\n'.join(new_lines)
+        else:
+            # New version, add at top after notice
+            print(f"Adding new version section for {version}")
+            notice = "### NOTICE: The nightly branch is in alpha; things will break! ####"
+            if notice in content:
+                content = content.replace(notice, f"{notice}\n{version}\n{changelog_entry}\n")
+            else:
+                content = f"{notice}\n{version}\n{changelog_entry}\n\n{content}"
+
+        with open(CHANGELOG, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        print("Changelog updated successfully")
 
     def _clean_addons(self):
         for root, dirnames, filenames in os.walk(GITPATH):
