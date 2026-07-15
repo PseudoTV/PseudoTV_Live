@@ -109,7 +109,7 @@ class Builder(object):
         self.jsonRPC   = service.jsonRPC
         self.cache     = service.cache
         self.holiday   = self.seasonal.getHoliday()
-        self.channels  = Channels(writable=True)
+        self.channels  = Channels(getChannelKey(), writable=True)
         self.resources = Resources(service)
         self.runActions = RulesList(self.channels.getChannels()).runActions
 
@@ -117,6 +117,7 @@ class Builder(object):
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
         
+
 
     def getVerifiedChannels(self, channels: Optional[list] = None) -> list:
         if channels is None: 
@@ -139,7 +140,7 @@ class Builder(object):
             else:
                 if not citem.get('id'): 
                     citem['id'] = Globals._getChannelID(citem['name'], citem['path'], citem['number'], Globals.settings.getMYUUID())
-                citem['logo'] = self.resources.getLogo(citem, fallback=self.resources.getImageCache(citem['name']), lookup=True)
+                citem['logo'] = self.resources.getLogo(citem, fallback=citem.get('logo', LOGO), lookup=True)
                 self.log(f"[{citem['id']}] VERIFIED - channel {citem['number']}: {citem['name']} changed = {citem.get('changed', False)}", xbmc.LOGINFO)
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, Globals._cleanGroups(citem), inherited=self)
              
@@ -169,6 +170,7 @@ class Builder(object):
     def buildChannels(self, channels: Optional[list] = None, preview: bool = False, silent: Optional[bool] = None, write: bool = True) -> Optional[dict]:
         if channels is None: channels = []
         if silent is None:   silent = not Globals.settings.showDialog(silent)
+        if preview and write: write = False
         self.log('buildChannels, channels=%d, preview=%s, silent=%s, write=%s' % (len(channels), preview, silent, write))
         
         if Globals.properties.isRunning('Builder.buildChannels'): return
@@ -190,64 +192,65 @@ class Builder(object):
             
             preview_results = {}
             with M3U(writable=write) as m3u, XMLTVS(writable=write, m3u=m3u) as epg:
-                all_stop_times = dict(epg.loadStopTimes(channels, fallback=fallback_str))
-                has_programmes = dict(epg.hasProgrammes(channels))
-                
-                if self.enableBCTs:
-                    self.log('buildChannels, pre-computing filler sources')
-                    Fillers({}, self)
-                
-                for idx, citem in enumerate(channels):
-                    try:
-                        updated = set()
-                        self.pMSG = f"{LANGUAGE(32144)}: {LANGUAGE(32212)}"
-                        self.pHeader = ADDON_NAME
-                        self.pName   = citem.get('name', '')
-                        self.pCount  = int(idx * 100) // self.cCount
+                with Globals.dialog._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
+                    all_stop_times = dict(epg.loadStopTimes(channels, fallback=fallback_str))
+                    has_programmes = dict(epg.hasProgrammes(channels))
+
+                    if self.enableBCTs:
+                        self.log('buildChannels, pre-computing filler sources')
+                        Fillers({}, self)
+                    
+                    for idx, citem in enumerate(channels):
+                        try:
+                            updated = set()
+                            self.pMSG = f"{LANGUAGE(32144)}: {LANGUAGE(32212)}"
+                            self.pHeader = ADDON_NAME
+                            self.pName   = citem.get('name', '')
+                            self.pCount  = int(idx * 100) // self.cCount
                         
-                        self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{self.pName}", header=self.pHeader)
-                        
-                        if self.service.interrupt():
-                            self.log(f"[{citem.get('id')}] buildChannels, _interrupt")
-                            self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
-                            if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
-                            break
-                        elif self.service.suspend():
-                            self.log(f"[{citem.get('id')}] buildChannels, _suspend")
-                            self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32215)}", header=self.pHeader)
-                            if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
-                            break
+                            self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{self.pName}", header=self.pHeader)
+                            
+                            if self.service.interrupt():
+                                self.log(f"[{citem.get('id')}] buildChannels, _interrupt")
+                                self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
+                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                                break
+                            elif self.service.suspend():
+                                self.log(f"[{citem.get('id')}] buildChannels, _suspend")
+                                self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32215)}", header=self.pHeader)
+                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                                break
                                 
-                        citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
-                        raw_start = all_stop_times.get(citem.get('id'), fallback_epoch)
+                            citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
+                            raw_start = all_stop_times.get(citem.get('id'), fallback_epoch)
                         
-                        if isinstance(raw_start, str):
-                            start_epoch = float(datetime.datetime.strptime(raw_start, DTFORMAT).timestamp())
-                            start_timestamp_str = raw_start
-                        else:
-                            start_epoch = float(raw_start)
-                            start_timestamp_str = Globals._epochTime(start_epoch, tz=False).strftime(DTFORMAT)
+                            if isinstance(raw_start, str):
+                                    start_epoch = float(datetime.datetime.strptime(raw_start, DTFORMAT).timestamp())
+                                    start_timestamp_str = raw_start
+                            else:
+                                    start_epoch = float(raw_start)
+                                    start_timestamp_str = Globals._epochTime(start_epoch, tz=False).strftime(DTFORMAT)
 
-                        _update = start_epoch <= fallback_epoch or start_epoch <= future_stop
-                        self.log(f"[{citem.get('id')}] Schedule delta audit -> Update Required: {_update} | Target End: {start_timestamp_str}")
+                            _update = start_epoch <= fallback_epoch or start_epoch <= future_stop
+                            self.log(f"[{citem.get('id')}] Schedule delta audit -> Update Required: {_update} | Target End: {start_timestamp_str}")
 
-                        _changed = citem.get('changed', False)
-                        if not _changed and getattr(self, 'enableChanged', False):
-                            paths = citem.get('path', [])
-                            valid_extensions = tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)
-                            _changed = any(Globals.settings.getFileCRC(f) for f in paths if f.endswith(valid_extensions))
+                            _changed = citem.get('changed', False)
+                            if not _changed and getattr(self, 'enableChanged', False):
+                                    paths = citem.get('path', [])
+                                    valid_extensions = tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)
+                                    _changed = any(Globals.settings.getFileCRC(f) for f in paths if f.endswith(valid_extensions))
                         
-                        if _changed:
-                            self.log(f"[{citem.get('id')}] Playlist signature mutation caught; flushing target datasets.")
-                            self._resetPagination(citem)
-                            m3u.delStation(citem)
-                            epg.delBroadcast(citem)
-                            citem['changed'] = False
-                            changes.add(self.channels.addChannel(citem))
+                            if _changed:
+                                    self.log(f"[{citem.get('id')}] Playlist signature mutation caught; flushing target datasets.")
+                                    self._resetPagination(citem)
+                                    m3u.delStation(citem)
+                                    epg.delBroadcast(citem)
+                                    citem['changed'] = False
+                                    changes.add(self.channels.addChannel(citem))
 
-                        if _update or _changed:                       
-                            self.pMSG = LANGUAGE(32236) if preview else (f"{LANGUAGE(30014)} {LANGUAGE(30223)}" if start_timestamp_str == fallback_str else f"{LANGUAGE(32022)} {LANGUAGE(30223)}")
-                            self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
+                            if _update or _changed:                       
+                                    self.pMSG = LANGUAGE(32236) if preview else (f"{LANGUAGE(30014)} {LANGUAGE(30223)}" if start_timestamp_str == fallback_str else f"{LANGUAGE(32022)} {LANGUAGE(30223)}")
+                                    self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
 
                             if start_epoch > 0:
                                 self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
@@ -258,53 +261,55 @@ class Builder(object):
                                     if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
                                     break
                                 elif isinstance(fileList, list) and fileList:
-                                    with Globals.dialog._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
-                                        total_dur = sum(item.get('duration', 0) for item in fileList if isinstance(item, dict))
-                                        self.log(f"[{citem.get('id')}] buildChannels, assigning time slots to {len(fileList)} items, total duration = {total_dur}s ({total_dur // 3600}h {(total_dur % 3600) // 60}m)")
-                                        for s_idx, item in enumerate(fileList):
-                                            duration = item.get('duration')
-                                            if not duration: continue
-                                            item["idx"] = s_idx
-                                            item['start'] = start_epoch
-                                            item['stop'] = start_epoch + duration
-                                            start_epoch = item['stop']
-                                        
-                                        fileList = sorted(self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, fileList, inherited=self), key=itemgetter('start'))
-                                        if not citem.get('radio', False): fileList = sorted(Fillers(citem, self).injectFillers(fileList), key=itemgetter('start'))
-                                        if preview: preview_results[citem.get('id')] = fileList
-                                        else:
-                                            prog_added = any([epg.addProgram(citem.get('id'), epg.getProgramItem(citem, item)) for item in fileList])
-                                            updated.add(prog_added)
-                                            self.log(f"[{citem.get('id')}] buildChannels, epg.addProgram: {prog_added}, {len(fileList)} programmes added")
+                                    total_dur = sum(item.get('duration', 0) for item in fileList if isinstance(item, dict))
+                                    self.log(f"[{citem.get('id')}] buildChannels, assigning time slots to {len(fileList)} items, total duration = {total_dur}s ({total_dur // 3600}h {(total_dur % 3600) // 60}m)")
+                                    for s_idx, item in enumerate(fileList):
+                                        duration = item.get('duration')
+                                        if not duration: continue
+                                        item["idx"] = s_idx
+                                        item['start'] = start_epoch
+                                        item['stop'] = start_epoch + duration
+                                        start_epoch = item['stop']
+                                    
+                                    fileList = sorted(self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, fileList, inherited=self), key=itemgetter('start'))
+                                    if not citem.get('radio', False): fileList = sorted(Fillers(citem, self).injectFillers(fileList), key=itemgetter('start'))
+                                    if preview: preview_results[citem.get('id')] = fileList
+                                    else:
+                                        prog_added = any([epg.addProgram(citem.get('id'), epg.getProgramItem(citem, item)) for item in fileList])
+                                        updated.add(prog_added)
+                                        self.log(f"[{citem.get('id')}] buildChannels, epg.addProgram: {prog_added}, {len(fileList)} programmes added")
                                                     
                                 elif not fileList:
                                     has_progs = has_programmes.get(citem.get('id'), False)
                                     updated.add(has_progs)
                                     self.log(f"[{citem.get('id')}] buildChannels, no programmes found (has_existing={has_progs})")
                                 self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
-                        else:
-                            has_progs = has_programmes.get(citem.get('id'), False)
-                            updated.add(has_progs)
+                            else:
+                                has_progs = has_programmes.get(citem.get('id'), False)
+                                updated.add(has_progs)
                         
-                        if any(updated): 
-                            sitem = m3u.getStationItem(citem)
-                            station_added = any((m3u.addStation(sitem), epg.addChannel(sitem)))
-                            complete.add(station_added) 
-                            self.log(f"[{citem.get('id')}] buildChannels, station added to m3u/epg: {station_added}")
-                        else:
-                            self._resetPagination(citem)
-                            m3u.delStation(citem)
-                            epg.delBroadcast(citem)
-                            self.log(f"[{citem.get('id')}] buildChannels, no programmes, removing station from m3u/epg")
-                    except Exception as e: 
-                        self.log(f"Channel compiler faulted critically at index execution point: {str(e)}", xbmc.LOGERROR)
+                            if any(updated): 
+                                sitem = m3u.getStationItem(citem)
+                                station_added = any((m3u.addStation(sitem), epg.addChannel(sitem)))
+                                complete.add(station_added) 
+                                self.log(f"[{citem.get('id')}] buildChannels, station added to m3u/epg: {station_added}")
+                            else:
+                                self._resetPagination(citem)
+                                m3u.delStation(citem)
+                                epg.delBroadcast(citem)
+                                self.log(f"[{citem.get('id')}] buildChannels, no programmes, removing station from m3u/epg")
+                        except Exception as e: 
+                            self.log(f"Channel compiler faulted critically at index execution point: {str(e)}", xbmc.LOGERROR)
 
             if any(changes): self.channels.setChannels()
             if any(updated):
                 self.log(f"Channel compilation finished: {len(complete)} stations added, {len(changes)} channels updated, {len(preview_results)} previews", xbmc.LOGINFO)
-                if not self.service.tasks.chkSync():
-                    self.log("buildChannels, post-build sync check failed, triggering refresh")
-                    Globals.properties.setPropTimer('chkPVRRefresh')
+                if not self.service.tasks.chkPVRSync():
+                    if not Globals.properties.getPropTimer('chkPVRRefresh')[0]:
+                        self.log("buildChannels, post-build sync check: PVR out of sync, triggering refresh", xbmc.LOGDEBUG)
+                        Globals.properties.setPropTimer('chkPVRRefresh')
+                    else:
+                        self.log("buildChannels, post-build sync check: PVR out of sync, refresh already queued", xbmc.LOGDEBUG)
             return preview_results if preview else None
 
 
@@ -315,7 +320,7 @@ class Builder(object):
             info={
                 'genre': ["Music"],
                 'art': {"thumb": citem.get('logo', LOGO), "poster": LOGO_POSTER, "fanart": LOGO_LANDSCAPE, "landscape": LOGO_LANDSCAPE, "logo": citem.get('logo', LOGO), "icon": citem.get('logo', LOGO)},
-                'plot': LANGUAGE(32029) % (citem['name'])
+                'plot': LANGUAGE(32029).format(name=citem['name'])
             }
         )
         
@@ -585,7 +590,7 @@ class Builder(object):
 
             label = item.get("title") or item.get("label") or dirItem.get('label') or ''
             if not label:  
-                self.pErrors.append(LANGUAGE(32018)(LANGUAGE(30188)))
+                self.pErrors.append(LANGUAGE(32018).format(type=LANGUAGE(30188)))
                 continue
                 
             # Normalize Metadata Schemas (TV Shows vs Movies)

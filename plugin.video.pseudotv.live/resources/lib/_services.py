@@ -77,6 +77,7 @@ class _Service(object):
     def suspend(self) -> bool:
         return _getProp('%s.pendingSuspend'%(ADDON_ID),'false') == 'true'
 
+
     def sleep(self, wait: Optional[float] = None) -> bool:
         """Blocks until shutdown/interrupt, returns True on completion."""
         while not self.monitor.abortRequested():

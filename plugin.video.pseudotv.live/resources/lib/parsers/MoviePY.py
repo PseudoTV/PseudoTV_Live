@@ -20,6 +20,8 @@ from variables    import *
 from typing import Union
 
 class MoviePY:
+
+
     def determineLength(self, filename: str) -> Union[int, float]:
         """
         Determines video length using MoviePy.

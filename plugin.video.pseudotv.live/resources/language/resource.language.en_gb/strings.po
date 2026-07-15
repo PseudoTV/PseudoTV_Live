@@ -89,7 +89,7 @@ msgctxt "#30017"
 msgid "Enable Pre-Roll"
 msgstr ""
 
-msgctxt "#30018"
+msgctxt "#33017"
 msgid "Add Ratings & Bumpers"
 msgstr ""
 
@@ -97,7 +97,7 @@ msgctxt "#30019"
 msgid "Enable Post-Roll"
 msgstr ""
 
-msgctxt "#30020"
+msgctxt "#33019"
 msgid "Add Adverts & Trailers"
 msgstr ""
 
@@ -110,7 +110,7 @@ msgid "Auto"
 msgstr ""
 
 msgctxt "#30023"
-msgid "Unable to reload %s"
+msgid "Unable to reload {name}"
 msgstr ""
 
 msgctxt "#30024"
@@ -150,7 +150,7 @@ msgid "Resources"
 msgstr ""
 
 msgctxt "#30033"
-msgid "%s Support & Discussion Thread"
+msgid "{name} Support & Discussion Thread"
 msgstr ""
 
 msgctxt "#30034"
@@ -298,7 +298,7 @@ msgid "Third-Party"
 msgstr ""
 
 msgctxt "#30070"
-msgid "Clearing %s Cache"
+msgid "Clearing {name} Cache"
 msgstr ""
 
 msgctxt "#30071"
@@ -310,7 +310,7 @@ msgid "Debugging"
 msgstr ""
 
 msgctxt "#30073"
-msgid "Updated Available!\nVersion: [B]%s[/B]"
+msgid "Updated Available! Version: [B]{version}[/B]"
 msgstr ""
 
 msgctxt "#30074"
@@ -358,7 +358,7 @@ msgid "Disable Cache"
 msgstr ""
 
 msgctxt "#30085"
-msgid "%s updated by %s"
+msgid "{name} updated by {author}"
 msgstr ""
 
 msgctxt "#30086"
@@ -406,7 +406,7 @@ msgid "Genre:"
 msgstr ""
 
 msgctxt "#30097"
-msgid "Port %s is In-Use! Port %s is available on this instance\n All PseudoTV Instances must be configured to use the same port."
+msgid "Port {port} is In-Use! Port {available} is available on this instance  All PseudoTV Instances must be configured to use the same port."
 msgstr ""
 
 msgctxt "#30098"
@@ -414,11 +414,11 @@ msgid "TCP Port:"
 msgstr ""
 
 msgctxt "#30099"
-msgid "Server Added (%s)"
+msgid "Server Added ({name})"
 msgstr ""
 
 msgctxt "#30100"
-msgid "Removed Server (%s)"
+msgid "Removed Server ({name})"
 msgstr ""
 
 msgctxt "#30101"
@@ -454,7 +454,7 @@ msgid "Channels"
 msgstr ""
 
 msgctxt "#30109"
-msgid "Edit Channel %s\n[COLOR=white][B]In-use[/B][/COLOR] | [COLOR=dimgray][B]Unused[/B][/COLOR] | [COLOR=yellow][B]Favorite[/B][/COLOR] | [COLOR=cyan][B]Radio[/B][/COLOR] | [COLOR=orange][B]Uneditable[/B][/COLOR] | [COLOR=red][B]Warning[/B][/COLOR] *see wiki for details."
+msgid "Edit Channel {name} [COLOR=white][B]In-use[/B][/COLOR] | [COLOR=dimgray][B]Unused[/B][/COLOR] | [COLOR=yellow][B]Favorite[/B][/COLOR] | [COLOR=cyan][B]Radio[/B][/COLOR] | [COLOR=orange][B]Uneditable[/B][/COLOR] | [COLOR=red][B]Warning[/B][/COLOR] *see wiki for details."
 msgstr ""
 
 msgctxt "#30110"
@@ -498,7 +498,7 @@ msgid "Watch Later"
 msgstr ""
 
 msgctxt "#30120"
-msgid "[COLOR=red][B]Warning!! [/B][/COLOR]%s\nAlready Exists, override it?."
+msgid "[COLOR=red][B]Warning!! [/B][/COLOR]{name} Already Exists, override it?."
 msgstr ""
 
 msgctxt "#30121"
@@ -530,7 +530,7 @@ msgid "Custom"
 msgstr ""
 
 msgctxt "#30128"
-msgid "Searching for %s logo"
+msgid "Searching for {name} logo"
 msgstr ""
 
 msgctxt "#30129"
@@ -602,7 +602,7 @@ msgid "Show Channel Bug"
 msgstr ""
 
 msgctxt "#30146"
-msgid "Every %s Minutes"
+msgid "Every {minutes} Minutes"
 msgstr ""
 
 msgctxt "#30147"
@@ -830,7 +830,7 @@ msgid "JSONRPC Wait (Seconds)"
 msgstr ""
 
 msgctxt "#30202"
-msgid "Failed to validate Path!\nForce Approval?\n*Forced channels may fail to build or playback properly."
+msgid "Failed to validate Path! Force Approval? *Forced channels may fail to build or playback properly."
 msgstr ""
 
 msgctxt "#30203"
@@ -1034,11 +1034,11 @@ msgid "Music"
 msgstr ""
 
 msgctxt "#32017"
-msgid "Select One or More %s"
+msgid "Select One or More {type}"
 msgstr ""
 
 msgctxt "#32018"
-msgid "No %s found..."
+msgid "No {type} found..."
 msgstr ""
 
 msgctxt "#32019"
@@ -1082,7 +1082,7 @@ msgid "Checking"
 msgstr ""
 
 msgctxt "#32029"
-msgid "Listen to %s Radio..."
+msgid "Listen to {name} Radio..."
 msgstr ""
 
 msgctxt "#32030"
@@ -1102,23 +1102,23 @@ msgid "No New Content Found"
 msgstr ""
    
 msgctxt "#32034"
-msgid "%s not found, Please Install!"
+msgid "{name} not found, Please Install!"
 msgstr ""
 
 msgctxt "#32035"
-msgid "[COLOR=yellow][B]Notice!! [/B]The following changes will be applied to [B]%s[/B], if you select [B]YES![/B][/COLOR]"
+msgid "[COLOR=yellow][B]Notice!! [/B]The following changes will be applied to [B]{name}[/B], if you select [B]YES![/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32036"
-msgid "Apply Changes to %s?"
+msgid "Apply Changes to {name}?"
 msgstr ""
 
 msgctxt "#32037"
-msgid "%s settings updated."
+msgid "{name} settings updated."
 msgstr ""
 
 msgctxt "#32038"
-msgid "Something went wrong! wait while we try again...\nPlayback Attempt (%s)"
+msgid "Something went wrong! wait while we try again... Playback Attempt ({count})"
 msgstr ""
 
 msgctxt "#32039"
@@ -1126,7 +1126,7 @@ msgid "Are You Still Watching?"
 msgstr ""
 
 msgctxt "#32040"
-msgid "Stopping Playback in [B]%s[/B] seconds.\n[B]Cancel[/B] to continue watching."
+msgid "Stopping Playback in [B]{seconds}[/B] seconds. [B]Cancel[/B] to continue watching."
 msgstr ""
 
 msgctxt "#32041"
@@ -1134,19 +1134,19 @@ msgid "Library"
 msgstr ""
 
 msgctxt "#32042"
-msgid "[B]Welcome to %s[/B]\n[B]No[/B] Channels found! Would you like to enable Autotuned Channels?"
+msgid "[B]Welcome to {name}[/B] [B]No[/B] Channels found! Would you like to enable Autotuned Channels?"
 msgstr ""
 
 msgctxt "#32043"
-msgid "%s - Readme v.%s"
+msgid "{name} - Readme v.{version}"
 msgstr ""
 
 msgctxt "#32044"
-msgid "Enter Custom Groups\nSeparate by '|' ex. Action|Comedy"
+msgid "Enter Custom Groups Separate by '|' ex. Action|Comedy"
 msgstr ""
 
 msgctxt "#32045"
-msgid "%s - Changelog v.%s"
+msgid "{name} - Changelog v.{version}"
 msgstr ""
 
 msgctxt "#32046"
@@ -1186,7 +1186,7 @@ msgid "Initializing"
 msgstr ""
 
 msgctxt "#32055"
-msgid "%s compatible plugin found!\nWould you like to add [B]%s[/B] to your recommended list?"
+msgid "{plugin} compatible plugin found! Would you like to add [B]{name}[/B] to your recommended list?"
 msgstr ""
 
 msgctxt "#32056"
@@ -1274,11 +1274,11 @@ msgid "Save All Channel Changes?"
 msgstr ""
 
 msgctxt "#32077"
-msgid "%s Configuration In-valid, Try again..."
+msgid "{name} Configuration In-valid, Try again..."
 msgstr ""
 
 msgctxt "#32078"
-msgid "Select Channel %s"
+msgid "Select Channel {name}"
 msgstr ""
 
 msgctxt "#32079"
@@ -1354,7 +1354,7 @@ msgid "Position Changed, Do you want to save?"
 msgstr ""
 
 msgctxt "#32097"
-msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi is in Windowed Display!\nIt's recommend you switch to Fullscreen.\nCurrent Resolution (%s)"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi is in Windowed Display! It's recommend you switch to Fullscreen. Current Resolution ({resolution})"
 msgstr ""
 
 msgctxt "#32098"
@@ -1402,7 +1402,7 @@ msgid "Replace existing Backup from"
 msgstr ""
 
 msgctxt "#32109"
-msgid "Replace [%s] Channels\nWith [%s] Channels\nFrom: %s"
+msgid "Replace [{old}] Channels With [{new}] Channels From: {source}"
 msgstr ""
 
 msgctxt "#32110"
@@ -1446,7 +1446,7 @@ msgid "Remove m3u and xmltv files"
 msgstr ""
 
 msgctxt "#32121"
-msgid "Force %s to reload"
+msgid "Force {name} to reload"
 msgstr ""
 
 msgctxt "#32122"
@@ -1478,19 +1478,19 @@ msgid "Rebuilding Autotuned Channels"
 msgstr ""
 
 msgctxt "#32129"
-msgid "%s is busy, Try again later..."
+msgid "{name} is busy, Try again later..."
 msgstr ""
 
 msgctxt "#32130"
-msgid "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled\nIt's recommended you re-enable when finished debugging"
+msgid "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled It's recommended you re-enable when finished debugging"
 msgstr ""
 
 msgctxt "#32131"
-msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi's Webserver is disabled.\nIt's recommend you enable."
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi's Webserver is disabled. It's recommend you enable."
 msgstr ""
 
 msgctxt "#32132"
-msgid "Default device name [B]%s[/B] detected!\nPlease change your instance name to something unique this will assure proper multi-room functionality."
+msgid "Default device name [B]{name}[/B] detected! Please change your instance name to something unique this will assure proper multi-room functionality."
 msgstr ""
 
 msgctxt "#32133"
@@ -1498,7 +1498,7 @@ msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR] Something went wrong, Please doubl
 msgstr ""
 
 msgctxt "#32134"
-msgid "Playback failed! This maybe because %s is building this channel.\nPlease check your channel settings."
+msgid "Playback failed! This maybe because {name} is building this channel. Please check your channel settings."
 msgstr ""
 
 msgctxt "#32135"
@@ -1530,7 +1530,7 @@ msgid "Shutting down background service..."
 msgstr ""
 
 msgctxt "#32142"
-msgid "Debugging is [B]enabled[/B]\nIt is recommend you disable debugging when applicable.\nWould you like to disable debugging now?"
+msgid "Debugging is [B]enabled[/B] It is recommend you disable debugging when applicable. Would you like to disable debugging now?"
 msgstr ""
 
 msgctxt "#32143"
@@ -1574,7 +1574,7 @@ msgid "Changes Applied!"
 msgstr ""
 
 msgctxt "#32153"
-msgid "[COLOR=red][B]File migration required!![/B][/COLOR]\n[B]Copying File:[/B] %s\n[B]From:[/B] %s\n[B]To:[/B] %s"
+msgid "[COLOR=red][B]File migration required!![/B][/COLOR] [B]Copying File:[/B] {file} [B]From:[/B] {from_path} [B]To:[/B] {to_path}"
 msgstr ""
 
 msgctxt "#32154"
@@ -1586,7 +1586,7 @@ msgid "Show XMLTV"
 msgstr ""
 
 msgctxt "#32156"
-msgid "Would you like to Install %s?"
+msgid "Would you like to Install {name}?"
 msgstr ""
 
 msgctxt "#32157"
@@ -1611,11 +1611,11 @@ msgid "[COLOR=yellow][B]- Create Path[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32162"
-msgid "Looking for multi-room instances (%ss)"
+msgid "Looking for multi-room instances ({seconds}s)"
 msgstr ""
 
 msgctxt "#32163"
-msgid "Announcing [B]%s[/B]\nDialog will close when paired: Timeout in %s seconds."
+msgid "Announcing [B]{name}[/B] Dialog will close when paired: Timeout in {seconds} seconds."
 msgstr ""
 
 msgctxt "#32164"
@@ -1639,7 +1639,7 @@ msgid "Update Available!"
 msgstr ""
 
 msgctxt "#32169"
-msgid "Edit Channel %s (%s)"
+msgid "Edit Channel {name} ({id})"
 msgstr ""
 
 msgctxt "#32170"
@@ -1647,7 +1647,7 @@ msgid "- Delete Path"
 msgstr ""
 
 msgctxt "#32171"
-msgid "%s in-use, Try Again..."
+msgid "{name} in-use, Try Again..."
 msgstr ""
 
 msgctxt "#32172"
@@ -1699,11 +1699,11 @@ msgid "Select server to remove."
 msgstr ""
 
 msgctxt "#32184"
-msgid "Restart Percentage (%s)"
+msgid "Restart Percentage ({percent})"
 msgstr ""
 
 msgctxt "#32185"
-msgid "Playing %s"
+msgid "Playing {name}"
 msgstr ""
 
 msgctxt "#32186"
@@ -1719,11 +1719,11 @@ msgid "Snapshot uploaded to [B]https://paste.kodi.tv/[/B][CR]Sensitive informati
 msgstr ""
 
 msgctxt "#32189"
-msgid "Post this url or QRcode for your snapshot, together with a problem description, on the Kodi forum: %s"
+msgid "Post this url or QRcode for your snapshot, together with a problem description, on the Kodi forum: {url}"
 msgstr ""
 
 msgctxt "#32190"
-msgid "Error posting snapshot[CR]%s"
+msgid "Error posting snapshot[CR]{error}"
 msgstr ""
 
 msgctxt "#32191"
@@ -1751,7 +1751,7 @@ msgid "Video"
 msgstr ""
 
 msgctxt "#32197"
-msgid "Currently Supported!" 
+msgid "Currently Supported!"
 msgstr ""
 
 msgctxt "#32198"
@@ -1799,7 +1799,7 @@ msgid "Parsing Details"
 msgstr ""
 
 msgctxt "#32211"
-msgid "[COLOR=%s][B]%s[/B][/COLOR]"
+msgid "[COLOR={color}][B]{text}[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32212"
@@ -1819,7 +1819,7 @@ msgid "Enable Multi-Room Instances (Client Only) ?"
 msgstr ""
 
 msgctxt "#32216"
-msgid "[B]Welcome to %s![/B][CR][CR]If you're new please visit our wiki for helpful tips & guides.[CR][CR]Thank you for your support, enjoy![CR][CR][B][I]%s[/I][/B]"
+msgid "[B]Welcome to {name}![/B][CR][CR]If you're new please visit our wiki for helpful tips & guides.[CR][CR]Thank you for your support, enjoy![CR][CR][B][I]{author}[/I][/B]"
 msgstr ""
 
 msgctxt "#32217"
@@ -1831,11 +1831,11 @@ msgid "Not Needed..."
 msgstr ""
 
 msgctxt "#32219"
-msgid "%s Enabled"
+msgid "{name} Enabled"
 msgstr ""
 
 msgctxt "#32220"
-msgid "%s Disabled"
+msgid "{name} Disabled"
 msgstr ""
 
 msgctxt "#32221"
@@ -1847,7 +1847,7 @@ msgid "Save"
 msgstr ""
 
 msgctxt "#32223"
-msgid "Select One %s"
+msgid "Select One {type}"
 msgstr ""
 
 msgctxt "#32224"
@@ -1907,7 +1907,7 @@ msgid "Waiting for Background Service to idle..."
 msgstr ""
 
 msgctxt "#32238"
-msgid "Autotuned Channels must be\n disabled in settings."
+msgid "Autotuned Channels must be  disabled in settings."
 msgstr ""
 
 msgctxt "#32239"
@@ -2003,7 +2003,7 @@ msgid "Edit Channel"
 msgstr ""
 
 msgctxt "#32262"
-msgid "No Content Found\nTry increasing channels recursive limit."
+msgid "No Content Found Try increasing channels recursive limit."
 msgstr ""
 
 msgctxt "#32263"
@@ -2011,15 +2011,15 @@ msgid "Set Limits"
 msgstr ""
          
 msgctxt "#32264"
-msgid "%s disabled, Please Enable!"
+msgid "{name} disabled, Please Enable!"
 msgstr ""
 
 msgctxt "#32265"
-msgid "%s is unavailable\nTry again later..."
+msgid "{name} is unavailable Try again later..."
 msgstr ""
 
 msgctxt "#32266"
-msgid "If [B]No[/B], debugging will automatically disable in [B]%s[/B] minutes."
+msgid "If [B]No[/B], debugging will automatically disable in [B]{minutes}[/B] minutes."
 msgstr ""
 
 msgctxt "#32267"
@@ -2032,7 +2032,7 @@ msgstr ""
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"
-msgid "Only enable for short DEBUGGING sessions. The Kodi log will be spammed; You may experience poor system performance while enabled."
+msgid "[COLOR=yellow][B]Notice[/B][/COLOR] Enable debug logging to Kodi log. Generates high volume of log entries. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33002"
@@ -2040,7 +2040,7 @@ msgid "AutoTune Video/Mixed/Music SmartPlaylists."
 msgstr ""
 
 msgctxt "#33003"
-msgid "AutoTune from Recommended (Supported) plugins installed on Kodi.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgid "AutoTune from Recommended (Supported) plugins installed on Kodi. Support does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
 msgstr ""
 
 msgctxt "#33004"
@@ -2076,11 +2076,11 @@ msgid "AutoTune Music Genres collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33012"
-msgid "Move critical files to a central location.\nIf you're concerned with Write Amplification move to HDD or Persistent (Restorable) RAMDISK"
+msgid "Store addon cache in a central location to reduce SSD write amplification. [Default: Disabled] [Recommended: Enabled for SSD users]"
 msgstr ""
 
 msgctxt "#33013"
-msgid "AutoTune from Recommended (Supported) services installed on Kodi and supplied by IPTV Manager.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgid "AutoTune from Recommended (Supported) services installed on Kodi and supplied by IPTV Manager. Support does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
 msgstr ""
 
 msgctxt "#33015"
@@ -2088,15 +2088,15 @@ msgid "Pagination Limit, How many items are requested and parsed per call. [0:Un
 msgstr ""
 
 msgctxt "#33016"
-msgid "Global Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see wiki for details.\nChanges will propagate slowly over time and may not be instantaneous."
+msgid "Global Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see wiki for details. Changes will propagate slowly over time and may not be instantaneous."
 msgstr ""
 
 msgctxt "#33023"
 msgid "Artwork changes will propagate slowly over time and are not instantaneous."
 msgstr ""
 
-msgctxt "#33036"
-msgid "Kodi PVR & LiveTV"
+msgctxt "#33037"
+msgid "Open Kodi PVR and Live TV settings for IPTV Simple configuration."
 msgstr ""
 
 msgctxt "#33038"
@@ -2112,15 +2112,15 @@ msgid "Clear all Pre-defined selections and remove their channels."
 msgstr ""
 
 msgctxt "#33041"
-msgid "Global rules set the default for all channels, Advanced Channel Rules apply per channel. *see wiki for details.\nGlobals are the default setting for every channel."
+msgid "Global rules set the default for all channels, Advanced Channel Rules apply per channel. *see wiki for details. Globals are the default setting for every channel."
 msgstr ""
 
 msgctxt "#33042"
-msgid "Enable visual features."
+msgid "Enable visual overlay features (channel bugs, vignettes, OSD). [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33043"
-msgid "Display the channel logo at the bottom corner of your screen."
+msgid "Display the channel logo in the corner during playback. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33044"
@@ -2128,27 +2128,35 @@ msgid "Select Color to apply [#FFFFFFFF Default]"
 msgstr ""
 
 msgctxt "#33045"
-msgid "Display OnNext information towards the end of program.\nUp-Next requires service install. [0 Disabled, 1 Default]"
+msgid "Show On-Next info near end of current program. Requires Up-Next addon. [Default: Disabled (0)] [Recommended: Enabled (1)]"
 msgstr ""
 
 msgctxt "#33046"
-msgid "Remove paired server from list below."
+msgid "Remove a paired multiroom server from the discovered servers list."
 msgstr ""
 
 msgctxt "#33048"
-msgid "Enable/Disable paired servers."
+msgid "View and manage discovered PseudoTV Live servers on your network."
 msgstr ""
 
 msgctxt "#33049"
-msgid "Prefer Kodi Metadata - Use less accurate runtimes from meta-providers.\nPrefer File Metadata - Parse file for accurate runtimes.\nCan impact system performance! *see wiki for details."
+msgid "How to obtain runtime and metadata. Kodi metadata is faster but less accurate; file metadata is slower but precise. [Default: File Metadata]"
+msgstr ""
+
+msgctxt "#33050"
+msgid "Automatically add discovered instances without prompting. [Default: Enabled]"
+msgstr ""
+
+msgctxt "#34050"
+msgid "Automatically add discovered PseudoTV Live instances without prompting."
 msgstr ""
 
 msgctxt "#33052"
-msgid "Save parsed file duration meta to the Kodi library. Improves runtime accuracy. *see wiki for details."
+msgid "Save file-parsed runtime to Kodi database. Improves EPG accuracy. [Default: Disabled] [Recommended: Enabled]"
 msgstr ""
 
 msgctxt "#33053"
-msgid "Include Specials and Extras.\nSeason 00 & Movie Extras"
+msgid "Include Specials and Extras. Season 00 & Movie Extras"
 msgstr ""
 
 msgctxt "#33054"
@@ -2156,27 +2164,27 @@ msgid "Include .strm files *see wiki for details."
 msgstr ""
 
 msgctxt "#33055"
-msgid "Include 3D Media"
+msgid "Include 3D media content in channel building. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33056"
-msgid "Include content fillers (Ratings/Bumpers/Adverts/Trailers) in-between channel content\nDownload Filler Resources for content\nLocal directories will be automatically created.. *see wiki for details."
+msgid "Insert filler content (Ratings/Bumpers/Adverts/Trailers) between items. Download filler resources from addon settings. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33058"
-msgid "PVR Callback - Play channel as if from a PVR backend.\nPlaylist - Queue channel as a Playlist *see wiki for details."
+msgid "PVR Callback - Play channel as if from a PVR backend. Playlist - Queue channel as a Playlist *see wiki for details."
 msgstr ""
 
 msgctxt "#33061"
-msgid "Adjust (Seconds) to ignore differentials between load times and live offset. [60secs Default] *see wiki for details."
+msgid "Seconds to ignore when load times differ from live offset. [Default: 60]"
 msgstr ""
 
 msgctxt "#33062"
-msgid "Adjust (Percentage) to ignore loading content near the end of its runtime. [98% Default] / [100% Disables]. *see wiki for details."
+msgid "Percentage threshold to skip content near end of runtime. [Default: 98%] Set to 100% to disable."
 msgstr ""
 
 msgctxt "#33063"
-msgid "Group PseudoTV Live guide data by category."
+msgid "Group EPG guide entries by category type in XMLTV output. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33064"
@@ -2184,36 +2192,36 @@ msgid "Enter custom guide data categories for use in the channel manager."
 msgstr ""
 
 msgctxt "#33068"
-msgid "Allow the Seasonal Holiday Channel to advance to the nearest holiday within its given month."
+msgid "Allow Seasonal Holiday channel to advance to nearest upcoming holiday. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33070"
-msgid "Allow PseudoTV Live to configure Third-Party plugins (IPTV Simple/IPTV Manager) for optimal usage.\nOptimal changes will be reinforced automatically without a user prompt!"
+msgid "Allow PseudoTV Live to configure IPTV Simple/IPTV Manager automatically. [Default: Disabled] [Recommended: Enabled]"
 msgstr ""
 
 msgctxt "#33071"
-msgid "Open IPTV Simple's settings"
+msgid "Open the IPTV Simple Client addon settings directly."
 msgstr ""
 
 msgctxt "#33074"
-msgid "Allow Access to configure aspects of Kodi for use with PseudoTV Live [Minimal risk of overriding existing user configurations]."
+msgid "Allow PseudoTV Live to modify Kodi settings for optimal operation. [Default: Disabled] [Recommended: Enabled]"
 msgstr ""
 
 msgctxt "#33078"
-msgid "Stop Playback when Idle for x Hours.\nCancelable with prompt and countdown."
+msgid "Stop playback after being idle for specified hours. Shows cancellation prompt with countdown. [Default: Disabled]"
 msgstr ""
 
 
 msgctxt "#33084"
-msgid "Not recommend!! Only disable if you understand the impact of theses changes."
+msgid "[COLOR=orange][B]Important[/B][/COLOR] Override recommended settings. Only disable if you understand the impact. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33085"
-msgid "Extending guidedata"
+msgid "Extend EPG guide data beyond default range to fill schedule gaps."
 msgstr ""
 
 msgctxt "#33086"
-msgid "Interval between channel Bug appearances (Minutes). [-1 Indefinitely, 0 Random]"
+msgid "Minutes between channel bug appearances. -1: always visible, 0: random. [Default: 0]"
 msgstr ""
 
 msgctxt "#33089"
@@ -2221,15 +2229,15 @@ msgid "QRCode - Visit PseudoTV Live Wiki"
 msgstr ""
 
 msgctxt "#33092"
-msgid "Multi-room help"
+msgid "Configure multiroom settings to share channels across network."
 msgstr ""
 
-msgctxt "#33097"
-msgid "Only recommend you change port if a conflict exists."
+msgctxt "#33098"
+msgid "HTTP port for multiroom communication. Only change if another service uses this port. [Default: 50001]"
 msgstr ""
 
 msgctxt "#33100"
-msgid "Denote this instance of PseudoTV Live as a client.\nRemote Server | Centralized Folder."
+msgid "Configure as client that pulls channels from remote server. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33104"
@@ -2237,27 +2245,27 @@ msgid "AutoTune from SmartPlaylists from Kodi."
 msgstr ""
 
 msgctxt "#33105"
-msgid "Scan Kodi for Recommended (Supported) Plugins.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgid "Scan Kodi for plugins providing content. [Default: Disabled]"
 msgstr ""
 
-msgctxt "#33107"
-msgid "Restore the last channel backup."
-msgstr ""
-
-msgctxt "#33109"
-msgid "Adjust delay between Kodi API requests (Seconds) to avoid collisions.\nIncreasing value decreases performance; while adding system stability. [1 Default]"
-msgstr ""
-
-msgctxt "#33110"
-msgid "Backup channel configurations & rules."
+msgctxt "#33108"
+msgid "Open the PseudoTV Live addon settings."
 msgstr ""
 
 msgctxt "#33111"
+msgid "Adjust delay between Kodi API requests (Seconds) to avoid collisions. Increasing value decreases performance; while adding system stability. [1 Default]"
+msgstr ""
+
+msgctxt "#33111"
+msgid "Backup channel configurations & rules."
+msgstr ""
+
+msgctxt "#33113"
 msgid "Apply diffuse color to channel bug regardless of monochromatics"
 msgstr ""
 
 msgctxt "#33112"
-msgid "Change the onscreen Channel Bug position. [Auto Default]"
+msgid "Position of the channel bug overlay on screen. [Default: Auto]"
 msgstr ""
 
 msgctxt "#33113"
@@ -2273,7 +2281,7 @@ msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33121"
-msgid "Group channel TV shows in blocks. [0 Disabled, 0 Default] (Pagination size influences grouping).\nChanges may propagate slowly over time and may not be instantaneous. [0 Default] *see wiki for details"
+msgid "Group TV shows in blocks of X episodes. Pagination size influences grouping. [Default: 0 (Disabled)]"
 msgstr ""
 
 msgctxt "#33125"
@@ -2281,11 +2289,11 @@ msgid "Include Coming Soon Trailers from the IMDB Trailer plugin."
 msgstr ""
 
 msgctxt "#33126"
-msgid "Include Trailers from your Kodi library.\nTrailer genres are matched with channel genres when applicable.\nEnabling may slow down channel parsing."
+msgid "Include trailers from Kodi library. Genres matched when possible. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33129"
-msgid "Server Status:"
+msgid "Current PVR sync status display."
 msgstr ""
 
 msgctxt "#33130"
@@ -2293,47 +2301,47 @@ msgid ""
 msgstr ""
 
 msgctxt "#33131"
-msgid "Prevent Trakt scrobbling during PseudoTV usage."
+msgid "Prevent Trakt from scrobbling content played through PseudoTV Live. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33132"
-msgid "Restore the previous playcount and resume points at the end of playback. ie. Passive PseudoTV usage."
+msgid "Restore playcount and resume points when PseudoTV playback ends. [Default: Disabled]"
 msgstr ""
 
-msgctxt "#33134"
-msgid "Probability a non-channel specific i.e generic random video will be used when no match is found.\n[0% Disabled, 50% Default 100% Always]"
+msgctxt "#33139"
+msgid "Chance of using random video when no channel-specific match found. [Default: 50%]"
 msgstr ""
 
 msgctxt "#33137"
-msgid "Launch Node Editor"
+msgid "Open the Kodi Node Editor for advanced SmartPlaylist creation."
 msgstr ""
 
 msgctxt "#33138"
-msgid "Open Smartplaylist Editor"
+msgid "Open the Kodi SmartPlaylist Editor for custom playlists."
 msgstr ""
 
 msgctxt "#33140"
-msgid "Automatically create local channel & genre subfolders for fillers\n./cache/fillers/."
-msgstr ""
-
-msgctxt "#33148"
-msgid "Remove PseudoTV Live recordings when media path no longer exists."
+msgid "Auto-create subfolders under cache/fillers/ for each channel and genre. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33149"
-msgid "Override Low-Power background pausing and performance throttling."
+msgid "Override Kodi background throttling for full performance when idle. [Default: Disabled]"
+msgstr ""
+
+msgctxt "#33149"
+msgid "Override Kodi background throttling for full performance when idle. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33150"
-msgid "Parse Library & Build Channels while playing."
+msgid "Allow channel building to continue while media plays. May impact playback performance. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33153"
-msgid "[B]Restart[/B] prompt when media progress above % [0% Disabled, 95% Default]."
+msgid "Show restart prompt when playback progress exceeds percentage. 0% disables prompt. [Default: 95%]"
 msgstr ""
 
 msgctxt "#33155"
-msgid "Allow PseudoTV Live to force Kodi's PVR Backend to reload after a channel update [May Cause System Instability]."
+msgid "Force IPTV Simple to reload after channel updates. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33157"
@@ -2341,15 +2349,15 @@ msgid "Open Kodi's PVR & Live TV settings."
 msgstr ""
 
 msgctxt "#33159"
-msgid "Force a complete rebuild of your Autotune library."
+msgid "Force complete rebuild of all autotuned channels. Use when channels are corrupted or missing."
 msgstr ""
 
-msgctxt "#33160"
+msgctxt "#33027"
 msgid "Select one or more channel logo resource packs."
 msgstr ""
 
-msgctxt "#33161"
-msgid "QRCode - Visit Kodi.TV PseudoTV Live Support Forum."
+msgctxt "#33159"
+msgid "Force complete rebuild of all autotuned channels. Use when channels are corrupted or missing."
 msgstr ""
 
 msgctxt "#33165"
@@ -2364,24 +2372,24 @@ msgctxt "#33168"
 msgid "QRCode - Visit PseudoTV Live Wiki."
 msgstr ""
 
-msgctxt "#33169"
-msgid "Be sure to install the Lunatixz Beta repository in-order to stay update.\nInformation available in the readme or in the official Kodi Forums."
+msgctxt "#33033"
+msgid "Be sure to install the Lunatixz Beta repository in-order to stay update. Information available in the readme or in the official Kodi Forums."
 msgstr ""
 
 msgctxt "#33170"
-msgid "Delete channel Path"
+msgid "Display the On-Screen Display when the channel changes. [Default: Disabled]"
 msgstr ""
 
-msgctxt "#33171"
-msgid "Display OSD on change"
+msgctxt "#33170"
+msgid "Display the On-Screen Display when the channel changes. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33172"
-msgid "Default Channel List the Channel Manager starts with."
+msgid "Default channel list displayed when opening Channel Manager."
 msgstr ""
 
 msgctxt "#33174"
-msgid "Enable Vignette"
+msgid "Enable the vignette overlay effect during playback. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33175"
@@ -2412,12 +2420,12 @@ msgctxt "#33181"
 msgid "Autotuned Channel Limit by Type. [2 Min.|Default, 25 Max.]"
 msgstr ""
 
-msgctxt "#33182"
+msgctxt "#33183"
 msgid "Enabled in discovered servers in the list below."
 msgstr ""
 
 msgctxt "#33184"
-msgid "Enabled Channel Building"
+msgid "Enable channel building and compilation processes."
 msgstr ""
 
 msgctxt "#33185"
@@ -2429,43 +2437,43 @@ msgid "Vignette Non-Linear Stretch"
 msgstr ""
 
 msgctxt "#33198"
-msgid "Boost Background Processing through Multi-Threading. [Disabled Default]\nProgress Dialog disabled when running executors."
+msgid "Use multi-threading for faster background processing. Disables progress dialog. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33201"
-msgid "How long to wait for Kodi response (Seconds) [-1 Disabled Default]\nPervent system hangs while waiting for a lengthy response."
+msgid "Seconds to wait for Kodi API response before timeout. [Default: -1 (Disabled)]"
 msgstr ""
 
-msgctxt "#33202"
-msgid "Minimum Debugging Level [LOGERROR - Default]\nIf submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error."
+msgctxt "#33002"
+msgid "Minimum Debugging Level [LOGERROR - Default] If submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error."
 msgstr ""
 
 msgctxt "#33209"
-msgid "Select Channel Bug Transparency. [25% = More Transparent, 50% = Less Transparent]"
+msgid "Transparency level for channel bug logo. Lower = more transparent. [Default: 25%]"
 msgstr ""
 
 msgctxt "#33211"
-msgid "Include repeating content when interleave for a round-robin of content *see wiki for details [True Default]"
+msgid "Include duplicate content in interleaved channels for round-robin. [Default: True]"
 msgstr ""
 
 msgctxt "#33212"
-msgid "Notifications During Playback"
+msgid "Show notification popups during media playback. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33213"
-msgid "This Instance of PseudoTV only runs as a client, with no channels configured locally."
+msgid "Configure as client only, no local channel definitions. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33214"
-msgid "Force Channel rebuilding when Playlist changes are detected"
+msgid "Force channel rebuild when playlist file changes detected. [Default: Disabled]"
 msgstr ""
 
-msgctxt "#33215"
+msgctxt "#33179"
 msgid "Interleave individual paths in sets of x *see wiki for details [0 Disabled]"
 msgstr ""
 
 msgctxt "#33219"
-msgid "[COLOR=red][B]Warning!! [/B][/COLOR]PseudoTV is not responsible for excessive API usage or any charges incurred from A.I. services.\nUsers are advised to configure their platforms carefully to manage usage."
+msgid "[COLOR=red][B]Warning[/B][/COLOR] AI features may incur API usage costs. Use at your own discretion."
 msgstr ""
 
 msgctxt "#33220"
@@ -2473,38 +2481,38 @@ msgid "Change the default A.I. generative prompt use {name} and {group} along wi
 msgstr ""
 
 msgctxt "#33222"
-msgid "How long to wait (Seconds) before PseudoTV attempts to correct failed playback. [90 Default]"
+msgid "Seconds before PseudoTV attempts to correct failed playback. [Default: 90]"
 msgstr ""
 
 msgctxt "#33224"
-msgid "How many sub-folders to recursively search, 0 == Root Folder Only. [0 Default]\nIncrease based on your media folder hierarchy."
+msgid "Subfolder levels to recursively search. 0 = root only. [Default: 0]"
 msgstr ""
 
 msgctxt "#33225"
-msgid "Enable parsing additional media details, Enabling will impact channel building performance. [False Default]"
+msgid "Parse additional media metadata during channel building. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33226"
-msgid "Enable Smart Shuffling\nChanges may propagate slowly over time and may not be instantaneous. [False Default] *see wiki for details"
+msgid "Randomize channel content order. Changes apply gradually. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33227"
-msgid "System Memory limit (Percentage) cache can utilize."
+msgid "Maximum percentage of system memory the addon cache can utilize."
 msgstr ""
 
 msgctxt "#33228"
-msgid "Pause Channel when not viewing (Experimental)"
+msgid "Pause channel content when not actively viewed. Experimental. [Default: Disabled]"
 msgstr ""
 
 msgctxt "#33229"
-msgid "Change the onscreen On Next position. [Auto Default]"
+msgid "Position of the On-Next overlay. Auto selects optimal position. [Default: Auto]"
 msgstr ""
 
-msgctxt "#33230"
-msgid "Force TV in Episode order, Movies in Year order\nBased on available content provided by your channel configuration and supersedes SmartPlaylist rules"
+msgctxt "#33181"
+msgid "Force TV in Episode order, Movies in Year order Based on available content provided by your channel configuration and supersedes SmartPlaylist rules"
 msgstr ""
 
-msgctxt "#33231"
+msgctxt "#33183"
 msgid "Random sort & shuffle channel content."
 msgstr ""
 
@@ -2513,10 +2521,10 @@ msgid "Change sorting methods like episode order, random order."
 msgstr ""
 
 msgctxt "#33233"
-msgid "Include Extras & Specials in Post-Roll fillers.\nContent is matched by the previous media played.\nEnabling may slow down channel parsing."
+msgid "Include Extras/Specials in Post-Roll fillers. Matched to previously played item. [Default: Disabled]"
 msgstr ""
 msgctxt "#33259"
-msgid "Rebuild channel after change?"
+msgid "Prompt to rebuild channel after changes in Channel Manager."
 msgstr ""
 
 
@@ -2524,14 +2532,94 @@ msgctxt "#33308"
 msgid "Install Log Uploader."
 msgstr ""
 
-msgctxt "#33309"
+msgctxt "#33009"
 msgid "Submit debugging log for review to http://paste.kodi.tv."
 msgstr ""
 
-msgctxt "#33310"
-msgid "Open Settings"
+msgctxt "#33108"
+msgid "Open the PseudoTV Live addon settings."
 msgstr ""
 
-msgctxt "#33311"
-msgid "Periodically populate channels based on your top 25 Kodi content by category.\nDisable to enable Channel Manager."
+msgctxt "#33230"
+msgid "Force TV in episode order, movies in year order. Overrides SmartPlaylist sorting. [Default: Disabled]"
 msgstr ""
+msgctxt "#34051"
+msgid "Select addon(s) providing bumper videos for pre-roll/post-roll. [Default: None]"
+msgstr ""
+
+msgctxt "#34052"
+msgid "Select addon(s) providing rating card videos. [Default: None]"
+msgstr ""
+
+msgctxt "#34053"
+msgid "Select addon(s) providing advert videos. [Default: None]"
+msgstr ""
+
+msgctxt "#34054"
+msgid "Select addon(s) providing trailer videos. [Default: None]"
+msgstr ""
+
+msgctxt "#34055"
+msgid "API key for OpenRouter AI services."
+msgstr ""
+
+msgctxt "#34056"
+msgid "AI model used for contextual logo generation."
+msgstr ""
+
+msgctxt "#34057"
+msgid "Enable AI-powered artwork generation. [Default: Disabled]"
+msgstr ""
+
+msgctxt "#34058"
+msgid "AI model used for image generation tasks."
+msgstr ""
+
+msgctxt "#34059"
+msgid "Show the Utilities menu in the addon settings."
+msgstr ""
+
+msgctxt "#34060"
+msgid "Display the changelog on addon update."
+msgstr ""
+
+msgctxt "#34061"
+msgid "Current connection status of the remote HTTP server."
+msgstr ""
+
+msgctxt "#34062"
+msgid "Display name for this PseudoTV Live instance on the network."
+msgstr ""
+
+msgctxt "#34063"
+msgid "URL to the M3U playlist file served by this instance."
+msgstr ""
+
+msgctxt "#34064"
+msgid "URL to the XMLTV guide data file served by this instance."
+msgstr ""
+
+msgctxt "#34065"
+msgid "URL to the genre mappings file served by this instance."
+msgstr ""
+
+msgctxt "#34066"
+msgid "Display QR code to install Bonjour service on Windows."
+msgstr ""
+
+msgctxt "#30234"
+msgid "Would you like to add: [B]{name}[/B] to the first available {addon} channel?"
+msgstr ""
+
+msgctxt "#30235"
+msgid "Would you like to add: [B]{name}[/B] to {type} recordings?"
+msgstr ""
+
+msgctxt "#30236"
+msgid "Would you like to remove: [B]{name}[/B] from recordings?"
+msgstr ""
+
+msgctxt "#30237"
+msgid "Select one or more resources"
+msgstr ""
+

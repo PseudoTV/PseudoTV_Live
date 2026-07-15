@@ -22,6 +22,8 @@ from variables  import *
 from resources  import Resources
 
 class Fillers(object):
+
+
     def __init__(self, citem: Dict[str, Any] = {}, builder: Any = None):
         self.citem      = citem
         self.builder    = builder
@@ -157,6 +159,7 @@ class Fillers(object):
         return items
         
 
+
     def _getPreRoll(self, fileItem: Dict[str, Any]) -> List[Dict[str, Any]]:
         # pre roll - bumpers/ratings
         nfileList: List[Dict[str, Any]] = []
@@ -227,6 +230,7 @@ class Fillers(object):
                     post_counter += 1
         return nfileList
         
+
 
     def injectFillers(self, fileList: List[Dict[str, Any]], slot_size_mins: int = 30) -> List[Dict[str, Any]]:
         self.log('[%s] injectFillers, IN fileList = %s'%(self.citem.get('id'), len(fileList)))

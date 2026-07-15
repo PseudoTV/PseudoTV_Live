@@ -30,7 +30,7 @@ from _services   import _Service
 REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Library(object):
-    channels   = Channels()
+    channels   = Channels(getChannelKey())
     predefined = Predefined()
     
     def __init__(self, service: Optional[_Service] = None, writable: bool = False):
@@ -67,9 +67,11 @@ class Library(object):
         self.resources   = Resources(service)
         
 
+
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
         
+
 
     def _load(self) -> dict:
         return Globals.settings.getCacheSetting(self.libraryKEY, FileAccess._getMD5(self.libraryKEY), default={})
@@ -122,7 +124,7 @@ class Library(object):
     def clrLibraryCache(self, type: str):
         self.log('clrLibraryCache, type = %s'%(type))
         with Globals.builtin.busy_dialog():
-            Globals.dialog.notificationDialog(LANGUAGE(30070)%(type),time=5)
+            Globals.dialog.notificationDialog(LANGUAGE(30070).format(name=type),time=5)
             self.cache.clr("%s.%s"%(self.__class__.__name__,self.AUTOTUNE[type]['func'].__name__),wait=5)
 
 
@@ -270,6 +272,7 @@ class Library(object):
         searchList = sorted(searchList,key=itemgetter('name'))
         return searchList
                 
+
 
     def getTVInfo(self, sortbycount: bool = True, limit: int = AUTOTUNE_CHANNEL_LIMIT) -> dict:
         self.log('getTVInfo')
@@ -430,6 +433,7 @@ class Library(object):
         return self.searchRecommended().get(addonid,{})
         
 
+
     def searchRecommended(self) -> dict:
         ...#todo refactor feature
         # library.importPrompt() 
@@ -480,6 +484,7 @@ class Library(object):
         return self.setWhiteList(whiteList)
         
 
+
     def addBlackList(self, addonid: str) -> bool:
         self.log('addBlackList, addonid = %s'%(addonid))
         blackList = self.getBlackList()
@@ -501,7 +506,7 @@ class Library(object):
         
         try:
             if len(addonNames) > 1:
-                retval = Globals.dialog.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056))
+                retval = Globals.dialog.yesnoDialog('%s'%(LANGUAGE(32055).format(plugin=ADDON_NAME,name=', '.join(addonNames))), customlabel=LANGUAGE(32056))
                 self.log('importPrompt, prompt retval = %s'%(retval))
                 if   retval == 1: raise Exception('Single Entry')
                 elif retval == 2: 
@@ -513,7 +518,7 @@ class Library(object):
             self.log('importPrompt, %s'%(e))
             for addonid, item in list(addonList.items()):
                 if item.get('meta',{}).get('name') in addonNames:
-                    if not Globals.dialog.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name','')))):
+                    if not Globals.dialog.yesnoDialog('%s'%(LANGUAGE(32055).format(plugin=ADDON_NAME,name=item['meta'].get('name','')))):
                         self.addBlackList(addonid)
                     else:
                         self.addWhiteList(addonid)

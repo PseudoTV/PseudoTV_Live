@@ -25,6 +25,8 @@ from library    import Library
 from channels   import Channels
 
 class Autotune(object):    
+
+
     def __init__(self, sysARG: list = sys.argv):
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG  = sysARG 
@@ -47,14 +49,14 @@ class Autotune(object):
                 hasServers = Globals.properties.hasServers()
                 self.log(f'_runTune, hasBackup = {hasBackup}, hasServers = {hasServers}')
                 while not MONITOR().abortRequested():
-                    retval = Globals.dialog.yesnoDialog(message='%s %s'%(LANGUAGE(32042)%(ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254))
+                    retval = Globals.dialog.yesnoDialog(message='%s %s'%(LANGUAGE(32042).format(name=ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254))
                     if retval == 0: #No
                         return True if hasChannels else Globals._openSettings()
                     elif retval == 1: #Yes
                         Globals.settings.setSettingBool('Autotuned_Channels',True)
                         break       
                     elif retval == 2:#Custom
-                        menu = [Globals.listitems.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33310),url='special://home/addons/%s/resources/lib/utilities.py, Channel_Manager'%(ADDON_ID))]
+                        menu = [Globals.listitems.buildMenuListItem(LANGUAGE(30107),LANGUAGE(33108),url='special://home/addons/%s/resources/lib/utilities.py, Channel_Manager'%(ADDON_ID))]
                         if hasBackup:  menu.append(Globals.listitems.buildMenuListItem('%s %s'%(LANGUAGE(32112),LANGUAGE(30108)),LANGUAGE(32111),url='special://home/addons/%s/resources/lib/backup.py, Recover_Backup'%(ADDON_ID)))
                         if hasServers: menu.append(Globals.listitems.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='special://home/addons/%s/resources/lib/multiroom.py, Select_Server_Client'%(ADDON_ID)))
                         select = Globals.dialog.selectDialog(menu,multi=False)
@@ -63,12 +65,8 @@ class Autotune(object):
             else: return True
             
         with Globals.dialog._progressDialog("", LANGUAGE(30038)) as self.pDialog:
-            items = []
+            items   = []
             manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
-            if autoChannels: 
-                if manager.backup.backupChannels(CHANNELFLE_AUTOTUNE,silent=True): 
-                    FileAccess.delete(CHANNELFLEPATH)
-                    
             library = Library()
             for idx, type in enumerate(AUTOTUNE_TYPES):
                 self.pMSG    = type

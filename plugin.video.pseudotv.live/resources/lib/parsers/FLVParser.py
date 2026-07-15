@@ -21,11 +21,14 @@ from typing import Any, Optional, Union
 import struct
 
 class FLVTagHeader:
+
+
     def __init__(self):
         self.tagtype = 0
         self.datasize = 0
         self.timestamp = 0
         self.timestampext = 0
+
 
     def readHeader(self, thefile: Any):
         try:
@@ -51,6 +54,8 @@ class FLVParser:
     Parser for FLV (Flash Video) files.
     Duration is extracted from the last video tag timestamp.
     """
+
+
     def __init__(self):
         self.monitor = MONITOR()    
     
@@ -59,36 +64,36 @@ class FLVParser:
         Determines video length from FLV file.
         Returns duration in seconds.
         """
-        LOG("FLVParser: determineLength %s"%filename)
+        LOG("FLVParser: determineLength, [%s]"%filename)
 
         try: 
             self.File = FileAccess.open(filename, "rb", None)
         except IOError as e:
-            LOG("FLVParser: Unable to open the file: %s"%e)
+            LOG("FLVParser: determineLength, unable to open the file, failed!\n%s"%e)
             return 0
 
         try:
             if self.verifyFLV() == False:
-                LOG("FLVParser: Not a valid FLV")
+                LOG("FLVParser: determineLength, not a valid FLV")
                 return 0
 
             tagheader = self.findLastVideoTag()
 
             if tagheader is None:
-                LOG("FLVParser: Unable to find a video tag")
+                LOG("FLVParser: determineLength, unable to find a video tag")
                 return 0
 
             dur = int(self.getDurFromTag(tagheader))
-            LOG("FLVParser: Duration is %s seconds"%(dur))
+            LOG("FLVParser: determineLength, duration = %s seconds"%(dur))
             return dur
         except Exception as e:
-            LOG("FLVParser: Unexpected error: %s"%e)
+            LOG("FLVParser: determineLength, failed!\n%s"%e)
             return 0
         finally:
             try:
                 self.File.close()
             except Exception as e:
-                LOG('FLVParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
+                LOG('FLVParser: File.close, failed!\n%s' % e, xbmc.LOGDEBUG)
 
 
     def verifyFLV(self) -> bool:
@@ -97,7 +102,7 @@ class FLVParser:
             data = self.File.read(3)
             return data == b'FLV' or data == 'FLV'
         except Exception as e:
-            LOG('FLVParser: verifyFLV failed: %s' % e, xbmc.LOGDEBUG)
+            LOG('FLVParser: verifyFLV, failed!\n%s' % e, xbmc.LOGDEBUG)
             return False
 
 
@@ -107,7 +112,7 @@ class FLVParser:
             self.File.seek(0, 2)
             curloc = self.File.tell()
         except Exception as e:
-            LOG("FLVParser: Exception seeking in findLastVideoTag: %s"%e)
+            LOG("FLVParser: findLastVideoTag, failed!\n%s"%e)
             return None
 
         # Go through a limited amount of the file before quitting
@@ -122,11 +127,11 @@ class FLVParser:
                 data = int(struct.unpack('>I', self.File.readBytes(4))[0])
 
                 if data < 1:
-                    LOG('FLVParser: Invalid packet data')
+                    LOG('FLVParser: findLastVideoTag, invalid packet data')
                     return None
 
                 if curloc - data <= 0:
-                    LOG('FLVParser: No video packet found')
+                    LOG('FLVParser: findLastVideoTag, no video packet found')
                     return None
 
                 self.File.seek(-4 - data, 1)
@@ -135,21 +140,21 @@ class FLVParser:
                 tag.readHeader(self.File)
 
                 if tag.datasize <= 0:
-                    LOG('FLVParser: Invalid packet header')
+                    LOG('FLVParser: findLastVideoTag, invalid packet header')
                     return None
 
                 if curloc - 8 <= 0:
-                    LOG('FLVParser: No video packet found')
+                    LOG('FLVParser: findLastVideoTag, no video packet found')
                     return None
 
                 self.File.seek(-8, 1)
-                LOG("FLVParser: detected tag type %s"%(tag.tagtype))
+                LOG("FLVParser: findLastVideoTag, detected tag type %s"%(tag.tagtype))
                 curloc = self.File.tell()
 
                 if tag.tagtype == 9:  # Video tag type
                     return tag
             except Exception as e:
-                LOG('FLVParser: Exception in findLastVideoTag: %s'%e)
+                LOG('FLVParser: findLastVideoTag, failed!\n%s'%e)
                 return None
 
         return None

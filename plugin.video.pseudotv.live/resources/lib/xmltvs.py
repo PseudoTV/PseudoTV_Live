@@ -133,6 +133,14 @@ class XMLTVS(object):
                 except Exception as e:
                     self.log("_save, failed!", xbmc.LOGERROR)
                     Globals.dialog.notificationDialog(LANGUAGE(32000))
+                
+                # Update PVR status with current M3U/XMLTV data
+                status = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(), Globals.properties.getFriendlyName())
+                xmltv_channels = self.getChannels()
+                status['xmltv']['channel_ids'] = {c.get('id') for c in xmltv_channels if c.get('id')}
+                status['xmltv']['programmes'] = len(self.getProgrammes())
+                status['xmltv']['last_write'] = time.time()
+                Globals.settings.instances._computeDerived(status)
                 return self.buildGenres()
         
     
@@ -171,6 +179,7 @@ class XMLTVS(object):
             self._error('loadData',e)
             return data
         
+
 
     def loadChannels(self) -> list:
         self.log('loadChannels, file = %s'%self.XMLTVFile)
@@ -254,7 +263,8 @@ class XMLTVS(object):
 
 
     def cleanString(self, text: str) -> str:
-        if text == ', ' or not text: text = LANGUAGE(32020) #"Unavailable"
+        if text == ', ' or not text: text = LANGUAGE(32020) or 'Unavailable'
+        if not isinstance(text, str): text = str(text)
         return bytes(text,DEFAULT_ENCODING).decode(DEFAULT_ENCODING,'ignore')
 
 
@@ -320,6 +330,7 @@ class XMLTVS(object):
         try:    return sorted(channels, key=itemgetter('display-name'))
         except Exception: return channels
         
+
 
     def sortProgrammes(self, programmes: list=None) -> list:
         if programmes is None: programmes = []
@@ -391,9 +402,14 @@ class XMLTVS(object):
 
         item['rating']      = Globals._cleanMPAA(fItem.get('mpaa') or 'NA')
         item['stars']       = (fItem.get('rating')        or '0')
+        item['votes']       = (fItem.get('votes')         or '')
         item['writer']      = fItem.get('writer',[])[:5]   #trim list to five
         item['director']    = fItem.get('director',[])[:5] #trim list to five
         item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role',LANGUAGE(32020))) for actor in fItem.get('cast',[])[:5] if actor.get('name')]
+        item['studio']      = fItem.get('studio','')
+        item['country']     = fItem.get('country','')
+        item['tagline']     = fItem.get('tagline','')
+        item['originaltitle'] = fItem.get('originaltitle','')
         
         fItem['citem']      = citem #channel item (stale data due to xmltv storage) use for reference
         item['fitem']       = fItem #raw kodi fileitem/listitem, contains citem both passed through 'plot' xmltv param.
@@ -415,9 +431,10 @@ class XMLTVS(object):
                       'icon'         : [{'src':ritem['logo']}]})
                       
             self.log('addRecording, sitem = %s'%(sitem))
-            try: self.XMLTVDATA['recordings'][self.findRecording(ritem)[0]] = sitem
-            except Exception: 
-                self.log(f'addRecording, findRecording failed for {ritem.get("id")}, appending instead', xbmc.LOGWARNING)
+            idx, _ = self.findRecording(ritem)
+            if idx is not None:
+                self.XMLTVDATA['recordings'][idx] = sitem
+            else:
                 self.XMLTVDATA['recordings'].append(sitem)
 
             fitem['start'] = Globals._getUTCstamp()
@@ -432,9 +449,10 @@ class XMLTVS(object):
                       'display-name' : [(self.cleanString(citem['name']), LANG)],
                       'icon'         : [{'src':citem['logo']}]})
             self.log('addChannel, mitem = %s'%(mitem))
-            try:              self.XMLTVDATA['channels'][self.findChannel(mitem)[0]] = mitem
-            except Exception: 
-                self.log(f'addChannel, findChannel failed for {mitem.get("id")}, appending instead', xbmc.LOGWARNING)
+            idx, _ = self.findChannel(mitem)
+            if idx is not None:
+                self.XMLTVDATA['channels'][idx] = mitem
+            else:
                 self.XMLTVDATA['channels'].append(mitem)
             return True
 
@@ -489,18 +507,34 @@ class XMLTVS(object):
             if item.get('audio',False):
                 pitem['audio'] = [{'stereo': 'stereo'}]
 
-            # if item.get('video',{}):
-                # pitem['video'] = [{'aspect': item.get('video',{}).get('aspect')}]
-            
-            # if item.get('language',''):
-                # pitem['language'] = [(item.get('language'), LANG)]
-               
-            # if item.get('subtitle',[]):
-                # pitem['subtitles'] = [{'type': 'teletext', 'language': ('%s'%(sub), LANG)} for sub in item.get('subtitle',[])]
-                
-             ##### TODO #####
-               # 'country'     : [('USA', LANG)],#todo
-               # 'premiere': (u'Not really. Just testing', u'en'),
+            if item.get('language',''):
+                pitem['language'] = [(item.get('language'), LANG)]
+
+            if item.get('subtitle',[]):
+                pitem['subtitles'] = [{'type': 'teletext', 'language': (sub, LANG)} for sub in item.get('subtitle',[]) if sub]
+
+            if item.get('video',{}).get('aspect'):
+                pitem['video'] = [{'aspect': item['video']['aspect']}]
+
+            if not item.get('new', False):
+                pitem['previously-shown'] = [{}]
+
+            if item.get('votes',''):
+                try: pitem['star-rating'] = [{'value': '%s/10'%(int(round(float(item['stars'])))), 'votes': str(item['votes'])}]
+                except Exception: pass
+
+            if item.get('studio',''):
+                pitem['credits'] = pitem.get('credits',{})
+                pitem['credits']['studio'] = [self.cleanString(item['studio'])]
+
+            if item.get('country',''):
+                pitem['country'] = [(item['country'], LANG)]
+
+            if item.get('tagline',''):
+                pitem['desc'] = list(pitem.get('desc',[]))
+                if not pitem['desc']:
+                    pitem['desc'] = [(self.cleanString(item['tagline']), LANG)]
+
             self.log('[%s] addProgram'%(id))
             self.XMLTVDATA['programmes'].append(pitem)
             return True

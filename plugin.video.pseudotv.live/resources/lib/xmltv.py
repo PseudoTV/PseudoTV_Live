@@ -343,6 +343,8 @@ class Writer:
     """
     A class for generating XMLTV data
     """
+
+
     def __init__(self, encoding: str = locale, date: Optional[str] = None,
                  source_info_url: Optional[str] = None, source_info_name: Optional[str] = None,
                  generator_info_url: Optional[str] = None, generator_info_name: Optional[str] = None):
@@ -357,9 +359,11 @@ class Writer:
             if val:
                 self.root.set(attr, val)
 
+
     def setattr(self, node: Any, attr: str, value: Any):
         if value is not None:
             node.set(attr, str(value))
+
 
     def settext(self, node: Any, text: Any, with_lang: bool = True):
         if with_lang:
@@ -372,6 +376,7 @@ class Writer:
         else:
             node.text = '' if text is None else str(text)
 
+
     def seticons(self, node: Any, icons: List[Dict[str, Any]]):
         for icon in icons:
             if 'src' not in icon:
@@ -381,16 +386,19 @@ class Writer:
                 if attr in icon:
                     self.setattr(i, attr, icon[attr])
 
+
     def set_zero_ormore(self, programme: Dict[str, Any], element: str, p: Any):
         if element in programme and programme[element]:
             for item in programme[element]:
                 e = SubElement(p, element)
                 self.settext(e, item)
 
+
     def set_zero_orone(self, programme: Dict[str, Any], element: str, p: Any):
         if element in programme and programme[element] is not None:
             e = SubElement(p, element)
             self.settext(e, programme[element])
+
 
     def addProgramme(self, programme: Dict[str, Any]) -> Any:
         """
@@ -541,6 +549,7 @@ class Writer:
                     self.settext(v, review['value'], with_lang=False)
 
         return p
+
 
     def addChannel(self, channel: Dict[str, Any]) -> Any:
         """

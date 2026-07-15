@@ -24,6 +24,8 @@ from variables import *
 from resources import Resources
 
 class Busy(xbmcgui.WindowXMLDialog):
+
+
     def __init__(self, *args: Any, **kwargs: Any):
         self.isLocked = kwargs.pop('isLocked', False)
         super().__init__(*args, **kwargs)
@@ -36,7 +38,8 @@ class Busy(xbmcgui.WindowXMLDialog):
             diffuse_color = "0xC0FF0000" if self.isLocked else "0xFF01416b"
             spinner.setColorDiffuse(diffuse_color)
         except Exception as e:
-            LOG(f"Busy: Failed to modify UI Control 41 spinner element: {str(e)}", xbmc.LOGERROR)
+            LOG(f"Busy: onInit, failed!\n{str(e)}", xbmc.LOGERROR)
+
 
     def onAction(self, act: xbmcgui.Action):
         actionId = act.getId()
@@ -49,6 +52,8 @@ class Busy(xbmcgui.WindowXMLDialog):
                 Globals.dialog.notificationDialog(LANGUAGE(32260))
                 
 class Background(xbmcgui.WindowXMLDialog):
+
+
     def __init__(self, *args: Any, **kwargs: Any):
         self.service = kwargs.pop('service', None)
         super().__init__(*args, **kwargs)
@@ -62,6 +67,7 @@ class Background(xbmcgui.WindowXMLDialog):
       
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
+
 
     def onInit(self):
         try:
@@ -167,6 +173,7 @@ class Replay(xbmcgui.WindowXMLDialog):
             self.log(f"onInit failed: {str(e)}", xbmc.LOGERROR)
             self.close()
 
+
     def _run(self, control: xbmcgui.Control):
         try:
             wait = OSD_TIMER * 2
@@ -197,6 +204,7 @@ class Replay(xbmcgui.WindowXMLDialog):
         finally:
             self.close()
 
+
     def onAction(self, act: xbmcgui.Action):
         actionId = act.getId()
         self.log(f"onAction: actionId = {actionId}")
@@ -215,12 +223,15 @@ class Replay(xbmcgui.WindowXMLDialog):
             else: 
                 Globals.dialog.notificationDialog(LANGUAGE(30154))
 
+
     def onClose(self):
         self.log("onClose")
         self.closing = True
 
 
 class Overlay:
+
+
     def __init__(self, *args: Any, **kwargs: Any):
         service = kwargs.get('service', None)
         if service is None: return
@@ -264,14 +275,18 @@ class Overlay:
             self.log(f'initOverlays, failed to parse Channel_Bug_Position_XY: {e}', xbmc.LOGDEBUG)
             self.channelBugX, self.channelBugY = abs(int(self.window_w // 9) - self.window_w) - 128, abs(int(self.window_h // 16) - self.window_h) - 128
 
+
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
+
 
     def _hasControl(self, control: xbmcgui.Control) -> bool:
         return control in self.cntrlManager
 
+
     def _isVisible(self, control: str) -> bool:
         return self.cntrlManager.get(control, False)
+
 
     def _setVisible(self, control: xbmcgui.Control, state: bool = False) -> bool:
         if control is None: return False
@@ -282,6 +297,7 @@ class Overlay:
             self.log(f"_setVisible failed: {str(e)}", xbmc.LOGERROR)
             self._delControl(control)
             return False
+
 
     def _addControl(self, control: xbmcgui.Control):
         if control is None: return
@@ -343,6 +359,7 @@ class Overlay:
         elif not state and self.onnext is not None:
             if hasattr(self.onnext, 'onClose'): self.onnext.onClose()
             self.onnext = None
+
 
     def close(self):
         self.log("close: Cleaning overlay layout objects.")
@@ -413,6 +430,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
         
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
+
 
     def onInit(self):
         try:
@@ -488,6 +506,7 @@ class OnNext(xbmcgui.WindowXMLDialog):
                 
         except Exception as e: self.log(f"_run: notification task loop crash failure: {str(e)}", xbmc.LOGERROR)
 
+
     def _updateUpNext(self, nowItem: Optional[dict] = None, nextItem: Optional[dict] = None):
         if nowItem is None: nowItem = {}
         if nextItem is None: nextItem = {}
@@ -519,10 +538,12 @@ class OnNext(xbmcgui.WindowXMLDialog):
         except Exception as e:
             self.log(f"_updateUpNext structural payload packaging failed: {str(e)}", xbmc.LOGERROR)
 
+
     def onAction(self, act: xbmcgui.Action):
         actionId = act.getId()
         self.log(f"onAction: actionId = {actionId}")
         self.closing = True
+
 
     def onClose(self):
         self.log('onClose: Tearing down overlay windows.')

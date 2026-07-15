@@ -42,7 +42,7 @@ class FileAccess(object):
             compressed = zlib.compress(normalized_str.encode(DEFAULT_ENCODING), level=1)
             return base64.urlsafe_b64encode(compressed).decode('ascii')
         except Exception as e:
-            LOG(f"_encodeString failed! {e}", xbmc.LOGERROR)
+            LOG(f"FileAccess: _encodeString, failed!\n{e}", xbmc.LOGERROR)
         return ""
 
     @staticmethod
@@ -58,7 +58,7 @@ class FileAccess(object):
             decompressed_str = zlib.decompress(raw_bytes).decode(DEFAULT_ENCODING)
             return FileAccess.loadJSON(decompressed_str)
         except Exception as e:
-            LOG(f"_decodeString failed! {e}", xbmc.LOGERROR)
+            LOG(f"FileAccess: _decodeString, failed!\n{e}", xbmc.LOGERROR)
         return ""
 
     @staticmethod
@@ -74,7 +74,7 @@ class FileAccess(object):
                 return bytes(item)
             return pickle.dumps(item, protocol=4)
         except Exception as e:
-            LOG(f"dumpPICKLE failed! {e}", xbmc.LOGERROR)
+            LOG(f"FileAccess: dumpPICKLE, failed!\n{e}", xbmc.LOGERROR)
         return b""
 
     @staticmethod
@@ -91,7 +91,7 @@ class FileAccess(object):
         except pickle.UnpicklingError:
             pass
         except Exception as e:
-            LOG(f"loadPICKLE failed! {e}", xbmc.LOGERROR)
+            LOG(f"FileAccess: loadPICKLE, failed!\n{e}", xbmc.LOGERROR)
         return None
 
     @staticmethod
@@ -111,7 +111,7 @@ class FileAccess(object):
         except (TypeError, ValueError):
             return '{}'
         except Exception as e:
-            LOG(f"dumpJSON failed! {e}", xbmc.LOGERROR)
+            LOG(f"FileAccess: dumpJSON, failed!\n{e}", xbmc.LOGERROR)
         return '{}'
 
     @staticmethod
@@ -138,7 +138,7 @@ class FileAccess(object):
         except (json.JSONDecodeError, TypeError):
             return item
         except Exception as e:
-            LOG(f"loadJSON failed! {e}", xbmc.LOGERROR)
+            LOG(f"FileAccess: loadJSON, failed!\n{e}", xbmc.LOGERROR)
         return item
 
     @staticmethod
@@ -148,7 +148,7 @@ class FileAccess(object):
             with FileAccess.stream(file_path, 'r') as fle:
                 return FileAccess.loadJSON(fle.read())
         except Exception as e:
-            LOG(f"getJSON failed! {e}\nfile = {file_path}", xbmc.LOGERROR)
+            LOG(f"FileAccess: getJSON, failed!\n{e}", xbmc.LOGERROR)
         return {}
 
     @staticmethod
@@ -160,7 +160,7 @@ class FileAccess(object):
                     fle.write(FileAccess.dumpJSON(data, idnt=4, sortkey=False))
                 return True
             except Exception as e:
-                LOG(f"setJSON failed! {e}\nfile = {file_path}", xbmc.LOGERROR)
+                LOG(f"FileAccess: setJSON, failed!\n{e}", xbmc.LOGERROR)
         return False
 
     @staticmethod
@@ -178,7 +178,7 @@ class FileAccess(object):
                         f.write(chunk)
             return True
         except Exception as e:
-            LOG(f"setURL failed! {e}\nfile = {file_path}", xbmc.LOGERROR)
+            LOG(f"FileAccess: setURL, failed!\n{e}", xbmc.LOGERROR)
         return False
 
     @staticmethod
@@ -230,7 +230,7 @@ class FileAccess(object):
     @staticmethod
     def copyFolder(src: str, dest_dir: str, dia: Any = None, move: bool = False) -> Any:
         """Recursively copy/move a folder with optional progress dialog."""
-        LOG(f"copyFolder {src} to {dest_dir}")
+        LOG(f"FileAccess: copyFolder {src} to {dest_dir}")
         if not FileAccess.exists(dest_dir):
             FileAccess.mkdirs(dest_dir)
         
@@ -288,7 +288,7 @@ class FileAccess(object):
             LOG(f"delete {filename}", xbmc.LOGINFO)
             return xbmcvfs.delete(filename)
         except Exception as e:
-            LOG(f"delete failed via VFS! {e}. Attempting native os.remove", xbmc.LOGERROR)
+            LOG(f"FileAccess: delete, failed!\n{e}", xbmc.LOGERROR)
             translated = FileAccess.translatePath(filename)
             if os.path.exists(translated):
                 os.remove(translated)
@@ -301,14 +301,14 @@ class FileAccess(object):
             try:
                 filepath = (filepath.split('stack://')[1].split(' , '))[0]
             except Exception as e:
-                LOG("exists stack:// parse failed: %s" % e, xbmc.LOGDEBUG)
+                LOG(f"FileAccess: exists, stack:// parse failed!\n{e}", xbmc.LOGDEBUG)
         
         exists = xbmcvfs.exists(filepath)
         if not exists and not filepath.endswith('\\'):
             filepath_slashed = os.path.join(filepath, '')
             exists = os.path.exists(filepath_slashed) or os.path.exists(FileAccess.translatePath(filepath_slashed))
             
-        LOG(f"path = {path}, exists = {exists}")
+        LOG(f"FileAccess: exists, path = {path}, exists = {exists}")
         return exists
 
     @staticmethod
@@ -318,7 +318,7 @@ class FileAccess(object):
             try:
                 return codecs.open(newname, mode, encoding)
             except Exception as e:
-                LOG("openSMB %s failed: %s" % (newname, e), xbmc.LOGDEBUG)
+                LOG(f"FileAccess: openSMB, failed!\n{e}", xbmc.LOGDEBUG)
         return None
 
     @staticmethod
@@ -330,7 +330,7 @@ class FileAccess(object):
     @staticmethod
     def rename(path: str, newpath: str, force: bool = True) -> bool:
         """Rename a file using multiple fallback strategies (xbmcvfs, os, shutil)."""
-        LOG(f"rename {path} to {newpath}, force = {force}")
+        LOG(f"FileAccess: rename, src = {path}, dest = {newpath}, force = {force}")
         if not FileAccess.exists(path):
             return False
         
@@ -338,13 +338,13 @@ class FileAccess(object):
             if xbmcvfs.rename(path, newpath):
                 return FileAccess.exists(newpath)
         except Exception as e:
-            LOG(f"xbmcvfs.rename failed! {e}", xbmc.LOGERROR)
+            LOG(f"FileAccess: rename, failed!\n{e}", xbmc.LOGERROR)
             
         try:
             if FileAccess.move(path, newpath):
                 return True
         except Exception as e:
-            LOG(f"Fallback move failed! {e}", xbmc.LOGERROR)
+            LOG(f"FileAccess: rename, fallback move failed!\n{e}", xbmc.LOGERROR)
            
         if os.name.lower() == 'nt':
             if path.lower().startswith('smb://'): 
@@ -362,45 +362,45 @@ class FileAccess(object):
             os.rename(trans_path, trans_newpath)
             return True
         except Exception as e:
-            LOG(f"os.rename failed! {e}", xbmc.LOGERROR)
+                LOG(f"FileAccess: rename, failed!\n{e}", xbmc.LOGERROR)
      
         try:
             shutil.move(trans_path, trans_newpath)
             return True
         except Exception as e:
-            LOG(f"shutil.move failed! {e}", xbmc.LOGERROR)
+                LOG(f"FileAccess: rename, shutil.move failed!\n{e}", xbmc.LOGERROR)
             
         return False
 
     @staticmethod
     def removedirs(path: str, force: bool = True) -> bool:
         """Remove a directory with fallback to native os.rmdir."""
-        LOG(f"removedirs, path = {path}, force = {force}")
+        LOG(f"FileAccess: removedirs, path = {path}, force = {force}")
         if not path:
             return False
         try:
             if xbmcvfs.rmdir(path, force=force):
                 return True
         except Exception as e:
-            LOG(f"removedirs, xbmcvfs.rmdir failed for {path}: {e}", xbmc.LOGWARNING)
-            try:
-                translated = FileAccess.translatePath(path)
-                os.rmdir(translated)
-                return not os.path.exists(translated)
-            except Exception:
-                LOG("removedirs completely failed!", xbmc.LOGERROR)
+            LOG(f"FileAccess: removedirs, failed!\n{e}", xbmc.LOGWARNING)
+        try:
+            translated = FileAccess.translatePath(path)
+            os.rmdir(translated)
+            return not os.path.exists(translated)
+        except Exception:
+            LOG("FileAccess: removedirs, completely failed!", xbmc.LOGERROR)
         return False
             
     @staticmethod
     def makedirs(path: str) -> bool:
         try:
-            LOG(f"makedirs, path = {path}")
+            LOG(f"FileAccess: makedirs, path = {path}")
             translated = FileAccess.translatePath(path)
             os.makedirs(translated, exist_ok=True)
             return os.path.exists(translated)
         except Exception as e:
-            LOG(f"makedirs, os.makedirs failed for {path}: {e}", xbmc.LOGWARNING)
-            return FileAccess._makedirs_fallback(path)
+            LOG(f"FileAccess: makedirs, failed!\n{e}", xbmc.LOGWARNING)
+        return FileAccess._makedirs_fallback(path)
             
     @staticmethod
     def _makedirs_fallback(path: str) -> bool:
@@ -419,6 +419,8 @@ class FileAccess(object):
 
 
 class VFSFile:
+
+
     def __init__(self, filename: str, mode: str):
         self.monitor  = MONITOR()
         self.filename = filename
@@ -430,15 +432,18 @@ class VFSFile:
         else:
             self.currentFile = xbmcvfs.File(filename, 'r')
             
-        LOG(f"VFSFile Opening {filename}", xbmc.LOGDEBUG)
+        LOG(f"FileAccess: VFSFile opening {filename}", xbmc.LOGDEBUG)
         if self.currentFile is None:
-            LOG(f"VFSFile Couldn't open {filename}", xbmc.LOGERROR)
+            LOG(f"FileAccess: VFSFile open, failed!\n{e}", xbmc.LOGERROR)
+
 
     def __enter__(self) -> 'VFSFile':
         return self
 
+
     def __exit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Any):
         self.close()
+
 
     def read(self, num_bytes: int = 0) -> Union[bytes, str]:
         try:
@@ -458,11 +463,14 @@ class VFSFile:
         if self.currentFile:
             return self.currentFile.close()
 
+
     def seek(self, num_bytes: int, offset: int = 1) -> int:
         return self.currentFile.seek(num_bytes, offset)
 
+
     def size(self) -> int:
         return self.currentFile.size()
+
 
     def tell(self) -> int:
         try:
@@ -470,17 +478,19 @@ class VFSFile:
         except Exception:
             return self.currentFile.seek(0, 1)
 
+
     def readlines(self) -> List[str]:
         try:
             return ''.join(list(self.readline())).split('\n')
         except Exception:
             return self.read().split('\n')
 
+
     def readline(self) -> Generator[str, None, None]:
         try:
             yield from self.read_in_chunks()
         except Exception as e:
-            LOG(f"VFSFile: readline failed! {e}", xbmc.LOGERROR)
+            LOG(f"FileAccess: VFSFile readline, failed!\n{e}", xbmc.LOGERROR)
         
     def read_in_chunks(self, chunk_size: int = 1024) -> Generator[str, None, None]:
         """Read file data in fixed-size chunks."""
@@ -492,6 +502,8 @@ class VFSFile:
 
 
 class FileLock:
+
+
     def __init__(self, filename: str, timeout: Optional[float] = None, delay: Optional[float] = None):
         if timeout is None: timeout = LOCK_MAX_FILE_TIMEOUT
         if delay is None: delay = LOCK_MAX_FILE_DELAY
@@ -507,7 +519,7 @@ class FileLock:
         try:
             self.release()
         except Exception as e:
-            LOG("FileLock.__del__ release failed: %s" % e, xbmc.LOGDEBUG)
+            LOG("FileAccess: FileLock __del__, release failed!\n%s" % e, xbmc.LOGDEBUG)
         
     def acquire(self):
         """Acquire a file lock with timeout and delay between retries."""
@@ -516,7 +528,7 @@ class FileLock:
             while not self.monitor.abortRequested():
                 if FileAccess.exists(self.lockfile):
                     if (time.time() - start_time) >= self.timeout:
-                        LOG("FileLock Timeout occurred waiting for lock to release.", xbmc.LOGWARNING)
+                        LOG("FileAccess: FileLock timeout!", xbmc.LOGWARNING)
                         break
                     self.monitor.waitForAbort(self.delay)
                     continue
@@ -526,7 +538,7 @@ class FileLock:
                     self.is_locked = True
                     break
                 except Exception as e:
-                    LOG(f"FileLock acquiring failed! {e}", xbmc.LOGERROR)
+                    LOG(f"FileAccess: FileLock acquire, failed!\n{e}", xbmc.LOGERROR)
                     break
  
     def release(self):

@@ -23,9 +23,11 @@ from m3u        import M3U
 from xmltvs     import XMLTVS
 
 class Record(object):
+
+
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         with Globals.builtin.busy_dialog():
-            LOG('Record: __init__, sysARG = %s, fitem = %s\npath = %s'%(sysARG,fitem,listitem.getPath()))
+            LOG('Record: __init__, sysARG = %s, fitem = %s, path = %s'%(sysARG,fitem,listitem.getPath()))
             self.sysARG         = sysARG
             self.fitem          = fitem
             self.listitem       = listitem
@@ -46,7 +48,7 @@ class Record(object):
                     opt  = ''
                     seek = 0
                     msg  = LANGUAGE(30119)
-                retval = Globals.dialog.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto %s recordings?'%(self.fitem['label'],msg),customlabel=opt)
+                retval = Globals.dialog.yesnoDialog(LANGUAGE(30235).format(name=self.fitem['label'], type=msg),customlabel=opt)
                 if retval or int(retval) > 0:
                     with Globals.builtin.busy_dialog():
                         m3u   = M3U(writable=True)
@@ -65,7 +67,7 @@ class Record(object):
     def remove(self):
         if not Globals.properties.isRunning('Record.remove'):
             with Globals.properties.chkRunning('Record.remove'):
-                if Globals.dialog.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(self.fitem['label'])):
+                if Globals.dialog.yesnoDialog(LANGUAGE(30236).format(name=self.fitem['label'])):
                     with Globals.builtin.busy_dialog():
                         m3u   = M3U(writable=True)
                         xmltv = XMLTVS(writable=True)

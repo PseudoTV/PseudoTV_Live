@@ -48,6 +48,7 @@ class Settings(object):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
         
 
+
     def _getRealSettings(self, id: str = ADDON_ID) -> xbmcaddon.Addon:
         try:              return xbmcaddon.Addon(id)
         except Exception as e: 
@@ -55,6 +56,8 @@ class Settings(object):
             return REAL_SETTINGS
 
     #GET
+
+
     def _getSetting(self, func: Callable, key: str) -> Any:
         try: 
             value = func(key)
@@ -103,9 +106,11 @@ class Settings(object):
         return [literal_eval(value) for value in self.getSetting(key).split('|')]
         
 
+
     def getSettingFloatList(self, key: str) -> list:
         return [float(value) for value in self.getSetting(key).split('|') if isinstance(value,float)]
         
+
 
     def getSettingDict(self, key: str) -> dict:
         return FileAccess._decodeString(self.getSetting(key))
@@ -125,11 +130,15 @@ class Settings(object):
         
         
     #CLR
+
+
     def clrCacheSetting(self, key: str):
         self.cache.clr(key)
     
     
     #SET
+
+
     def _setSetting(self, func: Callable, key: str, value: Any):
         try:
             func(key, value)
@@ -169,6 +178,7 @@ class Settings(object):
     def setSettingNumberList(self, key: str, value: list) -> str:
         return self.setSetting(key,('|').join(value))
         
+
 
     def setSettingList(self, key: str, values: list) -> str:
         return self.setSetting(key,('|').join(values))
@@ -218,13 +228,13 @@ class Settings(object):
                 if isEnabled: return True
                 elif enable:
                     if not force:
-                        if not self.dialog.yesnoDialog(message=LANGUAGE(32156)%(id)):
+                        if not self.dialog.yesnoDialog(message=LANGUAGE(32156).format(name=id)):
                             self.log('[%s] hasAddon, (Not Enabled!)'%(id))
                             return isEnabled
                     self.dialog.builtin.executebuiltin(f'EnableAddon({id})',wait=True)
-                elif notify: self.dialog.notificationDialog(LANGUAGE(32264)%(id))
+                elif notify: self.dialog.notificationDialog(LANGUAGE(32264).format(name=id))
             elif install: self.dialog.builtin.executebuiltin(f'InstallAddon({id})',wait=True)
-            elif notify:  self.dialog.notificationDialog(LANGUAGE(32034)%(id))
+            elif notify:  self.dialog.notificationDialog(LANGUAGE(32034).format(name=id))
             return self.dialog.builtin.getInfoBool(f'System.HasAddon({id})')
         
         bypass = self.getSettingBool('Enable_Kodi_Access')
@@ -260,15 +270,10 @@ class Settings(object):
         return uuid
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=5))
     def getBonjour(self) -> dict:
         def __getResumeURLs(remote: str) -> list:
             keys = self.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={})
             return ['http://%s/filelist/%s'%(remote,key) for key in keys]
-            
-        def __getChannels() -> list:
-            from channels import Channels
-            return Channels().getChannels()
             
         host    = self.dialog.properties.getRemoteHost()
         payload = {'id'       :ADDON_ID,
@@ -277,8 +282,8 @@ class Settings(object):
                    'name'     :self.dialog.properties.getFriendlyName(),
                    'version'  :ADDON_VERSION,
                    'machine'  :platform.machine(),
-                   'platform' :self.dialog.builtin.getInfoLabel('System.OSVersionInfo'),
-                   'build'    :self.dialog.builtin.getInfoLabel('System.BuildVersion'),
+                   'platform' :self.dialog.builtin.getInfoLabel('System.OSVersionInfo',retries=3),
+                   'build'    :self.dialog.builtin.getInfoLabel('System.BuildVersion',retries=3),
                    'python'   :platform.python_version(),
                    'remotes'  : {'m3u'     :'http://%s/%s'%(host,M3UFLE),
                                  'xmltv'   :'http://%s/%s'%(host,XMLTVFLE),
@@ -287,15 +292,18 @@ class Settings(object):
                                  'servers' :'http://%s/api/%s'%(host,SERVERFLE),
                                  'library' :'http://%s/api/%s'%(host,LIBRARYFLE),
                                  'channels':'http://%s/api/%s'%(host,CHANNELFLE),
+                                 'pvr'     :'http://%s/api/%s'%(host,PVRFLE),
                                  'logs'    :'http://%s/api/%s'%(host,LOGSFLE),
                                  'resume'  : __getResumeURLs(host)},
-                   'settings' : {'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
-                                 'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
-                                 'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
-                                 'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
-                                 'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}}
+                                 'settings' : {'Resource_Logos'    :self.getSetting('Resource_Logos').split('|'),
+                                  'Resource_Bumpers'  :self.getSetting('Resource_Bumpers').split('|'),
+                                  'Resource_Ratings'  :self.getSetting('Resource_Ratings').split('|'),
+                                  'Resource_Adverts'  :self.getSetting('Resource_Adverts').split('|'),
+                                  'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}}
                    
-        payload['md5']     = FileAccess._getMD5(FileAccess.dumpJSON(payload))
+        # MD5 from stable fields only (exclude volatile 'md5', 'updated', 'resume')
+        stable = {k: v for k, v in payload.items() if k not in ('md5', 'updated', 'resume')}
+        payload['md5']     = FileAccess._getMD5(FileAccess.dumpJSON(stable))
         payload['updated'] = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         self.log(f"getBonjour:\npayload = %s"%(payload))
         return payload
@@ -342,6 +350,7 @@ class Settings(object):
     def setAutotuned(self, state: bool = True) -> bool:
         return self.dialog.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned', state, life=datetime.timedelta(days=MAX_GUIDEDAYS)))
 
+
     def setPVRPath(self, path: str, instanceName: str = ADDON_NAME):
         settings  = self.instances.getSettings(instanceName)
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
@@ -356,6 +365,7 @@ class Settings(object):
                      'genresPath'                 :os.path.join(path,GENREFLE),
                      'logoPathType'               :'0',
                      'logoPath'                   :os.path.join(path,'logos')}
+        settings.update(self.instances.IPTV_SIMPLE_SETTINGS())
         settings.update(nsettings)
         if self.chkPVRChanges(instanceName, settings.copy()):
             self.log('[%s] setPVRPath, %s settings = %s'%(PVR_CLIENT_ID, instanceName, nsettings))
@@ -370,7 +380,7 @@ class Settings(object):
                      'm3uPathType'                :'1',
                      # 'm3uUrl'                     :'http://%s/%s.%s'%(host,M3UFLE,processID),
                      'm3uUrl'                     :'http://%s/%s'%(host,M3UFLE),
-                     'm3uCache'                   :'true',
+                     'm3uCache'                   :'false',
                      'epgPathType'                :'1',
                      'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
                      'epgCache'                   :'true',
@@ -378,6 +388,7 @@ class Settings(object):
                      'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
                      'logoPathType'               :'1',
                      'logoBaseUrl'                :'http://%s/logos'%(host)}
+        settings.update(self.instances.IPTV_SIMPLE_SETTINGS())
         settings.update(nsettings)
         if self.chkPVRChanges(instanceName, settings.copy()):
             self.log('[%s] setPVRLocal, %s settings = %s'%(PVR_CLIENT_ID, instanceName, nsettings))
@@ -415,8 +426,8 @@ class Settings(object):
 
         if len(nsettings) > 0:
             if prompt:
-                self.dialog.textviewer('%s\n\n%s'%(LANGUAGE(32035)%(PVR_CLIENT_NAME),'[CR]'.join(changes)))
-                if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon.getAddonInfo('name'))):
+                self.dialog.textviewer('%s\n\n%s'%(LANGUAGE(32035).format(name=PVR_CLIENT_NAME),'[CR]'.join(changes)))
+                if not self.dialog.yesnoDialog((LANGUAGE(32036).format(name=addon.getAddonInfo('name')))):
                     self.dialog.notificationDialog(LANGUAGE(32046))
                     return False
             self.log('[%s] chkPVRChanges, instanceName = %s, prompt = %s, changes = %s'%(PVR_CLIENT_ID,instanceName,prompt,nsettings))
@@ -424,6 +435,7 @@ class Settings(object):
         self.log('[%s] chkPVRChanges, no changes detected!'%(PVR_CLIENT_ID))
         return False
         
+
 
     def getCurrentSettings(self) -> dict:
         settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT', 'Enable_Autotune', 'Remove_BG_APIKEY', 'Open_Router_APIKEY', 'Enable_Kodi_Access']
@@ -473,6 +485,8 @@ class Settings(object):
             
 class Properties(object):
     dialog = None
+
+
     def __init__(self, service: Optional[_Service] = None, winID: int = 10131):
         if service is None: service = _Service()
         self.pool       = service.pool
@@ -499,6 +513,7 @@ class Properties(object):
         return self.setEXTProperty('%s.ProcessID'%(ADDON_ID),FileAccess._getMD5(uuid4()))
         
 
+
     def _clrTrash(self, processID: Optional[str] = None):
         """Clear abandoned properties after processID change."""
         if processID:
@@ -513,7 +528,7 @@ class Properties(object):
     def _getTrash(self) -> dict:
         try:    return (FileAccess._decodeString(self.getEXTProperty('%s.TRASH'%(ADDON_ID),{})) or {})
         except Exception as e: 
-            LOG('Properties: _getTrash failed: %s' % e, xbmc.LOGDEBUG)
+            LOG('Properties: _getTrash, failed!\n%s' % e, xbmc.LOGDEBUG)
             return {}
 
 
@@ -537,6 +552,8 @@ class Properties(object):
 
 
     #GET
+
+
     def getProperty(self, key: str, default: str = '') -> str:
         thid = None
         try:
@@ -579,6 +596,8 @@ class Properties(object):
         
         
     #CLEAR
+
+
     def clrProperties(self):
         self.log('clrProperties')
         self._memory_cache = OrderedDict()
@@ -599,6 +618,8 @@ class Properties(object):
         
         
     #SET
+
+
     def setProperty(self, key: str, value: Any) -> Any:
         key, thid = self._getKey(key)
         if value is None or value == '':
@@ -632,7 +653,7 @@ class Properties(object):
         else:     self.clrEXTProperty('script.trakt.paused')
 
 
-    @debounceit()
+    @debounceit(OSD_TIMER)
     def setPropTimer(self, key: str, state: bool = True, args: tuple = (), kwargs: dict = None) -> Any:
         if not key.startswith(ADDON_ID): key = '%s.%s'%(ADDON_ID, key)
         value = FileAccess.dumpJSON({'s': state, 'a': list(args), 'k': kwargs or {}})
@@ -679,6 +700,7 @@ class Properties(object):
         return len(channelDATA.get('channels',[])) > 0
         
 
+
     def setBackup(self, key: str = CHANNELBACKUP_KEY, channels: Optional[list] = None) -> Any:
         backups = self.dialog.settings.getCacheSetting('%s.has.backups'%(ADDON_ID), default={})
         if channels is None: channels = Channels(key).getChannels()
@@ -710,6 +732,7 @@ class Properties(object):
         return self.setEXTProperty('%s.has.Servers'%(ADDON_ID),state)
         
 
+
     def hasServers(self) -> bool:
         return self.getEXTProperty('%s.has.Servers'%(ADDON_ID),False)
         
@@ -725,6 +748,7 @@ class Properties(object):
     def setPendingShutdown(self, state: bool = True) -> Any:
         return self.setEXTProperty('%s.SERVICE.pendingShutdown'%(ADDON_ID),state)
         
+
 
     def isPendingShutdown(self) -> bool:
         value = self.getEXTProperty('%s.SERVICE.pendingShutdown'%(ADDON_ID),False)
@@ -774,6 +798,7 @@ class Properties(object):
             self.setLockActivity(False)
             
 
+
     def setLockActivity(self, state: bool = True) -> Any:
         """Context state for locking activity."""
         return self.setEXTProperty('%s.lockActivity'%(ADDON_ID),state)
@@ -800,6 +825,7 @@ class Properties(object):
         """Context state for interrupting activity."""
         return self.setProperty('%s.interruptActivity'%(ADDON_ID),state)
         
+
 
     def isInterruptActivity(self) -> bool:
         """Context state for interrupting activity."""
@@ -1083,7 +1109,7 @@ class ListItems(object):
             if playable: listitem.setProperty("IsPlayable","true")
             else:        listitem.setIsFolder(True)
             return listitem
-        except Exception as e: LOG("buildItemListItem, failed! %s\n%s"%(e,item), xbmc.LOGERROR)
+        except Exception as e: LOG("ListItems: buildItemListItem, failed!\n%s\n%s"%(e,item), xbmc.LOGERROR)
             
                      
     def buildMenuListItem(self, label: str = "", label2: str = "", icon: str = ICON, url: str = "", info: dict = {}, art: dict = {}, props: dict = {}, offscreen: bool = False, media: str = 'video') -> xbmcgui.ListItem:
@@ -1163,6 +1189,8 @@ class ListItems(object):
     
 class Builtin(object):
     dialog = None
+
+
     def __init__(self, service: Optional[_Service] = None):
         if service is None: service = _Service()
         self.lock       = Lock()
@@ -1176,6 +1204,7 @@ class Builtin(object):
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
+
 
     def hasPVR(self) -> bool:
         return self.getInfoBool('Pvr.HasTVChannels')
@@ -1196,6 +1225,7 @@ class Builtin(object):
     def hasMovie(self) -> bool:
         return self.getInfoBool('Library.HasContent(Movies)')
                 
+
 
     def hasMedia(self) -> bool:
         return self.getInfoBool('Player.hasMedia')
@@ -1295,20 +1325,24 @@ class Builtin(object):
 
     busy_dialog = busyDialog
 
+
     def getIdle(self) -> int:
         with self.lock:
             try:              return int(xbmc.getGlobalIdleTime() or '0')
             except Exception: return 0
             
 
-    def getInfoLabel(self, key: str, default: str = '') -> str:
+
+    def getInfoLabel(self, key: str, default: str = '', retries: int = 5) -> str:
         with self.lock:
             value   = None
             pattern = r"^[a-zA-Z0-9]+\.[a-zA-Z0-9]+(?:\(.*\))?$"
             if re.match(pattern, key):
-                value = xbmc.getInfoLabel(key)
-                if value == "Busy": 
-                    if not self.monitor.waitForAbort(0.5): return self.getInfoLabel(key,default)
+                for attempt in range(retries):
+                    value = xbmc.getInfoLabel(key)
+                    if value != "Busy": break
+                    self.log('getInfoLabel, key = %s, busy (attempt %d/%d)'%(key,attempt+1,retries))
+                    if self.monitor.waitForAbort(0.5): break
                 self.log('getInfoLabel, key = %s, value = %s'%(key,value))
             else: self.log('getInfoLabel failed!, key = %s'%(key))
             return (value or default)
@@ -1353,6 +1387,7 @@ class Builtin(object):
             self.monitor.waitForAbort(float(Globals.settings.getSetting('API_Delay')))
             return response
     
+
 
     def getResolution(self) -> tuple:
         WH, WIN = self.getInfoLabel('System.ScreenResolution').split(' - ')
@@ -1458,12 +1493,14 @@ class Dialog(object):
         if state: timerit(self.doInfoMonitor)(0.1)
             
 
+
     def doInfoMonitor(self):
         self.properties.clrEXTProperty('%s.montiorList'%(ADDON_ID))
         while not self.monitor.abortRequested() and self.properties.isRunning('Kodi.toggleInfoMonitor'):
             if self.monitor.waitForAbort(float(Globals.settings.getSetting('API_Delay'))): break
             self.fillInfoMonitor()
                     
+
 
     def fillInfoMonitor(self, type: str = 'ListItem'):
         try:
@@ -1620,18 +1657,25 @@ class Dialog(object):
     def notificationWait(self, message: str, header: str = ADDON_NAME, wait: int = 4, silent: Optional[bool] = None, usethread: bool = False) -> bool:
         if silent is None: silent = not self.settings.showDialog(silent)
         if usethread: return timerit(self.notificationWait)(0.1, *(message, header, wait))
+        status = True
         with self._progressDialog(message, header, silent) as pDialog:
             if pDialog is None: return
             remaning = int(wait)
             while not self.monitor.abortRequested() and remaning > 0:
                 self._updateProgress(pDialog, int((abs(wait - remaning) * 100) // wait))
-                time.sleep(1.0)
-                if isinstance(pDialog, xbmcgui.DialogProgress) and pDialog.iscanceled(): break
-                if isinstance(pDialog, xbmcgui.DialogProgressBG) and pDialog.isFinished(): break
+                if self.monitor.waitForAbort(1.0): 
+                    status = False
+                    break
+                if isinstance(pDialog, xbmcgui.DialogProgress) and pDialog.iscanceled(): 
+                    status = False
+                    break
+                if isinstance(pDialog, xbmcgui.DialogProgressBG) and pDialog.isFinished(): 
+                    status = False
+                    break
                 remaning -= 1
             if hasattr(pDialog, 'close'): 
                 pDialog.close()
-        return True
+        return status
 
     @contextmanager
     def _progressDialog(self, message: str = '', header: str = ADDON_NAME, silent: Optional[bool] = None, background: bool = True) -> Iterator:
@@ -1768,7 +1812,7 @@ class Dialog(object):
                
             def onAction(self, act: Any):
                 actionId = act.getId()
-                LOG('DialogSelect: onAction: actionId = %s'%(actionId))
+                LOG('DialogSelect: onAction, actionId = %s'%(actionId))
                 if actionId in ACTION_PREVIOUS_MENU: self.close()
                 else: pass
                 
@@ -1777,6 +1821,7 @@ class Dialog(object):
             dialogSelect.doModal()
             del dialogSelect
         
+
 
     def selectDialog(self, items: list, header: str = ADDON_NAME, preselect: Optional[Any] = None, useDetails: bool = True, autoclose: int = SELECT_DELAY, multi: bool = True, custom: bool = False) -> Optional[Union[int, list]]:
         self.log('selectDialog, items = %s, header = %s, preselect = %s, useDetails = %s, autoclose = %s, multi = %s, custom = %s'%(len(items),header,preselect,useDetails,autoclose,multi,custom))
@@ -1808,6 +1853,7 @@ class Dialog(object):
             return self.dialog.input(message, default, key, opt, close)
         
 
+
     def importSTRM(self, strm: str) -> Optional[str]:
         try:
             with self.builtin.busyDialog():
@@ -1815,7 +1861,7 @@ class Dialog(object):
                 lines = fle.readlines()
                 fle.close()
                 paths = [line for line in lines if not line.startswith('#') and '://' in line]
-                if len(paths) == 0: return self.notificationDialog(LANGUAGE(32018)%(LANGUAGE(30047)))
+                if len(paths) == 0: return self.notificationDialog(LANGUAGE(32018).format(type=LANGUAGE(30047)))
             select = self.selectDialog(paths, LANGUAGE(32080), useDetails=False, multi=False)
             self.log("importSTRM, strm = %s paths = %s"%(strm,paths))
             if not select is None: return paths[select]
@@ -1828,6 +1874,7 @@ class Dialog(object):
         self.log("_resourcePath [%s], content = %s, ftype = %s, path = %s"%(id, content, ftype,path))
         return path
         
+
 
     def browseResources(self, ids: list = [], content: str = 'videos', ftype: str = '', multi: bool = True) -> Optional[Union[str, list]]:
         #todo when no resources avail take user to Image Collections repo.
@@ -1843,7 +1890,7 @@ class Dialog(object):
         with self.builtin.busyDialog():
             lizLST.extend(poolit(__buildMenuItem)([result for result in __getResources() if result.get('addonid').startswith('resource.%s.%s'%(content,ftype))]))
 
-        selects = self.selectDialog(lizLST, 'Select one or more resources', preselect=Globals._findItemsInLST(lizLST,ids,'getPath'), multi=multi)
+        selects = self.selectDialog(lizLST, LANGUAGE(30237), preselect=Globals._findItemsInLST(lizLST,ids,'getPath'), multi=multi)
         if selects is None:                return
         elif not isinstance(selects,list): return lizLST[selects].getPath()
         else:                              return [lizLST[select].getPath() for select in selects]
@@ -1905,6 +1952,7 @@ class Dialog(object):
         if not retval is None and retval != default:
             return retval
         
+
 
     def multiBrowse(self, paths: list = [], header: str = ADDON_NAME, exclude: list = [], monitor: bool = True) -> list:
         self.log('multiBrowse, IN paths = %s'%(paths))

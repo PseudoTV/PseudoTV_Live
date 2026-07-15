@@ -378,6 +378,7 @@ class Globals:
     def _getChannelID(name: str, path: Any, number: int, uuid: Optional[str] = None) -> str:
         if uuid is None: uuid = Globals.settings.getMYUUID()
         if isinstance(path, list): path = '|'.join(path)
+        name = str(name).strip()
         tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
         return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
     
@@ -385,6 +386,7 @@ class Globals:
     def _getRecordID(name: str, path: Any, number: int, uuid: Optional[str] = None) -> str:
         if uuid is None: uuid = Globals.settings.getMYUUID()
         if isinstance(path, list): path = '|'.join(path)
+        name = str(name).strip()
         tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),uuid)
         return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:16]).decode(DEFAULT_ENCODING),Globals._slugify(ADDON_NAME))
 
@@ -496,7 +498,7 @@ class Globals:
         text = re.sub(r'\[/COLOR\]', '', text)
         text = text.replace("[B]",'').replace("[/B]",'')
         text = text.replace("[I]",'').replace("[/I]",'')
-        return text.replace(":",'')
+        return text.replace(":",'').strip()
 
     @staticmethod
     def _combineDicts(dict1: dict = {}, dict2: dict = {}) -> dict:

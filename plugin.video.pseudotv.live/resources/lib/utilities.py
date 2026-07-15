@@ -30,7 +30,7 @@ class Utilities(object):
         items = [
                  {'label':LANGUAGE(32117)                  ,'label2':LANGUAGE(32120),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(False,),'kwargs':{}}, #"Rebuild M3U/XMLTV/Genres"
                  {'label':LANGUAGE(32118)                  ,'label2':LANGUAGE(32119),'icon':ICON,'func':Utilities._runCleanup  , 'hide':False ,'args':(True,) ,'kwargs':{}}, #"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':ICON,'func':Utilities._runReload   , 'hide':False ,'args':()      ,'kwargs':{}}, #"Force PVR reload"
+                 {'label':LANGUAGE(32121).format(name=PVR_CLIENT_NAME),'label2':LANGUAGE(32122),'icon':ICON,'func':Utilities._runReload   , 'hide':False ,'args':()      ,'kwargs':{}}, #"Force PVR reload"
                  {'label':LANGUAGE(32123)                  ,'label2':LANGUAGE(32124),'icon':ICON,'func':Utilities._runRestart  , 'hide':False ,'args':()      ,'kwargs':{}}, #"Force PTVL restart"
                  {'label':LANGUAGE(30205)                  ,'label2':LANGUAGE(30205),'icon':ICON,'func':Utilities._runCPUBench , 'hide':False ,'args':()      ,'kwargs':{}}, 
                  {'label':LANGUAGE(30208)                  ,'label2':LANGUAGE(30208),'icon':ICON,'func':Utilities._runIOBench  , 'hide':False ,'args':()      ,'kwargs':{}}, 
@@ -78,7 +78,7 @@ class Utilities(object):
     
     @staticmethod
     def _runReload():
-        if Globals.dialog.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
+        if Globals.dialog.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121).format(name=xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
             state = Globals.settings.getSettingBool('Enable_PVR_RELOAD')
             Globals.settings.setSettingBool('Enable_PVR_RELOAD',True)
             Globals.properties.setPropTimer('chkPVRRefresh')#refresh pvr guide
@@ -103,11 +103,11 @@ class Utilities(object):
     
     @staticmethod
     def qrWiki():
-        Globals.dialog.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
+        Globals.dialog.qrDialog(URL_WIKI,LANGUAGE(32216).format(name=ADDON_NAME,author=ADDON_AUTHOR))
 
     @staticmethod
     def qrSupport():
-        Globals.dialog.qrDialog(URL_SUPPORT, LANGUAGE(30033)%(ADDON_NAME))
+        Globals.dialog.qrDialog(URL_SUPPORT, LANGUAGE(30033).format(name=ADDON_NAME))
         
     @staticmethod
     def qrRemote():
@@ -115,7 +115,7 @@ class Utilities(object):
 
     @staticmethod
     def qrReadme():
-        Globals.dialog.qrDialog(URL_README, LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION))
+        Globals.dialog.qrDialog(URL_README, LANGUAGE(32043).format(name=ADDON_NAME,version=ADDON_VERSION))
 
     @staticmethod
     def qrBonjourDL():
@@ -162,7 +162,7 @@ class Utilities(object):
                 except:
                     with FileAccess.stream(CHANGELOG_FLE) as fle:
                         txt = __addColor(fle.read())
-                Globals.dialog.textviewer(txt, heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+                Globals.dialog.textviewer(txt, heading=(LANGUAGE(32045).format(name=ADDON_NAME,version=ADDON_VERSION)),usemono=True)
         except Exception as e: LOG('Utilities: showChangelog failed! %s'%(e), xbmc.LOGERROR)
 
     @staticmethod
@@ -210,8 +210,8 @@ class Utilities(object):
         with Globals.builtin.busy_dialog():
             succes, data = __postLog(FileAccess.dumpJSON(__cleanPayload(payload),idnt=4))
             
-        if succes: Globals.dialog.qrDialog(data,LANGUAGE(32189)%(data))
-        else:      Globals.dialog.okDialog(LANGUAGE(32190)%(data))
+        if succes: Globals.dialog.qrDialog(data,LANGUAGE(32189).format(url=data))
+        else:      Globals.dialog.okDialog(LANGUAGE(32190).format(error=data))
        
     @staticmethod
     def _runLogger():

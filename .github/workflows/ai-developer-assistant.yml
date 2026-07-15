@@ -27,6 +27,7 @@ jobs:
       json: ${{ steps.check.outputs.json }}
       any_code: ${{ steps.check.outputs.any_code }}
       file_count: ${{ steps.check.outputs.file_count }}
+      strings_po: ${{ steps.check.outputs.strings_po }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -39,96 +40,437 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE: ${{ github.event.pull_request.base.ref }}
-          PR_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          echo "=== Change Detection ==="
-          echo "Event: $EVENT_NAME"
-          echo "Ref: ${{ github.ref }}"
-          echo "SHA: ${{ github.sha }}"
-          echo "PR Base: $PR_BASE"
-          echo "PR SHA: $PR_SHA"
-          
           PY_CHANGED=""
           XML_CHANGED=""
           JSON_CHANGED=""
           ALL_CHANGED=""
           
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            echo "Fetching base branch: $PR_BASE"
             git fetch origin $PR_BASE 2>&1 || true
-            echo "Comparing: origin/$PR_BASE...HEAD"
             PY_CHANGED=$(git diff --name-only origin/$PR_BASE...HEAD -- '*.py' 2>&1 || true)
             XML_CHANGED=$(git diff --name-only origin/$PR_BASE...HEAD -- '*.xml' 2>&1 || true)
             JSON_CHANGED=$(git diff --name-only origin/$PR_BASE...HEAD -- '*.json' 2>&1 || true)
             ALL_CHANGED=$(git diff --name-only origin/$PR_BASE...HEAD 2>&1 || true)
-            
           elif [ "$EVENT_NAME" = "push" ]; then
-            echo "Comparing: HEAD~1...HEAD"
             PY_CHANGED=$(git diff --name-only HEAD~1 HEAD -- '*.py' 2>&1 || true)
             XML_CHANGED=$(git diff --name-only HEAD~1 HEAD -- '*.xml' 2>&1 || true)
             JSON_CHANGED=$(git diff --name-only HEAD~1 HEAD -- '*.json' 2>&1 || true)
             ALL_CHANGED=$(git diff --name-only HEAD~1 HEAD 2>&1 || true)
-            
-          else
-            echo "Manual trigger"
           fi
           
-          echo ""
-          echo "Raw git diff output:"
-          echo "${ALL_CHANGED:-<empty>}"
-          echo ""
-          
-          PY_COUNT=0
-          XML_COUNT=0
-          JSON_COUNT=0
-          TOTAL_COUNT=0
-          
-          if [ -n "$PY_CHANGED" ]; then
-            PY_COUNT=$(echo "$PY_CHANGED" | grep -c '\.py$' || true)
-          fi
-          if [ -n "$XML_CHANGED" ]; then
-            XML_COUNT=$(echo "$XML_CHANGED" | grep -c '\.xml$' || true)
-          fi
-          if [ -n "$JSON_CHANGED" ]; then
-            JSON_COUNT=$(echo "$JSON_CHANGED" | grep -c '\.json$' || true)
-          fi
-          if [ -n "$ALL_CHANGED" ]; then
-            TOTAL_COUNT=$(echo "$ALL_CHANGED" | grep -c '.' || true)
-          fi
-          
-          PY_COUNT=${PY_COUNT:-0}
-          XML_COUNT=${XML_COUNT:-0}
-          JSON_COUNT=${JSON_COUNT:-0}
-          TOTAL_COUNT=${TOTAL_COUNT:-0}
-          
-          echo "Python files changed: $PY_COUNT"
-          echo "XML files changed: $XML_COUNT"
-          echo "JSON files changed: $JSON_COUNT"
-          echo "Total files changed: $TOTAL_COUNT"
+          PY_COUNT=0; XML_COUNT=0; JSON_COUNT=0; TOTAL_COUNT=0
+          [ -n "$PY_CHANGED" ] && PY_COUNT=$(echo "$PY_CHANGED" | grep -c '\.py$' || true)
+          [ -n "$XML_CHANGED" ] && XML_COUNT=$(echo "$XML_CHANGED" | grep -c '\.xml$' || true)
+          [ -n "$JSON_CHANGED" ] && JSON_COUNT=$(echo "$JSON_CHANGED" | grep -c '\.json$' || true)
+          [ -n "$ALL_CHANGED" ] && TOTAL_COUNT=$(echo "$ALL_CHANGED" | grep -c '.' || true)
           
           echo "python=false" >> $GITHUB_OUTPUT
           echo "xml=false" >> $GITHUB_OUTPUT
           echo "json=false" >> $GITHUB_OUTPUT
           echo "any_code=false" >> $GITHUB_OUTPUT
+          [ "${PY_COUNT:-0}" -gt 0 ] && echo "python=true" >> $GITHUB_OUTPUT
+          [ "${XML_COUNT:-0}" -gt 0 ] && echo "xml=true" >> $GITHUB_OUTPUT
+          [ "${JSON_COUNT:-0}" -gt 0 ] && echo "json=true" >> $GITHUB_OUTPUT
           
-          if [ "$PY_COUNT" -gt 0 ]; then
-            echo "python=true" >> $GITHUB_OUTPUT
-          fi
-          if [ "$XML_COUNT" -gt 0 ]; then
-            echo "xml=true" >> $GITHUB_OUTPUT
-          fi
-          if [ "$JSON_COUNT" -gt 0 ]; then
-            echo "json=true" >> $GITHUB_OUTPUT
-          fi
-          
-          if [ "$PY_COUNT" -gt 0 ] || [ "$XML_COUNT" -gt 0 ] || [ "$JSON_COUNT" -gt 0 ]; then
+          if [ "${PY_COUNT:-0}" -gt 0 ] || [ "${XML_COUNT:-0}" -gt 0 ] || [ "${JSON_COUNT:-0}" -gt 0 ]; then
             echo "any_code=true" >> $GITHUB_OUTPUT
-            echo "file_count=$TOTAL_COUNT" >> $GITHUB_OUTPUT
-            echo "RESULT: Code changes detected"
-          else
-            echo "file_count=$TOTAL_COUNT" >> $GITHUB_OUTPUT
-            echo "RESULT: No code changes"
           fi
+          echo "file_count=${TOTAL_COUNT:-0}" >> $GITHUB_OUTPUT
+          # Check for strings.po changes
+          STRINGS_CHANGED=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            STRINGS_CHANGED=$(git diff --name-only origin/$PR_BASE...HEAD -- '**/strings.po' 2>&1 || true)
+          elif [ "$EVENT_NAME" = "push" ]; then
+            STRINGS_CHANGED=$(git diff --name-only HEAD~1 HEAD -- '**/strings.po' 2>&1 || true)
+          fi
+          STRINGS_COUNT=0
+          [ -n "$STRINGS_CHANGED" ] && STRINGS_COUNT=$(echo "$STRINGS_CHANGED" | grep -c 'strings.po$' || true)
+          echo "strings_po=false" >> $GITHUB_OUTPUT
+          [ "${STRINGS_COUNT:-0}" -gt 0 ] && echo "strings_po=true" >> $GITHUB_OUTPUT
+
+  translate:
+    name: AI Translation
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.strings_po == 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install OpenCode
+        run: curl -fsSL https://opencode.ai/install | bash
+
+      - name: Generate Translations
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          EN_GB_FILE="plugin.video.pseudotv.live/resources/language/resource.language.en_gb/strings.po"
+          
+          if [ ! -f "$EN_GB_FILE" ]; then
+            echo "en_GB strings.po not found"
+            exit 0
+          fi
+          
+          # Get diff of en_GB changes
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.ref }}"
+            git fetch origin $BASE --depth=1 2>/dev/null || true
+            DIFF=$(git diff origin/$BASE...HEAD -- "$EN_GB_FILE" 2>/dev/null | head -c 30000 || true)
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            DIFF=$(git diff HEAD~1 HEAD -- "$EN_GB_FILE" 2>/dev/null | head -c 30000 || true)
+          fi
+          
+          if [ -z "$DIFF" ]; then
+            echo "No changes detected in en_GB strings.po"
+            exit 0
+          fi
+          
+          # Extract changed msgctxt IDs from diff
+          CHANGED_IDS=$(echo "$DIFF" | grep -oP 'msgctxt "#\K[0-9]+' | sort -u || true)
+          
+          if [ -z "$CHANGED_IDS" ]; then
+            echo "No new/changed string IDs detected"
+            exit 0
+          fi
+          
+          echo "Changed string IDs: $CHANGED_IDS"
+          
+          # Kodi supported languages (ISO 639-1/ISO 3166-1)
+          LANGUAGES=(
+            "afZA:Afrikaans (South Africa)"
+            "arAR:Arabic (Argentina)"
+            "bgBG:Bulgarian (Bulgaria)"
+            "caES:Catalan (Spain)"
+            "csCZ:Czech (Czech Republic)"
+            "daDK:Danish (Denmark)"
+            "deDE:German (Germany)"
+            "elGR:Greek (Greece)"
+            "enAU:English (Australia)"
+            "enGB:English (United Kingdom)"
+            "enUS:English (United States)"
+            "eoEO:Esperanto"
+            "esES:Spanish (Spain)"
+            "esMX:Spanish (Mexico)"
+            "etEE:Estonian (Estonia)"
+            "euES:Basque (Spain)"
+            "faIR:Persian (Iran)"
+            "fiFI:Finnish (Finland)"
+            "frCA:French (Canada)"
+            "frFR:French (France)"
+            "glES:Galician (Spain)"
+            "heIL:Hebrew (Israel)"
+            "hiIN:Hindi (India)"
+            "hrHR:Croatian (Croatia)"
+            "huHU:Hungarian (Hungary)"
+            "hyAM:Armenian (Armenia)"
+            "idID:Indonesian (Indonesia)"
+            "isIS:Icelandic (Iceland)"
+            "itIT:Italian (Italy)"
+            "jaJP:Japanese (Japan)"
+            "koKR:Korean (Korea)"
+            "ltLT:Lithuanian (Lithuania)"
+            "lvLV:Latvian (Latvia)"
+            "miNZ:Maori (New Zealand)"
+            "mkMK:Macedonian (North Macedonia)"
+            "mnMN:Mongolian (Mongolia)"
+            "msMY:Malay (Malaysia)"
+            "mtMT:Maltese (Malta)"
+            "nbNO:Norwegian Bokmål (Norway)"
+            "nlNL:Dutch (Netherlands)"
+            "noNO:Norwegian (Norway)"
+            "plPL:Polish (Poland)"
+            "ptBR:Portuguese (Brazil)"
+            "ptPT:Portuguese (Portugal)"
+            "roRO:Romanian (Romania)"
+            "ruRU:Russian (Russia)"
+            "skSK:Slovak (Slovakia)"
+            "slSI:Slovenian (Slovenia)"
+            "srRS:Serbian (Serbia)"
+            "svSE:Swedish (Sweden)"
+            "taIN:Tamil (India)"
+            "teIN:Telugu (India)"
+            "thTH:Thai (Thailand)"
+            "trTR:Turkish (Turkey)"
+            "ukUA:Ukrainian (Ukraine)"
+            "viVN:Vietnamese (Vietnam)"
+            "zhCN:Chinese (China)"
+            "zhTW:Chinese (Taiwan)"
+          )
+          
+          # Generate translations for each language
+          for LANG_CODE_NAME in "${LANGUAGES[@]}"; do
+            LANG_CODE="${LANG_CODE_NAME%%:*}"
+            LANG_NAME="${LANG_CODE_NAME#*:}"
+            
+            # Skip en_GB (source language)
+            if [ "$LANG_CODE" = "enGB" ]; then
+              continue
+            fi
+            
+            # Convert lang code format: enGB -> resource.language.en_gb
+            FOLDER_CODE=$(echo "$LANG_CODE" | sed 's/\([a-z][a-z]\)\([A-Z][A-Z]\)/\L\1_\L\2/')
+            LANG_DIR="plugin.video.pseudotv.live/resources/language/resource.language.${FOLDER_CODE}"
+            LANG_FILE="${LANG_DIR}/strings.po"
+            
+            # Create directory if not exists
+            mkdir -p "$LANG_DIR"
+            
+            # Build translation prompt with changed strings
+            STRINGS_TO_TRANSLATE=""
+            for ID in $CHANGED_IDS; do
+              # Extract msgid for this ID from en_GB file
+              MSGID=$(awk -v id="#$ID" '/msgctxt/{
+                ctx=$0
+                getline
+                if ($0 ~ /msgid/) {
+                  msgid=$0
+                  sub(/msgid "/, "", msgid)
+                  sub(/"$/, "", msgid)
+                  print ctx "|" msgid
+                }
+              }' "$EN_GB_FILE" | grep "#$ID" | head -1 | cut -d'|' -f2-)
+              
+              if [ -n "$MSGID" ]; then
+                STRINGS_TO_TRANSLATE="${STRINGS_TO_TRANSLATE}#${ID}|${MSGID}\n"
+              fi
+            done
+            
+            if [ -z "$STRINGS_TO_TRANSLATE" ]; then
+              echo "No strings to translate for $LANG_NAME"
+              continue
+            fi
+            
+            echo "Translating $(echo "$CHANGED_IDS" | wc -w) strings to $LANG_NAME..."
+            
+            # Call AI for translation
+            PROMPT="Translate these Kodi addon UI strings from English to ${LANG_NAME}. Keep all placeholders (%s, [B], [/B], [COLOR=...], [CR], {name}, {group}) unchanged. Only output translations in format: #ID|translation Strings: $(echo -e "$STRINGS_TO_TRANSLATE")"
+            
+            TRANSLATIONS=$(opencode run --model opencode/mimo-v2.5-free "$PROMPT" 2>&1 | grep -E '^[0-9]+\|' || true)
+            
+            if [ -z "$TRANSLATIONS" ]; then
+              echo "Translation failed for $LANG_NAME, skipping"
+              continue
+            fi
+            
+            # Generate strings.po file
+            {
+              echo '# Kodi Media Center language file'
+              echo '# Addon Name: "PseudoTV Live"'
+              echo '# Addon id: plugin.video.pseudotv.live'
+              echo '# Addon Provider: Lunatixz'
+              echo 'msgid ""'
+              echo 'msgstr ""'
+              echo '"Project-Id-Version: plugin.video.pseudotv.live\\n"'
+              echo '"Report-Msgid-Bugs-To: \\n"'
+              echo '"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\\n"'
+              echo '"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\\n"'
+              echo '"Last-Translator: Lunatixz Translation Team\\n"'
+              echo "\"Language-Team: ${LANG_NAME}\\n\""
+              echo '"MIME-Version: 1.0\\n"'
+              echo '"Content-Type: text/plain; charset=UTF-8\\n"'
+              echo '"Content-Transfer-Encoding: 8bit\\n"'
+              echo "\"Language: ${FOLDER_CODE}\\n\""
+              echo '"Plural-Forms: nplurals=2; plural=(n != 1);\\n"'
+            } > "$LANG_FILE"
+            
+            # Append translated strings
+            while IFS='|' read -r ID TRANSLATION; do
+              ID=$(echo "$ID" | tr -d ' ')
+              TRANSLATION=$(echo "$TRANSLATION" | sed 's/"/\\"/g')
+              echo "" >> "$LANG_FILE"
+              echo "msgctxt \"${ID}\"" >> "$LANG_FILE"
+              echo "msgid \"$(grep -A1 "msgctxt \"${ID}\"" "$EN_GB_FILE" | grep 'msgid' | sed 's/msgid "//;s/"$//')\"" >> "$LANG_FILE"
+              echo "msgstr \"${TRANSLATION}\"" >> "$LANG_FILE"
+            done <<< "$TRANSLATIONS"
+            
+            echo "Created $LANG_FILE"
+          done
+          
+          echo "Translation complete"
+          
+          # Generate report
+          cat > translate-report.md << 'REPORT_EOF'
+          ## AI Translation
+          
+          REPORT_EOF
+          
+          echo "**Changed string IDs:** ${CHANGED_IDS}" >> translate-report.md
+          echo "" >> translate-report.md
+          echo "**Languages translated:** ${#LANGUAGES[@]}" >> translate-report.md
+          echo "" >> translate-report.md
+          echo "**Files created/updated:**" >> translate-report.md
+          ls -la plugin.video.pseudotv.live/resources/language/ >> translate-report.md || true
+        continue-on-error: true
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: translate-report
+          path: translate-report.md
+          retention-days: 30
+
+  changelog:
+    name: Changelog Update
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.any_code == 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install OpenCode
+        run: curl -fsSL https://opencode.ai/install | bash
+
+      - name: Check and Update Changelog
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          ADDON_XML="plugin.video.pseudotv.live/addon.xml"
+          CHANGELOG_TXT="plugin.video.pseudotv.live/changelog.txt"
+          
+          if [ ! -f "$ADDON_XML" ] || [ ! -f "$CHANGELOG_TXT" ]; then
+            echo "addon.xml or changelog.txt not found"
+            exit 0
+          fi
+          
+          # Read current version from addon.xml
+          VERSION=$(grep -oP 'version="\K[^"]+' "$ADDON_XML" | head -1)
+          if [ -z "$VERSION" ]; then
+            echo "Could not read version from addon.xml"
+            exit 0
+          fi
+          
+          VERSION_LABEL="v.${VERSION}"
+          echo "Current version: $VERSION_LABEL"
+          
+          # Check if changelog already has this version
+          if grep -q "^${VERSION_LABEL}$" "$CHANGELOG_TXT"; then
+            # Count entries under this version
+            ENTRY_COUNT=$(awk "/^${VERSION_LABEL}$/,/^v\./" "$CHANGELOG_TXT" | grep -c "^- " || true)
+            echo "Found $ENTRY_COUNT entries under $VERSION_LABEL"
+            
+            if [ "${ENTRY_COUNT:-0}" -ge 20 ]; then
+              echo "Version already has ${ENTRY_COUNT} entries (max 20). Skipping."
+              exit 0
+            fi
+          else
+            echo "Version $VERSION_LABEL not found in changelog. Will add new section."
+            ENTRY_COUNT=0
+          fi
+          
+          # Get git diff for changes
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.ref }}"
+            git fetch origin $BASE --depth=1 2>/dev/null || true
+            DIFF=$(git diff origin/$BASE...HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -c 30000 || true)
+            FILES=$(git diff --name-only origin/$BASE...HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null || true)
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            DIFF=$(git diff HEAD~1 HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -c 30000 || true)
+            FILES=$(git diff --name-only HEAD~1 HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null || true)
+          fi
+          
+          if [ -z "$DIFF" ]; then
+            echo "No code changes detected"
+            exit 0
+          fi
+          
+          # Read existing changelog entries for this version
+          EXISTING_ENTRIES=""
+          if [ "${ENTRY_COUNT:-0}" -gt 0 ]; then
+            EXISTING_ENTRIES=$(awk "/^${VERSION_LABEL}$/,/^v\./" "$CHANGELOG_TXT" | grep "^- " || true)
+          fi
+          
+          # Keywords from __addColor in utilities.py
+          KEYWORDS="Added|Implemented|Introduced|Addressed|New!|Optimized|Improved|Modified|Enhanced|Refactored|Refined|Overhauled|Reworked|Tweaked|Adjusted|Updated|Changed|Corrected|Proper|Included|Fixed|Resolved|Removed|Replaced|Eliminated|Excluded|Deprecated|Important|Warning|Notice"
+          
+          # Generate changelog entry using AI
+          PROMPT="You are generating a changelog entry for PseudoTV Live Kodi addon. Analyze the code changes below and generate a SINGLE changelog entry line. RULES: 1. Start with a dash, space, then ONE of these EXACT keywords: ${KEYWORDS}. 2. Keep it concise (1-2 lines max) - this is for end users, not developers. 3. Focus on USER-FACING changes: new features, improvements, bug fixes. 4. Do NOT include file names, technical details, or code references. 5. Do NOT include variables, function names, or internal implementation details. 6. Make it understandable to a non-technical user. EXAMPLES: - Fixed Cache shutdown order to prevent database corruption. - Improved Channel logo detection and resource selection in settings. - Added Recently Added Music to Autotuning. CHANGED FILES: ${FILES} CODE DIFF (first 2000 chars): $(echo "$DIFF" | head -c 2000) Generate ONLY the changelog line starting with dash, nothing else."
+
+          echo "Generating changelog entry..."
+          ENTRY=$(opencode run --model opencode/mimo-v2.5-free "$PROMPT" 2>&1 | grep -E "^- " | head -1 || true)
+          
+          if [ -z "$ENTRY" ]; then
+            echo "Failed to generate changelog entry"
+            exit 0
+          fi
+          
+          # Validate entry has a valid keyword
+          if ! echo "$ENTRY" | grep -qE "^- (${KEYWORDS})"; then
+            echo "Invalid entry format: $ENTRY"
+            exit 0
+          fi
+          
+          echo "Generated entry: $ENTRY"
+          
+          # Read current changelog
+          CONTENT=$(cat "$CHANGELOG_TXT")
+          
+          if echo "$CONTENT" | grep -q "^${VERSION_LABEL}$"; then
+            # Version exists - add entry and enforce 20 entry limit
+            echo "Adding entry to existing version $VERSION_LABEL"
+            
+            # Extract all entries for this version (including new one)
+            ALL_ENTRIES=$(echo "$EXISTING_ENTRIES"; echo "$ENTRY")
+            TOTAL=$(echo "$ALL_ENTRIES" | grep -c "^- " || true)
+            
+            if [ "${TOTAL:-0}" -gt 20 ]; then
+              # Keep only the first 20 entries (most recent/important)
+              KEEP_ENTRIES=$(echo "$ALL_ENTRIES" | head -20)
+              echo "Trimmed to 20 entries (was $TOTAL)"
+            else
+              KEEP_ENTRIES="$ALL_ENTRIES"
+            fi
+            
+            # Use awk to rebuild the changelog
+            awk -v ver="$VERSION_LABEL" -v entries="$KEEP_ENTRIES" '
+              $0 == ver { found=1; print; print entries; next }
+              found && /^v\./ { found=0 }
+              !found { print }
+            ' "$CHANGELOG_TXT" > "${CHANGELOG_TXT}.tmp" && mv "${CHANGELOG_TXT}.tmp" "$CHANGELOG_TXT"
+          else
+            # New version - add at top after notice
+            echo "Adding new version section $VERSION_LABEL"
+            ENTRY_CLEAN="${ENTRY#- }"
+            # Create temp file with new content
+            echo "${VERSION_LABEL}" > "${CHANGELOG_TXT}.new"
+            echo "- ${ENTRY_CLEAN}" >> "${CHANGELOG_TXT}.new"
+            echo "" >> "${CHANGELOG_TXT}.new"
+            cat "$CHANGELOG_TXT" >> "${CHANGELOG_TXT}.new"
+            mv "${CHANGELOG_TXT}.new" "$CHANGELOG_TXT"
+          fi
+          
+          echo "Changelog updated successfully"
+          echo "entry=${ENTRY}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION_LABEL}" >> $GITHUB_OUTPUT
+          
+          # Generate report
+          cat > changelog-report.md << REPORT_EOF
+          ## Changelog Update
+          
+          **Version:** ${VERSION_LABEL}
+          **Entry:** ${ENTRY}
+          **Total entries in version:** $(echo "$ALL_ENTRIES" | grep -c "^- " || echo "1")
+          
+          REPORT_EOF
+          
+          if [ "${TOTAL:-0}" -gt 20 ]; then
+            echo "**Note:** Entries trimmed from ${TOTAL} to 20 (maximum limit)" >> changelog-report.md
+          fi
+        continue-on-error: true
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: changelog-report
+          path: changelog-report.md
+          retention-days: 30
 
   addon-check:
     name: Kodi Addon Checker
@@ -136,35 +478,50 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-
       - name: Install kodi-addon-checker
         run: pip install kodi-addon-checker
-
       - name: Run Kodi Addon Checker
         id: kodi-check
         run: |
-          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 | sed 's/[^[[:alnum:][:space:]._-]//g' > kodi-check-output.txt || true
+          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 > kodi-raw.txt || true
           
-          ERRORS=$(grep -c "^ERROR:" kodi-check-output.txt 2>/dev/null | tr -d '[:space:]' || true)
-          WARNINGS=$(grep -c "^WARN:" kodi-check-output.txt 2>/dev/null | tr -d '[:space:]' || true)
-          ERRORS=${ERRORS:-0}
-          WARNINGS=${WARNINGS:-0}
+          ERRORS=$(grep -c "^ERROR:" kodi-raw.txt 2>/dev/null || echo "0")
+          WARNINGS=$(grep -c "^WARN:" kodi-raw.txt 2>/dev/null || echo "0")
+          echo "errors=${ERRORS:-0}" >> $GITHUB_OUTPUT
+          echo "warnings=${WARNINGS:-0}" >> $GITHUB_OUTPUT
           
-          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
-          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
-        continue-on-error: true
-
-      - name: Upload Kodi Check Report
+          cat > kodi-check-report.md << 'REPORT_EOF'
+          ## Kodi Addon Checker
+          
+          REPORT_EOF
+          
+          if [ "${ERRORS:-0}" -gt 0 ] || [ "${WARNINGS:-0}" -gt 0 ]; then
+            echo "| Severity | Count |" >> kodi-check-report.md
+            echo "|----------|-------|" >> kodi-check-report.md
+            echo "| Errors | ${ERRORS:-0} |" >> kodi-check-report.md
+            echo "| Warnings | ${WARNINGS:-0} |" >> kodi-check-report.md
+            echo "" >> kodi-check-report.md
+            echo '```' >> kodi-check-report.md
+            grep -E "^(ERROR|WARN):" kodi-raw.txt >> kodi-check-report.md || true
+            echo '```' >> kodi-check-report.md
+          else
+            echo "No issues found." >> kodi-check-report.md
+          fi
+          
+          # Fail if there are errors
+          if [ "${ERRORS:-0}" -gt 0 ]; then
+            exit 1
+          fi
+      - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: kodi-addon-check-report
-          path: kodi-check-output.txt
+          name: kodi-check-report
+          path: kodi-check-report.md
           retention-days: 30
 
   lint-ruff:
@@ -175,37 +532,47 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-
       - name: Install Ruff
         run: pip install ruff
-
       - name: Run Ruff
         id: check-ruff
         run: |
-          ruff check plugin.video.pseudotv.live/resources/lib --select=F,E9,W6 --output-format=concise 2>&1 | tee ruff-output.txt || true
+          ruff check plugin.video.pseudotv.live/resources/lib --select=F,E9,W6 --output-format=concise 2>&1 > ruff-raw.txt || true
           
-          ISSUES=$(grep -cE "^[^ ].*:[0-9]+:[0-9]+:" ruff-output.txt 2>/dev/null || echo "0")
-          ISSUES=${ISSUES:-0}
-          echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+          ISSUES=$(grep -cE "^[^ ].*:[0-9]+:[0-9]+:" ruff-raw.txt 2>/dev/null || echo "0")
+          echo "issues=${ISSUES:-0}" >> $GITHUB_OUTPUT
           
-          if [ "$ISSUES" -gt 0 ]; then
+          if [ "${ISSUES:-0}" -gt 0 ]; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
           else
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
+          
+          cat > ruff-report.md << 'REPORT_EOF'
+          ## Ruff Linter
+          
+          REPORT_EOF
+          
+          if [ "${ISSUES:-0}" -gt 0 ]; then
+            echo "**${ISSUES} issue(s) found**" >> ruff-report.md
+            echo "" >> ruff-report.md
+            echo '```' >> ruff-report.md
+            cat ruff-raw.txt >> ruff-report.md
+            echo '```' >> ruff-report.md
+          else
+            echo "No issues found." >> ruff-report.md
+          fi
         continue-on-error: true
-
-      - name: Upload Ruff Report
+      - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: ruff-report
-          path: ruff-output.txt
+          path: ruff-report.md
           retention-days: 30
 
   lint-xml:
@@ -216,47 +583,58 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-
       - name: Validate XML Files
         id: check-xml
         run: |
           python -c "
           import xml.etree.ElementTree as ET
           import glob
-          import sys
-          
           errors = []
+          ok_files = []
           for f in glob.glob('**/*.xml', recursive=True):
               try:
                   ET.parse(f)
-                  print(f'OK: {f}')
+                  ok_files.append(f)
               except ET.ParseError as e:
-                  print(f'ERROR: {f} - {e}')
                   errors.append(f'{f}: {e}')
           
-          if errors:
-              sys.exit(1)
-          print('All XML files valid')
-          " 2>&1 | tee xml-output.txt || true
+          print(f'OK: {len(ok_files)} files')
+          for e in errors:
+              print(f'ERROR: {e}')
+          " > xml-raw.txt 2>&1 || true
           
-          if grep -q "^ERROR:" xml-output.txt 2>/dev/null; then
+          if grep -q "^ERROR:" xml-raw.txt 2>/dev/null; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
           else
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
+          
+          cat > xml-report.md << 'REPORT_EOF'
+          ## XML Validation
+          
+          REPORT_EOF
+          
+          ERROR_COUNT=$(grep -c "^ERROR:" xml-raw.txt 2>/dev/null || echo "0")
+          if [ "${ERROR_COUNT:-0}" -gt 0 ]; then
+            echo "**${ERROR_COUNT} error(s) found**" >> xml-report.md
+            echo "" >> xml-report.md
+            echo '```' >> xml-report.md
+            grep "^ERROR:" xml-raw.txt >> xml-report.md || true
+            echo '```' >> xml-report.md
+          else
+            echo "All XML files valid." >> xml-report.md
+          fi
         continue-on-error: true
-
-      - name: Upload XML Report
+      - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: xml-report
-          path: xml-output.txt
+          path: xml-report.md
           retention-days: 30
 
   lint-json:
@@ -267,48 +645,59 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-
       - name: Validate JSON Files
         id: check-json
         run: |
           python -c "
           import json
           import glob
-          import sys
-          
           errors = []
+          ok_files = []
           for f in glob.glob('**/*.json', recursive=True):
               try:
                   with open(f) as fh:
                       json.load(fh)
-                  print(f'OK: {f}')
+                  ok_files.append(f)
               except json.JSONDecodeError as e:
-                  print(f'ERROR: {f} - {e}')
                   errors.append(f'{f}: {e}')
           
-          if errors:
-              sys.exit(1)
-          print('All JSON files valid')
-          " 2>&1 | tee json-output.txt || true
+          print(f'OK: {len(ok_files)} files')
+          for e in errors:
+              print(f'ERROR: {e}')
+          " > json-raw.txt 2>&1 || true
           
-          if grep -q "^ERROR:" json-output.txt 2>/dev/null; then
+          if grep -q "^ERROR:" json-raw.txt 2>/dev/null; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
           else
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
+          
+          cat > json-report.md << 'REPORT_EOF'
+          ## JSON Validation
+          
+          REPORT_EOF
+          
+          ERROR_COUNT=$(grep -c "^ERROR:" json-raw.txt 2>/dev/null || echo "0")
+          if [ "${ERROR_COUNT:-0}" -gt 0 ]; then
+            echo "**${ERROR_COUNT} error(s) found**" >> json-report.md
+            echo "" >> json-report.md
+            echo '```' >> json-report.md
+            grep "^ERROR:" json-raw.txt >> json-report.md || true
+            echo '```' >> json-report.md
+          else
+            echo "All JSON files valid." >> json-report.md
+          fi
         continue-on-error: true
-
-      - name: Upload JSON Report
+      - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: json-report
-          path: json-output.txt
+          path: json-report.md
           retention-days: 30
 
   fstring-check:
@@ -319,30 +708,42 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-
       - name: Run F-String Checker
         id: check-fstring
         run: |
-          python .github/scripts/fstring_check.py plugin.video.pseudotv.live/resources/lib 2>&1 | tee fstring-output.txt
+          python .github/scripts/fstring_check.py plugin.video.pseudotv.live/resources/lib 2>&1 > fstring-raw.txt || true
           
-          if grep -q "^ERRORS:" fstring-output.txt 2>/dev/null; then
+          if grep -q "^ERRORS:" fstring-raw.txt 2>/dev/null; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
           else
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
+          
+          cat > fstring-report.md << 'REPORT_EOF'
+          ## F-String Validation
+          
+          REPORT_EOF
+          
+          if grep -q "^ERRORS:" fstring-raw.txt 2>/dev/null; then
+            echo "**Issues found**" >> fstring-report.md
+            echo "" >> fstring-report.md
+            echo '```' >> fstring-report.md
+            cat fstring-raw.txt >> fstring-report.md
+            echo '```' >> fstring-report.md
+          else
+            echo "No issues found." >> fstring-report.md
+          fi
         continue-on-error: true
-
-      - name: Upload F-String Report
+      - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: fstring-report
-          path: fstring-output.txt
+          path: fstring-report.md
           retention-days: 30
 
   lint:
@@ -357,50 +758,66 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
       - name: Install OpenCode
         run: curl -fsSL https://opencode.ai/install | bash
-
       - name: Get Changed Files
-        id: get-diff
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.ref }}"
-            HEAD="${{ github.event.pull_request.head.sha }}"
             git fetch origin $BASE --depth=1 2>/dev/null || true
-            git diff --name-only origin/$BASE...$HEAD -- '*.py' > lint_files.txt 2>/dev/null || true
+            git diff --name-only origin/$BASE...HEAD -- '*.py' > lint_files.txt 2>/dev/null || true
           elif [ "${{ github.event_name }}" = "push" ]; then
             git diff --name-only HEAD~1 HEAD -- '*.py' > lint_files.txt 2>/dev/null || true
           fi
-          echo "Files to lint: $(cat lint_files.txt 2>/dev/null | wc -l)"
-
       - name: Run OpenCode Lint
         id: check-lint
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           FILES=$(cat lint_files.txt | head -5)
-          FILE_COUNT=$(cat lint_files.txt | wc -l)
-          echo "Analyzing $FILE_COUNT file(s) (limited to 5)"
-          opencode run --model opencode/mimo-v2.5-free --file "$FILES" "Lint these Python files for syntax errors, import errors, undefined variables, and security concerns. Only report actual issues found." 2>&1 | tee lint-output.txt || true
+          if [ -z "$FILES" ]; then
+            echo "No Python files changed"
+            echo "has_errors=false" >> $GITHUB_OUTPUT
+            echo "No changes detected" > lint-report.md
+            exit 0
+          fi
           
-          if grep -qiE "(error|issue|problem)" lint-output.txt 2>/dev/null; then
+          # Lint each file separately
+          for FILE in $FILES; do
+            opencode run --model opencode/mimo-v2.5-free --file "$FILE" "Lint this Python file for syntax errors, import errors, undefined variables, and security concerns. Only report actual issues found." 2>&1 >> lint-raw.txt || true
+          done
+          
+          if grep -qiE "(error|issue|problem)" lint-raw.txt 2>/dev/null; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
           else
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
+          
+          cat > lint-report.md << 'REPORT_EOF'
+          ## OpenCode Lint
+          
+          REPORT_EOF
+          
+          if grep -qiE "(error|issue|problem)" lint-raw.txt 2>/dev/null; then
+            echo "**Issues found**" >> lint-report.md
+            echo "" >> lint-report.md
+            echo '```' >> lint-report.md
+            cat lint-raw.txt >> lint-report.md
+            echo '```' >> lint-report.md
+          else
+            echo "No issues found." >> lint-report.md
+          fi
         continue-on-error: true
-
-      - name: Upload Lint Report
+      - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: lint-report
-          path: lint-output.txt
+          path: lint-report.md
           retention-days: 30
 
   ai-review:
-    name: AI Code Review & Test Generation
+    name: AI Code Review
     runs-on: ubuntu-latest
     needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint]
     if: |
@@ -417,102 +834,48 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-
-      - name: Install Dependencies
-        run: |
-          pip install --upgrade pip
-          pip install pytest
-
       - name: Install OpenCode
         run: curl -fsSL https://opencode.ai/install | bash
-
       - name: Get Changes
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.ref }}"
-            HEAD="${{ github.event.pull_request.head.sha }}"
             git fetch origin $BASE --depth=1 2>/dev/null || true
-            git diff origin/$BASE...$HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
-            git diff --name-only origin/$BASE...$HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -10 > changed_files.txt || true
+            git diff origin/$BASE...HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
+            git diff --name-only origin/$BASE...HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -10 > changed_files.txt || true
           elif [ "${{ github.event_name }}" = "push" ]; then
             git diff HEAD~1 HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
             git diff --name-only HEAD~1 HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -10 > changed_files.txt || true
           fi
-          echo "Changed files: $(cat changed_files.txt 2>/dev/null | wc -l)"
-          echo "Diff size: $(wc -c < changes.diff 2>/dev/null || echo 0) bytes"
-
       - name: AI Code Review
-        id: ai-review
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           DIFF=$(cat changes.diff)
           FILES=$(cat changed_files.txt 2>/dev/null || echo "None")
           
-          echo "AI Code Review" > ai-review-output.txt
-          echo "============================================" >> ai-review-output.txt
+          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Analyze these code changes to PseudoTV Live (Kodi addon). CHANGED FILES: $FILES CODE DIFF: $DIFF Focus on: 1. Does this break existing functionality? 2. Bugs or logic errors? 3. Follows existing code patterns? 4. Missing imports or undefined variables? 5. Kodi API compatibility issues? Provide risk assessment (LOW/MEDIUM/HIGH) and specific findings." 2>&1 || true)
           
-          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Analyze the following code changes from a recent push to PseudoTV Live (Kodi addon). CHANGED FILES: $FILES CODE DIFF: $DIFF Focus on: 1. Does this change break existing functionality? 2. Are there any bugs or logic errors in the diff? 3. Does it follow the existing code patterns in the project? 4. Are there any missing imports or undefined variables? 5. Could this change cause issues with Kodi API compatibility? Provide a brief risk assessment (LOW/MEDIUM/HIGH) and specific findings if any issues exist." 2>&1 || true)
+          cat > ai-review-report.md << 'REPORT_EOF'
+          ## AI Code Review
           
-          echo "$OPENCODE_OUTPUT" | sed 's/[^[[:alnum:][:space:]._-]//g' >> ai-review-output.txt || true
+          REPORT_EOF
           
-          cat ai-review-output.txt
+          echo "$OPENCODE_OUTPUT" | sed 's/[^[[:alnum:][:space:]._-]//g' >> ai-review-report.md || true
         continue-on-error: true
-
-      - name: Generate Dynamic Tests
-        id: gen-tests
-        env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-        run: |
-          DIFF=$(cat changes.diff)
-          FILES=$(cat changed_files.txt 2>/dev/null || echo "None")
-          
-          echo "AI Test Generation (Changed Items Only)" > gen-tests-output.txt
-          echo "============================================" >> gen-tests-output.txt
-          echo "AI will only generate tests for RECENTLY CHANGED functions/classes." >> gen-tests-output.txt
-          echo "" >> gen-tests-output.txt
-          
-          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Generate pytest tests ONLY for the RECENTLY CHANGED functions/classes in these files. CHANGED FILES: $FILES CODE DIFF: $DIFF Requirements: Test only the NEW or MODIFIED functions/classes. Mock xbmc/xbmcgui/xbmcaddon/xbmcplugin modules. Focus on edge cases in the changed code. If the changes are minor (variable renames, comments, whitespace), output 'No new tests needed'. Output ONLY the Python test code in a code block." 2>&1 || true)
-          
-          echo "$OPENCODE_OUTPUT" | sed 's/[^[[:alnum:][:space:]._-]//g' >> gen-tests-output.txt || true
-          
-          cat gen-tests-output.txt
-        continue-on-error: true
-
-      - name: Upload AI Review Reports
+      - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ai-review-reports
-          path: |
-            ai-review-output.txt
-            gen-tests-output.txt
-            changes.diff
-            changed_files.txt
+          name: ai-review-report
+          path: ai-review-report.md
           retention-days: 30
-
-      - name: Execute Generated Tests
-        if: success()
-        run: |
-          TEST_FILE="test_dynamic_ai.py"
-          if [ -f gen-tests-output.txt ]; then
-            python -c "import re; content=open('gen-tests-output.txt').read(); match=re.search(r'\`\`\`python\n(.*?)\`\`\`', content, re.DOTALL); open('$TEST_FILE','w').write(match.group(1)) if match else None" 2>/dev/null || true
-          fi
-          if [ -f "$TEST_FILE" ]; then
-            PYTHONPATH="$(pwd):$(pwd)/plugin.video.pseudotv.live/resources/lib" pytest "$TEST_FILE" -v || true
-            rm -f "$TEST_FILE"
-          fi
 
   report:
     name: Generate Report
     runs-on: ubuntu-latest
     if: always()
-    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, ai-review]
+    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, ai-review, translate, changelog]
     steps:
       - name: Download All Reports
         uses: actions/download-artifact@v7
@@ -520,114 +883,49 @@ jobs:
           path: reports
         continue-on-error: true
 
-      - name: Print Summary
-        run: |
-          echo ""
-          echo "============================================"
-          echo "   AI DEVELOPER ASSISTANT SUMMARY"
-          echo "============================================"
-          echo ""
-          
-          echo "CHANGE DETECTION"
-          echo "--------------------------------------------"
-          echo "Python Changes: ${{ needs.changes.outputs.python == 'true' && 'YES' || 'NO' }}" | sed 's/^/  /'
-          echo "XML Changes: ${{ needs.changes.outputs.xml == 'true' && 'YES' || 'NO' }}" | sed 's/^/  /'
-          echo "JSON Changes: ${{ needs.changes.outputs.json == 'true' && 'YES' || 'NO' }}" | sed 's/^/  /'
-          echo "Files Changed: ${{ needs.changes.outputs.file_count }}" | sed 's/^/  /'
-          echo ""
-          
-          echo "VALIDATION STATUS"
-          echo "--------------------------------------------"
-          ADDON="${{ needs.addon-check.result }}"
-          FSTRING="${{ needs.fstring-check.result }}"
-          RUFF="${{ needs.lint-ruff.result }}"
-          XML="${{ needs.lint-xml.result }}"
-          JSON="${{ needs.lint-json.result }}"
-          LINT="${{ needs.lint.result }}"
-          AI="${{ needs.ai-review.result }}"
-          
-          echo "Kodi Addon Checker: $(echo $ADDON | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
-          echo "F-String Validation: $(echo $FSTRING | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
-          echo "Ruff Linter: $(echo $RUFF | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
-          echo "XML Validation: $(echo $XML | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
-          echo "JSON Validation: $(echo $JSON | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
-          echo "OpenCode Lint: $(echo $LINT | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
-          echo "AI Code Review: $(echo $AI | sed 's/success/PASSED/;s/failure/FAILED/;s/skipped/SKIPPED/;s/cancelled/CANCELLED/')" | sed 's/^/  /'
-          echo ""
-          
-          echo "AI triggered: ${{ needs.ai-review.result != 'skipped' && 'YES' || 'NO' }}" | sed 's/^/  /'
-          
-          echo ""
-          echo "============================================"
-          echo "   END OF SUMMARY"
-          echo "============================================"
-
       - name: Write Job Summary
         if: always()
         run: |
-          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          cat > $GITHUB_STEP_SUMMARY << 'HEADER'
           ## AI Developer Assistant Report
           
           ### Validation Results
-          | Check | Status |
-          |-------|--------|
-          | Kodi Addon Checker | ${{ needs.addon-check.result == 'success' && '✅ Passed' || needs.addon-check.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
-          | F-String Validation | ${{ needs.fstring-check.result == 'success' && '✅ Passed' || needs.fstring-check.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
-          | Ruff Linter | ${{ needs.lint-ruff.result == 'success' && '✅ Passed' || needs.lint-ruff.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
-          | XML Validation | ${{ needs.lint-xml.result == 'success' && '✅ Passed' || needs.lint-xml.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
-          | JSON Validation | ${{ needs.lint-json.result == 'success' && '✅ Passed' || needs.lint-json.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
-          | OpenCode Lint | ${{ needs.lint.result == 'success' && '✅ Passed' || needs.lint.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |
-          | AI Code Review | ${{ needs.ai-review.result == 'success' && '✅ Passed' || needs.ai-review.result == 'skipped' && '⏭️ Skipped (no lint issues)' || '❌ Failed' }} |
-          EOF
+          | Check | Status | Details |
+          |-------|--------|---------|
+          HEADER
+          
+          echo "| Kodi Addon Checker | ${{ needs.addon-check.result == 'success' && '✅ Passed' || needs.addon-check.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | [View Report](#kodi-addon-checker) |" >> $GITHUB_STEP_SUMMARY
+          echo "| F-String Validation | ${{ needs.fstring-check.result == 'success' && '✅ Passed' || needs.fstring-check.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | [View Report](#f-string-validation) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ruff Linter | ${{ needs.lint-ruff.result == 'success' && '✅ Passed' || needs.lint-ruff.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | [View Report](#ruff-linter) |" >> $GITHUB_STEP_SUMMARY
+          echo "| XML Validation | ${{ needs.lint-xml.result == 'success' && '✅ Passed' || needs.lint-xml.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | [View Report](#xml-validation) |" >> $GITHUB_STEP_SUMMARY
+          echo "| JSON Validation | ${{ needs.lint-json.result == 'success' && '✅ Passed' || needs.lint-json.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | [View Report](#json-validation) |" >> $GITHUB_STEP_SUMMARY
+          echo "| OpenCode Lint | ${{ needs.lint.result == 'success' && '✅ Passed' || needs.lint.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | [View Report](#opencode-lint) |" >> $GITHUB_STEP_SUMMARY
+          echo "| AI Code Review | ${{ needs.ai-review.result == 'success' && '✅ Passed' || needs.ai-review.result == 'skipped' && '⏭️ Skipped (no lint issues)' || '❌ Failed' }} | [View Report](#ai-code-review) |" >> $GITHUB_STEP_SUMMARY
+          echo "| AI Translation | ${{ needs.translate.result == 'success' && '✅ Generated' || needs.translate.result == 'skipped' && '⏭️ Skipped (no strings.po changes)' || needs.translate.result == 'failure' && '❌ Failed' || '⏭️ N/A' }} | [View Report](#ai-translation) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Changelog | ${{ needs.changelog.result == 'success' && '✅ Updated' || needs.changelog.result == 'skipped' && '⏭️ Skipped (no code changes)' || needs.changelog.result == 'failure' && '❌ Failed' || '⏭️ N/A' }} | [View Report](#changelog-update) |" >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Change Detection" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "Python Changes: ${{ needs.changes.outputs.python == 'true' && 'YES' || 'NO' }}" >> $GITHUB_STEP_SUMMARY
-          echo "XML Changes: ${{ needs.changes.outputs.xml == 'true' && 'YES' || 'NO' }}" >> $GITHUB_STEP_SUMMARY
-          echo "JSON Changes: ${{ needs.changes.outputs.json == 'true' && 'YES' || 'NO' }}" >> $GITHUB_STEP_SUMMARY
-          echo "Files Changed: ${{ needs.changes.outputs.file_count || '0' }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "| Type | Changed |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Python | ${{ needs.changes.outputs.python == 'true' && 'Yes' || 'No' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| XML | ${{ needs.changes.outputs.xml == 'true' && 'Yes' || 'No' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JSON | ${{ needs.changes.outputs.json == 'true' && 'Yes' || 'No' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Strings.po | ${{ needs.changes.outputs.strings_po == 'true' && 'Yes (AI Translation Triggered)' || 'No' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Files | ${{ needs.changes.outputs.file_count || '0' }} |" >> $GITHUB_STEP_SUMMARY
           
-          if [ -f reports/ruff-report/ruff-output.txt ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Ruff Linter" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            head -50 reports/ruff-report/ruff-output.txt >> $GITHUB_STEP_SUMMARY || true
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Detailed Reports" >> $GITHUB_STEP_SUMMARY
           
-          if [ -f reports/xml-report/xml-output.txt ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### XML Validation" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat reports/xml-report/xml-output.txt >> $GITHUB_STEP_SUMMARY || true
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ -f reports/json-report/json-output.txt ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### JSON Validation" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat reports/json-report/json-output.txt >> $GITHUB_STEP_SUMMARY || true
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ -f reports/fstring-report/fstring-output.txt ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### F-String Checker" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat reports/fstring-report/fstring-output.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ -f reports/kodi-addon-check-report/kodi-check-output.txt ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Kodi Addon Checker" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat reports/kodi-addon-check-report/kodi-check-output.txt >> $GITHUB_STEP_SUMMARY || true
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
+          for report in reports/*/*.md; do
+            if [ -f "$report" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              cat "$report" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
 
       - name: Post PR Comment
         if: github.event_name == 'pull_request'
@@ -635,6 +933,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const path = require('path');
             
             const addonResult = '${{ needs.addon-check.result }}';
             const fstringResult = '${{ needs.fstring-check.result }}';
@@ -643,6 +942,8 @@ jobs:
             const jsonResult = '${{ needs.lint-json.result }}';
             const lintResult = '${{ needs.lint.result }}';
             const aiResult = '${{ needs.ai-review.result }}';
+            const translateResult = '${{ needs.translate.result }}';
+            const changelogResult = '${{ needs.changelog.result }}';
             
             const statusIcon = (r) => r === 'success' ? '✅' : r === 'skipped' ? '⏭️' : '❌';
             
@@ -655,57 +956,41 @@ jobs:
             report += `| XML Validation | ${statusIcon(xmlResult)} ${xmlResult} |\n`;
             report += `| JSON Validation | ${statusIcon(jsonResult)} ${jsonResult} |\n`;
             report += `| OpenCode Lint | ${statusIcon(lintResult)} ${lintResult} |\n`;
-            report += `| AI Code Review | ${statusIcon(aiResult)} ${aiResult} |\n\n`;
+            report += `| AI Code Review | ${statusIcon(aiResult)} ${aiResult} |\n`;
+            report += `| AI Translation | ${statusIcon(translateResult)} ${translateResult} |\n`;
+            report += `| Changelog | ${statusIcon(changelogResult)} ${changelogResult} |\n\n`;
             
-            report += `*AI review only runs when linter issues are found.*\n\n`;
+            // Add detailed findings from reports
+            const reportFiles = [
+              { name: 'Ruff Linter', file: 'reports/ruff-report/ruff-report.md', icon: '🔍' },
+              { name: 'XML Validation', file: 'reports/xml-report/xml-report.md', icon: '📄' },
+              { name: 'JSON Validation', file: 'reports/json-report/json-report.md', icon: '📋' },
+              { name: 'F-String Checker', file: 'reports/fstring-report/fstring-report.md', icon: '📝' },
+              { name: 'Kodi Checker', file: 'reports/kodi-check-report/kodi-check-report.md', icon: '🎬' },
+              { name: 'OpenCode Lint', file: 'reports/lint-report/lint-report.md', icon: '🤖' },
+              { name: 'AI Review', file: 'reports/ai-review-report/ai-review-report.md', icon: '🧠' },
+              { name: 'AI Translation', file: 'reports/translate-report/translate-report.md', icon: '🌐' },
+              { name: 'Changelog', file: 'reports/changelog-report/changelog-report.md', icon: '📝' }
+            ];
             
-            try {
-              const ruff = fs.readFileSync('reports/ruff-report/ruff-output.txt', 'utf8');
-              const ruffIssues = (ruff.match(/^(warning|error)/gm) || []).length;
-              if (ruffIssues > 0) {
-                report += `### Ruff Linter\n`;
-                report += '- **Issues:** ' + ruffIssues + '\n';
-                report += '```\n' + ruff.substring(0, 500) + '\n```\n\n';
-              }
-            } catch(e) {}
+            for (const rf of reportFiles) {
+              try {
+                const content = fs.readFileSync(rf.file, 'utf8');
+                const hasIssues = content.includes('**') && (content.includes('issue') || content.includes('error') || content.includes('Error'));
+                if (hasIssues) {
+                  report += `\n### ${rf.icon} ${rf.name}\n`;
+                  // Extract just the key findings
+                  const lines = content.split('\n');
+                  for (const line of lines) {
+                    if (line.includes('**') || line.includes('ERROR') || line.includes('error')) {
+                      report += `${line}\n`;
+                    }
+                  }
+                }
+              } catch(e) {}
+            }
             
-            try {
-              const xml = fs.readFileSync('reports/xml-report/xml-output.txt', 'utf8');
-              const xmlErrors = (xml.match(/^ERROR:/gm) || []).length;
-              if (xmlErrors > 0) {
-                report += `### XML Validation\n`;
-                report += '```\n' + xml.substring(0, 500) + '\n```\n\n';
-              }
-            } catch(e) {}
-            
-            try {
-              const json = fs.readFileSync('reports/json-report/json-output.txt', 'utf8');
-              const jsonErrors = (json.match(/^ERROR:/gm) || []).length;
-              if (jsonErrors > 0) {
-                report += `### JSON Validation\n`;
-                report += '```\n' + json.substring(0, 500) + '\n```\n\n';
-              }
-            } catch(e) {}
-            
-            try {
-              const kodi = fs.readFileSync('reports/kodi-addon-check-report/kodi-check-output.txt', 'utf8');
-              const errors = (kodi.match(/^ERROR:/gm) || []).length;
-              const warnings = (kodi.match(/^WARN:/gm) || []).length;
-              if (errors > 0 || warnings > 0) {
-                report += `### Kodi Checker Details\n`;
-                report += `- **Errors:** ${errors}\n- **Warnings:** ${warnings}\n\n`;
-              }
-            } catch(e) {}
-            
-            try {
-              const fstr = fs.readFileSync('reports/fstring-report/fstring-output.txt', 'utf8');
-              if (fstr.includes('issue(s) found')) {
-                report += `### F-String Issues\n`;
-                report += '```\n' + fstr.substring(0, 500) + '\n```\n\n';
-              }
-            } catch(e) {}
-            
-            report += `---\n*View workflow logs for full details*`;
+            report += `\n---\n*View workflow run for full details*`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,

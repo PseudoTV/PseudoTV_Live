@@ -20,6 +20,8 @@ from variables import *
 from typing import Optional, Union
 
 class VFSParser:
+
+
     def determineLength(self, filename: str, fileitem: Optional[dict] = None, jsonRPC=None) -> Union[int, float]:
         """
         Determines video duration from VFS metadata.
@@ -28,7 +30,7 @@ class VFSParser:
         Priority: resume.total > runtime > duration > streamdetails.video.duration
         """
         if fileitem is None: fileitem = {}
-        LOG("VFSParser: determineLength, file = %s\nitem = %s"%(filename, fileitem))
+        LOG("VFSParser: determineLength, [%s]"%(filename))
         # Try to extract duration from fileitem metadata (assumed to be in seconds)
         duration = (fileitem.get('resume', {}).get('total') or fileitem.get('runtime') or 
                     fileitem.get('duration') or (fileitem.get('streamdetails', {}).get('video', []) or [{}])[0].get('duration') or 0)
@@ -41,12 +43,12 @@ class VFSParser:
                     duration = (metadata.get('resume', {}).get('total') or  metadata.get('runtime') or 
                                 metadata.get('duration') or (metadata.get('streamdetails', {}).get('video', []) or [{}])[0].get('duration') or 0)
             except Exception as e:
-                LOG("VFSParser: Failed to get metadata via JSON-RPC: %s"%(e), xbmc.LOGERROR)
+                LOG("VFSParser: getFileDetails, failed!\n%s"%(e), xbmc.LOGERROR)
         
         try:
             duration = round(duration)
         except (ValueError, TypeError):
             duration = 0
         
-        LOG("VFSParser: Duration is %s seconds"%(duration))
+        LOG("VFSParser: determineLength, duration = %s seconds"%(duration))
         return duration

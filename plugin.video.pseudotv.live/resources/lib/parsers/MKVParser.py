@@ -25,9 +25,12 @@ class MKVParser:
     Parser for Matroska (MKV) video files.
     Extracts duration from EBML header information.
     """
+
+
     def __init__(self):
         self.monitor = MONITOR()
         
+
 
     def determineLength(self, filename: str) -> Union[int, float]:
         """
@@ -62,6 +65,7 @@ class MKVParser:
             except Exception as e:
                 LOG('MKVParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
         
+
 
     def parseHeader(self, size: int) -> Union[int, float]:
         """Parse MKV header to extract duration and timecode scale."""

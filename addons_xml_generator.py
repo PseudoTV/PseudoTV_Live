@@ -24,6 +24,7 @@ https://anarchintosh-projects.googlecode.com/files/addons_xml_generator.py
 """
 
 import os
+import re
 import sys
 import hashlib
 import subprocess
@@ -177,7 +178,7 @@ class Generator:
                 text=True,
                 encoding='utf-8',
                 errors='replace',
-                timeout=30
+                timeout=60
             )
             raw_output = result.stdout
         except FileNotFoundError:
@@ -188,13 +189,12 @@ class Generator:
             return
 
         # Extract and validate changelog entry
-        import re
         lines = raw_output.strip().split('\n')
         changelog_entry = ""
         for line in lines:
             line = line.strip()
             if line.startswith('- '):
-                changelog_entry = re.sub(r'[^[[:alnum:][:space:]._/-]', '', line)
+                changelog_entry = re.sub(r'[^\w\s._/-]', '', line)
                 break
 
         if not changelog_entry:
@@ -216,28 +216,36 @@ class Generator:
             print(f"Appending to existing version {version} section")
             lines = content.split('\n')
             new_lines = []
-            found = False
-            inserted = False
-            for line in lines:
-                new_lines.append(line)
-                if line.strip() == version and not found:
-                    found = True
-                elif found and line.startswith('- ') and not inserted:
-                    # Insert after existing entries
-                    pass
-                elif found and line.startswith('v.') and not inserted:
-                    new_lines.insert(-1, changelog_entry)
-                    inserted = True
-            if found and not inserted:
-                # Insert before next version or end
-                for i, line in enumerate(new_lines):
-                    if line.strip() == version:
-                        # Find last entry under this version
-                        j = i + 1
-                        while j < len(new_lines) and (new_lines[j].startswith('- ') or new_lines[j].strip() == ''):
-                            j += 1
-                        new_lines.insert(j, changelog_entry)
-                        break
+            version_line_idx = -1
+            insert_idx = -1
+
+            # Find the version line and determine insertion point
+            for i, line in enumerate(lines):
+                if line.strip() == version and version_line_idx == -1:
+                    version_line_idx = i
+                    new_lines.append(line)
+                    continue
+
+                if version_line_idx != -1 and insert_idx == -1:
+                    # We're under the target version section
+                    if line.startswith('v.'):
+                        # Hit next version, insert before it
+                        insert_idx = len(new_lines)
+                        new_lines.append(changelog_entry)
+                        new_lines.append(line)
+                    elif i == len(lines) - 1:
+                        # End of file, append here
+                        new_lines.append(line)
+                        new_lines.append(changelog_entry)
+                    else:
+                        new_lines.append(line)
+                else:
+                    new_lines.append(line)
+
+            # If we found version but haven't inserted yet (version was last section)
+            if version_line_idx != -1 and insert_idx == -1:
+                new_lines.append(changelog_entry)
+
             content = '\n'.join(new_lines)
         else:
             # New version, add at top after notice

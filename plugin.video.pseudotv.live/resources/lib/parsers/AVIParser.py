@@ -21,14 +21,18 @@ from typing import Any, Optional, Union
 import struct
 
 class AVIChunk:
+
+
     def __init__(self):
         self.empty()
+
 
     def empty(self) -> None:
         self.size = 0
         self.fourcc = ''
         self.datatype = 1
         self.chunk = ''
+
 
     def read(self, thefile: Any):
         data = thefile.readBytes(4)
@@ -46,13 +50,17 @@ class AVIChunk:
 
 
 class AVIList:
+
+
     def __init__(self):
         self.empty()
+
 
     def empty(self) -> None:
         self.size = 0
         self.fourcc = ''
         self.datatype = 2
+
 
     def read(self, thefile: Any):
         data = thefile.readBytes(4)
@@ -65,8 +73,11 @@ class AVIList:
 
 
 class AVIHeader:
+
+
     def __init__(self):
         self.empty()
+
 
     def empty(self) -> None:
         self.dwMicroSecPerFrame = 0
@@ -82,8 +93,11 @@ class AVIHeader:
 
 
 class AVIStreamHeader:
+
+
     def __init__(self):
         self.empty()
+
 
     def empty(self) -> None:
         self.fccType = ''
@@ -107,9 +121,12 @@ class AVIParser:
     Parser for AVI video files.
     Duration is calculated from stream header information.
     """
+
+
     def __init__(self):
         self.Header = AVIHeader()
         self.StreamHeader = AVIStreamHeader()
+
 
     def determineLength(self, filename: str) -> Union[int, float]:
         """
@@ -136,6 +153,7 @@ class AVIParser:
                 self.File.close()
             except Exception as e:
                 LOG('AVIParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
+
 
     def readHeader(self) -> int:
         # AVI Chunk

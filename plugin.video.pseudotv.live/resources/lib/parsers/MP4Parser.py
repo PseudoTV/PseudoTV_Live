@@ -20,6 +20,8 @@ from variables import *
 from typing import Any, Dict, Optional, Tuple, Union
 
 class MP4DataBlock:
+
+
     def __init__(self):
         self.size    = -1
         self.boxtype = ''
@@ -27,6 +29,8 @@ class MP4DataBlock:
 
 
 class MP4MovieHeader:
+
+
     def __init__(self):
         self.version  = 0
         self.flags    = 0
@@ -36,6 +40,8 @@ class MP4MovieHeader:
         self.duration = 0
 
 class MP4Parser:
+
+
     def __init__(self):
         self.monitor = MONITOR()
         self.MovieHeader = MP4MovieHeader()

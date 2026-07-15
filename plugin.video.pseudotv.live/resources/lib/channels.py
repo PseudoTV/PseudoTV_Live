@@ -28,10 +28,13 @@ from multiroom  import Multiroom
 class Channels(object):
     _lock = RLock()
     
-    def __init__(self, key: Optional[str] = None, writable: bool = False):
-        if key is None: key = CHANNELAUTOTUNE_KEY if Globals.settings.getSettingBool('Enable_Autotune') else CHANNEL_KEY
+    def __init__(self, key: str, writable: bool = False):
         self.writable    = writable
         self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
+        # Ensure name fields are strings (JSON parses "24" as int)
+        for ch in self.channelDATA.get('channels', []):
+            if 'name' in ch and not isinstance(ch['name'], str):
+                ch['name'] = str(ch['name'])
         self.channelKEY  = f'{key}.{self.channelDATA.get("version",ADDON_VERSION)}'
         channels = self.channelDATA.get('channels') or []
         self.channelTEMP = channels.pop(0) if channels else {}
@@ -88,8 +91,9 @@ class Channels(object):
             return Globals.settings.setCacheSetting(self.channelKEY, self.channelDATA, FileAccess._getMD5(self.channelKEY), expiration)
             
 
+
     def getTemplate(self) -> dict: 
-        return self.channelTEMP.copy()
+        return {}
         
         
     def getChannels(self) -> list:
@@ -125,6 +129,7 @@ class Channels(object):
         return self._save()
         
 
+
     def getImportPlugins(self) -> list:
         return self.channelDATA.get('plugins',[])
         
@@ -137,6 +142,7 @@ class Channels(object):
     def clrChannels(self):
         self.channelDATA['channels'] = []
         
+
 
     def delChannel(self, citem: Optional[Union[dict, list]] = None) -> bool:
         """Delete channel(s) by ID or dict. Handles single dict or list of dicts."""

@@ -43,6 +43,8 @@ _NIGHT_RE = re.compile(r'\_Night(.*?)', re.IGNORECASE)
 # Resource_Adverts
   
 class RulesList(object):
+
+
     def __init__(self, channels: Optional[list] = None):
         self.channels = channels
         self.ruleList = [BaseRule(),
@@ -75,12 +77,14 @@ class RulesList(object):
         else:        self.ruleItems = {}
                          
 
+
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
                   
 
+
     def getTemplate(self) -> dict:
-        return Channels().channelRULE.copy()
+        return Channels(getChannelKey()).channelRULE.copy()
         
                   
     def dumpRules(self, rules: dict = {}) -> dict:
@@ -97,8 +101,9 @@ class RulesList(object):
         return nrules
             
 
+
     def loadRules(self, channels: Optional[list] = None, append: bool = False) -> dict:
-        if channels is None: channels = Channels().getChannels()
+        if channels is None: channels = Channels(getChannelKey()).getChannels()
         #load channel rules and their instances. append = full rule list.
         def __load(ruleList, citem={}):
             tmpruleList = {}
@@ -165,9 +170,11 @@ class BaseRule(object):
         self.storedValues       = []
         
 
+
     def getTitle(self) -> str:
         return self.name
         
+
 
     def onAction(self, optionindex: int) -> Any:
         return ''
@@ -243,12 +250,12 @@ class BaseRule(object):
     def validateRange(self, optionindex: int, minimum: int, maximum: int, default: int):
         if int(self.optionValues[optionindex]) < minimum:
             self.log("Invalid minimum range")
-            Globals.dialog.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
+            Globals.dialog.notificationDialog(LANGUAGE(32077).format(name=self.optionLabels[optionindex]))
             self.optionValues[optionindex] = default
             return
         elif int(self.optionValues[optionindex]) > maximum:
             self.log("Invalid maximum range")
-            Globals.dialog.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
+            Globals.dialog.notificationDialog(LANGUAGE(32077).format(name=self.optionLabels[optionindex]))
             self.optionValues[optionindex] = default
             return
 
@@ -261,7 +268,7 @@ class BaseRule(object):
                 self.optionValues[optionindex] = val
             return
         except Exception as e: self.log('validateDigitBox failed: %s' % e, xbmc.LOGDEBUG)
-        Globals.dialog.notificationDialog(LANGUAGE(32077)%(self.optionLabels[optionindex]))
+        Globals.dialog.notificationDialog(LANGUAGE(32077).format(name=self.optionLabels[optionindex]))
         self.optionValues[optionindex] = default
 
     
@@ -281,6 +288,7 @@ class BaseRule(object):
         value = Globals.dialog.colorDialog(colorlist, self.optionValues[optionindex], colorfile, self.name)
         if value: self.optionValues[optionindex] = value
         
+
 
     def onActionTextBox(self, optionindex: int):
         self.log("onActionTextBox")
@@ -306,8 +314,8 @@ class BaseRule(object):
     def onActionSelect(self, optionindex: int, header: Optional[str] = None, preselect: Any = None, useDetails: bool = False, autoclose: int = SELECT_DELAY, multi: bool = False):
         self.log("onActionSelect")
         if header is None:
-            if multi: header = '%s - %s'%(ADDON_NAME,LANGUAGE(32017)%(''))
-            else:     header = '%s - %s'%(ADDON_NAME,LANGUAGE(32223)%(''))
+            if multi: header = '%s - %s'%(ADDON_NAME,LANGUAGE(32017).format(type=''))
+            else:     header = '%s - %s'%(ADDON_NAME,LANGUAGE(32223).format(type=''))
         
         if isinstance(self.selectBoxOptions[optionindex],dict): values, options = list(self.selectBoxOptions[optionindex].values()), list(self.selectBoxOptions[optionindex].keys())
         else:                                                   values, options = self.selectBoxOptions[optionindex], self.optionValues[optionindex]
@@ -339,6 +347,8 @@ class BaseRule(object):
 
 #Rules apply sequentially by myId
 class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
+
+
     def __init__(self):
         self.myId               = 1
         self.name               = LANGUAGE(30143)
@@ -351,6 +361,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
         self.storedValues       = [[],[],[],[],[],[]]
         
 
+
     def copy(self) -> 'ShowChannelBug':
         return ShowChannelBug()
 
@@ -361,7 +372,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
 
     def getPosition(self, optionindex: int):
         orgvalue = self.optionValues[optionindex]
-        self.onActionSelect(optionindex, LANGUAGE(32223)%(''))
+        self.onActionSelect(optionindex, LANGUAGE(32223).format(type=''))
         if self.optionValues[optionindex] == self.selectBoxOptions[optionindex][1]:
             from overlaytool import OverlayTool
             try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=1, Channel_Bug_Position_XY=self.optionValues[optionindex], ChannelBug_Color=self.optionValues[3])
@@ -410,6 +421,8 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
 
 
 class ShowOnNext(BaseRule):
+
+
     def __init__(self):
         self.myId               = 2
         self.name               = LANGUAGE(30045)
@@ -433,7 +446,7 @@ class ShowOnNext(BaseRule):
 
     def getPosition(self, optionindex: int):
         orgvalue = self.optionValues[optionindex]
-        self.onActionSelect(optionindex, LANGUAGE(32223)%(''))
+        self.onActionSelect(optionindex, LANGUAGE(32223).format(type=''))
         if self.optionValues[optionindex] == self.selectBoxOptions[optionindex][1]:
             from overlaytool import OverlayTool
             try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=0, OnNext_Position_XY=self.optionValues[optionindex], OnNext_Color=self.optionValues[2])
@@ -471,6 +484,8 @@ class ShowOnNext(BaseRule):
 
 
 class SetScreenVingette(BaseRule):
+
+
     def __init__(self):
         self.myId               = 3
         self.name               = LANGUAGE(30177)
@@ -483,6 +498,7 @@ class SetScreenVingette(BaseRule):
         self.storedValues       = [[],[],[]]
         
 
+
     def copy(self) -> 'SetScreenVingette':
         return SetScreenVingette()
 
@@ -491,6 +507,8 @@ class SetScreenVingette(BaseRule):
         return '%s (%s)'%(self.name,self.optionValues)
             
             # todo set viewmode as {} response from json.
+
+
     def getPosition(self, optionindex: int):#todo vin utility to adjust zoom,vshift,pratio and nls
         Globals.dialog.notificationDialog(LANGUAGE(32020))
 
@@ -539,6 +557,8 @@ class SetScreenVingette(BaseRule):
         
 
 class MST3k(BaseRule):
+
+
     def __init__(self):
         self.myId               = 4
         self.name               = "Mystery Science Theater 3K Silhouette"
@@ -606,6 +626,8 @@ class MST3k(BaseRule):
         
 
 class DisableOverlay(BaseRule): #PLAYER RULES [50-99]
+
+
     def __init__(self):
         self.myId               = 50
         self.name               = LANGUAGE(30042)
@@ -643,6 +665,8 @@ class DisableOverlay(BaseRule): #PLAYER RULES [50-99]
 
 
 class ForceSubtitles(BaseRule):
+
+
     def __init__(self):
         self.myId               = 51
         self.name               = "Force Subtitles"
@@ -680,6 +704,8 @@ class ForceSubtitles(BaseRule):
 
 
 class DisableTrakt(BaseRule):
+
+
     def __init__(self):
         self.myId               = 52
         self.name               = "Trakt scrobbling"
@@ -717,6 +743,8 @@ class DisableTrakt(BaseRule):
 
 
 class RollbackPlaycount(BaseRule):
+
+
     def __init__(self):
         self.myId               = 53
         self.name               = "Rollback Playcount"
@@ -754,6 +782,8 @@ class RollbackPlaycount(BaseRule):
 
 
 class DisableRestart(BaseRule):
+
+
     def __init__(self):
         self.myId               = 54
         self.name               = "Restart Button"
@@ -792,13 +822,15 @@ class DisableRestart(BaseRule):
 
         
 class DisableOnChange(BaseRule):
+
+
     def __init__(self):
         self.myId               = 55
         self.name               = LANGUAGE(30170)
-        self.description        = LANGUAGE(33171)
+        self.description        = LANGUAGE(33170)
         self.optionLabels       = [LANGUAGE(30170)]
         self.optionValues       = [Globals.settings.getSettingBool('Enable_OnInfo')]
-        self.optionDescriptions = [LANGUAGE(33171)]
+        self.optionDescriptions = [LANGUAGE(33170)]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.storedValues       = [[]]
 
@@ -829,6 +861,8 @@ class DisableOnChange(BaseRule):
 
 
 class ForceRebuild(BaseRule):
+
+
     def __init__(self):
         self.myId               = 497
         self.name               = "Force Rebuild"
@@ -861,6 +895,8 @@ class ForceRebuild(BaseRule):
             
             
 class DurationOptions(BaseRule): #PRE-BUILD RULES [500-599]
+
+
     def __init__(self):
         self.myId               = 500
         self.name               = "Duration Options"
@@ -909,6 +945,8 @@ class DurationOptions(BaseRule): #PRE-BUILD RULES [500-599]
 
 
 class IncludeOptions(BaseRule):
+
+
     def __init__(self):
         self.myId               = 501
         self.name               = "Include Options"
@@ -955,13 +993,15 @@ class IncludeOptions(BaseRule):
 
 
 class PreRoll(BaseRule):
+
+
     def __init__(self):
         self.myId               = 502
         self.name               = "Pre-Roll"
         self.description        = "Pre-Roll Options"
         self.optionLabels       = [LANGUAGE(30017),LANGUAGE(30139),LANGUAGE(30029),LANGUAGE(30028),"Bumpers Folder","Ratings Folder"]
         self.optionValues       = [Globals.settings.getSettingInt('Enable_Preroll'),Globals.settings.getSettingInt('Random_Pre_Chance'),Globals.settings.getSetting('Resource_Bumpers'),Globals.settings.getSetting('Resource_Ratings'),[os.path.join(FILLER_LOC,'Bumpers','')],[os.path.join(FILLER_LOC,'Ratings','')]]
-        self.optionDescriptions = [LANGUAGE(30018),LANGUAGE(33134),LANGUAGE(33029),LANGUAGE(33028),"",""]
+        self.optionDescriptions = [LANGUAGE(33017),LANGUAGE(33139),LANGUAGE(33029),LANGUAGE(33028),"",""]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0},list(range(0,101,1)),"","","",""]
         self.storedValues       = [{},{}]
@@ -998,13 +1038,15 @@ class PreRoll(BaseRule):
         
                             
 class PostRoll(BaseRule):
+
+
     def __init__(self):
         self.myId               = 503
         self.name               = "Post-Roll"
         self.description        = "Post-Roll Options"
         self.optionLabels       = [LANGUAGE(30019),LANGUAGE(30134),LANGUAGE(30030),"Adverts Folder",LANGUAGE(30031),"Trailers Folder",LANGUAGE(30126),LANGUAGE(30053)]
         self.optionValues       = [Globals.settings.getSettingInt('Enable_Postroll'),Globals.settings.getSettingInt('Random_Post_Chance'),Globals.settings.getSetting('Resource_Adverts'),[os.path.join(FILLER_LOC,'Adverts','')],Globals.settings.getSetting('Resource_Trailers'),[os.path.join(FILLER_LOC,'Trailers','')],Globals.settings.getSettingBool('Include_Trailers_KODI'),Globals.settings.getSettingBool('Include_Extras_KODI')]
-        self.optionDescriptions = [LANGUAGE(30020),LANGUAGE(33134),LANGUAGE(33030),"",LANGUAGE(33031),"",LANGUAGE(33126),LANGUAGE(33233)]
+        self.optionDescriptions = [LANGUAGE(33019),LANGUAGE(33139),LANGUAGE(33030),"",LANGUAGE(33031),"",LANGUAGE(33126),LANGUAGE(33233)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0,LANGUAGE(30026):1,LANGUAGE(30024):2,LANGUAGE(30025):3},list(range(0,101,1)),[]]
         self.storedValues       = [{},{}]
@@ -1043,13 +1085,15 @@ class PostRoll(BaseRule):
         
 
 class InterleaveValue(BaseRule):
+
+
     def __init__(self):
         self.myId               = 504
         self.name               = LANGUAGE(30192)
-        self.description        = LANGUAGE(33215)
+        self.description        = LANGUAGE(33179)
         self.optionLabels       = [LANGUAGE(30179),LANGUAGE(30211)]
         self.optionValues       = [Globals.settings.getSettingInt('Interleave_Set'), Globals.settings.getSettingBool('Interleave_Repeat')]
-        self.optionDescriptions = [LANGUAGE(33215),LANGUAGE(33211)]
+        self.optionDescriptions = [LANGUAGE(33179),LANGUAGE(33211)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(0,26,1))]
         self.storedValues       = [[],[]]
@@ -1089,6 +1133,8 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
     """
     SeasonalRule
     """
+
+
     def __init__(self):
         self.myId               = 800
         self.name               = "Seasonal"
@@ -1100,6 +1146,7 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
         self.storedValues       = [[]]
         
 
+
     def copy(self) -> 'SeasonalRule':
         return SeasonalRule()
         
@@ -1107,6 +1154,7 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
     def getTitle(self) -> str:
         return '%s (%s)'%(self.name,self.optionValues[0][0].get('holiday',{}).get('name','None'))
             
+
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, builder: Any) -> Any:
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
@@ -1132,6 +1180,8 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
 
 
 class HandleMethodOrder(BaseRule):
+
+
     def __init__(self):
         self.myId               = 950
         self.name               = LANGUAGE(32232)
@@ -1180,6 +1230,8 @@ class HandleMethodOrder(BaseRule):
 
 
 class HandleLimits(BaseRule):
+
+
     def __init__(self):
         self.myId               = 951
         self.name               = LANGUAGE(32263)
@@ -1225,13 +1277,15 @@ class HandleLimits(BaseRule):
 
 
 class ForceEpisodeOrder(BaseRule):
+
+
     def __init__(self):
         self.myId               = 998
         self.name               = LANGUAGE(30181)
-        self.description        = LANGUAGE(33230)
+        self.description        = LANGUAGE(33181)
         self.optionLabels       = [LANGUAGE(30181)]
         self.optionValues       = [True]
-        self.optionDescriptions = [LANGUAGE(33230)]
+        self.optionDescriptions = [LANGUAGE(33181)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
         self.storedValues       = [[],[],{},[],[],[]]
         self.selectBoxOptions   = []
@@ -1315,13 +1369,15 @@ class ForceEpisodeOrder(BaseRule):
         
         
 class ForceRandom(BaseRule):
+
+
     def __init__(self):
         self.myId               = 999
         self.name               = LANGUAGE(30182)
-        self.description        = LANGUAGE(33231)
+        self.description        = LANGUAGE(33183)
         self.optionLabels       = [LANGUAGE(30182)]
         self.optionValues       = [True]
-        self.optionDescriptions = [LANGUAGE(33231)]
+        self.optionDescriptions = [LANGUAGE(33183)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
         self.storedValues       = [[]]
 
@@ -1352,17 +1408,20 @@ class ForceRandom(BaseRule):
         
 
 class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
+
+
     def __init__(self):
         self.myId               = 1000
         self.name               = LANGUAGE(30121)
         self.description        = LANGUAGE(33121)
         self.optionLabels       = [LANGUAGE(30180),LANGUAGE(30181),LANGUAGE(30182)]
         self.optionValues       = [Globals.settings.getSettingInt('Enable_Even'),Globals.settings.getSettingBool('Enable_Even_Force_Episode'),Globals.settings.getSettingBool('Enable_Even_Force_Random')]
-        self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33230),LANGUAGE(30182)]
+        self.optionDescriptions = [LANGUAGE(33121),LANGUAGE(33181),LANGUAGE(30182)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(0,26,1))]
         self.storedValues       = [[],[],[],{},[]]
         
+
 
     def copy(self) -> 'EvenShowsRule':
         return EvenShowsRule()
@@ -1455,6 +1514,8 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
 
 
 class PadScheduling(BaseRule):
+
+
     def __init__(self):
         self.myId               = 2999
         self.name               = "Pad Scheduling"
@@ -1465,6 +1526,7 @@ class PadScheduling(BaseRule):
         self.actions            = [RULES_ACTION_CHANNEL_START, RULES_ACTION_CHANNEL_BUILD_TIME_POST,RULES_ACTION_CHANNEL_STOP]
         self.storedValues       = [[],[]]
         
+
 
     def copy(self) -> 'PadScheduling':
         return PadScheduling()
@@ -1477,6 +1539,7 @@ class PadScheduling(BaseRule):
     def onAction(self, optionindex: int) -> Any:
         return self.optionValues[optionindex]
         
+
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, inherited: Any) -> Any:
         self.log('[%s] runAction, actionid = %s,'%(citem.get('id'),actionid))
@@ -1515,6 +1578,8 @@ class PadScheduling(BaseRule):
         
         
 class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
+
+
     def __init__(self):
         self.myId               = 3000
         self.name               = LANGUAGE(32230)
@@ -1525,6 +1590,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         self.actions            = [RULES_ACTION_PLAYBACK_RESUME, RULES_ACTION_PLAYER_START, RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP, RULES_ACTION_CHANNEL_START, RULES_ACTION_CHANNEL_STOP, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN, RULES_ACTION_CHANNEL_BUILD_TIME_PRE, RULES_ACTION_CHANNEL_CITEM, RULES_ACTION_CHANNEL_TEMP_CITEM]
         self.storedValues       = [[],[],False]
         
+
 
     def copy(self) -> 'PauseRule':
         return PauseRule()
@@ -1569,6 +1635,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         return JSONRPC().getTotDuration(filelist)
             
 
+
     def _buildSchedule(self, citem: dict, filelist: list, builder: Any) -> dict:     
         self.log('[%s] _buildSchedule, filelist = %s'%(citem.get('id'),len(filelist)))
         self._builder = builder
@@ -1590,11 +1657,13 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         elif self.optionValues[1]:                               return self._builder.jsonRPC.requestURL(self.optionValues[1],payload={'uuid':Globals.settings.getMYUUID(),'name':friendly,'payload':{'resume':resume,'filelist':filelist}},
                                                                                                    cache={"cache":Globals.settings.cache, "checksum":ADDON_VERSION, "life": datetime.timedelta(minutes=15)})
 
+
     def _getResumeData(self, id: int) -> dict:
         key = self._getKey(id)
         self.log("[%s] runAction, _getResumeData: key = %s, url = %s"%(id,key,self.optionValues[1]))
         if self.optionValues[1]: return self._builder.jsonRPC.requestURL(self.optionValues[1])
         else:                    return Globals.settings.getCacheSetting(key, FileAccess._getMD5(key), default={})
+
 
     def _getResume(self, id: int) -> dict:
         return (self._getResumeData(id).get('resume') or {"idx":0,"position":0.0,"total":0.0,"file":"","updated":{"instance":"","time":-1}})
@@ -1603,6 +1672,7 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
     def _getFilelist(self, id: int) -> list:
         return (self._getResumeData(id).get('filelist') or [])
         
+
 
     def _getPlaylist(self, id: int) -> list:
         resume   = self._getResume(id)

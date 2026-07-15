@@ -19,14 +19,15 @@
 # -*- coding: utf-8 -*-
 import gzip, mimetypes, socket, errno
 
+from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
+from six.moves.socketserver    import ThreadingMixIn
+from typing                    import Any
 from zeroconf                  import *
 from variables                 import *
 from channels                  import Channels
 from library                   import Library
 from resources                 import Resources
-from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
-from six.moves.socketserver    import ThreadingMixIn
-from typing                    import Any
+from multiroom                 import Multiroom
 #todo proper REST API to handle server/client communication incl. sync/update triggers.
 #todo incorporate experimental webserver UI to master branch.
 
@@ -47,6 +48,11 @@ class Discovery(Thread):
 
         def removeService(self, zeroconf: Any, type: str, name: str):
             self.log("removeService, type = %s, name = %s"%(type,name))
+            for server_name, server_info in list(self.zServers.items()):
+                if server_info.get('name') == name:
+                    self.multiroom.setServerOffline(server_name)
+                    self.zServers.pop(server_name, None)
+                    break
 
         def addService(self, zeroconf: Any, type: str, name: str):
             INFO = self.zeroconf.getServiceInfo(type, name)
@@ -60,6 +66,7 @@ class Discovery(Thread):
                 self.log("addService, found %s @ %s (bonjour=%s)" % (server, self.zServers[server]['host'], self.zServers[server]['bonjour']))
                 self.multiroom.addServer(self.jsonRPC.requestURL(self.zServers[server]['bonjour']))
 
+
     def __init__(self, service: Any = None, multiroom: Any = None):
         Thread.__init__(self)
         self.daemon    = True
@@ -68,8 +75,10 @@ class Discovery(Thread):
         self.multiroom = multiroom
         self.start()
 
+
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
+
 
     def run(self):
         if not Globals.properties.isRunning('Discovery.run'):
@@ -86,7 +95,7 @@ class Discovery(Thread):
                             if self.monitor.waitForAbort(DISCOVER_INTERVAL): break
                             self.log("run, stopping browse for %s" % ZEROCONF_SERVICE)
                             zconf.close()
-                        Globals.settings.setSetting('ZeroConf_Status',LANGUAGE(32211)%({True:'green',False:'red'}[zcons],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
+                        Globals.settings.setSetting('ZeroConf_Status',LANGUAGE(32211).format(color={True:'green',False:'red'}[zcons],text={True:LANGUAGE(32158),False:LANGUAGE(32253)}[zcons]))
                     except Exception as e:
                         self.log("run, zeroconf browse failed: %s" % e, xbmc.LOGERROR)
                         break
@@ -97,6 +106,7 @@ class Discovery(Thread):
 
 
 class MyHandler(BaseHTTPRequestHandler):
+
 
     def __init__(self, request: Any, client_address: Any, server: Any, service: Any):
         self.service   = service
@@ -142,15 +152,15 @@ class MyHandler(BaseHTTPRequestHandler):
             self.log('do_POST incoming uuid [%s] verified!'%(incoming.get('uuid')))
             if self.path.startswith('/api/'):
                 if self.path == f'/api/{CHANNELFLE}':
-                    channels = Channels(writable=True)
+                    channels = Channels(getChannelKey(), writable=True)
                     if channels.setChannels(list(channels._verify(incoming.get('payload')))):
-                        Globals.dialog.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30108),incoming.get('name',ADDON_NAME)))
+                        Globals.dialog.notificationDialog(LANGUAGE(30085).format(name=LANGUAGE(30108),author=incoming.get('name',ADDON_NAME)))
                     del channels
                     self.send_response(200, "OK")
             elif self.path.startswith('/filelist/'):
                 #filelist w/resume - paused channel rule
                 if Globals.settings.setCacheSetting(self.path.replace('/filelist/',''), incoming.get('payload'), FileAccess._getMD5(self.path.replace('/filelist/','')), datetime.timedelta(days=84)):
-                    Globals.dialog.notificationDialog(LANGUAGE(30085)%(LANGUAGE(30060),incoming.get('name',ADDON_NAME)))
+                    Globals.dialog.notificationDialog(LANGUAGE(30085).format(name=LANGUAGE(30060),author=incoming.get('name',ADDON_NAME)))
                     self.send_response(200, "OK")
             else: return self.do_GET()
 
@@ -206,17 +216,16 @@ class MyHandler(BaseHTTPRequestHandler):
                 elif self.path.startswith('/api/'):
                     data = None
                     if   self.path == f'/api/{BONJOURFLE}': data = Globals.settings.getBonjour()
-                    elif self.path == f'/api/{SERVERFLE}' : 
-                        from multiroom import Multiroom
-                        data = Multiroom(service=self.service).getServers()
+                    elif self.path == f'/api/{SERVERFLE}' : data = Multiroom(service=self.service).getServers()
                     elif self.path == f'/api/{LIBRARYFLE}': data = Library(self.service).getLibrary()
-                    elif self.path == f'/api/{CHANNELFLE}': data = Channels().getChannels()
-                    elif self.path == f'/api/{LOGSFLE}':                            data = Globals.builtin.parseKodiLog()
+                    elif self.path == f'/api/{CHANNELFLE}': data = Channels(getChannelKey()).getChannels()
+                    elif self.path == f'/api/{PVRFLE}':     data = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(),Globals.properties.getFriendlyName())
+                    elif self.path == f'/api/{LOGSFLE}':    data = Globals.builtin.parseKodiLog()
                     if not data is None:
                         return __sendChunk(self.path, FileAccess.dumpJSON(data,idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
                 elif self.path.endswith('.html'):
                     data = None
-                    if self.path.lower() == f'/{MANAGERFLE.lower()}': data = Channels()._channelManager()
+                    if self.path.lower() == f'/{MANAGERFLE.lower()}': data = Channels(getChannelKey())._channelManager()
                     if not data is None:
                         return __sendChunk(self.path, data, False)
             return self.send_error(404, "File Not Found [%s]" % self.path)
@@ -233,6 +242,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
 class HTTP(Thread):
     httpd = None
+
 
     def __init__(self, service: Any = None):
         Thread.__init__(self)
@@ -267,7 +277,7 @@ class HTTP(Thread):
             else:
                 self.log(f"_chkPort {tmpPort} is in use. Trying next port.")
                 tmpPort += 1
-        if tmpPort != port: Globals.dialog.notificationDialog(LANGUAGE(30097)%(port,tmpPort))
+        if tmpPort != port: Globals.dialog.notificationDialog(LANGUAGE(30097).format(port=port,available=tmpPort))
         self.log("_chkPort, port available = %s"%(tmpPort))
         return tmpPort
 
@@ -276,8 +286,8 @@ class HTTP(Thread):
         def __update(silent: bool = None):
             if silent is None: not Globals.settings.showDialog(silent)
             isRunning = Globals.properties.isRunning('HTTP.run')
-            if not silent: Globals.dialog.notificationDialog('%s: %s'%(Globals.settings.getSetting('Remote_NAME'),LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
-            Globals.settings.setSetting('Remote_Status',LANGUAGE(32211)%({True:'green',False:'red'}[isRunning],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
+            if not silent: Globals.dialog.notificationDialog('%s: %s'%(Globals.settings.getSetting('Remote_NAME'),LANGUAGE(32211).format(color={True:'green',False:'red'}[isRunning],text={True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning])))
+            Globals.settings.setSetting('Remote_Status',LANGUAGE(32211).format(color={True:'green',False:'red'}[isRunning],text={True:LANGUAGE(32158),False:LANGUAGE(32253)}[isRunning]))
 
         def __cancel(wait: float = 1.0):
             try:
@@ -319,7 +329,7 @@ class HTTP(Thread):
                         self.log("run, http server failed! %s"%(e), xbmc.LOGERROR)
                         break
                 elif self.service.pendingShutdown or pendingRestart:
-                    self.monitor.waitForAbort(M3U_REFRESH)
+                    self.monitor.waitForAbort(5)
                     self.log("run, _shutdown/pendingRestart", xbmc.LOGERROR)
                     break
 

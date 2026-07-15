@@ -21,6 +21,8 @@ from variables    import *
 from seasonal   import Seasonal 
 
 class Info(object):
+
+
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         with Globals.builtin.busy_dialog():
             LOG('Info: __init__, sysARG = %s'%(sysARG))
@@ -28,6 +30,8 @@ class Info(object):
         Globals.dialog.infoDialog(listitem)
             
 class Browse(object): #todo fix with proper container and window
+
+
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         LOG('Browse: __init__, sysARG = %s'%(sysARG))
         # def __buildMenuItem(item):

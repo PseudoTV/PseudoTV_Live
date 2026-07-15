@@ -21,15 +21,16 @@
 from typing         import Any, Callable, Optional
 from variables      import *
 from m3u            import M3U
+from xmltvs         import XMLTVS
 from backup         import Backup
 from library        import Library
 from builder        import Builder
 from channels       import Channels
-
-_VERSION_RE = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME))
 from multiroom      import Multiroom
 from server         import HTTP, Discovery
 from context_create import _autotune
+
+_VERSION_RE = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME))
 
 class Tasks(object):
     citems = []
@@ -46,57 +47,26 @@ class Tasks(object):
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
-    def chkSync(self) -> bool:
-        """Check if PseudoTV files are in sync with Kodi's PVR state. Returns True if in sync."""
-        try:
-            status = Globals.settings.instances.chkPVRStatus()
-            m3u_synced   = status['m3u']['sync_state']   in ('fresh', 'stale')
-            xmltv_synced = status['xmltv']['sync_state']  in ('fresh', 'stale')
-            has_errors   = len(status['log']['pvr_errors']) > 0
-            has_channels = status['m3u']['channels'] > 0
-            has_programs = status['xmltv']['programmes'] > 0
-            
-            in_sync = m3u_synced and xmltv_synced and has_channels and has_programs and not has_errors
-            
-            if not in_sync:
-                reasons = []
-                if not has_channels:  reasons.append('no M3U channels')
-                if not has_programs:  reasons.append('no XMLTV programmes')
-                if status['m3u']['sync_state'] == 'outdated':   reasons.append('M3U outdated')
-                if status['xmltv']['sync_state'] == 'outdated':  reasons.append('XMLTV outdated')
-                if has_errors: reasons.append(f'{len(status["log"]["pvr_errors"])} PVR errors')
-                self.log(f"chkSync, out of sync: {', '.join(reasons)}", xbmc.LOGWARNING)
-                Globals.properties.setPropTimer('chkPVRRefresh')
-            else:
-                self.log(f"chkSync, in sync: m3u={status['m3u']['channels']}ch, xmltv={status['xmltv']['channels']}ch/{status['xmltv']['programmes']}prog")
-            return in_sync
-        except Exception as e:
-            self.log(f"chkSync, failed: {e}", xbmc.LOGERROR)
-            return True
-
 
     def _client(self):
-        """Initialize client-side checks."""
+        """Run client-side initialization."""
         self.service._que(self.chkPVRBackend    ,1)
         self.service._que(self.chkHTTP          ,1)
         self.service._que(self.chkDebugging     ,1)
         self.service._que(self.chkVersion       ,1)
         self.service._que(self.chkKodiSettings  ,1)
         self.service._que(self.chkDiscovery     ,1)
-        self.service._que(self.chkQUES          ,5)
-        self.log('_initialize, _client...')
+        self.service._que(self.chkQUES          ,1)
+        self.log('_client, initialized')
         
         
     def _host(self):
         """Initialize host-side checks and setup."""
-        self._client()
-        self._migrateChannels() #temp, remove in v.0.7.5.
         self.service._que(self.chkDirs          ,1)
         self.service._que(self.chkCrash         ,1)
-        # self.service._que(self.chkStations      ,1)
+        self.service._que(self.chkPVRSync       ,1)
+        # self.service._que(self.chkStations    ,2)
         self.service._que(self.chkLibrary       ,2)
-        self.service._que(self.chkChannels      ,3)
-        self.service._que(self.chkFiles         ,5)
         self.service._que(self.chkTrailers      ,5)
         self.log('_initialize, _host...')
     
@@ -121,9 +91,11 @@ class Tasks(object):
             Globals.settings.setPVRLocal(Globals.properties.getRemoteHost(),instanceName)
             
 
+
     def chkHTTP(self):
         """Start HTTP server instance."""
         timerit(HTTP)(0.1,self.service)
+        Globals.properties.setEXTProperty(f'{ADDON_ID}.Local_Host', self.jsonRPC.getLocalHost())
         self.log('chkHTTP')
         
         
@@ -134,7 +106,7 @@ class Tasks(object):
         if Globals.settings.getSettingBool('Debug_Enable'):
             if   Globals.settings.getSettingBool('Debug_Keep_Enable'): return
             elif disable: Globals.settings.setSettingBool('Debug_Enable',False)
-            elif Globals.dialog.yesnoDialog('%s\n%s'%(LANGUAGE(32142),LANGUAGE(32266)%(DEBUG_TIMEOUT//60)) ,autoclose=4):
+            elif Globals.dialog.yesnoDialog('%s\n%s'%(LANGUAGE(32142),LANGUAGE(32266).format(minutes=DEBUG_TIMEOUT//60)) ,autoclose=4):
                 self.log('_chkDebugging, disabling debugging.')
                 Globals.settings.setSettingBool('Debug_Enable',False)
             elif kodi_access: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True)
@@ -147,6 +119,7 @@ class Tasks(object):
         self.log('chkDiscovery')
         self.service._que(self.chkDiscovery,1,300)#5MINS
          
+
 
     def chkCrash(self):
         """Check for Kodi crash data and handle recovery."""
@@ -190,7 +163,7 @@ class Tasks(object):
         LAST_VERSION = Globals.settings.getCacheSetting('chkVersion.LAST_VERSION', default='0.0.0')
         if ADDON_VERSION < ONLINE_VERSION:
             UPDATE_AVAILABLE = True
-            Globals.dialog.notificationDialog(LANGUAGE(30073)%(ONLINE_VERSION))
+            Globals.dialog.notificationDialog(LANGUAGE(30073).format(version=ONLINE_VERSION))
         elif ADDON_VERSION != LAST_VERSION:
             Globals.settings.setCacheSetting('chkVersion.LAST_VERSION', ADDON_VERSION)
             Globals.builtin.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
@@ -208,18 +181,10 @@ class Tasks(object):
         self.service._que(self.chkKodiSettings,1,10800)#3HRS
          
 
+
     def chkDirs(self):
         """Create required directories if they don't exist."""
         [(self.log('chkDirs, creating [%s]'%(folder)),FileAccess.makedirs(folder)) for folder in [LOGO_LOC,FILLER_LOC,TEMP_LOC] if not FileAccess.exists(os.path.join(folder,''))]
-
-
-    def chkFiles(self):
-        """Check if critical files exist and rebuild channels if missing."""
-        if not Globals.properties.isRunning('Builder.buildChannels'):
-            if any(not bool(FileAccess.exists(file)) for file in [M3UFLEPATH,XMLTVFLEPATH,GENREFLEPATH]): 
-                self.log('chkFiles, missing files! running chkChannels to rebuild.')
-                self.service._que(self.chkChannels,5)
-        self.service._que(self.chkFiles,5,900)#15MINS
 
 
     def chkFillers(self, channels: Optional[list] = None, silent: Optional[bool] = None):
@@ -319,21 +284,9 @@ class Tasks(object):
                 
                 
     def chkStations(self, channels: Optional[list] = None):
-        """Check PVR stations and remove inactive channels."""
-        if channels is None: channels = self.getChannels()
-        if channels:
-            programmes = []
-            if Globals.builtin.getInfoBool("Pvr.HasTVChannels"):    programmes.extend(self.jsonRPC.getPVRChannels())
-            if Globals.builtin.getInfoBool("Pvr.HasRadioChannels"): programmes.extend(self.jsonRPC.getPVRChannels(radio=True))
-            if not programmes: return self.service._que(self.chkStations,1,30)#30SECS
-            broadcasts = { Globals._decodePlot(b.get('plot', '')).get('citem', {}).get('name') for b in programmes if 'broadcastnow' in b and b.get('plot')}
-            remove = [c for c in channels if c.get('name') not in broadcasts]
-            self.log(f"chkStations, channels = {len(channels)}, removing = {len(remove)}")
-            with M3U(writable=len(remove)>0) as m3u:
-                for channel in remove: 
-                    m3u.delStation(channel)
-            if len(remove) > 0: Globals.properties.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
-            self.service._que(self.chkStations,-1,MIN_EPG_DURATION)#3HRS
+        """Check PVR loaded channels against channels.json, remove abandoned ones from M3U."""
+        self.log("chkStations, TODO: Compare PVR channels vs channels.json, remove abandoned from M3U")
+        # self.service._que(self.chkStations,-1,MIN_EPG_DURATION)#3HRS
                 
     def chkLibrary(self, types: Optional[list] = None, silent: Optional[bool] = None):
         """Check and update library for specified content types."""
@@ -392,41 +345,163 @@ class Tasks(object):
             if any((runAutoTune, not hasAutoTuned)):
                 if Globals.settings.setAutotuned(_autotune()): 
                     Globals.properties.setPropTimer('chkChanged')# Refresh Channel Changed!
-            elif Globals.properties.hasEnabledServers():                     
-                Globals.properties.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
+            Globals.properties.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
 
 
-    @debounceit(M3U_REFRESH * 2)
+    @debounceit(60)
     def chkPVRRefresh(self, brute: Optional[bool] = None):
         """Refresh PVR guide data using the appropriate reload method.
-        
-        Three reload methods, used based on context:
-          togglePVRBackend  - Full addon disable/enable. Use when PVR is stuck, brute force needed.
-          triggerReload      - Toggle m3uCache. Use when M3U/XMLTV files already written.
-          PVRScan            - API scan. Use when PVR backend supports it.
+
+        Uses updatePVRStatus data to intelligently select the refresh method:
+          triggerReload      - Lightweight toggle of m3uCache/epgCache. Safe, fast, non-blocking.
+          PVRScan            - JSON-RPC API scan. Tells PVR to re-read existing files.
+          chkChannels        - Build specific missing channel IDs.
+          chkLibrary         - Full library scan (triggers chkChannels + build).
+          togglePVRBackend   - Full addon disable/enable. Last resort only, can't run while playing.
+
+        Decision tree (ordered by specificity, least to most invasive):
+          1. PVR not connected                     -> triggerReload
+          2. Local M3U empty + local XMLTV empty   -> chkLibrary (full rebuild)
+          3. Local M3U has channels + XMLTV empty  -> chkChannels (build XMLTV for existing)
+          4. Local M3U+XMLTV have data, PVR missing channels -> chkChannels for missing IDs
+          5. Local M3U==XMLTV, PVR different set   -> PVRScan (re-read files)
+          6. Files stale/outdated                   -> triggerReload (force cache refresh)
+          7. PVR errors                             -> triggerReload (retry)
+          8. Channels with no EPG data              -> chkChannels (rebuild to populate guide)
+          9. Brute (last resort)                    -> togglePVRBackend (only when player inactive)
         """
         if brute is None: brute = Globals.settings.getSettingBool('Enable_PVR_RELOAD')
-        self.log(f"chkPVRRefresh, brute force reload state = {brute}")
 
         if not Globals.properties.isRunning('Tasks.chkPVRRefresh'):
             with Globals.properties.chkRunning('Tasks.chkPVRRefresh'):
-                if self.chkSync():
-                    self.log("chkPVRRefresh, already in sync, skipping refresh")
+                # Cooldown: skip if we triggered a refresh within the last 90s
+                last_refresh = Globals.settings.getCacheSetting('chkPVRRefresh.LAST_RUN', default=0)
+                if time.time() - last_refresh < 90 and not brute:
+                    self.log(f"chkPVRRefresh, cooldown ({int(time.time() - last_refresh)}s since last refresh), skipping", xbmc.LOGDEBUG)
                     return
-                # Method 1: brute force - disable/enable addon (full reload)
+                Globals.settings.setCacheSetting('chkPVRRefresh.LAST_RUN', time.time())
+
+                status = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(),Globals.properties.getFriendlyName())
+
+                pvr_connected   = status['log'].get('pvr_connected', True)
+                m3u_ids         = set(status['m3u'].get('channel_ids', []))
+                xmltv_ids       = set(status['xmltv'].get('channel_ids', []))
+                pvr_ids         = set(status['log'].get('pvr_channel_ids', []))
+                xmltv_programs  = status['xmltv'].get('programmes', 0)
+                missing_ids     = status['m3u'].get('unloaded_by_pvr', [])
+                m3u_sync        = status['m3u']['sync_state']
+                xmltv_sync      = status['xmltv']['sync_state']
+                has_errors      = len(status['log'].get('pvr_errors', [])) > 0
+
+                # Files fresh and PVR connected: PVR is still loading, wait instead of rebuild
+                m3u_fresh   = m3u_sync == 'fresh'
+                xmltv_fresh = xmltv_sync == 'fresh'
+                if m3u_fresh and xmltv_fresh and pvr_connected and not has_errors:
+                    self.log("chkPVRRefresh, files fresh and PVR connected, waiting for PVR to load", xbmc.LOGDEBUG)
+                    return
+
+                #1 PVR not connected - wait for reconnection
+                if not pvr_connected:
+                    self.log("chkPVRRefresh, #1 PVR not connected, triggerReload", xbmc.LOGWARNING)
+                    Globals.settings.instances.triggerReload()
+                    return
+
+                #2 Local M3U empty + local XMLTV empty - no files exist, full rebuild needed
+                if not m3u_ids and not xmltv_programs:
+                    self.log("chkPVRRefresh, #2 Local M3U+XMLTV empty, chkLibrary (full rebuild)", xbmc.LOGWARNING)
+                    self.chkLibrary()
+                    return
+
+                #3 Local M3U has channels + local XMLTV empty - channels exist but no programme data
+                if m3u_ids and not xmltv_programs:
+                    self.log(f"chkPVRRefresh, #3 Local M3U has {len(m3u_ids)}ch but no XMLTV, chkChannels", xbmc.LOGWARNING)
+                    self.service._que(self.chkChannels, 3, 0, 0)
+                    return
+
+                #4 Local M3U+XMLTV have data, PVR missing some channels - rebuild missing ones
+                if m3u_ids and xmltv_programs > 0 and missing_ids:
+                    self.log(f"chkPVRRefresh, #4 PVR missing {len(missing_ids)} channels, chkChannels", xbmc.LOGWARNING)
+                    try:
+                        with M3U(writable=True) as m3u, XMLTVS(writable=True, m3u=m3u) as epg:
+                            m3u_stations = m3u.getStations()
+                            rebuild = [ch for ch in m3u_stations if ch.get('id') in missing_ids]
+                            if rebuild:
+                                self.service._que(self.chkChannels, 3, 0, 0, rebuild, True)
+                            else:
+                                # Missing IDs not in local M3U - check if channels exist in channels.json
+                                # If not, they're abandoned: remove from M3U/XMLTV and trigger refresh
+                                try:
+                                    with Channels() as channels:
+                                        ch_ids = {ch.get('id') for ch in channels.getChannels()}
+                                    orphan_ids = [ch_id for ch_id in missing_ids if ch_id not in ch_ids]
+                                    if orphan_ids:
+                                        self.log(f"chkPVRRefresh, #4 removing {len(orphan_ids)} abandoned channels not in channels.json: {orphan_ids}", xbmc.LOGWARNING)
+                                        for ch_id in orphan_ids:
+                                            m3u.delStation({'id': ch_id})
+                                            epg.delBroadcast({'id': ch_id})
+                                        Globals.settings.instances.triggerReload()
+                                except Exception as e:
+                                    self.log(f"chkPVRRefresh, #4 orphan cleanup error: {e}", xbmc.LOGDEBUG)
+                    except Exception as e:
+                        self.log(f"chkPVRRefresh, #4 chkChannels error: {e}", xbmc.LOGDEBUG)
+                    else:
+                        return
+
+                #5 M3U+XMLTV in sync with each other, PVR has different set - tell PVR to re-read
+                if m3u_ids == xmltv_ids and pvr_ids != m3u_ids and pvr_ids:
+                    self.log(f"chkPVRRefresh, #5 PVR set differs from M3U+XMLTV, PVRScan", xbmc.LOGWARNING)
+                    try:
+                        client_id = self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid', -1)
+                        if not self.jsonRPC.PVRScan(client_id).get('error'):
+                            self.log("chkPVRRefresh, #5 PVRScan initiated", xbmc.LOGDEBUG)
+                            return
+                    except Exception as e:
+                        self.log(f"chkPVRRefresh, #5 PVRScan failed: {e}", xbmc.LOGDEBUG)
+                        Globals.settings.instances.triggerReload()
+                        return
+                        
+                #6 Files stale/outdated but PVR connected - force cache refresh
+                if m3u_sync in ('outdated', 'unknown') or xmltv_sync in ('outdated', 'unknown'):
+                    self.log(f"chkPVRRefresh, #6 Files outdated (m3u={m3u_sync}, xmltv={xmltv_sync}), triggerReload", xbmc.LOGWARNING)
+                    Globals.settings.instances.triggerReload()
+                    return
+
+                #7 PVR errors - retry
+                if has_errors:
+                    self.log(f"chkPVRRefresh, #7 {len(status['log']['pvr_errors'])} PVR errors, triggerReload", xbmc.LOGWARNING)
+                    Globals.settings.instances.triggerReload()
+                    return
+
+                #8 Channels with no EPG data - rebuild to populate guide
+                missing_epg = status['m3u'].get('missing_epg', [])
+                if missing_epg:
+                    self.log(f"chkPVRRefresh, #8 {len(missing_epg)} channels with no EPG data, triggering rebuild", xbmc.LOGWARNING)
+                    try:
+                        with M3U() as m3u:
+                            m3u_stations = m3u.getStations()
+                            rebuild = [ch for ch in m3u_stations if ch.get('id') in missing_epg]
+                            if rebuild:
+                                self.service._que(self.chkChannels, 3, 0, 0, rebuild, True)
+                            else:
+                                self.log("chkPVRRefresh, #8 missing EPG IDs not found in M3U", xbmc.LOGDEBUG)
+                    except Exception as e:
+                        self.log(f"chkPVRRefresh, #8 chkChannels error: {e}", xbmc.LOGDEBUG)
+                    return
+
+                #9 Brute force (last resort) - full addon disable/enable
                 if brute:
-                    if not self.service.player.isPlaying(): 
+                    if not self.service.player.isPlaying():
+                        self.log("chkPVRRefresh, #9 Brute: togglePVRBackend", xbmc.LOGWARNING)
                         Globals.settings.instances.togglePVRBackend(False)
                         self.monitor.waitForAbort(M3U_REFRESH)
                         Globals.settings.instances.togglePVRBackend(True)
+                    else:
+                        self.log("chkPVRRefresh, #9 Brute requested but player active, triggerReload fallback", xbmc.LOGWARNING)
+                        Globals.settings.instances.triggerReload()
                     return
-                # Method 2: try PVR API scan first
-                try: 
-                    client_id = self.jsonRPC.getPVRClient(PVR_CLIENT_ID).get('clientid',-1)
-                    if self.jsonRPC.PVRScan(client_id).get('error'): raise Exception(f'{PVR_CLIENT_ID} does not support PVR.Scan')
-                except Exception as e: self.log(f"chkPVRRefresh: PVR scan failed... {str(e)}", xbmc.LOGDEBUG)
-                # Method 3: fallback - toggle m3uCache (lightweight reload)
-                Globals.settings.instances.triggerReload()
+
+                self.log("chkPVRRefresh, no action needed (in sync)", xbmc.LOGDEBUG)
+
 
     def chkSettingsChange(self, old_settings: dict = {}) -> dict:
         """Check for settings changes and trigger appropriate actions."""
@@ -494,9 +569,60 @@ class Tasks(object):
 
     def getChannels(self) -> list:
         """Get list of configured channels."""
-        return Channels().getChannels()
+        return Channels(getChannelKey()).getChannels()
         
         
     def getLibrary(self, type: Optional[str] = None) -> Any:
         """Get library items for specified content type."""
         Library(service=self.service).getLibrary(type)
+
+
+    def chkPVRSync(self, host=None, friendly=None) -> bool:
+        """Check if PseudoTV files are in sync with Kodi's PVR state. Returns True if in sync."""
+        if host is None: host = Globals.properties.getRemoteHost()
+        if friendly is None: friendly = Globals.properties.getFriendlyName()
+        try:
+            status = Globals.settings.instances.updatePVRStatus(host,friendly)
+
+            m3u_synced   = status['m3u']['sync_state']    in ('fresh', 'stale')
+            xmltv_synced = status['xmltv']['sync_state']  in ('fresh', 'stale')
+            has_errors   = len(status['log']['pvr_errors']) > 0
+            has_channels = status['m3u']['channels'] > 0
+            has_programs = status['xmltv']['programmes'] > 0
+            pvr_connected = status['log'].get('pvr_connected', True)
+            in_sync      = m3u_synced and xmltv_synced and has_channels and has_programs and not has_errors
+
+            if not in_sync:
+                reasons = []
+                if not has_channels:  reasons.append('no M3U channels')
+                if not has_programs:  reasons.append('no XMLTV programmes')
+                if status['m3u']['sync_state'] == 'outdated':   reasons.append('M3U outdated')
+                if status['xmltv']['sync_state'] == 'outdated':  reasons.append('XMLTV outdated')
+                if has_errors: reasons.append(f'{len(status["log"]["pvr_errors"])} PVR errors')
+                if not pvr_connected: reasons.append('PVR client not connected')
+                self.log(f"chkPVRSync, out of sync: {', '.join(reasons)}", xbmc.LOGWARNING)
+                Globals.properties.setPropTimer('chkPVRRefresh')
+            else:
+                self.log(f"chkPVRSync, in sync: m3u={status['m3u']['channels']}ch, xmltv={status['xmltv']['channels']}ch/{status['xmltv']['programmes']}prog")
+                rebuild_ids = set()
+                rebuild_ids.update(status.get('m3u', {}).get('unloaded_by_pvr', []))
+                rebuild_ids.update(status.get('xmltv', {}).get('empty_channels', []))
+                orphan_ids = status.get('xmltv', {}).get('missing_from_local', [])
+                if rebuild_ids or orphan_ids:
+                    try:
+                        with M3U() as m3u, XMLTVS(m3u=m3u) as epg:
+                            for ch_id in orphan_ids:
+                                self.log(f"chkPVRSync, removing orphan XMLTV channel: {ch_id}", xbmc.LOGWARNING)
+                                epg.delBroadcast({'id': ch_id})
+                            if rebuild_ids:
+                                m3u_stations = m3u.getStations()
+                                rebuild = [ch for ch in m3u_stations if ch.get('id') in rebuild_ids]
+                                if rebuild:
+                                    self.log(f"chkPVRSync, {len(rebuild)} channels need rebuild: {[ch.get('name','?') for ch in rebuild]}", xbmc.LOGWARNING)
+                                    self.service._que(self.chkChannels, 3, 0, 0, rebuild, True)
+                    except Exception as e:
+                        self.log(f"chkPVRSync, EPG issue handling error: {e}", xbmc.LOGDEBUG)
+            return in_sync
+        except Exception as e:
+            self.log(f"chkPVRSync, exception: {e}", xbmc.LOGDEBUG)
+            return True

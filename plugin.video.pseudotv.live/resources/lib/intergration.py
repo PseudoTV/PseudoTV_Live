@@ -29,12 +29,15 @@ BASE_HEADER = {"Authorization": "",
                "X-Reference"  : f"{ADDON_URL}",}
            
 class OpenRouter(object):
+
+
     def __init__(self, service: Optional[_Service] = None):
         if service is None: service = _Service()
         self.service = service
         self.pool    = service.pool
         self.cache   = service.cache
         
+
 
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)

@@ -31,6 +31,8 @@ def _globals() -> Any:
     return _Globals
 
 class JSONRPC(object):
+
+
     def __init__(self, service: Optional['_Service'] = None):
         self.runtimeThreshold = 15 #todo user setting % of allowed difference between runtime and duration before overriding runtime.
         if service is None: service = _Service()
@@ -108,6 +110,7 @@ class JSONRPC(object):
             sock.close()
         
 
+
     def sendJSON(self, param: dict, timeout: Optional[int] = None) -> dict:
         command = param
         command["jsonrpc"] = "2.0"
@@ -167,6 +170,7 @@ class JSONRPC(object):
         self.log('walkFileDirectory, walking finished')
         return walk
                 
+
 
     def walkListDirectory(self, path: str, exts: Optional[list] = None, depth: Optional[int] = None, checksum: Optional[str] = None, expiration: Optional[datetime.timedelta] = None) -> dict:
         if exts is None: exts = []
@@ -397,6 +401,7 @@ class JSONRPC(object):
         return self.cacheJSON({"method":"Player.GetViewMode","params":{}},datetime.timedelta(seconds=15)).get('result',default)
         
 
+
     def setViewMode(self, params: Optional[dict] = None) -> dict:
         if params is None: params = {}
         return self.sendJSON({"method":"Player.SetViewMode","params":params})
@@ -433,6 +438,7 @@ class JSONRPC(object):
         param = {"method":"PVR.GetChannelGroupDetails","params":{"channelgroupid":1,"channels":{"limits":{"end":0,"start":0},"properties":self.getEnums("PVR.Fields.Channel", type='items')}}}
         return self.sendJSON(param).get('result',{}).get('channelgroupdetails', {}).get('channels',[])
         
+
 
     def PVRScan(self, id: int) -> dict:
         param = {"method":"PVR.Scan","params":{"clientid":id}}
@@ -525,6 +531,7 @@ class JSONRPC(object):
         runtime = self.cache.get('getRuntime.%s'%(md5), checksum=md5)
         return round(runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         
+
 
     def _setDuration(self, path: str, item: Optional[dict] = None, duration: int = 0, save: Optional[bool] = None) -> int: #set VideoParser cache
         if item is None: item = {}
@@ -769,7 +776,7 @@ class JSONRPC(object):
         friendly = self.getSettingValue("services.devicename")
         self.log("inputFriendlyName, name = %s"%(friendly))
         if not friendly or friendly.lower() == 'kodi':
-            if Dialog().okDialog(LANGUAGE(32132)%(friendly)):
+            if Dialog().okDialog(LANGUAGE(32132).format(name=friendly)):
                 friendly = Dialog().inputDialog(LANGUAGE(30122), friendly)
                 if not friendly or friendly.lower() == 'kodi':
                     return self.inputFriendlyName()
@@ -884,6 +891,7 @@ class JSONRPC(object):
                     return _globals()._decodePlot(candidate.get('plot', ''))
         return {}
         
+
 
     def toggleShowLog(self, state: bool = False):
         self.log('toggleShowLog, state = %s'%(state))

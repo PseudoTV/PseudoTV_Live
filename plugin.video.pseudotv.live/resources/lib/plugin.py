@@ -24,6 +24,8 @@ from rules               import RulesList
 from infotagger.listitem import ListItemInfoTag
 
 class Plugin(object):
+
+
     def __init__(self, mode: str = 'playlist', sysInfo: dict = {}):
         self.service = _Service()   
         self.pool    = self.service.pool
@@ -158,7 +160,7 @@ class Plugin(object):
                 self.sysInfo["progresspercentage"] = -1
                 self.sysInfo['name'] = self.sysInfo['fitem'].get('label')
                 self.sysInfo['vid']  = self.sysInfo['fitem'].get('file')
-                Globals.dialog.notificationDialog(f"{LANGUAGE(32185)%('Channel')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
+                Globals.dialog.notificationDialog(f"{LANGUAGE(32185).format(name='Channel')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
                 listitem = Globals.listitems.buildItemListItem(self.sysInfo.get('fitem'))
             else:
                 #STRM called from Guide, presumably live; workaround for Kodi bug w/strm handling in setResolvedUrl.
@@ -227,7 +229,7 @@ class Plugin(object):
         self.log('[%s] playVOD, vid = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('vid')))
         self.sysInfo["seek"] = -1
         self.sysInfo["progresspercentage"] = -1
-        Globals.dialog.notificationDialog(f"{LANGUAGE(32185)%('VOD')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
+        Globals.dialog.notificationDialog(f"{LANGUAGE(32185).format(name='VOD')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
         self._resolveURL(True, Globals.listitems.buildItemListItem(self.sysInfo.get('fitem')))
             
             
@@ -247,7 +249,7 @@ class Plugin(object):
                 return listitem
             
         self.log('[%s] playPlaylist, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
-        Globals.dialog.notificationDialog(f"{LANGUAGE(32185)%('Playlist')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem'].get('label')}")
+        Globals.dialog.notificationDialog(f"{LANGUAGE(32185).format(name='Playlist')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem'].get('label')}")
         nextitems = self._getPVRItems()
         listitems = poolit(__buildfItem)(nextitems)
         self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))

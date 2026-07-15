@@ -82,7 +82,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
     def onInit(self):
         """Initialize overlay controls and display."""
         if not Globals.builtin.getInfoBool('System.IsFullscreen'):
-            Globals.dialog.okDialog(LANGUAGE(32097)%(Globals.builtin.getInfoLabel('System.ScreenResolution')))
+            Globals.dialog.okDialog(LANGUAGE(32097).format(resolution=Globals.builtin.getInfoLabel('System.ScreenResolution')))
             
         self.posx, self.posy = 0, 0
         
@@ -103,6 +103,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         self.switch(self.focusControl)
         
 
+
     def _addCntrl(self, cntrl: xbmcgui.Control, incl: bool = True):
         """Add control to window and optionally include in focus cycle."""
         self.log('_addCntrl cntrl = %s'%(cntrl))
@@ -111,6 +112,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         if incl and not cntrl in self.focusCycleLST: self.focusCycleLST.append(cntrl)
         if not cntrl in self.focusCNTRLST:  self.focusCNTRLST[cntrl] = cntrl.getX(),cntrl.getY()
         
+
 
     def switch(self, cntrl: Optional[xbmcgui.Control] = None):
         """Switch focus to control with animation effects."""
@@ -169,6 +171,7 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             if auto: save("OnNext_Position_XY",LANGUAGE(30022))
             else:    save("OnNext_Position_XY","(%s,%s)"%(posx, posy))
         
+
 
     def _setFocus(self, cntrl: xbmcgui.Control):
         """Set focus to specified control with error handling."""

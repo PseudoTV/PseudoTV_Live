@@ -23,6 +23,8 @@ from variables   import *
 from _services   import _Service
 
 class Multiroom(object):
+
+
     def __init__(self, sysARG: list = sys.argv, service: Optional[_Service] = None):
         if service is None: service = _Service
         self.log('__init__, sysARG = %s'%(sysARG))
@@ -31,8 +33,7 @@ class Multiroom(object):
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
         self.serverData = FileAccess.getJSON(SERVERFLE_DEFAULT)
-        self.serverTEMP = self.serverData.get('servers',[{}]).pop("friendly")
-        self.serverKEY  = f'Servers.{self.serverData.get("version",ADDON_VERSION)}'
+        self.serverKEY  = 'Servers'  # Fixed key survives addon updates
         self.serverData.update(self._load())
 
 
@@ -48,7 +49,7 @@ class Multiroom(object):
     def _load(self) -> dict:
         servers = Globals.settings.getCacheSetting(self.serverKEY, FileAccess._getMD5(self.serverKEY), default={})
         Globals.properties.setHasServers(len(servers.get('servers',{})) > 0)
-        Globals.settings.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers.get('servers',{}))]))
+        Globals.settings.setSetting('Select_server','|'.join([LANGUAGE(32211).format(color={True:'green',False:'red'}[server.get('online',False)],text=server.get('name')) for server in self.getEnabled(servers.get('servers',{}))]))
         self.log('_load, servers = %s'%(len(servers.get('servers',{}))))
         return servers
 
@@ -66,7 +67,7 @@ class Multiroom(object):
         if servers is None: servers = self.serverData['servers']
         self.serverData["servers"] = servers
         Globals.properties.setHasServers(len(servers) > 0)
-        Globals.settings.setSetting('Select_server','|'.join([LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],server.get('name')) for server in self.getEnabled(servers)]))
+        Globals.settings.setSetting('Select_server','|'.join([LANGUAGE(32211).format(color={True:'green',False:'red'}[server.get('online',False)],text=server.get('name')) for server in self.getEnabled(servers)]))
         self.log('_setServers, servers = %s'%(len(servers)))
         return self._save()
             
@@ -79,9 +80,18 @@ class Multiroom(object):
         return enabled
             
 
+
     def getRemote(self, remote: str) -> Any:
         self.log("getRemote, remote = %s"%(remote))
         return self.jsonRPC.requestURL(remote, header={'Accept':'application/json'})
+
+
+    def setServerOffline(self, name: str):
+        servers = self.getServers()
+        if name in servers:
+            servers[name]['online'] = False
+            self.log('setServerOffline, server = %s'%(name))
+            self._setServers(servers)
         
         
     def addServer(self, payload: dict = {}):
@@ -90,12 +100,16 @@ class Multiroom(object):
             servers = self.getServers()
             server  = servers.get(payload.get('name'),{})
             if not server: 
-                payload['enabled'] = True
                 servers[payload['name']] = payload
                 self.log('addServer, adding server = %s'%(payload))
                 if payload.get('host') != Globals.properties.getRemoteHost(): 
-                    Globals.settings.setPVRRemote(payload.get('host'),payload.get('name')) #add Remote IPTV Simple config
-                    Globals.dialog.notificationDialog('[B]%s:[/B] %s'%(LANGUAGE(32047),payload.get('name')))
+                    if Globals.settings.getSettingBool('Auto_Allow_Servers') or Globals.dialog.yesnoDialog('[B]%s:[/B] %s\n%s'%(LANGUAGE(32047),payload.get('name'),LANGUAGE(30129))):
+                        payload['enabled'] = True
+                        Globals.settings.setPVRRemote(payload.get('host'),payload.get('name')) #add Remote IPTV Simple config
+                    else:
+                        payload['enabled'] = False
+                else:
+                    payload['enabled'] = True
                 self._setServers(servers)
             else:
                 instancePath = Globals.settings.instances.hasPVRInstance(server.get('name'))
@@ -103,7 +117,7 @@ class Multiroom(object):
                 if instancePath is None or (payload.get('md5') != server.get('md5',str(random.random()))):#something changed!
                     if payload['enabled']:
                         if payload['online'] != server.get('online',False):
-                            Globals.dialog.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211)%({True:'green',False:'red'}[server.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))
+                            Globals.dialog.notificationDialog('%s: %s'%(server.get('name'),LANGUAGE(32211).format(color={True:'green',False:'red'}[server.get('online',False)],text={True:LANGUAGE(32158),False:LANGUAGE(32253)}[server.get('online',False)])))
                         if payload.get('host') != Globals.properties.getRemoteHost(): 
                             Globals.settings.setPVRRemote(payload.get('host'),payload.get('name')) #update Remote IPTV Simple config
                         if payload.get('settings') != server.get('settings'):
@@ -115,11 +129,12 @@ class Multiroom(object):
                     self.log('addServer, updating server = %s'%(payload))
                     self._setServers(servers)
 
+
     def _delServer(self, servers: dict = {}):
         self.log('_delServer')
         def __buildMenuItem(payload):
             idx = list(servers.values()).index(payload)
-            return Globals.listitems.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=Globals._getDummyIcon(str(idx+1)),url=FileAccess.dumpJSON(payload))
+            return Globals.listitems.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211).format(color={True:'green',False:'red'}[payload.get('online',False)],text={True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=Globals._getDummyIcon(str(idx+1)),url=FileAccess.dumpJSON(payload))
       
         with Globals.builtin.busy_dialog():
             if not servers: servers = self.getServers()
@@ -135,7 +150,7 @@ class Multiroom(object):
     def _selServer(self):
         self.log('_selServer')
         def __buildMenuItem(payload): #build menu item
-            return Globals.listitems.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211)%({True:'green',False:'red'}[payload.get('online',False)],{True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=Globals._getDummyIcon(str(list(servers.values()).index(payload)+1)),url=FileAccess.dumpJSON(payload))
+            return Globals.listitems.buildMenuListItem(payload.get('name'),'%s - %s: Channels (%s)'%(LANGUAGE(32211).format(color={True:'green',False:'red'}[payload.get('online',False)],text={True:LANGUAGE(32158),False:LANGUAGE(32253)}[payload.get('online',False)]),payload.get('host'),len(payload.get('channels',[]))),icon=Globals._getDummyIcon(str(list(servers.values()).index(payload)+1)),url=FileAccess.dumpJSON(payload))
       
         with Globals.builtin.busy_dialog():
             friendly = Globals.properties.getFriendlyName()
@@ -160,7 +175,7 @@ class Multiroom(object):
                                     if not servers[liz.getLabel()].get('enabled',False):
                                         changed = True
                                         servers[liz.getLabel()]['enabled'] = True
-                                        Globals.dialog.notificationDialog(LANGUAGE(30099)%(liz.getLabel()))
+                                        Globals.dialog.notificationDialog(LANGUAGE(30099).format(name=liz.getLabel()))
                                     if not Globals.settings.instances.hasPVRInstance(liz.getLabel()): 
                                         if Globals.settings.setPVRRemote(servers[liz.getLabel()].get('host'),liz.getLabel()):
                                             Globals.properties.setPropTimer('chkPVRRefresh')#refresh pvr guide
@@ -168,7 +183,7 @@ class Multiroom(object):
                                     if servers[liz.getLabel()].get('enabled',False):
                                         changed = True
                                         servers[liz.getLabel()]['enabled'] = False
-                                        Globals.dialog.notificationDialog(LANGUAGE(30100)%(liz.getLabel()))
+                                        Globals.dialog.notificationDialog(LANGUAGE(30100).format(name=liz.getLabel()))
                                     try: FileAccess.delete(Globals.settings.instances.hasPVRInstance(liz.getLabel()))
                                     except Exception as e: self.log('delete PVR instance failed: %s' % e, xbmc.LOGDEBUG)
                         if changed: self._setServers(servers)
@@ -181,12 +196,11 @@ class Multiroom(object):
                 Globals.builtin.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_ZeroConf_QR'%(ADDON_ID))
             if Globals.dialog.yesnoDialog(message=LANGUAGE(30129)):
                 if self.jsonRPC.setSettingValue("services.zeroconf",True,queue=False):
-                    Globals.dialog.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30035)))
+                    Globals.dialog.notificationDialog(LANGUAGE(32219).format(name=LANGUAGE(30035)))
                     self.service._que(self.service.tasks.chkDiscovery, 1)
-        else: Globals.dialog.notificationDialog(LANGUAGE(32219)%(LANGUAGE(30034)))
+        else: Globals.dialog.notificationDialog(LANGUAGE(32219).format(name=LANGUAGE(30034)))
                             
         
-    @threadit
     @staticmethod
     def _run(self) -> Any:
         try:    param = self.sysARG[1]

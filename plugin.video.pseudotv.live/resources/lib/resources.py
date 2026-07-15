@@ -37,6 +37,8 @@ _NON_ALNUM_RE = re.compile(r'[^a-zA-Z0-9\s&]')
 _MULTI_WS_RE  = re.compile(r'\s+')
 
 class Resources(object):
+
+
     def __init__(self, service: Optional[_Service] = None):
         if service is None: service = _Service()
         self.remoteHost  = Globals.properties.getRemoteHost()
@@ -52,6 +54,7 @@ class Resources(object):
             self.pruneimageCache()
         else:
             self.imageCache = OrderedDict(Globals.settings.getCacheSetting('imageCache',default={}))
+        self._logo_cache = {}
         self.seasonal    = Seasonal(service)
         self.holiday     = self.seasonal.getHoliday()
         self.openRouter  = OpenRouter(service)
@@ -144,21 +147,28 @@ class Resources(object):
         return image
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=5))
     def getLocalLogo(self, chname: str, select: bool = False) -> list:
+        key = (str(chname) if chname is not None else '', select)
+        cached = self._logo_cache.get(key)
+        if cached is not None: return cached
         logos = []
+        chname = key[0]
         for path in LOCAL_FOLDERS:
             for ext in IMG_EXTS:
                 fn = os.path.join(path, chname + ext)
                 if FileAccess.exists(fn):
                     self.log('getLocalLogo, found %s' % fn)
                     if select: logos.append(fn)
-                    else: return fn
-        if select: return logos
-        return None
+                    else:
+                        self._logo_cache[key] = fn
+                        return fn
+        result = logos if select else None
+        self._logo_cache[key] = result
+        return result
 
 
     def getLogoResources(self, citem: dict, select: bool = False) -> Optional[dict]:
+        citem['name'] = str(citem.get('name', '')) if citem.get('name') is not None else ''
         self.log('getLogoResources, chname = %s, type = %s, select = %s'%(citem.get('name'), citem.get('type'),select))
 
         def __getResources(type: str) -> list:
@@ -188,6 +198,7 @@ class Resources(object):
 
 
     def getTVShowLogo(self, chname: str, select: bool = False) -> Optional[dict]:
+        chname = str(chname) if chname is not None else ''
         self.log('getTVShowLogo, chname = %s, select = %s'%(chname,select))
         cacheName     = 'getTVShowLogo.%s.%s'%(FileAccess._getMD5(chname),select)
         cacheResponse = self.cache.get(cacheName)
@@ -217,6 +228,7 @@ class Resources(object):
         if not chname: return []
         variations = {chname} # original name
         variations.add(Globals._cleanChannelSuffix(chname, type)) # Remove Suffix
+        if chname is not None: chname = str(chname)
         if isinstance(chname,str): 
             variations.add(_NON_ALNUM_RE.sub(' ', chname)) # Remove Non-Alphanumeric (except spaces and &)
             if '&' in chname: variations.add(chname.replace('&', ' and '))  # '&' to 'and' replacement
@@ -318,6 +330,7 @@ class Resources(object):
         self.log('getTexture, url = %s\nimage = %s'%(url,image))
         if not image is None: return f'special://userdata/Thumbnails/{image}'
         
+
 
     def setTexture(self, url: str) -> str:
         image = f'{Globals.properties.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'

@@ -19,8 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-from typing import Any, Generator, List, Tuple, Optional, Dict
-from variables     import *
+from typing      import Any, Generator, List, Tuple, Optional, Dict
+from variables   import *
 from channels    import Channels
 from fileaccess  import FileAccess, FileLock
 
@@ -61,6 +61,7 @@ class M3U(object):
     _RE_WEBPROP   = re.compile(r'^#WEBPROP:(.*)$', re.IGNORECASE)
     _RE_XPLAYLIST = re.compile(r'^#EXT-X-PLAYLIST-TYPE:(.*)$', re.IGNORECASE)
 
+
     def __init__(self, file: str = M3UFLEPATH, writable: bool = False):
         self._lock        = RLock()
         self.EPGArtwork  = int((Globals.settings.getSetting('EPG_Artwork') or "0"))
@@ -74,8 +75,10 @@ class M3U(object):
                          'stations': stations,
                          'recordings': recordings }
 
+
     def __enter__(self) -> 'M3U':
         return self
+
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any):
         try:
@@ -92,6 +95,7 @@ class M3U(object):
         
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
+
 
     def _load(self) -> Generator[Dict[str, Any], None, None]:
         self.log('_load, file=%s' % self.stationFile)
@@ -213,6 +217,7 @@ class M3U(object):
                     self.log('_load, m3u item = %s' % mitem)
                     yield mitem
 
+
     def _save(self) -> bool:
         self.M3UDATA['data'] = '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
                                'http://%s/%s' % (Globals.properties.getRemoteHost(), XMLTVFLE) )
@@ -271,14 +276,22 @@ class M3U(object):
                 finally:
                     if fle and hasattr(fle, 'close'): 
                         fle.close()
+                        
+            # Update PVR status with current M3U/XMLTV data
+            status   = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(), Globals.properties.getFriendlyName())
+            stations = self.getStations()
+            status['m3u']['channel_ids'] = {s.get('id') for s in stations if s.get('id')}
+            status['m3u']['last_write'] = time.time()
+            Globals.settings.instances._computeDerived(status)
         return False
+
 
     def _verify(self, stations: Optional[List[Dict[str, Any]]] = None, recordings: Optional[List[Dict[str, Any]]] = None, chkPath: Optional[bool] = None) -> List[Dict[str, Any]]:
         if chkPath is None:
             chkPath = Globals.settings.getSettingBool('Clean_Recordings')
             
         if stations:
-            channels = Channels().getChannels()
+            channels = Channels(getChannelKey()).getChannels()
             chan_ids = {channel.get('id') for channel in channels if channel.get('id')}
             verified_stations = [station for station in stations if station.get('id') in chan_ids]
             self.log('_verify, stations %d -> %d (matched active channels)' % (len(stations), len(verified_stations)))
@@ -315,6 +328,7 @@ class M3U(object):
         
         self.log('cleanSelf, slug = %s, key = %s: returning: stations = %s, recordings = %s' % (slug, key, len(stations), len(recordings)))
         return stations, recordings
+
 
     def sortStations(self, stations: List[Dict[str, Any]], key: str = 'number') -> List[Dict[str, Any]]:
         try:              
@@ -357,6 +371,7 @@ class M3U(object):
     def getTZShift(self) -> float:
         self.log('getTZShift')
         return ((time.mktime(time.localtime()) - time.mktime(time.gmtime())) / 60.0 / 60.0)
+
 
     def getStations(self) -> List[Dict[str, Any]]:
         stations = self.sortStations(self.M3UDATA.get('stations', []))
@@ -409,6 +424,7 @@ class M3U(object):
             except Exception as e: 
                 self.log('[%s] delStation failed: %s' % (citem.get('id',''), e), xbmc.LOGDEBUG)
             return False
+
 
     def delRecording(self, ritem: Dict[str, Any]) -> bool:
         with self._lock:

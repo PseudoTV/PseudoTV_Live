@@ -19,18 +19,23 @@ class Channel:
     favorite: bool = False
 
 class Channels:
+
+
     def __init__(self):
         self.channelDATA: Dict[str, List[Channel]] = FileAccess.getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP: Dict = FileAccess.getJSON(CHANNEL_ITEM)
         self.channelDATA.update(self._load())
 
+
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s' % (self.__class__.__name__, msg), level)
+
 
     def _load(self, file: str = CHANNELFLEPATH) -> Dict[str, List[Channel]]:
         channelDATA = FileAccess.getJSON(file)
         self.log('_load, channels = %s' % (len(channelDATA.get('channels', []))))
         return channelDATA
+
 
     def _verify(self, channels: List[Channel] = []) -> Iterator[Channel]:
         for idx, citem in enumerate(self.channelDATA.get('channels', [])):
@@ -40,36 +45,45 @@ class Channels:
             else:
                 yield citem
 
+
     def _save(self, file: str = CHANNELFLEPATH) -> bool:
         self.channelDATA['uuid'] = SETTINGS.getMYUUID()
         self.channelDATA['channels'] = self.sortChannels(self.channelDATA['channels'])
         self.log('_save, channels = %s' % (len(self.channelDATA['channels'])))
         return FileAccess.setJSON(file, self.channelDATA)
 
+
     def getTemplate(self) -> Dict:
         return self.channelTEMP.copy()
+
 
     def getChannels(self) -> List[Channel]:
         return sorted(self.channelDATA['channels'], key=itemgetter('number'))
 
+
     def popChannels(self, type: str, channels: List[Channel] = []) -> List[Channel]:
         return [self.channelDATA['channels'].pop(self.channelDATA['channels'].index(citem)) for citem in list([c for c in channels if c.type == type])]
+
 
     def getCustom(self) -> List[Channel]:
         channels = self.getChannels()
         return list([citem for citem in channels if citem.number <= CHANNEL_LIMIT])
 
+
     def getAutotuned(self) -> List[Channel]:
         channels = self.getChannels()
         return list([citem for citem in channels if citem.number > CHANNEL_LIMIT])
+
 
     def getChannelbyID(self, id: str) -> List[Channel]:
         channels = self.getChannels()
         return list([c for c in channels if c.id == id])
 
+
     def getType(self, type: str) -> List[Channel]:
         channels = self.getChannels()
         return list([citem for citem in channels if citem.type == type])
+
 
     def sortChannels(self, channels: List[Channel]) -> List[Channel]:
         try:
@@ -78,6 +92,7 @@ class Channels:
             LOG('ChannelsDataclass: sortChannels failed: %s' % e, xbmc.LOGDEBUG)
             return channels
 
+
     def setChannels(self, channels: List[Channel] = []) -> bool:
         if len(channels) == 0: channels = self.channelDATA['channels']
         self.channelDATA['channels'] = channels
@@ -85,15 +100,19 @@ class Channels:
         PROPERTIES.setChannels(len(channels) > 0)
         return self._save()
 
+
     def getImports(self) -> List:
         return self.channelDATA.get('imports', [])
+
 
     def setImports(self, data: List = []) -> bool:
         self.channelDATA['imports'] = data
         return self.setChannels()
 
+
     def clearChannels(self):
         self.channelDATA['channels'] = []
+
 
     def delChannel(self, citem: Channel) -> bool:
         self.log('delChannel,[%s]' % (citem.id), xbmc.LOGINFO)
@@ -101,6 +120,7 @@ class Channels:
         if idx is not None:
             self.channelDATA['channels'].pop(idx)
         return True
+
 
     def addChannel(self, citem: Channel) -> bool:
         idx, channel = self.findChannel(citem)
@@ -120,6 +140,7 @@ class Channels:
             self.channelDATA.setdefault('channels', []).append(citem)
         return True
 
+
     def findChannel(self, citem: Channel, channels: List[Channel] = []) -> tuple:
         if len(channels) == 0:
             channels = self.getChannels()
@@ -127,6 +148,7 @@ class Channels:
             if citem.id == eitem.id:
                 return idx, eitem
         return None, {}
+
 
     def findAutotuned(self, citem: Channel, channels: List[Channel] = []) -> tuple:
         if len(channels) == 0:

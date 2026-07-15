@@ -33,7 +33,7 @@ def _open(fitem: Optional[dict] = {}):
                 Globals.properties.setRunning('Create.open',False)
             finally:del manager
             return True
-    else: Globals.dialog.notificationDialog(LANGUAGE(32129)%(ADDON_NAME))
+    else: Globals.dialog.notificationDialog(LANGUAGE(32129).format(name=ADDON_NAME))
             
 @threadit  
 def _add(sysARG: list, listitem: Optional[dict] = {}):
@@ -41,7 +41,7 @@ def _add(sysARG: list, listitem: Optional[dict] = {}):
     if not listitem: listitem = xbmcgui.ListItem(offscreen=True)
     path = listitem.getPath()
     if not path: return Globals.dialog.notificationDialog(LANGUAGE(32030))
-    elif Globals.dialog.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto the first available %s channel?'%(listitem.getLabel(),ADDON_NAME)):
+    elif Globals.dialog.yesnoDialog(LANGUAGE(30234).format(name=listitem.getLabel(), addon=ADDON_NAME)):
         if not Globals.properties.isRunning('Create.add'):
             with Globals.properties.chkRunning('Create.add'):
                 manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
@@ -58,7 +58,7 @@ def _add(sysARG: list, listitem: Optional[dict] = {}):
                     citem['favorite'] = True
                     citem['changed']  = True
                     citem['radio']    = True if path.startswith('musicdb://') else False
-                    manager._addChannels(citem['number'], citem)
+                    manager._addChannels(citem['number'], [citem])
                     manager.closeManager()
                 del manager
                 Globals.properties.setPropTimer('chkChanged')# Refresh Channel Changed!
@@ -77,7 +77,7 @@ def _autotune(start: int = 1, count: int = -1, automatic: bool = False):
         if not auto_tune: #prompt user to autotune.
             while not MONITOR().abortRequested():
                 wait   = AUTOCLOSE_DELAY
-                retval = Globals.dialog.yesnoDialog(message='%s %s'%(LANGUAGE(32042)%(ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254),autoclose=wait)
+                retval = Globals.dialog.yesnoDialog(message='%s %s'%(LANGUAGE(32042).format(name=ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254),autoclose=wait)
                 if retval == 0: #No 
                     Globals.settings.setSettingBool('Enable_Autotune',False)
                     return False if time.time() >= (run_time + wait) else True #return True if autoclose ie. no user input.
@@ -93,7 +93,7 @@ def _autotune(start: int = 1, count: int = -1, automatic: bool = False):
                         
                     with Globals.builtin.busy_dialog():
                         menu = [Globals.listitems.buildMenuListItem(LANGUAGE(30107),url='__manager'),
-                                Globals.listitems.buildMenuListItem(LANGUAGE(33310),url='__settings')]
+                                Globals.listitems.buildMenuListItem(LANGUAGE(33108),url='__settings')]
                         if hasImports: menu.append(Globals.listitems.buildMenuListItem('%s %s'%(LANGUAGE(32194),LANGUAGE(30108)),LANGUAGE(32111),url='__import'))
                         if hasBackups: menu.append(Globals.listitems.buildMenuListItem('%s %s'%(LANGUAGE(32112),LANGUAGE(30108)),LANGUAGE(32111),url='__backup'))
                         if hasServers: menu.append(Globals.listitems.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='__server'))

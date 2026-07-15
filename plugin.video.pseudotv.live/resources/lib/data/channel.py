@@ -20,6 +20,8 @@
 from variables import *
 
 class Channel():
+
+
     def __init__(self, id: str="", type: str="", number: int=0, name: str="", logo: str="", path: list=[], group: list=[], rules: list=[], catchup: str="vod", radio: bool=False, favorite: bool=False):
         self.id       = id
         self.type     = type

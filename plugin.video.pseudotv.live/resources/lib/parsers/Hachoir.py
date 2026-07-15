@@ -20,6 +20,8 @@ from variables    import *
 from typing import Union
 
 class Hachoir:
+
+
     def determineLength(self, filename: str) -> Union[int, float]:
         """
         Determines video length using Hachoir metadata.

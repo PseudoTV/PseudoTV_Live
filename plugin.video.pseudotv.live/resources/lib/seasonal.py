@@ -38,6 +38,8 @@ TV_QUERY    = {"path":"videodb://tvshows/titles/", "method":"VideoLibrary.GetEpi
 MOVIE_QUERY = {"path":"videodb://movies/titles/" , "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"  ,"limits":LIMITS,"sort":SORT,"filter":FILTER}
 
 class Seasonal(object):
+
+
     def __init__(self, service: Optional[_Service] = None):
         if service is None: service = _Service()
         self.service = service
@@ -97,6 +99,7 @@ class Seasonal(object):
     def getSpecialHolidays(self, month: str, day: str) -> Dict[str, Any]: #todo check if month, day of week, day match holiday exceptions.
         return {"Friday":{"13":{ "name": "Friday The 13th", "tagline": "", "keyword": "", "logo": ""}}}
     
+
 
     def getNearestHoliday(self, fallback: bool = True) -> Dict[str, Any]:
         """Find the nearest holiday with a keyword, optionally wrapping to previous days."""

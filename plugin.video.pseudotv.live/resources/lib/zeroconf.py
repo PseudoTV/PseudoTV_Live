@@ -173,12 +173,14 @@ class BadTypeInNameException(Exception):
 class DNSEntry(object):
     """A DNS entry"""
 
+
     def __init__(self, name: str, type: int, clazz: int):
         self.key = name.lower()
         self.name = name
         self.type = type
         self.clazz = clazz & _CLASS_MASK
         self.unique = (clazz & _CLASS_UNIQUE) != 0
+
 
     def __eq__(self, other: object) -> bool:
         """Equality test on name, type, and class"""
@@ -187,17 +189,21 @@ class DNSEntry(object):
                 self.type == other.type and
                 self.clazz == other.clazz)
 
+
     def __ne__(self, other: object) -> bool:
         """Non-equality test"""
         return not self.__eq__(other)
+
 
     def getClazz(self, clazz: int) -> str:
         """Class accessor"""
         return _CLASSES.get(clazz, "?(%s)" % clazz)
 
+
     def getType(self, t: int) -> str:
         """Type accessor"""
         return _TYPES.get(t, "?(%s)" % t)
+
 
     def toString(self, hdr: str, other: Optional[str]) -> str:
         """String representation with additional information"""
@@ -217,16 +223,19 @@ class DNSEntry(object):
 class DNSQuestion(DNSEntry):
     """A DNS question entry"""
 
+
     def __init__(self, name: str, type: int, clazz: int):
         #if not name.endswith(".local."):
         #    raise NonLocalNameException
         DNSEntry.__init__(self, name, type, clazz)
+
 
     def answeredBy(self, rec: 'DNSRecord') -> bool:
         """Returns true if the question is answered by the record"""
         return (self.clazz == rec.clazz and
                 (self.type == rec.type or self.type == _TYPE_ANY) and
                 self.name == rec.name)
+
 
     def __repr__(self) -> str:
         """String representation"""
@@ -236,14 +245,17 @@ class DNSQuestion(DNSEntry):
 class DNSRecord(DNSEntry):
     """A DNS record - like a DNS entry, but has a TTL"""
 
+
     def __init__(self, name: str, type: int, clazz: int, ttl: int):
         DNSEntry.__init__(self, name, type, clazz)
         self.ttl = ttl
         self.created = currentTimeMillis()
 
+
     def __eq__(self, other: object) -> bool:
         """Tests equality as per DNSRecord"""
         return isinstance(other, DNSRecord) and DNSEntry.__eq__(self, other)
+
 
     def suppressedBy(self, msg: 'DNSIncoming') -> bool:
         """Returns true if any answer in a message can suffice for the
@@ -253,27 +265,33 @@ class DNSRecord(DNSEntry):
                 return True
         return False
 
+
     def suppressedByAnswer(self, other: 'DNSRecord') -> bool:
         """Returns true if another record has same name, type and class,
         and if its TTL is at least half of this record's."""
         return self == other and other.ttl > (self.ttl / 2)
+
 
     def getExpirationTime(self, percent: float) -> float:
         """Returns the time at which this record will have expired
         by a certain percentage."""
         return self.created + (percent * self.ttl * 10)
 
+
     def getRemainingTTL(self, now: float) -> float:
         """Returns the remaining TTL in seconds."""
         return max(0, (self.getExpirationTime(100) - now) / 1000)
+
 
     def isExpired(self, now: float) -> bool:
         """Returns true if this record has expired."""
         return self.getExpirationTime(100) <= now
 
+
     def isStale(self, now: float) -> bool:
         """Returns true if this record is at least half way expired."""
         return self.getExpirationTime(50) <= now
+
 
     def resetTTL(self, other: 'DNSRecord'):
         """Sets this record's TTL and created time to that of
@@ -281,9 +299,11 @@ class DNSRecord(DNSEntry):
         self.created = other.created
         self.ttl = other.ttl
 
+
     def write(self, out: 'DNSOutgoing'):
         """Abstract method"""
         raise AbstractMethodException
+
 
     def toString(self, other: Optional[str]) -> str:
         """String representation with addtional information"""
@@ -294,17 +314,21 @@ class DNSRecord(DNSEntry):
 class DNSAddress(DNSRecord):
     """A DNS address record"""
 
+
     def __init__(self, name: str, type: int, clazz: int, ttl: int, address: bytes):
         DNSRecord.__init__(self, name, type, clazz, ttl)
         self.address = address
+
 
     def write(self, out: 'DNSOutgoing'):
         """Used in constructing an outgoing packet"""
         out.writeString(self.address)
 
+
     def __eq__(self, other: object) -> bool:
         """Tests equality on address"""
         return isinstance(other, DNSAddress) and self.address == other.address
+
 
     def __repr__(self) -> str:
         """String representation"""
@@ -316,20 +340,24 @@ class DNSAddress(DNSRecord):
 class DNSHinfo(DNSRecord):
     """A DNS host information record"""
 
+
     def __init__(self, name: str, type: int, clazz: int, ttl: int, cpu: str, os: str):
         DNSRecord.__init__(self, name, type, clazz, ttl)
         self.cpu = cpu
         self.os = os
+
 
     def write(self, out: 'DNSOutgoing'):
         """Used in constructing an outgoing packet"""
         out.writeString(self.cpu)
         out.writeString(self.oso)
 
+
     def __eq__(self, other: object) -> bool:
         """Tests equality on cpu and os"""
         return (isinstance(other, DNSHinfo) and
                 self.cpu == other.cpu and self.os == other.os)
+
 
     def __repr__(self) -> str:
         """String representation"""
@@ -338,17 +366,21 @@ class DNSHinfo(DNSRecord):
 class DNSPointer(DNSRecord):
     """A DNS pointer record"""
 
+
     def __init__(self, name: str, type: int, clazz: int, ttl: int, alias: str):
         DNSRecord.__init__(self, name, type, clazz, ttl)
         self.alias = alias
+
 
     def write(self, out: 'DNSOutgoing'):
         """Used in constructing an outgoing packet"""
         out.writeName(self.alias)
 
+
     def __eq__(self, other: object) -> bool:
         """Tests equality on alias"""
         return isinstance(other, DNSPointer) and self.alias == other.alias
+
 
     def __repr__(self) -> str:
         """String representation"""
@@ -357,17 +389,21 @@ class DNSPointer(DNSRecord):
 class DNSText(DNSRecord):
     """A DNS text record"""
 
+
     def __init__(self, name: str, type: int, clazz: int, ttl: int, text: bytes):
         DNSRecord.__init__(self, name, type, clazz, ttl)
         self.text = text
+
 
     def write(self, out: 'DNSOutgoing'):
         """Used in constructing an outgoing packet"""
         out.writeString(self.text)
 
+
     def __eq__(self, other: object) -> bool:
         """Tests equality on text"""
         return isinstance(other, DNSText) and self.text == other.text
+
 
     def __repr__(self) -> str:
         """String representation"""
@@ -379,6 +415,7 @@ class DNSText(DNSRecord):
 class DNSService(DNSRecord):
     """A DNS service record"""
 
+
     def __init__(self, name: str, type: int, clazz: int, ttl: int, priority: int, weight: int, port: int, server: str):
         DNSRecord.__init__(self, name, type, clazz, ttl)
         self.priority = priority
@@ -386,12 +423,14 @@ class DNSService(DNSRecord):
         self.port = port
         self.server = server
 
+
     def write(self, out: 'DNSOutgoing'):
         """Used in constructing an outgoing packet"""
         out.writeShort(self.priority)
         out.writeShort(self.weight)
         out.writeShort(self.port)
         out.writeName(self.server)
+
 
     def __eq__(self, other: object) -> bool:
         """Tests equality on priority, weight, port and server"""
@@ -401,12 +440,14 @@ class DNSService(DNSRecord):
                 self.port == other.port and
                 self.server == other.server)
 
+
     def __repr__(self) -> str:
         """String representation"""
         return self.toString("%s:%s" % (self.server, self.port))
 
 class DNSIncoming(object):
     """Object representation of an incoming DNS packet"""
+
 
     def __init__(self, data: bytes):
         """Constructor from string holding bytes of packet"""
@@ -423,16 +464,19 @@ class DNSIncoming(object):
         self.readQuestions()
         self.readOthers()
 
+
     def unpack(self, format: str) -> Tuple[Any, ...]:
         length = struct.calcsize(format)
         info = struct.unpack(format, self.data[self.offset:self.offset+length])
         self.offset += length
         return info
 
+
     def readHeader(self):
         """Reads header portion of packet"""
         (self.id, self.flags, self.numQuestions, self.numAnswers,
          self.numAuthorities, self.numAdditionals) = self.unpack('!6H')
+
 
     def readQuestions(self):
         """Reads questions section of packet"""
@@ -443,9 +487,11 @@ class DNSIncoming(object):
             question = DNSQuestion(name, type, clazz)
             self.questions.append(question)
 
+
     def readInt(self) -> int:
         """Reads an integer from the packet"""
         return self.unpack('!I')[0]
+
 
     def readCharacterString(self) -> str:
         """Reads a character string from the packet"""
@@ -456,15 +502,18 @@ class DNSIncoming(object):
             s = s.decode(DEFAULT_ENCODING)
         return s
 
+
     def readString(self, length: int) -> bytes:
         """Reads a string of a given length from the packet"""
         info = self.data[self.offset:self.offset+length]
         self.offset += length
         return info
 
+
     def readUnsignedShort(self) -> int:
         """Reads an unsigned short from the packet"""
         return self.unpack('!H')[0]
+
 
     def readOthers(self):
         """Reads the answers, authorities and additionals section of the
@@ -506,13 +555,16 @@ class DNSIncoming(object):
         """Returns true if this is a query"""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
 
+
     def isResponse(self) -> bool:
         """Returns true if this is a response"""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
+
     def readUTF(self, offset: int, length: int) -> str:
         """Reads a UTF-8 string of a given length from the packet"""
         return self.data[offset:offset+length].decode(DEFAULT_ENCODING, 'replace')
+
 
     def readName(self) -> str:
         """Reads a domain name from the packet"""
@@ -551,6 +603,7 @@ class DNSIncoming(object):
 class DNSOutgoing(object):
     """Object representation of an outgoing packet"""
 
+
     def __init__(self, flags: int, multicast: bool = True):
         self.finished = False
         self.id = 0
@@ -565,14 +618,17 @@ class DNSOutgoing(object):
         self.authorities = []
         self.additionals = []
 
+
     def addQuestion(self, record: DNSQuestion):
         """Adds a question"""
         self.questions.append(record)
+
 
     def addAnswer(self, inp: DNSIncoming, record: DNSRecord):
         """Adds an answer"""
         if not record.suppressedBy(inp):
             self.addAnswerAtTime(record, 0)
+
 
     def addAnswerAtTime(self, record: Optional[DNSRecord], now: float):
         """Adds an answer if if does not expire by a certain time"""
@@ -580,21 +636,26 @@ class DNSOutgoing(object):
             if now == 0 or not record.isExpired(now):
                 self.answers.append((record, now))
 
+
     def addAuthorativeAnswer(self, record: DNSRecord):
         """Adds an authoritative answer"""
         self.authorities.append(record)
+
 
     def addAdditionalAnswer(self, record: DNSRecord):
         """Adds an additional answer"""
         self.additionals.append(record)
 
+
     def pack(self, format: str, value: Any):
         self.data += struct.pack(format, value)
         self.size += struct.calcsize(format)
 
+
     def writeByte(self, value: int):
         """Writes a single byte to the packet"""
         self.pack('!c', putByte(value))
+
 
     def insertShort(self, index: int, value: int):
         """Inserts an unsigned short in a certain position in the packet"""
@@ -602,13 +663,16 @@ class DNSOutgoing(object):
                     self.data[index:]
         self.size += 2
 
+
     def writeShort(self, value: int):
         """Writes an unsigned short to the packet"""
         self.pack('!H', value)
 
+
     def writeInt(self, value: float):
         """Writes an unsigned integer to the packet"""
         self.pack('!I', int(value))
+
 
     def writeString(self, value: Union[str, bytes]):
         """Writes a string to the packet"""
@@ -616,6 +680,7 @@ class DNSOutgoing(object):
             value = value.encode(DEFAULT_ENCODING)
         self.data += value
         self.size += len(value)
+
 
     def writeUTF(self, s: str):
         """Writes a UTF-8 string of a given length to the packet"""
@@ -625,6 +690,7 @@ class DNSOutgoing(object):
             raise NamePartTooLongException
         self.writeByte(length)
         self.writeString(utfstr)
+
 
     def writeName(self, name: str):
         """Writes a domain name to the packet"""
@@ -651,11 +717,13 @@ class DNSOutgoing(object):
                 self.writeUTF(part)
             self.writeByte(0)
 
+
     def writeQuestion(self, question: DNSQuestion):
         """Writes a question to the packet"""
         self.writeName(question.name)
         self.writeShort(question.type)
         self.writeShort(question.clazz)
+
 
     def writeRecord(self, record: DNSRecord, now: float):
         """Writes a record (answer, authoritative answer, additional) to
@@ -679,6 +747,7 @@ class DNSOutgoing(object):
 
         length = len(self.data[index:])
         self.insertShort(index, length) # Here is the short we adjusted for
+
 
     def packet(self) -> bytes:
         """Returns a string containing the packet's bytes
@@ -711,8 +780,10 @@ class DNSOutgoing(object):
 class DNSCache(object):
     """A cache of DNS entries"""
 
+
     def __init__(self):
         self.cache = {}
+
 
     def add(self, entry: DNSEntry):
         """Adds an entry"""
@@ -722,6 +793,7 @@ class DNSCache(object):
             list = self.cache[entry.key] = []
         list.append(entry)
 
+
     def remove(self, entry: DNSEntry):
         """Removes an entry"""
         try:
@@ -729,6 +801,7 @@ class DNSCache(object):
             list.remove(entry)
         except Exception:
             pass
+
 
     def get(self, entry: DNSEntry) -> Optional[DNSEntry]:
         """Gets an entry by key.  Will return None if there is no
@@ -739,11 +812,13 @@ class DNSCache(object):
         except Exception:
             return None
 
+
     def getByDetails(self, name: str, type: int, clazz: int) -> Optional[DNSEntry]:
         """Gets an entry by details.  Will return None if there is
         no matching entry."""
         entry = DNSEntry(name, type, clazz)
         return self.get(entry)
+
 
     def entriesWithName(self, name: str) -> List[DNSEntry]:
         """Returns a list of entries whose key matches the name."""
@@ -751,6 +826,7 @@ class DNSCache(object):
             return self.cache[name]
         except Exception:
             return []
+
 
     def entries(self) -> List[DNSEntry]:
         """Returns a list of all entries"""
@@ -773,6 +849,7 @@ class Engine(threading.Thread):
     packets.
     """
 
+
     def __init__(self, zc: 'Zeroconf'):
         threading.Thread.__init__(self)
         self.zc = zc
@@ -780,6 +857,7 @@ class Engine(threading.Thread):
         self.condition = threading.Condition()
         self.timeout   = int(Globals.settings.getSetting('API_Timeout') or "10") * 2
         self.start()
+
 
     def run(self):
         while not MONITOR().abortRequested() and not _GLOBAL_DONE:
@@ -802,11 +880,13 @@ class Engine(threading.Thread):
                 except Exception:
                     pass
 
+
     def getReaders(self) -> List[socket.socket]:
         self.condition.acquire()
         result = list(self.readers.keys())
         self.condition.release()
         return result
+
 
     def addReader(self, reader: Any, socket: socket.socket):
         self.condition.acquire()
@@ -814,11 +894,13 @@ class Engine(threading.Thread):
         self.condition.notify()
         self.condition.release()
 
+
     def delReader(self, socket: socket.socket):
         self.condition.acquire()
         del(self.readers[socket])
         self.condition.notify()
         self.condition.release()
+
 
     def notify(self):
         self.condition.acquire()
@@ -833,9 +915,11 @@ class Listener(object):
     It requires registration with an Engine object in order to have
     the read() method called when a socket is availble for reading."""
 
+
     def __init__(self, zc: 'Zeroconf'):
         self.zc = zc
         self.zc.engine.addReader(self, self.zc.socket)
+
 
     def handle_read(self):
         try:
@@ -869,10 +953,12 @@ class Reaper(threading.Thread):
     """A Reaper is used by this module to remove cache entries that
     have expired."""
 
+
     def __init__(self, zc: 'Zeroconf'):
         threading.Thread.__init__(self)
         self.zc = zc
         self.start()
+
 
     def run(self):
         while not MONITOR().abortRequested():
@@ -893,6 +979,7 @@ class ServiceBrowser(threading.Thread):
     removeService() methods called when this browser
     discovers changes in the services availability."""
 
+
     def __init__(self, zc: 'Zeroconf', type: str, listener: Any):
         """Creates a browser for a specific type"""
         threading.Thread.__init__(self)
@@ -908,6 +995,7 @@ class ServiceBrowser(threading.Thread):
 
         self.zc.addListener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
         self.start()
+
 
     def updateRecord(self, zc: 'Zeroconf', now: float, record: DNSRecord):
         """Callback invoked by Zeroconf when new information arrives.
@@ -935,9 +1023,11 @@ class ServiceBrowser(threading.Thread):
             if expires < self.nextTime:
                 self.nextTime = expires
 
+
     def cancel(self):
         self.done = True
         self.zc.notifyAll()
+
 
     def run(self):
         while not MONITOR().abortRequested():
@@ -969,6 +1059,7 @@ class ServiceBrowser(threading.Thread):
 class ServiceInfo(object):
     """Service information"""
 
+
     def __init__(self, type: str, name: str, address: Optional[str] = None, port: Optional[int] = None, weight: int = 0,
                  priority: int = 0, properties: Optional[Union[Dict[str, Any], bytes]] = None, server: Optional[str] = None):
         """Create a service description.
@@ -996,6 +1087,7 @@ class ServiceInfo(object):
         else:
             self.server = name
         self.setProperties(properties)
+
 
     def setProperties(self, properties: Optional[Union[Dict[str, Any], bytes]]):
         """Sets properties and text of this info from a dictionary"""
@@ -1025,6 +1117,7 @@ class ServiceInfo(object):
             self.text = result
         else:
             self.text = properties
+
 
     def setText(self, text: Union[bytes, str]):
         """Sets properties and text given a text field"""
@@ -1064,9 +1157,11 @@ class ServiceInfo(object):
             traceback.print_exc()
             self.properties = None
 
+
     def getType(self) -> str:
         """Type accessor"""
         return self.type
+
 
     def getName(self) -> str:
         """Name accessor"""
@@ -1074,33 +1169,41 @@ class ServiceInfo(object):
             return self.name[:len(self.name) - len(self.type) - 1]
         return self.name
 
+
     def getAddress(self) -> Optional[str]:
         """Address accessor"""
         return self.address
+
 
     def getPort(self) -> Optional[int]:
         """Port accessor"""
         return self.port
 
+
     def getPriority(self) -> int:
         """Pirority accessor"""
         return self.priority
+
 
     def getWeight(self) -> int:
         """Weight accessor"""
         return self.weight
 
+
     def getProperties(self) -> Optional[Dict[str, Any]]:
         """Properties accessor"""
         return self.properties
+
 
     def getText(self) -> Optional[bytes]:
         """Text accessor"""
         return self.text
 
+
     def getServer(self) -> str:
         """Server accessor"""
         return self.server
+
 
     def updateRecord(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]):
         """Updates service information from a DNS record"""
@@ -1121,6 +1224,7 @@ class ServiceInfo(object):
             elif record.type == _TYPE_TXT:
                 if record.name == self.name:
                     self.setText(record.text)
+
 
     def request(self, zc: 'Zeroconf', timeout: float) -> bool:
         """Returns true if the service could be discovered on the
@@ -1163,15 +1267,18 @@ class ServiceInfo(object):
 
         return result
 
+
     def __eq__(self, other: object) -> bool:
         """Tests equality of service name"""
         if isinstance(other, ServiceInfo):
             return other.name == self.name
         return False
 
+
     def __ne__(self, other: object) -> bool:
         """Non-equality test"""
         return not self.__eq__(other)
+
 
     def __repr__(self) -> str:
         """String representation"""
@@ -1193,6 +1300,8 @@ class Zeroconf(object):
 
     Supports registration, unregistration, queries and browsing.
     """
+
+
     def __init__(self, bindaddress: Optional[str] = None):
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads."""
@@ -1251,11 +1360,14 @@ class Zeroconf(object):
         self.listener = Listener(self)
         self.reaper = Reaper(self)
 
+
     def isLoopback(self) -> bool:
         return self.intf.startswith("0.0.0.0")
 
+
     def isLinklocal(self) -> bool:
         return self.intf.startswith("169.254.")
+
 
     def wait(self, timeout: float):
         """Calling thread waits for a given number of milliseconds or
@@ -1264,11 +1376,13 @@ class Zeroconf(object):
         self.condition.wait(timeout / 1000)
         self.condition.release()
 
+
     def notifyAll(self):
         """Notifies all waiting threads"""
         self.condition.acquire()
         self.condition.notifyAll()
         self.condition.release()
+
 
     def getServiceInfo(self, type: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
@@ -1279,6 +1393,7 @@ class Zeroconf(object):
             return info
         return None
 
+
     def addServiceListener(self, type: str, listener: Any):
         """Adds a listener for a particular service type.  This object
         will then have its updateRecord method called when information
@@ -1286,12 +1401,14 @@ class Zeroconf(object):
         self.removeServiceListener(listener)
         self.browsers.append(ServiceBrowser(self, type, listener))
 
+
     def removeServiceListener(self, listener: Any):
         """Removes a listener from the set that is currently listening."""
         for browser in self.browsers:
             if browser.listener == listener:
                 browser.cancel()
                 del(browser)
+
 
     def registerService(self, info: ServiceInfo, ttl: int = _DNS_TTL):
         """Registers service information to the network with a default TTL
@@ -1327,6 +1444,7 @@ class Zeroconf(object):
             i += 1
             nextTime += _REGISTER_TIME
 
+
     def unregisterService(self, info: ServiceInfo):
         """Unregister a service."""
         try:
@@ -1360,6 +1478,7 @@ class Zeroconf(object):
             i += 1
             nextTime += _UNREGISTER_TIME
 
+
     def unregisterAllServices(self):
         """Unregister all registered services."""
         if len(self.services) > 0:
@@ -1386,6 +1505,7 @@ class Zeroconf(object):
                 self.send(out)
                 i += 1
                 nextTime += _UNREGISTER_TIME
+
 
     def checkService(self, info: ServiceInfo):
         """Checks the network for a unique service name, modifying the
@@ -1418,6 +1538,7 @@ class Zeroconf(object):
             i += 1
             nextTime += _CHECK_TIME
 
+
     def addListener(self, listener: Any, question: Optional[DNSQuestion]):
         """Adds a listener for a given question.  The listener will have
         its updateRecord method called when information is available to
@@ -1430,6 +1551,7 @@ class Zeroconf(object):
                     listener.updateRecord(self, now, record)
         self.notifyAll()
 
+
     def removeListener(self, listener: Any):
         """Removes a listener."""
         try:
@@ -1438,12 +1560,14 @@ class Zeroconf(object):
         except Exception:
             pass
 
+
     def updateRecord(self, now: float, rec: DNSRecord):
         """Used to notify listeners of new information that has updated
         a record."""
         for listener in self.listeners:
             listener.updateRecord(self, now, rec)
         self.notifyAll()
+
 
     def handleResponse(self, msg: DNSIncoming):
         """Deal with incoming response packets.  All answers
@@ -1463,6 +1587,7 @@ class Zeroconf(object):
                 self.cache.add(record)
 
             self.updateRecord(now, record)
+
 
     def handleQuery(self, msg: DNSIncoming, addr: str, port: int):
         """Deal with incoming query packets.  Provides a response if
@@ -1528,6 +1653,7 @@ class Zeroconf(object):
             out.id = msg.id
             self.send(out, addr, port)
 
+
     def send(self, out: DNSOutgoing, addr: str = _MDNS_ADDR, port: int = _MDNS_PORT):
         """Sends an outgoing packet."""
         packet = out.packet()
@@ -1540,6 +1666,7 @@ class Zeroconf(object):
         except Exception:
             # Ignore this, it may be a temporary loss of network connection
             pass
+
 
     def close(self):
         """Ends the background threads, and prevent this instance from

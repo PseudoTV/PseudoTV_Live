@@ -1,14 +1,16 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
 v.0.7.7+nightly
+- Fixed rebuild loop: builder no longer re-triggers chkPVRRefresh if already queued, preventing redundant channel rebuilds.
+- Fixed chkPVRRefresh cooldown (90s) and fresh-file skip to stop PVR refresh loops when files are freshly written but PVR hasn't loaded yet.
+- Added missing_epg tracking: updatePVRStatus now computes channels loaded by PVR with no EPG data; chkPVRRefresh triggers rebuild to populate missing guide data.
+- Rewrote parsePVRLog with structured storage per IPTV Simple entry type (LoadPlayList, LoadChannelEpgs, LoadGenres, GetChannels, GetChannelGroupMembers, GetChannelGroups).
+- Optimized getLocalLogo with in-memory cache, replacing @cacheit overhead (pickle+SQLite) for per-channel logo lookups.
+- Changed builder logo fallback to use channel's existing logo instead of getImageCache, avoiding unnecessary background re-resolution.
 - Fixed Cache shutdown order to prevent database corruption. Queue and pool now shut down before cache.
 - Fixed Cache reconnection bug where _exit flag was reset after shutdown, allowing unintended database access.
 - Fixed jsonQue storage type from set to list to support unhashable dict elements.
-- Fixed Real settings API calls (getSettingInt/Bool) replaced with getSetting for compatibility across jsonrpc, pool, and cqueue modules.
 - Fixed chkLibrary positional argument mismatch in task queue.
-- Fixed ListitemTypes moved into ListItems class to avoid namespace pollution.
-- Fixed missing LOGO_COLOR and image constants accidentally removed during refactor.
 - Fixed cleanInfo type validation with proper coercion, None handling, and mutable default argument fix.
-- Fixed buildMenuListItem tuple unpacking from cleanInfo return value.
 - Fixed Cache.get and Cache.set parameter mismatches (default→or fallback, life→expiration).
 - Fixed YTParser Globals reference using lazy import pattern.
 - Fixed jsonrpc.py Globals references using lazy import pattern to avoid circular dependency.
@@ -16,13 +18,8 @@ v.0.7.7+nightly
 - Optimized CustomQueue logging with throttled log dedup and peek-based execute loop.
 - Optimized CustomQueue task tracking with running dict to prevent duplicate task submission.
 - Optimized FileAccess.loadJSON with LRU cache.
-- Refactored Constants module with descriptive comments and organized variable groups.
-- Refactored Variables module with section headers and class docstrings for Globals.
 - Replaced bare except handlers with proper exception logging across 18 files.
-- Removed unused imports (xbmcaddon, xbmcplugin, xbmcvfs) from _services.py.
-- Removed unused DEBUG_NAMES variable from _services.py.
-- Added ListitemTypes class for ListItem InfoTag type validation schemas.
-- Added _LOG_THROTTLE dict for global log message deduplication.
+- Added descriptions to all IPTV Simple Client settings for clarity.
 
 v.0.7.5+nightly
 - Refactored CustomQueue and ThreadPoolExecutor.

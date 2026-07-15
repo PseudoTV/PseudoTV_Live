@@ -20,6 +20,8 @@ from variables    import *
 from typing import Union
 
 class MediaInfo:
+
+
     def determineLength(self, filename: str) -> Union[int, float]:
         try:
             from pymediainfo import MediaInfo

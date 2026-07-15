@@ -20,6 +20,8 @@
 from variables import *
 
 class Program():
+
+
     def __init__(self):
         ...
 

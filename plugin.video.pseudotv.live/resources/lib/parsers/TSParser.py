@@ -21,6 +21,8 @@ from typing import Optional, Union
 import struct
 
 class TSPacket:
+
+
     def __init__(self):
         self.pid = 0
         self.errorbit = 1
@@ -35,22 +37,25 @@ class TSParser:
     Parser for MPEG-TS (.ts) video files.
     Duration is calculated from PTS (Presentation TimeStamp) in 90kHz clock cycles.
     """
+
+
     def __init__(self):
         self.monitor = MONITOR()
         
+
 
     def determineLength(self, filename: str) -> Union[int, float]:
         """
         Determines video length from TS file by reading PTS timestamps.
         Returns duration in seconds.
         """
-        LOG("TSParser: determineLength %s"%filename)
+        LOG("TSParser: determineLength, [%s]"%filename)
         self.pid = -1
 
         try: 
             self.File = FileAccess.open(filename, "rb", None)
         except IOError as e:
-            LOG("TSParser: Unable to open the file: %s"%e)
+            LOG("TSParser: determineLength, unable to open the file, failed!\n%s"%e)
             return 0
 
         try:
@@ -58,13 +63,13 @@ class TSParser:
             self.packetLength = self.findPacketLength()
 
             if self.packetLength <= 0:
-                LOG("TSParser: Invalid packet length")
+                LOG("TSParser: determineLength, invalid packet length")
                 return 0
 
             start = self.getStartTime()
-            LOG('TSParser: Start %s'%(start))
+            LOG('TSParser: determineLength, start = %s'%(start))
             end = self.getEndTime()
-            LOG('TSParser: End - %s'%(end))
+            LOG('TSParser: determineLength, end = %s'%(end))
 
             if end > start:
                 # 90000 is the PTS clock frequency (90 kHz)
@@ -72,14 +77,15 @@ class TSParser:
             else:
                 dur = 0
 
-            LOG("TSParser: Duration is %s seconds"%(dur))
+                LOG("TSParser: determineLength, duration = %s seconds"%(dur))
             return dur
         finally:
             try:
                 self.File.close()
             except Exception as e:
-                LOG('TSParser: File.close failed: %s' % e, xbmc.LOGDEBUG)
+                LOG('TSParser: File.close, failed!\n%s' % e, xbmc.LOGDEBUG)
         
+
 
     def findPacketLength(self) -> int:
         LOG('TSParser: findPacketLength')
@@ -104,11 +110,11 @@ class TSParser:
                         # A minimum of 188, so skip the rest
                         self.File.seek(187, 1)
             except Exception as e:
-                LOG('TSParser: Exception in findPacketLength: %s'%e)
+                LOG('TSParser: findPacketLength, failed!\n%s'%e)
                 return 0
 
         if (start > 0) and (end > start):
-            LOG('TSParser: Packet Length: %s'%(end - start))
+            LOG('TSParser: findPacketLength, packet length = %s'%(end - start))
             return (end - start)
 
         return 0
@@ -122,7 +128,7 @@ class TSParser:
             size = self.File.tell()
             self.File.seek(pos, 0)
         except Exception as e:
-            LOG("TSParser: Error getting file size: %s"%e)
+                LOG("TSParser: getFileSize, failed!\n%s"%e)
 
         return size
 
@@ -137,7 +143,7 @@ class TSParser:
         try:
             self.File.seek(0, 0)
         except Exception as e:
-            LOG("TSParser: Error seeking to start: %s"%e)
+            LOG("TSParser: seekToStart, failed!\n%s"%e)
             return 0
 
         while not self.monitor.abortRequested() and maxpackets > 0:
@@ -152,7 +158,7 @@ class TSParser:
 
                 if ret > 0:
                     self.pid = packet.pid
-                    LOG('TSParser: PID: %s'%(self.pid))
+                    LOG('TSParser: getStartTime, PID = %s'%(self.pid))
                     return ret
 
         return 0

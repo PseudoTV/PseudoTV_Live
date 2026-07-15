@@ -41,6 +41,7 @@ class XSP(object):
         return False
     
 
+
     def isXSP(self, path: str) -> bool:
         if path.lower().endswith('.xsp'): return True
         return False
@@ -75,6 +76,7 @@ class XSP(object):
                 return item.get('path')
         return ""
       
+
 
     def parseXSP(self, id: str, file: str) -> list:
         def _createDXSP(tvshow: str, sort: Optional[dict] = None, operator: str = 'is') -> dict:
@@ -126,6 +128,7 @@ class XSP(object):
         except Exception as e: self.log("[%s] parseXSP [%s], failed! %s"%(id,file,e), xbmc.LOGERROR)
         return [file]
             
+
 
     def parseDXSP(self, id: str, file: str, filters: Optional[dict] = None, incExtras: Optional[bool] = None) -> str:
         if filters is None:

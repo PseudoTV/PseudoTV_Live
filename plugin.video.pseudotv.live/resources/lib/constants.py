@@ -124,7 +124,7 @@ TASK_INTERVAL       = 30.0   # Background task runner tick interval
 SUSPEND_INTERVAL    = 2.5    # Pause/suspend polling interval
 MIN_EPG_DURATION    = 10800  # Minimum EPG guide duration (3 hours in seconds)
 TIMEOUT_EXECUTOR    = 1800   # Single executor task timeout (30 min)
-TIMEOUT_EXECUTORS   = 10800  # Total executor shutdown timeout (3 hours)
+TIMEOUT_EXECUTORS   = 300    # Total executor shutdown timeout (5 min)
 ONNEXT_TIMER        = 15     # OnNext notification display duration (seconds)
 DEBUG_TIMEOUT       = 900    # Debug log retention timeout (15 min)
 
@@ -146,7 +146,7 @@ BACKUP_TIME_FORMAT  = '%Y-%m-%d %I:%M %p'   # Human-readable backup timestamp
 # =============================================================================
 # File Locking
 # =============================================================================
-LOCK_MAX_FILE_TIMEOUT = 30   # Max seconds to wait for file lock acquisition
+LOCK_MAX_FILE_TIMEOUT = 15   # Max seconds to wait for file lock acquisition
 LOCK_MAX_FILE_DELAY   = 0.5  # Delay between file lock retry attempts
 
 # =============================================================================
@@ -164,7 +164,7 @@ AUTOTUNE_CHANNEL_DEFAULT = 2 # Default channel count for autotune
 FILLER_LIMIT        = 250    # Maximum filler items per channel
 M3U_REFRESH         = 15     # M3U file refresh check interval (seconds)
 M3U_INTERVAL        = 30     # M3U full reload interval (seconds)
-M3U_TIMEOUT         = 60     # M3U network request timeout (seconds)
+M3U_TIMEOUT         = 30     # M3U network request timeout (seconds)
 HTTP_TIMEOUT        = 30     # HTTP server file serving timeout (seconds)
 
 # =============================================================================
@@ -268,6 +268,12 @@ TV_CHTYPE           = ["TV Networks", # Channel types that contain TV content
                        "TV Genres",
                        "Mixed Genre"]
 
+# Content type mapping for PVR On Demand (Kodi v23+)
+# TODO: https://github.com/xbmc/xbmc/pull/25711
+# MOVIE_CHTYPE channels → "movie" content type
+# TV_CHTYPE channels    → "tvshow" content type
+# radio=True channels   → "music" content type
+
 # =============================================================================
 # Plugin URL Templates (mode= parameter dispatches to handler)
 # =============================================================================
@@ -287,6 +293,7 @@ PVR_CLIENT_ID       = 'pvr.iptvsimple'                   # IPTV Simple Client ad
 PVR_CLIENT_NAME     = 'IPTV Simple Client'               # Human-readable PVR client name
 PVR_CLIENT_LOC      = 'special://profile/addon_data/%s'%(PVR_CLIENT_ID) # PVR addon data dir
 PVR_SETTINGS_XML    = os.path.join(PVR_CLIENT_LOC,'settings.xml')        # PVR settings file
+# ENABLE_ON_DEMAND  = True                               # TODO: Route VOD content to PVR On Demand API (Kodi v23+)
 
 # =============================================================================
 # Documentation Files
@@ -307,6 +314,7 @@ LOGSFLE             = 'logs.json'       # Diagnostic log export
 SERVERFLE           = 'servers.json'    # Multiroom server registry
 CHANNELFLE          = 'channels.json'   # Channel configuration database
 LIBRARYFLE          = 'library.json'    # Library content index
+PVRFLE              = 'pvr.json'        # PVR sync status
 TVGROUPFLE          = 'tv_groups.xml'    # TV channel group mappings
 RADIOGROUPFLE       = 'radio_groups.xml' # Radio channel group mappings
 PROVIDERFLE         = 'providers.xml'   # Content provider definitions
@@ -319,6 +327,11 @@ CHANNELBACKUP_KEY   = f'{CHANNEL_KEY}.Backup'       # Backup snapshot key
 CHANNELCHANGED_KEY  = f'{CHANNEL_KEY}.Changed'      # Dirty flag for pending changes
 CHANNELLATEST_KEY   = f'{CHANNEL_KEY}.Latest'       # Latest build timestamp
 CHANNELAUTOTUNE_KEY = f'{CHANNEL_KEY}.Autotune'     # Autotune status key
+
+def getChannelKey():
+    """Return the active channel key based on Enable_Autotune setting."""
+    try: return CHANNELAUTOTUNE_KEY if REAL_SETTINGS.getSettingBool('Enable_Autotune') else CHANNEL_KEY
+    except Exception: return CHANNEL_KEY
 RESUME_INDEX        = 'Resume.Filelist.Index'       # Playback resume position index
 
 # =============================================================================

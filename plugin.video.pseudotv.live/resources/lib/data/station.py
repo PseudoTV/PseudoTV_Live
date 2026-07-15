@@ -20,6 +20,8 @@
 from variables import *
 
 class Station():
+
+
     def __init__(self):
         self.id: str = id
         self.number: int = number

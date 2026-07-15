@@ -34,7 +34,7 @@ from variables  import *
 
 
 # if SETTINGS.hasWizardRun():
-        # DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216)%(ADDON_NAME,ADDON_AUTHOR))
+        # DIALOG.qrDialog(URL_WIKI,LANGUAGE(32216).format(name=ADDON_NAME,author=ADDON_AUTHOR))
 
 class Wizard(xbmcgui.WindowXMLDialog):
     lastActionTime = time.time()

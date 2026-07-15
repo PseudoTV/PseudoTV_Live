@@ -20,6 +20,8 @@ from variables    import *
 from typing import Union
 
 class OpenCV:
+
+
     def determineLength(self, filename: str) -> Union[int, float]:
         """
         Determines video length using OpenCV.
