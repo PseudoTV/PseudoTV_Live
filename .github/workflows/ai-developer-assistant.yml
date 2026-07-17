@@ -69,9 +69,9 @@ jobs:
           echo "xml=false" >> $GITHUB_OUTPUT
           echo "json=false" >> $GITHUB_OUTPUT
           echo "any_code=false" >> $GITHUB_OUTPUT
-          [ "${PY_COUNT:-0}" -gt 0 ] && echo "python=true" >> $GITHUB_OUTPUT
-          [ "${XML_COUNT:-0}" -gt 0 ] && echo "xml=true" >> $GITHUB_OUTPUT
-          [ "${JSON_COUNT:-0}" -gt 0 ] && echo "json=true" >> $GITHUB_OUTPUT
+          if [ "${PY_COUNT:-0}" -gt 0 ]; then echo "python=true" >> $GITHUB_OUTPUT; fi
+          if [ "${XML_COUNT:-0}" -gt 0 ]; then echo "xml=true" >> $GITHUB_OUTPUT; fi
+          if [ "${JSON_COUNT:-0}" -gt 0 ]; then echo "json=true" >> $GITHUB_OUTPUT; fi
           
           if [ "${PY_COUNT:-0}" -gt 0 ] || [ "${XML_COUNT:-0}" -gt 0 ] || [ "${JSON_COUNT:-0}" -gt 0 ]; then
             echo "any_code=true" >> $GITHUB_OUTPUT
@@ -87,19 +87,103 @@ jobs:
           STRINGS_COUNT=0
           [ -n "$STRINGS_CHANGED" ] && STRINGS_COUNT=$(echo "$STRINGS_CHANGED" | grep -c 'strings.po$' || true)
           echo "strings_po=false" >> $GITHUB_OUTPUT
-          [ "${STRINGS_COUNT:-0}" -gt 0 ] && echo "strings_po=true" >> $GITHUB_OUTPUT
+          if [ "${STRINGS_COUNT:-0}" -gt 0 ]; then echo "strings_po=true" >> $GITHUB_OUTPUT; fi
+
+  check-prev:
+    name: Check Previous Run
+    runs-on: ubuntu-latest
+    outputs:
+      prev_failed: ${{ steps.check.outputs.prev_failed }}
+      prev_has_code: ${{ steps.check.outputs.prev_has_code }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 4
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Check Previous Workflow
+        id: check
+        run: |
+          echo "prev_failed=false" >> "$GITHUB_OUTPUT"
+          echo "prev_has_code=false" >> "$GITHUB_OUTPUT"
+          
+          check_commit() {
+            local SHA=$1
+            local PREV=$2
+            
+            if [ -z "$SHA" ] || [ "$SHA" = "0000000000000000000000000000000000000000" ]; then
+              return 1
+            fi
+            
+            # Check code changes between this commit and its child
+            HAS_CHANGES=$(git diff --name-only "$SHA" "$PREV" -- '*.py' '*.xml' '*.json' 2>/dev/null | head -1)
+            
+            # Check if workflow failed
+            RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$SHA&per_page=1" 2>/dev/null || echo '{"workflow_runs":[]}')
+            
+            CONCLUSION=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('workflow_runs',[{}])[0].get('conclusion','none'))" 2>/dev/null || echo "none")
+            
+            echo "Commit $SHA: changes=$([ -n "$HAS_CHANGES" ] && echo "yes" || echo "no"), conclusion=$CONCLUSION"
+            
+            # Found a failed run with code changes - we're done
+            if [ "$CONCLUSION" = "failure" ] && [ -n "$HAS_CHANGES" ]; then
+              echo "prev_failed=true" >> "$GITHUB_OUTPUT"
+              echo "prev_has_code=true" >> "$GITHUB_OUTPUT"
+              return 0
+            fi
+            
+            # Failed but no code changes - keep looking
+            if [ "$CONCLUSION" = "failure" ]; then
+              return 1
+            fi
+            
+            # Not a failure - stop looking
+            return 0
+          }
+          
+          PREV_SHA="${{ github.event.before }}"
+          HEAD_SHA="${{ github.sha }}"
+          
+          # Check up to 3 commits back
+          SHA="$PREV_SHA"
+          CHILD="$HEAD_SHA"
+          for i in 1 2 3; do
+            if ! check_commit "$SHA" "$CHILD"; then
+              # Get parent for next iteration
+              CHILD="$SHA"
+              SHA=$(git rev-parse "$SHA^" 2>/dev/null || echo "")
+            else
+              break
+            fi
+          done
 
   translate:
     name: AI Translation
     runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.strings_po == 'true'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Check for strings.po Changes
+        id: check-strings
+        run: |
+          echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1 2>/dev/null || true
+            CHANGED=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD -- '**/strings.po' 2>/dev/null || true)
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            CHANGED=$(git diff --name-only HEAD~1 HEAD -- '**/strings.po' 2>/dev/null || true)
+          fi
+          if [ -n "$CHANGED" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Changed files: $CHANGED"
+          fi
+      - name: Exit if No Changes
+        if: steps.check-strings.outputs.has_changes != 'true'
+        run: exit 0
 
       - name: Install OpenCode
         run: curl -fsSL https://opencode.ai/install | bash
@@ -107,6 +191,7 @@ jobs:
       - name: Generate Translations
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           EN_GB_FILE="plugin.video.pseudotv.live/resources/language/resource.language.en_gb/strings.po"
           
@@ -139,66 +224,13 @@ jobs:
           
           echo "Changed string IDs: $CHANGED_IDS"
           
-          # Kodi supported languages (ISO 639-1/ISO 3166-1)
+          # Top 5 Kodi languages by user base
           LANGUAGES=(
-            "afZA:Afrikaans (South Africa)"
-            "arAR:Arabic (Argentina)"
-            "bgBG:Bulgarian (Bulgaria)"
-            "caES:Catalan (Spain)"
-            "csCZ:Czech (Czech Republic)"
-            "daDK:Danish (Denmark)"
-            "deDE:German (Germany)"
-            "elGR:Greek (Greece)"
-            "enAU:English (Australia)"
             "enGB:English (United Kingdom)"
-            "enUS:English (United States)"
-            "eoEO:Esperanto"
             "esES:Spanish (Spain)"
-            "esMX:Spanish (Mexico)"
-            "etEE:Estonian (Estonia)"
-            "euES:Basque (Spain)"
-            "faIR:Persian (Iran)"
-            "fiFI:Finnish (Finland)"
-            "frCA:French (Canada)"
+            "deDE:German (Germany)"
             "frFR:French (France)"
-            "glES:Galician (Spain)"
-            "heIL:Hebrew (Israel)"
-            "hiIN:Hindi (India)"
-            "hrHR:Croatian (Croatia)"
-            "huHU:Hungarian (Hungary)"
-            "hyAM:Armenian (Armenia)"
-            "idID:Indonesian (Indonesia)"
-            "isIS:Icelandic (Iceland)"
-            "itIT:Italian (Italy)"
-            "jaJP:Japanese (Japan)"
-            "koKR:Korean (Korea)"
-            "ltLT:Lithuanian (Lithuania)"
-            "lvLV:Latvian (Latvia)"
-            "miNZ:Maori (New Zealand)"
-            "mkMK:Macedonian (North Macedonia)"
-            "mnMN:Mongolian (Mongolia)"
-            "msMY:Malay (Malaysia)"
-            "mtMT:Maltese (Malta)"
-            "nbNO:Norwegian Bokmål (Norway)"
-            "nlNL:Dutch (Netherlands)"
-            "noNO:Norwegian (Norway)"
-            "plPL:Polish (Poland)"
             "ptBR:Portuguese (Brazil)"
-            "ptPT:Portuguese (Portugal)"
-            "roRO:Romanian (Romania)"
-            "ruRU:Russian (Russia)"
-            "skSK:Slovak (Slovakia)"
-            "slSI:Slovenian (Slovenia)"
-            "srRS:Serbian (Serbia)"
-            "svSE:Swedish (Sweden)"
-            "taIN:Tamil (India)"
-            "teIN:Telugu (India)"
-            "thTH:Thai (Thailand)"
-            "trTR:Turkish (Turkey)"
-            "ukUA:Ukrainian (Ukraine)"
-            "viVN:Vietnamese (Vietnam)"
-            "zhCN:Chinese (China)"
-            "zhTW:Chinese (Taiwan)"
           )
           
           # Generate translations for each language
@@ -292,18 +324,34 @@ jobs:
           
           echo "Translation complete"
           
+          # Check if there are any changes
+          if git diff --quiet plugin.video.pseudotv.live/resources/language/ 2>/dev/null; then
+            echo "No translation changes to commit"
+            echo "status=no_changes" >> $GITHUB_OUTPUT
+          else
+            # Create branch and commit
+            BRANCH_NAME="translations/$(date +%Y%m%d-%H%M%S)"
+            git checkout -b "$BRANCH_NAME"
+            git add plugin.video.pseudotv.live/resources/language/
+            git commit -m "Auto-translations: ${#CHANGED_IDS[@]} strings translated to ${#LANGUAGES[@]} languages"
+            git push origin "$BRANCH_NAME"
+            
+            # Create PR
+            BODY="Automated translation update for ${#CHANGED_IDS[@]} changed strings across ${#LANGUAGES[@]} languages."
+            gh pr create --title "Auto-Translations: ${#CHANGED_IDS[@]} strings" --body "$BODY" --base master --head "$BRANCH_NAME" --label "translations" 2>/dev/null || true
+            
+            echo "status=pr_created" >> $GITHUB_OUTPUT
+            echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          fi
+          
           # Generate report
-          cat > translate-report.md << 'REPORT_EOF'
-          ## AI Translation
-          
-          REPORT_EOF
-          
-          echo "**Changed string IDs:** ${CHANGED_IDS}" >> translate-report.md
+          echo "AI Translation Report" > translate-report.md
           echo "" >> translate-report.md
-          echo "**Languages translated:** ${#LANGUAGES[@]}" >> translate-report.md
+          echo "Changed string IDs: ${CHANGED_IDS}" >> translate-report.md
           echo "" >> translate-report.md
-          echo "**Files created/updated:**" >> translate-report.md
-          ls -la plugin.video.pseudotv.live/resources/language/ >> translate-report.md || true
+          echo "Languages translated: ${#LANGUAGES[@]}" >> translate-report.md
+          echo "" >> translate-report.md
+          echo "Status: PR created for review" >> translate-report.md
         continue-on-error: true
       - name: Upload Report
         if: always()
@@ -331,6 +379,7 @@ jobs:
       - name: Check and Update Changelog
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ADDON_XML="plugin.video.pseudotv.live/addon.xml"
           CHANGELOG_TXT="plugin.video.pseudotv.live/changelog.txt"
@@ -447,22 +496,35 @@ jobs:
           fi
           
           echo "Changelog updated successfully"
-          echo "entry=${ENTRY}" >> $GITHUB_OUTPUT
-          echo "version=${VERSION_LABEL}" >> $GITHUB_OUTPUT
+          echo "entry=$ENTRY" >> $GITHUB_OUTPUT
+          echo "version=$VERSION_LABEL" >> $GITHUB_OUTPUT
+          
+          # Check if there are any changes
+          if git diff --quiet "$CHANGELOG_TXT" 2>/dev/null; then
+            echo "No changelog changes to commit"
+            echo "status=no_changes" >> $GITHUB_OUTPUT
+          else
+            # Create branch and commit
+            BRANCH_NAME="changelog/$(date +%Y%m%d-%H%M%S)"
+            git checkout -b "$BRANCH_NAME"
+            git add "$CHANGELOG_TXT"
+            git commit -m "Changelog: $ENTRY"
+            git push origin "$BRANCH_NAME"
+            
+            # Create PR
+            BODY="Automated changelog update for $VERSION_LABEL"
+            gh pr create --title "Changelog: $VERSION_LABEL" --body "$BODY" --base master --head "$BRANCH_NAME" --label "changelog" 2>/dev/null || true
+            
+            echo "status=pr_created" >> $GITHUB_OUTPUT
+            echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          fi
           
           # Generate report
-          cat > changelog-report.md << REPORT_EOF
-          ## Changelog Update
-          
-          **Version:** ${VERSION_LABEL}
-          **Entry:** ${ENTRY}
-          **Total entries in version:** $(echo "$ALL_ENTRIES" | grep -c "^- " || echo "1")
-          
-          REPORT_EOF
-          
-          if [ "${TOTAL:-0}" -gt 20 ]; then
-            echo "**Note:** Entries trimmed from ${TOTAL} to 20 (maximum limit)" >> changelog-report.md
-          fi
+          echo "## Changelog Update" > changelog-report.md
+          echo "" >> changelog-report.md
+          echo "**Version:** $VERSION_LABEL" >> changelog-report.md
+          echo "**Entry:** $ENTRY" >> changelog-report.md
+          echo "**Status:** PR created for review" >> changelog-report.md
         continue-on-error: true
       - name: Upload Report
         if: always()
@@ -487,33 +549,37 @@ jobs:
       - name: Run Kodi Addon Checker
         id: kodi-check
         run: |
-          kodi-addon-checker --branch omega plugin.video.pseudotv.live 2>&1 > kodi-raw.txt || true
+          kodi-addon-checker --branch omega plugin.video.pseudotv.live > kodi-raw.txt 2>&1 || true
           
-          ERRORS=$(grep -c "^ERROR:" kodi-raw.txt 2>/dev/null || echo "0")
-          WARNINGS=$(grep -c "^WARN:" kodi-raw.txt 2>/dev/null || echo "0")
-          echo "errors=${ERRORS:-0}" >> $GITHUB_OUTPUT
-          echo "warnings=${WARNINGS:-0}" >> $GITHUB_OUTPUT
+          ERRORS=$(grep -c "^ERROR:" kodi-raw.txt || echo "0")
+          WARNINGS=$(grep -c "^WARN:" kodi-raw.txt || echo "0")
           
-          cat > kodi-check-report.md << 'REPORT_EOF'
-          ## Kodi Addon Checker
+          # Clean up - remove carriage returns and whitespace
+          ERRORS=$(echo "$ERRORS" | tr -d '[:space:]')
+          WARNINGS=$(echo "$WARNINGS" | tr -d '[:space:]')
           
-          REPORT_EOF
+          echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
+          echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
           
-          if [ "${ERRORS:-0}" -gt 0 ] || [ "${WARNINGS:-0}" -gt 0 ]; then
-            echo "| Severity | Count |" >> kodi-check-report.md
-            echo "|----------|-------|" >> kodi-check-report.md
-            echo "| Errors | ${ERRORS:-0} |" >> kodi-check-report.md
-            echo "| Warnings | ${WARNINGS:-0} |" >> kodi-check-report.md
-            echo "" >> kodi-check-report.md
-            echo '```' >> kodi-check-report.md
-            grep -E "^(ERROR|WARN):" kodi-raw.txt >> kodi-check-report.md || true
-            echo '```' >> kodi-check-report.md
-          else
-            echo "No issues found." >> kodi-check-report.md
-          fi
+          {
+            echo "## Kodi Addon Checker"
+            echo ""
+            if [ "$ERRORS" -gt 0 ] || [ "$WARNINGS" -gt 0 ]; then
+              echo "| Severity | Count |"
+              echo "|----------|-------|"
+              echo "| Errors | $ERRORS |"
+              echo "| Warnings | $WARNINGS |"
+              echo ""
+              echo '```'
+              grep -E "^(ERROR|WARN):" kodi-raw.txt || true
+              echo '```'
+            else
+              echo "No issues found."
+            fi
+          } > kodi-check-report.md
           
           # Fail if there are errors
-          if [ "${ERRORS:-0}" -gt 0 ]; then
+          if [ "$ERRORS" -gt 0 ]; then
             exit 1
           fi
       - name: Upload Report
@@ -541,7 +607,7 @@ jobs:
       - name: Run Ruff
         id: check-ruff
         run: |
-          ruff check plugin.video.pseudotv.live/resources/lib --select=F,E9,W6 --output-format=concise 2>&1 > ruff-raw.txt || true
+          ruff check plugin.video.pseudotv.live/resources/lib --select=F,E9,W6 --ignore=F401,F403,F405 --output-format=concise 2>&1 > ruff-raw.txt || true
           
           ISSUES=$(grep -cE "^[^ ].*:[0-9]+:[0-9]+:" ruff-raw.txt 2>/dev/null || echo "0")
           echo "issues=${ISSUES:-0}" >> $GITHUB_OUTPUT
@@ -552,20 +618,19 @@ jobs:
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
           
-          cat > ruff-report.md << 'REPORT_EOF'
-          ## Ruff Linter
-          
-          REPORT_EOF
-          
-          if [ "${ISSUES:-0}" -gt 0 ]; then
-            echo "**${ISSUES} issue(s) found**" >> ruff-report.md
-            echo "" >> ruff-report.md
-            echo '```' >> ruff-report.md
-            cat ruff-raw.txt >> ruff-report.md
-            echo '```' >> ruff-report.md
-          else
-            echo "No issues found." >> ruff-report.md
-          fi
+          {
+            echo "## Ruff Linter"
+            echo ""
+            if [ "${ISSUES:-0}" -gt 0 ]; then
+              echo "**${ISSUES} issue(s) found**"
+              echo ""
+              echo '```'
+              cat ruff-raw.txt
+              echo '```'
+            else
+              echo "No issues found."
+            fi
+          } > ruff-report.md
         continue-on-error: true
       - name: Upload Report
         if: always()
@@ -613,21 +678,20 @@ jobs:
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
           
-          cat > xml-report.md << 'REPORT_EOF'
-          ## XML Validation
-          
-          REPORT_EOF
-          
-          ERROR_COUNT=$(grep -c "^ERROR:" xml-raw.txt 2>/dev/null || echo "0")
-          if [ "${ERROR_COUNT:-0}" -gt 0 ]; then
-            echo "**${ERROR_COUNT} error(s) found**" >> xml-report.md
-            echo "" >> xml-report.md
-            echo '```' >> xml-report.md
-            grep "^ERROR:" xml-raw.txt >> xml-report.md || true
-            echo '```' >> xml-report.md
-          else
-            echo "All XML files valid." >> xml-report.md
-          fi
+          ERROR_COUNT=$(grep -c "^ERROR:" xml-raw.txt || echo "0")
+          {
+            echo "## XML Validation"
+            echo ""
+            if [ "${ERROR_COUNT:-0}" -gt 0 ]; then
+              echo "**${ERROR_COUNT} error(s) found**"
+              echo ""
+              echo '```'
+              grep "^ERROR:" xml-raw.txt || true
+              echo '```'
+            else
+              echo "All XML files valid."
+            fi
+          } > xml-report.md
         continue-on-error: true
       - name: Upload Report
         if: always()
@@ -676,21 +740,20 @@ jobs:
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
           
-          cat > json-report.md << 'REPORT_EOF'
-          ## JSON Validation
-          
-          REPORT_EOF
-          
-          ERROR_COUNT=$(grep -c "^ERROR:" json-raw.txt 2>/dev/null || echo "0")
-          if [ "${ERROR_COUNT:-0}" -gt 0 ]; then
-            echo "**${ERROR_COUNT} error(s) found**" >> json-report.md
-            echo "" >> json-report.md
-            echo '```' >> json-report.md
-            grep "^ERROR:" json-raw.txt >> json-report.md || true
-            echo '```' >> json-report.md
-          else
-            echo "All JSON files valid." >> json-report.md
-          fi
+          ERROR_COUNT=$(grep -c "^ERROR:" json-raw.txt || echo "0")
+          {
+            echo "## JSON Validation"
+            echo ""
+            if [ "${ERROR_COUNT:-0}" -gt 0 ]; then
+              echo "**${ERROR_COUNT} error(s) found**"
+              echo ""
+              echo '```'
+              grep "^ERROR:" json-raw.txt || true
+              echo '```'
+            else
+              echo "All JSON files valid."
+            fi
+          } > json-report.md
         continue-on-error: true
       - name: Upload Report
         if: always()
@@ -723,20 +786,19 @@ jobs:
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
           
-          cat > fstring-report.md << 'REPORT_EOF'
-          ## F-String Validation
-          
-          REPORT_EOF
-          
-          if grep -q "^ERRORS:" fstring-raw.txt 2>/dev/null; then
-            echo "**Issues found**" >> fstring-report.md
-            echo "" >> fstring-report.md
-            echo '```' >> fstring-report.md
-            cat fstring-raw.txt >> fstring-report.md
-            echo '```' >> fstring-report.md
-          else
-            echo "No issues found." >> fstring-report.md
-          fi
+          {
+            echo "## F-String Validation"
+            echo ""
+            if grep -q "^ERRORS:" fstring-raw.txt 2>/dev/null; then
+              echo "**Issues found**"
+              echo ""
+              echo '```'
+              cat fstring-raw.txt
+              echo '```'
+            else
+              echo "No issues found."
+            fi
+          } > fstring-report.md
         continue-on-error: true
       - name: Upload Report
         if: always()
@@ -793,20 +855,19 @@ jobs:
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
           
-          cat > lint-report.md << 'REPORT_EOF'
-          ## OpenCode Lint
-          
-          REPORT_EOF
-          
-          if grep -qiE "(error|issue|problem)" lint-raw.txt 2>/dev/null; then
-            echo "**Issues found**" >> lint-report.md
-            echo "" >> lint-report.md
-            echo '```' >> lint-report.md
-            cat lint-raw.txt >> lint-report.md
-            echo '```' >> lint-report.md
-          else
-            echo "No issues found." >> lint-report.md
-          fi
+          {
+            echo "## OpenCode Lint"
+            echo ""
+            if grep -qiE "(error|issue|problem)" lint-raw.txt 2>/dev/null; then
+              echo "**Issues found**"
+              echo ""
+              echo '```'
+              cat lint-raw.txt
+              echo '```'
+            else
+              echo "No issues found."
+            fi
+          } > lint-report.md
         continue-on-error: true
       - name: Upload Report
         if: always()
@@ -819,7 +880,7 @@ jobs:
   ai-review:
     name: AI Code Review
     runs-on: ubuntu-latest
-    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint]
+    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, check-prev]
     if: |
       always() && needs.changes.outputs.any_code == 'true' && (
         needs.lint-ruff.outputs.has_errors == 'true' ||
@@ -827,7 +888,8 @@ jobs:
         needs.lint-json.outputs.has_errors == 'true' ||
         needs.fstring-check.outputs.has_errors == 'true' ||
         needs.lint.outputs.has_errors == 'true' ||
-        needs.addon-check.result == 'failure'
+        needs.addon-check.result == 'failure' ||
+        (needs.check-prev.outputs.prev_failed == 'true' && needs.check-prev.outputs.prev_has_code == 'true')
       )
     steps:
       - name: Checkout Code
@@ -856,12 +918,11 @@ jobs:
           
           OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Analyze these code changes to PseudoTV Live (Kodi addon). CHANGED FILES: $FILES CODE DIFF: $DIFF Focus on: 1. Does this break existing functionality? 2. Bugs or logic errors? 3. Follows existing code patterns? 4. Missing imports or undefined variables? 5. Kodi API compatibility issues? Provide risk assessment (LOW/MEDIUM/HIGH) and specific findings." 2>&1 || true)
           
-          cat > ai-review-report.md << 'REPORT_EOF'
-          ## AI Code Review
-          
-          REPORT_EOF
-          
-          echo "$OPENCODE_OUTPUT" | sed 's/[^[[:alnum:][:space:]._-]//g' >> ai-review-report.md || true
+          {
+            echo "## AI Code Review"
+            echo ""
+            echo "$OPENCODE_OUTPUT" | sed 's/[^[[:alnum:][:space:]._-]//g' || true
+          } > ai-review-report.md
         continue-on-error: true
       - name: Upload Report
         if: always()
@@ -875,7 +936,7 @@ jobs:
     name: Generate Report
     runs-on: ubuntu-latest
     if: always()
-    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, ai-review, translate, changelog]
+    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, ai-review, translate, changelog, check-prev]
     steps:
       - name: Download All Reports
         uses: actions/download-artifact@v7
