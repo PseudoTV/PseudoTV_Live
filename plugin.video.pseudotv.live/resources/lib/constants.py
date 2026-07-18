@@ -92,7 +92,7 @@ def _getFreeMEM() -> int:
     try:
         raw_mem = xbmc.getInfoLabel('System.FreeMemory')
         return int("".join(c for c in raw_mem if c.isdigit()))
-    except Exception as e:
+    except Exception:
         return 1024
 # =============================================================================
 # Performance & Threading
@@ -166,6 +166,7 @@ M3U_REFRESH         = 15     # M3U file refresh check interval (seconds)
 M3U_INTERVAL        = 30     # M3U full reload interval (seconds)
 M3U_TIMEOUT         = 30     # M3U network request timeout (seconds)
 HTTP_TIMEOUT        = 30     # HTTP server file serving timeout (seconds)
+LOGO_REFRESH        = 900
 
 # =============================================================================
 # Media Type Classifications
@@ -371,7 +372,7 @@ NOTE_WAV            = os.path.join(SFX_LOC,'notify.wav') # Subtle notification s
 # =============================================================================
 # Remote/Default Config Files (shipped with addon)
 # =============================================================================
-M3UFLE_ITEM         = os.path.join(REMOTE_LOC,'m3u.json')          # M3U item template
+M3UFLE_DEFAULT      = os.path.join(REMOTE_LOC,'m3u.json')          # M3U item template
 SEASONS             = os.path.join(REMOTE_LOC,'seasons.json')      # Seasonal content definitions
 HOLIDAYS            = os.path.join(REMOTE_LOC,'holidays.json')     # Holiday content definitions
 GROUPFLE_DEFAULT    = os.path.join(REMOTE_LOC,'groups.xml')        # Default channel groups
@@ -492,6 +493,7 @@ HEADER = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 _LOG_THROTTLE  = {}  # {(event, level): (last_log_timestamp, skip_count)} - for throttled log dedup
 _LOG_LAST_KEY  = None  # last (event, level) key that was logged - for consecutive duplicate detection
 LOG_MAX_LENGTH = 500  # max characters for log message string (traceback excluded)
+DEBUG_NAMES    = {0: 'LOGDEBUG', 1: 'LOGINFO', 2: 'LOGWARNING', 3: 'LOGERROR', 4: 'LOGFATAL'}
 
 def LOG(event: Any, level: int = xbmc.LOGDEBUG, throttle: float = float(SERVICE_INTERVAL)):
     """Central logging function. Checks Debug_Enable and Debug_Level settings.
@@ -500,7 +502,6 @@ def LOG(event: Any, level: int = xbmc.LOGDEBUG, throttle: float = float(SERVICE_
     then a 'Skipped N duplicate messages..' line is logged when the sequence ends."""
     global _LOG_LAST_KEY
     if REAL_SETTINGS.getSetting('Debug_Enable') == 'true' or level >= 3:
-        DEBUG_NAMES  = {0: 'LOGDEBUG', 1: 'LOGINFO', 2: 'LOGWARNING', 3: 'LOGERROR', 4: 'LOGFATAL'}
         DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}
         DEBUG_LEVEL  = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
         if len(str(event)) > LOG_MAX_LENGTH: event = '%s...[TRUNCATED]' % str(event)[:LOG_MAX_LENGTH]

@@ -57,6 +57,16 @@ class Fillers(object):
 
     def fillSources(self) -> Dict[str, Any]:
         def _build(ftype: str, path: str, checksum: str = ADDON_VERSION, expiration: datetime.timedelta = datetime.timedelta(minutes=15)) -> Dict[str, List[Dict[str, Any]]]:
+            # Check cache first — avoid re-walking directories on every build
+            cache_key = f'fillers.{ftype}.{FileAccess._getMD5(path)}'
+            cached = self.cache.get(cache_key, checksum)
+            if cached is not None:
+                self.log('[%s] fillSources _build, type = %s, path = %s (cache hit)'%(self.citem.get('id'),ftype, path))
+                return cached
+            # Skip expensive directory walk if path doesn't exist
+            if not FileAccess.exists(path):
+                self.log('[%s] fillSources _build, type = %s, path = %s (not found)'%(self.citem.get('id'),ftype, path))
+                return {}
             self.log('[%s] fillSources _build, type = %s, path = %s'%(self.citem.get('id'),ftype, path))
             data    = self.jsonRPC.walkFileDirectory(path, 'video', None, self.builder.limit, checksum, expiration)
             tmpDICT: Dict[str, List[Dict[str, Any]]] = {}
@@ -70,6 +80,7 @@ class Fillers(object):
                     if item['duration'] == 0: continue
                     tmpDICT.setdefault(path.lower(),[]).append(item)
                     [tmpDICT.setdefault(genre.lower(),[]).append(item) for genre in item.get('genre',[])] #breakdown genres if available
+            if tmpDICT: self.cache.set(cache_key, tmpDICT, checksum, expiration)
             return tmpDICT
 
         pDialog = getattr(self.builder, 'pDialog', None)
@@ -104,7 +115,6 @@ class Fillers(object):
                         if item['duration'] == 0: continue
                         values.setdefault('items',{}).setdefault(genre.lower(),[]).append(item)
         
-            total = sum(len(item) for item in values.get('items', {}).values() if isinstance(item, list))
             self.log('fillSources, type = %s, items = %s' % (ftype, len(values['items'])))
         return values
         
@@ -133,6 +143,7 @@ class Fillers(object):
     def _getFillterItem(self, ftype: str, count: int = 1, keys: List[Any] = ['resources'], chance: bool = False, passes: Optional[int] = None) -> List[Dict[str, Any]]:
         tmpLST: List[Dict[str, Any]] = []
         filler = self.bctTypes.get(ftype, {})
+        if not filler.get('items', {}): return tmpLST  # skip if no filler sources exist for this type
         if passes is None: passes = count * len(keys)
         if passes <= 0: return tmpLST
         for key in keys:

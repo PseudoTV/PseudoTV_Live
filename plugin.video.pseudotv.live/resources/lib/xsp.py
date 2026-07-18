@@ -98,9 +98,6 @@ class XSP(object):
             except Exception: type = MUSIC_TYPES[0]
             if type.lower() in map(str.lower,MUSIC_TYPES): return []
             else:
-                try:    limit = int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue)
-                except Exception: limit = 0
-                    
                 if type.lower() == "tvshows":
                     sort  = {}
                     order = dom.getElementsByTagName("order")
@@ -109,6 +106,9 @@ class XSP(object):
                         except Exception as e: self.log('parseXSP order direction failed: %s' % e, xbmc.LOGDEBUG)
                         try: sort.update({'method':order[0].firstChild.data})
                         except Exception as e: self.log('parseXSP order method failed: %s' % e, xbmc.LOGDEBUG)
+
+                    try: limit = int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue)
+                    except Exception: limit = 0
 
                     paths = []
                     for rule in dom.getElementsByTagName("rule"):
@@ -142,7 +142,7 @@ class XSP(object):
                 self.log("[%s] parseDXSP, found invalid music path! %s"%(id), xbmc.LOGINFO)
                 return ''
         
-            params = FileAccess.loadJSON(params)
+            params = FileAccess.loadJSON(params, skip_cache=True)
             params['rules'].update(filters)
             if '-1/-1/-1/' not in path: path = '%s/-1/-1/-1/'%(path.strip('/')) #flatten xsp
             if 'tvshows' in path:

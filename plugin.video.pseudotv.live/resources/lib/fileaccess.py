@@ -56,7 +56,7 @@ class FileAccess(object):
             padded_data = data + b'=' * (-len(data) % 4)
             raw_bytes = base64.urlsafe_b64decode(padded_data)
             decompressed_str = zlib.decompress(raw_bytes).decode(DEFAULT_ENCODING)
-            return FileAccess.loadJSON(decompressed_str)
+            return FileAccess.loadJSON(decompressed_str, skip_cache=True)
         except Exception as e:
             LOG(f"FileAccess: _decodeString, failed!\n{e}", xbmc.LOGERROR)
         return ""
@@ -115,8 +115,10 @@ class FileAccess(object):
         return '{}'
 
     @staticmethod
-    def loadJSON(item: str = "") -> Any:
-        """Deserialize a JSON string with LRU caching for small strings."""
+    def loadJSON(item: str = "", skip_cache: bool = False) -> Any:
+        """Deserialize a JSON string with LRU caching for small strings.
+        Set skip_cache=True for unique strings that will never cache-hit (avoids cache pollution).
+        """
         if not item:
             return {}
         try:
@@ -124,7 +126,7 @@ class FileAccess(object):
                 return json.load(item) or {}
             if isinstance(item, (bytes, bytearray)):
                 item = item.decode('utf-8')
-            if isinstance(item, str) and len(item) < 8192:
+            if not skip_cache and isinstance(item, str) and len(item) < 8192:
                 cached = FileAccess._json_cache.get(item)
                 if cached is not None:
                     FileAccess._json_cache.move_to_end(item)

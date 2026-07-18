@@ -68,7 +68,9 @@ class Channels(object):
 
     def _load(self) -> dict:
         channelDATA = Globals.settings.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY), default={})
-        if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(channelDATA.get('channels',[]))))
+        if CHANNELAUTOTUNE_KEY not in self.channelKEY:
+            verified = len(list(self._verify(channelDATA.get('channels',[]))))
+            Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(verified))
         self.log('_load, channels=%d' % len(channelDATA.get('channels',[])))
         return channelDATA
     
@@ -93,13 +95,14 @@ class Channels(object):
 
 
     def getTemplate(self) -> dict: 
-        return {}
+        return self.channelTEMP.copy()
         
         
     def getChannels(self) -> list:
         with self._lock:
-            self.log('getChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
-            return sorted(self.channelDATA['channels'], key=itemgetter('number'))
+            channelDATA = (self.channelDATA or FileAccess.getJSON(CHANNELFLE_DEFAULT))
+            self.log('getChannels, channels=%d' % len(channelDATA.get('channels',[])))
+            return sorted(channelDATA['channels'], key=itemgetter('number'))
         
         
     def getChannelbyID(self, id: str) -> list:
@@ -128,8 +131,7 @@ class Channels(object):
             self.log('setChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
         return self._save()
         
-
-
+        
     def getImportPlugins(self) -> list:
         return self.channelDATA.get('plugins',[])
         

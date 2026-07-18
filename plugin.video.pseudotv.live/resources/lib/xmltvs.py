@@ -131,7 +131,7 @@ class XMLTVS(object):
                         with FileAccess.open(self.XMLTVFile, "w") as fle:
                             writer.write(fle, pretty_print=True)
                 except Exception as e:
-                    self.log("_save, failed!", xbmc.LOGERROR)
+                    self.log("_save, failed!\n%s"%e, xbmc.LOGERROR)
                     Globals.dialog.notificationDialog(LANGUAGE(32000))
                 
                 # Update PVR status with current M3U/XMLTV data
@@ -560,7 +560,6 @@ class XMLTVS(object):
     def delRecording(self, ritem: dict) -> bool:
         with self._lock:
             self.log('[%s] delRecording'%((ritem.get('id') or ritem.get('label'))))
-            recordings = self.XMLTVDATA['recordings']
             programmes = self.XMLTVDATA['programmes']
             idx, recording = self.findRecording(ritem)
             if idx is not None:

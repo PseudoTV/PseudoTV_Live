@@ -17,33 +17,26 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from variables    import *
-from typing import Union
 
 class OpenCV:
 
 
-    def determineLength(self, filename: str) -> Union[int, float]:
+    def determineLength(self, filename: str) -> int:
         """
         Determines video length using OpenCV.
         Returns duration in seconds.
         """
+        cap = None
         try:
             import cv2
             LOG("OpenCV: determineLength %s"%(filename))
-            # CAP_PROP_POS_MSEC returns milliseconds, convert to seconds
-            dur_ms = cv2.VideoCapture(FileAccess.translatePath(filename)).get(cv2.CAP_PROP_FRAME_COUNT)
-            if dur_ms <= 0:
-                # Fallback to frame count method
-                cap = cv2.VideoCapture(FileAccess.translatePath(filename))
-                frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                cap.release()
-                if frame_count > 0 and fps > 0:
-                    dur = int(frame_count / fps)
-                else:
-                    return 0
+            cap = cv2.VideoCapture(FileAccess.translatePath(filename))
+            frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            if frame_count > 0 and fps > 0:
+                dur = int(frame_count / fps)
             else:
-                dur = int(dur_ms)
+                dur = 0
             LOG('OpenCV: Duration is %s seconds'%(dur))
             return dur
         except ImportError:
@@ -52,3 +45,6 @@ class OpenCV:
         except Exception as e:
             LOG("OpenCV: failed! %s"%(e), xbmc.LOGERROR)
             return 0
+        finally:
+            if cap is not None:
+                cap.release()

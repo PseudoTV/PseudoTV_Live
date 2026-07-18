@@ -5,16 +5,16 @@
     <onunload>SetProperty(plugin.video.pseudotv.live.BUSY_OVERLAY.Running,false,10000)</onunload>
     <controls>
         <animation type="WindowOpen" reversible="false">
-            <effect type="zoom" start="80" end="160" center="50%,50%" delay="160" tween="back" time="240"/>
+            <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
             <effect type="fade" delay="160" end="100" time="240"/>
         </animation>
         <animation type="WindowClose" reversible="false">
-            <effect type="zoom" start="80" end="160" center="50%,50%" easing="in" tween="back" time="240"/>
+            <effect type="zoom" start="100" end="80" center="50%,50%" easing="in" tween="back" time="240"/>
             <effect type="fade" start="100" end="0" time="240"/>
         </animation>
         <control type="group">
             <animation type="Visible" reversible="false">
-                <effect type="zoom" start="80" end="160" center="50%,50%" delay="160" tween="back" time="240"/>
+                <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" end="100" time="240"/>
             </animation>
             <centertop>50%</centertop>
@@ -43,6 +43,7 @@
                     <visible>!Window.IsVisible(fullscreenvideo)</visible>
                     <aspectratio aligny="center">keep</aspectratio>
                     <texture>dialogs/extendedprogress/logo.png</texture>
+                    <animation effect="fade" start="80" end="100" time="1000" loop="true" pulse="true" condition="true">Conditional</animation>
                 </control>
                 <control type="image" id="41">
                     <centertop>50%</centertop>
@@ -54,6 +55,20 @@
                     <texture colordiffuse="FF01416b">dialogs/extendedprogress/loading.png</texture>
                     <animation effect="rotate" center="auto" start="360" end="0" time="1500" loop="true" condition="true">Conditional</animation>
                 </control>
+            </control>
+            <control type="label" id="40002">
+                <description>status text</description>
+                <centertop>70%</centertop>
+                <centerleft>50%</centerleft>
+                <width>400</width>
+                <height>40</height>
+                <font>font12</font>
+                <align>center</align>
+                <textcolor>dimgray</textcolor>
+                <label/>
+                <animation type="Visible" reversible="false">
+                    <effect type="fade" start="0" end="100" time="200"/>
+                </animation>
             </control>
         </control>
     </controls>

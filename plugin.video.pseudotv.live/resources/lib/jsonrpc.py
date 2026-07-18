@@ -102,7 +102,7 @@ class JSONRPC(object):
             sock.settimeout(float(timeout))
             sock.connect((ip, 9090))
             sock.sendall(command.encode(DEFAULT_ENCODING))
-            return FileAccess.loadJSON(sock.recv(4096).decode(DEFAULT_ENCODING))
+            return FileAccess.loadJSON(sock.recv(4096).decode(DEFAULT_ENCODING), skip_cache=True)
         except socket.timeout:
             self.log("sendRemote to %s timed out (timeout=%ds)" % (ip, timeout), xbmc.LOGERROR)
             return None
@@ -117,7 +117,7 @@ class JSONRPC(object):
         command["id"] = f"{ADDON_ID}.local"
         if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
         try:
-            response = FileAccess.loadJSON(self.pool.executor(xbmc.executeJSONRPC,timeout,FileAccess.dumpJSON(command))) or {}
+            response = FileAccess.loadJSON(self.pool.executor(xbmc.executeJSONRPC,timeout,FileAccess.dumpJSON(command)), skip_cache=True) or {}
         except Exception as e:
             self.log('sendJSON, failed to parse response: %s' % e, xbmc.LOGWARNING)
             response = {}
@@ -128,9 +128,9 @@ class JSONRPC(object):
 
 
     def queueJSON(self, param: dict):
-        if hasattr(self.service,'jsonQue'): self.service.jsonQue.append(param)
-        
-        
+        if hasattr(self.service,'jsonQue'): self.service.jsonQue.add(FileAccess.dumpJSON(param, sortkey=True))
+
+
     def cacheJSON(self, param: dict, life: Optional[datetime.timedelta] = None, checksum: Optional[str] = None, timeout: Optional[int] = None) -> dict:
         if checksum is None: checksum = ADDON_VERSION
         if life is None: life = datetime.timedelta(minutes=5)
@@ -222,7 +222,7 @@ class JSONRPC(object):
     def getEnums(self, id: str, type: str = '', key: str = 'enums') -> Any:
         self.log('getEnums id = %s, type = %s, key = %s' % (id, type, key))
         param = {"method":"JSONRPC.Introspect","params":{"getmetadata":True,"filterbytransport":True,"filter":{"getreferences":False,"id":id,"type":"type"}}}
-        json_response = self.cacheJSON(param,datetime.timedelta(days=28),self.getInfoLabel('System.BuildVersion')).get('result',{}).get('types',{}).get(id,{})
+        json_response = self.cacheJSON(param,datetime.timedelta(days=84),self.getInfoLabel('System.BuildVersion')).get('result',{}).get('types',{}).get(id,{})
         return (json_response.get('properties',{}).get(type,{}).get(key) or json_response.get(type,{}).get(key) or json_response.get(key,[]))
 
 
@@ -268,8 +268,9 @@ class JSONRPC(object):
 
     def getAddonDetails(self, addonid: Optional[str] = None, cache: bool = True) -> dict:
         if addonid is None: addonid = ADDON_ID
-        param = {"method":"Addons.GetAddonDetails","params":{"addonid":addonid,"properties":self.getEnums("Addon.Fields", type='items')}}
-        if cache: return self.cacheJSON(param).get('result',{}).get('addon', {})
+        param   = {"method":"Addons.GetAddonDetails","params":{"addonid":addonid,"properties":self.getEnums("Addon.Fields", type='items')}}
+        version = Globals.settings.getAddonDetails(addonid).get('version')
+        if cache: return self.cacheJSON(param, checksum=version).get('result',{}).get('addon', {})
         else:     return self.sendJSON(param).get('result',{}).get('addon', {})
 
 
@@ -623,7 +624,7 @@ class JSONRPC(object):
             try:
                 params = param.get(item.get('type'))
                 self.log('quePlaycount, params = %s'%(params.get('params',{})))
-                if hasattr(self.service, 'jsonQue'): self.service.jsonQue.append(params)
+                if hasattr(self.service, 'jsonQue'): self.service.jsonQue.add(FileAccess.dumpJSON(params, sortkey=True))
             except Exception as e: self.log('quePlaycount failed: %s' % e, xbmc.LOGDEBUG)
                 
                 
@@ -651,7 +652,7 @@ class JSONRPC(object):
             getDirectory = True
             param["media"] = media
             param["directory"] = path
-            param["properties"] = self.getEnums("List.Fields.Files", type='items')
+            param["properties"] = self.getEnums("List.Fields.Files", type='items')  # requests ~50 fields per item
         self.log(f"requestList, id: {ch_id}, getDirectory = {getDirectory}, media = {media}, limit = {page}, sort = {sort}, query = {query}, limits = {limits}\npath = {path}")
         
         # Process Auto-Pagination and Cache Thresholds
@@ -665,9 +666,12 @@ class JSONRPC(object):
 
         if limits.get('start', 0) >= 0:
             current_end = limits.get('end', 0)
+            start = 0 if current_end == -1 else current_end
+            if start >= limits.get('total', 0):
+                start = 0  # wrap around when pagination exceeds total
             param["limits"] = {
-                "start": 0 if current_end == -1 else current_end,
-                "end": page
+                "start": start,
+                "end": start + page
             }
             
         param["sort"] = sort
@@ -690,14 +694,9 @@ class JSONRPC(object):
             self.log(f'[{ch_id}] requestList, exceeding boundaries. Resetting limits to 0')
             limits = {"end": 0, "start": 0, "total": total_records}
               
-        if len(items) == 0 and total_records > 0 and end_boundary > 0:
-            self.log(f"[{ch_id}] requestList, items empty but total count exists. Retrying with fresh bounds at 0.")
-            fallback_limits = {"end": 0, "start": 0, "total": total_records}
-            return self.requestList(citem, path, media, page, sort, filter, fallback_limits, query)
-        else:          
-            self.autoPagination(ch_id, path, query, limits)
-            self.log(f"[{ch_id}] requestList, return items = {len(items)}")
-            return items, limits, errors
+        self.autoPagination(ch_id, path, query, limits)
+        self.log(f"[{ch_id}] requestList, return items = {len(items)}")
+        return items, limits, errors
 
 
     def resetPagination(self, id: str, path: str, query: Optional[dict] = None, limits: Optional[dict] = None) -> dict:
@@ -735,11 +734,9 @@ class JSONRPC(object):
         username = 'kodi'
         password = ''
         secure   = False
-        enabled  = True
         settings = self.getSetting('control','services',cache=True)
         for setting in settings:
             if setting.get('id','').lower() == 'services.webserver' and not setting.get('value'):
-                enabled = False
                 Dialog().notificationDialog(LANGUAGE(32131))
                 break
             if   setting.get('id','').lower() == 'services.webserverusername': username = setting.get('value')
@@ -851,11 +848,9 @@ class JSONRPC(object):
             broadcasts    = self.getPVRBroadcasts(channel_id) if channel_id else []
             broadcastpast = []
             broadcastnext = []
-            broadcastnow = None
             for b in broadcasts:
                 prog = b.get('progresspercentage', 0)
                 if prog == 100:      broadcastpast.append(b)
-                elif 0 < prog < 100: broadcastnow = b
                 elif prog == 0:      broadcastnext.append(b)
 
             if broadcastpast:

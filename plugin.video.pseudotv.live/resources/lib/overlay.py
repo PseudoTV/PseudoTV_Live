@@ -41,6 +41,14 @@ class Busy(xbmcgui.WindowXMLDialog):
             LOG(f"Busy: onInit, failed!\n{str(e)}", xbmc.LOGERROR)
 
 
+    def setStatus(self, text: str):
+        try:
+            label = self.getControl(40002)
+            label.setLabel(text)
+        except Exception:
+            pass
+
+
     def onAction(self, act: xbmcgui.Action):
         actionId = act.getId()
         if actionId == 0 or not actionId: return
@@ -335,8 +343,7 @@ class Overlay:
             self._addControl(self.channelBug)
             
             id   = self.channelBug.getId()
-            logo = self.citem.get('logo',(Globals.builtin.getInfoLabel('Player.Art(icon)') or LOGO))
-            wait = 900 #15mins todo add user settings
+            logo = self.citem.get('logo') or Globals.builtin.getInfoLabel('Player.Art(icon)') or LOGO
             
             if   self.forceBugDiffuse:        self.channelBug.setColorDiffuse(self.channelBugColor)
             elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
@@ -442,7 +449,6 @@ class OnNext(xbmcgui.WindowXMLDialog):
     def _run(self):
         try:
             if self.onNextMode in [1, 2]: 
-                logo      = self.citem.get('logo') or Globals.builtin.getInfoLabel('Player.Art(icon)') or LOGO
                 chname    = self.citem.get('name') or Globals.builtin.getInfoLabel('VideoPlayer.ChannelName')
                 nowTitle  = self.fitem.get('label') or Globals.builtin.getInfoLabel('VideoPlayer.Title')
                 nextTitle = self.nitem.get('showlabel') or Globals.builtin.getInfoLabel('VideoPlayer.NextTitle') or chname

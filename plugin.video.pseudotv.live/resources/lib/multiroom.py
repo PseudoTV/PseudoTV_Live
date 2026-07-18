@@ -60,7 +60,8 @@ class Multiroom(object):
             
             
     def getServers(self) -> dict:
-        return self.serverData.get('servers',{})
+        serverData = (self.serverData or FileAccess.getJSON(SERVERFLE_DEFAULT))
+        return serverData.get('servers', {})
 
 
     def _setServers(self, servers: Optional[dict] = None) -> bool:
@@ -163,7 +164,7 @@ class Multiroom(object):
             
         if not Globals.properties.isRunning('Multiroom._selServer'):
             with Globals.properties.chkRunning('Multiroom._selServer'):
-                selects = Globals.dialog.selectDialog(lizLST,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizLST) if FileAccess.loadJSON(listitem.getPath()).get('enabled',False)])
+                selects = Globals.dialog.selectDialog(lizLST,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizLST) if FileAccess.loadJSON(listitem.getPath(), skip_cache=True).get('enabled',False)])
                 if not selects is None:
                     if 0 in selects: return self._delServer(servers)
                     else:

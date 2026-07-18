@@ -37,8 +37,10 @@ class YTParser(object):
 
 
     def _getVideoID(self, filename: str) -> Union[str, None]:
-        if   'videoid'  in filename: return _VIDEOID_RE.search(filename).group(1)
-        elif 'video_id' in filename: return _VIDEO_ID_RE.search(filename).group(1)
+        match = _VIDEOID_RE.search(filename) if 'videoid' in filename else None
+        if match: return match.group(1)
+        match = _VIDEO_ID_RE.search(filename) if 'video_id' in filename else None
+        if match: return match.group(1)
         return None
 
 
@@ -67,7 +69,7 @@ class YTParser(object):
                 LOG("YTParser: _getDurationViaYDL, [%s] file = %s"%(vID,filename))
                 ydl = YoutubeDL({'quiet': False, 'skip_download': True, 'cookiefile': FileAccess.translatePath(YOUTUBE_COOKIES), 'no_color': True, 'format': 'best', 'outtmpl': '%(id)s.%(ext)s', 'no-mtime': True, 'add-header': HEADER, 'socket_timeout': 10})
                 with ydl:
-                    return ydl.extract_info("https://www.youtube.com/watch?v={sID}".format(sID=vID), download=False).get('duration',0)
+                    return ydl.extract_info("https://www.youtube.com/watch?v={vID}".format(vID=vID), download=False).get('duration',0)
         except Exception as e:
             LOG("YTParser: _getDurationViaYDL, [%s] failed!\n%s"%(vID,e), xbmc.LOGWARNING)
         return 0

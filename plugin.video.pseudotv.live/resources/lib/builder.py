@@ -37,14 +37,15 @@ class Builder(object):
     
     def __init__(self, service: Any):
         # Global dialog properties
-        self.fCount  = 0
-        self.pCount  = 0
-        self.cCount  = 0
-        self.pDialog = None
-        self.pMSG    = ''
-        self.pName   = ''
-        self.pHeader = ''
-        self.pErrors = []
+        self.fCount    = 0
+        self.pCount    = 0
+        self.cCount    = 0
+        self._buildIdx = 0
+        self.pDialog   = None
+        self.pMSG      = ''
+        self.pName     = ''
+        self.pHeader   = ''
+        self.pErrors   = []
         
         # Global rules setup
         self.accurateDuration = bool(Globals.settings.getSettingInt('Duration_Type'))
@@ -185,12 +186,14 @@ class Builder(object):
             future_stop = now + ((MAX_GUIDEDAYS * 86400) - 10800)
             fallback_str = Globals._epochTime(fallback_epoch, tz=False).strftime(DTFORMAT)
 
-            self.pDialog, self.pMSG, self.pName, self.pHeader = None, '', '', ''
+            self.pDialog, self.pName, self.pHeader = None, '', ''
+            self.pMSG    = f"{LANGUAGE(32144)}: {LANGUAGE(32212)}"
             self.pErrors = []
             self.pCount  = 0
             self.cCount  = len(channels)
             
             preview_results = {}
+            updated = False
             with M3U(writable=write) as m3u, XMLTVS(writable=write, m3u=m3u) as epg:
                 with Globals.dialog._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
                     all_stop_times = dict(epg.loadStopTimes(channels, fallback=fallback_str))
@@ -202,8 +205,8 @@ class Builder(object):
                     
                     for idx, citem in enumerate(channels):
                         try:
-                            updated = set()
-                            self.pMSG = f"{LANGUAGE(32144)}: {LANGUAGE(32212)}"
+                            updated = False
+                            self._buildIdx = idx
                             self.pHeader = ADDON_NAME
                             self.pName   = citem.get('name', '')
                             self.pCount  = int(idx * 100) // self.cCount
@@ -249,7 +252,7 @@ class Builder(object):
                                     changes.add(self.channels.addChannel(citem))
 
                             if _update or _changed:                       
-                                    self.pMSG = LANGUAGE(32236) if preview else (f"{LANGUAGE(30014)} {LANGUAGE(30223)}" if start_timestamp_str == fallback_str else f"{LANGUAGE(32022)} {LANGUAGE(30223)}")
+                                    self.pMSG = LANGUAGE(32236) if preview else (f"{LANGUAGE(30014)} {LANGUAGE(30108) if len(channels) else LANGUAGE(30223)}" if start_timestamp_str == fallback_str else f"{LANGUAGE(32022)} {LANGUAGE(30223)}")
                                     self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
 
                             if start_epoch > 0:
@@ -276,17 +279,17 @@ class Builder(object):
                                     if preview: preview_results[citem.get('id')] = fileList
                                     else:
                                         prog_added = any([epg.addProgram(citem.get('id'), epg.getProgramItem(citem, item)) for item in fileList])
-                                        updated.add(prog_added)
+                                        updated = updated or prog_added
                                         self.log(f"[{citem.get('id')}] buildChannels, epg.addProgram: {prog_added}, {len(fileList)} programmes added")
                                                     
                                 elif not fileList:
                                     has_progs = has_programmes.get(citem.get('id'), False)
-                                    updated.add(has_progs)
+                                    updated = updated or has_progs
                                     self.log(f"[{citem.get('id')}] buildChannels, no programmes found (has_existing={has_progs})")
                                 self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                             else:
                                 has_progs = has_programmes.get(citem.get('id'), False)
-                                updated.add(has_progs)
+                                updated = updated or has_progs
                         
                             if any(updated): 
                                 sitem = m3u.getStationItem(citem)
@@ -302,15 +305,19 @@ class Builder(object):
                             self.log(f"Channel compiler faulted critically at index execution point: {str(e)}", xbmc.LOGERROR)
 
             if any(changes): self.channels.setChannels()
-            if any(updated):
-                self.log(f"Channel compilation finished: {len(complete)} stations added, {len(changes)} channels updated, {len(preview_results)} previews", xbmc.LOGINFO)
-                if not self.service.tasks.chkPVRSync():
-                    if not Globals.properties.getPropTimer('chkPVRRefresh')[0]:
-                        self.log("buildChannels, post-build sync check: PVR out of sync, triggering refresh", xbmc.LOGDEBUG)
-                        Globals.properties.setPropTimer('chkPVRRefresh')
-                    else:
-                        self.log("buildChannels, post-build sync check: PVR out of sync, refresh already queued", xbmc.LOGDEBUG)
-            return preview_results if preview else None
+
+        # Run chkPVRSync AFTER _save completes — sees updated channel_ids
+        if any(updated):
+            self.log(f"Channel compilation finished: {len(complete)} stations added, {len(changes)} channels updated, {len(preview_results)} previews", xbmc.LOGINFO)
+            in_sync, findings = self.service.tasks.chkPVRSync()
+            if not in_sync:
+                if not Globals.properties.getPropTimer('chkPVRRefresh')[0]:
+                    self.log("buildChannels, post-build sync check: PVR out of sync, triggering refresh", xbmc.LOGDEBUG)
+                    Globals.properties.setPropTimer('chkPVRRefresh')
+                else:
+                    self.log("buildChannels, post-build sync check: PVR out of sync, refresh already queued", xbmc.LOGDEBUG)
+
+        return preview_results if preview else None
 
 
     def buildMusic(self, citem: dict) -> list:
@@ -541,9 +548,17 @@ class Builder(object):
             
             if items_len > 0:
                 self.fCount = int(idx * 100) // items_len
-                if self.cCount == 1: 
+                if self.cCount == 1:
                     self.pCount = max(0, min(self.fCount, 99))
-                    self.fCount = -1
+                else:
+                    # Blend channel progress with per-file progress within the channel
+                    # e.g., channel 3/20 = 15%, file 5/10 = 50% → pCount = 15% + (50% * 5% range) = 17%
+                    if self.cCount > 0:
+                        channel_base = int(self._buildIdx * 100) // self.cCount
+                        channel_range = max(1, 100 // self.cCount)
+                        self.pCount = min(99, channel_base + int(self.fCount * channel_range // 100))
+                    else:
+                        self.pCount = min(99, self.fCount)
 
             if not item.get('type'): 
                 item['type'] = default_type
@@ -559,7 +574,7 @@ class Builder(object):
             elif fileType != 'file':
                 continue
 
-            suffix = "" if self.fCount < 0 else f": {self.fCount}%"
+            suffix = f": {self.fCount}%"
             self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
 
             if file.startswith('pvr://'):
@@ -620,8 +635,12 @@ class Builder(object):
                 item["episodelabel"] = tagline
                 item["showlabel"]    = f"{item.get('title', '')} - {tagline}" if tagline else item.get('title', '')
             
-            # Duration Validation
-            dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
+            # Duration Validation — use metadata duration if available, skip expensive video parser
+            meta_dur = item.get('duration') or item.get('runtime') or 0
+            if meta_dur > 0 and not self.accurateDuration:
+                dur = meta_dur
+            else:
+                dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
             if dur > self.minDuration:
                 self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx} accepted: dur={dur}s, min={self.minDuration}s, file = {file}")
                 self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)

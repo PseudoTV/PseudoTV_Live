@@ -143,7 +143,7 @@ class MyHandler(BaseHTTPRequestHandler):
             if content_length > 10 * 1024 * 1024:  # 10MB limit
                 self.log(f'do_POST, request too large: {content_length} bytes', xbmc.LOGWARNING)
                 return self.send_error(413, "Request Entity Too Large")
-            incoming = FileAccess.loadJSON(self.rfile.read(content_length).decode())
+            incoming = FileAccess.loadJSON(self.rfile.read(content_length).decode(), skip_cache=True)
         except Exception as e: 
             self.log(f'do_POST, failed to parse incoming body: {e}', xbmc.LOGWARNING)
             incoming = {}

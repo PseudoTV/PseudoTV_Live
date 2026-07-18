@@ -145,10 +145,29 @@ class RulesList(object):
                
         
     def runActions(self, action: str, citem: dict = {}, parameter: Any = None, inherited: Any = None) -> Any:
+        """Dispatch an action to all rules registered for it, in myId order.
+        
+        Rules are loaded lazily if not pre-cached. Each rule can transform
+        the parameter before passing it to the next rule in the chain.
+        
+        Args:
+            action: Action constant (e.g., RULES_ACTION_CHANNEL_START).
+            citem: Channel item dict (must have 'id' key).
+            parameter: Data to pass through the rule chain (file list, schedule, etc.).
+            inherited: Builder or service instance with context.
+        
+        Returns:
+            The parameter after all rules have processed it.
+        """
         if inherited is None: inherited = self
         rules = self.ruleItems.get(citem.get('id',''))
         if not rules: rules = (self.loadRules([citem]).get(citem.get('id','')) or {})
-        for myId, rule in list(sorted(rules.items())):
+        # Pre-sort by myId once per loadRules call (cached in ruleItems)
+        sorted_rules = rules.get('_sorted')
+        if sorted_rules is None:
+            sorted_rules = list(sorted(rules.items()))
+            rules['_sorted'] = sorted_rules
+        for myId, rule in sorted_rules:
             if action in rule.actions:
                 self.log("[%s] runActions, %s performing channel rule: %s"%(citem.get('id'),inherited.__class__.__name__,rule.name))
                 try: parameter = rule.runAction(action, citem, parameter, inherited)
@@ -408,7 +427,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
             overlay.channelBugColor    = '0x%s'%(self.optionValues[2])
             overlay.channelBugDiffuse  = self.optionValues[3]
             overlay.channelBugFade     = self.optionValues[4]
-            self.log("runAction, setting enableChannelBug = %s, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.enableChannelBug,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse,overlay.channelBugFade))
+            self.log("runAction, setting enableChannelBug = %s, channelBugPosition = %s, channelBugColor = %s, channelBugDiffuse = %s, channelBugFade = %s"%(overlay.enableChannelBug,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse,overlay.channelBugFade))
             
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
             overlay.enableChannelBug   = self.storedValues[0]
@@ -416,7 +435,7 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [1-49]
             overlay.channelBugColor   = self.storedValues[2]
             overlay.channelBugDiffuse = self.storedValues[3]
             overlay.channelBugFade    = self.storedValues[4]
-            self.log("runAction, restoring enableChannelBug = %s, channelBugColor = %s, channelBugDiffuse = %s"%(overlay.enableChannelBug,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse,overlay.channelBugFade))
+            self.log("runAction, restoring enableChannelBug = %s, channelBugPosition = %s, channelBugColor = %s, channelBugDiffuse = %s, channelBugFade = %s"%(overlay.enableChannelBug,(overlay.channelBugX, overlay.channelBugY),overlay.channelBugColor,overlay.channelBugDiffuse,overlay.channelBugFade))
         return parameter
 
 
@@ -492,7 +511,7 @@ class SetScreenVingette(BaseRule):
         self.description        = LANGUAGE(33177)
         self.optionLabels       = [LANGUAGE(30174),LANGUAGE(30175),LANGUAGE(30176),LANGUAGE(30178),LANGUAGE(30185),LANGUAGE(30186)]
         self.optionValues       = [False,' ',1.00,0.00,1.00,False]
-        self.optionDescriptions = [LANGUAGE(33174),LANGUAGE(33175),LANGUAGE(33176),LANGUAGE(33179),LANGUAGE(33185),LANGUAGE(34186)]
+        self.optionDescriptions = [LANGUAGE(33174),LANGUAGE(33175),LANGUAGE(33176),LANGUAGE(34179),LANGUAGE(33185),LANGUAGE(34186)]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
         self.selectBoxOptions   = ['','',list(Globals._frange(5,21,1)),list(range(-2,3,1)),list(Globals._frange(5,21,1)),'']#[LANGUAGE(30022),LANGUAGE(32136)]]
         self.storedValues       = [[],[],[]]
@@ -1090,10 +1109,10 @@ class InterleaveValue(BaseRule):
     def __init__(self):
         self.myId               = 504
         self.name               = LANGUAGE(30192)
-        self.description        = LANGUAGE(33179)
+        self.description        = LANGUAGE(34179)
         self.optionLabels       = [LANGUAGE(30179),LANGUAGE(30211)]
         self.optionValues       = [Globals.settings.getSettingInt('Interleave_Set'), Globals.settings.getSettingBool('Interleave_Repeat')]
-        self.optionDescriptions = [LANGUAGE(33179),LANGUAGE(33211)]
+        self.optionDescriptions = [LANGUAGE(34179),LANGUAGE(33211)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(0,26,1))]
         self.storedValues       = [[],[]]
@@ -1171,8 +1190,16 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
                             else:
                                 query['filter']['and'] = [r for r in query['filter'].get("and", []) if not (('season' in r or 'episode' in r) and r.get("value") == "0")]
                                 query['filter']['and'] = Globals._setDictLST(query['filter']['and'])
-                        # subfileList, subdirList, limits, errors = builder.buildList(citem, query.get('path',''), 'video', (query.get('limit') or builder.limit), query.get('sort',{}), builder.limits, {'file':query.get('path')}, query) #parse all directories under root. Flattened hierarchies recommended to stream line channel building.
-                        self.storedValues[0].append(builder.buildFileList(citem, query.get('path',''), 'video', (query.get('limit') or builder.limit), query.get('sort',{}), builder.limits, query))
+                        # Cache buildFileList result per path to avoid repeated JSONRPC calls
+                        path = query.get('path','')
+                        cache_key = f'seasonal.{citem["id"]}.{FileAccess._getMD5(path)}'
+                        cached = builder.jsonRPC.cache.get(cache_key)
+                        if cached is not None:
+                            self.storedValues[0].append(cached)
+                        else:
+                            result = builder.buildFileList(citem, path, 'video', (query.get('limit') or builder.limit), query.get('sort',{}), builder.limits, query)
+                            if result: builder.jsonRPC.cache.set(cache_key, result, expiration=datetime.timedelta(hours=1))
+                            self.storedValues[0].append(result)
                     return [fileList for fileList in self.storedValues[0] if fileList] #fileArray
                 except Exception as e: self.log(f"[{citem['id']}] runAction, failed! {e}", xbmc.LOGERROR)
                 return []
@@ -1180,7 +1207,14 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
 
 
 class HandleMethodOrder(BaseRule):
+    """Rule 950: Override sort method and order for channel builds.
+    
+    Caches sort/order enum lookups at class level to avoid repeated JSONRPC
+    Introspect calls on every instantiation (allRules → copy → __init__).
+    """
 
+    _cached_sort  = None
+    _cached_order = None
 
     def __init__(self):
         self.myId               = 950
@@ -1203,11 +1237,15 @@ class HandleMethodOrder(BaseRule):
 
 
     def getSort(self) -> list:
-        return JSONRPC().getEnums("List.Sort",type="method")
+        if HandleMethodOrder._cached_sort is None:
+            HandleMethodOrder._cached_sort = JSONRPC().getEnums("List.Sort",type="method")
+        return HandleMethodOrder._cached_sort
 
 
     def getOrder(self) -> list:
-        return JSONRPC().getEnums("List.Sort",type="order")
+        if HandleMethodOrder._cached_order is None:
+            HandleMethodOrder._cached_order = JSONRPC().getEnums("List.Sort",type="order")
+        return HandleMethodOrder._cached_order
 
 
     def onAction(self, optionindex: int) -> Any:
@@ -1286,7 +1324,7 @@ class ForceEpisodeOrder(BaseRule):
         self.optionLabels       = [LANGUAGE(30181)]
         self.optionValues       = [True]
         self.optionDescriptions = [LANGUAGE(33181)]
-        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
+        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_STOP]
         self.storedValues       = [[],[],{},[],[],[]]
         self.selectBoxOptions   = []
 
@@ -1363,6 +1401,7 @@ class ForceEpisodeOrder(BaseRule):
                 builder.enableEven  = self.storedValues[0]
                 builder.evenEpisode = self.storedValues[1]
                 builder.evenShuffle = self.storedValues[2]
+                self.storedValues = [[],[],{},[],[],[]]  # clear memory from show/movie partitioning
                 self.log("runAction, restoring enableEven = %s, evenEpisode = %s, evenShuffle = %s"%(builder.enableEven,builder.evenEpisode,builder.evenShuffle))
             
         return parameter
@@ -1452,18 +1491,26 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
 
 
     def _sortShows(self, fileItems: list, episode_order: bool = False, random_order: bool = False) -> tuple:
+        """Partition file items into TV shows and movies, with optional deduplication.
+        
+        Uses a set of item IDs for O(1) dedup when episode_order=True,
+        instead of O(n) 'item not in list' checks.
+        """
         try:
+            seen_ids = set()
             for item in fileItems:
-                type  = item.get('type', '')
-                title = item.get('showtitle')
+                type    = item.get('type', '')
+                title   = item.get('showtitle')
+                item_id = item.get('id') or item.get('file')
                 if title and type.startswith(tuple(TV_TYPES)):
-                    if episode_order and item not in self.storedValues[3].setdefault(title,[]): 
-                        self.storedValues[3].setdefault(title, []).append(item) #no duplicates
-                    elif not episode_order:
-                        self.storedValues[3].setdefault(title, []).append(item) #duplicates allowed
+                    if episode_order:
+                        if item_id and item_id in seen_ids: continue
+                        if item_id: seen_ids.add(item_id)
+                    self.storedValues[3].setdefault(title, []).append(item)
                 else:
-                    item_id = item.get('id') or item.get('file')
-                    if episode_order and item_id in self.storedValues[4]: continue
+                    if episode_order:
+                        if item_id and item_id in seen_ids: continue
+                        if item_id: seen_ids.add(item_id)
                     self.storedValues[4].append(item)
             if random_order:
                 self.storedValues[3] = Globals._randomShuffle(self.storedValues[3])
@@ -1476,13 +1523,9 @@ class EvenShowsRule(BaseRule): #BUILD RULES [1000-2999]
     def _mergeShows(self, shows: dict = {}, movies: list = [], inherited: Any = None) -> list:
         try:
             movie_queue = deque(movies or [])
-            movie_cnt   = (len(movie_queue) // len(shows)) if len(shows) > 0 else 0
             show_keys   = list(shows.keys())
             
-            all_chunks  = []
-            for show, chunks in shows.items():
-                for chunk in chunks:
-                    all_chunks.append(chunk)
+            all_chunks  = [chunk for chunks in shows.values() for chunk in chunks]
                     
             total_slots = len(all_chunks)
             if total_slots == 0: return list(movie_queue)
@@ -1549,26 +1592,26 @@ class PadScheduling(BaseRule):
             self.log("runAction, setting padScheduling to %s"%(inherited.padScheduling))
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_POST:
-            # pad scheduling with duplicates to met minimum guide requirements (MIN_EPG_DURATION).
+            # Pad scheduling with duplicates to meet minimum guide requirements (MIN_EPG_DURATION).
+            # Pre-calculates needed iterations, logs only first/last to reduce log spam.
             if inherited.padScheduling and len(parameter) > 0:
                 iters  = cycle(parameter)
                 totDur = 0
                 start  = parameter[-1]['stop']
                 idx    = len(parameter)
                 now    = Globals._getUTCstamp()
-                while not inherited.monitor.abortRequested() and start <= (now + MIN_EPG_DURATION):
-                    if start >= (now + MIN_EPG_DURATION): break
-                    else: 
-                        idx += 1
-                        item = next(iters).copy()
-                        item["idx"]   = idx
-                        item['start'] = start
-                        item['stop']  = start + item['duration']
-                        start = item['stop']
-                        totDur += item['duration']
-                        parameter.append(item)
-                        inherited.pDialog = Globals.dialog._updateProgressThrottled(inherited.pDialog, inherited.pCount, message=f"{inherited.pName}: {LANGUAGE(33085)} {totDur}/{MIN_EPG_DURATION}",header=inherited.pHeader)
-                        self.log("[%s] addScheduling, ADD fileList = %s, totDur = %s/%s, stop = %s"%(citem['id'],len(parameter),totDur,MIN_EPG_DURATION,parameter[-1].get('stop')))
+                target = now + MIN_EPG_DURATION
+                while not inherited.monitor.abortRequested() and start < target:
+                    idx += 1
+                    item = next(iters).copy()
+                    item["idx"]   = idx
+                    item['start'] = start
+                    item['stop']  = start + item['duration']
+                    start = item['stop']
+                    totDur += item['duration']
+                    parameter.append(item)
+                    inherited.pDialog = Globals.dialog._updateProgressThrottled(inherited.pDialog, inherited.pCount, message=f"{inherited.pName}: {LANGUAGE(33085)} {totDur}/{MIN_EPG_DURATION}",header=inherited.pHeader)
+                self.log("[%s] addScheduling, padded %s items, totDur = %s/%s"%(citem['id'],idx-len(parameter)+1,totDur,MIN_EPG_DURATION))
         
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             inherited.padScheduling = self.storedValues[0]
@@ -1622,9 +1665,8 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         
     def _chkIDX(self):
         keys = set(Globals.settings.getCacheSetting(RESUME_INDEX, FileAccess._getMD5(RESUME_INDEX), default={}))
-        for key in list(keys):
-            if not Globals.settings.getCacheSetting(key, FileAccess._getMD5(key), default={}): keys.pop(key)
-        return Globals.settings.setCacheSetting(RESUME_INDEX, keys, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
+        valid = {k for k in keys if Globals.settings.getCacheSetting(k, FileAccess._getMD5(k), default={})}
+        return Globals.settings.setCacheSetting(RESUME_INDEX, valid, FileAccess._getMD5(RESUME_INDEX), datetime.timedelta(days=84))
         
         
     def _getKey(self, id: int) -> str:
@@ -1632,20 +1674,22 @@ class PauseRule(BaseRule): #POST-BUILD RULES [3000-~]
         
         
     def _getTotDuration(self, id: int, filelist: list = []) -> float:
-        return JSONRPC().getTotDuration(filelist)
+        if not hasattr(self, '_jsonrpc'): self._jsonrpc = JSONRPC()
+        return self._jsonrpc.getTotDuration(filelist)
             
 
 
     def _buildSchedule(self, citem: dict, filelist: list, builder: Any) -> dict:     
         self.log('[%s] _buildSchedule, filelist = %s'%(citem.get('id'),len(filelist)))
         self._builder = builder
+        duration = self._getTotDuration(citem.get('id'), filelist)
         updated = self._getResumeData(citem.get('id')).get('updated',{})
         try:    viewed = '%s: %s (%s)'%(LANGUAGE(32250),Globals._epochTime(updated.get('time')).strftime(BACKUP_TIME_FORMAT),updated.get('instance'))
         except Exception: viewed = LANGUAGE(32251)
-        return builder.buildCells(citem, duration=self._getTotDuration(citem.get('id'), filelist), entries=1, 
+        return builder.buildCells(citem, duration=duration, entries=1, 
                                   info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)), 
                                         "episodetitle":viewed,
-                                        "plot":'%s: %s\nSize: %s\nRuntime: ~%s hrs.'%(LANGUAGE(32249),Globals._epochTime(time.time(),tz=False).strftime(BACKUP_TIME_FORMAT),len(filelist),round(self._getTotDuration(citem.get('id'), filelist)//60//60)),
+                                        "plot":'%s: %s\nSize: %s\nRuntime: ~%s hrs.'%(LANGUAGE(32249),Globals._epochTime(time.time(),tz=False).strftime(BACKUP_TIME_FORMAT),len(filelist),round(duration//60//60)),
                                         "art":{"thumb":LOGO,"poster":LOGO_POSTER,"fanart":LOGO_LANDSCAPE,"landscape":LOGO_LANDSCAPE,"logo":citem.get('logo',LOGO),"icon":citem.get('logo',LOGO)}})
             
     def _setResume(self, id: int, filelist: list = [], resume: dict = {"idx":0,"position":0.0,"total":0.0,"file":"","updated":{"instance":"","time":-1}}):

@@ -21,15 +21,12 @@ from typing import Any, Optional, Union
 import struct
 
 class FLVTagHeader:
-
-
     def __init__(self):
         self.tagtype = 0
         self.datasize = 0
         self.timestamp = 0
         self.timestampext = 0
-
-
+        
     def readHeader(self, thefile: Any):
         try:
             data = struct.unpack('B', thefile.readBytes(1))[0]
@@ -54,7 +51,6 @@ class FLVParser:
     Parser for FLV (Flash Video) files.
     Duration is extracted from the last video tag timestamp.
     """
-
 
     def __init__(self):
         self.monitor = MONITOR()    

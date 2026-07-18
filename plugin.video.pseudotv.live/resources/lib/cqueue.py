@@ -60,6 +60,7 @@ class CustomQueue(object):
         self.pending  = {}
         self.running  = {}
         self.counter  = 0
+        self._dedup_registry = {}  # {dedup_key: task_key} — generic dedup for any queued function
         
         self.useExecutor = Globals.settings.getSettingBool('Enable_Executor')
         self.queueThread = Thread(target=self.execute, name=f"{ADDON_ID}.priorityQUE")
@@ -98,6 +99,7 @@ class CustomQueue(object):
 
 
     def _evict_lowest(self):
+        """Remove the lowest-priority task from the queue when heap is full."""
         if not self.heap: return
         worst_idx = max(range(len(self.heap)), key=lambda i: self.heap[i][0])
         _, _, task = self.heap[worst_idx]
@@ -105,12 +107,27 @@ class CustomQueue(object):
         task.cancel()
         task_key = self._get_task_key(task.func, task.args, task.kwargs)
         self.pending.pop(task_key, None)
+        # Clear dedup keys for evicted task
+        for dk in getattr(task, 'dedup_keys', set()):
+            self._dedup_registry.pop(dk, None)
         self.heap[worst_idx] = self.heap[-1]
         self.heap.pop()
         if self.heap: heapq.heapify(self.heap)
 
 
-    def push(self, package: tuple, priority: int = 3, delay: int = 0, timer: int = 0):
+    def push(self, package: tuple, priority: int = 3, delay: int = 0, timer: int = 0, dedup_keys: Optional[set] = None):
+        """Push a task to the priority queue.
+        
+        Args:
+            package: Tuple of (func, args, kwargs).
+            priority: 1=highest, 5=lowest.
+            delay: Seconds to delay execution.
+            timer: Absolute timestamp for execution.
+            dedup_keys: Set of string keys for cross-task deduplication.
+                Tasks sharing the same dedup_key are tracked together —
+                callers can check get_queued_dedup_keys() to see which
+                keys are already queued before pushing new tasks.
+        """
         now = time.time()
         if   timer: execute_at = timer
         elif delay: execute_at = now + delay
@@ -139,7 +156,13 @@ class CustomQueue(object):
                     if len(self.heap) >= self.MAX_HEAP_SIZE: self._evict_lowest()
                     new_task = Task(func, args, kwargs, priority, execute_at)
                     new_task.task_key = task_key
+                    new_task.dedup_keys = dedup_keys or set()
                     self.pending[task_key] = new_task
+                    # Register dedup keys for this task — enables cross-task deduplication
+                    for dk in new_task.dedup_keys:
+                        self._dedup_registry[dk] = task_key
+                    if new_task.dedup_keys:
+                        self.log(f"push, {func.__name__} registered {len(new_task.dedup_keys)} dedup keys", xbmc.LOGDEBUG)
                     self.counter += 1
                     heapq.heappush(self.heap, (self._compute_score(new_task), self.counter, new_task))
                     self.log(f"push, {func.__name__}{self._fmt_args(args, kwargs)} (Priority: {priority}).", xbmc.LOGDEBUG)
@@ -158,6 +181,9 @@ class CustomQueue(object):
                 task_key = self._get_task_key(task.func, task.args, task.kwargs)
                 if task.is_cancelled:
                     self.pending.pop(task_key, None)
+                    # Clear dedup keys for cancelled task
+                    for dk in getattr(task, 'dedup_keys', set()):
+                        self._dedup_registry.pop(dk, None)
                     continue
                 if self.pending.get(task_key) is task:
                     self.pending.pop(task_key, None)
@@ -168,9 +194,33 @@ class CustomQueue(object):
 
 
     def _finish(self, task: Task):
+        """Clean up a completed task — remove from running set and clear dedup keys."""
         if task and task.task_key:
             with self.lock:
                 self.running.pop(task.task_key, None)
+                # Clear dedup keys for completed task
+                dedup_keys = getattr(task, 'dedup_keys', set())
+                for dk in dedup_keys:
+                    self._dedup_registry.pop(dk, None)
+                if dedup_keys:
+                    self.log(f"_finish, {task.func.__name__} cleared {len(dedup_keys)} dedup keys", xbmc.LOGDEBUG)
+
+
+    def get_queued_dedup_keys(self, key_prefix: str = '') -> set:
+        """Get all dedup keys currently queued (pending or running) matching prefix.
+        
+        Used by callers to check which items are already queued before pushing
+        new tasks. For example, chkChannels checks 'build.' prefix to see which
+        channel IDs are already queued for building.
+        
+        Args:
+            key_prefix: Only return keys starting with this prefix.
+        
+        Returns:
+            Set of matching dedup key strings.
+        """
+        with self.lock:
+            return {dk for dk in self._dedup_registry if dk.startswith(key_prefix)}
 
 
     def execute(self):

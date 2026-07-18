@@ -215,7 +215,7 @@ class Globals:
         
     @staticmethod  
     def _setDictLST(lst: list = []) -> list: #set lst of dicts then return
-        return [FileAccess.loadJSON(s) for s in list(OrderedDict.fromkeys([FileAccess.dumpJSON(d) for d in lst]))]
+        return [FileAccess.loadJSON(s, skip_cache=True) for s in list(OrderedDict.fromkeys([FileAccess.dumpJSON(d) for d in lst]))]
     
     @staticmethod  
     def _mergeDict(dict1: list = {},dict2: list = {},key: str = 'label') -> list:
@@ -242,18 +242,18 @@ class Globals:
     def diffLSTDICT(old: list, new: list) -> dict:
         set1 = {FileAccess.dumpJSON(d, sortkey=True) for d in old}
         set2 = {FileAccess.dumpJSON(d, sortkey=True) for d in new}
-        return {"added": [FileAccess.loadJSON(s) for s in set2 - set1], "removed": [FileAccess.loadJSON(s) for s in set1 - set2]}
+        return {"added": [FileAccess.loadJSON(s, skip_cache=True) for s in set2 - set1], "removed": [FileAccess.loadJSON(s, skip_cache=True) for s in set1 - set2]}
             
     @staticmethod  
     def _cleanGroups(citem: dict = {}) -> dict:
         if Globals.settings.getSetting('Enable_Grouping') == "true":
             #Default
-            if ADDON_NAME not in citem.get('group'): citem.setdefault('group',[]).append(ADDON_NAME)
+            if ADDON_NAME not in citem.get('group',[]): citem.setdefault('group',[]).append(ADDON_NAME)
             #Favorites
             if citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']:   citem['group'].append(LANGUAGE(32019))
             elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']: citem['group'].remove(LANGUAGE(32019))
             #Type
-            if citem.get('type') not in citem.get('group'): citem['group'].append(citem.get('type'))
+            if citem.get('type') not in citem.get('group',[]): citem.setdefault('group',[]).append(citem.get('type'))
             #Genre
             if citem.get('type') in [LANGUAGE(32006),LANGUAGE(32007),LANGUAGE(32009)]:#"TV Genres","Movie Genres","Mixed Genres"
                 citem['group'].append(citem.get('type').replace(f' {LANGUAGE(32014)}','').replace(f' {LANGUAGE(32015)}','').replace(f' {LANGUAGE(32010)}',''))
@@ -306,7 +306,6 @@ class Globals:
             
     @staticmethod
     def _cleanMPAA(mpaa: str) -> str:
-        orgMPA = mpaa
         mpaa = mpaa.lower()
         if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex
         if 'rated ' in mpaa: mpaa = re.split('rated ',mpaa)[1]  #todo prop. regex

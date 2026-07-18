@@ -61,8 +61,6 @@ try:
 except Exception as e: LOG('VideoParser: cv2 not available, failed!\n%s' % e, xbmc.LOGDEBUG)
     
 class VideoParser(object):
-
-
     def __init__(self):
         self.AVIExts  = ['.avi']
         self.MP4Exts  = ['.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov']

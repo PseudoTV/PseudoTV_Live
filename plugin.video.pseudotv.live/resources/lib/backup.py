@@ -163,11 +163,9 @@ class Backup(object):
             ctl = (0,1) #settings return focus
             try:
                 param = self.sysARG[1]
-                if len(self.sysARG) > 2: args = sys.argv[2]
             except Exception as e:
                 self.log(f'run, failed to parse sysARG: {e}', xbmc.LOGWARNING)
                 param = None
-                args  = None
             if   param == 'Export_Channels': self.exportChannels()
             elif param == 'Backup_Channels': self.backupChannels()
             elif param == 'Select_Imports':  self.selectImports()

@@ -156,6 +156,7 @@ class _Cache(object):
                             data BLOB, 
                             checksum BLOB
                         )""")
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_expires ON cache(expires)")
                     conn.commit()
                     self.log('_open, connected successfully', xbmc.LOGINFO)
                     return conn
@@ -188,7 +189,8 @@ class _Cache(object):
                         result = self._database.execute(query, data)
                     else:                       
                         result = self._database.execute(query)
-                    self._database.commit()
+                    if not query.lstrip().upper().startswith('SELECT'):
+                        self._database.commit()
                     return result
                 except Exception as e:
                     self.log(f"SQL Error during [{query[:48]}]: {e}", xbmc.LOGERROR)
@@ -199,11 +201,10 @@ class _Cache(object):
         """Retrieve a cached value by endpoint, checking memory cache first if enabled."""
         checksum = self.getChecksum(checksum)
         cur_time = self.getTimestamp(datetime.datetime.now())
-        with self._lock:
-            if self.enable_mem_cache:
-                result = self._getMEM(endpoint, checksum, cur_time)
-                if result is not None: return result
-            return self._getDB(endpoint, checksum, cur_time)
+        if self.enable_mem_cache:
+            result = self._getMEM(endpoint, checksum, cur_time)
+            if result is not None: return result
+        return self._getDB(endpoint, checksum, cur_time)
 
 
     def _set(self, endpoint: str, data: Any, checksum: Any = "", delta_time: Any = -1):
@@ -212,11 +213,10 @@ class _Cache(object):
         expires  = delta_time
         if isinstance(delta_time, datetime.timedelta):
             expires = self.getTimestamp(datetime.datetime.now() + delta_time)
-        with self._lock:
-            if self.enable_mem_cache and not self._exit: 
-                self._setMEM(endpoint, checksum, expires, data)
-            query = "INSERT OR REPLACE INTO cache(id, expires, data, checksum) VALUES (?, ?, ?, ?)"
-            self._execute_sql(query, (endpoint, expires, FileAccess.dumpPICKLE(data), checksum))
+        if self.enable_mem_cache and not self._exit: 
+            self._setMEM(endpoint, checksum, expires, data)
+        query = "INSERT OR REPLACE INTO cache(id, expires, data, checksum) VALUES (?, ?, ?, ?)"
+        self._execute_sql(query, (endpoint, expires, FileAccess.dumpPICKLE(data), checksum))
 
 
     def _clr(self, endpoint: str):
@@ -265,9 +265,8 @@ class _Cache(object):
             if len(self._cache_idx) >= self.max_entries: return
             encoded_data = FileAccess._encodeString((expires, data, checksum))
             item_size = sys.getsizeof(encoded_data)
-            with self._lock:
-                self.window.setProperty('%s.%s' % (ADDON_ID, endpoint), str(encoded_data))
-                self._cache_idx.append((endpoint, item_size))
+            self.window.setProperty('%s.%s' % (ADDON_ID, endpoint), encoded_data)
+            self._cache_idx.append((endpoint, item_size))
         except Exception as e:
             self.log("_setMEM failed: %s" % e)
 
@@ -359,11 +358,18 @@ class _Cache(object):
                     self.log('_shutdown, database closed', xbmc.LOGINFO)
 
 
+    _checksum_cache = {}
+
     def getChecksum(self, stringinput: Any) -> int:
         """Generate an Adler32 checksum from the global checksum combined with the input string."""
         if not stringinput and not self.global_checksum: return ADDON_VERSION
+        cache_key = (self.global_checksum, stringinput)
+        cached = _Cache._checksum_cache.get(cache_key)
+        if cached is not None: return cached
         combined = "%s-%s" % (self.global_checksum, stringinput) if self.global_checksum else str(stringinput)
-        return zlib.adler32(combined.encode(DEFAULT_ENCODING)) & 0xffffffff
+        result = zlib.adler32(combined.encode(DEFAULT_ENCODING)) & 0xffffffff
+        _Cache._checksum_cache[cache_key] = result
+        return result
         
     @staticmethod
     def getTimestamp(date_time: datetime.datetime) -> int:

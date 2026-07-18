@@ -61,7 +61,8 @@ def _add(sysARG: list, listitem: Optional[dict] = {}):
                     manager._addChannels(citem['number'], [citem])
                     manager.closeManager()
                 del manager
-                Globals.properties.setPropTimer('chkChanged')# Refresh Channel Changed!
+                Globals.properties.setPropTimer('chkChannels')# Refresh Channel Changed!
+                Globals.properties.setPropTimer('chkPVRRefresh')# Refresh PVR to re-scan M3U
                 return Globals.dialog.notificationDialog("%s [B]%s[/B]: [B]%s[/B]\nAdded!"%(LANGUAGE(30223),citem['number'],citem['name']))
 
 def _autotune(start: int = 1, count: int = -1, automatic: bool = False):
@@ -115,7 +116,8 @@ def _autotune(start: int = 1, count: int = -1, automatic: bool = False):
             if items: manager._addChannels(start, Globals._randomShuffle(items))
             manager.closeManager()
             del manager
-        Globals.properties.setPropTimer('chkChanged')# Refresh Channel Changed!
+        Globals.properties.setPropTimer('chkChannels')# Refresh Channel Changed!
+        Globals.properties.setPropTimer('chkPVRRefresh')# Refresh PVR to re-scan M3U
         return True
 
 if __name__ == '__main__': 

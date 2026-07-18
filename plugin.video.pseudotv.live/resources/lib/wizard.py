@@ -91,7 +91,7 @@ class Wizard(xbmcgui.WindowXMLDialog):
         
     def onAction(self, act: xbmcgui.Action):
         actionId = act.getId()   
-        if (time.time() - self.lastActionTime) < .5 and actionId not in ACTION_PREVIOUS_MENU: action = ACTION_INVALID # during certain times we just want to discard all input
+        if (time.time() - self.lastActionTime) < .5 and actionId not in ACTION_PREVIOUS_MENU: pass # during certain times we just want to discard all input
         else:
             if actionId in ACTION_PREVIOUS_MENU:
                 if self.isLocked(): Globals.dialog.notificationDialog(LANGUAGE(32260))

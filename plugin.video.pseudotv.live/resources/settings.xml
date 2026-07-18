@@ -59,7 +59,7 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <setting id="Export_Channels" type="string" label="32110" help="33111" parent="Open_Manager">
+                <setting id="Export_Channels" type="string" label="32110" help="33110" parent="Open_Manager">
                     <level>2</level>
                     <constraints>
                         <allowempty>true</allowempty>
@@ -880,7 +880,7 @@
                 </setting>
             </group>
             <group id="2" label="30103">
-                <setting id="ZeroConf_Status" type="string" label="32182" help="33183">
+                <setting id="ZeroConf_Status" type="string" label="32182" help="33182">
                     <level>0</level>
                     <default>[COLOR=red][B]Offline[/B][/COLOR]</default>
                     <constraints>

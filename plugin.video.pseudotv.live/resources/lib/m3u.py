@@ -244,7 +244,7 @@ class M3U(object):
                                 xplaylist = station.get('x-playlist-type', '')
                                 
                                 for key, value in station.items():
-                                    if key not in ['kodiprops', 'extvlcopt', 'x-playlist-type'] and key in opts and str(value):
+                                    if key not in ['kodiprops', 'extvlcopt', 'x-playlist-type', 'url'] and key in opts and str(value):
                                         optional += '%s="%s" ' % (key, value)
 
                                 fle.write(line_template % (
@@ -270,19 +270,19 @@ class M3U(object):
                             except Exception as e:
                                 self.log("_save, loop record entry failed! %s" % e, xbmc.LOGERROR)
                                 continue
-                    return True
                 except Exception as e: 
                     self.log("_save, global write process failed! %s" % e, xbmc.LOGERROR)
                 finally:
                     if fle and hasattr(fle, 'close'): 
                         fle.close()
-                        
+
             # Update PVR status with current M3U/XMLTV data
             status   = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(), Globals.properties.getFriendlyName())
             stations = self.getStations()
             status['m3u']['channel_ids'] = {s.get('id') for s in stations if s.get('id')}
             status['m3u']['last_write'] = time.time()
             Globals.settings.instances._computeDerived(status)
+            return True
         return False
 
 

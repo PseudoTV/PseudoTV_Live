@@ -195,7 +195,6 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         # during certain times we just want to discard all input
         if lastaction < 3 and lastaction > 1 and actionId not in ACTION_PREVIOUS_MENU:
             self.log('Not allowing actions')
-            action = ACTION_INVALID
         elif actionId in ACTION_SELECT_ITEM:   self.switch(self.focusCycle())
         elif actionId in ACTION_PREVIOUS_MENU: self.save()
         else:

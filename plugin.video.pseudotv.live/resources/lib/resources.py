@@ -112,6 +112,7 @@ class Resources(object):
                 except Exception as e: self.log('setImageCache move_to_end failed: %s' % e, xbmc.LOGDEBUG)
                 self.pruneimageCache()
                 self.log('setImageCache, name = %s, image = %s'%(chname,image))
+                self.service._que(self.service.tasks.chkLogos,5,LOGO_REFRESH)#30MINS
             except Exception as e: self.log(f'setImageCache failed!\n{e}', xbmc.LOGWARNING)
         return image
 

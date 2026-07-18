@@ -63,48 +63,48 @@ class MP4Parser:
             LOG("MP4Parser: Unable to open the file: %s"%str(e))
             return 0
             
-        dur = self.readHeader()
-        if not dur:
-            LOG("MP4Parser - Using New Parser")
-            try:
-                boxes = self.find_boxes(self.File)
-                
-                # Check for required boxes
-                if b"moov" not in boxes:
-                    LOG("MP4Parser: Missing required 'moov' box")
-                    self.File.close()
-                    return 0
-                
-                if b"ftyp" not in boxes:
-                    LOG("MP4Parser: Missing required 'ftyp' box")
-                    self.File.close()
-                    return 0
-                
-                moov_boxes = self.find_boxes(self.File, boxes[b"moov"][0] + 8, boxes[b"moov"][1])
-                
-                # Try to get duration from mvhd (primary method)
-                if b"mvhd" in moov_boxes:
-                    dur = self.scan_mvhd(self.File, moov_boxes[b"mvhd"][0])
-                    if dur > 0:
-                        LOG("MP4Parser: Got duration from mvhd: %s seconds"%dur)
-                else:
-                    LOG("MP4Parser: Missing 'mvhd' box in moov, trying fallback")
-                
-                # If mvhd failed, try fallback from trak boxes
-                if not dur and b"trak" in moov_boxes:
-                    LOG("MP4Parser: Trying fallback duration detection from trak boxes")
-                    dur = self.get_track_duration(self.File, moov_boxes)
-                    if dur > 0:
-                        LOG("MP4Parser: Got duration from trak boxes: %s seconds"%dur)
-                
-                if not dur:
-                    LOG("MP4Parser: All duration detection methods failed")
-                
-            except Exception as e:
-                LOG("MP4Parser, failed! %s"%str(e), xbmc.LOGERROR)
-                dur = 0
-                
-        self.File.close()
+        try:
+            dur = self.readHeader()
+            if not dur:
+                LOG("MP4Parser - Using New Parser")
+                try:
+                    boxes = self.find_boxes(self.File)
+                    
+                    # Check for required boxes
+                    if b"moov" not in boxes:
+                        LOG("MP4Parser: Missing required 'moov' box")
+                        return 0
+                    
+                    if b"ftyp" not in boxes:
+                        LOG("MP4Parser: Missing required 'ftyp' box")
+                        return 0
+                    
+                    moov_boxes = self.find_boxes(self.File, boxes[b"moov"][0] + 8, boxes[b"moov"][1])
+                    
+                    # Try to get duration from mvhd (primary method)
+                    if b"mvhd" in moov_boxes:
+                        dur = self.scan_mvhd(self.File, moov_boxes[b"mvhd"][0])
+                        if dur > 0:
+                            LOG("MP4Parser: Got duration from mvhd: %s seconds"%dur)
+                    else:
+                        LOG("MP4Parser: Missing 'mvhd' box in moov, trying fallback")
+                    
+                    # If mvhd failed, try fallback from trak boxes
+                    if not dur and b"trak" in moov_boxes:
+                        LOG("MP4Parser: Trying fallback duration detection from trak boxes")
+                        dur = self.get_track_duration(self.File, moov_boxes)
+                        if dur > 0:
+                            LOG("MP4Parser: Got duration from trak boxes: %s seconds"%dur)
+                    
+                    if not dur:
+                        LOG("MP4Parser: All duration detection methods failed")
+                    
+                except Exception as e:
+                    LOG("MP4Parser, failed! %s"%str(e), xbmc.LOGERROR)
+                    dur = 0
+        finally:
+            self.File.close()
+            
         LOG("MP4Parser: Duration is %s"%(dur))
         return dur
 
@@ -230,7 +230,7 @@ class MP4Parser:
         """Fallback method to get duration from track (trak) boxes.
         
         This method is used when mvhd box is missing or fails to provide duration.
-        It reads the track header (tkhd) to extract duration information.
+        It reads the track header (tkhd) and media header (mdhd) to extract duration.
         
         Args:
             f: File object to read from
@@ -247,15 +247,26 @@ class MP4Parser:
             trak_offset, trak_end = moov_boxes[b"trak"]
             LOG("MP4Parser: Reading trak box at offset %s-%s"%(trak_offset, trak_end))
             
-            # Parse trak box to find tkhd
+            # Parse trak box to find tkhd and mdia
             trak_boxes = self.find_boxes(f, trak_offset + 8, trak_end)
             
             if b"tkhd" not in trak_boxes:
                 LOG("MP4Parser: No tkhd box found in trak")
                 return 0
             
+            # Get timescale from mdhd (inside mdia)
+            timescale = 1000  # default
+            if b"mdia" in trak_boxes:
+                mdia_offset, mdia_end = trak_boxes[b"mdia"]
+                mdia_boxes = self.find_boxes(f, mdia_offset + 8, mdia_end)
+                if b"mdhd" in mdia_boxes:
+                    ts = self.scan_mdhd(f, mdia_boxes[b"mdhd"][0])
+                    if ts > 0:
+                        timescale = ts
+                        LOG("MP4Parser: Got timescale from mdhd: %s"%timescale)
+            
             tkhd_offset = trak_boxes[b"tkhd"][0]
-            duration = self.scan_tkhd(f, tkhd_offset)
+            duration = self.scan_tkhd(f, tkhd_offset, timescale)
             
             if duration > 0:
                 LOG("MP4Parser: Successfully got duration from tkhd: %s seconds"%duration)
@@ -268,15 +279,54 @@ class MP4Parser:
             return 0
 
 
-    def scan_tkhd(self, f: Any, offset: int) -> int:
+    def scan_mdhd(self, f: Any, offset: int) -> int:
+        """Parse the Media Header (mdhd) box to extract timescale.
+        
+        Args:
+            f: File object to read from
+            offset (int): Byte offset of the mdhd box
+            
+        Returns:
+            int: Timescale, or 0 if unable to determine
+        """
+        try:
+            f.seek(offset, 0)
+            f.seek(8, 1)  # skip box header (size + type)
+            
+            # Read version
+            version_data = f.readBytes(1)
+            if not version_data or len(version_data) < 1:
+                return 0
+            
+            version = int.from_bytes(version_data, "big")
+            word_size = 8 if version == 1 else 4
+            
+            f.seek(3, 1)  # skip flags
+            f.seek(word_size * 2, 1)  # skip creation and modification time
+            
+            # Read timescale
+            timescale_data = f.readBytes(4)
+            if not timescale_data or len(timescale_data) < 4:
+                return 0
+            
+            timescale = int.from_bytes(timescale_data, "big")
+            return timescale if timescale > 0 else 0
+            
+        except Exception as e:
+            LOG("MP4Parser: Error scanning mdhd at offset %s: %s"%(offset, str(e)), xbmc.LOGDEBUG)
+            return 0
+
+
+    def scan_tkhd(self, f: Any, offset: int, timescale: int = 1000) -> int:
         """Parse the Track Header (tkhd) box to extract duration.
         
         The tkhd box contains track-specific information including duration.
-        Duration in tkhd is in the same timescale as mvhd.
+        Duration in tkhd is in timescale units from mdhd.
         
         Args:
             f: File object to read from
             offset (int): Byte offset of the tkhd box
+            timescale (int): Timescale from mdhd for duration conversion
             
         Returns:
             int: Duration in seconds, or 0 if unable to determine
@@ -311,10 +361,10 @@ class MP4Parser:
                 LOG("MP4Parser: Invalid tkhd duration: %s"%duration)
                 return 0
             
-            # Note: tkhd duration is also in timescale units, but we need to convert it
-            # For now, return the duration value - it may need timescale conversion
-            LOG("MP4Parser: Got tkhd duration value: %s"%duration)
-            return duration
+            # Convert from timescale units to seconds
+            calculated_duration = round(duration / timescale) if timescale > 0 else 0
+            LOG("MP4Parser: Got tkhd duration: %s / %s = %s seconds"%(duration, timescale, calculated_duration))
+            return calculated_duration
             
         except Exception as e:
             LOG("MP4Parser: Error scanning tkhd at offset %s: %s"%(offset, str(e)), xbmc.LOGERROR)

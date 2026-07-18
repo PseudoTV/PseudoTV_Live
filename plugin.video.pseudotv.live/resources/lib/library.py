@@ -84,8 +84,9 @@ class Library(object):
         
   
     def getLibrary(self, type: Optional[str] = None) -> Any:
-        if type is None: items = self.libraryDATA.get('library',{})
-        else:            items = self.libraryDATA.get('library',{}).get(type,[])
+        libraryDATA = (self.libraryDATA or FileAccess.getJSON(LIBRARYFLE_DEFAULT))
+        if type is None: items = libraryDATA.get('library')
+        else:            items = libraryDATA.get('library',{}).get(type,[])
         self.log('getLibrary, type = %s, items = %s'%(type, len(items)))
         return items
         
@@ -294,7 +295,7 @@ class Library(object):
                     ShowGenreList.update({genre: info.get('episode', 0) for genre in info.get('genre', [])})
                     
             if sortbycount:
-                TVShowList    = [FileAccess.loadJSON(x[0]) for x in sorted(TVShowList.most_common(limit*2))]
+                TVShowList    = [FileAccess.loadJSON(x[0], skip_cache=True) for x in sorted(TVShowList.most_common(limit*2))]
                 NetworkList   = [x[0] for x in sorted(NetworkList.most_common(limit))]
                 ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(limit))]
             else:

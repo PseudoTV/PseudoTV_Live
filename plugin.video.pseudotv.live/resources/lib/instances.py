@@ -249,39 +249,58 @@ class Instances(object):
         self.log(f"updatePVRStatus, friendly_name = {friendly_name}")
         if self._cached_status is None:
             self._cached_status = {
-                'name': friendly_name,
-                'm3u':   {'url'        : 'http://%s/%s'%(host, M3UFLE), 
-                          'channel_ids': set(), 
-                          'last_write' : None, 
-                          'sync_state' : 'unknown'},
+                'name': friendly_name,               # Instance friendly name (e.g., 'Kodi Desktop')
+                'm3u':   {'url'        : 'http://%s/%s'%(host, M3UFLE),    # HTTP URL to M3U playlist
+                          'channel_ids': set(),       # Channel IDs from saved M3U file (set by m3u.py)
+                          'last_write' : None,        # Timestamp of last M3U file write (set by m3u.py)
+                          'sync_state' : 'unknown',   # 'fresh'/'stale'/'outdated'/'unknown' (computed)
+                          'channels'   : 0,           # M3U channel count (computed by _computeDerived)
+                          'missing_epg': [],          # Channel IDs with no EPG data (computed)
+                          'unloaded_by_pvr': []},     # Channel IDs not loaded by PVR (computed)
                           
-                'xmltv': {'url'        : 'http://%s/%s'%(host, XMLTVFLE), 
-                          'channel_ids': set(), 
-                          'last_write' : None, 
-                          'sync_state' : 'unknown', 
-                          'programmes' : -1},
-                'log':   {'pvr_connected'     : False,
-                          'm3u_errors'        : [],
-                          'epg_errors'        : [],
-                          'connection_events' : [],
-                          'pvr_channel_ids'   : [],
-                          'pvr_provider'      : None,
-                          'connect_failed'    : False,
-                          'url_check_failed'  : False,
+                'xmltv': {'url'        : 'http://%s/%s'%(host, XMLTVFLE),  # HTTP URL to XMLTV file
+                          'channel_ids': set(),       # Channel IDs from saved XMLTV file (set by xmltvs.py)
+                          'last_write' : None,        # Timestamp of last XMLTV file write (set by xmltvs.py)
+                          'sync_state' : 'unknown',   # 'fresh'/'stale'/'outdated'/'unknown' (computed)
+                          'programmes' : -1,          # Total programme count (set by xmltvs.py)
+                          'channels'   : 0,           # XMLTV channel count (computed by _computeDerived)
+                          'missing_from_local': [],   # XMLTV IDs not in local M3U (computed)
+                          'empty_channels': []},      # XMLTV channels with no programmes (computed)
+                'log':   {'pvr_connected'     : False,         # PVR client connected state
+                          'm3u_errors'        : [],            # M3U load error strings
+                          'epg_errors'        : [],            # EPG load error strings
+                          'connection_events' : [],            # Connection state change dicts {from, to, time}
+                          'pvr_channel_ids'   : [],            # Hex channel IDs loaded by PVR (from parsePVRLog)
+                          'pvr_provider'      : None,          # Provider name if addon channels found (e.g., 'PseudoTV Live (Kodi Desktop)')
+                          'connect_failed'    : False,         # Connection attempt failed
+                          'url_check_failed'  : False,         # URL connection check failed
                           'load_playlist'     : {'started': False, 'total_channels': 0, 'channels': [], 'groups': {}, 'providers': {}, 'media_items': 0},
                           'load_epg'          : {'started': False, 'channels': {}, 'epg_channel_count': 0, 'epg_entry_count': 0},
                           'load_genres'       : {'genres_count': 0},
                           'get_channels'      : {'channels': {}},
                           'get_group_members' : {'channels': {}},
                           'get_channel_groups': {'groups': {}},
-                          'channels_available': 0,
-                          'radio_available'   : 0,
-                          'pvr_errors'        : [],
-                          'last_update'       : -1},
+                          'channels_available': 0,            # Non-radio channels available in PVR
+                          'radio_available'   : 0,            # Radio channels available in PVR
+                          'pvr_errors'        : [],            # Combined m3u_errors + epg_errors (computed)
+                          'last_update'       : -1},           # Timestamp of last updatePVRStatus call
                           
-                'notifications': {'last_event': None, 
-                                  'last_time': None, 
-                                  'events': []},
+                'notifications': {'last_event': None,   # Last PVR notification method name
+                                  'last_time': None,    # Timestamp of last PVR notification
+                                  'events': []},        # Last 50 notification dicts {method, data, time}
+                # PVR event tracking — timestamps and counts per notification type
+                # Updated by Monitor._logEvents when PVR sends notifications
+                'pvr_events': {
+                    'channel_update'  : {'last_time': 0, 'count': 0},  # OnChannelUpdate — channel list modified
+                    'group_update'    : {'last_time': 0, 'count': 0},  # OnChannelGroupUpdate — group structure changed
+                    'epg_update'      : {'last_time': 0, 'count': 0},  # OnEpgUpdate — EPG data updated
+                    'recording_update': {'last_time': 0, 'count': 0},  # OnRecordingUpdate — recording added/removed
+                    'timer_update'    : {'last_time': 0, 'count': 0},  # OnTimerUpdate — timer added/removed
+                    'provider_update' : {'last_time': 0, 'count': 0},  # OnProviderUpdate — provider list changed
+                    'scan_start'      : {'last_time': 0, 'count': 0},  # Scanner started (channel/epg scan)
+                    'scan_stop'       : {'last_time': 0, 'count': 0},  # Scanner finished
+                    'connection'      : {'last_time': 0, 'count': 0},  # ConnectionStateChange — PVR connection state
+                },
                 'in_sync': False  # True when PVR loaded IDs == M3U IDs == XMLTV IDs (computed by _computeDerived)
             }
         status = self._cached_status
@@ -432,9 +451,11 @@ class Instances(object):
             status['m3u']['unloaded_by_pvr'] = []
 
         # Channels loaded by PVR but with no EPG data (guide entries missing)
+        # pvr_channel_ids are hex-only (e.g., '312e506f...'), load_epg keys have suffix (e.g., '312e506f...@PseudoTV_Live')
+        # Strip suffix from EPG keys to normalize the comparison
         pvr_ids_set  = set(status['log'].get('pvr_channel_ids', []))
-        epg_ids_set  = set(status['log'].get('load_epg', {}).get('channels', {}).keys())
-        status['m3u']['missing_epg'] = list(pvr_ids_set - epg_ids_set)
+        epg_ids_set  = {k.split('@')[0] for k in status['log'].get('load_epg', {}).get('channels', {}).keys()}
+        status['m3u']['missing_epg'] = sorted(pvr_ids_set - epg_ids_set)
 
         # XMLTV channels with no programmes (placeholder - needs per-channel programme counts)
         status['xmltv']['empty_channels'] = []

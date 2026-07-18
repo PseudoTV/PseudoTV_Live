@@ -78,7 +78,7 @@ class Utilities(object):
     
     @staticmethod
     def _runReload():
-        if Globals.dialog.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121).format(name=xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))):
+        if Globals.dialog.yesnoDialog('Utilities: %s?'%(LANGUAGE(32121).format(name=Globals.settings.getAddonDetails(PVR_CLIENT_ID).get('name')))):
             state = Globals.settings.getSettingBool('Enable_PVR_RELOAD')
             Globals.settings.setSettingBool('Enable_PVR_RELOAD',True)
             Globals.properties.setPropTimer('chkPVRRefresh')#refresh pvr guide
@@ -180,9 +180,9 @@ class Utilities(object):
                 # [debug.pop(key) for key in list(debug.keys()) if key in ['LOGDEBUG','LOGINFO']]
                 return debug
                     
-            payload['debug']    = FileAccess.loadJSON(__cleanLog(FileAccess.dumpJSON(__getDebug(payload),idnt=4)))
-            payload['channels'] = FileAccess.loadJSON(__cleanLog(FileAccess.dumpJSON(payload.get('channels',[]),idnt=4)))
-            payload['m3u']      = FileAccess.loadJSON(__cleanLog(FileAccess.dumpJSON(payload.get('m3u',[]),idnt=4)))
+            payload['debug']    = FileAccess.loadJSON(__cleanLog(FileAccess.dumpJSON(__getDebug(payload),idnt=4)), skip_cache=True)
+            payload['channels'] = FileAccess.loadJSON(__cleanLog(FileAccess.dumpJSON(payload.get('channels',[]),idnt=4)), skip_cache=True)
+            payload['m3u']      = FileAccess.loadJSON(__cleanLog(FileAccess.dumpJSON(payload.get('m3u',[]),idnt=4)), skip_cache=True)
             [payload.pop(key) for key in ['host','remotes','bonjour','library','servers'] if key in payload]
             return payload
         
@@ -222,7 +222,7 @@ class Utilities(object):
     @staticmethod
     def _runUpdate(full: bool = False):
         LOG('Utilities: _runUpdate, full = %s'%(full))
-        Globals.properties.setPropTimer('chkChanged')# Refresh Channel Changed!
+        Globals.properties.setPropTimer('chkChannels')# Refresh Channel Changed!
               
     @staticmethod
     def openPositionUtil(idx: int):

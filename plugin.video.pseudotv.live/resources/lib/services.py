@@ -68,6 +68,7 @@ class Player(xbmc.Player):
         self.pool    = service.pool
         self.jsonRPC = service.jsonRPC
         
+        
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
@@ -87,10 +88,12 @@ class Player(xbmc.Player):
         self.log(f"onAVChange: playingItem={self.playingItem}")
         # self._onCheckpoint(self.playingItem)
         self.pool.submit(self._onCheckpoint,self.playingItem)
-                    
+                   
+                   
     def onPlayBackSeek(self, seek_time: Optional[float] = None, seek_offset: Optional[float] = None):
         self.playingItem.setdefault('seek',{}).update({'seek':seek_time, 'offset': seek_offset})
         self.log(f"onPlayBackSeek: seek={seek_time}, offset={seek_offset}")
+    
     
     def onPlayBackError(self):
         self.pendingItem.update({'invoked': -1, 'pending': False, 'last': self.playingItem})
@@ -98,11 +101,13 @@ class Player(xbmc.Player):
         # self._onError(self.playingItem)
         self.pool.submit(self._onError,self.playingItem)
         
+        
     def onPlayBackEnded(self):
         self.pendingItem.update({'invoked': -1, 'pending': False, 'item': {}, 'last': self.playingItem})
         self.log("onPlayBackEnded")
         # self._onChange(self.playingItem)
         self.pool.submit(self._onChange,self.playingItem)
+        
         
     def onPlayBackStopped(self):
         self.pendingItem.update({'invoked': -1, 'pending': False, 'playing': False, 'item': {}, 'last': {}})
@@ -144,6 +149,7 @@ class Player(xbmc.Player):
             self.monitor.waitForAbort(OSD_TIMER)
             return self.getPlayingItem() if self.isPlaying() else xbmcgui.ListItem()
         
+        
     def getPlayerFile(self) -> str:
         return self.getPlayingFile() if self.isPlaying() else self.playingItem.get('fitem', {}).get('file')
 
@@ -151,8 +157,10 @@ class Player(xbmc.Player):
     def getPlayerTime(self) -> int:
         return (self.getTimeLabel('Duration') or self.getTotalTime()) if self.isPlaying() else (self.playingItem.get('fitem', {}).get('runtime') or -1)
        
+       
     def getPlayedTime(self) -> int:
         return (self.getTimeLabel('Time') or self.getTime()) if self.isPlaying() else -1
+       
        
     def getRemainingTime(self) -> int:
         return (self.getPlayerTime() - self.getPlayedTime()) if self.isPlaying() else self.getTimeLabel('TimeRemaining')
@@ -172,6 +180,7 @@ class Player(xbmc.Player):
     def isPlayingFiller(self) -> bool:
         if self.isPlaying(): return Globals._isFiller({'genre': Globals.builtin.getInfoLabel('VideoPlayer.Genre(slash)').split(' / ')})
         return Globals._isFiller(self.playingItem.get('fitem', {}))
+        
         
     def isNextFiller(self) -> bool:
         if self.isPlaying(): return Globals._isFiller({'genre': Globals.builtin.getInfoLabel('VideoPlayer.NextGenre(slash)').split(' / ')})
@@ -195,9 +204,10 @@ class Player(xbmc.Player):
         elif state is None:           state = Globals.builtin.isSubtitle()
         self.showSubtitles(state)
   
+  
     # @debounceit(OSD_TIMER)
     def _onCheckpoint(self, playingItem: Optional[dict] = None):
-        self.log(f"_onCheckpoint, playingItem")
+        self.log("_onCheckpoint, playingItem")
         if playingItem is None: playingItem = {}
         if self.isPlayingPseudoTV() and not self.isPlayingFiller() and playingItem.get('isPlaylist', False):
             playingFile = self.getPlayerFile()
@@ -211,7 +221,7 @@ class Player(xbmc.Player):
 
 
     def _onPlaying(self):
-        self.log(f"_onPlaying, started")
+        self.log("_onPlaying, started")
         while not self.monitor.abortRequested() and not self.playingStopped.is_set():
             if self.service._shutdown(0.5): break
             elif not self.isPlayingPseudoTV(): break
@@ -229,12 +239,12 @@ class Player(xbmc.Player):
                         threshold  = abs((total_time - (total_time * 0.75)) - (ONNEXT_TIMER * 3))
                         if _played > self.minDuration and (threshold >= _remaining >= Globals._roundupDIV(threshold, 3)):
                             self.overlay.toggleOnNext(bool(self.OnNextMode))
-        self.log(f"_onPlaying, stopped")
+        self.log("_onPlaying, stopped")
 
 
     def _onPlay(self, playingItem: Optional[dict] = None):
         if playingItem is None: playingItem = {}
-        self.log(f"_onPlay")
+        self.log("_onPlay")
         if not playingItem:
             playingItem = self.getplayingItem()
         self.toggleInfo(False)
@@ -275,9 +285,10 @@ class Player(xbmc.Player):
             if not self.playingItem.get('callback') and self.jsonRPC:
                 self.playingItem['callback'] = self.jsonRPC.getCallback(self.playingItem)
                 Globals.properties.setProperty('lastPlayed.sysInfo', self.playingItem)
-                      
+                   
+                   
     def _onChange(self, playingItem: Optional[dict] = None):
-        self.log(f"_onChange")
+        self.log("_onChange")
         if playingItem is None: playingItem = {}
         self.toggleOverlay(False)
         if playingItem:
@@ -288,15 +299,17 @@ class Player(xbmc.Player):
         else:
             self.toggleBackground(False)
         
+        
     def _onError(self, playingItem: Optional[dict] = None):
-        self.log(f"_onError")
+        self.log("_onError")
         if playingItem is None: playingItem = {}
         if self.isPseudoTV() and Globals.settings.getSettingBool('Debug_Enable'):
             Globals.dialog.notificationDialog(LANGUAGE(32000))
             self.onPlayBackStopped()
            
+           
     def _onStop(self, playingItem: Optional[dict] = None):
-        self.log(f"_onStop")
+        self.log("_onStop")
         if playingItem is None: playingItem = {}
         self.toggleInfo(False)
         self.toggleOverlay(False)
@@ -309,6 +322,7 @@ class Player(xbmc.Player):
             self._runActions(RULES_ACTION_PLAYER_STOP, playingItem.get('citem', {}), playingItem, inherited=self)
             self.playingItem = {}
         self.playingStopped.set()
+            
             
     def _runActions(self, action: str, citem: Optional[dict] = None, parameter: Any = None, inherited: Any = None) -> Any:
         if citem is None: citem = {}
@@ -357,6 +371,7 @@ class Player(xbmc.Player):
                 self.overlay = None
         except Exception as e: self.log(f"toggleOverlay, failed: {e}", xbmc.LOGERROR)
 
+
     # @debounceit(OSD_TIMER)
     def toggleReplay(self, state: bool = False):
         self.log(f"toggleReplay, state = {state}")
@@ -393,6 +408,7 @@ class Monitor(xbmc.Monitor):
         self.player     = Player(monitor=self, service=service)
         LOG(f"Monitor: Player created = {self.player is not None}")
         
+        
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
@@ -421,11 +437,21 @@ class Monitor(xbmc.Monitor):
 
 
     def _logEvents(self, method: str, data: str):
-        """Track PVR-related notification events and store in status dict."""
+        """Track PVR-related notification events and store in status dict.
+        
+        Matches Kodi's PVR announcement method names to event types:
+          OnChannelUpdate / OnChannelGroupUpdate / OnEpgUpdate / OnRecordingUpdate /
+          OnTimerUpdate / OnProviderUpdate / OnScanStarted / OnScanFinished /
+          ConnectionStateChange
+
+        Triggers chkPVRSync on relevant events to keep PVR state current.
+        """
         self.log(f'_logEvents, {method}, {data}')
         try:              info = Globals._decodeDict(data) if data else {}
         except Exception: info = {}
-        if any(k in method for k in ('Channel', 'Epg', 'Scanner', 'Scan')):
+        # Determine if this is an actionable event that affects PseudoTV state
+        is_actionable = any(k in method for k in ('Channel', 'Epg', 'Scanner', 'Scan'))
+        if is_actionable:
             self.log(f"_logEvents, channel {info.get('channeltype', 'tv')} update received" if 'Channel' in method else
                       "_logEvents, EPG update received" if 'Epg' in method else
                      f"_logEvents, scanner event: {method}")
@@ -438,19 +464,36 @@ class Monitor(xbmc.Monitor):
             # Keep only last 50 events
             if len(status['notifications']['events']) > 50:
                 status['notifications']['events'] = status['notifications']['events'][-50:]
+            # Update per-event-type tracking
+            pvr_events = status.get('pvr_events', {})
+            event_map = {'Channel': 'channel_update', 'ChannelGroup': 'group_update',
+                         'Epg': 'epg_update', 'Recording': 'recording_update',
+                         'Timer': 'timer_update', 'Provider': 'provider_update',
+                         'ScanStart': 'scan_start', 'ScanStop': 'scan_stop',
+                         'Connection': 'connection'}
+            for key, event_type in event_map.items():
+                if key in method and event_type in pvr_events:
+                    pvr_events[event_type]['last_time'] = now
+                    pvr_events[event_type]['count'] = pvr_events[event_type].get('count', 0) + 1
+            # Only trigger refresh for actionable events (Channel/Epg/Scanner/Scan)
+            if is_actionable:
+                Globals.properties.setPropTimer('chkPVRRefresh')
         except Exception: pass
-      
+
+
     @debounceit(SERVICE_INTERVAL)
     def onSettingsChanged(self):
         self.log('onSettingsChanged; queuing settings synchronization...')
         self.service._que(self._updatePlayerSettings,1)
         self.service._que(self._updateServiceSettings,1)
             
+            
     def _updateServiceSettings(self):
         self.log('_updateServiceSettings')
         if hasattr(self.service, 'tasks'):
             self.service.curchannels = self.service.tasks.getChannels()
             self.service.cursettings = self.service.tasks.chkSettingsChange(self.service.cursettings)
+       
        
     def _updatePlayerSettings(self):
         self.log('_updatePlayerSettings')
@@ -476,7 +519,7 @@ class Service(object):
     def __init__(self):
         self.log("Initializing core system service layers...")
         self.isClient    = Globals.settings.getSettingBool('Enable_Client')
-        self.jsonQue     = list(Globals.settings.getCacheSetting('jsonQue', default=[]))
+        self.jsonQue     = set(Globals.settings.getCacheSetting('jsonQue', default=[]))
         self.postQue     = set(Globals.settings.getCacheSetting('postQue', default=[]))
         self.logoQue     = set(Globals.settings.getCacheSetting('logoQue', default=[]))
         self.trailerQue  = set(Globals.settings.getCacheSetting('trailerQue', default=[]))
@@ -502,13 +545,14 @@ class Service(object):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
 
-    def _que(self, func: Callable, priority: int = 3, delay: float = 0, timer: float = 0, *args: Any, **kwargs: Any):
-        self.queue.push((func, args, kwargs), priority, delay, timer)
+    def _que(self, func: Callable, priority: int = 3, delay: float = 0, timer: float = 0, *args: Any, dedup_keys: Optional[set] = None, **kwargs: Any):
+        self.queue.push((func, args, kwargs), priority, delay, timer, dedup_keys=dedup_keys)
 
 
     def _isPlaying(self) -> bool: #assert isPseudoTV Playing/User allows background tasks while playing.
         if self.player.isPlaying() and not getattr(self.player, 'runWhilePlaying', False): return True
         return False     
+        
         
     def _save(self) -> bool:
         try:
@@ -547,59 +591,69 @@ class Service(object):
             self.log(f"suspend boundary changed: active={self.pendingSuspend}")
         return self.pendingSuspend
         
+        
     def sleep(self, wait: float = CPU_CYCLE) -> bool:
         while not self.monitor.abortRequested():
             if   self.interrupt():     break
             elif self._shutdown(wait): break
         return True
-               
-    def _tasks(self):
-        self._que(self.tasks.chkQueTimer, 3, 30.0)
         
-    def _idle(self):
-        self.monitor._onIdle()
         
-    def _init(self):
-        if self.player.isPlayingPseudoTV(): self.player.onAVStarted()
-        self._wait()
-          
     def _wait(self, delay=60, timeout=300):
-        """Block until PVR has loaded channels."""
+        """Block until PVR has loaded channels or timeout reached.
+        
+        Shows timed notification dialogs during wait to inform user of progress.
+        """
         self._que(self.tasks._client, 1)
-        Globals.dialog.notificationWait(f"{LANGUAGE(32054)}...", wait=delay)
         if not Globals.settings.hasAddon(PVR_CLIENT_ID, enable=True, notify=False):
             self.log("_wait, PVR client not installed/enabled, skipping")
             return
-            
+
+        notifications = {0:  f"{LANGUAGE(32054)}...",                   # 32054: Initializing
+                         30: f"{LANGUAGE(30240)}",                      # 30240: Waiting for PVR to load channels
+                         60: f"{LANGUAGE(30241)}",                      # 30241: Connecting to PVR backend
+                         90: f"{LANGUAGE(30242)}",                      # 30242: Waiting for channel data
+                        120: f"{LANGUAGE(30243)}"}                      # 30243: PVR has no channels loaded
+        last_notified = -1
         start_time = time.time()
         self.log("_wait, waiting for PVR to load channels...")
         while not self.monitor.abortRequested():
-            if (time.time() - start_time) > timeout:
-                self.log("_wait, timeout reached, proceeding anyway")
+            elapsed = time.time() - start_time
+            if elapsed > timeout:
+                Globals.dialog.notificationDialog(f"{LANGUAGE(30243)}, {LANGUAGE(30244).lower()}", time=10) # 30243: PVR has no channels loaded, 30244: retrying channel detection
+                self.log("_wait, timeout reached, PVR has no channels loaded — triggering chkPVRRefresh", xbmc.LOGWARNING)
+                self._que(self.tasks.chkPVRRefresh, 2, 0, 0)
                 break
-            if not Globals.builtin.getInfoBool('Pvr.HasTVChannels') and not Globals.builtin.getInfoBool('Pvr.HasRadioChannels'):
-                self.log("_wait, PVR not ready, waiting...", xbmc.LOGDEBUG)
-                if not Globals.dialog.notificationWait(f"{LANGUAGE(32054)}...", wait=delay): break
-                continue
-                
-            status = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(),Globals.properties.getFriendlyName())
-            delay  = SERVICE_INTERVAL
-            pvr_connected = status.get('log',{}).get('pvr_connected', False)
-            m3u_channels  = status.get('m3u',{}).get('channel_ids', [])
-            xmltv_channels = status.get('xmltv',{}).get('channel_ids', [])
-            
-            if pvr_connected and (len(m3u_channels) > 0 or len(xmltv_channels) > 0):
-                self.log(f"_wait, PVR ready: {len(m3u_channels)} M3U, {len(xmltv_channels)} XMLTV channels")
+            if Globals.builtin.getInfoBool('Pvr.HasTVChannels') or Globals.builtin.getInfoBool('Pvr.HasRadioChannels'):
+                Globals.dialog.notificationDialog(f"{LANGUAGE(30245)}", time=10) # 30245: PVR loaded successfully
+                self.log("_wait, PVR has channels, proceeding")
                 break
-            elif pvr_connected:
-                self.log("_wait, PVR connected but no channels loaded, proceeding to build")
+            if Globals.builtin.getInfoBool('Pvr.HasTVChannels') or Globals.builtin.getInfoBool('Pvr.HasRadioChannels'):
+                Globals.dialog.notificationDialog(f"{LANGUAGE(30245)}", time=10) # 30245: PVR loaded successfully
+                self.log("_wait, PVR has channels, proceeding")
                 break
-            else:
-                self.log("_wait, PVR not ready, waiting...", xbmc.LOGDEBUG)
-        if not self.isClient: self._que(self.tasks._host, 1)
-        
+            # Show next timed notification
+            for t in sorted(notifications.keys()):
+                if elapsed >= t and t > last_notified:
+                    Globals.dialog.notificationDialog(notifications[t], time=10)
+                    last_notified = t
+            self.log("_wait, PVR not ready, waiting...", xbmc.LOGDEBUG)
+            if self.monitor.waitForAbort(delay): break
+
+
+    def _idle(self):
+        self.monitor._onIdle()
+
+
+    def _tasks(self):
+        self._que(self.tasks.chkQueTimer, 3, TASK_INTERVAL)
+
+
     def _start(self) -> bool:
-        self._init()
+        self._wait() # Wait for PVR Backend to initialize. 
+        if self.player.isPlayingPseudoTV(): self.player.onAVStarted()
+        if not self.isClient: self._que(self.tasks._host, 1)
+        self._tasks()
         self.log("_start, service started")
         while not self.monitor.abortRequested():
             if    self._shutdown(): break
@@ -609,6 +663,9 @@ class Service(object):
 
 
     def _stop(self, pendingRestart: bool = False) -> bool:
+        msg_id = 32141
+        if pendingRestart: msg_id = 32124
+        Globals.dialog.notificationWait(LANGUAGE(msg_id), usethread=True)
         if self.player.isPlayingPseudoTV(): self.player.onPlayBackStopped()
         with Globals.properties.interruptActivity():
             for thread in threading.enumerate():
