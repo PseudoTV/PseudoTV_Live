@@ -46,14 +46,14 @@ class Generator:
     """Generates addons.xml and addons.xml.md5 from addon.xml files."""
 
     def __init__(self, run_tests=True):
-        self._clean_addons()
-        self._generate_addons_file()
-        self._generate_md5_file()
         if run_tests:
             if not self._run_local_tests():
                 print("\nTests failed. Aborting build.")
                 sys.exit(1)
             self._update_changelog()
+        self._clean_addons()
+        self._generate_addons_file()
+        self._generate_md5_file()
         self._zipit(GITPATH)
         print("Finished updating addons xml and md5 files")
 
@@ -158,6 +158,27 @@ class Generator:
         version = f"v.{raw_version}"
         print(f"\nGenerating changelog entry for version {version}...")
 
+        # Check if version already exists and count entries
+        with open(CHANGELOG, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        entry_count = 0
+        if version in content:
+            # Count entries under this version
+            in_version = False
+            for line in content.split('\n'):
+                if line.strip() == version:
+                    in_version = True
+                    continue
+                if in_version and line.startswith('v.'):
+                    break
+                if in_version and line.startswith('- '):
+                    entry_count += 1
+
+            if entry_count >= 20:
+                print(f"Version already has {entry_count} entries (max 20). Skipping.")
+                return
+
         # Use OpenCode AI to generate changelog entry
         keywords = "Improved|Added|Tweaked|Refactored|Fixed|Resolved|Optimized|Moved|Introduced|Enhanced|Refined|Implemented|Replaced|Removed"
         prompt = (
@@ -206,10 +227,6 @@ class Generator:
             return
 
         print(f"Generated entry: {changelog_entry}")
-
-        # Update changelog.txt
-        with open(CHANGELOG, 'r', encoding='utf-8') as f:
-            content = f.read()
 
         if version in content:
             # Version exists, append entry
