@@ -148,7 +148,8 @@ class FileAccess(object):
         """Read a JSON file and return the parsed content."""
         try:
             with FileAccess.stream(file_path, 'r') as fle:
-                return FileAccess.loadJSON(fle.read())
+                result = FileAccess.loadJSON(fle.read())
+                return result if isinstance(result, dict) else {}
         except Exception as e:
             LOG(f"FileAccess: getJSON, failed!\n{e}", xbmc.LOGERROR)
         return {}
@@ -512,7 +513,8 @@ class FileLock:
         self.monitor = MONITOR()
         self.thread_lock = Lock()
         self.is_locked = False
-        self.lockfile = f"{os.path.splitext(filename.strip('\\'))[0]}.lock"
+        _slash = '\\'
+        self.lockfile = f"{os.path.splitext(filename.strip(_slash))[0]}.lock"
         self.timeout = timeout
         self.delay = delay
         self.fd = None

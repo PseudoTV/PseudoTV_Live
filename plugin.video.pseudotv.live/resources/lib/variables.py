@@ -22,6 +22,7 @@ from constants   import *
 from fileaccess  import FileAccess, FileLock
 from kodi        import Kodi, Settings, Properties, ListItems, Builtin, Dialog
 from pool        import debounceit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
+import socket
 
 # =============================================================================
 # Runtime Cache Paths (resolved from user settings at import time)
@@ -258,7 +259,7 @@ class Globals:
             if citem.get('type') in [LANGUAGE(32006),LANGUAGE(32007),LANGUAGE(32009)]:#"TV Genres","Movie Genres","Mixed Genres"
                 citem['group'].append(citem.get('type').replace(f' {LANGUAGE(32014)}','').replace(f' {LANGUAGE(32015)}','').replace(f' {LANGUAGE(32010)}',''))
         else: citem['group'] = [ADDON_NAME]
-        citem['group'] = sorted(set(citem['group']))
+        citem['group'] = sorted(set(g for g in citem['group'] if g))
         return citem
              
     @staticmethod
@@ -617,3 +618,9 @@ class Globals:
     @staticmethod
     def __escape_html(s: str) -> str: 
         return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")
+
+    @staticmethod
+    def getChannelKey():
+        """Return the active channel key based on Enable_Autotune setting."""
+        try: return CHANNEL_KEY_AUTOTUNE if REAL_SETTINGS.getSettingBool('Enable_Autotune') else CHANNEL_KEY_USER
+        except Exception: return CHANNEL_KEY_USER

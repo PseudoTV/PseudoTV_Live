@@ -111,13 +111,13 @@ class Cache(object):
         return self.cache.getChecksum(stringinput)
 
 class _Cache(object):
-    _lock            = RLock() 
     global_checksum  = '1.0.0'
     enable_mem_cache = False
     clean_interval   = MAX_GUIDEDAYS * 86400
 
 
     def __init__(self, monitor: Any = None, winID: int = 10000):
+        self._lock          = RLock() 
         self.monitor        = monitor
         self.window         = xbmcgui.Window(winID)
         self.max_entries    = MAX_CACHE_SIZE
@@ -320,6 +320,7 @@ class _Cache(object):
                             data BLOB, 
                             checksum BLOB
                         )""")
+                    self._database.execute("CREATE INDEX IF NOT EXISTS idx_expires ON cache(expires)")
                     self._database.commit()
                     return True
             except Exception as e:

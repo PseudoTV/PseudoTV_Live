@@ -26,26 +26,23 @@ from multiroom  import Multiroom
 #todo create dataclasses for all jsons
 # https://pypi.org/project/dataclasses-json/
 class Channels(object):
-    _lock = RLock()
-    
     def __init__(self, key: str, writable: bool = False):
+        self._lock       = RLock()
         self.writable    = writable
         self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
-        # Ensure name fields are strings (JSON parses "24" as int)
-        for ch in self.channelDATA.get('channels', []):
-            if 'name' in ch and not isinstance(ch['name'], str):
-                ch['name'] = str(ch['name'])
-        self.channelKEY  = f'{key}.{self.channelDATA.get("version",ADDON_VERSION)}'
+        self.channelKEY  = f'{key}.{self.channelDATA.get("version","0.0.0")}'
         channels = self.channelDATA.get('channels') or []
         self.channelTEMP = channels.pop(0) if channels else {}
         self.channelRULE = self.channelTEMP.pop('rules', {})
-        self.channelTEMP['rules'] = {}
+        self.channelRULE.pop("0", None)
+        self._isAutotune = (CHANNEL_KEY_AUTOTUNE in self.channelKEY)
         self.channelDATA.update(self._load())
         self.log(f'__init__ channelKEY = {self.channelKEY}')
         
         
-    def __enter__(self) -> 'Channels':
-        return self
+    @property
+    def isAutotune(self) -> bool:
+        return self._isAutotune
 
 
     def __exit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]):
@@ -67,32 +64,37 @@ class Channels(object):
 
 
     def _load(self) -> dict:
-        channelDATA = Globals.settings.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY), default={})
-        if CHANNELAUTOTUNE_KEY not in self.channelKEY:
-            verified = len(list(self._verify(channelDATA.get('channels',[]))))
-            Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(verified))
+        channelDATA = Globals.settings.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY), default=self.channelDATA)
+        Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(list(self._verify(channelDATA.get('channels',[]))))))
         self.log('_load, channels=%d' % len(channelDATA.get('channels',[])))
         return channelDATA
     
         
     def _verify(self, channels: list = []) -> Generator[dict, None, None]:
         """Filter and yield only valid channel items with required fields."""
+        template_keys = {'catchup': '', 'changed': False, 'enable': True, 'favorite': False,
+                         'group': [], 'id': '', 'logo': '', 'name': '', 'number': 0,
+                         'path': [], 'radio': False, 'rules': {}, 'type': ''}
         for idx, citem in enumerate(channels):
             if not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
                 self.log('[%s] _verify in-valid\n%s'%(citem.get('id'),citem))
                 continue
+            # Ensure all template keys are present with defaults
+            for key, default in template_keys.items():
+                if key not in citem:
+                    citem[key] = default
             yield citem
                 
                 
     def _save(self, expiration=-1) -> bool:
         if self.writable:
-            if CHANNELAUTOTUNE_KEY in self.channelKEY:
+            if self.isAutotune:
                 expiration = datetime.timedelta(days=MAX_GUIDEDAYS)
                 FileAccess.setJSON(CHANNEL_EXPORT_FLE,self.channelDATA)
+            Globals.properties.notifyDataChanged('channels')
             self.log('_save, channels=%d, expiration=%s' % (len(self.channelDATA['channels']), expiration))
             return Globals.settings.setCacheSetting(self.channelKEY, self.channelDATA, FileAccess._getMD5(self.channelKEY), expiration)
             
-
 
     def getTemplate(self) -> dict: 
         return self.channelTEMP.copy()
@@ -100,9 +102,8 @@ class Channels(object):
         
     def getChannels(self) -> list:
         with self._lock:
-            channelDATA = (self.channelDATA or FileAccess.getJSON(CHANNELFLE_DEFAULT))
-            self.log('getChannels, channels=%d' % len(channelDATA.get('channels',[])))
-            return sorted(channelDATA['channels'], key=itemgetter('number'))
+            self.log('getChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
+            return sorted(self.channelDATA['channels'], key=itemgetter('number'))
         
         
     def getChannelbyID(self, id: str) -> list:
@@ -127,7 +128,8 @@ class Channels(object):
             self.channelDATA['uuid']     = Globals.settings.getMYUUID()
             self.channelDATA['channels'] = self.sortChannels(list(self._verify(channels)))
             if len(self.channelDATA['channels']) > 0: Globals.properties.setHasChannels(self.channelKEY, self.channelDATA)
-            if CHANNELAUTOTUNE_KEY not in self.channelKEY: Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
+            if not self.isAutotune: Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
+            Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(list(self._verify(self.channelDATA.get('channels',[]))))))
             self.log('setChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
         return self._save()
         
@@ -144,7 +146,6 @@ class Channels(object):
     def clrChannels(self):
         self.channelDATA['channels'] = []
         
-
 
     def delChannel(self, citem: Optional[Union[dict, list]] = None) -> bool:
         """Delete channel(s) by ID or dict. Handles single dict or list of dicts."""

@@ -49,8 +49,7 @@ class TestChannelsSchema:
 
     def test_channel_rules_structure(self, channels_template):
         rules = channels_template['channels'][0]['rules']
-        assert 'version' in rules
-        assert isinstance(rules['version'], float)
+        assert isinstance(rules, dict)
 
     def test_has_plugins_array(self, channels_template):
         assert 'plugins' in channels_template

@@ -202,7 +202,7 @@ class Instances(object):
             'transformMulticastStreamUrls'  :'false',    # Transform multicast URLs to unicast
         }
                 
-    @debounceit(M3U_REFRESH * 2)
+    @debounceit(M3U_REFRESH)
     def triggerReload(self):
         """Trigger IPTV Simple to reload M3U/XMLTV by toggling cache settings.
         
@@ -213,13 +213,15 @@ class Instances(object):
             addon = xbmcaddon.Addon(PVR_CLIENT_ID)
             m3u_current = addon.getSetting('m3uCache')
             epg_current = addon.getSetting('epgCache')
-            addon.setSetting('m3uCache', 'false' if m3u_current == 'true' else 'true')
-            addon.setSetting('epgCache', 'false' if epg_current == 'true' else 'true')
-            self.log(f"triggerReload, toggled m3uCache={m3u_current}, epgCache={epg_current}", xbmc.LOGINFO)
+            # Always set false to force PVR to download fresh from HTTP server
+            # (toggling caused PVR to inherit global cache state from other instances)
+            addon.setSetting('m3uCache', 'false')
+            addon.setSetting('epgCache', 'false')
+            self.log(f"triggerReload, m3uCache={m3u_current}->false, epgCache={epg_current}->false", xbmc.LOGINFO)
         except Exception as e:
             self.log(f"triggerReload, error: {e}", xbmc.LOGDEBUG)
 
-    @debounceit(M3U_REFRESH * 2)
+    @debounceit(M3U_REFRESH)
     def togglePVRBackend(self, state: bool=False):
         """Toggle PVR backend addon on/off for a full reload.
         

@@ -72,6 +72,7 @@ class Background(xbmcgui.WindowXMLDialog):
         self.citem = playing_item.get('citem', {})
         self.fitem = playing_item.get('fitem', {})
         self.nitem = playing_item.get('nitem', {})
+        self.videoWindow = None
       
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
@@ -125,9 +126,65 @@ class Background(xbmcgui.WindowXMLDialog):
             self.getControl(40003).setText(info_text)
             thumb_art = Globals._getThumb(self.nitem)
             if thumb_art: self.getControl(40004).setImage(thumb_art)
+            
+            try:
+                self.videoWindow = self.getControl(41000)
+                self._shrinkVideo()
+            except Exception as e:
+                self.log(f"onInit videowindow: {e}", xbmc.LOGDEBUG)
         except Exception as e:
             self.log(f"onInit execution failed: {str(e)}", xbmc.LOGERROR)
             self.close()
+
+
+    def _shrinkVideo(self):
+        if self.videoWindow is None: return
+        try:
+            WH, _ = Globals.builtin.getResolution()
+            winW, winH = WH
+            targetX = abs(int(winW // 9))
+            targetY = abs(int(winH // 16) - winH) - 356
+            targetW, targetH = 960, 380
+            
+            startX, startY = 0, 0
+            startW, startH = winW, winH
+            steps = 20
+            for i in range(1, steps + 1):
+                t = i / steps
+                x = int(startX + (targetX - startX) * t)
+                y = int(startY + (targetY - startY) * t)
+                w = int(startW + (targetW - startW) * t)
+                h = int(startH + (targetH - startH) * t)
+                self.videoWindow.setPosition(x, y)
+                self.videoWindow.setWidth(w)
+                self.videoWindow.setHeight(h)
+                xbmc.Monitor().waitForAbort(0.015)
+        except Exception as e:
+            self.log(f"_shrinkVideo: {e}", xbmc.LOGDEBUG)
+
+
+    def _expandVideo(self):
+        if self.videoWindow is None: return
+        try:
+            WH, _ = Globals.builtin.getResolution()
+            winW, winH = WH
+            startX = abs(int(winW // 9))
+            startY = abs(int(winH // 16) - winH) - 356
+            startW, startH = 960, 380
+            
+            steps = 20
+            for i in range(1, steps + 1):
+                t = i / steps
+                x = int(startX + (0 - startX) * t)
+                y = int(startY + (0 - startY) * t)
+                w = int(startW + (winW - startW) * t)
+                h = int(startH + (winH - startH) * t)
+                self.videoWindow.setPosition(x, y)
+                self.videoWindow.setWidth(w)
+                self.videoWindow.setHeight(h)
+                xbmc.Monitor().waitForAbort(0.015)
+        except Exception as e:
+            self.log(f"_expandVideo: {e}", xbmc.LOGDEBUG)
 
 class Replay(xbmcgui.WindowXMLDialog):
     closing = False

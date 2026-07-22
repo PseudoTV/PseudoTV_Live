@@ -158,10 +158,8 @@ class Utilities(object):
                 return text  
                 
             with Globals.builtin.busy_dialog():
-                try: CHANGELOG_URL
-                except:
-                    with FileAccess.stream(CHANGELOG_FLE) as fle:
-                        txt = __addColor(fle.read())
+                with FileAccess.stream(CHANGELOG_FLE) as fle:
+                    txt = __addColor(fle.read())
                 Globals.dialog.textviewer(txt, heading=(LANGUAGE(32045).format(name=ADDON_NAME,version=ADDON_VERSION)),usemono=True)
         except Exception as e: LOG('Utilities: showChangelog failed! %s'%(e), xbmc.LOGERROR)
 

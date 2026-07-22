@@ -84,7 +84,7 @@ class RulesList(object):
 
 
     def getTemplate(self) -> dict:
-        return Channels(getChannelKey()).channelRULE.copy()
+        return Channels(Globals.getChannelKey()).channelRULE.copy()
         
                   
     def dumpRules(self, rules: dict = {}) -> dict:
@@ -103,7 +103,7 @@ class RulesList(object):
 
 
     def loadRules(self, channels: Optional[list] = None, append: bool = False) -> dict:
-        if channels is None: channels = Channels(getChannelKey()).getChannels()
+        if channels is None: channels = Channels(Globals.getChannelKey()).getChannels()
         #load channel rules and their instances. append = full rule list.
         def __load(ruleList, citem={}):
             tmpruleList = {}

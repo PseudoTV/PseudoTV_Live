@@ -30,8 +30,8 @@ _ERROR_RE = re.compile(r'line\ (.*?),\ column\ (.*)', re.IGNORECASE)
 class XMLTVS(object):
     
     def __init__(self, file: str = XMLTVFLEPATH, writable: bool = False, m3u: Optional[M3U] = None):
-        self._lock       = RLock()
         if m3u is None: m3u = M3U(writable=writable)
+        self._lock      = RLock()
         self.m3u        = m3u
         self.writable   = writable
         self.XMLTVFile  = file
@@ -141,6 +141,7 @@ class XMLTVS(object):
                 status['xmltv']['programmes'] = len(self.getProgrammes())
                 status['xmltv']['last_write'] = time.time()
                 Globals.settings.instances._computeDerived(status)
+                Globals.properties.notifyDataChanged('xmltv')
                 return self.buildGenres()
         
     
@@ -376,13 +377,13 @@ class XMLTVS(object):
     def getProgramItem(self, citem: dict, fItem: dict) -> dict:
         ''' Convert fileItem to Programme (XMLTV) item '''
         item = {}
-        item['channel']       = citem['id']
-        item['radio']         = citem['radio']
-        item['start']         = fItem['start']
-        item['stop']          = fItem['stop']
-        item['title']         = fItem['label']
-        item['desc']          = fItem['plot']
-        item['length']        = fItem['duration']
+        item['channel']       = citem.get('id', '')
+        item['radio']         = citem.get('radio', False)
+        item['start']         = fItem.get('start', '')
+        item['stop']          = fItem.get('stop', '')
+        item['title']         = fItem.get('label', '')
+        item['desc']          = fItem.get('plot', '')
+        item['length']        = fItem.get('duration', 0)
         item['sub-title']     = (fItem.get('episodetitle') or '')
         item['categories']    = (fItem.get('genre')        or ['Undefined'])[:5]#trim list to five
         item['type']          = fItem.get('type','video')

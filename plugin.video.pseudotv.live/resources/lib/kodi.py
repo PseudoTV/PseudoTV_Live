@@ -305,8 +305,7 @@ class Settings(object):
                                   'Resource_Trailers' :self.getSetting('Resource_Trailers').split('|')}}
                    
         # MD5 from stable fields only (exclude volatile 'md5', 'updated', 'resume')
-        stable = {k: v for k, v in payload.items() if k not in ('md5', 'updated', 'resume')}
-        payload['md5']     = FileAccess._getMD5(FileAccess.dumpJSON(stable))
+        payload['md5']     = FileAccess._getMD5(FileAccess.dumpJSON({k: v for k, v in payload.items() if k not in ('md5', 'updated')}))
         payload['updated'] = datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT)
         self.log("getBonjour:\npayload = %s"%(payload))
         return payload
@@ -330,7 +329,7 @@ class Settings(object):
                                   # 'recordings':[{'id':recording.get('id'),'display-name':recording.get('display-name',[['','']])[0][0],'icon':recording.get('icon',[{'src':LOGO}])[0].get('src',LOGO)} for recording in recordings], 
                                   # 'programmes':[{'id':key,'end-time':_globals()._epochTime(time.time(),tz=False).strftime(DTFORMAT)} for key, value in list(dict(xmltv.loadStopTimes()).items())]}
             # payload['library'] = Library().getLibrary()
-            # payload['servers'] = Multiroom().getServers()
+            # payload['servers'] = Multiroom().serverData
             # del xmltv
             # return payload
 
@@ -397,7 +396,7 @@ class Settings(object):
             return self.instances.setSettings(instanceName, settings)
         
         
-    def setPVRRemote(self, host: str, instanceName: str = ADDON_NAME, cache: bool = True):
+    def setPVRRemote(self, host: str, instanceName: str = ADDON_NAME, cache: bool = False):
         settings  = self.instances.getSettings(instanceName)
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
                      'kodi_addon_instance_enabled':'true',
@@ -406,7 +405,7 @@ class Settings(object):
                      'm3uCache'                   :'%s'%(str(cache).lower()),
                      'epgPathType'                :'1',
                      'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
-                     'epgCache'                   :'%s'%(str(cache).lower()),
+                     'epgCache'                   :'true',
                      'genresPathType'             :'1',
                      'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
                      'logoPathType'               :'1',
@@ -684,7 +683,7 @@ class Properties(object):
 
 
     def setHasChannels(self, key: Optional[str] = None, channelDATA: Optional[dict] = None) -> Any:
-        if key is None: key = CHANNELAUTOTUNE_KEY if self.dialog.settings.getSettingBool('Enable_Autotune') else CHANNEL_KEY
+        if key is None: key = _globals().getChannelKey()
         if channelDATA is None: channelDATA = Channels(key).channelDATA
         chanLST = self.dialog.settings.getCacheSetting('%s.has.Channels'%(ADDON_ID), default={})
         if len(channelDATA.get('channels',[])) > 0: 
@@ -695,7 +694,7 @@ class Properties(object):
         
         
     def hasChannels(self, key: Optional[str] = None, path: Optional[str] = None) -> bool:
-        if key is None: key = CHANNELAUTOTUNE_KEY if self.dialog.settings.getSettingBool('Enable_Autotune') else CHANNEL_KEY
+        if key is None: key = _globals().getChannelKey()
         if not path is None: 
             if FileAccess.exists(path): channelDATA = FileAccess.getJSON(path)
         else:                           channelDATA = self.dialog.settings.getCacheSetting('%s.has.Channels'%(ADDON_ID), default={}).get(key,{})
@@ -703,7 +702,7 @@ class Properties(object):
         
 
 
-    def setBackup(self, key: str = CHANNELBACKUP_KEY, channels: Optional[list] = None) -> Any:
+    def setBackup(self, key: str = CHANNEL_KEY_BACKUP, channels: Optional[list] = None) -> Any:
         backups = self.dialog.settings.getCacheSetting('%s.has.backups'%(ADDON_ID), default={})
         if channels is None: channels = Channels(key).getChannels()
         if len(channels) > 0: backups.setdefault(key,{}).update({'name':key, 'channels': channels, 'updated':(backups.get(key,{}).get('updated') or datetime.datetime.fromtimestamp(time.time()).strftime(DTFORMAT))})
@@ -711,7 +710,7 @@ class Properties(object):
         return self.dialog.settings.setCacheSetting('%s.has.backups'%(ADDON_ID),backups,life=-1).get(key)
 
 
-    def hasBackup(self, key: str = CHANNELBACKUP_KEY, path: Optional[str] = None) -> Optional[dict]:
+    def hasBackup(self, key: str = CHANNEL_KEY_BACKUP, path: Optional[str] = None) -> Optional[dict]:
         if not path is None: 
             if FileAccess.exists(path): return FileAccess.getJSON(path)
         else:                           return self.dialog.settings.getCacheSetting('%s.has.backups'%(ADDON_ID), default={}).get(key)
@@ -745,6 +744,16 @@ class Properties(object):
         
     def hasEnabledServers(self) -> bool:
         return self.getEXTProperty('%s.has.Enabled_Servers'%(ADDON_ID),False)
+        
+        
+    def notifyDataChanged(self, file_type: str):
+        """Notify all local PseudoTV instances that data was saved."""
+        try:
+            friendly = self.getFriendlyName()
+            self.jsonRPC.notifyAll(ADDON_NAME, {'friendly_name': friendly, 'type': file_type})
+            self.log(f'notifyDataChanged, sent: {file_type} from {friendly}')
+        except Exception as e:
+            self.log(f'notifyDataChanged, error: {e}', xbmc.LOGDEBUG)
         
         
     def setPendingShutdown(self, state: bool = True) -> Any:
@@ -1647,7 +1656,7 @@ class Dialog(object):
             return True
             
         
-    def yesnoDialog(self, message: str, heading: str = ADDON_NAME, nolabel: str = '', yeslabel: str = '', customlabel: str = '', autoclose: int = AUTOCLOSE_DELAY) -> Union[int, bool]:
+    def yesnoDialog(self, message: str, heading: str = ADDON_NAME, nolabel: str = '', yeslabel: str = '', customlabel: str = '', autoclose: int = YESNO_TIMEOUT) -> Union[int, bool]:
         if customlabel:
             # Returns the integer value for the selected button (-1:cancelled, 0:no, 1:yes, 2:custom)
             return self.dialog.yesnocustom(heading, message, customlabel, nolabel, yeslabel, (autoclose*1000))

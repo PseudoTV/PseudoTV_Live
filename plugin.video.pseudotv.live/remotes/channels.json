@@ -1,8 +1,8 @@
 {
     "name": "",
     "uuid": "",
-	"updated":"",
-	"version": "1.0.0",
+    "updated": "",
+    "version": "1.0.0",
     "channels": [
         {
             "id": "",
@@ -14,15 +14,14 @@
             ],
             "group": [
             ],
-            "rules": 
-                {
-                "version": 0.0,
+            "rules": {
+                "version": "0.0.1",
                 "0": {
                     "values": {
-                        "0": 1,
-                        "1": 1,
-                        "2": 1,
-                        "3": 1
+                        "0": "",
+                        "1": "",
+                        "2": "",
+                        "3": ""
                     }
                 }
             },
@@ -31,30 +30,6 @@
             "favorite": false,
             "changed": false,
             "enable": true
-        }
-    ],
-    "plugins": [
-        {
-            "vod": [
-                {
-                    "id": "",
-                    "type": "vod",
-                    "name": "",
-                    "description": "",
-                    "icon": "",
-                    "path": ""
-                }
-            ],
-            "live": [
-                {
-                    "id": "",
-                    "type": "live",
-                    "name": "",
-                    "description": "",
-                    "icon": "",
-                    "path": ""
-                }
-            ]
         }
     ]
 }

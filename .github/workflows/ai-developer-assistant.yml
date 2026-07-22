@@ -77,12 +77,12 @@ jobs:
             echo "any_code=true" >> $GITHUB_OUTPUT
           fi
           echo "file_count=${TOTAL_COUNT:-0}" >> $GITHUB_OUTPUT
-          # Check for strings.po changes
+          # Check for en_gb strings.po changes
           STRINGS_CHANGED=""
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            STRINGS_CHANGED=$(git diff --name-only origin/$PR_BASE...HEAD -- '**/strings.po' 2>&1 || true)
+            STRINGS_CHANGED=$(git diff --name-only origin/$PR_BASE...HEAD -- 'plugin.video.pseudotv.live/resources/language/resource.language.en_gb/strings.po' 2>&1 || true)
           elif [ "$EVENT_NAME" = "push" ]; then
-            STRINGS_CHANGED=$(git diff --name-only HEAD~1 HEAD -- '**/strings.po' 2>&1 || true)
+            STRINGS_CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'plugin.video.pseudotv.live/resources/language/resource.language.en_gb/strings.po' 2>&1 || true)
           fi
           STRINGS_COUNT=0
           [ -n "$STRINGS_CHANGED" ] && STRINGS_COUNT=$(echo "$STRINGS_CHANGED" | grep -c 'strings.po$' || true)
@@ -157,382 +157,6 @@ jobs:
               break
             fi
           done
-
-  translate:
-    name: AI Translation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Check for strings.po Changes
-        id: check-strings
-        run: |
-          echo "has_changes=false" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1 2>/dev/null || true
-            CHANGED=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD -- '**/strings.po' 2>/dev/null || true)
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            CHANGED=$(git diff --name-only HEAD~1 HEAD -- '**/strings.po' 2>/dev/null || true)
-          fi
-          if [ -n "$CHANGED" ]; then
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            echo "Changed files: $CHANGED"
-          fi
-      - name: Exit if No Changes
-        if: steps.check-strings.outputs.has_changes != 'true'
-        run: exit 0
-
-      - name: Install OpenCode
-        run: curl -fsSL https://opencode.ai/install | bash
-
-      - name: Generate Translations
-        env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          EN_GB_FILE="plugin.video.pseudotv.live/resources/language/resource.language.en_gb/strings.po"
-          
-          if [ ! -f "$EN_GB_FILE" ]; then
-            echo "en_GB strings.po not found"
-            exit 0
-          fi
-          
-          # Get diff of en_GB changes
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.ref }}"
-            git fetch origin $BASE --depth=1 2>/dev/null || true
-            DIFF=$(git diff origin/$BASE...HEAD -- "$EN_GB_FILE" 2>/dev/null | head -c 30000 || true)
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            DIFF=$(git diff HEAD~1 HEAD -- "$EN_GB_FILE" 2>/dev/null | head -c 30000 || true)
-          fi
-          
-          if [ -z "$DIFF" ]; then
-            echo "No changes detected in en_GB strings.po"
-            exit 0
-          fi
-          
-          # Extract changed msgctxt IDs from diff
-          CHANGED_IDS=$(echo "$DIFF" | grep -oP 'msgctxt "#\K[0-9]+' | sort -u || true)
-          
-          if [ -z "$CHANGED_IDS" ]; then
-            echo "No new/changed string IDs detected"
-            exit 0
-          fi
-          
-          echo "Changed string IDs: $CHANGED_IDS"
-          
-          # Top 5 Kodi languages by user base
-          LANGUAGES=(
-            "enGB:English (United Kingdom)"
-            "esES:Spanish (Spain)"
-            "deDE:German (Germany)"
-            "frFR:French (France)"
-            "ptBR:Portuguese (Brazil)"
-          )
-          
-          # Generate translations for each language
-          for LANG_CODE_NAME in "${LANGUAGES[@]}"; do
-            LANG_CODE="${LANG_CODE_NAME%%:*}"
-            LANG_NAME="${LANG_CODE_NAME#*:}"
-            
-            # Skip en_GB (source language)
-            if [ "$LANG_CODE" = "enGB" ]; then
-              continue
-            fi
-            
-            # Convert lang code format: enGB -> resource.language.en_gb
-            FOLDER_CODE=$(echo "$LANG_CODE" | sed 's/\([a-z][a-z]\)\([A-Z][A-Z]\)/\L\1_\L\2/')
-            LANG_DIR="plugin.video.pseudotv.live/resources/language/resource.language.${FOLDER_CODE}"
-            LANG_FILE="${LANG_DIR}/strings.po"
-            
-            # Create directory if not exists
-            mkdir -p "$LANG_DIR"
-            
-            # Build translation prompt with changed strings
-            STRINGS_TO_TRANSLATE=""
-            for ID in $CHANGED_IDS; do
-              # Extract msgid for this ID from en_GB file
-              MSGID=$(awk -v id="#$ID" '/msgctxt/{
-                ctx=$0
-                getline
-                if ($0 ~ /msgid/) {
-                  msgid=$0
-                  sub(/msgid "/, "", msgid)
-                  sub(/"$/, "", msgid)
-                  print ctx "|" msgid
-                }
-              }' "$EN_GB_FILE" | grep "#$ID" | head -1 | cut -d'|' -f2-)
-              
-              if [ -n "$MSGID" ]; then
-                STRINGS_TO_TRANSLATE="${STRINGS_TO_TRANSLATE}#${ID}|${MSGID}\n"
-              fi
-            done
-            
-            if [ -z "$STRINGS_TO_TRANSLATE" ]; then
-              echo "No strings to translate for $LANG_NAME"
-              continue
-            fi
-            
-            echo "Translating $(echo "$CHANGED_IDS" | wc -w) strings to $LANG_NAME..."
-            
-            # Call AI for translation
-            PROMPT="Translate these Kodi addon UI strings from English to ${LANG_NAME}. Keep all placeholders (%s, [B], [/B], [COLOR=...], [CR], {name}, {group}) unchanged. Only output translations in format: #ID|translation Strings: $(echo -e "$STRINGS_TO_TRANSLATE")"
-            
-            TRANSLATIONS=$(opencode run --model opencode/mimo-v2.5-free "$PROMPT" 2>&1 | grep -E '^[0-9]+\|' || true)
-            
-            if [ -z "$TRANSLATIONS" ]; then
-              echo "Translation failed for $LANG_NAME, skipping"
-              continue
-            fi
-            
-            # Generate strings.po file
-            {
-              echo '# Kodi Media Center language file'
-              echo '# Addon Name: "PseudoTV Live"'
-              echo '# Addon id: plugin.video.pseudotv.live'
-              echo '# Addon Provider: Lunatixz'
-              echo 'msgid ""'
-              echo 'msgstr ""'
-              echo '"Project-Id-Version: plugin.video.pseudotv.live\\n"'
-              echo '"Report-Msgid-Bugs-To: \\n"'
-              echo '"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\\n"'
-              echo '"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\\n"'
-              echo '"Last-Translator: Lunatixz Translation Team\\n"'
-              echo "\"Language-Team: ${LANG_NAME}\\n\""
-              echo '"MIME-Version: 1.0\\n"'
-              echo '"Content-Type: text/plain; charset=UTF-8\\n"'
-              echo '"Content-Transfer-Encoding: 8bit\\n"'
-              echo "\"Language: ${FOLDER_CODE}\\n\""
-              echo '"Plural-Forms: nplurals=2; plural=(n != 1);\\n"'
-            } > "$LANG_FILE"
-            
-            # Append translated strings
-            while IFS='|' read -r ID TRANSLATION; do
-              ID=$(echo "$ID" | tr -d ' ')
-              TRANSLATION=$(echo "$TRANSLATION" | sed 's/"/\\"/g')
-              echo "" >> "$LANG_FILE"
-              echo "msgctxt \"${ID}\"" >> "$LANG_FILE"
-              echo "msgid \"$(grep -A1 "msgctxt \"${ID}\"" "$EN_GB_FILE" | grep 'msgid' | sed 's/msgid "//;s/"$//')\"" >> "$LANG_FILE"
-              echo "msgstr \"${TRANSLATION}\"" >> "$LANG_FILE"
-            done <<< "$TRANSLATIONS"
-            
-            echo "Created $LANG_FILE"
-          done
-          
-          echo "Translation complete"
-          
-          # Check if there are any changes
-          if git diff --quiet plugin.video.pseudotv.live/resources/language/ 2>/dev/null; then
-            echo "No translation changes to commit"
-            echo "status=no_changes" >> $GITHUB_OUTPUT
-          else
-            # Create branch and commit
-            BRANCH_NAME="translations/$(date +%Y%m%d-%H%M%S)"
-            git checkout -b "$BRANCH_NAME"
-            git add plugin.video.pseudotv.live/resources/language/
-            git commit -m "Auto-translations: ${#CHANGED_IDS[@]} strings translated to ${#LANGUAGES[@]} languages"
-            git push origin "$BRANCH_NAME"
-            
-            # Create PR
-            BODY="Automated translation update for ${#CHANGED_IDS[@]} changed strings across ${#LANGUAGES[@]} languages."
-            gh pr create --title "Auto-Translations: ${#CHANGED_IDS[@]} strings" --body "$BODY" --base master --head "$BRANCH_NAME" --label "translations" 2>/dev/null || true
-            
-            echo "status=pr_created" >> $GITHUB_OUTPUT
-            echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
-          fi
-          
-          # Generate report
-          echo "AI Translation Report" > translate-report.md
-          echo "" >> translate-report.md
-          echo "Changed string IDs: ${CHANGED_IDS}" >> translate-report.md
-          echo "" >> translate-report.md
-          echo "Languages translated: ${#LANGUAGES[@]}" >> translate-report.md
-          echo "" >> translate-report.md
-          echo "Status: PR created for review" >> translate-report.md
-        continue-on-error: true
-      - name: Upload Report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: translate-report
-          path: translate-report.md
-          retention-days: 30
-
-  changelog:
-    name: Changelog Update
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.any_code == 'true'
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Install OpenCode
-        run: curl -fsSL https://opencode.ai/install | bash
-
-      - name: Check and Update Changelog
-        env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ADDON_XML="plugin.video.pseudotv.live/addon.xml"
-          CHANGELOG_TXT="plugin.video.pseudotv.live/changelog.txt"
-          
-          if [ ! -f "$ADDON_XML" ] || [ ! -f "$CHANGELOG_TXT" ]; then
-            echo "addon.xml or changelog.txt not found"
-            exit 0
-          fi
-          
-          # Read current version from addon.xml
-          VERSION=$(grep -oP 'version="\K[^"]+' "$ADDON_XML" | head -1)
-          if [ -z "$VERSION" ]; then
-            echo "Could not read version from addon.xml"
-            exit 0
-          fi
-          
-          VERSION_LABEL="v.${VERSION}"
-          echo "Current version: $VERSION_LABEL"
-          
-          # Check if changelog already has this version
-          if grep -q "^${VERSION_LABEL}$" "$CHANGELOG_TXT"; then
-            # Count entries under this version
-            ENTRY_COUNT=$(awk "/^${VERSION_LABEL}$/,/^v\./" "$CHANGELOG_TXT" | grep -c "^- " || true)
-            echo "Found $ENTRY_COUNT entries under $VERSION_LABEL"
-            
-            if [ "${ENTRY_COUNT:-0}" -ge 20 ]; then
-              echo "Version already has ${ENTRY_COUNT} entries (max 20). Skipping."
-              exit 0
-            fi
-          else
-            echo "Version $VERSION_LABEL not found in changelog. Will add new section."
-            ENTRY_COUNT=0
-          fi
-          
-          # Get git diff for changes
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.ref }}"
-            git fetch origin $BASE --depth=1 2>/dev/null || true
-            DIFF=$(git diff origin/$BASE...HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -c 30000 || true)
-            FILES=$(git diff --name-only origin/$BASE...HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null || true)
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            DIFF=$(git diff HEAD~1 HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -c 30000 || true)
-            FILES=$(git diff --name-only HEAD~1 HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null || true)
-          fi
-          
-          if [ -z "$DIFF" ]; then
-            echo "No code changes detected"
-            exit 0
-          fi
-          
-          # Read existing changelog entries for this version
-          EXISTING_ENTRIES=""
-          if [ "${ENTRY_COUNT:-0}" -gt 0 ]; then
-            EXISTING_ENTRIES=$(awk "/^${VERSION_LABEL}$/,/^v\./" "$CHANGELOG_TXT" | grep "^- " || true)
-          fi
-          
-          # Keywords from __addColor in utilities.py
-          KEYWORDS="Added|Implemented|Introduced|Addressed|New!|Optimized|Improved|Modified|Enhanced|Refactored|Refined|Overhauled|Reworked|Tweaked|Adjusted|Updated|Changed|Corrected|Proper|Included|Fixed|Resolved|Removed|Replaced|Eliminated|Excluded|Deprecated|Important|Warning|Notice"
-          
-          # Generate changelog entry using AI
-          PROMPT="You are generating a changelog entry for PseudoTV Live Kodi addon. Analyze the code changes below and generate a SINGLE changelog entry line. RULES: 1. Start with a dash, space, then ONE of these EXACT keywords: ${KEYWORDS}. 2. Keep it concise (1-2 lines max) - this is for end users, not developers. 3. Focus on USER-FACING changes: new features, improvements, bug fixes. 4. Do NOT include file names, technical details, or code references. 5. Do NOT include variables, function names, or internal implementation details. 6. Make it understandable to a non-technical user. EXAMPLES: - Fixed Cache shutdown order to prevent database corruption. - Improved Channel logo detection and resource selection in settings. - Added Recently Added Music to Autotuning. CHANGED FILES: ${FILES} CODE DIFF (first 2000 chars): $(echo "$DIFF" | head -c 2000) Generate ONLY the changelog line starting with dash, nothing else."
-
-          echo "Generating changelog entry..."
-          ENTRY=$(opencode run --model opencode/mimo-v2.5-free "$PROMPT" 2>&1 | grep -E "^- " | head -1 || true)
-          
-          if [ -z "$ENTRY" ]; then
-            echo "Failed to generate changelog entry"
-            exit 0
-          fi
-          
-          # Validate entry has a valid keyword
-          if ! echo "$ENTRY" | grep -qE "^- (${KEYWORDS})"; then
-            echo "Invalid entry format: $ENTRY"
-            exit 0
-          fi
-          
-          echo "Generated entry: $ENTRY"
-          
-          # Read current changelog
-          CONTENT=$(cat "$CHANGELOG_TXT")
-          
-          if echo "$CONTENT" | grep -q "^${VERSION_LABEL}$"; then
-            # Version exists - add entry and enforce 20 entry limit
-            echo "Adding entry to existing version $VERSION_LABEL"
-            
-            # Extract all entries for this version (including new one)
-            ALL_ENTRIES=$(echo "$EXISTING_ENTRIES"; echo "$ENTRY")
-            TOTAL=$(echo "$ALL_ENTRIES" | grep -c "^- " || true)
-            
-            if [ "${TOTAL:-0}" -gt 20 ]; then
-              # Keep only the first 20 entries (most recent/important)
-              KEEP_ENTRIES=$(echo "$ALL_ENTRIES" | head -20)
-              echo "Trimmed to 20 entries (was $TOTAL)"
-            else
-              KEEP_ENTRIES="$ALL_ENTRIES"
-            fi
-            
-            # Use awk to rebuild the changelog
-            awk -v ver="$VERSION_LABEL" -v entries="$KEEP_ENTRIES" '
-              $0 == ver { found=1; print; print entries; next }
-              found && /^v\./ { found=0 }
-              !found { print }
-            ' "$CHANGELOG_TXT" > "${CHANGELOG_TXT}.tmp" && mv "${CHANGELOG_TXT}.tmp" "$CHANGELOG_TXT"
-          else
-            # New version - add at top after notice
-            echo "Adding new version section $VERSION_LABEL"
-            ENTRY_CLEAN="${ENTRY#- }"
-            # Create temp file with new content
-            echo "${VERSION_LABEL}" > "${CHANGELOG_TXT}.new"
-            echo "- ${ENTRY_CLEAN}" >> "${CHANGELOG_TXT}.new"
-            echo "" >> "${CHANGELOG_TXT}.new"
-            cat "$CHANGELOG_TXT" >> "${CHANGELOG_TXT}.new"
-            mv "${CHANGELOG_TXT}.new" "$CHANGELOG_TXT"
-          fi
-          
-          echo "Changelog updated successfully"
-          echo "entry=$ENTRY" >> $GITHUB_OUTPUT
-          echo "version=$VERSION_LABEL" >> $GITHUB_OUTPUT
-          
-          # Check if there are any changes
-          if git diff --quiet "$CHANGELOG_TXT" 2>/dev/null; then
-            echo "No changelog changes to commit"
-            echo "status=no_changes" >> $GITHUB_OUTPUT
-          else
-            # Create branch and commit
-            BRANCH_NAME="changelog/$(date +%Y%m%d-%H%M%S)"
-            git checkout -b "$BRANCH_NAME"
-            git add "$CHANGELOG_TXT"
-            git commit -m "Changelog: $ENTRY"
-            git push origin "$BRANCH_NAME"
-            
-            # Create PR
-            BODY="Automated changelog update for $VERSION_LABEL"
-            gh pr create --title "Changelog: $VERSION_LABEL" --body "$BODY" --base master --head "$BRANCH_NAME" --label "changelog" 2>/dev/null || true
-            
-            echo "status=pr_created" >> $GITHUB_OUTPUT
-            echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
-          fi
-          
-          # Generate report
-          echo "## Changelog Update" > changelog-report.md
-          echo "" >> changelog-report.md
-          echo "**Version:** $VERSION_LABEL" >> changelog-report.md
-          echo "**Entry:** $ENTRY" >> changelog-report.md
-          echo "**Status:** PR created for review" >> changelog-report.md
-        continue-on-error: true
-      - name: Upload Report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: changelog-report
-          path: changelog-report.md
-          retention-days: 30
 
   addon-check:
     name: Kodi Addon Checker
@@ -913,15 +537,15 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
-          DIFF=$(cat changes.diff)
+          DIFF=$(cat changes.diff | head -c 10000)
           FILES=$(cat changed_files.txt 2>/dev/null || echo "None")
           
-          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Analyze these code changes to PseudoTV Live (Kodi addon). CHANGED FILES: $FILES CODE DIFF: $DIFF Focus on: 1. Does this break existing functionality? 2. Bugs or logic errors? 3. Follows existing code patterns? 4. Missing imports or undefined variables? 5. Kodi API compatibility issues? Provide risk assessment (LOW/MEDIUM/HIGH) and specific findings." 2>&1 || true)
+          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Review PseudoTV Live code changes. FILES: $FILES DIFF: $DIFF Check: 1) Breaking changes 2) Bugs 3) Pattern violations 4) Missing imports 5) Kodi compatibility. Risk: LOW/MEDIUM/HIGH" 2>&1 || true)
           
           {
             echo "## AI Code Review"
             echo ""
-            echo "$OPENCODE_OUTPUT" | sed 's/[^[[:alnum:][:space:]._-]//g' || true
+            echo "$OPENCODE_OUTPUT" | sed 's/[[:cntrl:]]//g' || true
           } > ai-review-report.md
         continue-on-error: true
       - name: Upload Report
@@ -936,7 +560,7 @@ jobs:
     name: Generate Report
     runs-on: ubuntu-latest
     if: always()
-    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, ai-review, translate, changelog, check-prev]
+    needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, ai-review, check-prev]
     steps:
       - name: Download All Reports
         uses: actions/download-artifact@v7
@@ -962,8 +586,6 @@ jobs:
           echo "| JSON Validation | ${{ needs.lint-json.result == 'success' && '✅ Passed' || needs.lint-json.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | [View Report](#json-validation) |" >> $GITHUB_STEP_SUMMARY
           echo "| OpenCode Lint | ${{ needs.lint.result == 'success' && '✅ Passed' || needs.lint.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | [View Report](#opencode-lint) |" >> $GITHUB_STEP_SUMMARY
           echo "| AI Code Review | ${{ needs.ai-review.result == 'success' && '✅ Passed' || needs.ai-review.result == 'skipped' && '⏭️ Skipped (no lint issues)' || '❌ Failed' }} | [View Report](#ai-code-review) |" >> $GITHUB_STEP_SUMMARY
-          echo "| AI Translation | ${{ needs.translate.result == 'success' && '✅ Generated' || needs.translate.result == 'skipped' && '⏭️ Skipped (no strings.po changes)' || needs.translate.result == 'failure' && '❌ Failed' || '⏭️ N/A' }} | [View Report](#ai-translation) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Changelog | ${{ needs.changelog.result == 'success' && '✅ Updated' || needs.changelog.result == 'skipped' && '⏭️ Skipped (no code changes)' || needs.changelog.result == 'failure' && '❌ Failed' || '⏭️ N/A' }} | [View Report](#changelog-update) |" >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Change Detection" >> $GITHUB_STEP_SUMMARY
@@ -1003,8 +625,6 @@ jobs:
             const jsonResult = '${{ needs.lint-json.result }}';
             const lintResult = '${{ needs.lint.result }}';
             const aiResult = '${{ needs.ai-review.result }}';
-            const translateResult = '${{ needs.translate.result }}';
-            const changelogResult = '${{ needs.changelog.result }}';
             
             const statusIcon = (r) => r === 'success' ? '✅' : r === 'skipped' ? '⏭️' : '❌';
             
@@ -1017,9 +637,7 @@ jobs:
             report += `| XML Validation | ${statusIcon(xmlResult)} ${xmlResult} |\n`;
             report += `| JSON Validation | ${statusIcon(jsonResult)} ${jsonResult} |\n`;
             report += `| OpenCode Lint | ${statusIcon(lintResult)} ${lintResult} |\n`;
-            report += `| AI Code Review | ${statusIcon(aiResult)} ${aiResult} |\n`;
-            report += `| AI Translation | ${statusIcon(translateResult)} ${translateResult} |\n`;
-            report += `| Changelog | ${statusIcon(changelogResult)} ${changelogResult} |\n\n`;
+            report += `| AI Code Review | ${statusIcon(aiResult)} ${aiResult} |\n\n`;
             
             // Add detailed findings from reports
             const reportFiles = [
@@ -1029,9 +647,7 @@ jobs:
               { name: 'F-String Checker', file: 'reports/fstring-report/fstring-report.md', icon: '📝' },
               { name: 'Kodi Checker', file: 'reports/kodi-check-report/kodi-check-report.md', icon: '🎬' },
               { name: 'OpenCode Lint', file: 'reports/lint-report/lint-report.md', icon: '🤖' },
-              { name: 'AI Review', file: 'reports/ai-review-report/ai-review-report.md', icon: '🧠' },
-              { name: 'AI Translation', file: 'reports/translate-report/translate-report.md', icon: '🌐' },
-              { name: 'Changelog', file: 'reports/changelog-report/changelog-report.md', icon: '📝' }
+              { name: 'AI Review', file: 'reports/ai-review-report/ai-review-report.md', icon: '🧠' }
             ];
             
             for (const rf of reportFiles) {

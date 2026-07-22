@@ -40,20 +40,31 @@ ADDON_DIR = os.path.join(GITPATH, 'plugin.video.pseudotv.live')
 TEST_DIR = os.path.join(ADDON_DIR, 'tests')
 CHANGELOG = os.path.join(ADDON_DIR, 'changelog.txt')
 ADDON_XML = os.path.join(ADDON_DIR, 'addon.xml')
+EN_GB_FILE = os.path.join(ADDON_DIR, 'resources', 'language', 'resource.language.en_gb', 'strings.po')
+LANG_DIR = os.path.join(ADDON_DIR, 'resources', 'language')
+
+# Top 5 Kodi languages by user base (excluding en_GB source)
+LANGUAGES = {
+    'esES': 'Spanish (Spain)',
+    'deDE': 'German (Germany)',
+    'frFR': 'French (France)',
+    'ptBR': 'Portuguese (Brazil)',
+}
 
 
 class Generator:
     """Generates addons.xml and addons.xml.md5 from addon.xml files."""
 
     def __init__(self, run_tests=True):
-        self._clean_addons()
-        self._generate_addons_file()
-        self._generate_md5_file()
         if run_tests:
             if not self._run_local_tests():
                 print("\nTests failed. Aborting build.")
                 sys.exit(1)
+            self._update_translations()
             self._update_changelog()
+        self._clean_addons()
+        self._generate_addons_file()
+        self._generate_md5_file()
         self._zipit(GITPATH)
         print("Finished updating addons xml and md5 files")
 
@@ -102,6 +113,149 @@ class Generator:
         except Exception as e:
             print(f"Error running tests: {e}")
             return True
+
+    def _update_translations(self):
+        """Generate translations for changed strings.po entries using AI."""
+        if not os.path.exists(EN_GB_FILE):
+            print("en_GB strings.po not found, skipping translations")
+            return
+
+        # Get git diff for en_gb strings.po changes
+        try:
+            result = subprocess.run(
+                ['git', 'diff', 'HEAD~1', 'HEAD', '--', EN_GB_FILE],
+                cwd=GITPATH,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                timeout=10
+            )
+            diff = result.stdout[:30000]
+            if not diff.strip():
+                print("No changes detected in en_GB strings.po")
+                return
+        except Exception as e:
+            print(f"Could not get git diff: {e}")
+            return
+
+        # Extract changed msgctxt IDs from diff
+        changed_ids = list(set(re.findall(r'msgctxt "#(\d+)"', diff)))
+        if not changed_ids:
+            print("No new/changed string IDs detected")
+            return
+
+        print(f"\nFound {len(changed_ids)} changed string IDs: {', '.join(changed_ids)}")
+
+        # Read en_GB file to extract msgids
+        try:
+            with open(EN_GB_FILE, 'r', encoding='utf-8') as f:
+                en_gb_content = f.read()
+        except Exception as e:
+            print(f"Could not read en_GB strings.po: {e}")
+            return
+
+        # Build strings to translate
+        strings_to_translate = []
+        for string_id in changed_ids:
+            # Extract msgid for this ID
+            pattern = rf'msgctxt "#{string_id}"\s*\nmsgid "([^"]*)"'
+            match = re.search(pattern, en_gb_content)
+            if match:
+                msgid = match.group(1)
+                strings_to_translate.append(f"#{string_id}|{msgid}")
+
+        if not strings_to_translate:
+            print("No strings to translate")
+            return
+
+        print(f"Translating {len(strings_to_translate)} strings to {len(LANGUAGES)} languages...")
+
+        # Generate translations for each language
+        for lang_code, lang_name in LANGUAGES.items():
+            # Convert lang code format: esES -> resource.language.es_es
+            folder_code = lang_code[:2].lower() + '_' + lang_code[2:].lower()
+            lang_dir = os.path.join(LANG_DIR, f'resource.language.{folder_code}')
+            lang_file = os.path.join(lang_dir, 'strings.po')
+
+            # Create directory if not exists
+            os.makedirs(lang_dir, exist_ok=True)
+
+            # Build translation prompt
+            strings_text = '\n'.join(strings_to_translate)
+            prompt = (
+                f"Translate these Kodi addon UI strings from English to {lang_name}. "
+                f"Keep all placeholders (%s, [B], [/B], [COLOR=...], [CR], {{name}}, {{group}}) unchanged. "
+                f"Only output translations in format: #ID|translation\n"
+                f"Strings:\n{strings_text}"
+            )
+
+            try:
+                result = subprocess.run(
+                    ['opencode', 'run', '--model', 'opencode/mimo-v2.5-free', prompt],
+                    cwd=GITPATH,
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='replace',
+                    timeout=60
+                )
+                raw_output = result.stdout
+            except FileNotFoundError:
+                print("OpenCode not found, skipping translations")
+                return
+            except Exception as e:
+                print(f"Error running OpenCode: {e}")
+                return
+
+            # Parse translations
+            translations = {}
+            for line in raw_output.strip().split('\n'):
+                line = line.strip()
+                if '|' in line and line[0].isdigit():
+                    parts = line.split('|', 1)
+                    if len(parts) == 2:
+                        translations[parts[0].strip()] = parts[1].strip()
+
+            if not translations:
+                print(f"Translation failed for {lang_name}, skipping")
+                continue
+
+            # Generate strings.po file
+            with open(lang_file, 'w', encoding='utf-8') as f:
+                f.write('# Kodi Media Center language file\n')
+                f.write('# Addon Name: "PseudoTV Live"\n')
+                f.write('# Addon id: plugin.video.pseudotv.live\n')
+                f.write('# Addon Provider: Lunatixz\n')
+                f.write('msgid ""\n')
+                f.write('msgstr ""\n')
+                f.write(f'"Project-Id-Version: plugin.video.pseudotv.live\\n"\n')
+                f.write('"Report-Msgid-Bugs-To: \\n"\n')
+                f.write('"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\\n"\n')
+                f.write('"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\\n"\n')
+                f.write('"Last-Translator: Lunatixz Translation Team\\n"\n')
+                f.write(f'"Language-Team: {lang_name}\\n"\n')
+                f.write('"MIME-Version: 1.0\\n"\n')
+                f.write('"Content-Type: text/plain; charset=UTF-8\\n"\n')
+                f.write('"Content-Transfer-Encoding: 8bit\\n"\n')
+                f.write(f'"Language: {folder_code}\\n"\n')
+                f.write('"Plural-Forms: nplurals=2; plural=(n != 1);\\n"\n')
+
+                # Append translated strings
+                for string_id, translation in translations.items():
+                    # Extract msgid from en_GB file
+                    pattern = rf'msgctxt "#{string_id}"\s*\nmsgid "([^"]*)"'
+                    match = re.search(pattern, en_gb_content)
+                    if match:
+                        msgid = match.group(1)
+                        translation = translation.replace('"', '\\"')
+                        f.write(f'\nmsgctxt "#{string_id}"\n')
+                        f.write(f'msgid "{msgid}"\n')
+                        f.write(f'msgstr "{translation}"\n')
+
+            print(f"Created {lang_file}")
+
+        print("Translation complete")
 
     def _update_changelog(self):
         """Generate changelog entry using AI and update changelog.txt."""
@@ -158,6 +312,27 @@ class Generator:
         version = f"v.{raw_version}"
         print(f"\nGenerating changelog entry for version {version}...")
 
+        # Check if version already exists and count entries
+        with open(CHANGELOG, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        entry_count = 0
+        if version in content:
+            # Count entries under this version
+            in_version = False
+            for line in content.split('\n'):
+                if line.strip() == version:
+                    in_version = True
+                    continue
+                if in_version and line.startswith('v.'):
+                    break
+                if in_version and line.startswith('- '):
+                    entry_count += 1
+
+            if entry_count >= 20:
+                print(f"Version already has {entry_count} entries (max 20). Skipping.")
+                return
+
         # Use OpenCode AI to generate changelog entry
         keywords = "Improved|Added|Tweaked|Refactored|Fixed|Resolved|Optimized|Moved|Introduced|Enhanced|Refined|Implemented|Replaced|Removed"
         prompt = (
@@ -206,10 +381,6 @@ class Generator:
             return
 
         print(f"Generated entry: {changelog_entry}")
-
-        # Update changelog.txt
-        with open(CHANGELOG, 'r', encoding='utf-8') as f:
-            content = f.read()
 
         if version in content:
             # Version exists, append entry

@@ -134,7 +134,7 @@ class MyHandler(BaseHTTPRequestHandler):
             if uuid == Globals.settings.getMYUUID(): return True
             else:
                 from multiroom  import Multiroom
-                for server in list(Multiroom().getServers().values()):
+                for server in list(Multiroom().serverData.values()):
                     if server.get('uuid') == uuid:
                         return True
 
@@ -152,7 +152,7 @@ class MyHandler(BaseHTTPRequestHandler):
             self.log('do_POST incoming uuid [%s] verified!'%(incoming.get('uuid')))
             if self.path.startswith('/api/'):
                 if self.path == f'/api/{CHANNELFLE}':
-                    channels = Channels(getChannelKey(), writable=True)
+                    channels = Channels(Globals.getChannelKey(), writable=True)
                     if channels.setChannels(list(channels._verify(incoming.get('payload')))):
                         Globals.dialog.notificationDialog(LANGUAGE(30085).format(name=LANGUAGE(30108),author=incoming.get('name',ADDON_NAME)))
                     del channels
@@ -216,16 +216,16 @@ class MyHandler(BaseHTTPRequestHandler):
                 elif self.path.startswith('/api/'):
                     data = None
                     if   self.path == f'/api/{BONJOURFLE}': data = Globals.settings.getBonjour()
-                    elif self.path == f'/api/{SERVERFLE}' : data = Multiroom(service=self.service).getServers()
+                    elif self.path == f'/api/{SERVERFLE}' : data = Multiroom(service=self.service).serverData
                     elif self.path == f'/api/{LIBRARYFLE}': data = Library(self.service).getLibrary()
-                    elif self.path == f'/api/{CHANNELFLE}': data = Channels(getChannelKey()).getChannels()
+                    elif self.path == f'/api/{CHANNELFLE}': data = Channels(Globals.getChannelKey()).getChannels()
                     elif self.path == f'/api/{PVRFLE}':     data = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(),Globals.properties.getFriendlyName())
                     elif self.path == f'/api/{LOGSFLE}':    data = Globals.builtin.parseKodiLog()
                     if not data is None:
                         return __sendChunk(self.path, FileAccess.dumpJSON(data,idnt=4).encode(encoding=DEFAULT_ENCODING), use_compression)
                 elif self.path.endswith('.html'):
                     data = None
-                    if self.path.lower() == f'/{MANAGERFLE.lower()}': data = Channels(getChannelKey())._channelManager()
+                    if self.path.lower() == f'/{MANAGERFLE.lower()}': data = Channels(Globals.getChannelKey())._channelManager()
                     if not data is None:
                         return __sendChunk(self.path, data, False)
             return self.send_error(404, "File Not Found [%s]" % self.path)

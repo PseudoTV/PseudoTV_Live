@@ -355,6 +355,7 @@ class Player(xbmc.Player):
                 self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", service=self.service)
                 self.background.show()
             elif not state:
+                if hasattr(self.background, '_expandVideo'): self.background._expandVideo()
                 if hasattr(self.background, 'close'): self.background.close()
                 self.background = None
         except Exception as e: self.log(f"toggleBackground, failed: {e}", xbmc.LOGERROR)
@@ -434,6 +435,25 @@ class Monitor(xbmc.Monitor):
         self.log(f"onNotification received -> Sender: {sender} | Method: {method} | Data: {data}")
         if 'pvr' in sender.lower() or 'PVR' in method:
             self._logEvents(method, data)
+        elif sender == ADDON_ID and ADDON_NAME in method:
+            self._onDataChanged(data)
+
+
+    def _onDataChanged(self, data: str):
+        """Handle data-changed notification from another PseudoTV instance."""
+        try:
+            info = Globals._decodeDict(data) if data else {}
+            remote_name = info.get('friendly_name', '')
+            if remote_name:
+                from multiroom import Multiroom
+                enabled = Multiroom(service=self.service).getEnabled()
+                if any(s.get('name') == remote_name for s in enabled):
+                    self.log(f"_onDataChanged, {remote_name} saved {info.get('type','')} -> triggering chkPVRRefresh")
+                    Globals.properties.setPropTimer('chkPVRRefresh')
+                else:
+                    self.log(f"_onDataChanged, {remote_name} not in enabled servers, skipping")
+        except Exception as e:
+            self.log(f"_onDataChanged, error: {e}", xbmc.LOGDEBUG)
 
 
     def _logEvents(self, method: str, data: str):
@@ -599,7 +619,7 @@ class Service(object):
         return True
         
         
-    def _wait(self, delay=60, timeout=300):
+    def _wait(self, delay=10, timeout=120):
         """Block until PVR has loaded channels or timeout reached.
         
         Shows timed notification dialogs during wait to inform user of progress.
@@ -612,8 +632,7 @@ class Service(object):
         notifications = {0:  f"{LANGUAGE(32054)}...",                   # 32054: Initializing
                          30: f"{LANGUAGE(30240)}",                      # 30240: Waiting for PVR to load channels
                          60: f"{LANGUAGE(30241)}",                      # 30241: Connecting to PVR backend
-                         90: f"{LANGUAGE(30242)}",                      # 30242: Waiting for channel data
-                        120: f"{LANGUAGE(30243)}"}                      # 30243: PVR has no channels loaded
+                         90: f"{LANGUAGE(30242)}"}                      # 30242: Waiting for channel data
         last_notified = -1
         start_time = time.time()
         self.log("_wait, waiting for PVR to load channels...")
@@ -623,10 +642,6 @@ class Service(object):
                 Globals.dialog.notificationDialog(f"{LANGUAGE(30243)}, {LANGUAGE(30244).lower()}", time=10) # 30243: PVR has no channels loaded, 30244: retrying channel detection
                 self.log("_wait, timeout reached, PVR has no channels loaded — triggering chkPVRRefresh", xbmc.LOGWARNING)
                 self._que(self.tasks.chkPVRRefresh, 2, 0, 0)
-                break
-            if Globals.builtin.getInfoBool('Pvr.HasTVChannels') or Globals.builtin.getInfoBool('Pvr.HasRadioChannels'):
-                Globals.dialog.notificationDialog(f"{LANGUAGE(30245)}", time=10) # 30245: PVR loaded successfully
-                self.log("_wait, PVR has channels, proceeding")
                 break
             if Globals.builtin.getInfoBool('Pvr.HasTVChannels') or Globals.builtin.getInfoBool('Pvr.HasRadioChannels'):
                 Globals.dialog.notificationDialog(f"{LANGUAGE(30245)}", time=10) # 30245: PVR loaded successfully
@@ -650,9 +665,9 @@ class Service(object):
 
 
     def _start(self) -> bool:
+        if not self.isClient: self._que(self.tasks._host, 1)
         self._wait() # Wait for PVR Backend to initialize. 
         if self.player.isPlayingPseudoTV(): self.player.onAVStarted()
-        if not self.isClient: self._que(self.tasks._host, 1)
         self._tasks()
         self.log("_start, service started")
         while not self.monitor.abortRequested():

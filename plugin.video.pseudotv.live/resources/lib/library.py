@@ -30,7 +30,7 @@ from _services   import _Service
 REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Library(object):
-    channels   = Channels(getChannelKey())
+    channels   = Channels(Globals.getChannelKey())
     predefined = Predefined()
     
     def __init__(self, service: Optional[_Service] = None, writable: bool = False):
@@ -145,7 +145,7 @@ class Library(object):
                     return
                 elif not result.get('label'): continue
                 else:
-                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s (%s): %s%%'%(self.pMSG,type.title(),int((idx)*100//len(results))), header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s (%s): %s %s%%'%(self.pMSG,type.title(),result.get('label',''),int((idx)*100//len(results))), header=self.pHeader)
                     nPlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':self.resources.getLogo({'name':result.get('label'),'type':"Custom"},fallback=result.get('thumbnail',LOGO))})
             self.log('getPlaylists, type = %s, PlayList = %s'%(type,len(nPlayList)))
             PlayList.extend(nPlayList)
@@ -312,7 +312,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32005)#"TV Shows"
                     self.pCount  = int(idx*100//len(TVShowList)) // 3
-                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(TVShowList))), header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s %s%%'%(self.pMSG,show.get('label',''),int((idx)*100//len(TVShowList))), header=self.pHeader)
                     nTVShowList.append({'name': show.get('label'), 'type':"TV Shows", 'path': self.predefined.createShowPlaylist(show.get('label')), 'logo': self.resources.getLogo({'name':show.get('label'),'type':"TV Shows"},show.get('art', {}).get('clearlogo', ''))})
             TVShowList = nTVShowList
 
@@ -324,7 +324,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32004)#"TV Networks"
                     self.pCount  = 33 + int(idx*100//len(NetworkList)) // 3
-                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(NetworkList))), header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s %s%%'%(self.pMSG,network,int((idx)*100//len(NetworkList))), header=self.pHeader)
                     nNetworkList.append({'name':network, 'type':"TV Networks", 'path': self.predefined.createNetworkPlaylist(network),'logo':self.resources.getLogo({'name':network,'type':"TV Networks"})})
             NetworkList = nNetworkList
             
@@ -336,7 +336,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32006)#"TV Genres"
                     self.pCount  = 66 + int(idx*100//len(ShowGenreList)) // 3
-                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(ShowGenreList))), header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s %s%%'%(self.pMSG,tvgenre,int((idx)*100//len(ShowGenreList))), header=self.pHeader)
                     nShowGenreList.append({'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createTVGenrePlaylist(tvgenre),'logo':self.resources.getLogo({'name':tvgenre,'type':"TV Genres"})})
             ShowGenreList = nShowGenreList
         self.log('getTVInfo, networks = %s, genres = %s, shows = %s' % (len(NetworkList), len(ShowGenreList), len(TVShowList)))
@@ -376,7 +376,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32008)#"Movie Studios"
                     self.pCount  = int(idx*100//len(StudioList)) // 2
-                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(StudioList))), header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s %s%%'%(self.pMSG,studio,int((idx)*100//len(StudioList))), header=self.pHeader)
                     nStudioList.append({'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio) ,'logo':self.resources.getLogo({'name':studio,'type':"Movie Studios"})})
             StudioList = nStudioList
             
@@ -388,7 +388,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32007)#"Movie Genres"
                     self.pCount  = 50 + int(idx*100//len(MovieGenreList)) // 2
-                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s%%'%(self.pMSG,int((idx)*100//len(MovieGenreList))), header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s %s%%'%(self.pMSG,genre,int((idx)*100//len(MovieGenreList))), header=self.pHeader)
                     nMovieGenreList.append({'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre) ,'logo':self.resources.getLogo({'name':genre,'type':"Movie Genres"})})   
             MovieGenreList = nMovieGenreList
         self.log('getMovieInfo, studios = %s, genres = %s' % (len(StudioList), len(MovieGenreList)))
@@ -422,7 +422,7 @@ class Library(object):
                 else:
                     self.pMSG    = LANGUAGE(32011)#"Music Genres"
                     self.pCount  = int(idx*100//len(MusicGenreList))
-                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, self.pMSG, header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, '%s: %s %s%%'%(self.pMSG,genre,int((idx)*100//len(MusicGenreList))), header=self.pHeader)
                     nMusicGenreList.append({'name':genre, 'type':"Music Genres", 'path': self.predefined.createMusicGenrePlaylist(genre),'logo':self.resources.getLogo({'name':genre,'type':"Music Genres"})})
             MusicGenreList = nMusicGenreList
         self.log('getMusicInfo, found genres = %s' % (len(MusicGenreList)))

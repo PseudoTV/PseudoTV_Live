@@ -110,7 +110,7 @@ class Builder(object):
         self.jsonRPC   = service.jsonRPC
         self.cache     = service.cache
         self.holiday   = self.seasonal.getHoliday()
-        self.channels  = Channels(getChannelKey(), writable=True)
+        self.channels  = Channels(Globals.getChannelKey(), writable=True)
         self.resources = Resources(service)
         self.runActions = RulesList(self.channels.getChannels()).runActions
 
@@ -205,7 +205,6 @@ class Builder(object):
                     
                     for idx, citem in enumerate(channels):
                         try:
-                            updated = False
                             self._buildIdx = idx
                             self.pHeader = ADDON_NAME
                             self.pName   = citem.get('name', '')
@@ -291,7 +290,7 @@ class Builder(object):
                                 has_progs = has_programmes.get(citem.get('id'), False)
                                 updated = updated or has_progs
                         
-                            if any(updated): 
+                            if updated: 
                                 sitem = m3u.getStationItem(citem)
                                 station_added = any((m3u.addStation(sitem), epg.addChannel(sitem)))
                                 complete.add(station_added) 
@@ -307,15 +306,14 @@ class Builder(object):
             if any(changes): self.channels.setChannels()
 
         # Run chkPVRSync AFTER _save completes — sees updated channel_ids
-        if any(updated):
+        if updated:
             self.log(f"Channel compilation finished: {len(complete)} stations added, {len(changes)} channels updated, {len(preview_results)} previews", xbmc.LOGINFO)
             in_sync, findings = self.service.tasks.chkPVRSync()
             if not in_sync:
-                if not Globals.properties.getPropTimer('chkPVRRefresh')[0]:
-                    self.log("buildChannels, post-build sync check: PVR out of sync, triggering refresh", xbmc.LOGDEBUG)
-                    Globals.properties.setPropTimer('chkPVRRefresh')
-                else:
-                    self.log("buildChannels, post-build sync check: PVR out of sync, refresh already queued", xbmc.LOGDEBUG)
+                self.log("buildChannels, post-build sync check: PVR out of sync, triggering immediate refresh", xbmc.LOGDEBUG)
+                self.service.tasks.chkPVRRefresh()
+            else:
+                self.log("buildChannels, post-build sync check: PVR in sync", xbmc.LOGDEBUG)
 
         return preview_results if preview else None
 
@@ -636,7 +634,8 @@ class Builder(object):
                 item["showlabel"]    = f"{item.get('title', '')} - {tagline}" if tagline else item.get('title', '')
             
             # Duration Validation — use metadata duration if available, skip expensive video parser
-            meta_dur = item.get('duration') or item.get('runtime') or 0
+            meta_dur = item.get('duration') or item.get('runtime') or 0  # runtime may be in minutes for library items
+            # meta_dur = item.get('duration') or (item.get('runtime', 0) * 60) or 0  # normalize runtime to seconds
             if meta_dur > 0 and not self.accurateDuration:
                 dur = meta_dur
             else:

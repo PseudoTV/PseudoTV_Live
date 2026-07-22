@@ -37,11 +37,11 @@ class Backup(object):
 
 
     def getBackups(self) -> list:
-        keys = [CHANNELBACKUP_KEY,CHANNELCHANGED_KEY,CHANNELLATEST_KEY]
+        keys = [CHANNEL_KEY_BACKUP,CHANNEL_KEY_CHANGED,CHANNEL_KEY_LATEST]
         return list(filter(None,[Globals.properties.setBackup(key, self.getChannels(key)) for key in keys]))
 
 
-    def backupChannels(self, key: str=CHANNELBACKUP_KEY, silent: bool = True) -> bool:
+    def backupChannels(self, key: str=CHANNEL_KEY_BACKUP, silent: bool = True) -> bool:
         channels = self.getChannels()
         if len(channels) > 0:
             self.log('backupChannels, key = %s, channels = %s'%(key, len(channels)))
@@ -53,13 +53,13 @@ class Backup(object):
         return False
 
 
-    def recoverChannels(self, key: str=CHANNELBACKUP_KEY) -> bool:
+    def recoverChannels(self, key: str=CHANNEL_KEY_BACKUP) -> bool:
         channels = Channels(key).getChannels()
         if len(channels) > 0:
             self.log('recoverChannels, key = %s, channels = %s'%(key, len(channels)))
             if Globals.dialog.yesnoDialog('%s'%(LANGUAGE(32109).format(old=len(self.getChannels()),new=len(channels),source=key))):
                 with Globals.builtin.busy_dialog(), Globals.properties.interruptActivity():
-                    target_key = CHANNELAUTOTUNE_KEY if Globals.settings.getSettingBool('Enable_Autotune') else CHANNEL_KEY
+                    target_key = Globals.getChannelKey()
                     if Globals.settings.setCacheSetting(target_key, self._setChannels(channels), FileAccess._getMD5(target_key), -1):
                         Globals.dialog.notificationDialog('%s %s\n%s'%(LANGUAGE(32112),LANGUAGE(32025), key))
                         Globals.properties.setPendingRestart()
@@ -98,7 +98,7 @@ class Backup(object):
                 self.log('importChannels, file = %s, channels = %s'%(file, len(channels)))
                 if Globals.dialog.yesnoDialog('%s'%(LANGUAGE(32109).format(old=len(self.getChannels()),new=len(channels),source=file))):
                     with Globals.builtin.busy_dialog(), Globals.properties.interruptActivity():
-                        target_key = CHANNELAUTOTUNE_KEY if Globals.settings.getSettingBool('Enable_Autotune') else CHANNEL_KEY
+                        target_key = Globals.getChannelKey()
                         if Globals.settings.setCacheSetting(target_key, self._setChannels(channels), FileAccess._getMD5(target_key), -1):
                             Globals.dialog.notificationDialog('%s %s\n%s'%(LANGUAGE(32112),LANGUAGE(32025),file))
                             Globals.properties.setPendingRestart()
@@ -152,7 +152,8 @@ class Backup(object):
         except Exception: return False
 
 
-    def getChannels(self, key: str = CHANNEL_KEY) -> list:
+    def getChannels(self, key=None) -> list:
+        if key is None: key = Globals.getChannelKey()
         if not self.channels is None: return self.channels.getChannels()
         return Channels(key).getChannels()
 

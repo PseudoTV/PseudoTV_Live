@@ -88,7 +88,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     )
                 
                 lizLST  = []
-                serLST  = Multiroom().getServers()
+                serLST  = Multiroom().serverData
                 servers = [value for key, value in serLST.items() if value.get('online', False)]
                 if servers: 
                     lizLST.extend(poolit(__buildItem)(servers))
@@ -105,7 +105,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 else:                  
                     return
             elif name:
-                self.server = Multiroom().getServers().get(name, {})
+                self.server = Multiroom().serverData.get(name, {})
                 return self.server.get('channels', [])
             return self.oldChannels
 
@@ -119,7 +119,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.EPGArtwork     = int((Globals.settings.getSetting('EPG_Artwork') or "0"))
             
             self.cache          = Cache(mem_cache=True)
-            self.channels       = Channels(getChannelKey(), writable=True)
+            self.channels       = Channels(Globals.getChannelKey(), writable=True)
             self.rule           = RulesList()
             self.jsonRPC        = JSONRPC()
             self.resources      = Resources()
@@ -174,7 +174,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.right_button3 = self.getControl(9003)
             self.right_button4 = self.getControl(9004)
             self.fillChanList(self.newChannels, focus=self.focusIndex, channel=self.openChannel)
-            self.log('onInit, backup=%s' % self.backup.backupChannels(CHANNELLATEST_KEY, silent=True))
+            self.log('onInit, backup=%s' % self.backup.backupChannels(CHANNEL_KEY_LATEST, silent=True))
         except Exception as e: 
             LOG("Manager.onInit failed: %s" % (e), xbmc.LOGERROR)
             self.closeManager()
@@ -1144,7 +1144,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     else: #local save
                         if self.channels.setChannels(channels):
                             self.madeChanges = False
-                            self.log(f"saveChanges, backup {CHANNELCHANGED_KEY} = {self.backup.backupChannels(CHANNELCHANGED_KEY,silent=True)}")
+                            self.log(f"saveChanges, backup {CHANNEL_KEY_CHANGED} = {self.backup.backupChannels(CHANNEL_KEY_CHANGED,silent=True)}")
                             Globals.dialog.notificationDialog(LANGUAGE(32152))  # "Changes Applied!"
                             Globals.properties.setPropTimer('chkChannels')# Refresh Channel Changed!
                             Globals.properties.setPropTimer('chkPVRRefresh')# Refresh PVR to re-scan M3U
@@ -1238,7 +1238,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                         elif focusItems.get('label') == LANGUAGE(32235): #Preview
                             if self.isVisible(self.itemList) and self.madeItemchange: self.closeChannel(focusItems.get('citem'), focus=focusItems.get('chpos',0), open=True)
                             self.previewChannel(focusItems.get('citem'), focusItems.get('retCntrl'))
-                        # elif focusItems.get('label') == LANGUAGE(32110): self.backup.backupChannels(CHANNELLATEST_KEY) #Backup - todo
+                        # elif focusItems.get('label') == LANGUAGE(32110): self.backup.backupChannels(CHANNEL_KEY_LATEST) #Backup - todo
                         elif focusItems.get('label') == LANGUAGE(32112): self.autoRecovery() #Recover
                         elif focusItems.get('label') == LANGUAGE(30038): self.autoTune(focusItems.get('number',1)) #AutoTune
                         elif focusItems.get('label') == LANGUAGE(30229): self.selectPredefined(focusItems.get('number',1)) #Predefined

@@ -63,17 +63,15 @@ class M3U(object):
 
 
     def __init__(self, file: str = M3UFLEPATH, writable: bool = False):
-        self._lock        = RLock()
+        self._lock       = RLock()
         self.EPGArtwork  = int((Globals.settings.getSetting('EPG_Artwork') or "0"))
         self.writable    = writable
         self.stationFile = file
         self.M3UDATA     = {}
-        
         stations, recordings = self.cleanSelf(list(self._load()))
-        self.M3UDATA = { 'data': '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % (
-                         'http://%s/%s' % (Globals.properties.getRemoteHost(), XMLTVFLE) ),
-                         'stations': stations,
-                         'recordings': recordings }
+        self.M3UDATA = {'data'      : '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % ('http://%s/%s' % (Globals.properties.getRemoteHost(), XMLTVFLE)),
+                        'stations'  : stations,
+                        'recordings': recordings}
 
 
     def __enter__(self) -> 'M3U':
@@ -86,12 +84,14 @@ class M3U(object):
             self.log('__exit__, writable = %s' % (getattr(self, 'writable', False)))
         except Exception as e: self.log('__exit__ save failed: %s' % e, xbmc.LOGDEBUG)
             
+            
     def __del__(self):
         try:
             if getattr(self, 'writable', False): self._save()
             self.log('__del__, writable = %s' % (getattr(self, 'writable', False)))
         except Exception as e: 
             self.log('__del__ save failed: %s' % e, xbmc.LOGDEBUG)
+        
         
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
@@ -255,7 +255,6 @@ class M3U(object):
                                     ';'.join(station.get('group', [])),
                                     str(station.get('radio', False)),
                                     station.get('catchup', ''),
-                                    optional,
                                     station.get('label', '')
                                 ))
                                         
@@ -282,6 +281,9 @@ class M3U(object):
             status['m3u']['channel_ids'] = {s.get('id') for s in stations if s.get('id')}
             status['m3u']['last_write'] = time.time()
             Globals.settings.instances._computeDerived(status)
+            # Force PVR to re-read M3U after write
+            Globals.settings.instances.triggerReload()
+            Globals.properties.notifyDataChanged('m3u')
             return True
         return False
 
@@ -291,7 +293,7 @@ class M3U(object):
             chkPath = Globals.settings.getSettingBool('Clean_Recordings')
             
         if stations:
-            channels = Channels(getChannelKey()).getChannels()
+            channels = Channels(Globals.getChannelKey()).getChannels()
             chan_ids = {channel.get('id') for channel in channels if channel.get('id')}
             verified_stations = [station for station in stations if station.get('id') in chan_ids]
             self.log('_verify, stations %d -> %d (matched active channels)' % (len(stations), len(verified_stations)))

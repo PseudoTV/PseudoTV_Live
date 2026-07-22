@@ -127,6 +127,7 @@ TIMEOUT_EXECUTOR    = 1800   # Single executor task timeout (30 min)
 TIMEOUT_EXECUTORS   = 300    # Total executor shutdown timeout (5 min)
 ONNEXT_TIMER        = 15     # OnNext notification display duration (seconds)
 DEBUG_TIMEOUT       = 900    # Debug log retention timeout (15 min)
+YESNO_TIMEOUT       = 30     # YesNo Dialog timeout (30 Secs)
 
 # =============================================================================
 # User-configurable Settings (read from addon settings)
@@ -323,18 +324,15 @@ PROVIDERFLE         = 'providers.xml'   # Content provider definitions
 # =============================================================================
 # Property / Setting Keys (used with Kodi Properties and settings cache)
 # =============================================================================
-CHANNEL_KEY         = 'Channels'                    # Root property key for channel data
-CHANNELBACKUP_KEY   = f'{CHANNEL_KEY}.Backup'       # Backup snapshot key
-CHANNELCHANGED_KEY  = f'{CHANNEL_KEY}.Changed'      # Dirty flag for pending changes
-CHANNELLATEST_KEY   = f'{CHANNEL_KEY}.Latest'       # Latest build timestamp
-CHANNELAUTOTUNE_KEY = f'{CHANNEL_KEY}.Autotune'     # Autotune status key
+CHANNEL_KEY          = 'Channels'                    # Root property key for channel data
+CHANNEL_KEY_USER     = f'{CHANNEL_KEY}'              # User created channels
+CHANNEL_KEY_BACKUP   = f'{CHANNEL_KEY}.Backup'       # Backup snapshot key
+CHANNEL_KEY_CHANGED  = f'{CHANNEL_KEY}.Changed'      # Dirty flag for pending changes
+CHANNEL_KEY_LATEST   = f'{CHANNEL_KEY}.Latest'       # Latest build timestamp
+CHANNEL_KEY_AUTOTUNE = f'{CHANNEL_KEY}.Autotune'     # Autotune status key
+RESUME_INDEX         = 'Resume.Filelist.Index'       # Playback resume position index
 
-def getChannelKey():
-    """Return the active channel key based on Enable_Autotune setting."""
-    try: return CHANNELAUTOTUNE_KEY if REAL_SETTINGS.getSettingBool('Enable_Autotune') else CHANNEL_KEY
-    except Exception: return CHANNEL_KEY
-RESUME_INDEX        = 'Resume.Filelist.Index'       # Playback resume position index
-
+SERVERS_KEY          = 'Servers'
 # =============================================================================
 # Supported File Extensions (queried from Kodi at import time)
 # =============================================================================
@@ -358,7 +356,7 @@ BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')                       
 # Resolved File Paths
 # =============================================================================
 CHANNEL_EXPORT_FLE  = os.path.join(BACKUP_LOC,CHANNELFLE)                                    # Channel export path
-CHANNEL_BACKUP_FLE  = os.path.join(BACKUP_LOC,'%s.json'%(CHANNELBACKUP_KEY.lower()))         # Channel backup path
+CHANNEL_BACKUP_FLE  = os.path.join(BACKUP_LOC,'%s.json'%(CHANNEL_KEY_BACKUP.lower()))         # Channel backup path
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')                              # Kodi settings override
 CACHE_FLE           = os.path.join(SETTINGS_LOC,'cache.db')                                  # SQLite cache database
 YOUTUBE_COOKIES     = os.path.join(SETTINGS_LOC,'www.youtube.com_cookies.txt')               # YouTube auth cookies

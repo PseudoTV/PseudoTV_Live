@@ -65,6 +65,7 @@ class Tasks(object):
         self.service._que(self.chkDirs          ,1)
         self.service._que(self.chkCrash         ,1)
         self.service._que(self.chkPVRSync       ,1)
+        self.service._que(self.chkPVRRefresh    ,2)
         self.service._que(self.chkLibrary       ,2)
         self.service._que(self.chkTrailers      ,5)
         self.log('_initialize, _host...')
@@ -90,7 +91,6 @@ class Tasks(object):
             Globals.settings.setPVRLocal(Globals.properties.getRemoteHost(),instanceName)
             
 
-
     def chkHTTP(self):
         """Start HTTP server instance."""
         timerit(HTTP)(0.1,self.service)
@@ -105,10 +105,10 @@ class Tasks(object):
         if disable: Globals.settings.setSettingBool('Debug_Enable',False)
         if Globals.settings.getSettingBool('Debug_Enable'):
             if not Globals.settings.getSettingBool('Debug_Keep_Enable'):
-                if Globals.dialog.yesnoDialog('%s\n%s'%(LANGUAGE(32142),LANGUAGE(32266).format(minutes=DEBUG_TIMEOUT//60)) ,autoclose=4):
+                if Globals.dialog.yesnoDialog('%s\n%s'%(LANGUAGE(32142),LANGUAGE(32266).format(minutes=YESNO_TIMEOUT)) ,autoclose=4):
                     self.log('_chkDebugging, disabling debugging.')
                     Globals.settings.setSettingBool('Debug_Enable',False)
-                elif kodi_access: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True) # Auto disable.
+                else: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True) # Auto disable.
         if kodi_access: self.jsonRPC.toggleShowLog(Globals.settings.getSettingBool('Debug_Enable'))
                     
              
@@ -166,7 +166,7 @@ class Tasks(object):
             Globals.dialog.notificationDialog(LANGUAGE(30073).format(version=ONLINE_VERSION))
         elif ADDON_VERSION != LAST_VERSION:
             Globals.settings.setCacheSetting('chkVersion.LAST_VERSION', ADDON_VERSION)
-            Globals.builtin.executescript('special://home/addons/%s/resources/lib/utilities.py, Show_Changelog'%(ADDON_ID))
+            Globals.builtin.executebuiltin(f'RunScript(special://home/addons/{ADDON_ID}/resources/lib/utilities.py, Show_Changelog)')
         Globals.settings.setSetting('Update_Status',{True:'[COLOR=yellow]%s [B]v.%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),False:'None'}[UPDATE_AVAILABLE])
         self.log('chkVersion, installed = %s, online = %s, last = %s'%(ADDON_VERSION,ONLINE_VERSION,LAST_VERSION))
         self.service._que(self.chkVersion,1,43200)#12HRS
@@ -305,10 +305,12 @@ class Tasks(object):
         
     def chkChannels(self, channels: Optional[list] = None, silent: Optional[bool] = None):
         """Check channels and run build or autotune if needed."""
+        explicit_channels = channels is not None
         if channels is None: channels = self.getChannels()
         if silent is None: silent = not Globals.settings.showDialog(silent)
-        # Filter for changed channels only
-        channels = [ch for ch in channels if isinstance(ch, dict) and ch.get('changed', False)]
+        # Filter for changed channels only when no explicit list provided
+        if not explicit_channels:
+            channels = [ch for ch in channels if isinstance(ch, dict) and ch.get('changed', False)]
         self.log("chkChannels, channels = %s, silent = %s"%(len(channels),silent))
         if len(channels) > 0:
             # Filter out channel IDs already queued for building
@@ -334,7 +336,8 @@ class Tasks(object):
             hasAutoTuned = Globals.settings.hasAutotuned()
             self.log(f'chkChannels, No Channels Configured! runAutoTune = {runAutoTune}, hasAutoTuned = {hasAutoTuned}')
             if any((runAutoTune, not hasAutoTuned)):
-                if autotune_result is not None and Globals.settings.setAutotuned(_autotune()): 
+                autotune_result = _autotune()
+                if autotune_result is not None and Globals.settings.setAutotuned(autotune_result):
                     Globals.properties.setPropTimer('chkChannels')# Refresh Channel Changed!
             Globals.properties.setPropTimer('chkPVRRefresh') # Refresh PVR Guide
 
@@ -413,7 +416,7 @@ class Tasks(object):
                     return
 
                 #2b Channels in channels.json but not in M3U - mark as changed for rebuild
-                channels = Channels(getChannelKey(), writable=True)
+                channels = Channels(Globals.getChannelKey(), writable=True)
                 all_channels = channels.getChannels()
                 m3u_name_map = {}
                 with M3U() as m3u:
@@ -484,8 +487,22 @@ class Tasks(object):
                             return
                     except Exception as e:
                         self.log(f"chkPVRRefresh, #5 PVRScan failed: {e}", xbmc.LOGDEBUG)
+                    # PVRScan unavailable - brute force with cooldown
+                    brute_key = 'brute_pvr_refresh.LAST_RUN'
+                    last_brute = Globals.settings.getCacheSetting(brute_key, default=0)
+                    if time.time() - last_brute > 900:
+                        self.log("chkPVRRefresh, #5 PVRScan unavailable, togglePVRBackend", xbmc.LOGWARNING)
+                        Globals.settings.setCacheSetting(brute_key, time.time())
+                        if not self.service.player.isPlaying():
+                            Globals.settings.instances.togglePVRBackend(False)
+                            self.monitor.waitForAbort(M3U_REFRESH)
+                            Globals.settings.instances.togglePVRBackend(True)
+                        else:
+                            Globals.settings.instances.triggerReload()
+                    else:
+                        self.log("chkPVRRefresh, #5 brute refresh cooldown active, triggerReload", xbmc.LOGDEBUG)
                         Globals.settings.instances.triggerReload()
-                        return
+                    return
                         
                 #6 Files stale/outdated but PVR connected - force cache refresh
                 if m3u_sync in ('outdated', 'unknown') or xmltv_sync in ('outdated', 'unknown'):
@@ -630,7 +647,7 @@ class Tasks(object):
             image_cache = Globals.settings.getCacheSetting('imageCache', default={})
             if not image_cache: return
             updated      = 0
-            channels     = Channels(getChannelKey(), writable=True)
+            channels     = Channels(Globals.getChannelKey(), writable=True)
             library      = Library()
             channel_map  = {c.get('name'): c for c in channels.getChannels() if c.get('name')}
             library_data = library.getLibrary()
@@ -671,7 +688,7 @@ class Tasks(object):
 
     def getChannels(self) -> list:
         """Get list of configured channels."""
-        return Channels(getChannelKey()).getChannels()
+        return Channels(Globals.getChannelKey()).getChannels()
         
         
     def getLibrary(self, type: Optional[str] = None) -> Any:
@@ -706,7 +723,8 @@ class Tasks(object):
             has_channels = status['m3u']['channels'] > 0
             has_programs = status['xmltv']['programmes'] > 0
             pvr_connected = status['log'].get('pvr_connected', True)
-            in_sync      = m3u_synced and xmltv_synced and has_channels and has_programs and not has_errors
+            channels_match = status['m3u']['channels'] == status['xmltv']['channels']
+            in_sync      = m3u_synced and xmltv_synced and has_channels and has_programs and channels_match and not has_errors
 
             # Detect PVR no-channels state: PVR connected, files exist, but PVR hasn't loaded them
             pvr_has_tv = Globals.builtin.getInfoBool('Pvr.HasTVChannels')
