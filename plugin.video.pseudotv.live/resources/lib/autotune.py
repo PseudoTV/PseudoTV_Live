@@ -65,16 +65,17 @@ class Autotune(object):
             else: return True
             
         with Globals.dialog._progressDialog("", LANGUAGE(30038)) as self.pDialog:
-            items   = []
+            videos, music = [], []
             manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
             library = Library()
             for idx, type in enumerate(AUTOTUNE_TYPES):
                 self.pMSG    = type
                 self.pCount  = int(idx*100//len(AUTOTUNE_TYPES))
                 self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
-                items.extend(Globals._randomSamples(library.getLibrary(type),count))
+                if type == "": music.extend(Globals._randomSamples(library.getLibrary(type),count))
+                else:          videos.extend(Globals._randomSamples(library.getLibrary(type),count))
             del library
-            if items: manager._addChannels(start, Globals._randomShuffle(items))
+            if videos + music: manager._addChannels(start, videos+music)
             manager.closeManager()
         del manager
         return True

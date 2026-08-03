@@ -121,6 +121,7 @@ DISCOVERY_TIMER     = 60     # Zeroconf network discovery broadcast interval
 DISCOVER_INTERVAL   = 30     # Time between discovery scans
 SERVICE_INTERVAL    = 5.0    # Main service loop tick interval
 TASK_INTERVAL       = 30.0   # Background task runner tick interval
+QUEUE_BURST_DELAY   = 1.0    # Delay between chkQUES burst drains while consumables remain
 SUSPEND_INTERVAL    = 2.5    # Pause/suspend polling interval
 MIN_EPG_DURATION    = 10800  # Minimum EPG guide duration (3 hours in seconds)
 TIMEOUT_EXECUTOR    = 1800   # Single executor task timeout (30 min)
@@ -210,7 +211,7 @@ DB_TYPES            = ["videodb://",  # Kodi library database URL prefixes
 
 WEB_TYPES           = ["http",        # Remote/web URL prefixes
                        "ftp://",
-                       "pvr://"
+                       "pvr://",
                        "upnp://",]
 
 VFS_TYPES           = ["plugin://",   # Kodi virtual filesystem URL prefixes
@@ -311,7 +312,19 @@ MANAGERFLE          = 'manager.html'    # Channel manager HTML UI
 M3UFLE              = 'pseudotv.m3u'    # M3U playlist export
 XMLTVFLE            = 'pseudotv.xml'    # XMLTV EPG export
 GENREFLE            = 'genres.xml'      # Genre mapping definitions
+SEASONFLE           = 'seasons.json'    # Seasonal content definitions (HTTP-exposed)
+HOLIDAYFLE          = 'holidays.json'   # Holiday content definitions (HTTP-exposed)
+
+# SQLite cache keys — M3U/XMLTV/genres data lives in cache.db (Phase 1 migration).
+M3U_CACHE_KEY       = 'm3u.data'        # {'stations', 'recordings', 'updated', 'version'}
+XMLTV_CHANNELS_KEY  = 'xmltv.channels'  # [channel dicts]
+XMLTV_PROGRAMMES_KEY= 'xmltv.programmes'# [programme dicts]
+XMLTV_RECORDINGS_KEY= 'xmltv.recordings'# [recording dicts]
+XMLTV_META_KEY      = 'xmltv.meta'      # {'updated', 'version'} render-cache invalidation token
+GENRES_CACHE_KEY    = 'genres.data'     # rendered genres.xml bytes
+
 BONJOURFLE          = 'bonjour.json'    # Bonjour/Zeroconf service cache
+
 LOGSFLE             = 'logs.json'       # Diagnostic log export
 SERVERFLE           = 'servers.json'    # Multiroom server registry
 CHANNELFLE          = 'channels.json'   # Channel configuration database
@@ -429,6 +442,7 @@ BUSY_XML        = '%s.busy.xml'%(ADDON_ID)          # Busy spinner dialog
 ONNEXT_XML      = '%s.onnext.xml'%(ADDON_ID)        # OnNext notification dialog
 REPLAY_XML      = '%s.restart.xml'%(ADDON_ID)       # Replay/restart prompt dialog
 BACKGROUND_XML  = '%s.background.xml'%(ADDON_ID)    # Background dialog
+OVERLAY_XML     = '%s.overlay.xml'%(ADDON_ID)       # Unified overlay dialog (vignette + bug + on-next)
 MANAGER_XML     = '%s.manager.xml'%(ADDON_ID)       # Channel manager dialog
 OVERLAYTOOL_XML = '%s.overlaytool.xml'%(ADDON_ID)   # Overlay tool dialog
 DIALOG_SELECT   = '%s.dialogselect.xml'%(ADDON_ID)  # Custom select dialog
@@ -490,6 +504,10 @@ HEADER = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 # =============================================================================
 _LOG_THROTTLE  = {}  # {(event, level): (last_log_timestamp, skip_count)} - for throttled log dedup
 _LOG_LAST_KEY  = None  # last (event, level) key that was logged - for consecutive duplicate detection
+_LOG_SETTINGS  = {'ts': 0, 'enable': False, 'level': 3}  # cached Debug_Enable/Level for LOG TTL
+_LOG_SETTINGS_TTL = 5.0  # seconds to cache debug settings before re-reading from Kodi
+_SETTINGS_CACHE = {}  # {(func_name, key): (value, timestamp)} - type-safe getSetting read cache
+_SETTINGS_CACHE_TTL = 5.0  # seconds to cache setting reads before re-reading from Kodi
 LOG_MAX_LENGTH = 500  # max characters for log message string (traceback excluded)
 DEBUG_NAMES    = {0: 'LOGDEBUG', 1: 'LOGINFO', 2: 'LOGWARNING', 3: 'LOGERROR', 4: 'LOGFATAL'}
 
@@ -499,25 +517,34 @@ def LOG(event: Any, level: int = xbmc.LOGDEBUG, throttle: float = float(SERVICE_
     When throttle > 0, consecutive identical (event, level) pairs are suppressed,
     then a 'Skipped N duplicate messages..' line is logged when the sequence ends."""
     global _LOG_LAST_KEY
-    if REAL_SETTINGS.getSetting('Debug_Enable') == 'true' or level >= 3:
-        DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}
-        DEBUG_LEVEL  = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))]
-        if len(str(event)) > LOG_MAX_LENGTH: event = '%s...[TRUNCATED]' % str(event)[:LOG_MAX_LENGTH]
-        if level >= 3: event = '%s\n%s' % (event, traceback.format_exc())
-        if throttle > 0:
-            now  = time.time()
-            key  = (event, level)
-            last_time, skip_count = _LOG_THROTTLE.get(key, (0, 0))
-            if (now - last_time) < throttle:
-                _LOG_THROTTLE[key] = (last_time, skip_count + 1)
-                return
-            elif _LOG_LAST_KEY is not None and _LOG_LAST_KEY != key:
-                prev_time, prev_skip = _LOG_THROTTLE.get(_LOG_LAST_KEY, (0, 0))
-                if prev_skip > 0:
-                    skip_msg = 'Skipped %d duplicate messages..' % (prev_skip)
-                    if level >= DEBUG_LEVEL: xbmc.log(skip_msg, level)
-            _LOG_THROTTLE[key] = (now, 0)
-            _LOG_LAST_KEY = key
-        event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
-        if level >= DEBUG_LEVEL:
-            xbmc.log(event, level)
+    # Cache debug settings with a short TTL — getSetting() hits Kodi's C++ API on
+    # every call, and LOG is called thousands of times during a build. When debug
+    # is off (default) this short-circuits immediately after one cached read.
+    _now = time.time()
+    if _now - _LOG_SETTINGS['ts'] > _LOG_SETTINGS_TTL:
+        _LOG_SETTINGS['ts']    = _now
+        _LOG_SETTINGS['enable'] = REAL_SETTINGS.getSetting('Debug_Enable') == 'true'
+        _LOG_SETTINGS['level']  = int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))
+    if not _LOG_SETTINGS['enable'] and level < 3:
+        return
+    DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}
+    DEBUG_LEVEL  = DEBUG_LEVELS[_LOG_SETTINGS['level']]
+    if len(str(event)) > LOG_MAX_LENGTH: event = '%s...[TRUNCATED]' % str(event)[:LOG_MAX_LENGTH]
+    if level >= 3: event = '%s\n%s' % (event, traceback.format_exc())
+    if throttle > 0:
+        now  = time.time()
+        key  = (event, level)
+        last_time, skip_count = _LOG_THROTTLE.get(key, (0, 0))
+        if (now - last_time) < throttle:
+            _LOG_THROTTLE[key] = (last_time, skip_count + 1)
+            return
+        elif _LOG_LAST_KEY is not None and _LOG_LAST_KEY != key:
+            prev_time, prev_skip = _LOG_THROTTLE.get(_LOG_LAST_KEY, (0, 0))
+            if prev_skip > 0:
+                skip_msg = 'Skipped %d duplicate messages..' % (prev_skip)
+                if level >= DEBUG_LEVEL: xbmc.log(skip_msg, level)
+        _LOG_THROTTLE[key] = (now, 0)
+        _LOG_LAST_KEY = key
+    event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
+    if level >= DEBUG_LEVEL:
+        xbmc.log(event, level)

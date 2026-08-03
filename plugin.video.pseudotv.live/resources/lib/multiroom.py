@@ -26,7 +26,7 @@ class Multiroom(object):
 
 
     def __init__(self, sysARG: list = sys.argv, service: Optional[_Service] = None):
-        if service is None: service = _Service
+        if service is None: service = _Service()
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG     = sysARG
         self.service    = service
@@ -217,7 +217,6 @@ class Multiroom(object):
         else: Globals.dialog.notificationDialog(LANGUAGE(32219).format(name=LANGUAGE(30034)))
                             
         
-    @staticmethod
     def _run(self) -> Any:
         try:    param = self.sysARG[1]
         except Exception: param = None

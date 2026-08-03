@@ -30,6 +30,22 @@ from resources  import Resources
 from seasonal   import Seasonal 
 from rules      import RulesList
 
+
+def _shouldProbe(item: Any, accurate: bool, vfs: tuple) -> bool:
+    """True when the item's duration probe may run in a worker thread.
+
+    Pure-I/O probes are safe to parallelize. vfs-prefixed paths (plugin://, pvr://,
+    resource://) resolve through xbmc.executeJSONRPC, which is not thread-safe, and
+    'stack://' paths — both stay on the serial path. Items carrying duration/runtime
+    metadata skip the probe unless accurate forces a re-probe."""
+    if not isinstance(item, dict): return False
+    if item.get('filetype') == 'directory': return False
+    fle = item.get('file', '') or ''
+    if not fle or fle.startswith('stack://') or fle.lower().startswith(vfs): return False
+    if (item.get('duration') or item.get('runtime') or 0) > 0 and not accurate: return False
+    return True
+
+
 class Builder(object):
     xsp      = XSP()
     seasonal = Seasonal()
@@ -61,7 +77,7 @@ class Builder(object):
         self.limit            = Globals.settings.getSettingInt('Page_Limit')
         self.recursiveLimit   = Globals.settings.getSettingInt('Recursive_Depth')
         self.padScheduling    = False #TODO Adv. Rules 
-        self.padFilelist      = False #TODO Adv. Rules 
+        self.padFilelist      = True # pad content-poor channels up to Page_Limit (automatic padding when available media < page limit)
         self.enableEven       = bool(Globals.settings.getSettingInt('Enable_Even'))
         self.evenEpisode      = Globals.settings.getSettingBool('Enable_Even_Force_Episode')
         self.evenShuffle      = Globals.settings.getSettingBool('Enable_Even_Force_Random')
@@ -146,7 +162,7 @@ class Builder(object):
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, Globals._cleanGroups(citem), inherited=self)
              
              
-    def buildCells(self, citem: dict, duration: int = 10800, type: str = 'video', entries: int = 3, info: Optional[dict] = None) -> list:
+    def buildCells(self, citem: dict, duration: int = MIN_EPG_DURATION, type: str = 'video', entries: int = 3, info: Optional[dict] = None) -> list:
         if info is None: info = {}
         art = info.setdefault('art', {})
         art['poster'] = art.get('poster') or Globals._getThumb(info, opt=1)
@@ -181,9 +197,13 @@ class Builder(object):
             changes  = set()
             complete = set()
             
-            now = float(Globals._getUTCstamp())
+            # Schedule epochs are local: _getGMTstamp() == time.time(), paired with
+            # _epochTime(ts, tz=False) to render local DTFORMAT. _getUTCstamp()
+            # returns the UTC wall-clock (time.time()-offset); passed to _epochTime
+            # (tz=False) it renders DTFORMAT 4h ahead (local != UTC), scheduling new
+            # channels in the future with empty guides.
+            now = float(Globals._getGMTstamp())
             fallback_epoch = float(Globals._roundTimeDown(now, offset=60))
-            future_stop = now + ((MAX_GUIDEDAYS * 86400) - 10800)
             fallback_str = Globals._epochTime(fallback_epoch, tz=False).strftime(DTFORMAT)
 
             self.pDialog, self.pName, self.pHeader = None, '', ''
@@ -198,7 +218,9 @@ class Builder(object):
                 with Globals.dialog._progressDialog(self.pMSG, ADDON_NAME, silent=silent, background=not preview) as self.pDialog:
                     all_stop_times = dict(epg.loadStopTimes(channels, fallback=fallback_str))
                     has_programmes = dict(epg.hasProgrammes(channels))
-
+                    for citem in channels:
+                        if not has_programmes.get(citem.get('id'), False):
+                            self.log(f"[{citem.get('id')}] buildChannels, no programmes for {citem.get('name','')}, placeholder skipped", xbmc.LOGDEBUG)
                     if self.enableBCTs:
                         self.log('buildChannels, pre-computing filler sources')
                         Fillers({}, self)
@@ -219,7 +241,7 @@ class Builder(object):
                                 break
                             elif self.service.suspend():
                                 self.log(f"[{citem.get('id')}] buildChannels, _suspend")
-                                self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32215)}", header=self.pHeader)
+                                self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
                                 if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
                                 break
                                 
@@ -233,8 +255,60 @@ class Builder(object):
                                     start_epoch = float(raw_start)
                                     start_timestamp_str = Globals._epochTime(start_epoch, tz=False).strftime(DTFORMAT)
 
-                            _update = start_epoch <= fallback_epoch or start_epoch <= future_stop
+                            # New seasonal holiday: when a different holiday becomes
+                            # active, cut the previous holiday's guide back to today's
+                            # start and rebuild from there, so the new holiday's meta
+                            # stitches at its own beginning.
+                            s_paths = citem.get('path', [])
+                            if isinstance(s_paths, (str, bytes)): s_paths = [s_paths]
+                            if s_paths == ['{Seasonal}'] and self.holiday and self.holiday.get('keyword'):
+                                current_kw = self.holiday.get('keyword')
+                                stored_kw = self._getSeasonalHoliday(citem.get('id'))
+                                if stored_kw and stored_kw != current_kw:
+                                    holiday_start = float(datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+                                    holiday_start_str = Globals._epochTime(holiday_start, tz=False).strftime(DTFORMAT)
+                                    removed = epg.truncateProgrammes(citem.get('id'), holiday_start_str)
+                                    self.log(f"[{citem.get('id')}] buildChannels, holiday changed {stored_kw} -> {current_kw}, truncated {removed} old programmes to {holiday_start_str}", xbmc.LOGINFO)
+                                    self._resetPagination(citem)
+                                    start_epoch = holiday_start
+                                    start_timestamp_str = holiday_start_str
+                                self._setSeasonalHoliday(citem.get('id'), current_kw)
+
+                            # Rebuild only when the existing guide doesn't already cover
+                            # the near-term horizon (Min_Days — same horizon chkPVRSync
+                            # uses). Evaluated on the RAW last-stop: clamping before this
+                            # check made `start_epoch <= fallback_epoch` always true, so
+                            # every channel rebuilt on every cycle.
+                            _update = start_epoch <= now + (MIN_GUIDEDAYS * 86400)
+                            if not _update:
+                                self.log(f"[{citem.get('id')}] buildChannels, guide sufficient, skipping ({start_timestamp_str})", xbmc.LOGDEBUG)
+
+                            # Clamp only when scheduling a rebuild: a stale guide from a
+                            # prior build can leave a last-stop ahead of now, which would
+                            # schedule the channel hours ahead and leave the guide empty.
+                            if _update and start_epoch > fallback_epoch:
+                                start_epoch = fallback_epoch
+                                start_timestamp_str = Globals._epochTime(fallback_epoch, tz=False).strftime(DTFORMAT)
+                                self.log(f"[{citem.get('id')}] buildChannels, future start clamped to {start_timestamp_str}", xbmc.LOGWARNING)
+
                             self.log(f"[{citem.get('id')}] Schedule delta audit -> Update Required: {_update} | Target End: {start_timestamp_str}")
+
+                            # fileList must be defined even when the channel is
+                            # skipped (guide sufficient) — the station-keep block
+                            # below tests `not fileList`.
+                            fileList = []
+
+                            # Truncate-then-append: when rebuilding, drop any existing
+                            # programmes that would overlap the new schedule (their
+                            # stop is after the build start). The future-start clamp
+                            # pulls start_epoch back to now for channels whose guide
+                            # doesn't reach Min_Days, so appending without clearing
+                            # would overlap the still-valid tail and produce duplicate
+                            # guide rows (wrong playback target).
+                            if _update and start_epoch > 0:
+                                epg.truncateProgrammes(citem.get('id'),
+                                                       Globals._epochTime(start_epoch, tz=False).strftime(DTFORMAT),
+                                                       mode='stop')
 
                             _changed = citem.get('changed', False)
                             if not _changed and getattr(self, 'enableChanged', False):
@@ -254,7 +328,7 @@ class Builder(object):
                                     self.pMSG = LANGUAGE(32236) if preview else (f"{LANGUAGE(30014)} {LANGUAGE(30108) if len(channels) else LANGUAGE(30223)}" if start_timestamp_str == fallback_str else f"{LANGUAGE(32022)} {LANGUAGE(30223)}")
                                     self.pHeader = f'{ADDON_NAME}, {self.pMSG}'
 
-                            if start_epoch > 0:
+                            if (_update or _changed) and start_epoch > 0:
                                 self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
                                 fileList = self.buildMusic(citem) if citem.get('radio', False) else self.buildVideo(citem)
                                 
@@ -293,17 +367,32 @@ class Builder(object):
                             if updated: 
                                 sitem = m3u.getStationItem(citem)
                                 station_added = any((m3u.addStation(sitem), epg.addChannel(sitem)))
-                                complete.add(station_added) 
+                                if station_added and not fileList:
+                                    self.log(f"[{citem.get('id')}] buildChannels, station added but no programmes, placeholder skipped", xbmc.LOGDEBUG)
+                                if station_added: complete.add(citem.get('id'))
                                 self.log(f"[{citem.get('id')}] buildChannels, station added to m3u/epg: {station_added}")
-                            else:
+                            elif _update or _changed:
                                 self._resetPagination(citem)
-                                m3u.delStation(citem)
-                                epg.delBroadcast(citem)
-                                self.log(f"[{citem.get('id')}] buildChannels, no programmes, removing station from m3u/epg")
+                                # Keep the station even when the rebuild produced no
+                                # programmes: the served XMLTV injects a "No Guide Data
+                                # - Check Back Later" placeholder so the channel remains
+                                # visible in Kodi.
+                                sitem = m3u.getStationItem(citem)
+                                m3u.addStation(sitem)
+                                epg.addChannel(sitem)
+                                complete.add(citem.get('id'))
+                                self.log(f"[{citem.get('id')}] buildChannels, no programmes after rebuild, keeping station for placeholder")
                         except Exception as e: 
                             self.log(f"Channel compiler faulted critically at index execution point: {str(e)}", xbmc.LOGERROR)
 
-            if any(changes): self.channels.setChannels()
+        # Ensure every local M3U station has an XMLTV entry: only channels from the
+        # local channels.json matter; remote multiroom stations are excluded.
+        epg_ids = {ch.get('id') for ch in epg.getChannels()}
+        for citem in channels:
+            if citem.get('id') not in epg_ids:
+                self.log(f"[{citem.get('id')}] buildChannels, missing XMLTV entry for {citem.get('name','')}, placeholder skipped", xbmc.LOGDEBUG)
+
+        self.channels.setChannels()
 
         # Run chkPVRSync AFTER _save completes — sees updated channel_ids
         if updated:
@@ -311,7 +400,9 @@ class Builder(object):
             in_sync, findings = self.service.tasks.chkPVRSync()
             if not in_sync:
                 self.log("buildChannels, post-build sync check: PVR out of sync, triggering immediate refresh", xbmc.LOGDEBUG)
-                self.service.tasks.chkPVRRefresh()
+                # Pass findings to chkPVRRefresh so it sees epg_expired/missing_epg
+                # rather than recomputing with empty defaults (which skipped rebuilds).
+                self.service.tasks.chkPVRRefresh(findings=findings)
             else:
                 self.log("buildChannels, post-build sync check: PVR in sync", xbmc.LOGDEBUG)
 
@@ -361,11 +452,11 @@ class Builder(object):
                     return None
                 elif self.service.suspend():
                     self.log(f"[{citem.get('id')}] buildVideo, _suspend")
-                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32215)}", header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
                     return None
                 
                 if path_len > 1: self.pName = f"{citem.get('name', '')} {idx + 1}/{path_len}"
-                sub_paths = self.xsp.parseXSP(citem.get('id'), base_path) if self.xsp.isXSP(base_path) else [base_path]
+                sub_paths = self.xsp.parseXSP(citem.get('id'), base_path, self.incExtras) if self.xsp.isXSP(base_path) else [base_path]
                 if self.sort.get("method", "") == 'random':
                     self.log(f"[{citem.get('id')}] buildVideo, random shuffling [{idx}/{len(sub_paths)}]")
                     sub_paths = Globals._randomShuffle(sub_paths)               
@@ -441,9 +532,10 @@ class Builder(object):
                     self.log(f"[{citem.get('id')}] buildFileList, __padFileList processing")
                     multiplier = page // list_len
                     remainder  = page % list_len
-                    paddedList = fileList * multiplier
-                    if remainder > 0: paddedList.extend(fileList[:remainder])
-                    self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'padding {remainder} files', header=self.pHeader)
+                    # copy each item so the schedule loop can stamp unique start/stop per slot
+                    paddedList = [dict(item) for _ in range(multiplier) for item in fileList]
+                    if remainder > 0: paddedList.extend(dict(item) for item in fileList[:remainder])
+                    self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message='Padding schedule...', header=self.pHeader)
                     fileList = paddedList
                     
                 elif list_len < page and len(dirList) > dirCount: self.pErrors.append(LANGUAGE(32262))
@@ -456,7 +548,7 @@ class Builder(object):
                 current_path = folder.get('file')
                 
                 if folder.get("label"): 
-                    self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'parsing folder: {folder.get("label")}', header=self.pHeader)
+                    self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'Scanning {folder.get("label")}...', header=self.pHeader)
                 
                 remaining_needed = abs(page - len(fileList))
                 subfileList, subdirList, limits, errors = self.buildList(citem, current_path, media, remaining_needed, sort, limits, folder, query)
@@ -538,6 +630,25 @@ class Builder(object):
 
         default_type = query.get('key', 'files')
         sort_method = sort.get("method", "")
+        # Parallelize only pure-I/O duration probes. vfs-prefixed paths (plugin://,
+        # pvr://, resource://) resolve through xbmc.executeJSONRPC, which is not
+        # thread-safe, so they and 'stack://' paths stay on the serial path. Items
+        # carrying duration/runtime metadata skip the probe unless accurate. Gated
+        # by Enable_Executor; when disabled all probes fall back to the serial call.
+        probe_futures = {}
+        probe_pool = getattr(getattr(self, 'service', None), 'pool', None)
+        if probe_pool is not None and getattr(probe_pool, '_executor', None):
+            try:
+                if probe_pool._getExecutorSettings().get('enabled'):
+                    _vfs = tuple(VFS_TYPES) if 'VFS_TYPES' in globals() else ()
+                    for idx, item in enumerate(items):
+                        if _shouldProbe(item, self.accurateDuration, _vfs):
+                            probe_futures[idx] = probe_pool._executor.submit(
+                                self.jsonRPC.getDuration, item.get('file'), item,
+                                self.accurateDuration, self.saveDuration)
+            except Exception as e:
+                self.log(f"[{citem.get('id')}] buildFiles, parallel probe setup failed: {e}", xbmc.LOGWARNING)
+                probe_futures = {}
         for idx, item in enumerate(items):
             if not isinstance(item, dict): continue
             
@@ -572,7 +683,7 @@ class Builder(object):
             elif fileType != 'file':
                 continue
 
-            suffix = f": {self.fCount}%"
+            suffix = f' {self.fCount}%'
             self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
 
             if file.startswith('pvr://'):
@@ -639,7 +750,14 @@ class Builder(object):
             if meta_dur > 0 and not self.accurateDuration:
                 dur = meta_dur
             else:
-                dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
+                fut = probe_futures.pop(idx, None)
+                if fut is not None:
+                    try: dur = fut.result()
+                    except Exception as e:
+                        self.log(f"[{citem.get('id')}] buildFiles, parallel probe failed: {e}", xbmc.LOGWARNING)
+                        dur = 0
+                else:
+                    dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
             if dur > self.minDuration:
                 self.log(f"[{citem.get('id')}] buildFiles, IDX = {idx} accepted: dur={dur}s, min={self.minDuration}s, file = {file}")
                 self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}{suffix}', header=self.pHeader)
@@ -709,4 +827,17 @@ class Builder(object):
     def _resetPagination(self, citem: Any) -> bool:
         if isinstance(citem, list): return any(self.jsonRPC.resetPagination(item) for item in citem)
         return any(self.jsonRPC.resetPagination(citem.get('id'), path) for path in citem.get('path',[]) if citem.get('id'))
+
+
+    def _getSeasonalHoliday(self, ch_id: str) -> Optional[str]:
+        """Return the holiday keyword a seasonal channel was last built with."""
+        key = 'seasonal.holiday.%s' % ch_id
+        return Globals.settings.getCacheSetting(key, FileAccess._getMD5(key))
+
+
+    def _setSeasonalHoliday(self, ch_id: str, keyword: str):
+        """Remember the holiday keyword a seasonal channel was built with."""
+        key = 'seasonal.holiday.%s' % ch_id
+        Globals.settings.setCacheSetting(key, keyword, FileAccess._getMD5(key),
+                                         life=datetime.timedelta(days=30))
     

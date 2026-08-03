@@ -35,6 +35,29 @@ ZEROCONF_SERVICE      = "_xbmc-jsonrpc-h._tcp.local."
 COMPRESSION_THRESHOLD = 1024  # 1 KB
 CHUNK_SIZE            = 4096 #4 KB
 
+# Filtered-M3U render cache: pvr.iptvsimple polls the M3U repeatedly during
+# builds, and each render re-parses the full M3U + 7MB XMLTV + channels.json.
+# Cache the rendered bytes keyed by source file mtimes, so between builds the
+# hot path is a single dict lookup instead of a 3-pass XMLTV parse.
+_M3U_RENDER_CACHE = {'sig': None, 'data': None}
+_XMLTV_RENDER_CACHE = {'sig': None, 'data': None}
+
+
+def _m3u_render_signature() -> tuple:
+    """Signature of the data the filtered M3U depends on.
+
+    M3U/XMLTV now live in the SQLite cache, so the render cache keys off the data
+    version tokens rather than file mtime/size. A data write bumps the token and
+    invalidates the render; nothing else does.
+    """
+    def _sig(key: str, field: str):
+        try:
+            v = Globals.settings.getCacheSetting(key) or {}
+            return v.get(field)
+        except Exception:
+            return None
+    return (_sig(M3U_CACHE_KEY, 'version'), _sig(XMLTV_META_KEY, 'version'), Globals.getChannelKey())
+
 class Discovery(Thread):
     class MyListener(object):
         def __init__(self, multiroom: Any = None):
@@ -50,7 +73,6 @@ class Discovery(Thread):
             self.log("removeService, type = %s, name = %s"%(type,name))
             for server_name, server_info in list(self.zServers.items()):
                 if server_info.get('name') == name:
-                    self.multiroom.setServerOffline(server_name)
                     self.zServers.pop(server_name, None)
                     break
 
@@ -106,8 +128,6 @@ class Discovery(Thread):
 
 
 class MyHandler(BaseHTTPRequestHandler):
-
-
     def __init__(self, request: Any, client_address: Any, server: Any, service: Any):
         self.service   = service
         self.monitor   = service.monitor
@@ -119,6 +139,95 @@ class MyHandler(BaseHTTPRequestHandler):
 
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
+
+
+    def _getFilteredM3U(self, allowed_ids=None):
+        """Get filtered M3U content using M3U class render() + filter pipeline.
+
+        Rendered output is cached keyed by source file mtimes — pvr.iptvsimple
+        polls the M3U repeatedly during builds, and each render otherwise
+        re-parses the full M3U + XMLTV + channels.json (3-pass parse of a 7MB+ file).
+        """
+        global _M3U_RENDER_CACHE
+        sig = _m3u_render_signature()
+        if _M3U_RENDER_CACHE['sig'] == sig:
+            return _M3U_RENDER_CACHE['data']
+        from io import BytesIO
+        from m3u import M3U
+        m3u = M3U()
+        stations = m3u.getFilteredStations()
+        buf = BytesIO()
+        m3u.render(buf, stations=stations)
+        data = buf.getvalue()
+        # never cache an implausibly large render — a half-written M3U read
+        # during a build once produced a 776MB blob that was then served on every poll
+        # until the file changed. Cap at 20MB (legit filtered M3U with recordings stays
+        # well under this); oversized output is served once but not cached.
+        if len(data) > 20 * 1024 * 1024:
+            self.log(f"_getFilteredM3U, render too large ({len(data)} bytes), not caching", xbmc.LOGWARNING)
+            return data
+        _M3U_RENDER_CACHE = {'sig': sig, 'data': data}
+        return data
+
+
+    def _getFilteredXMLTV(self):
+        """Get XMLTV content with temporary placeholder programmes injected.
+
+        Channels whose EPG doesn't reach the Min_Days horizon — including no-guide
+        channels — get an informative placeholder so pvr.iptvsimple shows a non-empty
+        row. Data is served from the SQLite cache (renderWithPlaceholders), not disk.
+
+        Rendered output is cached keyed on the XMLTV data version token — pvr.iptvsimple
+        polls the guide repeatedly, and a full re-render of a 10MB+ XMLTV per request
+        was slow enough to make the window unresponsive.
+        """
+        global _XMLTV_RENDER_CACHE
+        sig = self._xmltv_render_signature()
+        if _XMLTV_RENDER_CACHE['sig'] == sig:
+            return _XMLTV_RENDER_CACHE['data']
+        from io import BytesIO
+        from xmltvs import XMLTVS
+        # Load XMLTV once and derive the served-station set from the same data so a
+        # cache miss doesn't parse/load the 51MB guide twice.
+        xmltv_obj = XMLTVS()
+        stations = xmltv_obj.m3u.getFilteredStations(programmes=xmltv_obj.getProgrammes())
+        buf = BytesIO()
+        xmltv_obj.renderWithPlaceholders(buf, stations=stations)
+        data = buf.getvalue()
+        # don't cache implausibly large / empty renders
+        if data and len(data) < 100 * 1024 * 1024:
+            _XMLTV_RENDER_CACHE = {'sig': sig, 'data': data}
+        return data
+
+    def _xmltv_render_signature(self) -> tuple:
+        """Signature of the data the served XMLTV depends on.
+
+        Same inputs as the M3U render signature (XMLTV + M3U + channels.json) so
+        both caches invalidate together — the served XMLTV mirrors the filtered
+        M3U, so a change in channels.json or the M3U must re-render it too.
+        """
+        return _m3u_render_signature()
+
+
+    def _getGenres(self) -> bytes:
+        """Return rendered genres.xml bytes from the SQLite cache.
+
+        Falls back to the on-disk export file (legacy) if the cache is empty and
+        an export file exists.
+        """
+        try:
+            data = Globals.settings.getCacheSetting(GENRES_CACHE_KEY)
+            if data is not None:
+                return data if isinstance(data, bytes) else bytes(data, DEFAULT_ENCODING)
+        except Exception as e:
+            self.log(f"_getGenres, cache read failed: {e}", xbmc.LOGDEBUG)
+        if FileAccess.exists(GENREFLEPATH):
+            try:
+                with FileAccess.stream(GENREFLEPATH) as fle:
+                    return fle.readBytes()
+            except Exception as e:
+                self.log(f"_getGenres, file fallback failed: {e}", xbmc.LOGDEBUG)
+        return b''
 
 
     def do_HEAD(self):
@@ -193,25 +302,31 @@ class MyHandler(BaseHTTPRequestHandler):
             accept_encoding = self.headers.get("Accept-Encoding", "")
             use_compression = "gzip" in accept_encoding
             if self.path.startswith('/logos/'): # 302 Temporary Redirect
+                image = self.resources.getImageCache(Globals._unquoteString(self.path.split("/logos/")[1]))
                 self.send_response(302)
-                self.send_header('Location', f'http://{Globals.properties.getRemoteHost()}/images/{Globals._quoteString(self.resources.getImageCache(Globals._unquoteString(self.path.split("/logos/")[1])))}')
-                self.log(f'do_GET, redirecting to http://{Globals.properties.getRemoteHost()}/images/{Globals._quoteString(image)}')
+                self.send_header('Location', f'http://{Globals.properties.getRemoteHost()}/image/{Globals._quoteString(image)}')
+                self.log(f'do_GET, redirecting to http://{Globals.properties.getRemoteHost()}/image/{Globals._quoteString(image)}')
                 self.end_headers()
                 return
             else: # 200 OK
                 self.send_response(200)
                 if   self.path == '/favicon.ico':                return __sendFile(ICON_WEB, use_compression)
                 elif self.path.endswith(Globals.properties.getProcessID()): #force IPTV to reload fresh local meta.
-                    if   M3UFLE.lower()   in self.path:          return __sendFile(M3UFLEPATH, use_compression)
-                    elif XMLTVFLE.lower() in self.path:          return __sendFile(XMLTVFLEPATH, use_compression)
-                    elif GENREFLE.lower() in self.path:          return __sendFile(GENREFLEPATH, use_compression)
-                elif self.path.endswith(f'/{M3UFLE.lower()}'):   return __sendFile(M3UFLEPATH, use_compression)
-                elif self.path.endswith(f'/{XMLTVFLE.lower()}'): return __sendFile(XMLTVFLEPATH, use_compression)
-                elif self.path.endswith(f'/{GENREFLE.lower()}'): return __sendFile(GENREFLEPATH, use_compression)
+                    if   M3UFLE.lower()   in self.path:          return __sendChunk(self.path, self._getFilteredM3U(), use_compression)
+                    elif XMLTVFLE.lower() in self.path:          return __sendChunk(self.path, self._getFilteredXMLTV(), use_compression)
+                    elif GENREFLE.lower() in self.path:          return __sendChunk(self.path, self._getGenres(), use_compression)
+                    elif SEASONFLE.lower()  in self.path:        return __sendFile(SEASONS, use_compression)
+                    elif HOLIDAYFLE.lower() in self.path:        return __sendFile(HOLIDAYS, use_compression)
+                elif self.path.endswith(f'/{M3UFLE.lower()}'):   return __sendChunk(self.path, self._getFilteredM3U(), use_compression)
+                elif self.path.endswith(f'/{XMLTVFLE.lower()}'): return __sendChunk(self.path, self._getFilteredXMLTV(), use_compression)
+                elif self.path.endswith(f'/{GENREFLE.lower()}'): return __sendChunk(self.path, self._getGenres(), use_compression)
+                elif self.path.endswith(f'/{SEASONFLE.lower()}'):  return __sendFile(SEASONS, use_compression)
+                elif self.path.endswith(f'/{HOLIDAYFLE.lower()}'): return __sendFile(HOLIDAYS, use_compression)
                 elif self.path.startswith('/filelist/'):         return __sendChunk(self.path, FileAccess.dumpJSON(Globals.settings.getCacheSetting(self.path.replace('/filelist/',''), FileAccess._getMD5(self.path.replace('/filelist/','')), default=[])).encode(encoding=DEFAULT_ENCODING), use_compression)
                 elif self.path.startswith('/image/'):
                     img_path = Globals._unquoteString(self.path.split('/image/')[1])
-                    if '..' in img_path or not img_path: return self.send_error(400, "Invalid path")
+                    if '..' in img_path: return self.send_error(400, "Invalid path")
+                    if not img_path: return __sendFile(LOGO, False)  # dead placeholder -> LOGO var
                     return __sendFile(img_path, False)
                 elif self.path.startswith('/api/'):
                     data = None
@@ -316,7 +431,12 @@ class HTTP(Thread):
                         self.log("run, http server @ %s"%(server),xbmc.LOGINFO)
 
                         ThreadedHTTPServer.allow_reuse_address = True
-                        self._server = ThreadedHTTPServer((host, port), partial(MyHandler,service=self.service))
+                        # bind all interfaces so the server answers on every
+                        # advertised IP. Kodi's mDNS announces virtual/Hyper-V adapters
+                        # (e.g. 172.20.32.1) in addition to the LAN IP; binding only the
+                        # LAN IP made /api/bonjour.json unreachable on those, reporting
+                        # "server unreachable". URLs still advertise the LAN host.
+                        self._server = ThreadedHTTPServer(('0.0.0.0', port), partial(MyHandler,service=self.service))
                         try: self._server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                         except Exception as e: self.log("run, http server failed to set SO_REUSEADDR: %s" % e, xbmc.LOGWARNING)
 

@@ -64,6 +64,7 @@ class CustomQueue(object):
         
         self.useExecutor = Globals.settings.getSettingBool('Enable_Executor')
         self.queueThread = Thread(target=self.execute, name=f"{ADDON_ID}.priorityQUE")
+        self.queueThread.daemon = True
         
     def log(self, msg: str, level: int = xbmc.LOGDEBUG, throttle: float = 0):
         LOG(f'{self.__class__.__name__}: {msg}', level, throttle=throttle)
@@ -139,7 +140,7 @@ class CustomQueue(object):
         if task_key:
             priority = max(1, min(5, int(priority)))
             with self.lock:
-                if task_key in self.running:
+                if task_key in self.running and execute_at <= now:
                     self.log(f"push, {func.__name__} skipped (running, dispatched {time.time() - self.running[task_key].created_at:.1f}s ago).", throttle=self.LOG_THROTTLE)
                 elif task_key in self.pending:
                     existing_task = self.pending[task_key]
@@ -237,8 +238,12 @@ class CustomQueue(object):
                     self.monitor.waitForAbort(1)
                 continue
             elif self.service.interrupt():
-                self.log("execute, Interrupt active. Breaking execution loop.", xbmc.LOGWARNING)
-                break
+                self.log("execute, Interrupt active. Idling execution loop...", xbmc.LOGDEBUG)
+                while self.service.interrupt():
+                    if self.service.pendingShutdown: break
+                    if self.monitor.abortRequested(): break
+                    self.monitor.waitForAbort(1)
+                continue
             else:
                 now = time.time()
                 with self.lock:

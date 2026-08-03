@@ -61,8 +61,6 @@ def cacheit(expiration: datetime.timedelta = datetime.timedelta(minutes=15), che
     return internal
     
 class Cache(object):
-
-
     def __init__(self, mem_cache: bool = False, disable_cache: bool = False):
         self.monitor = MONITOR()
         self.cache   = _Cache(monitor=self.monitor)
@@ -70,10 +68,8 @@ class Cache(object):
         self.disable_cache = (disable_cache or REAL_SETTINGS.getSetting('Disable_Cache') == 'true')
         self.log('__init__, mem_cache=%s, disable_cache=%s, db=%s' % (mem_cache, self.disable_cache, self.cache.dbfile), xbmc.LOGINFO)
 
-
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s [%s]: %s' % (self.__class__.__name__, {True:'MEM|DB',False:'DB'}[self.cache.enable_mem_cache], msg), level)
-
 
     def set(self, name: str, value: Any, checksum: Any = None, expiration: datetime.timedelta = datetime.timedelta(minutes=15)) -> Any:
         if checksum is None: checksum = ADDON_VERSION
@@ -81,7 +77,6 @@ class Cache(object):
             self.cache._set(name, value, checksum, expiration)
             self.log('set [%s], type=%s, expires=%s, value=%.64s' % (name, type(value).__name__, expiration, str(value)))
         return value
-
 
     def get(self, name: str, checksum: Any = None) -> Optional[Any]:
         if checksum is None: checksum = ADDON_VERSION
@@ -94,11 +89,9 @@ class Cache(object):
                 self.log("get [%s] failed: %s" % (name, e), xbmc.LOGERROR)
                 self.cache._clr(name)
 
-
     def clear(self, name: str):
         self.log('clr, name = %s' % name)
         self.cache._clr(name)
-
 
     def checkpoint(self):
         self.cache._checkpoint()
@@ -106,15 +99,22 @@ class Cache(object):
     def shutdown(self):
         self.cache._shutdown()
 
-
     def getChecksum(self, stringinput: Any) -> int:
         return self.cache.getChecksum(stringinput)
 
+    def execute(self, query: str, data: Any = None) -> Any:
+        """Run a raw SQL statement against the cache DB (Phase 2 — programmes index).
+
+        Reads flush pending buffered writes first; writes are batched/committed via
+        the normal deferred-commit path. Returns the sqlite cursor for SELECTs.
+        """
+        return self.cache._execute_sql(query, data)
+
 class _Cache(object):
+    _checksum_cache  = {}
     global_checksum  = '1.0.0'
     enable_mem_cache = False
     clean_interval   = MAX_GUIDEDAYS * 86400
-
 
     def __init__(self, monitor: Any = None, winID: int = 10000):
         self._lock          = RLock() 
@@ -129,7 +129,11 @@ class _Cache(object):
         self._checkpointing = False
         self._database      = None
         self._cache_idx     = deque()
-
+        # Deferred-commit write buffer: accumulate writes and commit in one
+        # transaction, cutting SQLite commit amplification on low-power devices.
+        self._write_batch   = []   # list of (query, data) pending writes
+        self._batch_limit   = 64   # flush when this many writes accumulate
+        self._batch_dirty   = False
 
     def __del__(self):
         try: self._chkClean()
@@ -138,15 +142,21 @@ class _Cache(object):
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s' % (self.__class__.__name__, msg), level)
 
-
     def _open(self) -> Optional[sqlite3.Connection]:
-        """Open or connect to the SQLite database, creating the cache table if needed."""
+        """Open or connect to the SQLite database, creating the cache table if needed.
+
+        Uses a short connect timeout so a contended DB can't block addon threads
+        for minutes (API_Timeout is user-facing and can be 90s+).
+        """
         with self._lock:
             retries = 0
+            # Cap the SQLite lock wait — the user-facing API_Timeout can be huge,
+            # and a long-held DB lock would freeze every cache consumer.
+            db_timeout = min(self.timeout, 5)
             while not self.monitor.abortRequested() and retries < LOCK_MAX_FILE_TIMEOUT:
                 try:
-                    self.log('_open, connecting to %s (timeout=%ds, attempt=%d)' % (self.dbfile, self.timeout, retries + 1), xbmc.LOGINFO)
-                    conn = sqlite3.connect(self.dbfile, timeout=self.timeout, check_same_thread=False)
+                    self.log('_open, connecting to %s (timeout=%ds, attempt=%d)' % (self.dbfile, db_timeout, retries + 1), xbmc.LOGINFO)
+                    conn = sqlite3.connect(self.dbfile, timeout=db_timeout, check_same_thread=False)
                     conn.execute("PRAGMA journal_mode=WAL;")
                     conn.execute("PRAGMA synchronous=NORMAL;")
                     conn.execute("""
@@ -170,7 +180,12 @@ class _Cache(object):
             return None
                     
     def _execute_sql(self, query: str, data: Any = None) -> Optional[sqlite3.Cursor]:
-        """Execute a SQL query with optional data, handling executemany for lists of tuples."""
+        """Execute a SQL query with optional data, handling executemany for lists of tuples.
+
+        Writes are buffered into _write_batch and committed in one transaction via
+        _flush_batch — avoids a SQLite commit per cache.set (O(n²) on large builds).
+        Reads flush pending writes first so buffered data is visible.
+        """
         with self._lock:
             if self._exit:
                 return None
@@ -181,21 +196,67 @@ class _Cache(object):
                 self._database = self._open()
                 
             if self._database:
+                is_write = not query.lstrip().upper().startswith('SELECT')
+                if is_write:
+                    # Buffer the write; commit only when the batch fills or on flush.
+                    self._write_batch.append((query, data))
+                    self._batch_dirty = True
+                    if len(self._write_batch) >= self._batch_limit:
+                        self._flush_batch()
+                    return None
+                self._flush_batch()  # reads must see pending writes
                 try:
-                    # Fix: Handle executemany cleanly when list of tuples is provided
                     if isinstance(data, list):  
-                        result = self._database.executemany(query, data)
+                        return self._database.executemany(query, data)
                     elif data:                  
-                        result = self._database.execute(query, data)
+                        return self._database.execute(query, data)
                     else:                       
-                        result = self._database.execute(query)
-                    if not query.lstrip().upper().startswith('SELECT'):
-                        self._database.commit()
-                    return result
+                        return self._database.execute(query)
                 except Exception as e:
                     self.log(f"SQL Error during [{query[:48]}]: {e}", xbmc.LOGERROR)
                     return None
 
+    def _flush_batch(self):
+        """Commit all buffered writes in a single SQLite transaction.
+
+        The batch is snapshotted under the lock, then committed WITHOUT holding
+        self._lock — a blocking SQLite commit must never freeze other threads
+        that need the cache (build queue, HTTP serving, chkQUES).
+        """
+        with self._lock:
+            if self._exit or not self._batch_dirty or not self._write_batch:
+                return
+            batch = self._write_batch
+            self._write_batch = []
+            self._batch_dirty = False
+        # Commit outside the lock.
+        with self._lock:
+            if self._database is None:
+                self._database = self._open()
+        if not self._database:
+            # DB unavailable — re-buffer so writes aren't lost silently.
+            with self._lock:
+                self._write_batch = batch + self._write_batch
+                self._batch_dirty = True
+            return
+        try:
+            self._database.execute('BEGIN')
+            for query, data in batch:
+                if isinstance(data, list):
+                    self._database.executemany(query, data)
+                elif data:
+                    self._database.execute(query, data)
+                else:
+                    self._database.execute(query)
+            self._database.commit()
+        except Exception as e:
+            self.log(f"_flush_batch, SQL batch failed: {e}", xbmc.LOGERROR)
+            try: self._database.rollback()
+            except Exception: pass
+            # Re-buffer on failure so a transient lock doesn't lose writes.
+            with self._lock:
+                self._write_batch = batch + self._write_batch
+                self._batch_dirty = True
 
     def _get(self, endpoint: str, checksum: Any = "") -> Optional[Any]:
         """Retrieve a cached value by endpoint, checking memory cache first if enabled."""
@@ -205,7 +266,6 @@ class _Cache(object):
             result = self._getMEM(endpoint, checksum, cur_time)
             if result is not None: return result
         return self._getDB(endpoint, checksum, cur_time)
-
 
     def _set(self, endpoint: str, data: Any, checksum: Any = "", delta_time: Any = -1):
         """Store data in cache, writing to both memory and database if enabled."""
@@ -218,12 +278,10 @@ class _Cache(object):
         query = "INSERT OR REPLACE INTO cache(id, expires, data, checksum) VALUES (?, ?, ?, ?)"
         self._execute_sql(query, (endpoint, expires, FileAccess.dumpPICKLE(data), checksum))
 
-
     def _clr(self, endpoint: str):
         """Delete all cache entries matching the endpoint prefix."""
         query = "DELETE FROM cache WHERE id LIKE ?"
         self._execute_sql(query, (endpoint + '%',))
-
 
     def _getDB(self, endpoint: str, checksum: Any, cur_time: int) -> Optional[Any]:
         """Fetch a value from the database cache, checking expiration and checksum validity."""
@@ -244,7 +302,6 @@ class _Cache(object):
             self.log("_getDB [%s]: Decoding failed: %s" % (endpoint, e))
             return None
 
-
     def _getMEM(self, endpoint: str, checksum: Any, cur_time: int) -> Optional[Any]:
         """Retrieve a value from the in-memory window property cache."""
         try: 
@@ -258,7 +315,6 @@ class _Cache(object):
             self.log("_getMEM [%s]: %s" % (endpoint, e), xbmc.LOGDEBUG)
         return None
 
-
     def _setMEM(self, endpoint: str, checksum: Any, expires: int, data: Any):
         """Store a value in the in-memory window property cache, evicting if entry count limit exceeded."""
         try:
@@ -269,7 +325,6 @@ class _Cache(object):
             self._cache_idx.append((endpoint, item_size))
         except Exception as e:
             self.log("_setMEM failed: %s" % e)
-
 
     def _chkClean(self):
         """Check if the cache needs periodic cleanup based on last execution time."""
@@ -301,11 +356,12 @@ class _Cache(object):
             finally: 
                 self._trim = False
 
-
     def purge(self) -> bool:
         """Drop and recreate the cache table, clearing all persisted data."""
         with self._lock:
             try:
+                self._write_batch = []   # purge wipes everything — drop buffered writes
+                self._batch_dirty = False
                 if self._database is None:
                     self._database = self._open()
                 if self._database:
@@ -333,13 +389,12 @@ class _Cache(object):
             if self._database and not self._exit and not self._checkpointing:
                 try:
                     self._checkpointing = True
-                    self._database.commit()
+                    self._flush_batch()
                     self._database.execute("PRAGMA wal_checkpointing(FULL);")
                 except Exception as e:
                     self.log("_checkpoint failed: %s" % e, xbmc.LOGERROR)
                 finally:
                     self._checkpointing = False 
-
 
     def _shutdown(self):
         """Commit pending changes, checkpoint WAL, and close the database connection."""
@@ -347,8 +402,8 @@ class _Cache(object):
             if self._database and not self._exit:
                 try:
                     self.log('_shutdown, committing and closing database', xbmc.LOGINFO)
+                    self._flush_batch()          # write buffered entries before exit
                     self._exit = True
-                    self._database.commit()
                     self._database.execute("PRAGMA wal_checkpointing(TRUNCATE);")
                 except Exception as e:
                     self.log("_shutdown SQL commands failed: %s" % e, xbmc.LOGERROR)
@@ -357,9 +412,6 @@ class _Cache(object):
                     except Exception as e: self.log("_shutdown close failed: %s" % e, xbmc.LOGDEBUG)
                     self._database = None
                     self.log('_shutdown, database closed', xbmc.LOGINFO)
-
-
-    _checksum_cache = {}
 
     def getChecksum(self, stringinput: Any) -> int:
         """Generate an Adler32 checksum from the global checksum combined with the input string."""

@@ -1,4 +1,5 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
+
 v.0.7.8+nightly
 - Fixed progress dialog not rendering from non-main threads (added waitForAbort after dlg.update).
 - Refactored chkPVRSync to pure state checker, returns findings dict; chkPVRRefresh accepts findings to avoid duplicate updatePVRStatus calls.

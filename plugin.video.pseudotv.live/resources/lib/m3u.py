@@ -24,6 +24,15 @@ from variables   import *
 from channels    import Channels
 from fileaccess  import FileAccess, FileLock
 
+def clearM3UCache():
+    """Clear the M3U cache entry (utilities cleanup).
+
+    The playlist now lives in cache.db, so "cleaning" it means dropping the
+    m3u.data key rather than deleting any physical export file.
+    """
+    Globals.settings.clrCacheSetting(M3U_CACHE_KEY)
+
+
 class M3U(object):
     _RE_GLOBAL = {
         'tvg-shift': re.compile(r'tvg-shift="([^"]*)"', re.IGNORECASE),
@@ -72,25 +81,26 @@ class M3U(object):
         self.M3UDATA = {'data'      : '#EXTM3U tvg-shift="" x-tvg-url="%s" x-tvg-id="" catchup-correction=""' % ('http://%s/%s' % (Globals.properties.getRemoteHost(), XMLTVFLE)),
                         'stations'  : stations,
                         'recordings': recordings}
+        self._initial_ids = {s.get('id') for s in stations if s.get('id')}
 
 
     def __enter__(self) -> 'M3U':
+        self._saved = False
         return self
 
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any):
         try:
-            if getattr(self, 'writable', False): self._save()
-            self.log('__exit__, writable = %s' % (getattr(self, 'writable', False)))
-        except Exception as e: self.log('__exit__ save failed: %s' % e, xbmc.LOGDEBUG)
+            if getattr(self, 'writable', False) and not getattr(self, '_saved', False):
+                self._save()
+        except Exception as e: pass
             
             
     def __del__(self):
         try:
-            if getattr(self, 'writable', False): self._save()
-            self.log('__del__, writable = %s' % (getattr(self, 'writable', False)))
-        except Exception as e: 
-            self.log('__del__ save failed: %s' % e, xbmc.LOGDEBUG)
+            if getattr(self, 'writable', False) and not getattr(self, '_saved', False):
+                self._save()
+        except Exception: pass
         
         
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
@@ -98,7 +108,22 @@ class M3U(object):
 
 
     def _load(self) -> Generator[Dict[str, Any], None, None]:
-        self.log('_load, file=%s' % self.stationFile)
+        self.log('_load, cache=%s' % self.stationFile)
+        payload = Globals.settings.getCacheSetting(M3U_CACHE_KEY) or {}
+        stations   = payload.get('stations')   or []
+        recordings = payload.get('recordings') or []
+        if stations or recordings:
+            # data lives in the SQLite cache — serve it directly (no file I/O)
+            yield from (recordings + stations)
+            return
+        # Legacy migration: first run after the file->cache switch, or after a
+        # cache clear — parse the on-disk export once; the next writable _save
+        # populates the cache so subsequent loads hit SQLite.
+        yield from self._load_file()
+
+
+    def _load_file(self) -> Generator[Dict[str, Any], None, None]:
+        self.log('_load_file, file=%s' % self.stationFile)
         lines = []
         if FileAccess.exists(self.stationFile): 
             fle = None
@@ -229,63 +254,125 @@ class M3U(object):
         ))
         
         if self.writable:
-            with FileLock(self.stationFile):
-                try:
-                    with FileAccess.open(self.stationFile, 'w') as fle:
-                        fle.write('%s\n' % (self.M3UDATA['data']))
-                        opts = list(self.getMitem().keys())
-                        line_template = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
-                        
-                        for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
-                            try:
-                                optional  = ''
-                                kodiprops = station.get('kodiprops', [])
-                                extvlcopt = station.get('extvlcopt', [])
-                                xplaylist = station.get('x-playlist-type', '')
-                                
-                                for key, value in station.items():
-                                    if key not in ['kodiprops', 'extvlcopt', 'x-playlist-type', 'url'] and key in opts and str(value):
-                                        optional += '%s="%s" ' % (key, value)
+            # Persist to the SQLite cache (transactional; avoids file-lock races with
+            # the HTTP server / pvr.iptvsimple polling). Version token bumps on every
+            # save so the HTTP render cache invalidates.
+            old = Globals.settings.getCacheSetting(M3U_CACHE_KEY) or {}
+            Globals.settings.setCacheSetting(M3U_CACHE_KEY, {
+                'stations'  : self.M3UDATA['stations'],
+                'recordings': self.M3UDATA['recordings'],
+                'updated'   : time.time(),
+                'version'   : (old.get('version', 0) or 0) + 1}, life=-1)
+            # Optional physical export for local-file PVR configs / external tools.
+            if Globals.settings.getSettingBool('Enable_File_Export'):
+                self._save_export()
 
-                                fle.write(line_template % (
-                                    station.get('number', ''),
-                                    station.get('id', ''),
-                                    station.get('name', ''),
-                                    station.get('logo', ''),
-                                    ';'.join(station.get('group', [])),
-                                    str(station.get('radio', False)),
-                                    station.get('catchup', ''),
-                                    station.get('label', '')
-                                ))
-                                        
-                                if kodiprops: 
-                                    fle.write('%s\n' % ('\n'.join(['#KODIPROP:%s' % prop for prop in kodiprops])))
-                                if extvlcopt: 
-                                    fle.write('%s\n' % ('\n'.join(['#EXTVLCOPT:%s' % prop for prop in extvlcopt])))
-                                if xplaylist: 
-                                    fle.write('#EXT-X-PLAYLIST-TYPE:%s\n' % xplaylist)
-                                    
-                                fle.write('%s\n' % (station.get('url', '')))
-                            except Exception as e:
-                                self.log("_save, loop record entry failed! %s" % e, xbmc.LOGERROR)
-                                continue
-                except Exception as e: 
-                    self.log("_save, global write process failed! %s" % e, xbmc.LOGERROR)
-                finally:
-                    if fle and hasattr(fle, 'close'): 
-                        fle.close()
-
+            self._saved = True
             # Update PVR status with current M3U/XMLTV data
             status   = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(), Globals.properties.getFriendlyName())
             stations = self.getStations()
-            status['m3u']['channel_ids'] = {s.get('id') for s in stations if s.get('id')}
+            current_ids = {s.get('id') for s in stations if s.get('id')}
+            status['m3u']['channel_ids'] = current_ids
             status['m3u']['last_write'] = time.time()
             Globals.settings.instances._computeDerived(status)
-            # Force PVR to re-read M3U after write
-            Globals.settings.instances.triggerReload()
+            # Only force PVR reload if station set actually changed
+            if current_ids != self._initial_ids:
+                Globals.properties.setPropTimer('chkPVRRefresh')
             Globals.properties.notifyDataChanged('m3u')
             return True
         return False
+
+
+    def _save_export(self) -> bool:
+        """Write the physical pseudotv.m3u export (atomic temp+rename).
+
+        Only runs when Enable_File_Export is on; keeps the legacy file on disk
+        for local-file pvr.iptvsimple configs or third-party tooling. The SQLite
+        cache remains the source of truth.
+        """
+        try:
+            tmp_file = '%s.tmp' % (self.stationFile)
+            with FileAccess.open(tmp_file, 'w') as fle:
+                self._write(fle)
+            if FileAccess.rename(tmp_file, self.stationFile):
+                self.log('_save_export, atomic write complete')
+            else:
+                self.log("_save_export, atomic rename failed, retrying direct write", xbmc.LOGWARNING)
+                FileAccess.delete(tmp_file)
+                with FileAccess.open(self.stationFile, 'w') as fle:
+                    self._write(fle)
+            return True
+        except Exception as e:
+            self.log("_save_export failed! %s" % e, xbmc.LOGERROR)
+            try: FileAccess.delete(tmp_file)
+            except Exception: pass
+            return False
+
+
+    def _write(self, fle) -> None:
+        """Write the full M3U body to a file-like object (data header + stations).
+
+        Shared by _save (atomic temp+rename) and render (in-memory HTTP serving)
+        so both produce byte-identical output.
+        """
+        fle.write('%s\n' % (self.M3UDATA['data']))
+        opts = list(self.getMitem().keys())
+        line_template = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+        for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
+            try:
+                optional  = ''
+                kodiprops = station.get('kodiprops', [])
+                extvlcopt = station.get('extvlcopt', [])
+                xplaylist = station.get('x-playlist-type', '')
+                # Exclude template keys so attrs are not duplicated in the EXTINF line.
+                skip = {'kodiprops', 'extvlcopt', 'x-playlist-type', 'url', 'number', 'id', 'name', 'logo', 'group', 'radio', 'catchup'}
+                for key, value in station.items():
+                    if key not in skip and key in opts and str(value):
+                        optional += '%s="%s" ' % (key, value)
+                fle.write(line_template % (
+                    station.get('number', ''),
+                    station.get('id', ''),
+                    station.get('name', ''),
+                    station.get('logo', ''),
+                    ';'.join(station.get('group', [])),
+                    str(station.get('radio', False)),
+                    station.get('catchup', ''),
+                    optional,
+                    station.get('label', '')
+                ))
+                if kodiprops:
+                    fle.write('%s\n' % ('\n'.join(['#KODIPROP:%s' % prop for prop in kodiprops])))
+                if extvlcopt:
+                    fle.write('%s\n' % ('\n'.join(['#EXTVLCOPT:%s' % prop for prop in extvlcopt])))
+                if xplaylist:
+                    fle.write('#EXT-X-PLAYLIST-TYPE:%s\n' % xplaylist)
+                fle.write('%s\n' % (station.get('url', '')))
+            except Exception as e:
+                self.log("_save, loop record entry failed! %s" % e, xbmc.LOGERROR)
+                continue
+
+    def render(self, fle, stations=None, recordings=None):
+        """Render M3U content to a file-like object without touching disk.
+
+        Reuses the exact same template and logic as _save() lines 236-272.
+        Used by the HTTP server to serve filtered M3U content based on channels.json.
+        """
+        if stations is None:   stations = self.getStations()
+        if recordings is None: recordings = self.getRecordings()
+        # Build a str buffer, then delegate to _write so render and _save share the
+        # exact same template logic (byte-identical output).
+        import io
+        buf = io.StringIO()
+        saved_stations = self.M3UDATA['stations']
+        saved_recordings = self.M3UDATA['recordings']
+        try:
+            self.M3UDATA['stations'] = stations
+            self.M3UDATA['recordings'] = recordings
+            self._write(buf)
+        finally:
+            self.M3UDATA['stations'] = saved_stations
+            self.M3UDATA['recordings'] = saved_recordings
+        fle.write(buf.getvalue().encode(DEFAULT_ENCODING))
 
 
     def _verify(self, stations: Optional[List[Dict[str, Any]]] = None, recordings: Optional[List[Dict[str, Any]]] = None, chkPath: Optional[bool] = None) -> List[Dict[str, Any]]:
@@ -384,6 +471,100 @@ class M3U(object):
         recordings = self.sortStations(self.M3UDATA.get('recordings', []), key='name')
         self.log('getRecordings, recordings = %s' % (len(recordings)))
         return recordings
+
+
+    # =========================================================================
+    # HTTP Content Filtering
+    # =========================================================================
+    # Filters are applied in sequence to M3U stations before serving to
+    # pvr.iptvsimple via the HTTP server. pvr.iptvsimple uses the M3U to
+    # determine which channels appear in Kodi's EPG — missing M3U entry
+    # means the channel is invisible in the guide, regardless of XMLTV data.
+    #
+    # Filter chain (applied in order):
+    #   1. _filterByChannel — removes stations not in channels.json
+    #   2. _filterM3UByXMLTV — removes stations with no EPG programmes
+    #
+    # XMLTV is NOT filtered — it's served raw. Only M3U filtering matters
+    # because pvr.iptvsimple ignores XMLTV entries for channels absent from M3U.
+    # =========================================================================
+
+    def _filterByChannel(self, stations: List[Dict[str, Any]], allowed_ids: set) -> List[Dict[str, Any]]:
+        """Keep only stations whose 'id' exists in channels.json.
+
+        Why: channels.json is the master list of configured channels. Stations
+        removed from channels.json (e.g. during autotune or manual edits)
+        should not appear in the served M3U, even if the cached M3U file
+        still contains them. This ensures pvr.iptvsimple only sees channels
+        that are actively managed by PseudoTV.
+        """
+        if not allowed_ids:
+            return []
+        return [s for s in stations if s.get('id') in allowed_ids]
+
+    def _filterM3UByXMLTV(self, stations: List[Dict[str, Any]], channel_ids_with_programmes: set) -> List[Dict[str, Any]]:
+        """Remove stations that have no corresponding XMLTV programmes.
+
+        Why: A channel in M3U without XMLTV data shows as an empty entry
+        in Kodi's EPG guide — no title, no plot, no artwork. These are
+        useless to the user and clutter the guide. This happens when:
+          - The channel's content source is unreachable (SMB share down)
+          - The channel's smart playlist resolved to zero items
+          - All items were filtered out (extras, strm files, etc.)
+          - The channel was just created and no EPG data was generated yet
+
+        The filter reads the XMLTV programmes to find which channel IDs
+        have at least one programme, then drops M3U stations not in that set.
+        """
+        if not channel_ids_with_programmes:
+            return stations  # no programmes at all — safety: don't filter
+        return [s for s in stations if s.get('id') in channel_ids_with_programmes]
+
+    def _filterM3UByCurrentGuide(self, stations: List[Dict[str, Any]], current_ids: set) -> List[Dict[str, Any]]:
+        """Remove stations whose EPG does not cover the current time.
+
+        Why: A channel with only past programmes (EPG ends hours ago) shows an
+        empty guide row — nothing is airing "now" and nothing is scheduled.
+        Until the channel is rebuilt with fresh EPG the guide would be blank,
+        so keep the channel invisible to pvr.iptvsimple. `current_ids` is the
+        set of channel IDs having a programme whose [start, stop) window
+        contains `now` or starts shortly after (MIN_EPG_DURATION look-ahead).
+        """
+        if not current_ids:
+            return stations  # no coverage data — safety: don't filter
+        return [s for s in stations if s.get('id') in current_ids]
+
+    def getFilteredStations(self, programmes: Optional[list] = None) -> List[Dict[str, Any]]:
+        """Return stations filtered for HTTP serving to pvr.iptvsimple.
+
+        Two-layer filter:
+          1. channels.json membership — only configured channels are served.
+          2. XMLTV presence — channels that exist but have NO guide data at all
+             (e.g. a content source that resolved to nothing) are dropped from the
+             M3U so they don't appear as blank rows in Kodi.
+
+        Channels that DO have some guide data but lack current coverage, are
+        temporarily missing / mid-build, or have less than the minimum EPG duration
+        of future data are KEPT here — the served XMLTV (renderWithPlaceholders)
+        injects an informative "No Guide Data" placeholder for them.
+
+        `programmes` (optional) lets callers pass an already-loaded XMLTV programme
+        list so the serve path doesn't load XMLTV twice.
+        """
+        stations = self.getStations()
+
+        # Filter 1: Only stations in channels.json
+        allowed_ids = {ch.get('id') for ch in Channels(Globals.getChannelKey()).getChannels() if ch.get('id')}
+        stations = self._filterByChannel(stations, allowed_ids)
+
+        # Filter 2: Only stations with at least one XMLTV programme (drop no-guide channels)
+        if programmes is None:
+            from xmltvs import XMLTVS
+            programmes = XMLTVS().getProgrammes()
+        channel_ids_with_programmes = {p.get('channel') for p in programmes if p.get('channel')}
+        stations = self._filterM3UByXMLTV(stations, channel_ids_with_programmes)
+
+        return stations
                
     def getStationItem(self, sitem: Dict[str, Any]) -> Dict[str, Any]:
         if 3000 in list(sitem.get('rules', {}).keys()): 

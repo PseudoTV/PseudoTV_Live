@@ -36,9 +36,11 @@ try:
 except Exception as e: LOG('VideoParser: pymediainfo not available, failed!\n%s' % e, xbmc.LOGDEBUG)
     
 try:
-    import ffmpeg
-    from parsers import FFProbe
-    EXTERNAL_PARSER.append(FFProbe.FFProbe)
+    import shutil
+    if shutil.which('ffmpeg') or shutil.which('ffprobe'):
+        import ffmpeg
+        from parsers import FFProbe
+        EXTERNAL_PARSER.append(FFProbe.FFProbe)
 except Exception as e: LOG('VideoParser: ffmpeg not available, failed!\n%s' % e, xbmc.LOGDEBUG)
     
 try:
@@ -47,19 +49,11 @@ try:
     EXTERNAL_PARSER.append(Hachoir.Hachoir)
 except Exception as e: LOG('VideoParser: hachoir not available, failed!\n%s' % e, xbmc.LOGDEBUG)
 
-try:
-    import moviepy
-    from parsers import MoviePY
-    from numpy.core._multiarray_umath import *
-    EXTERNAL_PARSER.append(MoviePY.MoviePY)
-except Exception as e: LOG('VideoParser: moviepy not available, failed!\n%s' % e, xbmc.LOGDEBUG)
+# moviepy and cv2 are intentionally omitted: their single-phase-init C extensions
+# (numpy/OpenCV) cannot load in Kodi's Python subinterpreter
+# ("cannot load module more than once per process"), so these fallbacks can never
+# work here and only spam the log at every startup.
 
-try:
-    import cv2
-    from parsers import OpenCV
-    EXTERNAL_PARSER.append(OpenCV.OpenCV)
-except Exception as e: LOG('VideoParser: cv2 not available, failed!\n%s' % e, xbmc.LOGDEBUG)
-    
 class VideoParser(object):
     def __init__(self):
         self.AVIExts  = ['.avi']
@@ -78,8 +72,11 @@ class VideoParser(object):
             if not filename: LOG("VideoParser: getVideoLength, no filename.")
             elif filename.lower().startswith(tuple(self.VFSPaths)):
                 if filename.lower().startswith(tuple(self.YTPaths)):
+                    # YouTube: determineLength checks the cookie-keyed cache (incl. a
+                    # failed bot-check 0) and re-parses only when uncached or the
+                    # cookies file changed. No fall-through to the VFS probe.
                     duration = YTParser.YTParser().determineLength(filename)
-                if duration == 0:
+                else:
                     duration = VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
             else:
                 ext = os.path.splitext(filename)[1].lower()
@@ -108,6 +105,9 @@ class VideoParser(object):
                         duration = parser().determineLength(filename)
                     del monitor
             
-            if duration > 0: duration = jsonRPC._setDuration(filename, fileitem, round(duration))
+            # Cache successful probes in the generic duration cache — YouTube stays in
+            # its own cookie-keyed cache so a re-auth invalidates it correctly.
+            if duration > 0 and not filename.lower().startswith(tuple(self.YTPaths)):
+                duration = jsonRPC._setDuration(filename, fileitem, round(duration))
         LOG("VideoParser: getVideoLength, duration = %s, filename = %s"%(duration,filename))
         return duration

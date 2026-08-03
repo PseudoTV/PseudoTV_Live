@@ -5,90 +5,7 @@ from collections import OrderedDict
 from unittest.mock import MagicMock, patch
 import pytest
 
-# Mock Kodi modules
-# Mock Kodi modules
-xbmc = MagicMock()
-xbmcgui = MagicMock()
-xbmcaddon = MagicMock()
-xbmcvfs = MagicMock()
-xbmcplugin = MagicMock()
-xbr = MagicMock()
-kodi_six = MagicMock()
-kodi_six.xbmc = xbmc
-kodi_six.xbmcgui = xbmcgui
-kodi_six.xbmcaddon = xbmcaddon
-kodi_six.xbmcvfs = xbmcvfs
-kodi_six.xbmcplugin = xbmcplugin
-
-# Set Kodi log level constants to real integers
-xbmc.LOGDEBUG   = 0
-xbmc.LOGINFO    = 1
-xbmc.LOGWARNING = 2
-xbmc.LOGERROR   = 3
-xbmc.LOGFATAL   = 4
-xbmc.LOGNONE    = 7
-
-# Set other xbmc constants used at import time
-xbmc.PLAYLIST_MUSIC = 'music'
-xbmc.PLAYLIST_VIDEO = 'video'
-xbmc.SORT_METHOD_UNSPECIFIED = -1
-
-sys.modules['xbmc'] = xbmc
-sys.modules['xbmcgui'] = xbmcgui
-sys.modules['xbmcaddon'] = xbmcaddon
-sys.modules['xbmcvfs'] = xbmcvfs
-sys.modules['xbmcplugin'] = xbmcplugin
-sys.modules['xbr'] = xbr
-sys.modules['kodi_six'] = kodi_six
-sys.modules['kodi_six.xbmc'] = xbmc
-sys.modules['kodi_six.xbmcgui'] = xbmcgui
-sys.modules['kodi_six.xbmcaddon'] = xbmcaddon
-sys.modules['kodi_six.xbmcvfs'] = xbmcvfs
-sys.modules['kodi_six.xbmcplugin'] = xbmcplugin
-
-# Mock requests + submodules (constants.py imports from requests.adapters)
-sys.modules['requests'] = MagicMock()
-sys.modules['requests.adapters'] = MagicMock()
-
-sys.modules['pyqrcode'] = MagicMock()
-sys.modules['infotagger'] = MagicMock()
-sys.modules['infotagger.listitem'] = MagicMock()
-
-# Mock six module (required by constants.py)
-import urllib.parse as _real_urlparse
-import types as _types
-_six_urllib_ns = _types.SimpleNamespace(parse=_real_urlparse)
-six_mock = MagicMock()
-six_mock.moves.urllib = _six_urllib_ns
-sys.modules["six"] = six_mock
-sys.modules["six.moves"] = six_mock.moves
-LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)),'resources','lib')
-sys.path.insert(0, LIB_DIR)
-
-
-@pytest.fixture(autouse=True)
-def _patch_kodi_apis():
-    with patch('xbmcaddon.Addon') as mock_addon_cls, \
-         patch('xbmc.getSupportedMedia', return_value='|.mp4|.mkv|.avi|'):
-        mock_addon = MagicMock()
-        mock_addon_cls.return_value = mock_addon
-        mock_addon.getAddonInfo.side_effect = lambda k: {
-            'name': 'TestAddon', 'version': '1.0.0',
-            'icon': 'icon.png', 'fanart': 'fanart.jpg',
-            'profile': 'special://profile/addon_data/test/',
-            'path': '/tmp/test_addon', 'author': 'Test'
-        }.get(k, '')
-        mock_addon.getSetting.side_effect = lambda k: {
-            'User_Folder': 'special://profile/addon_data/plugin.video.pseudotv.live/cache',
-            'Disable_Cache': 'false', 'API_Timeout': '30',
-            'Debug_Enable': 'false', 'Debug_Level': '3',
-            'Enable_Grouping': 'true', 'Enable_Executor': 'true',
-            'Cache_MEM_Limit': '10'
-        }.get(k, '')
-        mock_addon.getSettingBool.return_value = True
-        mock_addon.getSettingInt.return_value = 50
-        mock_addon.getLocalizedString.return_value = 'TestString'
-        yield
+import variables
 
 
 @pytest.fixture
@@ -99,7 +16,6 @@ def globals_class():
 # ========================================================================
 # 1. _parseSE - Season/Episode parsing
 # ========================================================================
-
 
 class TestParseSE:
     @pytest.mark.parametrize('filename, expected', [
@@ -131,7 +47,6 @@ class TestParseSE:
 # 2. _splitYear / _stripRegion
 # ========================================================================
 
-
 class TestSplitYear:
     @pytest.mark.parametrize('label, exp_label, exp_year', [
         ('Movie (2020)', 'Movie', 2020),
@@ -160,7 +75,6 @@ class TestStripRegion:
 # 3. _slugify
 # ========================================================================
 
-
 class TestSlugify:
     @pytest.mark.parametrize('input_str, lowercase, expected', [
         ('Hello World', False, 'Hello_World'),
@@ -178,7 +92,6 @@ class TestSlugify:
 # 4. _getAbbr
 # ========================================================================
 
-
 class TestGetAbbr:
     def test_two_word(self, globals_class):
         assert globals_class._getAbbr('Hello World') == 'H.W.'
@@ -191,7 +104,6 @@ class TestGetAbbr:
 # ========================================================================
 # 5. _escapeString / _unescapeString
 # ========================================================================
-
 
 class TestEscapeString:
     def test_escape_ampersand(self, globals_class):
@@ -208,7 +120,6 @@ class TestEscapeString:
 # 6. _hasURLencoding
 # ========================================================================
 
-
 class TestHasURLEncoding:
     @pytest.mark.parametrize('text, expected', [
         ('hello%20world', True),
@@ -223,7 +134,6 @@ class TestHasURLEncoding:
 # ========================================================================
 # 7. _cleanMPAA
 # ========================================================================
-
 
 class TestCleanMPAA:
     @pytest.mark.parametrize('mpaa, expected', [
@@ -242,7 +152,6 @@ class TestCleanMPAA:
 # 8. _percentDiff
 # ========================================================================
 
-
 class TestPercentDiff:
     def test_same_values(self, globals_class):
         assert globals_class._percentDiff(100.0, 100.0) == 0.0
@@ -256,7 +165,6 @@ class TestPercentDiff:
 # ========================================================================
 # 9. _timeString2Seconds
 # ========================================================================
-
 
 class TestTimeString2Seconds:
     @pytest.mark.parametrize('time_str, expected', [
@@ -277,7 +185,6 @@ class TestTimeString2Seconds:
 # ========================================================================
 # 10. _chunkLst / _pagination
 # ========================================================================
-
 
 class TestChunkLst:
     def test_even_split(self, globals_class):
@@ -301,7 +208,6 @@ class TestPagination:
 # 11. _interleave
 # ========================================================================
 
-
 class TestInterleave:
     def test_sets_zero_concatenates(self, globals_class):
         result = globals_class._interleave([[1, 2], ['a', 'b']], sets=0)
@@ -318,7 +224,6 @@ class TestInterleave:
 # ========================================================================
 # 12. _randomShuffle / _randomSamples
 # ========================================================================
-
 
 class TestRandomShuffle:
     def test_shuffle_preserves_elements(self, globals_class):
@@ -362,7 +267,6 @@ class TestRandomSamples:
 # 13. _isStack / _splitStacks
 # ========================================================================
 
-
 class TestStackedFiles:
     def test_is_stack_true(self, globals_class):
         assert globals_class._isStack('stack://file1.mkv , file2.mkv') is True
@@ -381,7 +285,6 @@ class TestStackedFiles:
 # ========================================================================
 # 14. _isFiller
 # ========================================================================
-
 
 class TestIsFiller:
     def test_is_filler_by_genre(self, globals_class):
@@ -402,7 +305,6 @@ class TestIsFiller:
 # 15. _getLabel
 # ========================================================================
 
-
 class TestGetLabel:
     def test_label_from_name(self, globals_class):
         item = {'name': 'Test Movie'}
@@ -419,7 +321,6 @@ class TestGetLabel:
 # 16. _roundupDIV
 # ========================================================================
 
-
 class TestRoundupDIV:
     def test_exact_division(self, globals_class):
         assert globals_class._roundupDIV(10, 2) == 5
@@ -432,7 +333,6 @@ class TestRoundupDIV:
 # ========================================================================
 # 17. _combineDicts
 # ========================================================================
-
 
 class TestCombineDicts:
     def test_combine_basic(self, globals_class):
@@ -450,7 +350,6 @@ class TestCombineDicts:
 # ========================================================================
 # 18. _cleanLabel
 # ========================================================================
-
 
 class TestCleanLabel:
     def test_remove_color_tags(self, globals_class):
@@ -476,7 +375,6 @@ class TestCleanLabel:
 # 19. _stripNumber
 # ========================================================================
 
-
 class TestStripNumber:
     def test_strip_numbers(self, globals_class):
         assert globals_class._stripNumber('abc123def') == 'abcdef'
@@ -489,7 +387,6 @@ class TestStripNumber:
 # ========================================================================
 # 20. _encodePlot / _decodePlot
 # ========================================================================
-
 
 class TestEncodeDecodePlot:
     def test_encode_decode_roundtrip(self, globals_class):
@@ -513,7 +410,6 @@ class TestEncodeDecodePlot:
 # 21. _getChannelID / _getRecordID
 # ========================================================================
 
-
 class TestChannelID:
     def test_channel_id_deterministic(self, globals_class):
         with patch('variables.ADDON_NAME', 'PseudoTV Live'):
@@ -525,7 +421,6 @@ class TestChannelID:
         with patch('variables.ADDON_NAME', 'PseudoTV Live'):
             result = globals_class._getChannelID('Test', 'path', 1, 'uuid123')
             assert '@' in result
-            # Format: 32 hex chars + @ + slugified addon name
             parts = result.split('@')
             assert len(parts[0]) == 32
             assert parts[1] == 'PseudoTV_Live'
@@ -540,7 +435,7 @@ class TestChannelID:
         with patch('variables.ADDON_NAME', 'PseudoTV Live'):
             id1 = globals_class._getChannelID('Test', 'path1', 1, 'uuid')
             id2 = globals_class._getChannelID('Test', 'path2', 1, 'uuid')
-            assert id1 == id2  # both use str(hash_object) which is address-based
+            assert id1 == id2
 
     def test_list_path_handling(self, globals_class):
         with patch('variables.ADDON_NAME', 'PseudoTV Live'):
@@ -550,11 +445,8 @@ class TestChannelID:
 
     def test_uuid_not_in_id_due_to_hash_object(self, globals_class):
         with patch('variables.ADDON_NAME', 'PseudoTV Live'):
-            # Known: hashlib.md5() returns object, str() is address-based
-            # UUID is part of tmpid but path hash object dominates
             id1 = globals_class._getChannelID('Test', 'path', 1, 'uuid1')
             id2 = globals_class._getChannelID('Test', 'path', 1, 'uuid2')
-            # Both produce same result due to hash object str() behavior
             assert id1 == id2
 
     def test_number_affects_id(self, globals_class):
@@ -567,7 +459,6 @@ class TestChannelID:
 # ========================================================================
 # 22. _mergeDict
 # ========================================================================
-
 
 class TestMergeDict:
     def test_merge_basic(self, globals_class):
@@ -586,7 +477,6 @@ class TestMergeDict:
 # 23. _compareDict
 # ========================================================================
 
-
 class TestCompareDict:
     def test_same_dicts(self, globals_class):
         d1 = [{'name': 'b'}, {'name': 'a'}]
@@ -601,7 +491,6 @@ class TestCompareDict:
 # ========================================================================
 # 24. _isRadio
 # ========================================================================
-
 
 class TestIsRadio:
     def test_radio_flag_true(self, globals_class):
@@ -622,7 +511,6 @@ class TestIsRadio:
 # 25. _chkLogo
 # ========================================================================
 
-
 class TestChkLogo:
     def test_keep_existing_if_new_is_wlogo(self, globals_class):
         old = '/path/to/logo.png'
@@ -638,7 +526,6 @@ class TestChkLogo:
 # 26. _escapeDirJSON
 # ========================================================================
 
-
 class TestEscapeDirJSON:
     def test_no_colon(self, globals_class):
         path = '/unix/path'
@@ -650,7 +537,6 @@ class TestEscapeDirJSON:
 # 27. _frange
 # ========================================================================
 
-
 class TestFrange:
     def test_basic_frange(self, globals_class):
         result = globals_class._frange(0, 10, 2)
@@ -661,20 +547,18 @@ class TestFrange:
 # 28. _subZoom / _addZoom
 # ========================================================================
 
-
 class TestZoomCalculations:
     def test_sub_zoom(self, globals_class):
         result = globals_class._subZoom(100, 0.5)
-        assert result == 50  # 100*(0.5*100)/100 = 50
+        assert result == 50
     def test_add_zoom(self, globals_class):
         result = globals_class._addZoom(100, 0.5)
-        assert result == 150  # (100 - 100*(0.5*100)/100) + 100 = 150
+        assert result == 150
 
 
 # ========================================================================
 # 29. _roundTimeDown / _roundTimeUp
 # ========================================================================
-
 
 class TestTimeRounding:
     def test_round_down_30min(self, globals_class):
@@ -691,7 +575,6 @@ class TestTimeRounding:
 # 30. double_urlencode / single_urlencode
 # ========================================================================
 
-
 class TestURLEncoding:
     def test_single_urlencode(self, globals_class):
         result = globals_class.single_urlencode('hello world')
@@ -706,7 +589,6 @@ class TestURLEncoding:
 # ========================================================================
 # 31. diffLSTDICT
 # ========================================================================
-
 
 class TestDiffLSTDICT:
     def test_same_lists(self, globals_class):
@@ -733,7 +615,6 @@ class TestDiffLSTDICT:
 # 32. _chunkDict
 # ========================================================================
 
-
 class TestChunkDict:
     def test_chunk_dict_basic(self, globals_class):
         items = {'a': 1, 'b': 2, 'c': 3, 'd': 4, 'e': 5}
@@ -758,7 +639,6 @@ class TestChunkDict:
 # 33. _isShort
 # ========================================================================
 
-
 class TestIsShort:
     def test_is_short_true(self, globals_class):
         with patch.object(globals_class.settings, 'getSettingInt', return_value=300):
@@ -776,7 +656,6 @@ class TestIsShort:
 # 34. _isEnding
 # ========================================================================
 
-
 class TestIsEnding:
     def test_is_ending_true(self, globals_class):
         with patch.object(globals_class.settings, 'getSettingInt', return_value=90):
@@ -790,7 +669,6 @@ class TestIsEnding:
 # ========================================================================
 # 35. _cleanImage
 # ========================================================================
-
 
 class TestCleanImage:
     def test_clean_image_strips_trailing_slash(self, globals_class):
@@ -810,7 +688,6 @@ class TestCleanImage:
 # 36. _cleanGroups
 # ========================================================================
 
-
 class TestCleanGroups:
     def test_clean_groups_adds_addon_name(self, globals_class):
         with patch('variables.ADDON_NAME', 'PseudoTV Live'):
@@ -824,4 +701,3 @@ class TestCleanGroups:
             citem = {'group': ['Movies', 'Action']}
             result = globals_class._cleanGroups(citem)
             assert result['group'] == ['PseudoTV Live']
-

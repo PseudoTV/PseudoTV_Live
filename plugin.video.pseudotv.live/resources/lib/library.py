@@ -93,9 +93,14 @@ class Library(object):
         
     def setLibrary(self, type: str, items: list = []) -> bool:
         self.log('setLibrary, type = %s, items = %s'%(type,len(items)))
+        existing = self.libraryDATA.get('library', {}).get(type, [])
+        if existing == items:
+            self.log('setLibrary, type = %s, no change, skipping save' % type)
+            Globals.properties.setHasLibrary(type, len(items) > 0)
+            return False
         self.libraryDATA['uuid'] = Globals.settings.getMYUUID()
         self.libraryDATA['library'][type] = items
-        Globals.properties.setHasLibrary(type,len(items) > 0)
+        Globals.properties.setHasLibrary(type, len(items) > 0)
         return True if self._save() else False
 
 

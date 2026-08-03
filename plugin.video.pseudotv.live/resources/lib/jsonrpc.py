@@ -26,9 +26,23 @@ from _services   import _Service
 _Globals = None
 def _globals() -> Any:
     global _Globals
-    if _Globals is None:
-        from variables import Globals as _Globals
+    if _Globals is None:        from variables import Globals as _Globals
     return _Globals
+
+# Files.GetDirectory/List.Fields.Files property list. `streamdetails` is
+# deliberately excluded: Kodi probes every file's media streams to fill it (the
+# slow part of the query), and the builder fetches it on-demand per file via
+# getStreamDetails (cached by file md5). The list is derived from Kodi's own
+# List.Fields.Files enum so every property is valid — a hand-curated list broke
+# the queries ("Value does not match any of the enum values").
+def _fileQueryFields(jsonRPC: Any) -> list:
+    try:
+        fields = jsonRPC.getEnums("List.Fields.Files", type='items')
+        if isinstance(fields, list):
+            return [f for f in fields if f != 'streamdetails'] or fields
+    except Exception:
+        pass
+    return []
 
 class JSONRPC(object):
 
@@ -40,6 +54,7 @@ class JSONRPC(object):
         self.pool        = service.pool
         self.cache       = service.cache
         self.videoParser = VideoParser()
+        self._pending_trailers = None  # in-memory trailer batch accumulator (see addTrailer defer_save)
         self._session    = requests.Session()
         retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
         adapter = HTTPAdapter(max_retries=retries)
@@ -111,16 +126,78 @@ class JSONRPC(object):
         
 
 
+    def _webServerURL(self) -> Optional[str]:
+        """Local Kodi web server base URL (no dialog). None when the server is off."""
+        port, username, password, secure = 8080, 'kodi', '', False
+        enabled = True
+        try:
+            settings = self.getSetting('control', 'services', cache=True)
+            for setting in settings:
+                sid = str(setting.get('id', '')).lower()
+                if   sid == 'services.webserver' and not setting.get('value'): enabled = False
+                elif sid == 'services.webserverusername': username = setting.get('value') or ''
+                elif sid == 'services.webserverport':     port     = setting.get('value') or 8080
+                elif sid == 'services.webserverpassword': password = setting.get('value') or ''
+                elif sid == 'services.webserverssl' and setting.get('value'): secure = True
+        except Exception:
+            pass
+        if not enabled: return None
+        user = '%s:%s@' % (username, password) if username and password else ''
+        return '%s://%slocalhost:%s' % ('https' if secure else 'http', user, port)
+
+
+    def _httpJSONRPC(self, command: dict, timeout: Optional[int] = None) -> Optional[dict]:
+        """POST a JSON-RPC command to the local web server (own thread).
+
+        xbmc.executeJSONRPC marshals the call onto Kodi's main Application thread,
+        so a slow Files.GetDirectory on a network share freezes the whole UI for its
+        duration. The web server handles the request on its own connection thread,
+        keeping the window responsive. Returns None when unreachable so sendJSON can
+        fall back to the in-process call.
+        """
+        url = self._webServerURL()
+        if not url: return None
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
+        timeout = max(timeout, 90)  # slow SMB listings need more than the RPC timeout
+        try:
+            import requests as _requests
+            response = _requests.post(url + '/jsonrpc', json=command, timeout=timeout, headers=HEADER, verify=False)
+            if response.status_code != 200:
+                self.log("_httpJSONRPC %s status = %s" % (command.get('method', '?'), response.status_code), xbmc.LOGWARNING)
+                return None
+            data = response.json() or {}
+            return data if isinstance(data, dict) else None
+        except Exception as e:
+            self.log("_httpJSONRPC %s failed: %s" % (command.get('method', '?'), e), xbmc.LOGWARNING)
+            return None
+
+
     def sendJSON(self, param: dict, timeout: Optional[int] = None) -> dict:
         command = param
         command["jsonrpc"] = "2.0"
         command["id"] = f"{ADDON_ID}.local"
         if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        try:
-            response = FileAccess.loadJSON(self.pool.executor(xbmc.executeJSONRPC,timeout,FileAccess.dumpJSON(command)), skip_cache=True) or {}
-        except Exception as e:
-            self.log('sendJSON, failed to parse response: %s' % e, xbmc.LOGWARNING)
-            response = {}
+        # Files.GetDirectory marshals onto Kodi's main thread via xbmc.executeJSONRPC,
+        # freezing the UI for the duration of slow network listings. Send it over the
+        # local web server instead (own thread); fall back in-process if unreachable.
+        if command.get('method') == 'Files.GetDirectory':
+            response = self._httpJSONRPC(command, timeout)
+            if response is not None:
+                self.log(f"_httpJSONRPC {command.get('method')}, used HTTP path, timeout = {timeout}")
+                response = response or {}
+            else:
+                self.log(f"_httpJSONRPC {command.get('method')}, web server unreachable, falling back to xbmc.executeJSONRPC", xbmc.LOGWARNING)
+                try:
+                    response = FileAccess.loadJSON(self.pool.executor(xbmc.executeJSONRPC,timeout,FileAccess.dumpJSON(command)), skip_cache=True) or {}
+                except Exception as e:
+                    self.log('sendJSON, failed to parse response: %s' % e, xbmc.LOGWARNING)
+                    response = {}
+        else:
+            try:
+                response = FileAccess.loadJSON(self.pool.executor(xbmc.executeJSONRPC,timeout,FileAccess.dumpJSON(command)), skip_cache=True) or {}
+            except Exception as e:
+                self.log('sendJSON, failed to parse response: %s' % e, xbmc.LOGWARNING)
+                response = {}
         if response and response.get('error'):
             self.log('sendJSON %s error: %s' % (param.get('method','?'), response.get('error',{}).get('message',LANGUAGE(30079))), xbmc.LOGWARNING)
             response.setdefault('result',{})['error'] = response.pop('error') #move to result for processing in builder.
@@ -216,13 +293,18 @@ class JSONRPC(object):
 
     def getIntrospect(self, id: str) -> dict:
         param = {"method":"JSONRPC.Introspect","params":{"filter":{"id":id,"type":"method"}}}
-        return self.cacheJSON(param,datetime.timedelta(days=28),self.getInfoLabel('System.BuildVersion')).get('result',{})
+        response = self.cacheJSON(param,datetime.timedelta(days=28),self.getInfoLabel('System.BuildVersion')) or {}
+        return response.get('result',{}) or {}
 
 
     def getEnums(self, id: str, type: str = '', key: str = 'enums') -> Any:
         self.log('getEnums id = %s, type = %s, key = %s' % (id, type, key))
         param = {"method":"JSONRPC.Introspect","params":{"getmetadata":True,"filterbytransport":True,"filter":{"getreferences":False,"id":id,"type":"type"}}}
-        json_response = self.cacheJSON(param,datetime.timedelta(days=84),self.getInfoLabel('System.BuildVersion')).get('result',{}).get('types',{}).get(id,{})
+        # JSONRPC may be unready at startup: cacheJSON can return None/{} with None
+        # result/types. Coalesce at every level before chaining .get().
+        result = (self.cacheJSON(param,datetime.timedelta(days=84),self.getInfoLabel('System.BuildVersion')) or {}).get('result',{}) or {}
+        json_response = result.get('types',{}) or {}
+        json_response = json_response.get(id,{}) or {}
         return (json_response.get('properties',{}).get(type,{}).get(key) or json_response.get(type,{}).get(key) or json_response.get(key,[]))
 
 
@@ -361,7 +443,9 @@ class JSONRPC(object):
         if _globals().properties.isPendingSuspend(): return [],{},{}
         if checksum is None: checksum = ADDON_VERSION
         if expiration is None: expiration = datetime.timedelta(minutes=15)
-        param["properties"] = self.getEnums("List.Fields.Files", type='items') #todo change enums from files to media specific? 
+        # Respect a caller-preset properties list (requestList sends the trimmed
+        # _fileQueryFields); default to the same trimmed list for everyone else.
+        param.setdefault("properties", _fileQueryFields(self))
         param   = {"method":"Files.GetDirectory","params":param}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
         if cache: results = self.cacheJSON(param, expiration, checksum, timeout).get('result',{})
@@ -467,25 +551,25 @@ class JSONRPC(object):
 
 
     def getPVRRecordings(self, media: str = 'video', cache: bool = True) -> list:
-        param = {"method":"Files.GetDirectory","params":{"directory":"pvr://recordings/tv/active/","media":media,"properties":self.getEnums("List.Fields.Files", type='items')}}
+        param = {"method":"Files.GetDirectory","params":{"directory":"pvr://recordings/tv/active/","media":media,"properties":_fileQueryFields(self)}}
         if cache: return self.cacheJSON(param).get('result',{}).get('files', [])
         else:     return self.sendJSON(param).get('result',{}).get('files', [])
 
     
     def getPVRSearches(self, media: str = 'video', cache: bool = True) -> list:
-        param = {"method":"Files.GetDirectory","params":{"directory":"pvr://search/tv/savedsearches/","media":media,"properties":self.getEnums("List.Fields.Files", type='items')}}
+        param = {"method":"Files.GetDirectory","params":{"directory":"pvr://search/tv/savedsearches/","media":media,"properties":_fileQueryFields(self)}}
         if cache: return self.cacheJSON(param).get('result',{}).get('files', [])
         else:     return self.sendJSON(param).get('result',{}).get('files', [])
         
         
     def getPVRSearchItems(self, id: int, media: str = 'video', cache: bool = True) -> list:
-        param = {"method":"Files.GetDirectory","params":{"directory":f"pvr://search/tv/savedsearches/{id}/","media":media,"properties":self.getEnums("List.Fields.Files", type='items')}}
+        param = {"method":"Files.GetDirectory","params":{"directory":f"pvr://search/tv/savedsearches/{id}/","media":media,"properties":_fileQueryFields(self)}}
         if cache: return self.cacheJSON(param).get('result',{}).get('files', [])
         else:     return self.sendJSON(param).get('result',{}).get('files', [])
     
     
     def getSmartPlaylists(self, type: str = 'video', cache: bool = True) -> list:
-        param = {"method":"Files.GetDirectory","params":{"directory":f"special://profile/playlists/{type}/","media":"video","properties":self.getEnums("List.Fields.Files", type='items')}}
+        param = {"method":"Files.GetDirectory","params":{"directory":f"special://profile/playlists/{type}/","media":"video","properties":_fileQueryFields(self)}}
         if cache: return self.cacheJSON(param).get('result',{}).get('files', [])
         else:     return self.sendJSON(param).get('result',{}).get('files', [])
         
@@ -543,7 +627,7 @@ class JSONRPC(object):
         if save and item: self.queDuration(item, duration)
         return duration
 
-    
+
     def _getDuration(self, path: str) -> int: #get VideoParser cache
         md5 = FileAccess._getMD5(path)
         return round(self.cache.get('getDuration.%s'%(md5), checksum=md5) or self._getRuntime({'file':path}))
@@ -631,7 +715,7 @@ class JSONRPC(object):
     def requestList(self, citem: dict, path: str, media: str = 'video', page: Optional[int] = None, sort: Optional[dict] = None, filter: Optional[dict] = None, limits: Optional[dict] = None, query: Optional[dict] = None) -> tuple:
         """Build paginated request list with auto-pagination and cache thresholds."""
         if _globals().properties.isPendingSuspend(): return [],{},{}
-        if page is None:   page = int(REAL_SETTINGS.getSetting('Page_Limit') or "50")
+        if page is None:   page = int(REAL_SETTINGS.getSetting('Page_Limit') or "25")
         if sort is None:   sort = {}
         if filter is None: filter = {}
         if limits is None: limits = {"end": -1, "start": 0, "total": 0}
@@ -652,7 +736,7 @@ class JSONRPC(object):
             getDirectory = True
             param["media"] = media
             param["directory"] = path
-            param["properties"] = self.getEnums("List.Fields.Files", type='items')  # requests ~50 fields per item
+            param["properties"] = _fileQueryFields(self)
         self.log(f"requestList, id: {ch_id}, getDirectory = {getDirectory}, media = {media}, limit = {page}, sort = {sort}, query = {query}, limits = {limits}\npath = {path}")
         
         # Process Auto-Pagination and Cache Thresholds
@@ -714,7 +798,7 @@ class JSONRPC(object):
              
     def randomPagination(self, page: Optional[int] = None, limits: Optional[dict] = None, start: int = 0) -> dict:
         if limits is None: limits = {}
-        if page is None: page = int(REAL_SETTINGS.getSetting('Page_Limit') or "50")
+        if page is None: page = int(REAL_SETTINGS.getSetting('Page_Limit') or "25")
         if limits.get('total',0) > page: start = random.randrange(0, (limits.get('total',0)-page), page)
         return {"end": start, "start": start, "total":limits.get('total',0)}
         
@@ -753,7 +837,7 @@ class JSONRPC(object):
 
 
     def padItems(self, files: list, page: Optional[int] = None) -> list:
-        if page is None: page = int(REAL_SETTINGS.getSetting('Page_Limit') or "50")
+        if page is None: page = int(REAL_SETTINGS.getSetting('Page_Limit') or "25")
         # Balance media limits, by filling with duplicates to meet min. pagination.
         self.log("padItems; files In = %s"%(len(files)))
         if len(files) < page:
@@ -894,14 +978,22 @@ class JSONRPC(object):
             self.setSettingValue("debug.showloginfo",state,queue=False)
 
 
-    def addTrailer(self, item: dict) -> Optional[bool]:
+    def addTrailer(self, item: dict, defer_save: bool = False) -> Optional[bool]:
         if   'movieid' in item: key = 'movies'
         elif 'tvshowid'in item: key = 'tvshows'
         else: return
         fitem = item.copy()
         dur = self.getDuration(fitem.get('trailer'), accurate=bool(int(REAL_SETTINGS.getSetting('Duration_Type') or "0")), save=False)
         if dur > 0:
-            trailers = self.getTrailers()
+            # When defer_save, accumulate into an in-memory batch and write the
+            # whole trailers cache once via flushTrailers() — avoids rewriting the
+            # full SQLite entry on every trailer (O(n²) on large libraries).
+            if defer_save:
+                if self._pending_trailers is None:
+                    self._pending_trailers = self.getTrailers()
+                trailers = self._pending_trailers
+            else:
+                trailers = self.getTrailers()
             if 'streamdetails' in fitem: fitem.pop('streamdetails')
             fitem.update({'label':'%s - %s'%(fitem.get("label",""),LANGUAGE(30187)),
                          'episodetitle':'%s - %s'%(fitem.get("episodetitle",""),LANGUAGE(30187)),
@@ -913,7 +1005,16 @@ class JSONRPC(object):
             for genre in (fitem.get('genre',[]) or ['resources']):
                 if fitem not in trailers.setdefault(key,{}).setdefault(genre.lower(),[]):
                     trailers.setdefault(key,{}).setdefault(genre.lower(),[]).append(fitem)
+            if defer_save: return True
             return self.setTrailers(trailers)
+
+
+    def flushTrailers(self) -> bool:
+        """Write any in-memory batched trailer updates to the cache once."""
+        if not self._pending_trailers: return False
+        result = self.setTrailers(self._pending_trailers)
+        self._pending_trailers = None
+        return result
                 
                 
     def setTrailers(self, trailers: Optional[dict] = None) -> bool:

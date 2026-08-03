@@ -38,8 +38,22 @@ class Plugin(object):
         
         if not self.sysInfo.get('fitem'): 
             self._updateSysInfo() #Widgets don't include listitem meta, attempt to find matching meta with jsonrpc
-            
-        self.sysInfo['isVOD']      = False#self.sysInfo.get('fitem').get('file','-1') != self.sysInfo.get('vid','-1')
+
+        # keep vid mirroring the (possibly refreshed) fitem.file. When
+        # pvr.iptvsimple left {catchup-id} unresolved the strip path blanked vid;
+        # a blank vid then made isVOD (fitem.file != vid) True, routing live playback
+        # to playVOD's branch which zeroes seek and skips _setResume.
+        if not self.sysInfo.get('vid') or self.sysInfo.get('vid') in ('', '-1'):
+            self.sysInfo['vid'] = self.sysInfo.get('fitem', {}).get('file', '-1')
+
+        # pvr.iptvsimple sometimes leaves {utc}/{duration}/{utcend}
+        # unresolved when its EPG for the channel isn't loaded yet — the stripped
+        # URL then carries no start/stop, so seek stays -1 and "current" programmes
+        # play from the beginning. Recover the timeline from the live broadcast.
+        if self.sysInfo['seek'] < 0:
+            self._recoverTimeline()
+
+        self.sysInfo['isVOD']      = self.sysInfo.get('fitem',{}).get('file','-1') != self.sysInfo.get('vid','-1')
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
         self.sysInfo['isPlaylist'] = bool(Globals.settings.getSettingInt('Playback_Method'))
         mode = 'playlist' if any((self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist'])) else sysInfo.get('mode')
@@ -140,6 +154,62 @@ class Plugin(object):
         return []
                    
                    
+    def _recoverTimeline(self):
+        """Recover start/stop/duration for live seek when the invoked URL carried
+        unresolved {utc}/{duration}/{utcend} placeholders.
+
+        pvr.iptvsimple resolves those tokens only when its EPG for the channel is
+        loaded; on a cold start it invokes with the raw placeholders. default.py
+        strips them (fixing mode='live'), which leaves sysInfo without a timeline
+        so Plugin.__init__ computes seek=-1 and playback starts at 0:00. This
+        recovers the timeline so _setResume can seek to the in-progress position.
+
+        Sources, in order:
+          1. fitem['start']/['stop'] — the ListItem Kodi passes often carries the
+             current programme's epoch times (buildDictListItem reads 'start'/'stop'
+             properties). Same epoch base as the URL 'now'.
+          2. XMLTV — fallback when the ListItem lacks times.
+        """
+        try:
+            self.log('[%s] _recoverTimeline, seeking timeline' % self.sysInfo.get('chid'))
+            now = int(self.sysInfo.get('now', 0)) or int(time.time())
+
+            def _apply(start_epoch, stop_epoch):
+                duration = max(1, stop_epoch - start_epoch)
+                self.sysInfo['start']    = start_epoch
+                self.sysInfo['stop']     = stop_epoch
+                self.sysInfo['duration'] = duration
+                self.sysInfo['seek']     = max(0, now - start_epoch)
+                self.sysInfo['progresspercentage'] = round((self.sysInfo['seek'] / duration) * 100, 2)
+                self.log('[%s] _recoverTimeline, start=%s stop=%s duration=%s seek=%s' % (
+                    self.sysInfo.get('chid'), start_epoch, stop_epoch, duration, self.sysInfo['seek']))
+
+            # 1. fitem start/stop (epoch, from ListItem properties)
+            fstart = self.sysInfo.get('fitem', {}).get('start')
+            fstop  = self.sysInfo.get('fitem', {}).get('stop')
+            if fstart and fstop and int(fstart) <= now < int(fstop):
+                _apply(int(fstart), int(fstop))
+                return
+
+            # 2. XMLTV (UTC DTFORMAT strings)
+            now_str = Globals._epochTime(now, tz=False).strftime(DTFORMAT)
+            chid = self.sysInfo.get('chid')
+            from xmltvs import XMLTVS
+            with Globals.properties.suspendActivity():
+                programmes = XMLTVS().getProgrammes()
+            for prog in programmes:
+                if prog.get('channel') != chid:
+                    continue
+                start, stop = prog.get('start', ''), prog.get('stop', '')
+                if start and stop and start <= now_str < stop:
+                    _apply(int(Globals._strpTime(start, DTFORMAT).timestamp()),
+                           int(Globals._strpTime(stop, DTFORMAT).timestamp()))
+                    return
+            self.log('[%s] _recoverTimeline, no timeline covers now=%s, seek disabled' % (chid, now_str))
+        except Exception as e:
+            self.log('[%s] _recoverTimeline, failed: %s' % (self.sysInfo.get('chid'), e), xbmc.LOGDEBUG)
+
+
     def _setResume(self, listitem: xbmcgui.ListItem) -> xbmcgui.ListItem:
         if self.sysInfo.get('seek',0) > Globals.settings.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
             self.log('[%s] _setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), listitem.getPath()))

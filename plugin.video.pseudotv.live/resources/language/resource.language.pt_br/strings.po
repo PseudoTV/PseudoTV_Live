@@ -1,0 +1,45 @@
+# Kodi Media Center language file
+# Addon Name: "PseudoTV Live"
+# Addon id: plugin.video.pseudotv.live
+# Addon Provider: Lunatixz
+msgid ""
+msgstr ""
+"Project-Id-Version: plugin.video.pseudotv.live\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: Lunatixz Translation Team\n"
+"Language-Team: Portuguese (Brazil)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_br\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "#32279"
+msgid "No content available - check channel configuration"
+msgstr "Nenhum conteúdo disponível - verifique a configuração do canal"
+
+msgctxt "#32276"
+msgid "Failed to save to remote server."
+msgstr "Falha ao salvar no servidor remoto."
+
+msgctxt "#32277"
+msgid "No Guide Data - Check Back Later"
+msgstr "Sem dados de guia - Verifique mais tarde"
+
+msgctxt "#32278"
+msgid "Enable automatic PVR reload? This lets PseudoTV Live refresh channels and guide data when they change. Without it, you must manually reload the PVR."
+msgstr "Ativar recarga automática do PVR? Isso permite que o PseudoTV Live atualize os canais e os dados do guia quando mudarem. Sem isso, você deve recarregar o PVR manualmente."
+
+msgctxt "#32281"
+msgid "- Delete Rule"
+msgstr "- Excluir Regra"
+
+msgctxt "#32280"
+msgid "- Edit Rule"
+msgstr "- Editar Regra"
+
+msgctxt "#34068"
+msgid "Saving data, please wait..."
+msgstr "Salvando dados, por favor aguarde..."

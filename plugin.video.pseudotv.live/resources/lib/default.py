@@ -43,10 +43,13 @@ if __name__ == '__main__':
                 
         elif any(item in sysARG[2] for item in ['{catchup-id}', '{utc}', '{duration}', '{utcend}']):
             name = (Globals._unquoteString(sysInfo.get("name",'')) or Globals.builtin.getInfoLabel('ListItem.ChannelName') or ADDON_NAME)
-            Globals.dialog.notificationDialog(LANGUAGE(32265).format(name=name))
             Globals.properties.setEXTProperty('%s.%s'%(ADDON_ID, 'chkPVRRefresh'),"true")
             clean_ARG = re.sub(r'[&?]?(vid|now|start|duration|stop)=\{[^}]*\}', '', sysARG[2])
-            clean_ARG = re.sub(r'[&?]+', '?', clean_ARG.lstrip('?&'))
+            # strip leading separators + collapse stray internal '&&'
+            # (but never replace '&' with '?', which corrupted the query string and
+            # made mode='live?name=...', breaking live playback for catchup channels).
+            clean_ARG = clean_ARG.lstrip('?&')
+            clean_ARG = re.sub(r'[&?]+', '&', clean_ARG)
             if clean_ARG != sysARG[2].lstrip('?&'):
                 sysInfo = dict(urllib.parse.parse_qsl(clean_ARG.replace('.pvr','')))
                 if sysInfo.get('mode'):
@@ -57,7 +60,11 @@ if __name__ == '__main__':
                     else:
                         fitem, nitem = Globals._decodePlot(Globals.builtin.getInfoLabel('ListItem.Plot')), Globals._decodePlot(Globals.builtin.getInfoLabel('ListItem.NextPlot'))
                     chid = (sysInfo.get("chid") or fitem.get('citem',{}).get('id'))
-                    sysInfo.update({'mode':sysInfo.get('mode'),'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':'','name':name,'title':(Globals._unquoteString(sysInfo.get('title','')) or Globals.builtin.getInfoLabel('ListItem.label')),'radio':sysInfo.get('mode') == "radio"})
+                    # vid must mirror fitem.file (with the same '-1' default
+                    # plugin.py's isVOD uses) so isVOD (fitem.file != vid) stays False —
+                    # a blank/missing vid made isVOD True, routing live playback to
+                    # playVOD's branch which zeroes seek and skips _setResume.
+                    sysInfo.update({'mode':sysInfo.get('mode'),'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':fitem.get('file','-1'),'name':name,'title':(Globals._unquoteString(sysInfo.get('title','')) or Globals.builtin.getInfoLabel('ListItem.label')),'radio':sysInfo.get('mode') == "radio"})
                     _run(sysInfo.get('mode'), sysInfo)
                     sys.exit()
             xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())

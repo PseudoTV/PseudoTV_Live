@@ -4,87 +4,7 @@ import sys, os, datetime
 from unittest.mock import MagicMock, patch
 import pytest
 
-# Mock Kodi modules
-xbmc = MagicMock()
-xbmcgui = MagicMock()
-xbmcaddon = MagicMock()
-xbmcvfs = MagicMock()
-xbmcplugin = MagicMock()
-xbr = MagicMock()
-kodi_six = MagicMock()
-kodi_six.xbmc = xbmc
-kodi_six.xbmcgui = xbmcgui
-kodi_six.xbmcaddon = xbmcaddon
-kodi_six.xbmcvfs = xbmcvfs
-kodi_six.xbmcplugin = xbmcplugin
-
-xbmc.LOGDEBUG   = 0
-xbmc.LOGINFO    = 1
-xbmc.LOGWARNING = 2
-xbmc.LOGERROR   = 3
-xbmc.LOGFATAL   = 4
-xbmc.LOGNONE    = 7
-xbmc.PLAYLIST_MUSIC = 'music'
-xbmc.PLAYLIST_VIDEO = 'video'
-xbmc.SORT_METHOD_UNSPECIFIED = -1
-
-sys.modules['xbmc'] = xbmc
-sys.modules['xbmcgui'] = xbmcgui
-sys.modules['xbmcaddon'] = xbmcaddon
-sys.modules['xbmcvfs'] = xbmcvfs
-sys.modules['xbmcplugin'] = xbmcplugin
-sys.modules['xbr'] = xbr
-sys.modules['kodi_six'] = kodi_six
-sys.modules['kodi_six.xbmc'] = xbmc
-sys.modules['kodi_six.xbmcgui'] = xbmcgui
-sys.modules['kodi_six.xbmcaddon'] = xbmcaddon
-sys.modules['kodi_six.xbmcvfs'] = xbmcvfs
-sys.modules['kodi_six.xbmcplugin'] = xbmcplugin
-
-sys.modules['requests'] = MagicMock()
-sys.modules['requests.adapters'] = MagicMock()
-sys.modules['pyqrcode'] = MagicMock()
-sys.modules['infotagger'] = MagicMock()
-sys.modules['infotagger.listitem'] = MagicMock()
-
-import urllib.parse as _real_urlparse
-import types as _types
-_six_urllib_ns = _types.SimpleNamespace(parse=_real_urlparse)
-six_mock = MagicMock()
-six_mock.moves.urllib = _six_urllib_ns
-sys.modules["six"] = six_mock
-sys.modules["six.moves"] = six_mock.moves
-
-LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resources', 'lib')
-sys.path.insert(0, LIB_DIR)
-
-# Import variables first to break circular import
 import variables
-
-
-@pytest.fixture(autouse=True)
-def _patch_kodi_apis():
-    with patch('xbmcaddon.Addon') as mock_addon_cls, \
-         patch('xbmc.getSupportedMedia', return_value='|.mp4|.mkv|.avi|'):
-        mock_addon = MagicMock()
-        mock_addon_cls.return_value = mock_addon
-        mock_addon.getAddonInfo.side_effect = lambda k: {
-            'name': 'TestAddon', 'version': '1.0.0',
-            'icon': 'icon.png', 'fanart': 'fanart.jpg',
-            'profile': 'special://profile/addon_data/test/',
-            'path': '/tmp/test_addon', 'author': 'Test'
-        }.get(k, '')
-        mock_addon.getSetting.side_effect = lambda k: {
-            'User_Folder': 'special://profile/addon_data/plugin.video.pseudotv.live/cache',
-            'Disable_Cache': 'false', 'API_Timeout': '30',
-            'Debug_Enable': 'false', 'Debug_Level': '3',
-            'Enable_Grouping': 'true', 'Enable_Executor': 'true',
-            'Cache_MEM_Limit': '10'
-        }.get(k, '')
-        mock_addon.getSettingBool.return_value = True
-        mock_addon.getSettingInt.return_value = 50
-        mock_addon.getLocalizedString.return_value = 'TestString'
-        yield
 
 
 @pytest.fixture
@@ -173,7 +93,6 @@ class TestCacheitDecorator:
         def test_func(x):
             return x * 2
         
-        # The wrapper should exist
         assert hasattr(test_func, '__wrapped__') or callable(test_func)
 
 
@@ -204,3 +123,76 @@ class TestCacheClass:
     def test_cache_has_get_method(self):
         from cache import Cache
         assert hasattr(Cache, 'get')
+
+
+# ========================================================================
+# 6. Deferred-commit write batching (_flush_batch)
+# ========================================================================
+class TestWriteBatching:
+    """Verify cache writes buffer in memory and flush in one transaction."""
+
+    def _make(self):
+        from cache import _Cache
+        c = _Cache()
+        c.monitor = MagicMock(abortRequested=MagicMock(return_value=False))
+        c.window = MagicMock()
+        c._database = MagicMock()
+        return c
+
+    def test_writes_buffered_not_committed(self):
+        c = self._make()
+        c._execute_sql("INSERT OR REPLACE INTO cache(id) VALUES (?)", ('a',))
+        assert len(c._write_batch) == 1
+        assert c._batch_dirty is True
+        c._database.execute.assert_not_called()  # no individual execute/commit
+
+    def test_flush_commits_batch_once(self):
+        c = self._make()
+        for i in range(5):
+            c._execute_sql("INSERT OR REPLACE INTO cache(id) VALUES (?)", (str(i),))
+        c._flush_batch()
+        assert c._write_batch == []
+        assert c._batch_dirty is False
+        # One commit for the whole batch, plus the explicit BEGIN
+        c._database.commit.assert_called_once()
+
+    def test_flush_with_no_pending_noop(self):
+        c = self._make()
+        c._flush_batch()
+        c._database.commit.assert_not_called()
+
+    def test_read_flushes_pending_writes(self):
+        c = self._make()
+        c._execute_sql("INSERT OR REPLACE INTO cache(id) VALUES (?)", ('a',))
+        c._execute_sql("SELECT id FROM cache WHERE id = ?", ('a',))
+        assert c._write_batch == []  # read triggered a flush first
+
+    def test_batch_limit_triggers_auto_flush(self):
+        c = self._make()
+        c._batch_limit = 3
+        for i in range(3):
+            c._execute_sql("INSERT OR REPLACE INTO cache(id) VALUES (?)", (str(i),))
+        assert c._write_batch == []  # reached limit -> flushed
+        c._database.commit.assert_called_once()
+
+    def test_flush_rebuffers_on_db_failure(self):
+        c = self._make()
+        c._database.execute.side_effect = Exception("DB locked")
+        c._database.commit.side_effect = Exception("DB locked")
+        for i in range(2):
+            c._execute_sql("INSERT OR REPLACE INTO cache(id) VALUES (?)", (str(i),))
+        c._flush_batch()
+        # Writes re-buffered so a transient lock doesn't lose data
+        assert len(c._write_batch) == 2
+        assert c._batch_dirty is True
+
+    def test_flush_snapshots_and_releases_for_commit(self):
+        c = self._make()
+        c._database = MagicMock()
+        for i in range(3):
+            c._execute_sql("INSERT OR REPLACE INTO cache(id) VALUES (?)", (str(i),))
+        # New writes during commit go to a fresh batch, not the in-flight one
+        c._flush_batch()
+        # After successful flush the buffer is empty
+        assert c._write_batch == []
+        assert c._batch_dirty is False

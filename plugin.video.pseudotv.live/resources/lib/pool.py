@@ -67,7 +67,9 @@ class ExecutorPool:
         if now - self._executor_settings['last_check'] > self._SETTINGS_TTL:
             self._executor_settings['timeout'] = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
             self._executor_settings['enabled'] = REAL_SETTINGS.getSetting('Enable_Executor') == 'true'
-            if not self._executor_settings['enabled'] and xbmc.getCondVisibility('Player.Playing'):
+            # Auto-enable while playing gives concurrent JSONRPC — too aggressive on
+            # low-RAM SoC devices where the pool threads fight for limited resources.
+            if not self._executor_settings['enabled'] and not IS_CONSTRAINED_SOC and xbmc.getCondVisibility('Player.Playing'):
                 self._executor_settings['enabled'] = True
             self._executor_settings['last_check'] = now
         return self._executor_settings

@@ -24,6 +24,7 @@
 # https://tvtropes.org/pmwiki/pmwiki.php/Main/PopCultureHoliday
 # https://fanlore.org/wiki/List_of_Annual_Holidays,_Observances,_and_Events_in_Fandom
 
+import copy
 from typing import List, Dict, Optional, Union, Generator, Any
 
 from variables    import *
@@ -122,15 +123,96 @@ class Seasonal(object):
         return holiday
 
 
+    # ---- CRUD for the seasonal/holiday JSON data ----------------------------
+    # Backed by the HTTP-exposed remotes/seasons.json + holidays.json. These are
+    # the primitives a future HTTP editor feature will use to amend the lists;
+    # all writes go through FileAccess.setJSON (atomic + file-locked).
+
+    def getSeasonsData(self) -> Dict[str, Any]:
+        """Return the full seasons.json: {month: {day: {name, tagline, keyword, logo}}}."""
+        return FileAccess.getJSON(SEASONS)
+
+    def getHolidaysData(self) -> Dict[str, Any]:
+        """Return the full holidays.json: {keyword: {episodes: [...], movies: [...]}}."""
+        return FileAccess.getJSON(HOLIDAYS)
+
+    def setSeasonsData(self, data: Dict[str, Any]) -> bool:
+        """Persist the full seasons.json."""
+        return FileAccess.setJSON(SEASONS, data)
+
+    def setHolidaysData(self, data: Dict[str, Any]) -> bool:
+        """Persist the full holidays.json."""
+        return FileAccess.setJSON(HOLIDAYS, data)
+
+    def _monthKey(self, month: str) -> str:
+        """Normalize a month name to the seasons.json key form (e.g. 'january' -> 'January')."""
+        return month.title()
+
+    def addSeason(self, month: str, day: int, entry: Dict[str, Any]) -> bool:
+        """Add or replace one day's holiday entry in seasons.json."""
+        data = self.getSeasonsData()
+        month = self._monthKey(month)
+        data.setdefault(month, {})
+        data[month][str(day)] = entry
+        return self.setSeasonsData(data)
+
+    def delSeason(self, month: str, day: int) -> bool:
+        """Remove one day's holiday entry from seasons.json."""
+        data = self.getSeasonsData()
+        month = self._monthKey(month)
+        if data.get(month, {}).pop(str(day), None) is not None:
+            return self.setSeasonsData(data)
+        return False
+
+    def addHoliday(self, keyword: str, queries: Dict[str, Any]) -> bool:
+        """Add or replace one holiday keyword's episode/movie library queries."""
+        data = self.getHolidaysData()
+        data[keyword] = queries
+        return self.setHolidaysData(data)
+
+    def delHoliday(self, keyword: str) -> bool:
+        """Remove one holiday keyword's queries from holidays.json."""
+        data = self.getHolidaysData()
+        if keyword in data:
+            data.pop(keyword)
+            return self.setHolidaysData(data)
+        return False
+
+    def loadSeasons(self, url: Optional[str] = None) -> bool:
+        """Load seasons.json from a URL (defaults to the local HTTP server)."""
+        return self._loadJSON(SEASONS, SEASONFLE, url)
+
+    def loadHolidays(self, url: Optional[str] = None) -> bool:
+        """Load holidays.json from a URL (defaults to the local HTTP server)."""
+        return self._loadJSON(HOLIDAYS, HOLIDAYFLE, url)
+
+    def _loadJSON(self, dest: str, fle: str, url: Optional[str] = None) -> bool:
+        if url is None:
+            url = 'http://%s/%s' % (Globals.properties.getRemoteHost(), fle)
+        try:
+            resp = requests.get(url, timeout=10)
+            if resp.ok:
+                return FileAccess.setJSON(dest, resp.json())
+        except Exception as e:
+            self.log('_loadJSON, %s failed: %s' % (fle, e), xbmc.LOGDEBUG)
+        return False
+
+
     def buildSeasonal(self, holiday: Optional[Dict[str, Any]] = None) -> Generator[Dict[str, Any], None, None]:
         """Build seasonal query items for the given holiday."""
         if holiday is None: holiday = self.getHoliday()
         season  = self.getSeason(holiday.get('keyword'))
         for type, params in list(season.items()):
             for param in params:
-                item = {'episodes':TV_QUERY,'movies':MOVIE_QUERY}[type.lower()].copy()
+                item = copy.deepcopy({'episodes':TV_QUERY,'movies':MOVIE_QUERY}[type.lower()])
                 item["holiday"] = holiday
                 item["sort"].update(param.get("sort"))
                 item["filter"].update(param.get("filter"))
+                # Kodi JSONRPC rejects filters with empty field/operator/value mixed with and/or compositions.
+                # Remove empty rule keys when composition keys are present.
+                if item["filter"].get("and") or item["filter"].get("or"):
+                    item["filter"].pop("field", None)
+                    item["filter"].pop("operator", None)
+                    item["filter"].pop("value", None)
                 self.log('buildSeasonal, %s - item = %s'%(holiday.get('name'),item))
                 yield item

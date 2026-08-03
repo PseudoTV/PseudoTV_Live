@@ -90,7 +90,7 @@ class Fillers(object):
         for ftype, values in list(self.bctTypes.items()):
             if self.service.interrupt(): break
             if not values.get('enabled', False): continue
-            self.builder.pDialog = Globals.dialog._updateProgressThrottled(pDialog, pCount, message='%s %s' % (LANGUAGE(30014), ftype.title()), header='%s, %s' % (ADDON_NAME, pMSG))
+            self.builder.pDialog = Globals.dialog._updateProgressThrottled(pDialog, pCount, message='Adding %s...' % ftype.title(), header='%s, %s' % (ADDON_NAME, pMSG))
             
             # resources
             for id in values.get("sources",{}).get("ids",[]):
@@ -184,7 +184,7 @@ class Fillers(object):
                 for i, item in enumerate(items):
                     dur = item.get('duration', 0)
                     if not item.get('file') or dur == 0: continue
-                    self.builder.pDialog = Globals.dialog._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Filling Pre-Rolls %s%%' % (int((i + 1) * 100 // max(1, len(items)))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
+                    self.builder.pDialog = Globals.dialog._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Adding breaks...', header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
                     item.update({'title'       : item.get('label'),
                                  'episodetitle': 'Pre-Roll',
                                  'plot'        : item.get('plot', item.get('file')),
@@ -228,7 +228,7 @@ class Fillers(object):
                 if 0 < dur <= post_runtime:
                     post_counter = 0
                     post_runtime -= dur
-                    self.builder.pDialog = Globals.dialog._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Filling Post-Rolls %s%%' % (int(iteration * 100 // max(1, total_queue))), header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
+                    self.builder.pDialog = Globals.dialog._updateProgressThrottled(self.builder.pDialog, self.builder.pCount, message='Adding promos...', header='%s, %s' % (ADDON_NAME, getattr(self.builder, 'pMSG', '')))
                     item.update({'title'       : item.get('label'),
                                  'episodetitle': 'Post-Roll',
                                  'plot'        : item.get('plot', item.get('file')),

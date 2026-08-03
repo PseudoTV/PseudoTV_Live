@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   actions: write
 
@@ -533,6 +533,12 @@ jobs:
             git diff HEAD~1 HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -c 20000 > changes.diff || echo "" > changes.diff
             git diff --name-only HEAD~1 HEAD -- '*.py' '*.xml' '*.json' 2>/dev/null | head -10 > changed_files.txt || true
           fi
+      - name: Download Lint Reports
+        uses: actions/download-artifact@v7
+        with:
+          path: lint-reports
+          pattern: "*-report"
+        continue-on-error: true
       - name: AI Code Review
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -540,7 +546,14 @@ jobs:
           DIFF=$(cat changes.diff | head -c 10000)
           FILES=$(cat changed_files.txt 2>/dev/null || echo "None")
           
-          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Review PseudoTV Live code changes. FILES: $FILES DIFF: $DIFF Check: 1) Breaking changes 2) Bugs 3) Pattern violations 4) Missing imports 5) Kodi compatibility. Risk: LOW/MEDIUM/HIGH" 2>&1 || true)
+          LINT_RESULTS=""
+          for report in lint-reports/*-report/*.md; do
+            if [ -f "$report" ]; then
+              LINT_RESULTS="${LINT_RESULTS}--- $(basename $report) ---\n$(cat $report | head -c 2000)\n\n"
+            fi
+          done
+          
+          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Review PseudoTV Live code changes. FILES: $FILES DIFF: $DIFF LINT RESULTS: $LINT_RESULTS Check: 1) Breaking changes 2) Bugs 3) Pattern violations 4) Missing imports 5) Kodi compatibility. Risk: LOW/MEDIUM/HIGH" 2>&1 || true)
           
           {
             echo "## AI Code Review"
@@ -675,3 +688,54 @@ jobs:
               repo: context.repo.repo,
               body: report
             });
+
+  wiki-update:
+    name: Update Wiki
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && needs.changes.outputs.any_code == 'true'
+    needs: [changes]
+    steps:
+      - name: Checkout Main Repo
+        uses: actions/checkout@v7
+        with:
+          path: main
+
+      - name: Checkout Wiki Repo
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+
+      - name: Install OpenCode
+        run: curl -fsSL https://opencode.ai/install | bash
+
+      - name: Gather Changes
+        run: |
+          CHANGELOG=$(cat main/plugin.video.pseudotv.live/changelog.txt 2>/dev/null | head -c 5000)
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Generate Wiki Updates
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          if [ -f "wiki/Getting-Started.md" ]; then
+            opencode run --model opencode/mimo-v2.5-free "Do NOT read any files or use glob tool. Review this Kodi addon changelog and the existing Getting Started wiki page below. Update the Features section if any new features from the changelog are missing. Keep existing format. Output ONLY the full updated page content. CHANGELOG: $CHANGELOG EXISTING PAGE: $(cat wiki/Getting-Started.md)" > wiki/Getting-Started.md 2>&1
+          fi
+          if [ -f "wiki/Development.md" ]; then
+            opencode run --model opencode/mimo-v2.5-free "Do NOT read any files or use glob tool. Review this Kodi addon changelog and the existing Development wiki page below. Update if any new rules or plugin changes are relevant. Keep existing format. Output ONLY the full page content. CHANGELOG: $CHANGELOG EXISTING PAGE: $(cat wiki/Development.md)" > wiki/Development.md 2>&1
+          fi
+
+      - name: Commit and Push
+        run: |
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No wiki changes to commit"
+          else
+            git commit -m "Auto-update wiki from commit ${{ github.sha }}"
+            git push
+          fi

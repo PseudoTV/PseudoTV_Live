@@ -27,6 +27,63 @@ from fileaccess  import FileAccess, FileLock
 
 _ERROR_RE = re.compile(r'line\ (.*?),\ column\ (.*)', re.IGNORECASE)
 
+# Module-level holder for the served XMLTV data. The 51MB XMLTV was re-parsed
+# (3-pass xmltv.read_*) on every XMLTVS() construction (serve, chkPVRSync, plugin).
+# Data now lives in SQLite (xmltv.channels/programmes/recordings) and is loaded
+# once per save (keyed on xmltv.meta.version); subsequent loads are O(1).
+_XMLTV_HOLDER = {'sig': None, 'channels': [], 'programmes': [], 'recordings': []}
+_XMLTV_HOLDER_LOCK = RLock()
+
+# Phase 2: indexed `programmes` table backing the hot stop-time/coverage queries.
+# One-time DDL guard (the table persists in cache.db across processes).
+_PROG_TABLE_READY = False
+
+# buildGenres caches: the default genre mapping is static (parsed once) and the
+# rendered genres.xml only changes when the programme category set changes, so
+# repeated _save calls with the same categories skip the recompute entirely.
+_DEFAULT_GENRES = None
+_GENRE_SIG = None
+
+
+def _utcOffset() -> str:
+    """Local UTC offset as an XMLTV '+HHMM'/'-HHMM' suffix (e.g. '-0400').
+
+    pvr.iptvsimple interprets XMLTV start/stop as UTC unless an explicit offset
+    is present. Our schedule stores LOCAL %Y%m%d%H%M%S, so without this suffix
+    pvr.iptvsimple misreads the times and catchup seek drifts by the UTC offset,
+    landing playback on a programme from hours earlier.
+    """
+    delta = datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta(0)
+    total = int(delta.total_seconds())
+    sign = '-' if total < 0 else '+'
+    total = abs(total)
+    return '%s%02d%02d' % (sign, total // 3600, (total % 3600) // 60)
+_PROG_DDL = (
+    "CREATE TABLE IF NOT EXISTS programmes("
+    "channel TEXT NOT NULL, start TEXT NOT NULL, stop TEXT NOT NULL, data BLOB, "
+    "PRIMARY KEY (channel, start))",
+    "CREATE INDEX IF NOT EXISTS idx_prog_stop ON programmes(stop)",
+)
+
+
+def _xmltv_cache_sig():
+    """Return the current XMLTV cache version token, or None if never saved."""
+    meta = Globals.settings.getCacheSetting(XMLTV_META_KEY) or {}
+    return meta.get('version')
+
+
+def clearXMLTVCache():
+    """Clear the XMLTV cache entries and invalidate the module holder.
+
+    Used by the utilities cleanup — data now lives in cache.db, so "cleaning" the
+    guide means dropping the cache keys (and the in-memory holder), not deleting
+    any physical export file.
+    """
+    with _XMLTV_HOLDER_LOCK:
+        _XMLTV_HOLDER.update(sig=None, channels=[], programmes=[], recordings=[])
+    for key in (XMLTV_CHANNELS_KEY, XMLTV_PROGRAMMES_KEY, XMLTV_RECORDINGS_KEY, XMLTV_META_KEY):
+        Globals.settings.clrCacheSetting(key)
+
 class XMLTVS(object):
     
     def __init__(self, file: str = XMLTVFLEPATH, writable: bool = False, m3u: Optional[M3U] = None):
@@ -40,21 +97,22 @@ class XMLTVS(object):
         
         
     def __enter__(self) -> 'XMLTVS':
+        self._saved = False
         return self
 
 
     def __exit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Optional[Any]):
         try:
-            if self.writable: self._save()
-            self.log('__exit__, writable = %s'%(self.writable))
-        except Exception as e: self.log('__exit__ save failed: %s' % e, xbmc.LOGDEBUG)
+            if self.writable and not getattr(self, '_saved', False):
+                self._save()
+        except Exception as e: pass
             
             
     def __del__(self):
         try:
-            if self.writable: self._save()
-            self.log('__del__, writable = %s'%(self.writable))
-        except Exception as e: self.log('__del__ save failed: %s' % e, xbmc.LOGDEBUG)
+            if self.writable and not getattr(self, '_saved', False):
+                self._save()
+        except Exception: pass
             
             
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
@@ -76,26 +134,61 @@ class XMLTVS(object):
         
         
     def _load(self) -> dict:
-        self.log('_load, file=%s' % self.XMLTVFile)
+        self.log('_load, cache=%s' % self.XMLTVFile)
+        with _XMLTV_HOLDER_LOCK:
+            sig = _xmltv_cache_sig()
+            # Fresh if: (a) cache has a version token and the holder matches it, or
+            # (b) no token yet but the holder already holds file-migrated data (so we
+            # don't re-parse the 51MB export on every load before the first save).
+            holder_fresh = ((sig is not None and sig == _XMLTV_HOLDER['sig'])
+                            or (sig is None and (_XMLTV_HOLDER['channels'] or _XMLTV_HOLDER['programmes'])))
+            if not holder_fresh:
+                channels   = Globals.settings.getCacheSetting(XMLTV_CHANNELS_KEY)   or []
+                programmes = Globals.settings.getCacheSetting(XMLTV_PROGRAMMES_KEY) or []
+                recordings = Globals.settings.getCacheSetting(XMLTV_RECORDINGS_KEY) or []
+                if not (channels or programmes or recordings):
+                    # Legacy migration: first run after the file->cache switch or a
+                    # cache clear — parse the on-disk export once; the next writable
+                    # _save populates the cache so subsequent loads hit SQLite.
+                    channels_raw, programmes_raw = self._load_file()
+                    channels, recordings = self._clean(channels_raw, 'id')
+                    programmes = self._clean(programmes_raw, 'channel')
+                else:
+                    channels, recordings = self._clean(channels, 'id')
+                    programmes = self._clean(programmes, 'channel')
+                _XMLTV_HOLDER.update(sig=sig, channels=channels,
+                                     programmes=programmes, recordings=recordings)
+        data = self.resetData()
+        if self.writable:
+            # writable (builder) instances work on copies so their mutations never
+            # corrupt the shared holder that read-only servers are using.
+            return {'data'       : data,
+                    'channels'   : list(_XMLTV_HOLDER['channels']),
+                    'recordings' : list(_XMLTV_HOLDER['recordings']),
+                    'programmes' : list(_XMLTV_HOLDER['programmes'])}
+        return {'data'       : data,
+                'channels'   : _XMLTV_HOLDER['channels'],
+                'recordings' : _XMLTV_HOLDER['recordings'],
+                'programmes' : _XMLTV_HOLDER['programmes']}
+
+
+    def _load_file(self) -> tuple:
+        """Legacy XMLTV parse from the on-disk export (migration fallback)."""
+        self.log('_load_file, file=%s' % self.XMLTVFile)
         fle = None
         try:
             fle = FileAccess.open(self.XMLTVFile, 'r')
-            data        = xmltv.read_data(fle)        or self.resetData()
             fle.seek(0)
-            channels    = xmltv.read_channels(fle)    or []
+            channels   = xmltv.read_channels(fle)   or []
             fle.seek(0)
-            programmes  = xmltv.read_programmes(fle)  or []
+            programmes = xmltv.read_programmes(fle) or []
         except Exception as e:
             self._error('_load', e)
-            data, channels, programmes = self.resetData(), [], []
+            channels, programmes = [], []
         finally:
             if fle and hasattr(fle, 'close'):
                 fle.close()
-        channels, recordings = self._clean(channels, 'id')
-        return {'data'       : data,
-                'channels'   : channels,
-                'recordings' : recordings,
-                'programmes' : self._clean(programmes, 'channel')}
+        return channels, programmes
 
 
     def _save(self, reset: bool=True) -> bool:
@@ -113,37 +206,195 @@ class XMLTVS(object):
             ))
             
             if self.writable:
-                writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
-                                      date                = data['date'],
-                                      source_info_url     = self.cleanString(data['source-info-url']), 
-                                      source_info_name    = self.cleanString(data['source-info-name']),
-                                      generator_info_url  = self.cleanString(data['generator-info-url']), 
-                                      generator_info_name = self.cleanString(data['generator-info-name']))
+                # Guard against clobbering existing guide data with an empty dataset:
+                # a failed/partial _load or an orphan-cleanup over a narrowed channel
+                # set can leave 0 channels, which would wipe the XMLTV mid-build.
+                # Skip the write when the cache already holds content.
+                if len(self.XMLTVDATA['channels']) == 0 and len(self.XMLTVDATA['programmes']) == 0:
+                    if Globals.settings.getCacheSetting(XMLTV_META_KEY):
+                        self.log("_save, refusing to overwrite existing XMLTV with empty dataset", xbmc.LOGWARNING)
+                        return False
+                # Persist to the SQLite cache (transactional; avoids file-lock races
+                # with HTTP serving / pvr.iptvsimple). Version token increments on
+                # every save, invalidating the holder and HTTP render caches.
+                Globals.settings.setCacheSetting(XMLTV_CHANNELS_KEY,   self.XMLTVDATA['channels'],   life=-1)
+                Globals.settings.setCacheSetting(XMLTV_PROGRAMMES_KEY, self.XMLTVDATA['programmes'], life=-1)
+                Globals.settings.setCacheSetting(XMLTV_RECORDINGS_KEY, self.XMLTVDATA['recordings'], life=-1)
+                old_meta = Globals.settings.getCacheSetting(XMLTV_META_KEY) or {}
+                meta = {'updated': time.time(), 'version': (old_meta.get('version', 0) or 0) + 1}
+                Globals.settings.setCacheSetting(XMLTV_META_KEY, meta, life=-1)
+                with _XMLTV_HOLDER_LOCK:
+                    _XMLTV_HOLDER['sig'] = meta['version']
+                    # Keep the holder's data in sync with what was just saved, not
+                    # just the version token: otherwise the next load sees a matching
+                    # sig, treats the holder as fresh, and reuses the PREVIOUS chunk's
+                    # data — the xmltv.programmes blob then only ever holds the last
+                    # chunk instead of the accumulated guide. Copies so a writable
+                    # instance's mutations never alias the shared holder.
+                    _XMLTV_HOLDER['channels']   = list(self.XMLTVDATA['channels'])
+                    _XMLTV_HOLDER['programmes'] = list(self.XMLTVDATA['programmes'])
+                    _XMLTV_HOLDER['recordings'] = list(self.XMLTVDATA['recordings'])
+                # Backfill the indexed programmes table for rows written before the
+                # schema existed; addProgram/delBroadcast/clrProgrammes keep it synced.
+                self._backfill_programmes_table()
+                if Globals.settings.getSettingBool('Enable_File_Export'):
+                    self._save_export()
 
-                for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
-                    writer.addChannel(channel)
-                    
-                for program in self.XMLTVDATA['programmes']:
-                    writer.addProgramme(program)
-                    
-                try:
-                    with FileLock(self.XMLTVFile):
-                        with FileAccess.open(self.XMLTVFile, "w") as fle:
-                            writer.write(fle, pretty_print=True)
-                except Exception as e:
-                    self.log("_save, failed!\n%s"%e, xbmc.LOGERROR)
-                    Globals.dialog.notificationDialog(LANGUAGE(32000))
-                
+                self._saved = True
                 # Update PVR status with current M3U/XMLTV data
-                status = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(), Globals.properties.getFriendlyName())
-                xmltv_channels = self.getChannels()
-                status['xmltv']['channel_ids'] = {c.get('id') for c in xmltv_channels if c.get('id')}
-                status['xmltv']['programmes'] = len(self.getProgrammes())
-                status['xmltv']['last_write'] = time.time()
-                Globals.settings.instances._computeDerived(status)
-                Globals.properties.notifyDataChanged('xmltv')
+                try:
+                    status = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(), Globals.properties.getFriendlyName())
+                    xmltv_channels = self.getChannels()
+                    status['xmltv']['channel_ids'] = {c.get('id') for c in xmltv_channels if c.get('id')}
+                    status['xmltv']['programmes'] = len(self.getProgrammes())
+                    status['xmltv']['last_write'] = time.time()
+                    Globals.settings.instances._resolvePVRStatus(status)
+                    Globals.properties.notifyDataChanged('xmltv')
+                except Exception as e: self.log("_save, status update failed: %s" % e, xbmc.LOGDEBUG)
                 return self.buildGenres()
-        
+
+
+    def _save_export(self) -> bool:
+        """Write the physical pseudotv.xml export (atomic temp+rename).
+
+        Only runs when Enable_File_Export is on — the SQLite cache remains the
+        source of truth. Keeps the legacy file on disk for local-file pvr.iptvsimple
+        configs or third-party tooling.
+        """
+        try:
+            data = self.XMLTVDATA.get('data', self.resetData())
+            writer = xmltv.Writer(encoding            = DEFAULT_ENCODING,
+                                  date                = data.get('date', ''),
+                                  source_info_url     = self.cleanString(data.get('source-info-url', '')),
+                                  source_info_name    = self.cleanString(data.get('source-info-name', '')),
+                                  generator_info_url  = self.cleanString(data.get('generator-info-url', '')),
+                                  generator_info_name = self.cleanString(data.get('generator-info-name', '')))
+            for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
+                writer.addChannel(channel)
+            for program in self.XMLTVDATA['programmes']:
+                writer.addProgramme(self._offsetProgramme(program))
+            tmp_file = '%s.tmp' % (self.XMLTVFile)
+            with FileLock(self.XMLTVFile):
+                with FileAccess.open(tmp_file, "w") as fle:
+                    writer.write(fle, pretty_print=True)
+                if FileAccess.rename(tmp_file, self.XMLTVFile):
+                    self.log("_save_export, atomic write complete")
+                else:
+                    self.log("_save_export, atomic rename failed, retrying direct write", xbmc.LOGWARNING)
+                    FileAccess.delete(tmp_file)
+                    with FileAccess.open(self.XMLTVFile, "w") as fle:
+                        writer.write(fle, pretty_print=True)
+            return True
+        except Exception as e:
+            self.log("_save_export failed!\n%s" % e, xbmc.LOGERROR)
+            try: FileAccess.delete(tmp_file)
+            except Exception: pass
+            return False
+
+
+    def render(self, fle, channels=None, recordings=None, programmes=None):
+        """Render XMLTV content to a file-like object without touching disk.
+
+        Uses xmltv.Writer to write to any file-like object (e.g. BytesIO).
+        Used by the HTTP server to serve filtered XMLTV content based on channels.json.
+        """
+        if channels is None:    channels = self.getChannels()
+        if recordings is None:  recordings = self.getRecordings()
+        if programmes is None:  programmes = self.getProgrammes()
+        data = self.XMLTVDATA.get('data', self.resetData())
+        writer = xmltv.Writer(encoding            = DEFAULT_ENCODING,
+                              date                = data['date'],
+                              source_info_url     = self.cleanString(data['source-info-url']),
+                              source_info_name    = self.cleanString(data['source-info-name']),
+                              generator_info_url  = self.cleanString(data['generator-info-url']),
+                              generator_info_name = self.cleanString(data['generator-info-name']))
+        for channel in (recordings + channels):
+            writer.addChannel(channel)
+        for program in programmes:
+            writer.addProgramme(self._offsetProgramme(program))
+        writer.write(fle, pretty_print=True)
+
+
+    def _offsetProgramme(self, program: dict) -> dict:
+        """Return a copy of a programme with the local UTC offset appended to its
+        start/stop, so pvr.iptvsimple parses the LOCAL DTFORMAT times correctly
+        (it assumes UTC otherwise, which shifts catchup seek by the UTC offset)."""
+        p = dict(program)
+        if p.get('start'): p['start'] = '%s %s' % (p['start'], _utcOffset())
+        if p.get('stop'):  p['stop']  = '%s %s' % (p['stop'],  _utcOffset())
+        return p
+
+
+    def renderWithPlaceholders(self, fle, channels=None, programmes=None, stations=None, horizon: int = None):
+        """Render XMLTV with temporary placeholder programmes injected.
+
+        Every served channel gets a non-empty guide row: channels whose EPG does
+        not reach `horizon` (default Min_Days) ahead of now — including channels
+        with NO guide data at all — get a "No Guide Data - Check Back Later"
+        placeholder spanning [last-stop-or-now, now+horizon). This replaces the
+        old "hide empty-guide channels" approach: configured channels stay visible
+        in Kodi with a labelled placeholder instead of a blank row.
+
+        The placeholder is served only — it is never persisted and is stripped by
+        _isPlaceholder in loadStopTimes/hasProgrammes.
+
+        `stations` (optional) is the filtered M3U station set served to pvr.iptvsimple;
+        when provided, the rendered XMLTV is restricted to exactly those channels
+        (channel entries are rebuilt from the station dicts, so channels that had no
+        guide and were dropped from the persisted XMLTV still get a row here).
+        """
+        if horizon is None: horizon = MIN_GUIDEDAYS * 86400
+        if channels is None:   channels = self.getChannels()
+        if programmes is None: programmes = self.getProgrammes()
+        programmes = list(programmes)
+        if stations is not None:
+            served = {s.get('id') for s in stations if s.get('id')}
+            channels = [{'id': s['id'],
+                         'display-name': [(self.cleanString(s.get('name', '')), LANG)],
+                         'icon': [{'src': s.get('logo', '')}]}
+                        for s in stations if s.get('id')]
+            programmes = [p for p in programmes if p.get('channel') in served]
+        try:
+            now_epoch = float(Globals._getGMTstamp())
+            min_end_epoch = now_epoch + horizon
+            min_end_str = Globals._epochTime(min_end_epoch, tz=False).strftime(DTFORMAT)
+            max_stops = {}
+            for p in programmes:
+                ch = p.get('channel')
+                stop = p.get('stop')
+                if ch and stop and stop > max_stops.get(ch, ''):
+                    max_stops[ch] = stop
+            for ch in channels:
+                cid = ch.get('id')
+                if not cid:
+                    continue
+                last_stop = max_stops.get(cid)
+                if last_stop and last_stop >= min_end_str:
+                    continue  # guide already covers the full Min_Days window
+                start_epoch = now_epoch
+                if last_stop:
+                    start_epoch = max(now_epoch, Globals._strpTime(last_stop, DTFORMAT).timestamp())
+                programmes.append(self._placeholderProgramme(cid, ch, start=start_epoch, stop=min_end_epoch))
+        except Exception as e:
+            self.log(f"renderWithPlaceholders, failed: {e}", xbmc.LOGDEBUG)
+        self.render(fle, channels=channels, programmes=programmes)
+
+
+    def _placeholderProgramme(self, ch_id: str, ch: dict, start: Optional[float] = None, stop: Optional[float] = None) -> dict:
+        now  = float(Globals._getGMTstamp())
+        if start is None: start = now
+        if stop  is None: stop  = now + MIN_EPG_DURATION
+        logo = ch.get('logo') or (ch.get('icon') or [{}])[0].get('src', '')
+        msg  = LANGUAGE(32277)
+        return {'channel' : ch_id,
+                'category': [('Undefined', LANG)],
+                'title'   : [(msg, LANG)],
+                'desc'    : [(msg, LANG)],
+                'start'   : Globals._epochTime(start, tz=False).strftime(DTFORMAT),
+                'stop'    : Globals._epochTime(stop, tz=False).strftime(DTFORMAT),
+                'icon'    : [{'src': logo}],
+                'length'  : {'units': 'seconds', 'length': str(max(0, int(stop - start)))}}
+    
     
     def _error(self, e: Exception):
         try:
@@ -202,31 +453,117 @@ class XMLTVS(object):
             return []
         
         
+    def _programme_db(self) -> Any:
+        """SQLite cache handle for the indexed programmes table (Phase 2)."""
+        global _PROG_TABLE_READY
+        cache = Globals.settings.cache
+        if not _PROG_TABLE_READY:
+            for ddl in _PROG_DDL:
+                cache.execute(ddl)
+            _PROG_TABLE_READY = True
+        return cache
+
+
+    def _add_program_row(self, pitem: dict):
+        try:
+            if pitem.get('channel'):
+                self._programme_db().execute(
+                    "INSERT OR REPLACE INTO programmes(channel,start,stop,data) VALUES(?,?,?,?)",
+                    (pitem.get('channel'), pitem.get('start'), pitem.get('stop'), FileAccess.dumpPICKLE(pitem)))
+        except Exception as e:
+            self.log(f"_add_program_row failed: {e}", xbmc.LOGDEBUG)
+
+
+    def _del_channel_programmes(self, ch_id: str):
+        try:
+            if ch_id:
+                self._programme_db().execute("DELETE FROM programmes WHERE channel=?", (ch_id,))
+        except Exception as e:
+            self.log(f"_del_channel_programmes failed: {e}", xbmc.LOGDEBUG)
+
+
+    def _backfill_programmes_table(self):
+        """Rebuild the indexed table from the in-memory programmes if it is empty.
+
+        Migration path for data that predates Phase 2 (loaded from legacy file or
+        blob before the table existed). Subsequent saves stay in sync via the
+        incremental add/del handlers, so this only runs once.
+        """
+        try:
+            db = self._programme_db()
+            cursor = db.execute("SELECT COUNT(*) FROM programmes")
+            if cursor and cursor.fetchone()[0] == 0:
+                rows = [(p.get('channel'), p.get('start'), p.get('stop'), FileAccess.dumpPICKLE(p))
+                        for p in self.XMLTVDATA['programmes'] if p.get('channel')]
+                if rows:
+                    db.execute("INSERT OR REPLACE INTO programmes(channel,start,stop,data) VALUES(?,?,?,?)", rows)
+                    self.log(f"_backfill_programmes_table, inserted {len(rows)} rows", xbmc.LOGDEBUG)
+        except Exception as e:
+            self.log(f"_backfill_programmes_table failed: {e}", xbmc.LOGDEBUG)
+
+
+    def _db_channel_bounds(self, channels: list, fallback: str) -> Optional[dict]:
+        """Return {ch_id: {'start': min, 'stop': max}} from the indexed table, or None
+        when the table is empty (caller falls back to the in-memory scan)."""
+        try:
+            cursor = self._programme_db().execute(
+                "SELECT channel, MIN(start), MAX(stop) FROM programmes GROUP BY channel")
+            rows = cursor.fetchall() if cursor else []
+            if not rows:
+                return None
+            row_map = {r[0]: r for r in rows}
+            bounds = {}
+            for ch in channels:
+                ch_id = ch.get('id')
+                if not ch_id: continue
+                row = row_map.get(ch_id)
+                bounds[ch_id] = {'start': row[1] if row else fallback,
+                                 'stop' : row[2] if row else fallback}
+            return bounds
+        except Exception as e:
+            self.log(f"_db_channel_bounds failed: {e}", xbmc.LOGDEBUG)
+            return None
+
+
+    def _db_max_stops(self) -> Optional[dict]:
+        """Return {ch_id: max_stop} from the indexed table, or None when empty."""
+        try:
+            cursor = self._programme_db().execute(
+                "SELECT channel, MAX(stop) FROM programmes GROUP BY channel")
+            rows = cursor.fetchall() if cursor else []
+            if not rows:
+                return None
+            return {r[0]: r[1] for r in rows}
+        except Exception as e:
+            self.log(f"_db_max_stops failed: {e}", xbmc.LOGDEBUG)
+            return None
+
+
     def loadStopTimes(self, channels: list = None, programmes: list = None, fallback: Optional[str] = None) -> Generator:
         if channels is None:   channels   = []
         if programmes is None: programmes = []
         if not channels:   channels   = self.getChannels()
-        if not programmes: programmes = self.getProgrammes()
-        if not fallback:   fallback   = Globals._epochTime(Globals._roundTimeDown(Globals._getUTCstamp(), offset=60), tz=False).strftime(DTFORMAT)
-            
-        channel_bounds = { channel['id']: {'start': fallback, 'stop': fallback} for channel in channels if 'id' in channel }
-        for program in programmes:
-            ch_id = program.get('channel')
-            if ch_id not in channel_bounds: continue
-                
-            p_start = program.get('start')
-            if not channel_bounds[ch_id]['start'] or p_start < channel_bounds[ch_id]['start']:
-                channel_bounds[ch_id]['start'] = p_start
-                
-            p_stop = program.get('stop')
-            if not channel_bounds[ch_id]['stop'] or p_stop > channel_bounds[ch_id]['stop']:
-                channel_bounds[ch_id]['stop'] = p_stop
+        if not fallback:   fallback   = Globals._epochTime(Globals._roundTimeDown(Globals._getGMTstamp(), offset=60), tz=False).strftime(DTFORMAT)
+
+        # Phase 2: prefer the indexed programmes table (no full-list scan).
+        channel_bounds = self._db_channel_bounds(channels, fallback)
+        if channel_bounds is None:
+            channel_bounds = {channel['id']: {'start': fallback, 'stop': fallback} for channel in channels if 'id' in channel}
+            for program in (programmes or self.getProgrammes()):
+                if self._isPlaceholder(program): continue
+                ch_id = program.get('channel')
+                if ch_id not in channel_bounds: continue
+                p_start = program.get('start')
+                if not channel_bounds[ch_id]['start'] or p_start < channel_bounds[ch_id]['start']:
+                    channel_bounds[ch_id]['start'] = p_start
+                p_stop = program.get('stop')
+                if not channel_bounds[ch_id]['stop'] or p_stop > channel_bounds[ch_id]['stop']:
+                    channel_bounds[ch_id]['stop'] = p_stop
 
         self.log('loadStopTimes channel_bounds %s'%channel_bounds)
         for ch_id, bounds in channel_bounds.items():
             firstStart = bounds['start']
             lastStop   = bounds['stop']
-            
             try:
                 self.log(' [%s] loadStopTimes first-start = %s, last-stop = %s, fallback = %s' % (ch_id, firstStart, lastStop, fallback))
                 if firstStart > fallback:# Check if the program's actual first start time is in the future
@@ -241,16 +578,18 @@ class XMLTVS(object):
         if channels is None:   channels   = []
         if programmes is None: programmes = []
         if not channels:   channels   = self.getChannels()
-        if not programmes: programmes = self.getProgrammes()
-        if not now: now = Globals._epochTime(Globals._roundTimeDown(Globals._getUTCstamp(),offset=60),tz=False).strftime(DTFORMAT)
-        # Single-pass: build max stop time per channel
-        max_stops = {}
-        for program in programmes:
-            ch_id = program.get('channel')
-            if ch_id is None: continue
-            p_stop = program.get('stop', '')
-            if p_stop > max_stops.get(ch_id, ''):
-                max_stops[ch_id] = p_stop
+        if not now: now = Globals._epochTime(Globals._roundTimeDown(Globals._getGMTstamp(),offset=60),tz=False).strftime(DTFORMAT)
+        # Phase 2: prefer the indexed table; fall back to a single-pass scan.
+        max_stops = self._db_max_stops()
+        if max_stops is None:
+            max_stops = {}
+            for program in (programmes or self.getProgrammes()):
+                if self._isPlaceholder(program): continue
+                ch_id = program.get('channel')
+                if ch_id is None: continue
+                p_stop = program.get('stop', '')
+                if p_stop > max_stops.get(ch_id, ''):
+                    max_stops[ch_id] = p_stop
         for channel in channels:
             ch_id = channel.get('id')
             try: 
@@ -304,19 +643,15 @@ class XMLTVS(object):
 
     def cleanProgrammes(self, programmes: list=None) -> list:
         if programmes is None: programmes = []
-        now     = (Globals._epochTime(float(Globals._getUTCstamp()),tz=False) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells
-        holiday = Seasonal().getHoliday()
-        
+        now     = (Globals._epochTime(float(Globals._getGMTstamp()),tz=False) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells
+        # Holiday rollover is handled at build time (builder.truncateProgrammes):
+        # the per-programme holiday marker was never persisted, so a decode-based
+        # check here was a silent no-op AND a 12k-_decodePlot cost per load.
         def __filterProgrammes(program: dict) -> Optional[dict]:
             try:
-                citem    = Globals._decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
-                seasonal = citem.get('rules',{}).get(800,{}).get('values',{}).get(0,[{}])[0].get('holiday',{})
-                stopTime = program.get('stop',now).rstrip()
-                if seasonal and seasonal.get('name',str(random.random())) != holiday.get('name'):
-                    self.log('[%s] cleanProgrammes, __filterProgrammes removing expired holiday (%s)'%(citem.get('id'),seasonal))
-                    return None
-                elif Globals._strpTime(stopTime,DTFORMAT) < now: 
-                    self.log('[%s] cleanProgrammes, __filterProgrammes removing expired programmes (%s)'%(citem.get('id'),stopTime))
+                stopTime = program.get('stop', now).rstrip()
+                if Globals._strpTime(stopTime,DTFORMAT) < now: 
+                    self.log('[%s] cleanProgrammes, __filterProgrammes removing expired programmes (%s)'%(program.get('channel'),stopTime))
                     return None  # remove expired content, todo ignore "recordings" ie. media=True
             except Exception as e: self.log(f"__filterProgrammes, failed!\n{e}", xbmc.LOGWARNING)
             return program
@@ -336,13 +671,13 @@ class XMLTVS(object):
     def sortProgrammes(self, programmes: list=None) -> list:
         if programmes is None: programmes = []
         try:
-            programmes.sort(key=itemgetter('start'))
-            programmes.sort(key=itemgetter('channel'))
-            self.log('sortProgrammes, programmes = %s'%(len(programmes)))
-            return programmes
+            sorted_progs = sorted(programmes, key=itemgetter('start'))
+            sorted_progs = sorted(sorted_progs, key=itemgetter('channel'))
+            self.log('sortProgrammes, programmes = %s'%(len(sorted_progs)))
+            return sorted_progs
         except Exception as e:
-            self.log("sortProgrammes, failed! %s"%(e), xbmc.LOGERROR)
-            return []
+            self.log("sortProgrammes, failed! returning unsorted, %s"%(e), xbmc.LOGERROR)
+            return programmes
 
 
     def getRecordings(self) -> list:
@@ -438,7 +773,7 @@ class XMLTVS(object):
             else:
                 self.XMLTVDATA['recordings'].append(sitem)
 
-            fitem['start'] = Globals._getUTCstamp()
+            fitem['start'] = Globals._getGMTstamp()
             fitem['stop']  = fitem['start'] + fitem['duration']
             if self.addProgram(ritem['id'],self.getProgramItem(ritem,fitem),encodeDESC=True):
                 return True
@@ -538,14 +873,66 @@ class XMLTVS(object):
 
             self.log('[%s] addProgram'%(id))
             self.XMLTVDATA['programmes'].append(pitem)
+            self._add_program_row(pitem)
             return True
+
+
+    def addPlaceholder(self, ch_id: str, ch_name: str, ch_logo: str = '', msg: str = '') -> bool:
+        """Write a single placeholder programme for channels with no EPG.
+        Excluded from stop-time/coverage via _isPlaceholder in loadStopTimes/hasProgrammes."""
+        if not msg: msg = LANGUAGE(32277)
+        now  = Globals._getGMTstamp()
+        stop = now + MIN_EPG_DURATION
+        self.addChannel({'id': ch_id, 'name': ch_name, 'logo': ch_logo})
+        self.addProgram(ch_id, {'title': msg, 'desc': msg, 'categories': ['Undefined'], 'thumb': ch_logo, 'start': now, 'stop': stop, 'length': MIN_EPG_DURATION, 'fitem': {}, 'new': False}, encodeDESC=False)
+        self.log('[%s] addPlaceholder' % ch_id)
+        return True
+
+
+    def _isPlaceholder(self, program: dict) -> bool:
+        """Check if a programme entry is a placeholder.
+
+        Matches on placeholder title; no dedicated XMLTV flag exists for placeholders."""
+        title = program.get('title', [('', '')])
+        try: return title[0][0] in (LANGUAGE(32277), LANGUAGE(32279))
+        except: return False
 
 
     def clrProgrammes(self, citem: dict) -> bool:
         with self._lock:
             self.XMLTVDATA['programmes'] = [program for program in self.XMLTVDATA['programmes'] if program.get('channel') != citem.get('id')]
+            self._del_channel_programmes(citem.get('id'))
             self.log('clrProgrammes, removing channel %s programmes' % citem.get('id'))
             return True
+
+
+    def truncateProgrammes(self, ch_id: str, boundary: str, mode: str = 'start') -> int:
+        """Remove a channel's programmes that overlap a boundary (DTFORMAT).
+
+        mode='start' removes programmes starting at/after `boundary` (used when a
+        new seasonal holiday begins). mode='stop' removes programmes ending after
+        `boundary` (used when a rebuild's future-start clamp pulls the schedule
+        back to now — otherwise the new content overlaps the still-valid tail and
+        the guide shows duplicate rows). Returns the number removed. The indexed
+        programmes table is kept in sync.
+        """
+        with self._lock:
+            if mode == 'stop':
+                def _overlaps(program): return program.get('stop', '') > boundary
+            else:
+                def _overlaps(program): return program.get('start', '') >= boundary
+            before = len(self.XMLTVDATA['programmes'])
+            self.XMLTVDATA['programmes'] = [
+                program for program in self.XMLTVDATA['programmes']
+                if program.get('channel') != ch_id or not _overlaps(program)
+            ]
+            removed = before - len(self.XMLTVDATA['programmes'])
+            if removed:
+                self._del_channel_programmes(ch_id)
+                for program in self.XMLTVDATA['programmes']:
+                    if program.get('channel') == ch_id:
+                        self._add_program_row(program)
+            return removed
 
 
     def delBroadcast(self, citem: dict) -> bool:# remove single channel and all programmes from XMLTVDATA
@@ -554,6 +941,7 @@ class XMLTVS(object):
             programmes = self.XMLTVDATA['programmes']
             self.XMLTVDATA['channels']   = list([channel for channel in channels if channel.get('id') != citem.get('id')])
             self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != citem.get('id')])
+            self._del_channel_programmes(citem.get('id'))
             self.log('delBroadcast, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.XMLTVDATA['channels']),len(programmes),len(self.XMLTVDATA['programmes'])))
             return True
         
@@ -567,56 +955,73 @@ class XMLTVS(object):
                 self.XMLTVDATA['recordings'].pop(idx)
                 if not ritem.get('id'): ritem['id'] = recording['id']
                 self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != ritem.get('id')])
+                self._del_channel_programmes(ritem.get('id'))
                 return True
         
         
     def buildGenres(self, epggenres: Optional[dict] = None) -> bool:
         if epggenres is None: epggenres = {}
-        def __parseGenres(plines: list) -> dict:
+        global _DEFAULT_GENRES, _GENRE_SIG
+        def __parseGenres(plines: list, out: Optional[dict] = None) -> dict:
+            if out is None: out = {}
             for line in plines:
-                try:    
+                try:
                     names = line.childNodes[0].data
                     items = names.split(' / ')
                     data  = {'genre':names,'name':names,'genreId':line.attributes['genreId'].value}
-                    epggenres[names.lower()] = data
+                    out.setdefault(names.lower(), data)
                     for item in items:
                         name = item.strip()
-                        if name and not epggenres.get(name.lower()):
-                            epgdata = data.copy()
-                            epgdata['name'] = name
-                            epggenres[name.lower()] = epgdata
+                        if name:
+                            out.setdefault(name.lower(), dict(data, name=name))
                 except Exception: continue
-            self.log('buildGenres, __parseGenres: epggenres = %s'%(epggenres.keys())) #todo custom user color selector.
-            return epggenres
+            return out
 
-        def __matchGenres(program: dict):
-            categories = [cat[0] for cat in program.get('category',[])]
-            catcombo   = ' / '.join(categories)
-            for category in categories:
-                match = genres.get(category.lower())
-                if match and not genres.get(catcombo.lower()):
-                    genres[catcombo.lower()] = match
-                    break
-            
         def __getGenres(file: str = GENREFLE_DEFAULT) -> dict:
-            if FileAccess.exists(file): 
+            # Default mapping is static — parse once, return a copy so the
+            # caller's mutation (catcombo additions) never dirties the cache.
+            global _DEFAULT_GENRES
+            if file == GENREFLE_DEFAULT and _DEFAULT_GENRES is not None:
+                return dict(_DEFAULT_GENRES)
+            result = {}
+            if FileAccess.exists(file):
                 with FileAccess.open(file, "r") as fle:
                     dom = parse(fle)
-                return __parseGenres(dom.getElementsByTagName('genre'))
-            return {}
-            
+                result = __parseGenres(dom.getElementsByTagName('genre'))
+            if file == GENREFLE_DEFAULT:
+                _DEFAULT_GENRES = result
+            return result
+
         try:
+            # Categories are stable across a build's chunk saves — if the set is
+            # unchanged since the last render, the cached genres.xml is still
+            # valid, so skip the recompute + DOM build + write entirely.
+            seen_categories = set()
+            for program in self.XMLTVDATA.get('programmes', []):
+                cats = tuple(cat[0] for cat in program.get('category', []))
+                if cats: seen_categories.add(cats)
+            sig = tuple(sorted(seen_categories))
+            if sig == _GENRE_SIG and Globals.settings.getCacheSetting(GENRES_CACHE_KEY):
+                return True
+
             doc  = Document()
             root = doc.createElement('genres')
             doc.appendChild(root)
             name = doc.createElement('name')
             name.appendChild(doc.createTextNode('%s'%(ADDON_NAME)))
             root.appendChild(name)
-            
+
             genres = __getGenres()
-            for program in self.XMLTVDATA.get('programmes', []):
-                __matchGenres(program)
-                
+            # Match once per unique category list instead of once per programme —
+            # thousands of entries share the same combo.
+            for cats in seen_categories:
+                catcombo = ' / '.join(cats)
+                for category in cats:
+                    match = genres.get(category.lower())
+                    if match and not genres.get(catcombo.lower()):
+                        genres[catcombo.lower()] = match
+                        break
+
             epggenres = __getGenres(GENREFLEPATH)
             epggenres.update(dict(sorted(sorted(list(genres.items()), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId'])))
             for key in list(set(epggenres)):
@@ -625,9 +1030,18 @@ class XMLTVS(object):
                 gen.appendChild(doc.createTextNode(key.title()))
                 root.appendChild(gen)
             try:
-                with FileLock(GENREFLEPATH):
-                    with FileAccess.open(GENREFLEPATH, "w") as xmlData:
-                        xmlData.write(doc.toprettyxml(indent='  ',encoding=DEFAULT_ENCODING))
-                        return True
+                # Genres persist in the SQLite cache; the physical file is an optional
+                # export for local-file PVR configs / third-party tooling.
+                xml_bytes = doc.toprettyxml(indent='  ', encoding=DEFAULT_ENCODING)
+                # Store as str, not bytes: dumpPICKLE passes bytes through unpickled
+                # (fileaccess.py), so a bytes value is stored raw and the cache
+                # reader's loadPICKLE fails on it — genres would serve empty.
+                Globals.settings.setCacheSetting(GENRES_CACHE_KEY, xml_bytes.decode(DEFAULT_ENCODING), life=-1)
+                if Globals.settings.getSettingBool('Enable_File_Export'):
+                    with FileLock(GENREFLEPATH):
+                        with FileAccess.open(GENREFLEPATH, "w") as xmlData:
+                            xmlData.write(xml_bytes)
+                _GENRE_SIG = sig
+                return True
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
         except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)

@@ -5,87 +5,7 @@ from collections import OrderedDict
 from unittest.mock import MagicMock, patch
 import pytest
 
-# Mock Kodi modules
-xbmc = MagicMock()
-xbmcgui = MagicMock()
-xbmcaddon = MagicMock()
-xbmcvfs = MagicMock()
-xbmcplugin = MagicMock()
-xbr = MagicMock()
-kodi_six = MagicMock()
-kodi_six.xbmc = xbmc
-kodi_six.xbmcgui = xbmcgui
-kodi_six.xbmcaddon = xbmcaddon
-kodi_six.xbmcvfs = xbmcvfs
-kodi_six.xbmcplugin = xbmcplugin
-
-xbmc.LOGDEBUG   = 0
-xbmc.LOGINFO    = 1
-xbmc.LOGWARNING = 2
-xbmc.LOGERROR   = 3
-xbmc.LOGFATAL   = 4
-xbmc.LOGNONE    = 7
-xbmc.PLAYLIST_MUSIC = 'music'
-xbmc.PLAYLIST_VIDEO = 'video'
-xbmc.SORT_METHOD_UNSPECIFIED = -1
-
-sys.modules['xbmc'] = xbmc
-sys.modules['xbmcgui'] = xbmcgui
-sys.modules['xbmcaddon'] = xbmcaddon
-sys.modules['xbmcvfs'] = xbmcvfs
-sys.modules['xbmcplugin'] = xbmcplugin
-sys.modules['xbr'] = xbr
-sys.modules['kodi_six'] = kodi_six
-sys.modules['kodi_six.xbmc'] = xbmc
-sys.modules['kodi_six.xbmcgui'] = xbmcgui
-sys.modules['kodi_six.xbmcaddon'] = xbmcaddon
-sys.modules['kodi_six.xbmcvfs'] = xbmcvfs
-sys.modules['kodi_six.xbmcplugin'] = xbmcplugin
-
-sys.modules['requests'] = MagicMock()
-sys.modules['requests.adapters'] = MagicMock()
-sys.modules['pyqrcode'] = MagicMock()
-sys.modules['infotagger'] = MagicMock()
-sys.modules['infotagger.listitem'] = MagicMock()
-
-import urllib.parse as _real_urlparse
-import types as _types
-_six_urllib_ns = _types.SimpleNamespace(parse=_real_urlparse)
-six_mock = MagicMock()
-six_mock.moves.urllib = _six_urllib_ns
-sys.modules["six"] = six_mock
-sys.modules["six.moves"] = six_mock.moves
-
-LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'resources', 'lib')
-sys.path.insert(0, LIB_DIR)
-
-# Import variables first to break circular import with fileaccess
 import variables
-
-
-@pytest.fixture(autouse=True)
-def _patch_kodi_apis():
-    with patch('xbmcaddon.Addon') as mock_addon_cls, \
-         patch('xbmc.getSupportedMedia', return_value='|.mp4|.mkv|.avi|'):
-        mock_addon = MagicMock()
-        mock_addon_cls.return_value = mock_addon
-        mock_addon.getAddonInfo.side_effect = lambda k: {
-            'name': 'TestAddon', 'version': '1.0.0',
-            'icon': 'icon.png', 'fanart': 'fanart.jpg',
-            'profile': 'special://profile/addon_data/test/',
-            'path': '/tmp/test_addon', 'author': 'Test'
-        }.get(k, '')
-        mock_addon.getSetting.side_effect = lambda k: {
-            'User_Folder': 'special://profile/addon_data/plugin.video.pseudotv.live/cache',
-            'Disable_Cache': 'false', 'API_Timeout': '30',
-            'Debug_Enable': 'false', 'Debug_Level': '3',
-            'Enable_Grouping': 'true', 'Enable_Executor': 'true',
-            'Cache_MEM_Limit': '10'
-        }.get(k, '')
-        mock_addon.getSettingBool.return_value = True
-        mock_addon.getSettingInt.return_value = 50
-        mock_addon.getLocalizedString.return_value = 'TestString'
-        yield
 
 
 @pytest.fixture
@@ -260,13 +180,10 @@ class TestGetShortPath:
         assert result == "/a/b"
 
     def test_long_path_truncated(self, fileaccess):
-        # Use os.sep for the current platform
         path = os.sep.join(["", "a", "b", "c", "d", "e"])
         result = fileaccess._getShortPath(path, max_parts=3)
-        # Should start with '...' and have last 3 parts
         assert result.startswith("...")
         parts = result.split(os.sep)
-        # Should have ... + 3 parts = at least 4 parts
         assert len(parts) >= 4
 
     def test_short_path_no_truncation(self, fileaccess):
@@ -285,8 +202,5 @@ class TestGetSetJSON:
         assert loaded == data
 
     def test_getjson_missing_file(self, fileaccess):
-        # xbmcvfs is mocked, so this tests the fallback path
         result = fileaccess.getJSON("/nonexistent/path/file.json")
-        # With mocked xbmcvfs, it returns a mock object, not empty dict
-        # This is expected behavior in test environment
         assert result is not None

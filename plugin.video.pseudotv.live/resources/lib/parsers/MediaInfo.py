@@ -39,7 +39,9 @@ class MediaInfo:
                 if xml is None: raise Exception('no xml found!, directly parsing file.')
                 LOG("MediaInfo: parsing XML %s"%(xml))
                 fle = FileAccess.open(xml, 'rb')
-                mi  = MediaInfo(fle.read())
+                data = fle.read()
+                if isinstance(data, bytes): data = data.decode(DEFAULT_ENCODING)
+                mi  = MediaInfo(data)
             except Exception: 
                 LOG("MediaInfo: parsing %s"%(FileAccess.translatePath(filename)))
                 mi = MediaInfo.parse(FileAccess.translatePath(filename))

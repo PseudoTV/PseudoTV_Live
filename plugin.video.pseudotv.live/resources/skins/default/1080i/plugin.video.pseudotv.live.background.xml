@@ -61,6 +61,9 @@
                 <texture border="5" fallback="logo.png">logo.png</texture>
                 <visible>Control.IsVisible(40000)</visible>
                 <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+                <animation type="Visible" reversible="false">
+                    <effect type="fade" start="0" end="100" time="400" delay="300"/>
+                </animation>
             </control>
 			<!-- <control type="textbox" id="40005"> -->
                 <!-- <bottom>50</bottom> -->
@@ -83,6 +86,9 @@
                     <width>480</width>
                     <itemgap>1</itemgap>
                     <orientation>vertical</orientation>
+                    <animation type="Visible" reversible="false">
+                        <effect type="fade" start="0" end="100" time="400" delay="500"/>
+                    </animation>
                     <control type="label">
                         <description>Time</description>
                         <align>center</align>

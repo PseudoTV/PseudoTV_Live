@@ -1179,12 +1179,15 @@ class SeasonalRule(BaseRule): #PARSING RULES [800-999]
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
             if self.optionValues[0][0].get('holiday',{}):
                 try:
-                    if builder.pDialog: builder.pDialog = Globals.dialog._updateProgressThrottled(builder.pDialog, builder.pCount, message=f"{builder.pName}: {LANGUAGE(32209)} {self.name}",header=builder.pHeader)
+                    if builder.pDialog: builder.pDialog = Globals.dialog._updateProgressThrottled(builder.pDialog, builder.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,builder.pMSG))
                     self.log(f"[{citem['id']}] runAction, {self.optionValues[0][0]['holiday']['name']}")
                     for query in self.optionValues[0]:
                         citem['logo'] = (query.get('holiday',{}).get('logo') or LOGO_SEASONAL)
                         if query["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                             if not builder.incExtras:
+                                # If filter is a single rule (has 'field'), wrap in 'and' first
+                                if query["filter"].get("field") and not query["filter"].get("and"):
+                                    query["filter"] = {"and": [query["filter"]]}
                                 query["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
                                                                              {"field":"episode","operator":"greaterthan","value":"0"}])
                             else:
@@ -1562,7 +1565,7 @@ class PadScheduling(BaseRule):
     def __init__(self):
         self.myId               = 2999
         self.name               = "Pad Scheduling"
-        self.description        = f"Pad EPG with duplicates to met minimum EPG requirement [{MIN_EPG_DURATION//60//60} Hrs.]"
+        self.description        = f"Pad EPG with duplicates to meet minimum EPG requirement [{MIN_GUIDEDAYS} days]"
         self.optionLabels       = ["Pad Scheduling"]
         self.optionValues       = [True]
         self.optionDescriptions = [""]
@@ -1592,15 +1595,17 @@ class PadScheduling(BaseRule):
             self.log("runAction, setting padScheduling to %s"%(inherited.padScheduling))
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_POST:
-            # Pad scheduling with duplicates to meet minimum guide requirements (MIN_EPG_DURATION).
-            # Pre-calculates needed iterations, logs only first/last to reduce log spam.
+            # Pad scheduling with duplicates to meet minimum guide requirements
+            # (Min_Days). Loops the content pool so the guide never runs blank after
+            # a few hours. Pre-calculates needed iterations, logs only first/last
+            # to reduce log spam.
             if inherited.padScheduling and len(parameter) > 0:
                 iters  = cycle(parameter)
                 totDur = 0
                 start  = parameter[-1]['stop']
                 idx    = len(parameter)
-                now    = Globals._getUTCstamp()
-                target = now + MIN_EPG_DURATION
+                now    = Globals._getGMTstamp()
+                target = now + (MIN_GUIDEDAYS * 86400)
                 while not inherited.monitor.abortRequested() and start < target:
                     idx += 1
                     item = next(iters).copy()
@@ -1610,7 +1615,7 @@ class PadScheduling(BaseRule):
                     start = item['stop']
                     totDur += item['duration']
                     parameter.append(item)
-                    inherited.pDialog = Globals.dialog._updateProgressThrottled(inherited.pDialog, inherited.pCount, message=f"{inherited.pName}: {LANGUAGE(33085)} {totDur}/{MIN_EPG_DURATION}",header=inherited.pHeader)
+                    inherited.pDialog = Globals.dialog._updateProgressThrottled(inherited.pDialog, inherited.pCount, message='%s: %s'%(LANGUAGE(32209),self.name), header='%s, %s'%(ADDON_NAME,inherited.pMSG))
                 self.log("[%s] addScheduling, padded %s items, totDur = %s/%s"%(citem['id'],idx-len(parameter)+1,totDur,MIN_EPG_DURATION))
         
         elif actionid == RULES_ACTION_CHANNEL_STOP:

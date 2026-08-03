@@ -472,7 +472,7 @@
             <group id="3" label="32258">
                 <setting id="Page_Limit" type="integer" label="30015" help="33015">
                     <level>3</level>
-                    <default>10</default>
+                    <default>25</default>
                     <constraints>
                         <minimum>0</minimum>
                         <step>5</step>
@@ -514,6 +514,14 @@
                         </dependency>
                     </dependencies>
                     <control type="toggle"/>
+                </setting>
+                <setting id="Youtube_Cookies" type="string" label="30500" help="33065">
+                    <level>3</level>
+                    <default/>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <control type="edit" format="string"/>
                 </setting>
                 <setting id="Enable_Fillers" type="boolean" label="30056" help="33056">
                     <level>1</level>
@@ -640,6 +648,11 @@
                     <control type="slider" format="integer">
                         <popup>false</popup>
                     </control>
+                </setting>
+                <setting id="Enable_File_Export" type="boolean" label="34180" help="34181">
+                    <level>2</level>
+                    <default>false</default>
+                    <control type="toggle"/>
                 </setting>
             </group>
         </category>

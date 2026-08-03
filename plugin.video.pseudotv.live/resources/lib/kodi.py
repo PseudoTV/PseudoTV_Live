@@ -57,18 +57,33 @@ class Settings(object):
 
 
     def _getRealSettings(self, id: str = ADDON_ID) -> xbmcaddon.Addon:
-        try: return xbmcaddon.Addon(id)
-        except Exception as e: 
-            self.log(f'_getRealSettings, failed to create Addon({id}), falling back to REAL_SETTINGS: {e}', xbmc.LOGWARNING)
-            return REAL_SETTINGS
+        if not hasattr(self, '_cachedSettings') or self._cachedSettings is None:
+            try: self._cachedSettings = xbmcaddon.Addon(id)
+            except Exception as e: 
+                self.log(f'_getRealSettings, failed to create Addon({id}), falling back to REAL_SETTINGS: {e}', xbmc.LOGWARNING)
+                self._cachedSettings = REAL_SETTINGS
+        return self._cachedSettings
 
     #GET
 
 
     def _getSetting(self, func: Callable, key: str) -> Any:
+        # Cache reads with a short TTL — Builder/Rules/Resources constructors read
+        # dozens of settings each, and every getSetting hits Kodi's C++ API.
+        import sys
+        _SETTINGS_CACHE = sys.modules['constants']._SETTINGS_CACHE
+        _SETTINGS_CACHE_TTL = sys.modules['constants']._SETTINGS_CACHE_TTL
+        _now = time.time()
+        cache_key = (getattr(func, '__name__', 'getSetting'), key)  # type-safe: getSetting vs getSettingBool differ
+        cached = _SETTINGS_CACHE.get(cache_key)
+        if cached and (_now - cached[1]) < _SETTINGS_CACHE_TTL:
+            return cached[0]
         try: 
             value = func(key)
-            self.log(f'[{ADDON_ID}] {func.__name__}, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
+            _SETTINGS_CACHE[cache_key] = (value, _now)
+            _LOG_SETTINGS = sys.modules['constants']._LOG_SETTINGS
+            if _LOG_SETTINGS['enable']:
+                self.log(f'[{ADDON_ID}] {func.__name__}, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
             return value
         except Exception as e: self.log("_getSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
       
@@ -145,6 +160,11 @@ class Settings(object):
     def _setSetting(self, func: Callable, key: str, value: Any):
         try:
             func(key, value)
+            # Invalidate the read cache so subsequent reads see the new value.
+            import sys
+            _SETTINGS_CACHE = sys.modules['constants']._SETTINGS_CACHE
+            for cache_key in [k for k in _SETTINGS_CACHE if k[1] == key]:
+                _SETTINGS_CACHE.pop(cache_key, None)
             self.log(f'[{ADDON_ID}] {func.__name__}, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
         except Exception as e: self.log("_setSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
             
@@ -291,6 +311,8 @@ class Settings(object):
                    'remotes'  : {'m3u'     :'http://%s/%s'%(host,M3UFLE),
                                  'xmltv'   :'http://%s/%s'%(host,XMLTVFLE),
                                  'genre'   :'http://%s/%s'%(host,GENREFLE),
+                                 'seasons' :'http://%s/%s'%(host,SEASONFLE),
+                                 'holidays':'http://%s/%s'%(host,HOLIDAYFLE),
                                  'bonjour' :'http://%s/api/%s'%(host,BONJOURFLE),
                                  'servers' :'http://%s/api/%s'%(host,SERVERFLE),
                                  'library' :'http://%s/api/%s'%(host,LIBRARYFLE),
@@ -353,6 +375,25 @@ class Settings(object):
         return self.dialog.properties.setProperty('has.Autotuned',self.setCacheSetting('has.Autotuned', state, life=datetime.timedelta(days=MAX_GUIDEDAYS)))
 
 
+    def getPVRSettings(self, instanceName: str = ADDON_NAME):
+        settings  = self.instances.getSettings(instanceName)
+        nsettings = {'kodi_addon_instance_name'   :'',
+                     'kodi_addon_instance_enabled':'',
+                     'm3uPathType'                :'',
+                     'm3uPath'                    :'',
+                     'm3uCache'                   :'',
+                     'epgPathType'                :'',
+                     'epgPath'                    :'',
+                     'epgCache'                   :'',
+                     'genresPathType'             :'',
+                     'genresPath'                 :'',
+                     'logoPathType'               :'',
+                     'logoPath'                   :''}
+        settings.update(self.instances.IPTV_SIMPLE_SETTINGS())
+        settings.update(nsettings)
+        return settings.copy()
+
+
     def setPVRPath(self, path: str, instanceName: str = ADDON_NAME):
         settings  = self.instances.getSettings(instanceName)
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
@@ -362,7 +403,7 @@ class Settings(object):
                      'm3uCache'                   :'false',
                      'epgPathType'                :'0',
                      'epgPath'                    :os.path.join(path,XMLTVFLE),
-                     'epgCache'                   :'true',
+                     'epgCache'                   :'false',
                      'genresPathType'             :'0',
                      'genresPath'                 :os.path.join(path,GENREFLE),
                      'logoPathType'               :'0',
@@ -373,7 +414,7 @@ class Settings(object):
             self.log('[%s] setPVRPath, %s settings = %s'%(PVR_CLIENT_ID, instanceName, nsettings))
             return self.instances.setSettings(instanceName, settings)
         
-                
+        
     def setPVRLocal(self, host: str, instanceName: str = ADDON_NAME):
         settings  = self.instances.getSettings(instanceName)
         nsettings = {'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instanceName),
@@ -384,7 +425,7 @@ class Settings(object):
                      'm3uCache'                   :'false',
                      'epgPathType'                :'1',
                      'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
-                     'epgCache'                   :'true',
+                     'epgCache'                   :'false',
                      'genresPathType'             :'1',
                      'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
                      'logoPathType'               :'1',
@@ -405,7 +446,7 @@ class Settings(object):
                      'm3uCache'                   :'%s'%(str(cache).lower()),
                      'epgPathType'                :'1',
                      'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
-                     'epgCache'                   :'true',
+                     'epgCache'                   :'%s'%(str(cache).lower()),
                      'genresPathType'             :'1',
                      'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
                      'logoPathType'               :'1',
@@ -775,6 +816,31 @@ class Properties(object):
         value = self.getEXTProperty('%s.SERVICE.pendingRestart'%(ADDON_ID),False)
         self.clrEXTProperty(f'{ADDON_ID}.SERVICE.pendingRestart')
         return value
+
+
+    def setPVRReloading(self, state: bool = True) -> Any:
+        """Set flag indicating a PVR backend reload cycle is in progress.
+        
+        Used by togglePVRBackend to prevent overlapping disable/enable cycles.
+        The reload runs asynchronously via timerit, so callers check this
+        flag instead of waiting for togglePVRBackend to return.
+        """
+        return self.setEXTProperty('%s.SERVICE.pvrReloading'%(ADDON_ID), state)
+
+
+    def isPVRReloading(self) -> bool:
+        """Check if a PVR backend reload cycle is currently in progress."""
+        return self.getEXTProperty('%s.SERVICE.pvrReloading'%(ADDON_ID), False)
+
+
+    def setLogDirty(self, state: bool = True) -> Any:
+        """Mark PVR log status as needing reparse on next updatePVRStatus call."""
+        return self.setEXTProperty('%s.SERVICE.logDirty'%(ADDON_ID), state)
+
+
+    def isLogDirty(self) -> bool:
+        """Check if PVR log needs reparse."""
+        return self.getEXTProperty('%s.SERVICE.logDirty'%(ADDON_ID), False)
 
 
     @contextmanager
@@ -1337,15 +1403,32 @@ class Builtin(object):
     busy_dialog = busyDialog
 
 
+    @contextmanager
+    def _locked(self, timeout: float = 3.0):
+        """Acquire the Kodi API lock with a timeout so one stuck GUI call can't
+        wedge every other thread (HTTP endpoints included) forever. Yields False
+        and skips the body when the lock can't be obtained in time."""
+        acquired = self.lock.acquire(timeout=timeout)
+        if not acquired:
+            self.log('_locked, lock busy for %.1fs, returning degraded result' % timeout, xbmc.LOGWARNING)
+        try:
+            yield acquired
+        finally:
+            if acquired:
+                self.lock.release()
+
+
     def getIdle(self) -> int:
-        with self.lock:
+        with self._locked() as ok:
+            if not ok: return 0
             try:              return int(xbmc.getGlobalIdleTime() or '0')
             except Exception: return 0
             
 
 
     def getInfoLabel(self, key: str, default: str = '', retries: int = 5) -> str:
-        with self.lock:
+        with self._locked() as ok:
+            if not ok: return default
             value   = None
             pattern = r"^[a-zA-Z0-9]+\.[a-zA-Z0-9]+(?:\(.*\))?$"
             if re.match(pattern, key):
@@ -1360,7 +1443,8 @@ class Builtin(object):
 
 
     def getInfoBool(self, key: str) -> bool:
-        with self.lock:
+        with self._locked() as ok:
+            if not ok: return False
             value   = False
             pattern = r"^[a-zA-Z0-9]+\.[a-zA-Z0-9]+(?:\(.*\))?$"
             if re.match(pattern, key):
@@ -1371,13 +1455,15 @@ class Builtin(object):
         
         
     def executewindow(self, key: str, wait: bool = False, delay: bool = False, condition: Optional[Callable] = None) -> Any:
-        with self.lock:
+        with self._locked() as ok:
+            if not ok: return False
             return self.executebuiltin(key,wait,delay,condition)
         
         
     def executebuiltin(self, key: str, wait: bool = False, delay: Optional[float] = None, condition: Optional[Callable] = None) -> Any:
         if not condition is None and not condition(): return False
-        with self.lock:
+        with self._locked() as ok:
+            if not ok: return False
             self.log('executebuiltin, key = %s, wait = %s, delay = %s, condition = %s):'%(key,wait,delay,condition))
             if delay is None: return xbmc.executebuiltin('%s'%(key),wait)
             return timerit(xbmc.executebuiltin)(delay,*(key,wait,None,condition))
@@ -1385,18 +1471,23 @@ class Builtin(object):
         
     def executescript(self, path: str, condition: Optional[Callable] = None) -> bool:
         if not condition is None and not condition(): return False
-        with self.lock:
+        with self._locked() as ok:
+            if not ok: return False
             self.log('executescript, path = %s'%(path))
             xbmc.executescript('%s'%(path))
             return True
 
 
     def executeJSONRPC(self, request: dict) -> str:
-        with self.lock:
+        with self._locked() as ok:
+            if not ok: return ''
             response = xbmc.executeJSONRPC(FileAccess.dumpJSON(request))
             self.log('executeJSONRPC\nrequest = %s'%(request))
-            self.monitor.waitForAbort(float(_globals().settings.getSetting('API_Delay')))
-            return response
+        # Throttle outside the lock: the RPC itself can block when Kodi's JSON-RPC
+        # worker is busy (e.g. EPG grid render), so holding the lock across the
+        # API_Delay sleep would wedge every other Builtin caller.
+        self.monitor.waitForAbort(float(_globals().settings.getSetting('API_Delay')))
+        return response
     
 
 
@@ -2065,11 +2156,6 @@ class Dialog(object):
                 else:                                                      path = ''
             return path, params
             
-        def __andor(params: dict = {}) -> Optional[str]:
-            enumLST = list(sorted(['and', 'or']))
-            enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Conjunction",preselect=(enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1),useDetails=False, multi=False)
-            if not enumSEL is None: return enumLST[enumSEL]
-                  
         def __order(params: dict = {}) -> Optional[str]:
             enums   = self.jsonRPC.getEnums("List.Sort",type="order") 
             enumLST = list(sorted([_f for _f in enums if _f]))
@@ -2108,13 +2194,13 @@ class Dialog(object):
         def __value(params: dict = {}, rule: dict = {}) -> Optional[list]:
             return self.getValue(params, rule)
             
-        def __getRule(params: dict = {}, rule: dict = {"field":"","operator":"","value":[]}) -> dict:
+        def __getRule(params: dict = {}, rule: dict = {"field":"","operator":"","value":[]}) -> Optional[dict]:
             enumSEL = -1
             while not self.monitor.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=_globals()._getDummyIcon(_globals()._getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
                 enumSEL = self.selectDialog(enumLST,header="Select method",preselect=-1, multi=False)
                 if not enumSEL is None: rule.update({enumLST[enumSEL].getProperty('key'):({"field":__field,"operator":__operator,"value":__value}[enumLST[enumSEL].getProperty('key')])(params,rule)})
-            return rule
+            return rule if rule.get('field') else None
             
         def __getRules(params: dict = {}) -> dict:
             enumSEL = -1
@@ -2128,20 +2214,29 @@ class Dialog(object):
                         CONLKEY = enumLST[enumSEL].getProperty('key')
                         ruleLST = params.get('rules',{}).get(CONLKEY,[])
                         while not self.monitor.abortRequested() and not CONSEL is None:
-                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),FileAccess.dumpJSON(value),icon=_globals()._getDummyIcon(str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
+                            andLST = []
+                            for idx, value in enumerate(ruleLST):
+                                andLST.append(self.listitems.buildMenuListItem('%s|'%(idx+1),FileAccess.dumpJSON(value),icon=_globals()._getDummyIcon(str(idx+1)),props={'idx':str(idx)}))
+                                andLST.append(self.listitems.buildMenuListItem('  %s'%(LANGUAGE(32280)),"",icon=ICON,props={'key':'edit','idx':str(idx),'label2':FileAccess.dumpJSON(value)}))
+                                andLST.append(self.listitems.buildMenuListItem('  %s'%(LANGUAGE(32281)),"",icon=ICON,props={'key':'delete','idx':str(idx)}))
                             andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),"",icon=ICON,props={'key':'add'}))
                             if len(ruleLST) > 0 and eparams != params: andLST.insert(1,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),"",icon=ICON,props={'key':'save'}))
                             CONSEL = self.selectDialog(andLST,header="Edit Rules",multi=False)
                             if not CONSEL is None:
-                                if   andLST[CONSEL].getProperty('key') == 'add': ruleLST.append(__getRule(params,{"field":"","operator":"","value":[]}))
+                                if   andLST[CONSEL].getProperty('key') == 'add':
+                                    rule = __getRule(params,{"field":"","operator":"","value":[]})
+                                    if rule: ruleLST.append(rule)
                                 elif andLST[CONSEL].getProperty('key') == 'save': 
                                     params.setdefault('rules',{})[CONLKEY] = ruleLST
                                     break
-                                elif sorted(FileAccess.loadJSON(andLST[CONSEL].getLabel2())) in [sorted(andd) for andd in ruleLST]:
-                                    retval = self.yesnoDialog(LANGUAGE(32175), customlabel=LANGUAGE(32176))
-                                    if retval in [1,2]: ruleLST.pop(int(andLST[CONSEL].getProperty('idx')))
-                                    if retval == 2:     ruleLST.append(__getRule(params,FileAccess.loadJSON(andLST[CONSEL].getLabel2())))
-                                else:                   ruleLST.append(__getRule(params,FileAccess.loadJSON(andLST[CONSEL].getLabel2())))
+                                elif andLST[CONSEL].getProperty('key') == 'edit':
+                                    idx  = int(andLST[CONSEL].getProperty('idx'))
+                                    rule = __getRule(params,FileAccess.loadJSON(andLST[CONSEL].getProperty('label2')))
+                                    if rule:
+                                        ruleLST.pop(idx)
+                                        ruleLST.insert(idx, rule)
+                                elif andLST[CONSEL].getProperty('key') == 'delete':
+                                    ruleLST.pop(int(andLST[CONSEL].getProperty('idx')))
             return params
 
         def __getOrder(params: dict = {}) -> dict:
@@ -2183,9 +2278,8 @@ class Dialog(object):
     def getValue(self, params: dict = {}, rule: dict = {}) -> Optional[list]:
         def __getInput() -> str:  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([_globals()._unquoteString(value) for value in rule.get('value',[])]))
         def __getBrowse() -> str: return self.browseSources(default='|'.join([_globals()._unquoteString(value) for value in rule.get('value',[])]))
-        def __getSelect() -> Any: return self.notificationDialog(LANGUAGE(32020))
-        enumLST = sorted(['Enter', 'Browse', 'Select'])
-        enumKEY = {'Enter':{'func':__getInput},'Browse':{'func':__getBrowse},'Select':{'func':__getSelect}}
+        enumLST = sorted(['Enter', 'Browse'])
+        enumKEY = {'Enter':{'func':__getInput},'Browse':{'func':__getBrowse}}
         enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
         if not enumSEL is None: return [_globals()._quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
         

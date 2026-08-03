@@ -78,7 +78,7 @@ class XSP(object):
       
 
 
-    def parseXSP(self, id: str, file: str) -> list:
+    def parseXSP(self, id: str, file: str, incExtras: Optional[bool] = None) -> list:
         def _createDXSP(tvshow: str, sort: Optional[dict] = None, operator: str = 'is') -> dict:
             if sort is None: sort = {'order':'ascending','method':'episode'}
             param = {"type":"episodes","rules":{"and":[],"or":[]},"order":{"direction":sort.get('order','ascending'),"method":sort.get('method','episode'),"ignorearticle":True,"useartistsortname":True}}
@@ -89,6 +89,8 @@ class XSP(object):
             except Exception:
                 param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":f"{operator}","value":[Globals._quoteString(tvshow)]})
             return param
+        if incExtras is None:
+            incExtras = Globals.settings.getSettingBool('Enable_Extras')
         try: 
             xml = FileAccess.open(file, "r")
             dom = parse(xml)
@@ -125,6 +127,34 @@ class XSP(object):
                     
                     self.log("[%s] parseXSP [%s], type = %s, sort = %s, paths = %s"%(id,file, type, sort, '\n'.join(paths)))
                     if len(paths) > 0: return paths
+
+                elif type.lower() == "episodes":
+                    # Episodes playlist (.xsp file): rebuild as an inline dynamic
+                    # path so extras (season 0 / episode 0) are filtered at the
+                    # JSONRPC layer instead of post-download. Bare .xsp paths hit
+                    # Files.GetDirectory with no season/episode rule.
+                    rules = {"and": []}
+                    for rule in dom.getElementsByTagName("rule"):
+                        try:
+                            field    = rule.getAttribute("field")
+                            operator = rule.getAttribute("operator")
+                            values   = []
+                            for value in rule.getElementsByTagName("value"):
+                                if value.firstChild:
+                                    values.append(Globals._unescapeString(value.firstChild.data))
+                            if field and operator and values:
+                                rules["and"].append({"field":field,"operator":operator,"value":values if len(values) > 1 else values[0]})
+                        except Exception as e: self.log("[%s] parseXSP, rule parse failed: %s"%(id,e), xbmc.LOGDEBUG)
+
+                    if not incExtras:
+                        rules["and"].extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
+                                             {"field":"episode","operator":"greaterthan","value":"0"}])
+
+                    params = {"type":"episodes","rules":rules,
+                              "order":{"direction":"ascending","method":"episode","ignorearticle":True,"useartistsortname":True}}
+                    out = 'videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(params))
+                    self.log("[%s] parseXSP [%s], type = episodes -> %s"%(id,file,out))
+                    return [out]
         except Exception as e: self.log("[%s] parseXSP [%s], failed! %s"%(id,file,e), xbmc.LOGERROR)
         return [file]
             
@@ -144,9 +174,12 @@ class XSP(object):
         
             params = FileAccess.loadJSON(params, skip_cache=True)
             params['rules'].update(filters)
-            if '-1/-1/-1/' not in path: path = '%s/-1/-1/-1/'%(path.strip('/')) #flatten xsp
+            if '-1/-1/-1/' not in path and 'recentlyadded' not in path.lower(): path = '%s/-1/-1/-1/'%(path.strip('/')) #flatten xsp
             if 'tvshows' in path:
                 if not incExtras: #hide seasons and extras
+                    # If rules is a single rule (has 'field'), wrap in 'and' first
+                    if params['rules'].get("field") and not params['rules'].get("and"):
+                        params['rules'] = {"and": [params['rules']]}
                     params['rules'].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"}, 
                                                                  {"field":"episode","operator":"greaterthan","value":"0"}])
                 else:

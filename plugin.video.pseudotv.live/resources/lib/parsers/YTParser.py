@@ -18,6 +18,8 @@
 
 from variables    import *
 from typing       import Union
+from threading    import Thread
+import variables
 
 _VIDEOID_RE  = re.compile(r'videoid\=(.*)' , re.IGNORECASE)
 _VIDEO_ID_RE = re.compile(r'video_id\=(.*)', re.IGNORECASE)
@@ -63,16 +65,80 @@ class YTParser(object):
 
 
     def _getDurationViaYDL(self, vID: str, filename: str) -> int:
+        # Run extract_info in a watchdog thread: youtube_dl can hang indefinitely on
+        # a dead endpoint regardless of socket_timeout, which would freeze the build.
+        # A 25s ceiling bounds each probe; the orphaned thread is daemon and abandoned.
+        YDL_TIMEOUT = 25.0
+        result = [0]
+        def _probe():
+            try:
+                if xbmc.getCondVisibility('System.HasAddon(script.module.youtube.dl)'):
+                    from youtube_dl import YoutubeDL
+                    LOG("YTParser: _getDurationViaYDL, [%s] file = %s"%(vID,filename))
+                    ydl = YoutubeDL({'quiet': True, 'skip_download': True, 'cookiefile': self._cookiesFile(), 'no_color': True, 'format': 'best', 'outtmpl': '%(id)s.%(ext)s', 'no-mtime': True, 'add-header': HEADER, 'socket_timeout': 10})
+                    with ydl:
+                        result[0] = ydl.extract_info("https://www.youtube.com/watch?v={vID}".format(vID=vID), download=False).get('duration',0)
+            except Exception as e:
+                LOG("YTParser: _getDurationViaYDL, [%s] failed!\n%s"%(vID,e), xbmc.LOGWARNING)
+        probe = Thread(target=_probe)
+        probe.daemon = True
+        probe.start()
+        probe.join(YDL_TIMEOUT)
+        if probe.is_alive():
+            LOG("YTParser: _getDurationViaYDL, [%s] timed out after %ss"%(vID, YDL_TIMEOUT), xbmc.LOGWARNING)
+        return result[0]
+
+
+    def _cookiesFile(self) -> str:
+        """Resolve the YouTube cookies file: a user-supplied path from settings
+        (Youtube_Cookies) if set and present, else the default generated file."""
         try:
-            if xbmc.getCondVisibility('System.HasAddon(script.module.youtube.dl)'):
-                from youtube_dl import YoutubeDL
-                LOG("YTParser: _getDurationViaYDL, [%s] file = %s"%(vID,filename))
-                ydl = YoutubeDL({'quiet': False, 'skip_download': True, 'cookiefile': FileAccess.translatePath(YOUTUBE_COOKIES), 'no_color': True, 'format': 'best', 'outtmpl': '%(id)s.%(ext)s', 'no-mtime': True, 'add-header': HEADER, 'socket_timeout': 10})
-                with ydl:
-                    return ydl.extract_info("https://www.youtube.com/watch?v={vID}".format(vID=vID), download=False).get('duration',0)
-        except Exception as e:
-            LOG("YTParser: _getDurationViaYDL, [%s] failed!\n%s"%(vID,e), xbmc.LOGWARNING)
-        return 0
+            user = (variables.Globals.settings.getSetting('Youtube_Cookies') or '').strip()
+            if user:
+                path = FileAccess.translatePath(user)
+                if FileAccess.exists(path):
+                    return path
+        except Exception:
+            pass
+        return FileAccess.translatePath(YOUTUBE_COOKIES)
+
+
+    def _youtube_cookie_md5(self) -> str:
+        """md5 of the YouTube cookies file, memoized on the file's (mtime, size).
+
+        'nocookie' when the file is missing; when it appears/changes the memo
+        refreshes and cached YouTube durations re-parse.
+        """
+        try:
+            fle = self._cookiesFile()
+            st = (os.path.getmtime(fle), os.path.getsize(fle)) if FileAccess.exists(fle) else None
+            memo = getattr(self, '_yt_cookie_md5_memo', None)
+            if memo and memo[0] == st:
+                return memo[1]
+            value = 'nocookie'
+            if st:
+                with FileAccess.open(fle, 'r') as f:
+                    value = FileAccess._getMD5(f.read())
+            self._yt_cookie_md5_memo = (st, value)
+            return value
+        except Exception:
+            return 'nocookie'
+
+
+    def _getYouTubeDuration(self, video_id: str) -> Union[int, None]:
+        """Cached YouTube duration (incl. failed 0), or None when uncached or the
+        cookies file changed (re-auth) — caller should re-parse."""
+        if not video_id: return None
+        value = variables.Globals.settings.cache.get('yt.duration.%s' % video_id, checksum=self._youtube_cookie_md5())
+        return round(value) if value is not None else None
+
+
+    def _setYouTubeDuration(self, video_id: str, duration: int) -> int:
+        """Cache a YouTube duration (incl. 0) keyed on the cookies-file md5."""
+        if video_id:
+            variables.Globals.settings.cache.set('yt.duration.%s' % video_id, round(duration),
+                                       checksum=self._youtube_cookie_md5(), expiration=datetime.timedelta(days=28))
+        return duration
 
 
     def determineLength(self, filename: str) -> Union[int, float]:
@@ -82,8 +148,13 @@ class YTParser(object):
             LOG("YTParser: determineLength, no video_id found in [%s]"%filename, xbmc.LOGWARNING)
             return 0
         LOG("YTParser: determineLength, [%s] file = %s"%(vID,filename))
+        cached = self._getYouTubeDuration(vID)
+        if cached is not None:
+            LOG('YTParser: determineLength, cached = %s'%cached)
+            return cached
         dur = self._getDurationViaYTPlugin(vID)
         if dur == 0:
             dur = self._getDurationViaYDL(vID, filename)
+        self._setYouTubeDuration(vID, dur)
         LOG('YTParser: determineLength, duration = %s'%dur)
         return dur

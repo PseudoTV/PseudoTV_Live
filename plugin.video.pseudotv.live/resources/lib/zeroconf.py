@@ -856,6 +856,7 @@ class Engine(threading.Thread):
         self.readers   = {} # maps socket to reader
         self.condition = threading.Condition()
         self.timeout   = int(Globals.settings.getSetting('API_Timeout') or "10") * 2
+        self.daemon    = True
         self.start()
 
 
@@ -957,6 +958,7 @@ class Reaper(threading.Thread):
     def __init__(self, zc: 'Zeroconf'):
         threading.Thread.__init__(self)
         self.zc = zc
+        self.daemon = True
         self.start()
 
 
@@ -990,6 +992,7 @@ class ServiceBrowser(threading.Thread):
         self.nextTime = currentTimeMillis()
         self.delay = _BROWSER_TIME
         self.list = []
+        self.daemon = True
 
         self.done = False
 

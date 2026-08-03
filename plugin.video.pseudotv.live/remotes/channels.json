@@ -3,6 +3,13 @@
     "uuid": "",
     "updated": "",
     "version": "1.0.0",
+    "plugins": [
+        {
+            "name": "",
+            "vod": [],
+            "live": []
+        }
+    ],
     "channels": [
         {
             "id": "",

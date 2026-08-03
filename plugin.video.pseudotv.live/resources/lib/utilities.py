@@ -57,21 +57,26 @@ class Utilities(object):
         if Globals.dialog.yesnoDialog('Utilities: %s ?'%( LANGUAGE(32119) if full else LANGUAGE(32120) )): 
             with Globals.builtin.busy_dialog(lock=True), Globals.properties.interruptActivity():
                 LOG('Utilities: _runCleanup, full %s'%(full))
-                files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
-                         LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"
-                         LANGUAGE(30096):GENREFLEPATH}  #"Genre"
+                # M3U/XMLTV/genres now live in the SQLite cache — "cleaning" clears
+                # the cache entries (and the in-memory XMLTV holder), not files.
+                from m3u import clearM3UCache
+                from xmltvs import clearXMLTVCache
+                clearM3UCache()
+                clearXMLTVCache()
+                Globals.settings.clrCacheSetting(GENRES_CACHE_KEY)
+                Globals.dialog.notificationDialog('%s: %s\n%s'%(LANGUAGE(32127),'M3U/XMLTV/Genres','cache'),silent=False)
+                # Best-effort removal of any physical exports (Enable_File_Export)
+                # so stale legacy files don't linger on disk.
+                for path in (M3UFLEPATH, XMLTVFLEPATH, GENREFLEPATH):
+                    try: FileAccess.delete(path)
+                    except Exception: pass
                 if full:
+                    # Clean Start also resets user config + PVR instance (Kodi-managed files)
                     instanceName = Globals.properties.getFriendlyName()
-                    files.update({LANGUAGE(32053)                :SETTINGS_FLE, #Settings.xml
-                                  f'PVR Instance: {instanceName}':Globals.settings.instances.getPVRInstancePath(instanceName)}) #IPTV Instance.xml
-                
-                for key, path in list(files.items()):
-                    if FileAccess.delete(path): 
-                        Globals.dialog.notificationDialog('%s: %s\n%s'%(LANGUAGE(32127),key.replace(': ',''),os.path.split(path)[1]),silent=False)
-                        
-                if full:
+                    for path in (SETTINGS_FLE, Globals.settings.instances.getPVRInstancePath(instanceName)):
+                        try: FileAccess.delete(path)
+                        except Exception: pass
                     Globals.settings.setCacheSetting('Utilities._runCleanup',Globals.settings.getCurrentSettings())
-                    # if Globals.settings.cache.cache.purge(): #TODO REROUTE
                     timerit(Globals.properties.setPendingRestart)(SERVICE_INTERVAL)
                 Globals.dialog.notificationDialog(LANGUAGE(32025))
 
@@ -134,7 +139,7 @@ class Utilities(object):
                 text = text.replace('- Improved'   ,'[COLOR=yellow][B]- Improved:[/B][/COLOR]')
                 text = text.replace('- Modified'   ,'[COLOR=yellow][B]- Modified:[/B][/COLOR]')
                 text = text.replace('- Enhanced'   ,'[COLOR=yellow][B]- Enhanced:[/B][/COLOR]')
-                text = text.replace('- Refactored' ,'[COLOR=yellow][B]- Refactored:[/B][/COLOR]')
+                text = text.replace('- Fixed'      ,'[COLOR=yellow][B]- Fixed:[/B][/COLOR]')
                 text = text.replace('- Refined'    ,'[COLOR=yellow][B]- Refined:[/B][/COLOR]')
                 text = text.replace('- Overhauled' ,'[COLOR=yellow][B]- Overhauled:[/B][/COLOR]')
                 text = text.replace('- Reworked'   ,'[COLOR=yellow][B]- Reworked:[/B][/COLOR]')
@@ -145,8 +150,8 @@ class Utilities(object):
                 text = text.replace('- Corrected'  ,'[COLOR=yellow][B]- Corrected:[/B][/COLOR]')
                 text = text.replace('- Proper'     ,'[COLOR=yellow][B]- Proper:[/B][/COLOR]')
                 text = text.replace('- Included'   ,'[COLOR=yellow][B]- Changed:[/B][/COLOR]')
-                text = text.replace('- Notice'     ,'[COLOR=orange][B]- Notice:[/B][/COLOR]')
-                text = text.replace('- Fixed'      ,'[COLOR=orange][B]- Fixed:[/B][/COLOR]')
+                text = text.replace('- Notice'     ,'[COLOR=yellow][B]- Notice:[/B][/COLOR]')
+                text = text.replace('- Refactored' ,'[COLOR=orange][B]- Refactored:[/B][/COLOR]')
                 text = text.replace('- Resolved'   ,'[COLOR=orange][B]- Resolved:[/B][/COLOR]')
                 text = text.replace('- Removed'    ,'[COLOR=red][B]- Removed:[/B][/COLOR]')
                 text = text.replace('- Replaced'   ,'[COLOR=red][B]- Replaced:[/B][/COLOR]')
@@ -232,7 +237,18 @@ class Utilities(object):
                 try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
                 except Exception as e: LOG("Utilities: openPositionUtil, failed! %s"%(e), xbmc.LOGERROR)
                 finally: del overlaytool
-                          
+                        
+    @staticmethod
+    def _migrateChannels(old: str = CACHE_LOC, new: str = BACKUP_LOC):
+        """Migrate channel files from old location to new backup location."""
+        old_path = os.path.join(old,CHANNELFLE)
+        new_path = os.path.join(new,CHANNELFLE)
+        if FileAccess.exists(old_path):
+            self.log('migrate, importing %s...'%(old_path))
+            if Backup().importChannels(old_path): Globals.properties.setPendingRestart(True)
+            if FileAccess.move(old_path,new_path): Globals.dialog.notificationDialog(LANGUAGE(32025))
+                  
+         
 # @threadit      
 # def _clrLibrary():
     # #elif mode == 'clear_autotune' : _clrLibrary()

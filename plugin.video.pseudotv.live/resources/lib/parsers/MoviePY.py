@@ -28,7 +28,7 @@ class MoviePY:
         Returns duration in seconds.
         """
         try:
-            from moviepy.editor import VideoFileClip
+            from moviepy import VideoFileClip
             LOG("MoviePY: determineLength %s"%(filename))
             clip = VideoFileClip(FileAccess.translatePath(filename))
             dur = int(clip.duration)

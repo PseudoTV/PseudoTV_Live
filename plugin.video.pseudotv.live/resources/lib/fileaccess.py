@@ -467,7 +467,7 @@ class VFSFile:
             return self.currentFile.close()
 
 
-    def seek(self, num_bytes: int, offset: int = 1) -> int:
+    def seek(self, num_bytes: int, offset: int = 0) -> int:
         return self.currentFile.seek(num_bytes, offset)
 
 
@@ -510,14 +510,13 @@ class FileLock:
     def __init__(self, filename: str, timeout: Optional[float] = None, delay: Optional[float] = None):
         if timeout is None: timeout = LOCK_MAX_FILE_TIMEOUT
         if delay is None: delay = LOCK_MAX_FILE_DELAY
-        self.monitor = MONITOR()
+        self.monitor     = MONITOR()
         self.thread_lock = Lock()
-        self.is_locked = False
-        _slash = '\\'
-        self.lockfile = f"{os.path.splitext(filename.strip(_slash))[0]}.lock"
-        self.timeout = timeout
-        self.delay = delay
-        self.fd = None
+        self.is_locked   = False
+        self.lockfile    = f"{os.path.splitext(filename.strip(chr(92)))[0]}.lock"
+        self.timeout     = timeout
+        self.delay       = delay
+        self.fd          = None
  
     def __del__(self):
         try:

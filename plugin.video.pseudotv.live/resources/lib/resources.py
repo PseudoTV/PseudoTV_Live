@@ -55,6 +55,7 @@ class Resources(object):
         else:
             self.imageCache = OrderedDict(Globals.settings.getCacheSetting('imageCache',default={}))
         self._logo_cache = {}
+        self._tvshows_by_title = None  # lazily built title->show index (see getTVShowLogo)
         self.seasonal    = Seasonal(service)
         self.holiday     = self.seasonal.getHoliday()
         self.openRouter  = OpenRouter(service)
@@ -136,14 +137,18 @@ class Resources(object):
 
     def _buildWebImage(self, name: Optional[str], image: Optional[str] = None, fallback: str = LOGO) -> str:
         image = Globals._cleanImage(image)
-        if name and image is None: 
-            return self._buildWebImage(None, OrderedDict(Globals.settings.getCacheSetting('imageCache', default={})).get(name), f'http://{Globals.properties.getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logo/{Globals._quoteString(name)}')
-        elif image.startswith(('image://')):
+        if name and not image: 
+            # No logo resolved yet — return the /logos/{name} endpoint. When requested,
+            # the server resolves it via getImageCache (which falls back to LOGO and
+            # queues a lookup). Avoids storing a dead placeholder.
+            return f'http://{Globals.properties.getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logos/{Globals._quoteString(name)}'
+        if not image:
+            # Dead placeholder: serve the LOGO var through the image endpoint.
+            return f'http://{Globals.properties.getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(fallback or LOGO)}'
+        if image.startswith(('image://')):
             image = f'{Globals.properties.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
         elif not image.startswith(('http','resource')):
             image = f'http://{Globals.properties.getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
-        elif fallback:
-            image = fallback
         return image
         
         
@@ -204,24 +209,39 @@ class Resources(object):
         cacheResponse = self.cache.get(cacheName)
         if not cacheResponse:
             logos = []
-            try: items = self.jsonRPC.getTVshows()
-            except Exception as e:
-                self.log(f'getTVShowLogo: getTVshows failed!\n{e}', xbmc.LOGWARNING)
+            items = self._getTVShowsReuse()
+            if items is None:
+                self.log('getTVShowLogo: getTVshows failed!', xbmc.LOGWARNING)
                 return None
-            
+
             names = self.getNames(chname, "TV Shows")
             for name in names:
-                for item in items:
-                    if name.casefold() == item.get('title','').casefold():
-                        art = item.get('art', {})
-                        for key in ['clearlogo','logo','logos','clearart','icon']:
-                            logo = art.get(key,'').replace('image://DefaultFolder.png/','').rstrip('/')
-                            if not logo: continue
-                            self.log('getTVShowLogo, found %s'%(logo))
-                            logos.append(logo)
-                            if not select: return self.cache.set(cacheName, logo, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                item = self._tvshows_by_title.get(name.casefold())
+                if item:
+                    art = item.get('art', {})
+                    for key in ['clearlogo','logo','logos','clearart','icon']:
+                        logo = art.get(key,'').replace('image://DefaultFolder.png/','').rstrip('/')
+                        if not logo: continue
+                        self.log('getTVShowLogo, found %s'%(logo))
+                        logos.append(logo)
+                        if not select: return self.cache.set(cacheName, logo, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
             if logos: cacheResponse = self.cache.set(cacheName, logos, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
+
+
+    def _getTVShowsReuse(self) -> Optional[list]:
+        """Fetch the full TV-show list once per Resources instance and index it by
+        title. getTVShowLogo is called per-channel during a build — re-fetching the
+        entire library (1237 shows x ~50 props) for every channel blows up memory.
+        """
+        if self._tvshows_by_title is None:
+            try:
+                items = self.jsonRPC.getTVshows()
+                self._tvshows_by_title = {str(item.get('title','')).casefold(): item for item in (items or []) if item.get('title')}
+            except Exception as e:
+                self.log(f'getTVShowLogo: getTVshows failed!\n{e}', xbmc.LOGWARNING)
+                self._tvshows_by_title = {}
+        return self._tvshows_by_title or None
 
 
     def getNames(self, chname: str, type: str = "Custom") -> list:
@@ -293,7 +313,18 @@ class Resources(object):
                         
                 img  = Image.open(BytesIO(bg_bytes)).convert("RGBA")
                 draw = ImageDraw.Draw(img)
-                font = ImageFont.truetype(font_path, font_size)
+                # Resolve the font through FileAccess (special:// skin fonts may not
+                # exist on Android). Fall back to PIL's bundled default font so logo
+                # generation never throws "cannot open resource".
+                font = None
+                try:
+                    real_font = FileAccess.translatePath(font_path) if font_path else ''
+                    if FileAccess.exists(real_font):
+                        font = ImageFont.truetype(real_font, font_size)
+                except Exception:
+                    font = None
+                if font is None:
+                    font = ImageFont.load_default()
                 bbox = draw.textbbox((0, 0), text, font=font)
                 text_width  = bbox[2] - bbox[0]
                 text_height = bbox[3] - bbox[1]

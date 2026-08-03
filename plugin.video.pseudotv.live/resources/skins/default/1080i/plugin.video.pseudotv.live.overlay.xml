@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<window>
+    <backgroundcolor>0x00000000</backgroundcolor>
+    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY.Running,true,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY.Running,false,10000)</onunload>
+    <controls>
+        <!-- Vignette (fullscreen overlay image) -->
+        <control type="image" id="40000">
+            <description>Vignette</description>
+            <posx>0</posx>
+            <posy>0</posy>
+            <width>auto</width>
+            <height>auto</height>
+            <aspectratio>scale</aspectratio>
+            <visible>False</visible>
+            <animation type="Visible" reversible="true">
+                <effect type="fade" start="0" end="100" time="240" delay="160"/>
+            </animation>
+            <animation type="Hidden" reversible="true">
+                <effect type="fade" start="100" end="0" time="240"/>
+            </animation>
+        </control>
+
+        <!-- OnNext group (thumbnail + text) -->
+        <control type="group" id="40001">
+            <posx>130</posx>
+            <posy>735</posy>
+            <width>960</width>
+            <itemgap>15</itemgap>
+            <orientation>vertical</orientation>
+            <visible>False</visible>
+            <animation type="Visible" reversible="false">
+                <effect type="zoom" start="80" end="100" center="130,735" delay="160" tween="back" time="240"/>
+                <effect type="fade" start="0" end="100" delay="160" time="240"/>
+            </animation>
+            <animation type="Hidden" reversible="false">
+                <effect type="zoom" start="100" end="80" center="130,735" tween="back" time="240"/>
+                <effect type="fade" start="100" end="0" time="240"/>
+            </animation>
+            <control type="image" id="40004">
+                <description>OnNext Thumbnail</description>
+                <height>135</height>
+                <width>240</width>
+                <texture border="5" fallback="fanart.jpg"/>
+                <bordersize>5</bordersize>
+                <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+                <bordertexture border="5" infill="false" colordiffuse="FF01416b">colors/white.png</bordertexture>
+                <visible>False</visible>
+            </control>
+            <control type="textbox" id="40003">
+                <description>OnNext Text</description>
+                <height>70</height>
+                <width>960</width>
+                <posy>140</posy>
+                <font>font27</font>
+                <scroll>true</scroll>
+                <textcolor>white</textcolor>
+                <shadowcolor>dimgray</shadowcolor>
+                <scrolltime>600</scrolltime>
+                <autoscroll delay="5000" time="1000">false</autoscroll>
+                <label/>
+                <visible>False</visible>
+            </control>
+        </control>
+
+        <!-- Channel Bug (watermark logo) -->
+        <control type="image" id="40005">
+            <description>Channel Bug</description>
+            <posx>1600</posx>
+            <posy>880</posy>
+            <width>128</width>
+            <height>128</height>
+            <texture fallback="logo.png"/>
+            <aspectratio>keep</aspectratio>
+            <visible>False</visible>
+            <animation type="Visible" reversible="false">
+                <effect type="fade" start="0" end="100" time="2000" delay="1000"/>
+            </animation>
+            <animation type="Hidden" reversible="false">
+                <effect type="fade" start="100" end="0" time="500"/>
+            </animation>
+        </control>
+    </controls>
+</window>
