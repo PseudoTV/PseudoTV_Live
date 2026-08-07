@@ -19,6 +19,11 @@
 from variables    import *
 from typing import Union
 
+# hachoir parses local file streams only — smb:// and nfs:// are converted to
+# UNC via FileAccess.localizePath; other un-localizable protocols are skipped.
+_REMOTE_PREFIXES = ('dav://', 'davs://', 'ftp://', 'http://', 'https://',
+                    'upnp://', 'plugin://', 'pvr://', 'stack://')
+
 class Hachoir:
 
 
@@ -27,19 +32,20 @@ class Hachoir:
         Determines video length using Hachoir metadata.
         Returns duration in seconds.
         """
+        local = FileAccess.localizePath(filename)
+        if local.lower().startswith(_REMOTE_PREFIXES):
+            return 0
         try:
             meta = {}
             from hachoir.parser   import createParser
             from hachoir.metadata import extractMetadata
             LOG("Hachoir: determineLength %s"%(filename))
-            
-            file_obj = FileAccess.open(filename, 'rb')
-            parser = createParser(file_obj)
+
+            parser = createParser(local)
             if not parser:
                 raise Exception('Unable to create parser')
             
             meta = extractMetadata(parser)
-            file_obj.close()
             
             if not meta:
                 raise Exception('No metadata found')

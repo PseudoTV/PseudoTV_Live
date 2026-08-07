@@ -16,30 +16,82 @@ msgstr ""
 "Language: ja_jp\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgctxt "#32279"
-msgid "No content available - check channel configuration"
-msgstr "コンテンツがありません - チャンネル設定を確認してください"
+msgctxt "#32118"
+msgid "Clean Start"
+msgstr "クリーンスタート"
 
-msgctxt "#32276"
-msgid "Failed to save to remote server."
-msgstr "リモートサーバーへの保存に失敗しました。"
+msgctxt "#32119"
+msgid "Clear M3U/XMLTV/Genres cache and reset settings/PVR configuration"
+msgstr "M3U/XMLTV/ジャンルのキャッシュをクリアし、設定/PVR構成をリセット"
 
-msgctxt "#32277"
-msgid "No Guide Data - Check Back Later"
-msgstr "ガイドデータがありません - 後で確認してください"
-
-msgctxt "#32278"
-msgid "Enable automatic PVR reload? This lets PseudoTV Live refresh channels and guide data when they change. Without it, you must manually reload the PVR."
-msgstr "自動PVRリロードを有効にしますか？これにより、PseudoTV Liveはチャンネルとガイドデータが変更されたときに自動的に更新されます。無効にすると、手動でPVRをリロードする必要があります。"
+msgctxt "#34068"
+msgid "Saving data, please wait..."
+msgstr "データを保存中、お待ちください..."
 
 msgctxt "#32281"
 msgid "- Delete Rule"
 msgstr "- ルールを削除"
 
+msgctxt "#34181"
+msgid "Write pseudotv.m3u, pseudotv.xml and genres.xml to the cache folder. Disabled by default: the guide and playlist are served from the SQLite cache, which is faster and avoids file-write races. Enable only if you use a local-file PVR (iptvsimple) configuration or need the files for external tools."
+msgstr "pseudotv.m3u、pseudotv.xml、genres.xmlをキャッシュフォルダに書き出します。デバイルト: ガイドとプレイリストはSQLiteキャッシュから提供され、より高速でファイル書き込み競合を回避します。ローカルファイルPVR（iptvsimple）構成を使用する場合、または外部ツールにファイルが必要な場合のみ有効にしてください。"
+
+msgctxt "#30062"
+msgid "Adjust Seek Threshold (Percentage)"
+msgstr "シークしきい値の調整（パーセンテージ）"
+
+msgctxt "#32278"
+msgid "Enable automatic PVR reload? This lets PseudoTV Live refresh channels and guide data when they change. Without it, you must manually reload the PVR."
+msgstr "PVRの自動リロードを有効にしますか？これにより、PseudoTV Liveはチャンネルとガイドデータの変更時に自動で更新します。無効にすると、PVRの手動リロードが必要になります。"
+
+msgctxt "#32117"
+msgid "Clear M3U/XMLTV/Genres cache"
+msgstr "M3U/XMLTV/ジャンルのキャッシュをクリア"
+
+msgctxt "#32277"
+msgid "No Guide Data"
+msgstr "ガイドデータなし"
+
+msgctxt "#33065"
+msgid "Path to a YouTube cookies.txt exported from a logged-in browser session (Netscape format). YouTube bot-checks anonymous yt-dlp requests; a valid session cookie (SID/HSID/SSID) avoids it so video durations resolve. Leave empty to use the addon's generated cookie file."
+msgstr "ログイン済みブラウザセッションからエクスポートしたYouTube cookies.txtへのパス（Netscape形式）。YouTubeは匿名のyt-dlpリクエストをボットチェックします。有効なセッションCookie（SID/HSID/SSID）を使用するとこれを回避でき、動画の再生時間を解決できます。アドオン生成のCookieファイルを使用する場合は空のままにしてください。"
+
+msgctxt "#32279"
+msgid "No content available - check channel configuration"
+msgstr "コンテンツが利用できません - チャンネル構成を確認してください"
+
+msgctxt "#30500"
+msgid "YouTube Cookies File"
+msgstr "YouTubeクッキーファイル"
+
+msgctxt "#33063"
+msgid "Group EPG guide entries by category type in XMLTV output. [Default: Disabled]"
+msgstr "XMLTV出力でEPGガイドエントリをカテゴリタイプ別にグループ化します。[デフォルト: 無効]"
+
+msgctxt "#32276"
+msgid "Failed to save to remote server."
+msgstr "リモートサーバーへの保存に失敗しました。"
+
+msgctxt "#33064"
+msgid "Enter custom guide data categories for use in the channel manager."
+msgstr "チャンネルマネージャーで使用するカスタムガイドデータカテゴリを入力してください。"
+
+msgctxt "#32120"
+msgid "Clear M3U/XMLTV/Genres cache entries"
+msgstr "M3U/XMLTV/ジャンルのキャッシュエントリをクリア"
+
+msgctxt "#34180"
+msgid "Export M3U/XMLTV/genres files"
+msgstr "M3U/XMLTV/ジャンルファイルをエクスポート"
+
+msgctxt "#32121"
+msgid "Force {name} to reload"
+msgstr "{name}の強制リロード"
+
+msgctxt "#30061"
+msgid "Playback Seek Tolerance (Seconds)"
+msgstr "再生シーク許容値（秒）"
+
 msgctxt "#32280"
 msgid "- Edit Rule"
 msgstr "- ルールを編集"
-
-msgctxt "#34068"
-msgid "Saving data, please wait..."
-msgstr "データを保存中、お待ちください..."

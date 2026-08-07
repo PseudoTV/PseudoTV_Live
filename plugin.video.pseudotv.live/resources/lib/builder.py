@@ -242,8 +242,8 @@ class Builder(object):
                             elif self.service.suspend():
                                 self.log(f"[{citem.get('id')}] buildChannels, _suspend")
                                 self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
-                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
-                                break
+                                if self.monitor.waitForAbort(0.5): break
+                                continue
                                 
                             citem = self.runActions(RULES_ACTION_CHANNEL_TEMP_CITEM, citem, citem, inherited=self)
                             raw_start = all_stop_times.get(citem.get('id'), fallback_epoch)
@@ -283,13 +283,17 @@ class Builder(object):
                             if not _update:
                                 self.log(f"[{citem.get('id')}] buildChannels, guide sufficient, skipping ({start_timestamp_str})", xbmc.LOGDEBUG)
 
-                            # Clamp only when scheduling a rebuild: a stale guide from a
-                            # prior build can leave a last-stop ahead of now, which would
-                            # schedule the channel hours ahead and leave the guide empty.
-                            if _update and start_epoch > fallback_epoch:
+                            # Re-anchor to now only when the guide is stale (its last
+                            # programme ended in the past, so it no longer covers now).
+                            # Continuing from a future last-stop extends the existing
+                            # timeline, preserving programme start times — clamping a
+                            # valid future schedule back to now truncated it and
+                            # re-anchored every programme, so the guide shifted between
+                            # builds (Kodi's ingested EPG no longer matched playback).
+                            if _update and start_epoch < fallback_epoch:
                                 start_epoch = fallback_epoch
                                 start_timestamp_str = Globals._epochTime(fallback_epoch, tz=False).strftime(DTFORMAT)
-                                self.log(f"[{citem.get('id')}] buildChannels, future start clamped to {start_timestamp_str}", xbmc.LOGWARNING)
+                                self.log(f"[{citem.get('id')}] buildChannels, stale guide re-anchored to {start_timestamp_str}", xbmc.LOGWARNING)
 
                             self.log(f"[{citem.get('id')}] Schedule delta audit -> Update Required: {_update} | Target End: {start_timestamp_str}")
 
@@ -323,6 +327,12 @@ class Builder(object):
                                     epg.delBroadcast(citem)
                                     citem['changed'] = False
                                     changes.add(self.channels.addChannel(citem))
+                                    # The old guide was wiped above — anchor the rebuild
+                                    # to now, NOT the deleted guide's (now stale) last-stop.
+                                    # Continuing from that future last-stop re-anchored the
+                                    # channel into the future and left today's guide empty.
+                                    start_epoch = fallback_epoch
+                                    start_timestamp_str = fallback_str
 
                             if _update or _changed:                       
                                     self.pMSG = LANGUAGE(32236) if preview else (f"{LANGUAGE(30014)} {LANGUAGE(30108) if len(channels) else LANGUAGE(30223)}" if start_timestamp_str == fallback_str else f"{LANGUAGE(32022)} {LANGUAGE(30223)}")
@@ -339,6 +349,9 @@ class Builder(object):
                                 elif isinstance(fileList, list) and fileList:
                                     total_dur = sum(item.get('duration', 0) for item in fileList if isinstance(item, dict))
                                     self.log(f"[{citem.get('id')}] buildChannels, assigning time slots to {len(fileList)} items, total duration = {total_dur}s ({total_dur // 3600}h {(total_dur % 3600) // 60}m)")
+                                    # Pre-schedule hook: rules (e.g. Prime-Time Block) may
+                                    # reorder the queue before start/stop are stamped.
+                                    fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self) or fileList
                                     for s_idx, item in enumerate(fileList):
                                         duration = item.get('duration')
                                         if not duration: continue
@@ -430,12 +443,12 @@ class Builder(object):
         tmp_citem = citem.copy()
         tmp_citem['rules'] = dict(citem.get('rules', {}))
         if paths == ["{Seasonal}"]:
-            nrules = {800: {"values": {0: list(self.seasonal.buildSeasonal(self.holiday))}}}
+            nrules = {600: {"values": {0: list(self.seasonal.buildSeasonal(self.holiday))}}}
             tmp_citem['rules'].update(nrules)
             self.log(f" [{citem.get('id')}] buildVideo: Seasonal Content, new rules = {nrules}")
             
-        if self.enableEven and not tmp_citem.get('rules', {}).get(1000):
-            nrules = {1000: {"values": {0: Globals.settings.getSettingInt('Enable_Even'), 1: self.evenEpisode, 2: self.evenShuffle}}}
+        if self.enableEven and not tmp_citem.get('rules', {}).get(701):
+            nrules = {701: {"values": {0: Globals.settings.getSettingInt('Enable_Even'), 1: self.evenEpisode, 2: self.evenShuffle}}}
             tmp_citem['rules'].update(nrules)
             self.log(f" [{citem.get('id')}] buildVideo: Even Show Distribution, new rules = {nrules}")
             
@@ -453,7 +466,8 @@ class Builder(object):
                 elif self.service.suspend():
                     self.log(f"[{citem.get('id')}] buildVideo, _suspend")
                     self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
-                    return None
+                    if self.monitor.waitForAbort(0.5): return None
+                    continue
                 
                 if path_len > 1: self.pName = f"{citem.get('name', '')} {idx + 1}/{path_len}"
                 sub_paths = self.xsp.parseXSP(citem.get('id'), base_path, self.incExtras) if self.xsp.isXSP(base_path) else [base_path]
@@ -523,8 +537,8 @@ class Builder(object):
             elif self.service.suspend():
                 self.log(f"[{citem.get('id')}] buildFileList, _suspend")
                 self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32145)}", header=self.pHeader)
-                if not self.service.sleep(CPU_CYCLE): 
-                    continue
+                if self.monitor.waitForAbort(0.5): return []
+                continue
             
             elif len(dirList) == 0 or dirCount >= self.recursiveLimit:
                 list_len = len(fileList)
@@ -624,7 +638,7 @@ class Builder(object):
         tv_tuple  = tuple(TV_TYPES) if 'TV_TYPES' in globals() else ()
         
         holiday   = None
-        holiday_values = citem.get('rules', {}).get(800, {}).get('values', {}).get(0, [])
+        holiday_values = citem.get('rules', {}).get(600, {}).get('values', {}).get(0, [])
         if holiday_values and isinstance(holiday_values, list):
             holiday = holiday_values[0].get('holiday') if isinstance(holiday_values[0], dict) else None
 

@@ -44,6 +44,7 @@ class Player(xbmc.Player):
         self.lastSubState   = False
         self.background     = None
         self.overlay        = None
+        self._overlay_lock  = Lock()  # serializes overlay open/close (prevents logo stacking)
         self.replay         = None
         self.runActions     = None
         self.playingThread  = None
@@ -86,7 +87,6 @@ class Player(xbmc.Player):
 
     def onAVChange(self):
         self.log(f"onAVChange: playingItem={self.playingItem}")
-        # self._onCheckpoint(self.playingItem)
         self.pool.submit(self._onCheckpoint,self.playingItem)
                    
                    
@@ -98,21 +98,18 @@ class Player(xbmc.Player):
     def onPlayBackError(self):
         self.pendingItem.update({'invoked': -1, 'pending': False, 'last': self.playingItem})
         self.log("onPlayBackError", xbmc.LOGERROR)
-        # self._onError(self.playingItem)
         self.pool.submit(self._onError,self.playingItem)
         
         
     def onPlayBackEnded(self):
         self.pendingItem.update({'invoked': -1, 'pending': False, 'item': {}, 'last': self.playingItem})
         self.log("onPlayBackEnded")
-        # self._onChange(self.playingItem)
         self.pool.submit(self._onChange,self.playingItem)
         
         
     def onPlayBackStopped(self):
         self.pendingItem.update({'invoked': -1, 'pending': False, 'playing': False, 'item': {}, 'last': {}})
         self.log("onPlayBackStopped")
-        # self._onStop(self.playingItem)
         self.pool.submit(self._onStop,self.playingItem)
 
 
@@ -139,6 +136,7 @@ class Player(xbmc.Player):
         except Exception as e: 
             self.log(f"getplayingItem compilation failed: {str(e)}", xbmc.LOGERROR)
             return {}
+            
             
     def getPlayerItem(self) -> xbmcgui.ListItem:
         try:
@@ -205,7 +203,6 @@ class Player(xbmc.Player):
         self.showSubtitles(state)
   
   
-    # @debounceit(OSD_TIMER)
     def _onCheckpoint(self, playingItem: Optional[dict] = None):
         self.log("_onCheckpoint, playingItem")
         if playingItem is None: playingItem = {}
@@ -221,32 +218,26 @@ class Player(xbmc.Player):
 
 
     def _onPlaying(self):
-        _remaining = floor(self.getRemainingTime())
-        self.log(f"_onPlaying, _remaining {_remaining}")
-        # if _remaining > (OSD_TIMER * 2): return
         if self.enableOverlay:
-            self.toggleBackground(True)
-            _played = ceil(self.getPlayedTime())
-            self.log(f"_onPlaying, _played {_played}")
-            if _played > self.minDuration: 
-                self.toggleOverlay(True)
-            if self.overlay is not None:
-                # refresh overlay when playback advanced to a new
-                # program/channel — the overlay caches citem/fitem/nitem at build,
-                # so without this the channel bug logo and on-next row go stale.
-                cur_fitem = self.playingItem.get('fitem', {})
-                if cur_fitem.get('file') and cur_fitem.get('file') != self.overlay.fitem.get('file'):
-                    self.overlay.updatePlayingItem(self.playingItem)
-                total_time = int(self.getPlayerTime() * (self.maxProgress / 100))
-                self.log(f"_onPlaying, total_time {total_time}")
-                threshold  = abs((total_time - (total_time * 0.75)) - (ONNEXT_TIMER * 3))
-                if _played > self.minDuration and (threshold >= _remaining >= Globals._roundupDIV(threshold, 3)):
-                    self.overlay.showOnNext()
-        else:
-            self.toggleBackground(False)
-            self.toggleOverlay(False)
-
-
+            _remaining = floor(self.getRemainingTime())
+            # Negative remaining = live/unknown-duration stream (Duration 0) — no
+            # end to transition to, so leave overlay/background untouched.
+            if 0 <= _remaining < (OSD_TIMER * 2):
+                self.log(f"_onPlaying, _remaining {_remaining}")
+                self.toggleOverlay(False)
+                self.toggleBackground(True)
+            elif _remaining >= (OSD_TIMER * 2):
+                self.toggleBackground(False)
+                _played = ceil(self.getPlayedTime())
+                if _played > self.minDuration: 
+                    if self.overlay is None:
+                        self.log(f"_onPlaying, _played {_played}")
+                        self.toggleOverlay(True)
+                    else:
+                        self.toggleOnNext(True)
+                else: self.toggleOverlay(False)
+                
+                
     def _onPlay(self, playingItem: Optional[dict] = None):
         if playingItem is None: playingItem = {}
         self.log("_onPlay")
@@ -259,10 +250,6 @@ class Player(xbmc.Player):
         
         if playingItem.get('isPseudoTV'):
             oldInfo = self.playingItem
-            if self.jsonRPC:
-                self.jsonRPC.quePlaycount(oldInfo.get('fitem', {}), self.rollbackPlaycount)
-                self.jsonRPC._setRuntime(playingItem.get('fitem', {}), playingItem.get('fitem', {}).get('runtime'), self.saveDuration)
-
             newChan = oldInfo.get('chid', 'unknown') != playingItem.get('chid','unavailable')
             if newChan:
                 self.runActions  = RulesList([playingItem.get('citem', {})]).runActions
@@ -270,14 +257,6 @@ class Player(xbmc.Player):
                 Globals.properties.setTrakt(self.disableTrakt)
                 self.setSubtitles(self.lastSubState)
                 self.toggleReplay(bool(self.replayPercentage))
-                
-                # if self.playingThread is not None and self.playingThread.is_alive():
-                    # self.playingStopped.set()
-                    # self.playingThread.join(timeout=1.0)
-                    
-                # self.playingStopped.clear()
-                # self.playingThread = Thread(target=self.monitor._onPlay, daemon=True)
-                # self.playingThread.start()
             else:
                 self.playingItem = playingItem
                 if playingItem.get('radio', False): 
@@ -287,11 +266,24 @@ class Player(xbmc.Player):
                     Globals.builtin.executewindow('ReplaceWindow(fullscreenvideo)')
             self.toggleInfo(self.infoOnChange)   
             
-            if not self.playingItem.get('callback') and self.jsonRPC:
-                self.playingItem['callback'] = self.jsonRPC.getCallback(self.playingItem)
-                Globals.properties.setProperty('lastPlayed.sysInfo', self.playingItem)
-                   
-                   
+            if self.jsonRPC:
+                self.jsonRPC.quePlaycount(oldInfo.get('fitem', {}), self.rollbackPlaycount)
+                self.jsonRPC._setRuntime(playingItem.get('fitem', {}), playingItem.get('fitem', {}).get('runtime'), self.saveDuration)
+                if not self.playingItem.get('callback'):
+                    self.playingItem['callback'] = self.jsonRPC.getCallback(self.playingItem)
+                    Globals.properties.setProperty('lastPlayed.sysInfo', self.playingItem)
+            
+            # The _onPlaying timer loop self-terminates when playback pauses between
+            # content changes (isPlaying() goes False), so restart it whenever a
+            # PseudoTV item is playing and no loop is alive — not just on channel
+            # changes. Otherwise onnext/overlay/background tracking stops after the
+            # first content of a channel.
+            if self.playingThread is None or not self.playingThread.is_alive():
+                self.playingStopped.clear()
+                self.playingThread = Thread(target=self.monitor._onPlay, daemon=True)
+                self.playingThread.start()
+                    
+                    
     def _onChange(self, playingItem: Optional[dict] = None):
         self.log("_onChange")
         if playingItem is None: playingItem = {}
@@ -299,7 +291,10 @@ class Player(xbmc.Player):
         if playingItem:
             if not playingItem.get('isPlaylist', False):
                 self.toggleBackground(self.enableOverlay)
-                Globals.builtin.executebuiltin(f"PlayMedia({playingItem.get('callback')})")
+                # Prefer direct PVR playback by channelid (reliable channel targeting);
+                # fall back to the resolved pvr:// path when the channel can't be matched.
+                if not (self.jsonRPC and self.jsonRPC.playChannel(playingItem)):
+                    Globals.builtin.executebuiltin(f"PlayMedia({playingItem.get('callback')})")
             self._runActions(RULES_ACTION_PLAYER_CHANGE, playingItem.get('citem', {}), playingItem, inherited=self)
         else:
             self.toggleBackground(False)
@@ -368,30 +363,50 @@ class Player(xbmc.Player):
 
     def toggleOverlay(self, state: bool = False):
         self.log(f"toggleOverlay, state = {state}")
-        try:
-            if state and self.overlay is None:
-                self.overlay = Overlay(OVERLAY_XML, ADDON_PATH, "default", "1080i", service=self.service)
-                self.overlay.open()
-            elif not state:
-                if hasattr(self.overlay, 'close'): self.overlay.close()
-                self.overlay = None
-        except Exception as e: self.log(f"toggleOverlay, failed: {e}", xbmc.LOGERROR)
+        # Serialize open/close: rapid channel switches call toggleOverlay from
+        # different threads, so a new Overlay can be created while the previous
+        # one is still tearing down — its channel-bug control on the Fullscreen
+        # Video window (12005) isn't removed yet and logos stack. The lock makes
+        # a close fully complete (controls removed) before the next open.
+        with self._overlay_lock:
+            try:
+                if state and self.overlay is None:
+                    self.overlay = Overlay(OVERLAY_XML, ADDON_PATH, "default", "1080i", service=self.service)
+                    if hasattr(self.overlay, 'show'): self.overlay.show()
+                elif not state:
+                    if hasattr(self.overlay, 'close'): self.overlay.onClose()
+                    self.overlay = None
+            except Exception as e: self.log(f"toggleOverlay, failed: {e}", xbmc.LOGERROR)
+
+
+    def toggleOnNext(self, state: bool = False):
+        self.log(f"toggleOnNext, state = {state}")
+        # if not self.overlay is None:
+            # cur_fitem = self.playingItem.get('fitem', {})
+            # if cur_fitem.get('file') and cur_fitem.get('file') != self.overlay.fitem.get('file'):
+                # self.overlay.update(self.playingItem)
+                                
+            # total_time = int(self.getPlayerTime() * (self.maxProgress / 100))
+            # threshold = abs((total_time - (total_time * 0.75)) - (ONNEXT_TIMER * 3))
+            # if (threshold >= _remaining >= Globals._roundupDIV(threshold, 3)):
+                # self.log(f"toggleOnNext, total_time {total_time}")
+                # self.overlay.showOnNext()
 
 
     # @debounceit(OSD_TIMER)
     def toggleReplay(self, state: bool = False):
         self.log(f"toggleReplay, state = {state}")
-        if state and self.replay is None:
-            self.replay = Replay(REPLAY_XML, ADDON_PATH, "default", "1080i", service=self.service)
-            if   hasattr(self.replay, 'show_dialog'): self.replay.show_dialog()
-            elif hasattr(self.replay, 'doModal'):     self.replay.doModal()
-        elif not state:
-            if   hasattr(self.replay, 'onClose'): self.replay.onClose()
-            elif hasattr(self.replay, 'close'):   self.replay.close()
-            self.replay = None
+        # if state and self.replay is None:
+            # self.replay = Replay(REPLAY_XML, ADDON_PATH, "default", "1080i", service=self.service)
+            # if   hasattr(self.replay, 'show_dialog'): self.replay.show_dialog()
+            # elif hasattr(self.replay, 'doModal'):     self.replay.doModal()
+        # elif not state:
+            # if   hasattr(self.replay, 'onClose'): self.replay.onClose()
+            # elif hasattr(self.replay, 'close'):   self.replay.close()
+            # self.replay = None
 
 
-    # @debounceit(OSD_TIMER)
+    @debounceit(OSD_TIMER)
     def toggleInfo(self, state: bool = False):
         self.log(f"toggleInfo, state = {state}")
         if state and not Globals.builtin.getInfoBool('Window.IsVisible(fullscreeninfo)'):
@@ -401,6 +416,7 @@ class Player(xbmc.Player):
             if Globals.builtin.getInfoBool('Window.IsVisible(fullscreeninfo)'):
                 Globals.builtin.executebuiltin('Action(back)')
             Globals.builtin.executebuiltin('Globals.dialog.Close(fullscreeninfo)')
+           
            
 class Monitor(xbmc.Monitor):
     def __init__(self, service: 'Service'):
@@ -412,6 +428,7 @@ class Monitor(xbmc.Monitor):
         self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.player     = Player(monitor=self, service=service)
+        self._play_lock = Lock()  # serializes _onPlay loops across content changes
         LOG(f"Monitor: Player created = {self.player is not None}")
         
         
@@ -421,14 +438,17 @@ class Monitor(xbmc.Monitor):
 
     def _onPlay(self):
         self.log("_onPlay, started")
-        while not self.abortRequested() and not self.player.playingStopped.is_set():
-            # if self.service._shutdown(0.5): break
-            if not self.player.isPlayingPseudoTV(): break
-            if self.waitForAbort(0.5): break
-            self.log("_onPlay, loop")
-            self.player.pool.submit(self.player._onPlaying)
-        self.log("_onPlay, stopped")
-            
+        # Serialize the timer loop: if a previous loop is still winding down (its
+        # overlay/background close hasn't completed), block here until it fully
+        # exits before starting again — otherwise the new loop opens the overlay
+        # while the previous one is still closing.
+        with self._play_lock:
+            while not self.abortRequested() and not self.player.playingStopped.is_set():
+                if not self.player.isPlayingPseudoTV(): break
+                if self.waitForAbort(0.5): break
+                self.log("_onPlay, loop")
+                self.player._onPlaying()
+            self.log("_onPlay, stopped")
 
     def _onIdle(self):
         #chkidle

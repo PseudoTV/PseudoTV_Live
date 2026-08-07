@@ -24,6 +24,7 @@ from m3u         import M3U
 from seasonal    import Seasonal
 from typing       import Generator, Optional
 from fileaccess  import FileAccess, FileLock
+import ratings
 
 _ERROR_RE = re.compile(r'line\ (.*?),\ column\ (.*)', re.IGNORECASE)
 
@@ -43,6 +44,241 @@ _PROG_TABLE_READY = False
 # repeated _save calls with the same categories skip the recompute entirely.
 _DEFAULT_GENRES = None
 _GENRE_SIG = None
+
+
+# Curated Kodi-genre -> DVB genreId overrides and gap-fillers. Consulted before the
+# DVB synonym/word index so ambiguous words (e.g. 'classical' -> music, not history)
+# and Kodi-specific genres absent from the ETSI list ('anime', 'reality', 'mystery',
+# 'sitcom', 'basketball') resolve to the colour that matches user expectation rather
+# than ETSI document order.
+_GENRE_ALIASES = {
+    'movie': '0x10', 'drama': '0x10', 'action': '0x12', 'adventure': '0x12', 'western': '0x12', 'war': '0x12',
+    'crime': '0x11', 'detective': '0x11', 'mystery': '0x11', 'thriller': '0x11', 'suspense': '0x11', 'police': '0x11',
+    'scifi': '0x13', 'sci-fi': '0x13', 'science-fiction': '0x13', 'fantasy': '0x13', 'horror': '0x13', 'supernatural': '0x13', 'paranormal': '0x13',
+    'comedy': '0x14', 'sitcom': '0x14', 'stand-up': '0x14', 'standup': '0x14', 'sketch': '0x14',
+    'soap': '0x15', 'romance': '0x16', 'history': '0x17', 'historical': '0x17', 'classic': '0x17', 'classics': '0x17',
+    'biography': '0x83', 'biographical': '0x83', 'documentary': '0x23', 'news': '0x20', 'weather': '0x21', 'current-affairs': '0x20', 'information': '0x20',
+    'talk': '0x33', 'talk-show': '0x33', 'interview': '0x24', 'debate': '0x24', 'discussion': '0x24',
+    'game-show': '0x31', 'quiz': '0x31', 'contest': '0x31', 'game': '0x31', 'reality': '0x30', 'variety': '0x32', 'show': '0x30',
+    'sport': '0x40', 'sports': '0x40', 'football': '0x43', 'soccer': '0x43', 'rugby': '0x43', 'basketball': '0x45', 'baseball': '0x45', 'cricket': '0x45',
+    'hockey': '0x49', 'tennis': '0x44', 'squash': '0x44', 'golf': '0x40', 'boxing': '0x4B', 'mma': '0x4B', 'ufc': '0x4B', 'wrestling': '0x4B', 'martial': '0x4B',
+    'racing': '0x47', 'motorsport': '0x47', 'motoring': '0xA3', 'nascar': '0x47', 'formula': '0x47', 'athletics': '0x46', 'swimming': '0x48', 'skiing': '0x49', 'equestrian': '0x4A',
+    'kids': '0x50', 'children': '0x50', 'family': '0x50', 'cartoon': '0x55', 'cartoons': '0x55', 'animation': '0x55', 'anime': '0x55', 'preschool': '0x51', 'youth': '0x50',
+    'music': '0x60', 'musical': '0x65', 'opera': '0x65', 'broadway': '0x65', 'jazz': '0x64', 'rock': '0x61', 'pop': '0x61', 'classical': '0x62', 'country': '0x63', 'folk': '0x63',
+    'rap': '0x61', 'hip-hop': '0x61', 'hiphop': '0x61', 'dance': '0x60', 'electronic': '0x61', 'edm': '0x61', 'reggae': '0x63', 'blues': '0x61', 'r&b': '0x61', 'metal': '0x61', 'punk': '0x61',
+    'art': '0x70', 'arts': '0x70', 'culture': '0x70', 'fashion': '0x7B', 'literature': '0x75', 'poetry': '0x75', 'film': '0x76', 'cinema': '0x76', 'performing': '0x71',
+    'politics': '0x80', 'political': '0x80', 'economics': '0x82', 'finance': '0x82', 'business': '0x82', 'social': '0x80',
+    'education': '0x90', 'educational': '0x90', 'science': '0x90', 'nature': '0x91', 'animals': '0x91', 'wildlife': '0x91', 'environment': '0x91',
+    'technology': '0x92', 'tech': '0x92', 'medicine': '0x93', 'medical': '0x93', 'psychology': '0x93', 'space': '0x92', 'astronomy': '0x92',
+    'leisure': '0xA0', 'hobby': '0xA0', 'hobbies': '0xA0', 'travel': '0xA1', 'tourism': '0xA1', 'cooking': '0xA5', 'food': '0xA5', 'gardening': '0xA7',
+    'fitness': '0xA4', 'health': '0xA4', 'cars': '0xA3', 'auto': '0xA3', 'craft': '0xA2', 'shopping': '0xA6',
+    'religion': '0x73', 'religious': '0x73', 'spiritual': '0x95', 'adult': '0x18', 'mature': '0x18', 'erotic': '0x18',
+    'live': '0xB3', 'special': '0xB0', 'black-and-white': '0xB1', 'local': '0xB5', 'regional': '0xB5',
+}
+
+# Lazy-built reverse index over remotes/genres.xml:
+#   'exact': {synonym.lower(): genreId}  (first synonym wins)
+#   'tokens': {word: genreId}            (words len>=3; later wins)
+#   'by_id': {genreId: canonical entry}
+_GENRE_INDEX = None
+
+
+# =========================================================================
+# HTTP serve helpers — filtered M3U / XMLTV / genres rendering + grouping.
+# Kept here (not server.py) because XMLTVS already has both M3U and XMLTV
+# class access; the HTTP handler just wires in the channel list + rule
+# dispatcher. pvr.iptvsimple polls these repeatedly, so rendered bytes are
+# cached keyed by the data version tokens + grouping state.
+# =========================================================================
+_M3U_RENDER_CACHE = {'sig': None, 'data': None}
+_XMLTV_RENDER_CACHE = {'sig': None, 'data': None}
+
+
+def m3u_render_signature() -> tuple:
+    """Signature of the data the filtered M3U depends on.
+
+    M3U/XMLTV live in the SQLite cache, so the render cache keys off the data
+    version tokens rather than file mtime/size. A data write bumps the token
+    and invalidates the render; nothing else does.
+    """
+    def _sig(key: str, field: str):
+        try:
+            v = Globals.settings.getCacheSetting(key) or {}
+            return v.get(field)
+        except Exception:
+            return None
+    return (_sig(M3U_CACHE_KEY, 'version'), _sig(XMLTV_META_KEY, 'version'), Globals.getChannelKey(),
+            Globals.settings.getSetting('Enable_Grouping'))
+
+
+def xmltv_render_signature() -> tuple:
+    """Signature of the data the served XMLTV depends on.
+
+    Same inputs as the M3U render signature (XMLTV + M3U + channels.json +
+    grouping state) so both caches invalidate together — the served XMLTV
+    mirrors the filtered M3U, so a change in channels.json, the M3U or the
+    grouping toggle must re-render it too.
+    """
+    return m3u_render_signature()
+
+
+def applyGrouping(stations: list, channels: list) -> list:
+    """On-the-fly channel grouping for the served M3U.
+
+    Re-runs the same grouping rules the builder applies (_cleanGroups) on the
+    served station set so toggling Enable_Grouping — or editing a channel's
+    group/favorite/type — takes effect on the next HTTP poll without a rebuild.
+    """
+    if not isinstance(stations, list):
+        return stations
+    chans = {c.get('id'): c for c in channels if c.get('id')}
+    for station in stations:
+        citem = chans.get(station.get('id'))
+        if not citem: continue
+        Globals._cleanGroups(citem)  # reflects Enable_Grouping on/off + favorite/type/genre
+        if citem.get('group'):
+            station['group'] = list(citem['group'])
+    return stations
+
+
+def renderFilteredM3U(channels: list, runActions) -> bytes:
+    """Get filtered M3U content using M3U class render() + filter pipeline.
+
+    Rendered output is cached keyed by source file mtimes — pvr.iptvsimple
+    polls the M3U repeatedly during builds, and each render otherwise
+    re-parses the full M3U + XMLTV + channels.json (3-pass parse of a 7MB+ file).
+    """
+    global _M3U_RENDER_CACHE
+    sig = m3u_render_signature()
+    if _M3U_RENDER_CACHE['sig'] == sig:
+        return _M3U_RENDER_CACHE['data']
+    from io import BytesIO
+    m3u = M3U()
+    # runActions dispatches by citem['id'] — iterate every configured channel to
+    # let its M3U_FILTER rule act (each receives the list from the previous one).
+    def _filter(stations):
+        for citem in channels:
+            stations = runActions(RULES_ACTION_M3U_FILTER, citem, stations)
+        return stations
+    buf = BytesIO()
+    # Reflect Enable_Grouping (and channel group edits) in the served group-title
+    # on the fly, before the per-channel M3U_FILTER rules run — so GroupHide sees
+    # the grouped groups without waiting for a rebuild.
+    stations = applyGrouping(m3u.getFilteredStations(), channels)
+    m3u.render(buf, stations=_filter(stations))
+    data = buf.getvalue()
+    # never cache an implausibly large render — a half-written M3U read during a
+    # build once produced a 776MB blob served on every poll. Cap at 20MB.
+    if len(data) > 20 * 1024 * 1024:
+        LOG("renderFilteredM3U, render too large (%s bytes), not caching" % len(data), xbmc.LOGWARNING)
+        return data
+    _M3U_RENDER_CACHE = {'sig': sig, 'data': data}
+    return data
+
+
+def renderFilteredXMLTV(channels: list, runActions) -> bytes:
+    """Get XMLTV content with temporary placeholder programmes injected.
+
+    Channels whose EPG doesn't reach the Min_Days horizon — including no-guide
+    channels — get an informative placeholder so pvr.iptvsimple shows a non-empty
+    row. Data is served from the SQLite cache (renderWithPlaceholders), not disk.
+
+    Rendered output is cached keyed on the XMLTV data version token.
+    """
+    global _XMLTV_RENDER_CACHE
+    sig = xmltv_render_signature()
+    if _XMLTV_RENDER_CACHE['sig'] == sig:
+        return _XMLTV_RENDER_CACHE['data']
+    from io import BytesIO
+    xmltv_obj = XMLTVS()
+    # runActions dispatches by citem['id'] — iterate every configured channel
+    # so each channel's XMLTV_FILTER rule can act on the served set (chained).
+    def _filter(stations):
+        for citem in channels:
+            stations = runActions(RULES_ACTION_XMLTV_FILTER, citem, stations)
+        return stations
+    buf = BytesIO()
+    xmltv_obj.renderWithPlaceholders(buf, stations=_filter(xmltv_obj.m3u.getFilteredStations(programmes=xmltv_obj.getProgrammes())))
+    data = buf.getvalue()
+    # don't cache implausibly large / empty renders
+    if data and len(data) < 100 * 1024 * 1024:
+        _XMLTV_RENDER_CACHE = {'sig': sig, 'data': data}
+    return data
+
+
+def getFilteredGenres() -> bytes:
+    """Return rendered genres.xml bytes from the SQLite cache.
+
+    Falls back to the on-disk export file (legacy) if the cache is empty and
+    an export file exists.
+    #todo: apply genre filtering to the served genres.xml mirroring the
+    M3U/XMLTV filter rules (per-channel genre filter rules) — for now the
+    served genres reflect the full library set.
+    """
+    try:
+        data = Globals.settings.getCacheSetting(GENRES_CACHE_KEY)
+        if data is not None:
+            return data if isinstance(data, bytes) else bytes(data, DEFAULT_ENCODING)
+    except Exception as e:
+        LOG("getFilteredGenres, cache read failed: %s" % e, xbmc.LOGDEBUG)
+    if FileAccess.exists(GENREFLEPATH):
+        try:
+            with FileAccess.stream(GENREFLEPATH) as fle:
+                return fle.readBytes()
+        except Exception as e:
+            LOG("getFilteredGenres, file fallback failed: %s" % e, xbmc.LOGDEBUG)
+    return b''
+
+
+def _genre_tokens(key: str) -> list:
+    return [t for t in re.split(r'[\s/&,;.]+', key) if t]
+
+
+def _build_genre_index() -> dict:
+    global _GENRE_INDEX
+    if _GENRE_INDEX is not None:
+        return _GENRE_INDEX
+    index = {'exact': {}, 'tokens': {}, 'by_id': {}}
+    if FileAccess.exists(GENREFLE_DEFAULT):
+        try:
+            with FileAccess.open(GENREFLE_DEFAULT, "r") as fle:
+                dom = parse(fle)
+            for line in dom.getElementsByTagName('genre'):
+                try:
+                    gid = line.attributes['genreId'].value
+                    names = line.childNodes[0].data
+                    index['by_id'].setdefault(gid, {'genre': names, 'name': names.split(' / ')[0], 'genreId': gid})
+                    for syn in (s.strip() for s in names.split(' / ') if s.strip()):
+                        skey = syn.lower()
+                        index['exact'].setdefault(skey, gid)
+                        for tok in _genre_tokens(skey):
+                            if len(tok) >= 3:
+                                index['tokens'][tok] = gid
+                except Exception:
+                    continue
+        except Exception:
+            pass
+    _GENRE_INDEX = index
+    return index
+
+
+def _matchGenreId(category: str) -> Optional[str]:
+    """Resolve a Kodi genre string to a DVB genreId (the EPG colour).
+
+    Priority: curated alias > exact DVB synonym > DVB word token. Covers compound
+    genres ('Sci-Fi & Fantasy'), Kodi-specific genres missing from the ETSI list
+    ('anime', 'reality', 'mystery') and ambiguous words ('classical' -> music).
+    """
+    key = (category or '').strip().lower()
+    if not key:
+        return None
+    index = _build_genre_index()
+    if key in _GENRE_ALIASES: return _GENRE_ALIASES[key]
+    if key in index['exact']: return index['exact'][key]
+    for tok in _genre_tokens(key):
+        if tok in _GENRE_ALIASES: return _GENRE_ALIASES[tok]
+        if tok in index['tokens']: return index['tokens'][tok]
+    return None
 
 
 def _utcOffset() -> str:
@@ -356,25 +592,37 @@ class XMLTVS(object):
             programmes = [p for p in programmes if p.get('channel') in served]
         try:
             now_epoch = float(Globals._getGMTstamp())
+            now_rounded_epoch = float(Globals._roundTimeDown(now_epoch, offset=60))
+            now_str = Globals._epochTime(now_rounded_epoch, tz=False).strftime(DTFORMAT)
             min_end_epoch = now_epoch + horizon
             min_end_str = Globals._epochTime(min_end_epoch, tz=False).strftime(DTFORMAT)
-            max_stops = {}
+            ph_min_epoch = now_rounded_epoch + MIN_EPG_DURATION
+            # Channels whose real guide covers now need no placeholder. For the
+            # rest (no data at all, or a future-start guide that leaves today
+            # empty), inject a labelled placeholder from rounded-now filling the
+            # gap up to the next real programme — at least MIN_EPG_DURATION.
+            covers_now = set()
+            first_starts = {}
             for p in programmes:
                 ch = p.get('channel')
-                stop = p.get('stop')
-                if ch and stop and stop > max_stops.get(ch, ''):
-                    max_stops[ch] = stop
+                if not ch:
+                    continue
+                start, stop = p.get('start'), p.get('stop')
+                if start and start <= now_str < stop:
+                    covers_now.add(ch)
+                if start and (ch not in first_starts or start < first_starts[ch]):
+                    first_starts[ch] = start
             for ch in channels:
                 cid = ch.get('id')
-                if not cid:
+                if not cid or cid in covers_now:
                     continue
-                last_stop = max_stops.get(cid)
-                if last_stop and last_stop >= min_end_str:
-                    continue  # guide already covers the full Min_Days window
-                start_epoch = now_epoch
-                if last_stop:
-                    start_epoch = max(now_epoch, Globals._strpTime(last_stop, DTFORMAT).timestamp())
-                programmes.append(self._placeholderProgramme(cid, ch, start=start_epoch, stop=min_end_epoch))
+                ph_stop_epoch = ph_min_epoch
+                first = first_starts.get(cid)
+                if first and first > now_str:
+                    first_epoch = Globals._strpTime(first, DTFORMAT).timestamp()
+                    ph_stop_epoch = max(first_epoch, ph_min_epoch)
+                ph_stop_epoch = min(ph_stop_epoch, min_end_epoch)
+                programmes.append(self._placeholderProgramme(cid, ch, start=now_rounded_epoch, stop=ph_stop_epoch))
         except Exception as e:
             self.log(f"renderWithPlaceholders, failed: {e}", xbmc.LOGDEBUG)
         self.render(fle, channels=channels, programmes=programmes)
@@ -385,11 +633,14 @@ class XMLTVS(object):
         if start is None: start = now
         if stop  is None: stop  = now + MIN_EPG_DURATION
         logo = ch.get('logo') or (ch.get('icon') or [{}])[0].get('src', '')
-        msg  = LANGUAGE(32277)
+        # Short title for the EPG row; the informative message goes in the
+        # description/plot so the user knows the guide is still building.
+        title = LANGUAGE(32277)
+        desc  = LANGUAGE(32282)
         return {'channel' : ch_id,
                 'category': [('Undefined', LANG)],
-                'title'   : [(msg, LANG)],
-                'desc'    : [(msg, LANG)],
+                'title'   : [(title, LANG)],
+                'desc'    : [(desc, LANG)],
                 'start'   : Globals._epochTime(start, tz=False).strftime(DTFORMAT),
                 'stop'    : Globals._epochTime(stop, tz=False).strftime(DTFORMAT),
                 'icon'    : [{'src': logo}],
@@ -483,21 +734,30 @@ class XMLTVS(object):
 
 
     def _backfill_programmes_table(self):
-        """Rebuild the indexed table from the in-memory programmes if it is empty.
+        """Sync the indexed programmes table with the in-memory guide.
 
-        Migration path for data that predates Phase 2 (loaded from legacy file or
-        blob before the table existed). Subsequent saves stay in sync via the
-        incremental add/del handlers, so this only runs once.
+        Runs on every save: for each channel present in XMLTVDATA its table rows
+        are rebuilt from the in-memory set, so the table (used by
+        loadStopTimes/hasProgrammes for the build's coverage check) can never
+        drift from the served blob (used by the HTTP guide). A stale table once
+        reported guides that covered today while the served XMLTV did not — the
+        channel was marked 'guide sufficient' yet showed no guide data.
         """
         try:
             db = self._programme_db()
-            cursor = db.execute("SELECT COUNT(*) FROM programmes")
-            if cursor and cursor.fetchone()[0] == 0:
-                rows = [(p.get('channel'), p.get('start'), p.get('stop'), FileAccess.dumpPICKLE(p))
-                        for p in self.XMLTVDATA['programmes'] if p.get('channel')]
-                if rows:
-                    db.execute("INSERT OR REPLACE INTO programmes(channel,start,stop,data) VALUES(?,?,?,?)", rows)
-                    self.log(f"_backfill_programmes_table, inserted {len(rows)} rows", xbmc.LOGDEBUG)
+            with self._lock:
+                by_channel = {}
+                for p in self.XMLTVDATA['programmes']:
+                    ch = p.get('channel')
+                    if ch:
+                        by_channel.setdefault(ch, []).append(p)
+                for ch_id, progs in by_channel.items():
+                    db.execute("DELETE FROM programmes WHERE channel=?", (ch_id,))
+                    if progs:
+                        rows = [(ch_id, p.get('start'), p.get('stop'), FileAccess.dumpPICKLE(p)) for p in progs]
+                        db.execute("INSERT OR REPLACE INTO programmes(channel,start,stop,data) VALUES(?,?,?,?)", rows)
+                if by_channel:
+                    self.log(f"_backfill_programmes_table, synced {sum(len(v) for v in by_channel.values())} rows across {len(by_channel)} channels", xbmc.LOGDEBUG)
         except Exception as e:
             self.log(f"_backfill_programmes_table failed: {e}", xbmc.LOGDEBUG)
 
@@ -736,7 +996,7 @@ class XMLTVS(object):
             item['episode-num'] = {'xmltv_ns':'%s.%s'%(fItem.get("season",1)-1,fItem.get("episode",1)-1), # todo support totaleps <episode-num system="xmltv_ns">..44/47</episode-num>https://github.com/kodi-pvr/pvr.iptvsimple/pull/884
                                    'onscreen':'S%sE%s'%(str(fItem.get("season",0)).zfill(2),str(fItem.get("episode",0)).zfill(2))}
 
-        item['rating']      = Globals._cleanMPAA(fItem.get('mpaa') or 'NA')
+        item['rating']      = ratings.local(fItem.get('mpaa') or 'NA') or 'NA'
         item['stars']       = (fItem.get('rating')        or '0')
         item['votes']       = (fItem.get('votes')         or '')
         item['writer']      = fItem.get('writer',[])[:5]   #trim list to five
@@ -831,10 +1091,9 @@ class XMLTVS(object):
             
             rating = item.get('rating','NA')
             if rating != 'NA':
-                if rating.lower().startswith('tv'): 
-                    pitem['rating'] = [{'system': 'VCHIP', 'value': rating}]
-                else:  
-                    pitem['rating'] = [{'system': 'MPAA', 'value': rating}] #todo support international rating systems
+                # value stays the user's local label; system is detected
+                # (VCHIP for TV-*, named system for international, MPAA fallback).
+                pitem['rating'] = [{'system': ratings.system(rating), 'value': rating}]
                 
             if item.get('episode-num'): 
                 pitem['episode-num'] = [(item['episode-num'].get('xmltv_ns',''), 'xmltv_ns'),
@@ -881,10 +1140,11 @@ class XMLTVS(object):
         """Write a single placeholder programme for channels with no EPG.
         Excluded from stop-time/coverage via _isPlaceholder in loadStopTimes/hasProgrammes."""
         if not msg: msg = LANGUAGE(32277)
+        desc = LANGUAGE(32282)
         now  = Globals._getGMTstamp()
         stop = now + MIN_EPG_DURATION
         self.addChannel({'id': ch_id, 'name': ch_name, 'logo': ch_logo})
-        self.addProgram(ch_id, {'title': msg, 'desc': msg, 'categories': ['Undefined'], 'thumb': ch_logo, 'start': now, 'stop': stop, 'length': MIN_EPG_DURATION, 'fitem': {}, 'new': False}, encodeDESC=False)
+        self.addProgram(ch_id, {'title': msg, 'desc': desc, 'categories': ['Undefined'], 'thumb': ch_logo, 'start': now, 'stop': stop, 'length': MIN_EPG_DURATION, 'fitem': {}, 'new': False}, encodeDESC=False)
         self.log('[%s] addPlaceholder' % ch_id)
         return True
 
@@ -1013,13 +1273,16 @@ class XMLTVS(object):
 
             genres = __getGenres()
             # Match once per unique category list instead of once per programme —
-            # thousands of entries share the same combo.
+            # thousands of entries share the same combo. First category that
+            # resolves wins; _matchGenreId handles compound/aliased genres.
             for cats in seen_categories:
                 catcombo = ' / '.join(cats)
+                if genres.get(catcombo.lower()):
+                    continue
                 for category in cats:
-                    match = genres.get(category.lower())
-                    if match and not genres.get(catcombo.lower()):
-                        genres[catcombo.lower()] = match
+                    gid = _matchGenreId(category)
+                    if gid:
+                        genres[catcombo.lower()] = dict(_build_genre_index()['by_id'].get(gid, {'genre': category, 'name': category, 'genreId': gid}))
                         break
 
             epggenres = __getGenres(GENREFLEPATH)

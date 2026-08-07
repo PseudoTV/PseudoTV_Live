@@ -556,9 +556,7 @@ class Instances(object):
                           'load_playlist'     : {'started': False, 'total_channels': 0, 'channels': [], 'groups': {}, 'providers': {}, 'media_items': 0},
                           'load_epg'          : {'started': False, 'channels': {}, 'epg_channel_count': 0, 'epg_entry_count': 0},
                           'load_genres'       : {'genres_count': 0},
-                          'get_channels'      : {'channels': {}},
-                          'get_group_members' : {'channels': {}},
-                          'get_channel_groups': {'groups': {}},
+                          'channels'          : {},             # Consolidated {name: {ChannelId, ChannelNumber, groups: [...]}}
                           'channels_available': 0,            # Non-radio channels available in PVR
                           'radio_available'   : 0,            # Radio channels available in PVR
                           'pvr_errors'        : [],            # Combined m3u_errors + epg_errors (computed)
@@ -588,12 +586,37 @@ class Instances(object):
         status = self._cached_status
         try:
             if status['log']['pvr_connected'] and status['in_sync']: wait = 300
+            pvr_log = {}
             if Globals.properties.isLogDirty() or (time.time() - status['log']['last_update']) > wait:
                 pvr_log = self.parsePVRLog(host, friendly_name)
                 # Merge parsed PVR channel IDs with existing ones (log window may not cover all entries)
                 existing_ids = status['log'].get('pvr_channel_ids', [])
                 new_ids = pvr_log.get('pvr_channel_ids', [])
                 pvr_log['pvr_channel_ids'] = list(dict.fromkeys(existing_ids + new_ids))
+                # Channel/EPG metadata is also read incrementally (offset tail),
+                # so a later parse that skipped the startup burst must not wipe what
+                # an earlier one captured. Merge cumulatively. The consolidated
+                # `channels` map merges per-channel (base fields + deduped groups).
+                _prev_ch = (status['log'].get('channels') or {})
+                _cur_ch  = (pvr_log.get('channels') or {})
+                for _name, _entry in _cur_ch.items():
+                    _base = dict(_prev_ch.get(_name, {}))
+                    _base.setdefault('groups', [])
+                    _seen = {_g.get('name') for _g in _base['groups']}
+                    for _g in _entry.get('groups', []):
+                        if _g.get('name') not in _seen:
+                            _base['groups'].append(_g)
+                            _seen.add(_g.get('name'))
+                    _base.update({k: v for k, v in _entry.items() if k != 'groups'})
+                    _prev_ch[_name] = _base
+                pvr_log['channels'] = _prev_ch
+                _prev_epg = (status['log'].get('load_epg') or {})
+                _cur_epg  = (pvr_log.get('load_epg') or {})
+                _merged_epg = dict(_prev_epg)
+                _merged_epg.setdefault('channels', {}).update((_cur_epg or {}).get('channels', {}) or {})
+                _merged_epg['epg_channel_count'] = _cur_epg.get('epg_channel_count') or _prev_epg.get('epg_channel_count', 0)
+                _merged_epg['epg_entry_count']   = _cur_epg.get('epg_entry_count') or _prev_epg.get('epg_entry_count', 0)
+                pvr_log['load_epg'] = _merged_epg
             status['log'].update(pvr_log)
             status['log']['last_update'] = time.time()
             # Merge log-derived pvr_events; notification-driven counts win when higher.
@@ -796,25 +819,11 @@ class Instances(object):
             },
 
             # --- GetChannels: channels IPTV Simple reports to the PVR framework ---
-            'get_channels': {
-                # channels: channels keyed by their display name {name: {ChannelId, ChannelNumber}}
-                #   Populated when PVR queries IPTV Simple for the full channel list
-                'channels': {},
-            },
-
-            # --- GetChannelGroupMembers: channels within each PVR group ---
-            'get_group_members': {
-                # channels: channels keyed by display name {name: {ChannelId, ChannelNumber}}
-                #   Populated when PVR queries IPTV Simple for channels in a specific group
-                'channels': {},
-            },
-
-            # --- GetChannelGroups: PVR groups reported by IPTV Simple ---
-            'get_channel_groups': {
-                # groups: groups keyed by group name {group_name: {id, type, radio}}
-                #   id = PVR internal group ID, type = group type (0=all channels), radio = 1 if radio group
-                'groups': {},
-            },
+            # Consolidated per-channel metadata: {name: {ChannelId, ChannelNumber,
+            # groups: [{name, id, type, radio, ChannelOrder}]}}. Join of GetChannels
+            # (ChannelNumber), GetChannelGroupMembers (group + ChannelOrder) and
+            # GetChannelGroups (group id/type/radio).
+            'channels': {},
 
             # --- Summary counts from PVR's available channel listings ---
             # channels_available: total non-radio channels available in the PVR backend
@@ -864,6 +873,8 @@ class Instances(object):
             in_load_playlist = False
             current_extinf = None
             local_channel_ids = set()  # our instance's ChannelIds (from GetChannels)
+            channel_groups = {}        # group name -> {id, type, radio} (GetChannelGroups)
+            group_members  = {}        # channel name -> [(group, ChannelOrder)] (GetChannelGroupMembers)
 
             for line in all_lines:
                 line = re.sub(r'\x1b\[[0-9;]*m', '', line).strip()
@@ -992,10 +1003,7 @@ class Instances(object):
                 # ===== GetChannels =====
                 m = re.search(r"GetChannels.*(?:Channel Name|Transfer channel)\s+'([^']+)',\s+ChannelId\s+'(\d+)',\s+ChannelNumber[:\s]+'(\d+)'", line)
                 if m:
-                    result['get_channels']['channels'][m.group(1)] = {
-                        'ChannelId': int(m.group(2)),
-                        'ChannelNumber': int(m.group(3))
-                    }
+                    result['channels'].setdefault(m.group(1), {'ChannelId': int(m.group(2)), 'ChannelNumber': int(m.group(3)), 'groups': []})
                     local_channel_ids.add(int(m.group(2)))
 
                 # ===== GetChannelGroupMembers =====
@@ -1008,22 +1016,20 @@ class Instances(object):
                     if m:
                         ch_group, ch_name, ch_id, ch_order = '', m.group(1), int(m.group(2)), int(m.group(3))
                 if m and ch_name and ch_id in local_channel_ids:  # only our local instance's channels
-                    result['get_group_members']['channels'][ch_name] = {
-                        'group': ch_group,
-                        'ChannelId': ch_id,
-                        'ChannelOrder': ch_order
-                    }
+                    group_members.setdefault(ch_name, []).append((ch_group, ch_order))
 
                 # ===== GetChannelGroups =====
                 m = re.search(r"GetChannelGroups.*(?:ChannelGroup Name|Transfer channelGroup)\s+'([^']+)',\s+(?:ChannelGroup)?Id\s+'(\d+)',\s+(?:Type\s+'(\d+)',\s+)?Radio\s+'(\d+)'", line)
                 if not m:
                     m = re.search(r"GetChannelGroups.*Transfer channelGroup\s+'([^']+)',\s+ChannelGroupId\s+'(\d+)'", line)
                 if m:
-                    result['get_channel_groups']['groups'][m.group(1)] = {
-                        'id': int(m.group(2)),
-                        'type': int(m.group(3)) if m.group(3) else 0,
-                        'radio': int(m.group(4)) if m.group(4) else 0
-                    }
+                    entry = {'id': int(m.group(2)), 'type': 0, 'radio': 0}
+                    try:  # fallback regex only carries id (2 groups)
+                        entry['type']  = int(m.group(3)) if m.group(3) else 0
+                        entry['radio'] = int(m.group(4)) if m.group(4) else 0
+                    except (IndexError, TypeError):
+                        pass
+                    channel_groups[m.group(1)] = entry
 
                 # ===== channels_available / radio_available =====
                 m = re.search(r"channels available\s+'(\d+)',\s+radio\s*=\s*(\d+)", line)
@@ -1071,16 +1077,29 @@ class Instances(object):
                         if chid and chid not in result['pvr_channel_ids']:
                             result['pvr_channel_ids'].append(chid)
 
-            self.log(f"parsePVRLog, connected={result['pvr_connected']}, provider={result['pvr_provider']}, pvr_ids={len(result['pvr_channel_ids'])}, playlist_channels={result['load_playlist']['total_channels']}, epg_channels={result['load_epg']['epg_channel_count']}, get_channels={len(result['get_channels']['channels'])}, group_members={len(result['get_group_members']['channels'])}, channel_groups={len(result['get_channel_groups']['groups'])}, m3u_errors={len(result['m3u_errors'])}, epg_errors={len(result['epg_errors'])}")
+            # Join GetChannelGroupMembers + GetChannelGroups into each channel's groups.
+            for _name, _entry in result['channels'].items():
+                for _grp, _order in group_members.get(_name, []):
+                    _meta = dict(channel_groups.get(_grp, {}))
+                    _meta.update({'name': _grp, 'ChannelOrder': _order})
+                    _entry['groups'].append(_meta)
+
+            self.log(f"parsePVRLog, connected={result['pvr_connected']}, provider={result['pvr_provider']}, pvr_ids={len(result['pvr_channel_ids'])}, playlist_channels={result['load_playlist']['total_channels']}, epg_channels={result['load_epg']['epg_channel_count']}, channels={len(result['channels'])}, groups={len(channel_groups)}, m3u_errors={len(result['m3u_errors'])}, epg_errors={len(result['epg_errors'])}")
             # Derive pvr_events from the parsed log (notifications are unreliable).
             result['pvr_events']['connection']['count'] = len(result['connection_events'])
             if result['connection_events']:
                 try:
                     result['pvr_events']['connection']['last_time'] = datetime.datetime.strptime(result['connection_events'][-1]['time'], '%Y-%m-%d %H:%M:%S.%f').timestamp()
                 except Exception: pass
-            result['pvr_events']['channel_update']['count'] = len(result['get_channels']['channels'])
-            result['pvr_events']['group_update']['count']   = len(result['get_channel_groups']['groups'])
+            result['pvr_events']['channel_update']['count'] = len(result['channels'])
+            result['pvr_events']['group_update']['count']   = len(channel_groups)
             result['pvr_events']['epg_update']['count']     = result['load_epg']['epg_channel_count'] or len(result['load_epg']['channels'])
+            # Startup race: on a fresh session the first parse can run before
+            # iptvsimple finishes logging its channel/EPG load. If nothing of ours
+            # was seen yet, reset the offset so the next parse re-reads the log —
+            # otherwise that startup burst is skipped forever by the offset tail.
+            if not result['pvr_provider'] and not result['pvr_channel_ids']:
+                self._pvr_log_offset = 0
             return result
         except Exception as e:
             self.log(f"parsePVRLog, error: {e}", xbmc.LOGDEBUG)

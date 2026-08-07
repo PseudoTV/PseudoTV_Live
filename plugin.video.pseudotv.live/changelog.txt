@@ -1,5 +1,28 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
-
+v.0.7.9+nightly
+- Added Japanese language translation support
+- Improved build logging with timestamped output and file persistence
+- Enhanced OpenCode integration with automatic PATH detection and timeout handling
+- Fixed translation parsing to handle # prefixed string IDs correctly
+- Tweaked miscellaneous improvements and tweaks
+- Added automatic translation generation for Spanish, German, French, Portuguese, and Japanese using AI
+- Improved build process runs tests before generating changelog and translations
+- Enhanced build logging with timestamped output and file persistence
+- Implemented automatic OpenCode binary PATH detection for translation generation
+- Tweaked miscellaneous improvements and tweaks
+- Added version bump to 0.7.9+nightly
+- Implemented automatic translation generation for Spanish, German, French, Portuguese, and Japanese using AI
+- Enhanced OpenCode integration with PATH detection and timeout handling
+- Improved build logging with timestamped output and file persistence
+- Optimized build process to run tests before generating changelog and translations
+- Added todo scanning feature to track pending work items
+- Tweaked miscellaneous improvements and tweaks
+- Added version bump to 0.7.9+nightly
+- Added automatic translation generation for Spanish, German, French, Portuguese, and Japanese using AI
+- Improved build logging with timestamped output and file persistence
+- Optimized build process to run tests before generating changelog and translations
+- Enhanced OpenCode integration with PATH detection and timeout handling
+- Tweaked miscellaneous improvements and tweaks
 v.0.7.8+nightly
 - Fixed progress dialog not rendering from non-main threads (added waitForAbort after dlg.update).
 - Refactored chkPVRSync to pure state checker, returns findings dict; chkPVRRefresh accepts findings to avoid duplicate updatePVRStatus calls.

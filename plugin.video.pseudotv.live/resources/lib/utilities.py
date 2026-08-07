@@ -240,7 +240,11 @@ class Utilities(object):
                         
     @staticmethod
     def _migrateChannels(old: str = CACHE_LOC, new: str = BACKUP_LOC):
-        """Migrate channel files from old location to new backup location."""
+        """Migrate channel files from old location to new backup location.
+
+        Lazy conversion path for legacy channel JSON into the current cached
+        system: importChannels applies RULES_ID_MIGRATION so pre-0.2 rule ids
+        are remapped to the execution-ordered scheme during the move."""
         old_path = os.path.join(old,CHANNELFLE)
         new_path = os.path.join(new,CHANNELFLE)
         if FileAccess.exists(old_path):

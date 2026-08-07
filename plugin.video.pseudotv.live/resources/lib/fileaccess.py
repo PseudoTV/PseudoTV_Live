@@ -230,6 +230,23 @@ class FileAccess(object):
             path = path.split('@')[1]
         return xbmcvfs.translatePath(path)
 
+
+    @staticmethod
+    def localizePath(path: str) -> str:
+        """Return a path local parsers can open with native file access.
+
+        libmediainfo / hachoir / plain open() can't handle smb:// or nfs:// URLs,
+        but on Windows they CAN open the equivalent UNC path. smb://host/share/rest
+        and nfs://host/export/rest -> \\\\host\\share\\rest (\\host\\export\\rest).
+        Other protocols and local paths are returned as-is (Kodi's
+        xbmcvfs.translatePath only resolves special://, not network URLs).
+        """
+        if isinstance(path, str):
+            low = path.lower()
+            if low.startswith(('smb://', 'nfs://')):
+                return '\\\\' + path[path.find('://') + 3:].replace('/', '\\')
+        return path
+
     @staticmethod
     def copyFolder(src: str, dest_dir: str, dia: Any = None, move: bool = False) -> Any:
         """Recursively copy/move a folder with optional progress dialog."""

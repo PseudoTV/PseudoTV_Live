@@ -404,9 +404,9 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getLogoColor, id = %s' % (citem.get('id', -1)))
         if not citem.get('logo') or not citem.get('name'): 
             return 'FFFFFFFF'
-        elif citem.get('rules', {}).get(1):
-            if self.getRuleAbbr(citem, 1, 4) or self.resources.isMono(citem['logo']):
-                return self.getRuleAbbr(citem, 1, 3)
+        elif citem.get('rules', {}).get(200):  # ShowChannelBug (myId 200)
+            if self.getRuleAbbr(citem, 200, 4) or self.resources.isMono(citem['logo']):
+                return self.getRuleAbbr(citem, 200, 3)
         return Globals.settings.getSetting('ChannelBug_Color')
         
     def buildChannelItem(self, citem: dict={}, focuskey: str='path'):

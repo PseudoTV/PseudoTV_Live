@@ -21,6 +21,7 @@ from typing import Any, Optional, Iterator
 from variables   import *
 from videoparser import VideoParser
 from _services   import _Service
+import ratings
 
 # Lazy import to avoid circular dependency (variables.py defines Globals after kodi.py loads)
 _Globals = None
@@ -320,6 +321,46 @@ class JSONRPC(object):
         return self.sendJSON(param).get('result') == 'OK'
 
 
+    def getPVRChannelID(self, citem: Optional[dict] = None, radio: bool = False) -> Optional[dict]:
+        """Resolve a PseudoTV channel to its PVR channelid/clientid for Player.Open.
+
+        Matches by channel label (PVR channel name == citem name), the same key
+        matchChannel uses. Returns {'channelid': N, 'clientid': M} or None. Cached
+        briefly so channel switches don't re-enumerate PVR channels every time.
+        """
+        if not isinstance(citem, dict): return None
+        chname = citem.get('name', '')
+        if not chname: return None
+        cacheName = 'channelID.%s' % (FileAccess._getMD5('%s.%s' % (chname, radio)))
+        cached = (self.cache.get(cacheName, checksum=ADDON_VERSION) or {})
+        if cached: return cached
+        result = None
+        for channel in self.getPVRChannels(radio):
+            if channel.get('label', '').lower() == chname.lower():
+                result = {'channelid': channel.get('channelid'), 'clientid': channel.get('clientid')}
+                break
+        if result:
+            self.cache.set(cacheName, result, checksum=ADDON_VERSION, expiration=datetime.timedelta(seconds=15))
+        return result
+
+
+    def playChannel(self, sysInfo: Optional[dict] = None) -> bool:
+        """Open a PseudoTV channel through Kodi's PVR manager by its channelid.
+
+        Direct channel targeting avoids the fragile citem-in-plot matching used to
+        build a pvr:// path, and routes playback through Kodi's PVR backend
+        (timeshift/catchup). Returns False when the channel can't be resolved so
+        the caller can fall back to the pvr:// path.
+        """
+        if sysInfo is None: sysInfo = {}
+        target = self.getPVRChannelID(sysInfo.get('citem', {}), sysInfo.get('radio', False))
+        if not target or not target.get('channelid'): return False
+        item = {'channelid': target['channelid']}
+        if target.get('clientid'): item['clientid'] = target['clientid']
+        self.log(f"[{sysInfo.get('chid')}] playChannel, channelid = {item['channelid']}, clientid = {item.get('clientid')}")
+        return self.playerOpen({'item': item})
+
+
     def getSetting(self, category: str, section: str, cache: bool = False) -> list:
         param = {"method":"Settings.getSettings","params":{"filter":{"category":category,"section":section}}}
         if cache: return self.cacheJSON(param).get('result',{}).get('settings',[])
@@ -466,7 +507,7 @@ class JSONRPC(object):
     def getMPAA(self, type: str = 'movie', incItem: bool = False) -> list:
         def __parse(items: list) -> Iterator[dict]: 
             for item in items:
-                yield {'label':_globals()._cleanMPAA(item.get("mpaa","NR")),'item':item if incItem else {}}
+                yield {'label':ratings.local(item.get("mpaa","NR")) or 'NR','item':item if incItem else {}}
         if   type == 'movie':  return list(__parse(self.getMovies()))
         elif type == 'tvshow': return list(__parse(self.getTVshows()))
 

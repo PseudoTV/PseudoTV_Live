@@ -26,6 +26,7 @@ https://anarchintosh-projects.googlecode.com/files/addons_xml_generator.py
 import os
 import re
 import sys
+import time
 import hashlib
 import datetime
 import subprocess
@@ -34,6 +35,22 @@ from zipfile import ZipFile
 from shutil import copyfile, rmtree
 
 LOG_FILE = None
+
+def _prompt_skip(step_name, seconds=5):
+    try:
+        import msvcrt
+        _log(f"\n{step_name} — press any key to skip ({seconds}s)...")
+        for remaining in range(seconds, 0, -1):
+            _log(f"  {remaining}s remaining...")
+            if msvcrt.kbhit():
+                msvcrt.getch()
+                _log(f"Skipped {step_name}")
+                return True
+            time.sleep(1)
+        _log(f"Proceeding with {step_name}")
+        return False
+    except ImportError:
+        return False
 
 def _log(msg):
     ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -52,9 +69,13 @@ if os.path.isdir(_opencode_dir) and _opencode_dir not in os.environ.get('PATH', 
     os.environ['PATH'] = _opencode_dir + os.pathsep + os.environ.get('PATH', '')
 DELETE_EXT = ('.pyc', '.pyo', '.db')
 DELETE_FOLDERS = {'__pycache__', '.idea', 'Corel Auto-Preserve', 'venv'}
+ZIP_SKIP_DIRS = {'tests', 'graphify-out', '.opencode', '.github', 'wiki', '__pycache__', '.pytest_cache', '.git', '.idea'}
+ZIP_SKIP_FILES = {'todo.md', 'generator.log', 'AGENTS.md', 'SESSION_BACKUP.md', 'task_plan.md',
+                  'progress.md', 'findings.md', 'pytest.ini', '.gitignore', '.gitattributes', '.project'}
 ADDON_DIR = os.path.join(GITPATH, 'plugin.video.pseudotv.live')
 TEST_DIR = os.path.join(ADDON_DIR, 'tests')
 CHANGELOG = os.path.join(ADDON_DIR, 'changelog.txt')
+TODO_FILE = os.path.join(ADDON_DIR, 'todo.md')
 ADDON_XML = os.path.join(ADDON_DIR, 'addon.xml')
 EN_GB_FILE = os.path.join(ADDON_DIR, 'resources', 'language', 'resource.language.en_gb', 'strings.po')
 LANG_DIR = os.path.join(ADDON_DIR, 'resources', 'language')
@@ -84,11 +105,14 @@ class Generator:
                 sys.exit(1)
             self._update_translations()
             self._update_changelog()
+            self._scan_todos()
         self._clean_addons()
         self._generate_addons_file()
         self._generate_md5_file()
         self._zipit(GITPATH)
         _log("Finished updating addons xml and md5 files")
+        if sys.stdin.isatty():
+            input("\nPress Enter to close...")
 
     def _run_local_tests(self):
         """Run pytest on local test suite before building."""
@@ -145,7 +169,7 @@ class Generator:
         # Get git diff for en_gb strings.po changes
         try:
             result = subprocess.run(
-                ['git', 'diff', 'HEAD~1', 'HEAD', '--', EN_GB_FILE],
+                ['git', 'diff', 'HEAD~3', '--', EN_GB_FILE],
                 cwd=GITPATH,
                 capture_output=True,
                 text=True,
@@ -192,22 +216,39 @@ class Generator:
             return
 
         _log(f"Translating {len(strings_to_translate)} strings to {len(LANGUAGES)} languages...")
+        if _prompt_skip('translations'):
+            return
 
-        # Generate translations for each language
         for lang_code, lang_name in LANGUAGES.items():
-            # Convert lang code format: esES -> resource.language.es_es
             folder_code = lang_code[:2].lower() + '_' + lang_code[2:].lower()
             lang_dir = os.path.join(LANG_DIR, f'resource.language.{folder_code}')
             lang_file = os.path.join(lang_dir, 'strings.po')
-
-            # Create directory if not exists
             os.makedirs(lang_dir, exist_ok=True)
 
-            # Build translation prompt
-            strings_text = '\n'.join(strings_to_translate)
+            # Read existing translations to skip already-translated IDs
+            existing_content = ''
+            existing_ids = set()
+            if os.path.isfile(lang_file):
+                with open(lang_file, 'r', encoding='utf-8') as f:
+                    existing_content = f.read()
+                existing_ids = set(re.findall(r'msgctxt "#(\d+)"', existing_content))
+
+            needed_ids = [sid for sid in changed_ids if sid not in existing_ids]
+            if not needed_ids:
+                _log(f"{lang_name} — all strings already translated, skipped")
+                continue
+
+            needed_lines = []
+            for sid in needed_ids:
+                match = re.search(rf'msgctxt "#{sid}"\s*\nmsgid "([^"]*)"', en_gb_content)
+                if match:
+                    needed_lines.append(f"#{sid}|{match.group(1)}")
+            if not needed_lines:
+                continue
+            strings_text = '\n'.join(needed_lines)
             prompt = (
                 f"Translate these Kodi addon UI strings from English to {lang_name}. "
-                f"Keep all placeholders (%s, [B], [/B], [COLOR=...], [CR], {{name}}, {{group}}) unchanged. "
+                f"Keep all placeholders unchanged. "
                 f"Only output translations in format: #ID|translation. "
                 f"Do NOT read any files or use glob tool.\n"
                 f"Strings:\n{strings_text}"
@@ -215,32 +256,26 @@ class Generator:
 
             opencode_bin = os.path.join(_opencode_dir, 'opencode.exe')
             if not os.path.isfile(opencode_bin):
-                _log(f"OpenCode binary not found at {opencode_bin}, skipping")
-                continue
+                _log("OpenCode binary not found, skipping translations")
+                return
             try:
                 result = subprocess.run(
                     [opencode_bin, 'run', '--model', OPENCODE_MODEL, prompt],
-                    cwd=GITPATH,
-                    capture_output=True,
-                    text=True,
-                    encoding='utf-8',
-                    errors='replace',
-                    timeout=120
+                    cwd=GITPATH, capture_output=True, text=True,
+                    encoding='utf-8', errors='replace', timeout=120
                 )
-                raw_output = result.stdout
             except FileNotFoundError:
-                _log(f"OpenCode CLI not found, skipping translation for {lang_name}")
-                continue
+                _log(f"OpenCode CLI not found, skipping")
+                return
             except subprocess.TimeoutExpired:
-                _log(f"OpenCode timed out for {lang_name} (120s), skipping")
+                _log(f"OpenCode timed out for {lang_name}, skipping")
                 continue
             except Exception as e:
                 _log(f"Error running OpenCode for {lang_name}: {e}")
                 continue
 
-            # Parse translations
             translations = {}
-            for line in raw_output.strip().split('\n'):
+            for line in result.stdout.strip().split('\n'):
                 line = line.strip()
                 if '|' in line and (line[0].isdigit() or (line.startswith('#') and len(line) > 1 and line[1].isdigit())):
                     parts = line.split('|', 1)
@@ -251,39 +286,27 @@ class Generator:
                 _log(f"Translation failed for {lang_name}, skipping")
                 continue
 
-            # Generate strings.po file
-            with open(lang_file, 'w', encoding='utf-8') as f:
-                f.write('# Kodi Media Center language file\n')
-                f.write('# Addon Name: "PseudoTV Live"\n')
-                f.write('# Addon id: plugin.video.pseudotv.live\n')
-                f.write('# Addon Provider: Lunatixz\n')
-                f.write('msgid ""\n')
-                f.write('msgstr ""\n')
-                f.write(f'"Project-Id-Version: plugin.video.pseudotv.live\\n"\n')
-                f.write('"Report-Msgid-Bugs-To: \\n"\n')
-                f.write('"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\\n"\n')
-                f.write('"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\\n"\n')
-                f.write('"Last-Translator: Lunatixz Translation Team\\n"\n')
-                f.write(f'"Language-Team: {lang_name}\\n"\n')
-                f.write('"MIME-Version: 1.0\\n"\n')
-                f.write('"Content-Type: text/plain; charset=UTF-8\\n"\n')
-                f.write('"Content-Transfer-Encoding: 8bit\\n"\n')
-                f.write(f'"Language: {folder_code}\\n"\n')
-                f.write('"Plural-Forms: nplurals=2; plural=(n != 1);\\n"\n')
-
-                # Append translated strings
-                for string_id, translation in translations.items():
-                    # Extract msgid from en_GB file
-                    pattern = rf'msgctxt "#{string_id}"\s*\nmsgid "([^"]*)"'
-                    match = re.search(pattern, en_gb_content)
-                    if match:
-                        msgid = match.group(1)
-                        translation = translation.replace('"', '\\"')
-                        f.write(f'\nmsgctxt "#{string_id}"\n')
-                        f.write(f'msgid "{msgid}"\n')
-                        f.write(f'msgstr "{translation}"\n')
-
-            _log(f"Created {lang_file}")
+            if existing_content:
+                with open(lang_file, 'a', encoding='utf-8') as f:
+                    for string_id, translation in translations.items():
+                        match = re.search(rf'msgctxt "#{string_id}"\s*\nmsgid "([^"]*)"', en_gb_content)
+                        if match:
+                            msgid = match.group(1)
+                            f.write(f'\nmsgctxt "#{string_id}"\nmsgid "{msgid}"\nmsgstr "{translation.replace(chr(34), chr(92) + chr(34))}"\n')
+                _log(f"Appended {len(translations)} strings to {lang_file}")
+            else:
+                with open(lang_file, 'w', encoding='utf-8') as f:
+                    f.write('# Kodi Media Center language file\n# Addon Name: "PseudoTV Live"\n# Addon id: plugin.video.pseudotv.live\n# Addon Provider: Lunatixz\nmsgid ""\nmsgstr ""\n'
+                            f'"Project-Id-Version: plugin.video.pseudotv.live\\n"\n"Report-Msgid-Bugs-To: \\n"\n"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\\n"\n'
+                            f'"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\\n"\n"Last-Translator: Lunatixz Translation Team\\n"\n'
+                            f'"Language-Team: {lang_name}\\n"\n"MIME-Version: 1.0\\n"\n"Content-Type: text/plain; charset=UTF-8\\n"\n'
+                            f'"Content-Transfer-Encoding: 8bit\\n"\n"Language: {folder_code}\\n"\n"Plural-Forms: nplurals=2; plural=(n != 1);\\n"\n')
+                    for string_id, translation in translations.items():
+                        match = re.search(rf'msgctxt "#{string_id}"\s*\nmsgid "([^"]*)"', en_gb_content)
+                        if match:
+                            msgid = match.group(1)
+                            f.write(f'\nmsgctxt "#{string_id}"\nmsgid "{msgid}"\nmsgstr "{translation.replace(chr(34), chr(92) + chr(34))}"\n')
+                _log(f"Created {lang_file}")
 
         _log("Translation complete")
 
@@ -295,7 +318,7 @@ class Generator:
 
         try:
             result = subprocess.run(
-                ['git', 'diff', 'HEAD~1', 'HEAD', '--', '*.py', '*.xml', '*.json'],
+                ['git', 'diff', 'HEAD~3', '--', '*.py', '*.xml', '*.json'],
                 cwd=GITPATH,
                 capture_output=True,
                 text=True,
@@ -303,7 +326,7 @@ class Generator:
                 errors='replace',
                 timeout=10
             )
-            diff = result.stdout[:10000]
+            diff = result.stdout[:15000]
             if not diff.strip():
                 _log("No changes detected for changelog")
                 return
@@ -313,7 +336,7 @@ class Generator:
 
         try:
             result = subprocess.run(
-                ['git', 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', '*.py', '*.xml', '*.json'],
+                ['git', 'diff', '--name-only', 'HEAD~3', '--', '*.py', '*.xml', '*.json'],
                 cwd=GITPATH,
                 capture_output=True,
                 text=True,
@@ -338,6 +361,8 @@ class Generator:
 
         version = f"v.{raw_version}"
         _log(f"\nGenerating changelog entries for {version}...")
+        if _prompt_skip('changelog'):
+            return
 
         existing_entries = []
         with open(CHANGELOG, 'r', encoding='utf-8') as f:
@@ -356,13 +381,12 @@ class Generator:
         prompt = (
             f"Review these code changes to PseudoTV Live Kodi addon. "
             f"Do NOT read any files or use glob tool. "
-            f"Generate up to 20 changelog entries, one per line, prioritized by user-facing importance. "
+            f"Generate changelog entries, one per line. ONLY list changes that are important for users to know about "
+            f"or for developers to document: new features, notable bug fixes, significant improvements, "
+            f"or behavior changes. Skip trivial refactors, internal-only cleanup, or minor cosmetic changes. "
+            f"Lump any minor tweaks into a single entry like '- Tweaked Miscellaneous improvements and tweaks.' "
             f"Each line MUST start with '- ' and ONE of these EXACT keywords: {keywords}. "
-            f"Keep each entry concise (1-2 lines). Focus on user-facing changes: new features, bug fixes, "
-            f"performance improvements, refactors users will notice. Skip internal-only refactors or "
-            f"minor cleanup. Order by most relevant to users first. "
-            f"If the diff is small, weigh whether each change is important enough to add "
-            f"alongside existing entries for this version — don't add low-value entries just to fill space. "
+            f"Keep each entry concise (1-2 lines). Order by most relevant to users first. "
             f"CHANGED FILES: {files}\nCODE DIFF: {diff}\n"
             f"EXISTING ENTRIES for {version}:\n{existing_text}\n"
             f"Output ONLY the dash-prefixed lines, nothing else."
@@ -404,76 +428,184 @@ class Generator:
             _log("No valid changelog entries generated")
             return
 
-        changelog_entries = changelog_entries[:20]
         _log(f"Generated {len(changelog_entries)} changelog entries")
 
         with open(CHANGELOG, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        entry_count = 0
-        in_version = False
-        if version in content:
-            for line in content.split('\n'):
-                if line.strip() == version:
-                    in_version = True
-                    continue
-                if in_version and line.startswith('v.'):
-                    break
-                if in_version and line.startswith('- '):
-                    entry_count += 1
-
-            max_new = 20 - entry_count
-            if max_new <= 0:
-                _log(f"Version already has {entry_count} entries (max 20). Skipping.")
-                return
-            if len(changelog_entries) > max_new:
-                changelog_entries = changelog_entries[:max_new]
-                _log(f"Truncated to {max_new} entries to stay within limit")
-
         entries_text = '\n'.join(changelog_entries)
 
         if version in content:
-            _log(f"Appending {len(changelog_entries)} entries to existing {version} section")
-            lines = content.split('\n')
-            new_lines = []
-            version_line_idx = -1
-            insert_idx = -1
+                _log(f"Appending {len(changelog_entries)} entries to existing {version} section")
+                lines = content.split('\n')
+                new_lines = []
+                in_ver = False
 
-            for i, line in enumerate(lines):
-                if line.strip() == version and version_line_idx == -1:
-                    version_line_idx = i
-                    new_lines.append(line)
-                    continue
+                for i, line in enumerate(lines):
+                    if line.strip() == version and not in_ver:
+                        in_ver = True
+                        new_lines.append(line)
+                        continue
 
-                if version_line_idx != -1 and insert_idx == -1:
-                    if line.startswith('v.'):
-                        insert_idx = len(new_lines)
-                        new_lines.append(entries_text)
-                        new_lines.append(line)
-                    elif i == len(lines) - 1:
-                        new_lines.append(line)
-                        new_lines.append(entries_text)
-                    else:
-                        new_lines.append(line)
-                else:
+                    if in_ver:
+                        is_end = line.startswith('v.') or i >= len(lines) - 1
+                        if not line.strip() and not is_end:
+                            continue
+                        if is_end:
+                            new_lines.append(entries_text)
+                            in_ver = False
+
                     new_lines.append(line)
 
-            if version_line_idx != -1 and insert_idx == -1:
-                new_lines.append(entries_text)
-
-            content = '\n'.join(new_lines)
+                content = '\n'.join(new_lines)
         else:
             _log(f"Adding new version section for {version}")
             notice = "### NOTICE: The nightly branch is in alpha; things will break! ####"
             if notice in content:
-                content = content.replace(notice, f"{notice}\n{version}\n{entries_text}\n")
+                content = content.replace(notice, f"{notice}\n{version}\n{entries_text}")
             else:
-                content = f"{notice}\n{version}\n{entries_text}\n\n{content}"
+                content = f"{notice}\n{version}\n{entries_text}\n{content}"
 
         with open(CHANGELOG, 'w', encoding='utf-8') as f:
             f.write(content)
 
         _log("Changelog updated successfully")
+
+    def _scan_todos(self):
+        _log("\nScanning for TODO comments...")
+        lib_dir = os.path.join(ADDON_DIR, 'resources', 'lib')
+        if not os.path.isdir(lib_dir):
+            _log("lib directory not found, skipping TODO scan")
+            return
+
+        todos = []
+        for root, dirs, files in os.walk(lib_dir):
+            for f in files:
+                if not f.endswith('.py'):
+                    continue
+                path = os.path.join(root, f)
+                rel = os.path.relpath(path, ADDON_DIR)
+                with open(path, 'r', encoding='utf-8', errors='replace') as fh:
+                    for i, line in enumerate(fh, 1):
+                        lower = line.lower()
+                        if 'todo' not in lower:
+                            continue
+                        idx = lower.find('todo')
+                        if idx == 0 or (idx > 0 and not line[idx-1].isalpha()):
+                            todos.append((rel, i, line.strip()))
+
+        if not todos:
+            _log("No TODOs found")
+            return
+
+        # Check which TODOs are already documented
+        known_lines = set()
+        if os.path.isfile(TODO_FILE):
+            with open(TODO_FILE, 'r', encoding='utf-8') as f:
+                content = f.read()
+            for pair in re.findall(r'`([^`]+)`\s*\|\s*`(\d+)`', content):
+                known_lines.add((pair[0], pair[1]))
+
+        new_todos = [(f, l, t) for (f, l, t) in todos if (f, str(l)) not in known_lines]
+        if not new_todos:
+            _log(f"No new TODOs found (all {len(todos)} already documented)")
+            return
+
+        _log(f"Found {len(new_todos)} new TODOs (out of {len(todos)} total)")
+        if _prompt_skip('TODO analysis'):
+            return
+
+        todos_text = '\n'.join(f"{f}|{l}|{t}" for f, l, t in new_todos)
+        opencode_bin = os.path.join(_opencode_dir, 'opencode.exe')
+        if not os.path.isfile(opencode_bin):
+            _log("OpenCode not found, writing raw TODOs")
+            self._write_todo_md(todos, None)
+            return
+
+        prompt = (
+            "Do NOT read any files or use glob tool. "
+            "Analyze these TODO comments from a Kodi addon codebase. "
+            "Each line is: file|line|todo text. "
+            "Categorize each TODO by type (feature, refactor, bugfix, cleanup, performance, deprecation) "
+            "and assign a priority (HIGH/MEDIUM/LOW). "
+            "Output ONLY a markdown table with columns: #, File, Line, TODO, Category, Priority. "
+            "Sort by priority (HIGH first).\n"
+            f"TODOs:\n{todos_text}"
+        )
+
+        try:
+            result = subprocess.run(
+                [opencode_bin, 'run', '--model', OPENCODE_MODEL, prompt],
+                cwd=GITPATH, capture_output=True, text=True,
+                encoding='utf-8', errors='replace', timeout=120
+            )
+            self._write_todo_md(todos, result.stdout)
+        except Exception as e:
+            _log(f"OpenCode analysis failed: {e}, writing raw TODOs")
+            self._write_todo_md(todos, None)
+
+    def _write_todo_md(self, todos, analysis):
+        rows = []
+        if analysis:
+            for line in analysis.split('\n'):
+                line = line.strip()
+                if not line.startswith('|') or '---' in line or line.startswith('| -') or line.startswith('|#'):
+                    continue
+                parts = [p.strip() for p in line.split('|')]
+                if len(parts) >= 6:
+                        try:
+                            rows.append({
+                                'num': parts[1], 'file': parts[2], 'line': parts[3],
+                                'todo': parts[4], 'cat': parts[5], 'pri': parts[6]
+                            })
+                        except IndexError:
+                            pass
+
+        with open(TODO_FILE, 'w', encoding='utf-8') as f:
+            f.write("# 👾 PseudoTV Live - TODO List\n\n")
+            f.write("> Auto-generated from code comments. Updated during local builds.\n\n")
+            f.write(f"**Last scan:** `{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`  \n")
+            f.write(f"**Total:** `{len(todos)}` items")
+            if rows:
+                high = sum(1 for r in rows if r['pri'].upper() == 'HIGH')
+                med  = sum(1 for r in rows if r['pri'].upper() == 'MEDIUM')
+                low  = sum(1 for r in rows if r['pri'].upper() == 'LOW')
+                f.write(f"  — 🔴 `{high}` HIGH · 🟡 `{med}` MEDIUM · 🟢 `{low}` LOW\n\n")
+            else:
+                f.write("\n\n")
+
+            if not rows:
+                f.write("| # | File | Line | TODO |\n")
+                f.write("|---|------|------|------|\n")
+                for i, (file, line, text) in enumerate(todos, 1):
+                    text = text.replace('|', '/')
+                    f.write(f"| {i} | `{file}` | `{line}` | {text} |\n")
+                return
+
+            for pri_label, pri_icon, pri_color in [
+                ('HIGH', '🔴', 'dc3545'),
+                ('MEDIUM', '🟡', '856404'),
+                ('LOW', '🟢', '28a745'),
+            ]:
+                group = [r for r in rows if r['pri'].upper() == pri_label]
+                if not group:
+                    continue
+                f.write(f"\n\n## {pri_icon} {pri_label} Priority\n\n")
+                f.write(f"`{len(group)} item(s)`\n\n")
+                f.write("| File | Line | TODO | Category |\n")
+                f.write("|------|------|------|----------|\n")
+                for r in group:
+                    t = r['todo'].replace('|', '/')
+                    f.write(f"| `{r['file']}` | `{r['line']}` | {t} | {r['cat']} |\n")
+
+            f.write("\n\n---\n\n### 📋 Full Reference\n\n")
+            f.write("| # | File | Line | TODO | Category | Priority |\n")
+            f.write("|---|------|------|------|----------|----------|\n")
+            for r in rows:
+                t = r['todo'].replace('|', '/')
+                f.write(f"| {r['num']} | `{r['file']}` | `{r['line']}` | {t} | {r['cat']} | {r['pri']} |\n")
+
+        _log(f"Written {len(todos)} TODOs to {TODO_FILE}")
 
     def _clean_addons(self):
         for root, dirnames, filenames in os.walk(GITPATH):
@@ -579,9 +711,12 @@ class Generator:
         zip_path = os.path.join(ZIPPATH, addon, f'{addon}-{version}.zip')
         with ZipFile(zip_path, 'w') as addonzip:
             for root, dirs, files in os.walk(addon):
+                # Prune skipped directories in-place so os.walk skips them
+                dirs[:] = [d for d in dirs if d not in ZIP_SKIP_DIRS]
                 for file_path in files:
-                    if not file_path.endswith('.zip'):
-                        addonzip.write(os.path.join(root, file_path))
+                    if file_path.endswith('.zip') or file_path in ZIP_SKIP_FILES:
+                        continue
+                    addonzip.write(os.path.join(root, file_path))
 
         os.chdir(home)
 

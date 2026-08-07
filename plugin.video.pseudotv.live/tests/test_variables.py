@@ -132,7 +132,7 @@ class TestHasURLEncoding:
 
 
 # ========================================================================
-# 7. _cleanMPAA
+# 7. ratings.local - rating cleanup (moved from Globals._cleanMPAA to ratings.py)
 # ========================================================================
 
 class TestCleanMPAA:
@@ -144,8 +144,9 @@ class TestCleanMPAA:
         ('PG', 'PG'),
         ('', ''),
     ])
-    def test_clean_mpaa(self, globals_class, mpaa, expected):
-        assert globals_class._cleanMPAA(mpaa) == expected
+    def test_clean_mpaa(self, mpaa, expected):
+        from ratings import local
+        assert local(mpaa) == expected
 
 
 # ========================================================================

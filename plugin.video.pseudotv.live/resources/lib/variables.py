@@ -135,13 +135,17 @@ class Globals:
     @staticmethod
     def _openGuide(instanceName: str = ADDON_NAME):
         def __match(match):
+            # listdir may return URL-encoded ("PseudoTV%20Live%20(TV)@4") or decoded
+            # ("PseudoTV Live (TV)@4") group names — decode before comparing.
             for name in FileAccess.listdir('pvr://channels/tv/')[0]:
-                if name.lower().startswith(urllib.parse.quote(match.lower())):
-                    return match, 'pvr://channels/tv/%s'%(name)
-            return match, __match('All channels')
-        if xbmc.getCondVisibility('Pvr.HasTVChannels') or False:
+                if urllib.parse.unquote(name).lower().startswith(match.lower()):
+                    return name
+            return __match('All channels')
+        if xbmc.getCondVisibility('Pvr.HasTVChannels'):
             try:
-                instanceName, path = __match(instanceName)
+                name = __match(instanceName)
+                group, sep, tail = urllib.parse.unquote(name).partition('@')
+                path = 'pvr://channels/tv/%s%s' % (urllib.parse.quote(group, safe='()'), sep + tail if sep else '')
                 xbmc.executebuiltin("ReplaceWindow(TVGuide,%s)"%(path))
             except Exception: xbmc.executebuiltin("ReplaceWindow(TVGuide)")
         else: Globals._openSettings()
@@ -306,22 +310,6 @@ class Globals:
         return local.lower()
             
     @staticmethod
-    def _cleanMPAA(mpaa: str) -> str:
-        mpaa = mpaa.lower()
-        if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex
-        if 'rated ' in mpaa: mpaa = re.split('rated ',mpaa)[1]  #todo prop. regex
-        #todo regex, detect other region rating formats
-        # re.compile(':(.*)', re.IGNORECASE).search(text))
-        text = mpaa.upper()
-        try:
-            text = re.sub('/ US', ''  , text)
-            text = re.sub('Rated ', '', text)
-            mpaa = text.strip()
-        except Exception: 
-            mpaa = mpaa.strip()
-        return mpaa
-        
-    @staticmethod
     def _percentDiff(org: float, new: float) -> float:
         try: return (abs(round(org) - round(new)) / round(new)) * 100.0
         except ZeroDivisionError: return -1
@@ -452,6 +440,21 @@ class Globals:
     def _epochTime(timestamp: float, tz: bool = True) -> Any: #convert pvr json datetime string to datetime obj
         if tz: timestamp -= Globals._getTimeoffset()
         return datetime.datetime.fromtimestamp(timestamp)
+
+    @staticmethod
+    def _epoch(value: Any) -> int:
+        """Normalize a time value to a Unix epoch (seconds).
+
+        Accepts an epoch int/float, a DTFORMAT string ('%Y%m%d%H%M%S', as stored in
+        XMLTV/programme data) or a DTJSONFORMAT string ('%Y-%m-%d %H:%M:%S'). Returns
+        0 when the value is missing or can't be parsed — callers treat 0 as 'unknown'.
+        """
+        try: return int(value)
+        except (TypeError, ValueError):
+            try: return int(Globals._strpTime(str(value), DTFORMAT).timestamp())
+            except Exception:
+                try: return int(Globals._strpTime(str(value), DTJSONFORMAT).timestamp())
+                except Exception: return 0
 
     @staticmethod
     def _getTimeoffset() -> int:

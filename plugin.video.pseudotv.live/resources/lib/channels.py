@@ -83,6 +83,11 @@ class Channels(object):
             for key, default in template_keys.items():
                 if key not in citem:
                     citem[key] = default
+            # Lazy rule-id migration: remap pre-0.2 myIds to the renumbered scheme.
+            rules = citem.get('rules')
+            if isinstance(rules, dict) and rules:
+                citem['rules'] = {RULES_ID_MIGRATION.get(int(k), int(k)) if str(k).isdigit() else k: v
+                                  for k, v in rules.items()}
             yield citem
                 
                 

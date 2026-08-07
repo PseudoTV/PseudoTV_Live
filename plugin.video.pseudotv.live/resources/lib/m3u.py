@@ -567,7 +567,7 @@ class M3U(object):
         return stations
                
     def getStationItem(self, sitem: Dict[str, Any]) -> Dict[str, Any]:
-        if 3000 in list(sitem.get('rules', {}).keys()): 
+        if 300 in list(sitem.get('rules', {}).keys()): # PauseRule (myId 300) -> resume URL
             sitem['url'] = RESUME_URL.format(addon=ADDON_ID, name=Globals._quoteString(sitem['name']), chid=Globals._quoteString(sitem['id']))
         elif sitem.get('radio'): 
             sitem['url'] = RADIO_URL.format(addon=ADDON_ID, name=Globals._quoteString(sitem['name']), chid=Globals._quoteString(sitem['id']), radio=str(sitem['radio']), vid='{catchup-id}')

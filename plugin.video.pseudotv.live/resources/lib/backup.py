@@ -99,6 +99,13 @@ class Backup(object):
                 if Globals.dialog.yesnoDialog('%s'%(LANGUAGE(32109).format(old=len(self.getChannels()),new=len(channels),source=file))):
                     with Globals.builtin.busy_dialog(), Globals.properties.interruptActivity():
                         target_key = Globals.getChannelKey()
+                        # Remap pre-0.2 rule ids (RULES_ID_MIGRATION) so imported
+                        # channels carry the current execution-ordered scheme.
+                        for citem in channels:
+                            rules = citem.get('rules')
+                            if isinstance(rules, dict) and rules:
+                                citem['rules'] = {RULES_ID_MIGRATION.get(int(k), int(k)) if str(k).isdigit() else k: v
+                                                  for k, v in rules.items()}
                         if Globals.settings.setCacheSetting(target_key, self._setChannels(channels), FileAccess._getMD5(target_key), -1):
                             Globals.dialog.notificationDialog('%s %s\n%s'%(LANGUAGE(32112),LANGUAGE(32025),file))
                             Globals.properties.setPendingRestart()

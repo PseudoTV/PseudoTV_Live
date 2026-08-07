@@ -20,6 +20,7 @@
 from typing import Any, Dict, List, Optional
 from variables  import *
 from resources  import Resources
+import ratings
 
 class Fillers(object):
 
@@ -119,27 +120,6 @@ class Fillers(object):
         return values
         
         
-    def convertMPAA(self, ompaa: str) -> str:
-        #todo robust ratings system supporting international rating systems.
-        try:
-            if not ompaa:
-                return ompaa
-            ompaa = ompaa.upper()
-            m = re.search(r":(.*?)/", ompaa, re.IGNORECASE)
-            if not m:
-                return ompaa
-            mpaa = m.group(1).strip()
-        except Exception:
-            return ompaa
-        return (mpaa.replace('TV-Y' , 'G')
-                    .replace('TV-Y7', 'G')
-                    .replace('TV-G' , 'G')
-                    .replace('NA'   , 'NR')
-                    .replace('TV-PG', 'PG')
-                    .replace('TV-14', 'PG-13')
-                    .replace('TV-MA', 'R'))
-
-
     def _getFillterItem(self, ftype: str, count: int = 1, keys: List[Any] = ['resources'], chance: bool = False, passes: Optional[int] = None) -> List[Dict[str, Any]]:
         tmpLST: List[Dict[str, Any]] = []
         filler = self.bctTypes.get(ftype, {})
@@ -177,7 +157,7 @@ class Fillers(object):
         for ftype in ['bumpers','ratings']:
             filler = self.bctTypes.get(ftype, {})
             ignore = {'bumpers': IGNORE_CHTYPE + MOVIE_CHTYPE, 'ratings': IGNORE_CHTYPE + TV_CHTYPE}[ftype]
-            keys   = {'bumpers':[self.citem.get('name'), fileItem.get('genre'), self.citem.get('group',[]), self.fbuild],'ratings':[(self.convertMPAA(fileItem.get('mpaa')) or 'NR'), (fileItem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')]}[ftype]
+            keys   = {'bumpers':[self.citem.get('name'), fileItem.get('genre'), self.citem.get('group',[]), self.fbuild],'ratings':[(ratings.local(fileItem.get('mpaa')) or 'NR'), (fileItem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')]}[ftype]
             if filler.get('enabled', False) and self.citem.get('type') not in ignore:
                 items = self._getFillterItem(ftype, 1, keys, Globals._chanceBool(filler.get('chance', 0)))
                 # iterate and add pre-rolls

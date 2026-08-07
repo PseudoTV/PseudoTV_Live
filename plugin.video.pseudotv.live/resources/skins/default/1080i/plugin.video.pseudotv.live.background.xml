@@ -5,6 +5,14 @@
     <onunload>SetProperty(plugin.video.pseudotv.live.BACKGROUND_OVERLAY.Running,false,10000)</onunload>
     <controls>
         <control type="group">
+            <control type="videowindow" id="41000">
+                <description>Video Window</description>
+                <posx>0</posx>
+                <posy>0</posy>
+                <width>auto</width>
+                <height>auto</height>
+                <visible>[Player.Playing + !Control.IsVisible(40000)]</visible>
+            </control>
             <description>Background !Playing</description>
             <posx>0</posx>
             <posy>0</posy>
@@ -20,14 +28,6 @@
                 <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
                 <effect type="fade" delay="160" end="100" time="480"/>
             </animation>
-            <control type="videowindow" id="41000">
-                <description>Video Window</description>
-                <posx>0</posx>
-                <posy>0</posy>
-                <width>auto</width>
-                <height>auto</height>
-                <visible>[Player.Playing + !Control.IsVisible(40000)]</visible>
-            </control>
             <control type="image" id="40000">
                 <description>Hide Background</description>
                 <posx>0</posx>
@@ -65,20 +65,21 @@
                     <effect type="fade" start="0" end="100" time="400" delay="300"/>
                 </animation>
             </control>
-			<!-- <control type="textbox" id="40005"> -->
-                <!-- <bottom>50</bottom> -->
-                <!-- <left>50</left> -->
-                <!-- <width>1200</width> -->
-                <!-- <height>1000</height> -->
-				<!-- <font>font27</font> -->
-				<!-- <scroll>true</scroll> -->
-				<!-- <textcolor>white</textcolor> -->
-				<!-- <shadowcolor>dimgray</shadowcolor> -->
-				<!-- <scrolltime>600</scrolltime> -->
-				<!-- <autoscroll delay="5000" time="1000">false</autoscroll> -->
-				<!-- <label>Window(10000).Property(plugin.video.pseudotv.live.background.text)</label> -->
-                <!-- <visible>[Control.IsVisible(40000) + !String.IsEmpty(Control.GetLabel(40005))]</visible> -->
-			<!-- </control> -->
+            <control type="textbox" id="40005">
+                <description>Background Notification</description>
+                <bottom>50</bottom>
+                <left>50</left>
+                <width>1200</width>
+                <height>1000</height>
+                <font>font27</font>
+                <scroll>true</scroll>
+                <textcolor>white</textcolor>
+                <shadowcolor>dimgray</shadowcolor>
+                <scrolltime>600</scrolltime>
+                <autoscroll delay="5000" time="1000">false</autoscroll>
+                <label>Window(10000).Property(plugin.video.pseudotv.live.background.text)</label>
+                <visible>[Control.IsVisible(40000) + !String.IsEmpty(Control.GetLabel(40005))]</visible>
+            </control>
             <control type="group">
                 <control type="grouplist">
                     <posx>1440</posx>
@@ -121,7 +122,7 @@
                     <bordersize>5</bordersize>
                     <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
                     <bordertexture border="5" infill="false" colordiffuse="FF01416b">colors/white.png</bordertexture>
-                    <visible>Control.IsVisible(40001)</visible>
+                    <visible>[!Player.Playing + Control.IsVisible(40001)]</visible>
                 </control>
                 <control type="textbox" id="40003">
                     <height>70</height>
@@ -134,7 +135,7 @@
                     <scrolltime>600</scrolltime>
                     <autoscroll delay="5000" time="1000">false</autoscroll>
                     <label/>
-                    <visible>Control.IsVisible(40001)</visible>
+                    <visible>[!Player.Playing + Control.IsVisible(40001)]</visible>
                 </control>
             </control>
         </control>

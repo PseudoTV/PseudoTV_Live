@@ -19,6 +19,12 @@
 from variables    import *
 from typing import Union
 
+# libmediainfo only opens local paths — remote smb:// and nfs:// URLs are
+# converted to UNC via FileAccess.localizePath; other un-localizable protocols
+# are skipped.
+_REMOTE_PREFIXES = ('dav://', 'davs://', 'ftp://', 'http://', 'https://',
+                    'upnp://', 'plugin://', 'pvr://', 'stack://')
+
 class MediaInfo:
 
 
@@ -35,20 +41,26 @@ class MediaInfo:
             elif FileAccess.exists(filename.replace('.%s'%(filename.rsplit('.',1)[1]),'.xml')):
                 xml = filename.replace('.%s'%(filename.rsplit('.',1)[1]),'.xml')
             
-            try:
-                if xml is None: raise Exception('no xml found!, directly parsing file.')
-                LOG("MediaInfo: parsing XML %s"%(xml))
-                fle = FileAccess.open(xml, 'rb')
-                data = fle.read()
-                if isinstance(data, bytes): data = data.decode(DEFAULT_ENCODING)
-                mi  = MediaInfo(data)
-            except Exception: 
-                LOG("MediaInfo: parsing %s"%(FileAccess.translatePath(filename)))
-                mi = MediaInfo.parse(FileAccess.translatePath(filename))
-            finally:
-                if hasattr(fle, 'close'): 
-                    fle.close()
-                
+            # Prefer the XML sidecar; parse the file directly when no sidecar
+            # exists or it didn't yield a General-track duration.
+            if xml is not None:
+                try:
+                    LOG("MediaInfo: parsing XML %s"%(xml))
+                    fle = FileAccess.open(xml, 'rb')
+                    data = fle.read()
+                    if isinstance(data, bytes): data = data.decode(DEFAULT_ENCODING)
+                    mi  = MediaInfo(data)
+                except Exception:
+                    mi = None
+                finally:
+                    if hasattr(fle, 'close'): 
+                        fle.close()
+            
+            if mi is None or not any(t.track_type == 'General' for t in (mi.tracks or [])):
+                if not filename.lower().startswith(_REMOTE_PREFIXES):
+                    LOG("MediaInfo: parsing %s"%(FileAccess.localizePath(filename)))
+                    mi = MediaInfo.parse(FileAccess.localizePath(filename))
+            
             if not mi is None and mi.tracks:
                 for track in mi.tracks:
                     if track.track_type == 'General':

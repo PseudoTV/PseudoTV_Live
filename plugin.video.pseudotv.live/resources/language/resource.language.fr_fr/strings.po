@@ -16,30 +16,758 @@ msgstr ""
 "Language: fr_fr\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgctxt "#32279"
-msgid "No content available - check channel configuration"
-msgstr "Aucun contenu disponible - vérifiez la configuration des chaînes"
+msgctxt "#32118"
+msgid "Clean Start"
+msgstr "Démarrage propre"
 
-msgctxt "#32276"
-msgid "Failed to save to remote server."
-msgstr "Échec de l'enregistrement sur le serveur distant."
+msgctxt "#32119"
+msgid "Clear M3U/XMLTV/Genres cache and reset settings/PVR configuration"
+msgstr "Vider le cache M3U/XMLTV/Genres et réinitialiser les paramètres/configuration PVR"
 
-msgctxt "#32277"
-msgid "No Guide Data - Check Back Later"
-msgstr "Pas de données du guide - Vérifiez plus tard"
-
-msgctxt "#32278"
-msgid "Enable automatic PVR reload? This lets PseudoTV Live refresh channels and guide data when they change. Without it, you must manually reload the PVR."
-msgstr "Activer le rechargement automatique du PVR ? Cela permet à PseudoTV Live de rafraîchir les chaînes et les données du guide lorsqu'ils changent. Sans cela, vous devez recharger manuellement le PVR."
+msgctxt "#34068"
+msgid "Saving data, please wait..."
+msgstr "Sauvegarde des données, veuillez patienter..."
 
 msgctxt "#32281"
 msgid "- Delete Rule"
 msgstr "- Supprimer la règle"
 
+msgctxt "#34181"
+msgid "Write pseudotv.m3u, pseudotv.xml and genres.xml to the cache folder. Disabled by default: the guide and playlist are served from the SQLite cache, which is faster and avoids file-write races. Enable only if you use a local-file PVR (iptvsimple) configuration or need the files for external tools."
+msgstr "Écrire pseudotv.m3u, pseudotv.xml et genres.xml dans le dossier cache. Désactivé par défaut : le guide et la playlist sont servis depuis le cache SQLite, ce qui est plus rapide et évite les conflits d'écriture. N'activer que si vous utilisez une configuration PVR locale (iptvsimple) ou si vous avez besoin des fichiers pour des outils externes."
+
+msgctxt "#30062"
+msgid "Adjust Seek Threshold (Percentage)"
+msgstr "Ajuster le seuil de recherche (pourcentage)"
+
+msgctxt "#32278"
+msgid "Enable automatic PVR reload? This lets PseudoTV Live refresh channels and guide data when they change. Without it, you must manually reload the PVR."
+msgstr "Activer le rechargement automatique du PVR ? Cela permet à PseudoTV Live de rafraîchir les chaînes et les données du guide lorsqu'ils changent. Sans cela, vous devez recharger le PVR manuellement."
+
+msgctxt "#32117"
+msgid "Clear M3U/XMLTV/Genres cache"
+msgstr "Vider le cache M3U/XMLTV/Genres"
+
+msgctxt "#32277"
+msgid "No Guide Data"
+msgstr "Aucune donnée de guide"
+
+msgctxt "#33065"
+msgid "Path to a YouTube cookies.txt exported from a logged-in browser session (Netscape format). YouTube bot-checks anonymous yt-dlp requests; a valid session cookie (SID/HSID/SSID) avoids it so video durations resolve. Leave empty to use the addon's generated cookie file."
+msgstr "Chemin vers un fichier cookies.txt YouTube exporté depuis une session de navigateur connectée (format Netscape). YouTube vérifie les requêtes anonymes de yt-dlp ; un cookie de session valide (SID/HSID/SSID) évite cela afin que les durées des vidéos soient résolues. Laisser vide pour utiliser le fichier cookie généré par l'addon."
+
+msgctxt "#32279"
+msgid "No content available - check channel configuration"
+msgstr "Aucun contenu disponible - vérifiez la configuration des chaînes"
+
+msgctxt "#30500"
+msgid "YouTube Cookies File"
+msgstr "Fichier de cookies YouTube"
+
+msgctxt "#33063"
+msgid "Group EPG guide entries by category type in XMLTV output. [Default: Disabled]"
+msgstr "Regrouper les entrées EPG du guide par type de catégorie dans la sortie XMLTV. [Désactivé par défaut]"
+
+msgctxt "#32276"
+msgid "Failed to save to remote server."
+msgstr "Échec de la sauvegarde vers le serveur distant."
+
+msgctxt "#33064"
+msgid "Enter custom guide data categories for use in the channel manager."
+msgstr "Entrez les catégories de données de guide personnalisées pour une utilisation dans le gestionnaire de chaînes."
+
+msgctxt "#32120"
+msgid "Clear M3U/XMLTV/Genres cache entries"
+msgstr "Vider les entrées du cache M3U/XMLTV/Genres"
+
+msgctxt "#34180"
+msgid "Export M3U/XMLTV/genres files"
+msgstr "Exporter les fichiers M3U/XMLTV/genres"
+
+msgctxt "#32121"
+msgid "Force {name} to reload"
+msgstr "Forcer le rechargement de {name}"
+
+msgctxt "#30061"
+msgid "Playback Seek Tolerance (Seconds)"
+msgstr "Tolérance de recherche (secondes)"
+
 msgctxt "#32280"
 msgid "- Edit Rule"
 msgstr "- Modifier la règle"
 
-msgctxt "#34068"
-msgid "Saving data, please wait..."
-msgstr "Enregistrement des données, veuillez patienter..."
+msgctxt "#32343"
+msgid "Moving unwatched first"
+msgstr "Déplacement des non vus en premier"
+
+msgctxt "#33322"
+msgid "Number served channels starting at this value."
+msgstr "Nombre de chaînes desservies à partir de cette valeur."
+
+msgctxt "#32274"
+msgid "Failed to build preview or no content found."
+msgstr "Échec de la génération de l'aperçu ou aucun contenu trouvé."
+
+msgctxt "#33016"
+msgid "Global Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see wiki for details. Changes will propagate slowly over time and may not be instantaneous."
+msgstr "Les règles globales de remplissage s'appliquent à toutes les chaînes, les règles avancées du gestionnaire de chaînes s'appliquent par chaîne. *voir le wiki pour les détails. Les modifications se propageront lentement dans le temps et peuvent ne pas être instantanées."
+
+msgctxt "#32299"
+msgid "Programme Length"
+msgstr "Durée du programme"
+
+msgctxt "#33311"
+msgid "Insert a bumper every N minutes of content."
+msgstr "Insérer un bumper toutes les N minutes de contenu."
+
+msgctxt "#33137"
+msgid "Open the Kodi Node Editor for advanced SmartPlaylist creation."
+msgstr "Ouvrir l'éditeur de nœuds Kodi pour la création avancée de SmartPlaylist."
+
+msgctxt "#32283"
+msgid "Channel Filter"
+msgstr "Filtre de chaîne"
+
+msgctxt "#30021"
+msgid "Disabled"
+msgstr "Désactivé"
+
+msgctxt "#33183"
+msgid "Random sort & shuffle channel content."
+msgstr "Tri aléatoire et mélange du contenu de la chaîne."
+
+msgctxt "#32345"
+msgid "Moving recent first"
+msgstr "Déplacement des récents en premier"
+
+msgctxt "#30203"
+msgid "Name:"
+msgstr "Nom :"
+
+msgctxt "#33232"
+msgid "Change sorting methods like episode order, random order."
+msgstr "Modifier les méthodes de tri comme l'ordre des épisodes, l'ordre aléatoire."
+
+msgctxt "#32030"
+msgid "Invalid Path!"
+msgstr "Chemin invalide !"
+
+msgctxt "#32316"
+msgid "End (HH:MM)"
+msgstr "Fin (HH:MM)"
+
+msgctxt "#30237"
+msgid "Select one or more resources"
+msgstr "Sélectionner une ou plusieurs ressources"
+
+msgctxt "#33112"
+msgid "Position of the channel bug overlay on screen. [Default: Auto]"
+msgstr "Position du bug de chaîne à l'écran. [Défaut : Auto]"
+
+msgctxt "#32291"
+msgid "Include / Exclude"
+msgstr "Inclure / Exclure"
+
+msgctxt "#32322"
+msgid "Renumber Channels"
+msgstr "Renuméroter les chaînes"
+
+msgctxt "#32341"
+msgid "Filtering by rating/genre"
+msgstr "Filtrage par note/genre"
+
+msgctxt "#32348"
+msgid "Reserving primetime window"
+msgstr "Réservation de la case de prime time"
+
+msgctxt "#32352"
+msgid "Restoring resume schedule"
+msgstr "Restauration du planning de reprise"
+
+msgctxt "#30236"
+msgid "Would you like to remove: [B]{name}[/B] from recordings?"
+msgstr "Souhaitez-vous supprimer : [B]{name}[/B] des enregistrements ?"
+
+msgctxt "#30000"
+msgid "Miscellaneous"
+msgstr "Divers"
+
+msgctxt "#33108"
+msgid "Open the PseudoTV Live addon settings."
+msgstr "Ouvrir les paramètres de l'extension PseudoTV Live."
+
+msgctxt "#32297"
+msgid "Max MPAA Rating"
+msgstr "Note MPAA maximale"
+
+msgctxt "#30239"
+msgid "PseudoTV Live detected {count} configured channels but the PVR has not loaded them.\nA PVR backend refresh will now be attempted to restore channel access."
+msgstr "PseudoTV Live a détecté {count} chaînes configurées mais le PVR ne les a pas chargées.\nUne actualisation du backend PVR va maintenant être tentée pour restaurer l'accès aux chaînes."
+
+msgctxt "#32288"
+msgid "Night Starts At (24h)"
+msgstr "Début de la nuit (24h)"
+
+msgctxt "#33113"
+msgid "Apply diffuse color to channel bug regardless of monochromatics"
+msgstr "Appliquer une couleur diffuse au bug de chaîne quel que soit le monochromatique"
+
+msgctxt "#32306"
+msgid "Recent First"
+msgstr "Récent en premier"
+
+msgctxt "#33017"
+msgid "Add Ratings & Bumpers"
+msgstr "Ajouter des notes et des bumpers"
+
+msgctxt "#32339"
+msgid "Filtering by path keywords"
+msgstr "Filtrage par mots-clés de chemin"
+
+msgctxt "#30238"
+msgid "PVR Recovery"
+msgstr "Récupération PVR"
+
+msgctxt "#33023"
+msgid "Artwork changes will propagate slowly over time and are not instantaneous."
+msgstr "Les modifications de graphiques se propageront lentement dans le temps et ne sont pas instantanées."
+
+msgctxt "#33229"
+msgid "Position of the On-Next overlay. Auto selects optimal position. [Default: Auto]"
+msgstr "Position de l'overlay À venir. Sélectionne automatiquement la position optimale. [Défaut : Auto]"
+
+msgctxt "#33111"
+msgid "Adjust delay between Kodi API requests (Seconds) to avoid collisions. Increasing value decreases performance; while adding system stability. [1 Default]"
+msgstr "Ajuster le délai entre les requêtes API Kodi (secondes) pour éviter les collisions. Augmenter la valeur réduit les performances tout en ajoutant de la stabilité au système. [1 Défaut]"
+
+msgctxt "#32333"
+msgid "Lock Channel"
+msgstr "Verrouiller la chaîne"
+
+msgctxt "#32289"
+msgid "Night Ends At (24h)"
+msgstr "Fin de la nuit (24h)"
+
+msgctxt "#32313"
+msgid "Bumper Folder"
+msgstr "Dossier de bumpers"
+
+msgctxt "#32268"
+msgid "Validating channel path, this may take a moment..."
+msgstr "Validation du chemin de la chaîne, cela peut prendre un moment..."
+
+msgctxt "#32332"
+msgid "PIN"
+msgstr "Code PIN"
+
+msgctxt "#32328"
+msgid "Refresh Interval (minutes)"
+msgstr "Intervalle d'actualisation (minutes)"
+
+msgctxt "#30240"
+msgid "Waiting for PVR to load channels"
+msgstr "En attente du chargement des chaînes par le PVR"
+
+msgctxt "#32319"
+msgid "Groups"
+msgstr "Groupes"
+
+msgctxt "#32335"
+msgid "Building holiday content"
+msgstr "Construction du contenu festif"
+
+msgctxt "#33033"
+msgid "Be sure to install the Lunatixz Beta repository in-order to stay update. Information available in the readme or in the official Kodi Forums."
+msgstr "Assurez-vous d'installer le dépôt bêta de Lunatixz pour rester à jour. Informations disponibles dans le readme ou sur les forums officiels de Kodi."
+
+msgctxt "#32340"
+msgid "Matching audio/subtitle language"
+msgstr "Correspondance de la langue audio/sous-titres"
+
+msgctxt "#32314"
+msgid "Prime Time"
+msgstr "Prime time"
+
+msgctxt "#33139"
+msgid "Chance of using random video when no channel-specific match found. [Default: 50%]"
+msgstr "Probabilité d'utiliser une vidéo aléatoire lorsqu'aucune correspondance spécifique à la chaîne n'est trouvée. [Défaut : 50%]"
+
+msgctxt "#33314"
+msgid "Reserve this time window for a chosen genre or title."
+msgstr "Réserver cette tranche horaire pour un genre ou un titre choisi."
+
+msgctxt "#30234"
+msgid "Would you like to add: [B]{name}[/B] to the first available {addon} channel?"
+msgstr "Souhaitez-vous ajouter : [B]{name}[/B] à la première chaîne {addon} disponible ?"
+
+msgctxt "#32286"
+msgid "Day Source"
+msgstr "Source diurne"
+
+msgctxt "#32347"
+msgid "Inserting bumpers"
+msgstr "Insertion de bumpers"
+
+msgctxt "#34067"
+msgid "- Add Path"
+msgstr "- Ajouter un chemin"
+
+msgctxt "#34066"
+msgid "Display QR code to install Bonjour service on Windows."
+msgstr "Afficher le code QR pour installer le service Bonjour sur Windows."
+
+msgctxt "#32312"
+msgid "Interval (minutes)"
+msgstr "Intervalle (minutes)"
+
+msgctxt "#32000"
+msgid "Something went wrong, Try again later..."
+msgstr "Une erreur s'est produite, réessayez plus tard..."
+
+msgctxt "#32031"
+msgid "No Media Found!"
+msgstr "Aucun média trouvé !"
+
+msgctxt "#32300"
+msgid "Min Minutes"
+msgstr "Minutes minimales"
+
+msgctxt "#33302"
+msgid "Play unwatched programmes first, then already-watched content."
+msgstr "Lire les programmes non vus en premier, puis le contenu déjà visionné."
+
+msgctxt "#32350"
+msgid "Shuffling content"
+msgstr "Mélange du contenu"
+
+msgctxt "#32303"
+msgid "Unwatched First"
+msgstr "Non vus en premier"
+
+msgctxt "#30244"
+msgid "retrying channel detection"
+msgstr "nouvelle tentative de détection de chaîne"
+
+msgctxt "#33293"
+msgid "Prefer files whose name or audio/subtitle stream matches a language tag (e.g. eng, [ENG], .eng., multi). Defaults to your Kodi language."
+msgstr "Préférer les fichiers dont le nom ou le flux audio/sous-titres correspond à une balise de langue (par ex. eng, [ENG], .eng., multi). Par défaut, utilise la langue de votre Kodi."
+
+msgctxt "#32285"
+msgid "Dayparting"
+msgstr "Découpage journalier"
+
+msgctxt "#30205"
+msgid "Run CPU Benchmark"
+msgstr "Exécuter le benchmark CPU"
+
+msgctxt "#32295"
+msgid "Subtitle Language"
+msgstr "Langue des sous-titres"
+
+msgctxt "#33179"
+msgid "Interleave individual paths in sets of x *see wiki for details [0 Disabled]"
+msgstr "Entrelacer les chemins individuels par ensembles de x *voir le wiki pour les détails [0 Désactivé]"
+
+msgctxt "#32330"
+msgid "Pin Lock"
+msgstr "Verrouillage par code PIN"
+
+msgctxt "#32302"
+msgid "Unwatched First"
+msgstr "Non vus en premier"
+
+msgctxt "#33027"
+msgid "Select one or more channel logo resource packs."
+msgstr "Sélectionner un ou plusieurs packs de ressources de logo de chaîne."
+
+msgctxt "#32318"
+msgid "Hide Groups"
+msgstr "Masquer les groupes"
+
+msgctxt "#33037"
+msgid "Open Kodi PVR and Live TV settings for IPTV Simple configuration."
+msgstr "Ouvrir les paramètres PVR et TV en direct de Kodi pour la configuration d'IPTV Simple."
+
+msgctxt "#33306"
+msgid "Pull programmes added within this many days to the front."
+msgstr "Remonter les programmes ajoutés dans les X derniers jours en tête."
+
+msgctxt "#34051"
+msgid "Select addon(s) providing bumper videos for pre-roll/post-roll. [Default: None]"
+msgstr "Sélectionner l'/les extension(s) fournissant des vidéos de bumpers pour le pré/post-roll. [Défaut : Aucun]"
+
+msgctxt "#33296"
+msgid "Skip programmes rated higher than this or matching a genre you list."
+msgstr "Ignorer les programmes notés au-dessus de cette valeur ou correspondant à un genre que vous listez."
+
+msgctxt "#32324"
+msgid "Guide Name"
+msgstr "Nom du guide"
+
+msgctxt "#34179"
+msgid "Change Vignette V-Shift"
+msgstr "Modifier le décalage vertical du vignettage"
+
+msgctxt "#34050"
+msgid "Automatically add discovered PseudoTV Live instances without prompting."
+msgstr "Ajouter automatiquement les instances PseudoTV Live découvertes sans demander."
+
+msgctxt "#32351"
+msgid "Switching day/night source"
+msgstr "Basculement de la source jour/nuit"
+
+msgctxt "#33304"
+msgid "Play up to this many episodes of one show before switching."
+msgstr "Lire jusqu'à X épisodes d'une série avant de basculer."
+
+msgctxt "#32321"
+msgid "Logo Image"
+msgstr "Image du logo"
+
+msgctxt "#32273"
+msgid "Building preview for [B]{name}[/B], this may take a moment..."
+msgstr "Génération de l'aperçu pour [B]{name}[/B], cela peut prendre un moment..."
+
+msgctxt "#33184"
+msgid "Enable channel building and compilation processes."
+msgstr "Activer les processus de construction et de compilation des chaînes."
+
+msgctxt "#32307"
+msgid "Recent Days"
+msgstr "Jours récents"
+
+msgctxt "#32337"
+msgid "Padding schedule"
+msgstr "Planning de remplissage"
+
+msgctxt "#32344"
+msgid "Batching series runs"
+msgstr "Regroupement des passages de séries"
+
+msgctxt "#32308"
+msgid "Genre Boost"
+msgstr "Boost de genre"
+
+msgctxt "#32310"
+msgid "Boost"
+msgstr "Boost"
+
+msgctxt "#32334"
+msgid "Lock Rating"
+msgstr "Verrouiller la note"
+
+msgctxt "#33050"
+msgid "Automatically add discovered instances without prompting. [Default: Enabled]"
+msgstr "Ajouter automatiquement les instances découvertes sans demander. [Défaut : Activé]"
+
+msgctxt "#33140"
+msgid "Auto-create subfolders under cache/fillers/ for each channel and genre. [Default: Disabled]"
+msgstr "Créer automatiquement des sous-dossiers sous cache/fillers/ pour chaque chaîne et genre. [Défaut : Désactivé]"
+
+msgctxt "#33214"
+msgid "Force channel rebuild when playlist file changes detected. [Default: Disabled]"
+msgstr "Forcer la reconstruction de la chaîne lorsqu'une modification du fichier de playlist est détectée. [Défaut : Désactivé]"
+
+msgctxt "#33003"
+msgid "AutoTune from Recommended (Supported) plugins installed on Kodi. Support does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgstr "AutoTune à partir des plugins recommandés (supportés) installés sur Kodi. Le support n'implique pas une relation entre les projets, PseudoTV n'est pas responsable du contenu fourni par les plugins tiers."
+
+msgctxt "#32349"
+msgid "Forcing random sort"
+msgstr "Forçage du tri aléatoire"
+
+msgctxt "#33318"
+msgid "Hide these channel groups from the served guide. Separate with |."
+msgstr "Masquer ces groupes de chaînes du guide servi. Séparer avec |."
+
+msgctxt "#30152"
+msgid "Resume Later"
+msgstr "Reprendre plus tard"
+
+msgctxt "#30242"
+msgid "Waiting for channel data"
+msgstr "En attente des données de la chaîne"
+
+msgctxt "#30019"
+msgid "Enable Post-Roll"
+msgstr "Activer le post-roll"
+
+msgctxt "#32327"
+msgid "Feed URL"
+msgstr "URL du flux"
+
+msgctxt "#33181"
+msgid "Force TV in Episode order, Movies in Year order Based on available content provided by your channel configuration and supersedes SmartPlaylist rules"
+msgstr "Forcer les séries dans l'ordre des épisodes, les films dans l'ordre des années. Basé sur le contenu disponible fourni par votre configuration de chaîne et remplace les règles SmartPlaylist"
+
+msgctxt "#32269"
+msgid "Path validation passed!"
+msgstr "Validation du chemin réussie !"
+
+msgctxt "#30151"
+msgid "Copy Fillers Folder?"
+msgstr "Copier le dossier de remplissage ?"
+
+msgctxt "#33052"
+msgid "Save file-parsed runtime to Kodi database. Improves EPG accuracy. [Default: Disabled] [Recommended: Enabled]"
+msgstr "Enregistrer la durée analysée des fichiers dans la base de données Kodi. Améliore la précision du guide électronique. [Défaut : Désactivé] [Recommandé : Activé]"
+
+msgctxt "#32290"
+msgid "Path Keyword Filter"
+msgstr "Filtre par mots-clés de chemin"
+
+msgctxt "#33168"
+msgid "QRCode - Visit PseudoTV Live Wiki."
+msgstr "QRCode - Consulter le wiki de PseudoTV Live."
+
+msgctxt "#32292"
+msgid "Keywords"
+msgstr "Mots-clés"
+
+msgctxt "#33285"
+msgid "Use a different content source during the day and at night."
+msgstr "Utiliser une source de contenu différente le jour et la nuit."
+
+msgctxt "#32331"
+msgid "Require a PIN to play locked channels or programmes at/above a locked rating."
+msgstr "Exiger un code PIN pour lire les chaînes verrouillées ou les programmes à/supérieur à une note verrouillée."
+
+msgctxt "#32287"
+msgid "Night Source"
+msgstr "Source nocturne"
+
+msgctxt "#33320"
+msgid "Use this image as the channel logo in the guide."
+msgstr "Utiliser cette image comme logo de la chaîne dans le guide."
+
+msgctxt "#30206"
+msgid "Install I/O Benchmark"
+msgstr "Installer le benchmark E/S"
+
+msgctxt "#33290"
+msgid "Only include (or exclude) files whose path contains these words. Separate with |."
+msgstr "Inclure (ou exclure) uniquement les fichiers dont le chemin contient ces mots. Séparer avec |."
+
+msgctxt "#33165"
+msgid "QRCode - View Snapshot."
+msgstr "QRCode - Voir l'instantané."
+
+msgctxt "#32293"
+msgid "Audio / Language Preference"
+msgstr "Préférence audio / langue"
+
+msgctxt "#32323"
+msgid "Start Number"
+msgstr "Numéro de départ"
+
+msgctxt "#30241"
+msgid "Connecting to PVR backend"
+msgstr "Connexion au backend PVR"
+
+msgctxt "#33308"
+msgid "Install Log Uploader."
+msgstr "Installer le téléchargeur de journaux."
+
+msgctxt "#33283"
+msgid "Exclude this channel from the served M3U/XMLTV guide."
+msgstr "Exclure cette chaîne du guide M3U/XMLTV servi."
+
+msgctxt "#33010"
+msgid "AutoTune Mixed content collected from your Kodi Library."
+msgstr "AutoTune de contenu mixte collecté dans votre bibliothèque Kodi."
+
+msgctxt "#33009"
+msgid "Submit debugging log for review to http://paste.kodi.tv."
+msgstr "Soumettre le journal de débogage pour examen à http://paste.kodi.tv."
+
+msgctxt "#30017"
+msgid "Enable Pre-Roll"
+msgstr "Activer le pré-roll"
+
+msgctxt "#33132"
+msgid "Restore playcount and resume points when PseudoTV playback ends. [Default: Disabled]"
+msgstr "Restaurer le compteur de lecture et les points de reprise lorsque la lecture PseudoTV se termine. [Défaut : Désactivé]"
+
+msgctxt "#33159"
+msgid "Force complete rebuild of all autotuned channels. Use when channels are corrupted or missing."
+msgstr "Forcer la reconstruction complète de toutes les chaînes auto-accordées. À utiliser lorsque les chaînes sont corrompues ou manquantes."
+
+msgctxt "#33180"
+msgid "Build Filler Template folders based on your channels."
+msgstr "Construire les dossiers de modèles de remplissage basés sur vos chaînes."
+
+msgctxt "#32320"
+msgid "Logo Override"
+msgstr "Remplacement du logo"
+
+msgctxt "#32271"
+msgid "Path validation overridden by user."
+msgstr "Validation du chemin remplacée par l'utilisateur."
+
+msgctxt "#33201"
+msgid "Seconds to wait for Kodi API response before timeout. [Default: -1 (Disabled)]"
+msgstr "Secondes d'attente de la réponse de l'API Kodi avant l'expiration. [Défaut : -1 (Désactivé)]"
+
+msgctxt "#33219"
+msgid "[COLOR=red][B]Warning[/B][/COLOR] AI features may incur API usage costs. Use at your own discretion."
+msgstr "[COLOR=red][B]Attention[/B][/COLOR] Les fonctionnalités d'IA peuvent entraîner des coûts d'utilisation de l'API. Utilisez à vos propres risques."
+
+msgctxt "#33170"
+msgid "Display the On-Screen Display when the channel changes. [Default: Disabled]"
+msgstr "Afficher l'affichage à l'écran lorsque la chaîne change. [Défaut : Désactivé]"
+
+msgctxt "#30245"
+msgid "PVR loaded successfully"
+msgstr "PVR chargé avec succès"
+
+msgctxt "#32272"
+msgid "Path validation unavailable while media is playing."
+msgstr "Validation du chemin indisponible pendant la lecture des médias."
+
+msgctxt "#32309"
+msgid "Genre"
+msgstr "Genre"
+
+msgctxt "#32342"
+msgid "Filtering by duration range"
+msgstr "Filtrage par plage de durée"
+
+msgctxt "#33259"
+msgid "Mark this channel to be rebuilt on next update. Toggle ON to force a channel refresh."
+msgstr "Marquer cette chaîne pour reconstruction lors de la prochaine mise à jour. Activer pour forcer l'actualisation de la chaîne."
+
+msgctxt "#32301"
+msgid "Max Minutes"
+msgstr "Minutes maximales"
+
+msgctxt "#33326"
+msgid "Pull content from a remote JSON/M3U URL (see schema)."
+msgstr "Récupérer le contenu depuis une URL JSON/M3U distante (voir le schéma)."
+
+msgctxt "#33233"
+msgid "Include Extras/Specials in Post-Roll fillers. Matched to previously played item. [Default: Disabled]"
+msgstr "Inclure les bonus/spéciaux dans les remplissages de post-roll. Associés à l'élément précédemment lu. [Défaut : Désactivé]"
+
+msgctxt "#32282"
+msgid "No programme schedule is available for this channel at the moment. The guide may still be building or queued - check back later."
+msgstr "Aucun planning de programmes n'est disponible pour cette chaîne pour le moment. Le guide est peut-être encore en construction ou en file d'attente - réessayez plus tard."
+
+msgctxt "#32311"
+msgid "Programme Spacing"
+msgstr "Espacement des programmes"
+
+msgctxt "#32329"
+msgid "HTTP Headers"
+msgstr "En-têtes HTTP"
+
+msgctxt "#33149"
+msgid "Override Kodi background throttling for full performance when idle. [Default: Disabled]"
+msgstr "Remplacer la limitation en arrière-plan de Kodi pour les performances complètes lorsqu'il est inactif. [Défaut : Désactivé]"
+
+msgctxt "#32338"
+msgid "Distributing shows evenly"
+msgstr "Distribution équitable des émissions"
+
+msgctxt "#32304"
+msgid "Series Marathon"
+msgstr "Marathon de séries"
+
+msgctxt "#32270"
+msgid "Path validation failed!"
+msgstr "Échec de la validation du chemin !"
+
+msgctxt "#32298"
+msgid "Blocked Genres"
+msgstr "Genres bloqués"
+
+msgctxt "#32346"
+msgid "Weighting genres"
+msgstr "Pondération des genres"
+
+msgctxt "#32326"
+msgid "External Feed"
+msgstr "Flux externe"
+
+msgctxt "#32294"
+msgid "Audio Language"
+msgstr "Langue audio"
+
+msgctxt "#32284"
+msgid "Enable Channel Filter"
+msgstr "Activer le filtre de chaîne"
+
+msgctxt "#32336"
+msgid "Ordering episodes"
+msgstr "Organisation des épisodes"
+
+msgctxt "#33230"
+msgid "Force TV in episode order, movies in year order. Overrides SmartPlaylist sorting. [Default: Disabled]"
+msgstr "Forcer les séries dans l'ordre des épisodes, les films dans l'ordre des années. Remplace le tri SmartPlaylist. [Défaut : Désactivé]"
+
+msgctxt "#33299"
+msgid "Only keep programmes within this length range. 0 = no limit."
+msgstr "Conserver uniquement les programmes dans cette plage de durée. 0 = pas de limite."
+
+msgctxt "#32275"
+msgid "Channel saved successfully."
+msgstr "Chaîne enregistrée avec succès."
+
+msgctxt "#33110"
+msgid "Backup channel configurations & rules."
+msgstr "Sauvegarder les configurations et règles des chaînes."
+
+msgctxt "#33114"
+msgid "Confirm Paths"
+msgstr "Confirmer les chemins"
+
+msgctxt "#30235"
+msgid "Would you like to add: [B]{name}[/B] to {type} recordings?"
+msgstr "Souhaitez-vous ajouter : [B]{name}[/B] aux enregistrements {type} ?"
+
+msgctxt "#33324"
+msgid "Show this name in the guide."
+msgstr "Afficher ce nom dans le guide."
+
+msgctxt "#32305"
+msgid "Episodes per Run"
+msgstr "Épisodes par passage"
+
+msgctxt "#30243"
+msgid "PVR has no channels loaded"
+msgstr "Le PVR n'a aucune chaîne chargée"
+
+msgctxt "#33002"
+msgid "Minimum Debugging Level [LOGERROR - Default] If submit is [COLOR=dimgray][B]dim[/B][/COLOR] no debugging information logged, change to [B]LOGDEBUG[/B] and reproduce error."
+msgstr "Niveau de débogage minimum [LOGERROR - Défaut] Si la soumission est [COLOR=dimgray][B]dim[/B][/COLOR], aucune information de débogage enregistrée, passez à [B]LOGDEBUG[/B] et reproduisez l'erreur."
+
+msgctxt "#32296"
+msgid "Content Rating Filter"
+msgstr "Filtre par classification de contenu"
+
+msgctxt "#33209"
+msgid "Transparency level for channel bug logo. Lower = more transparent. [Default: 25%]"
+msgstr "Niveau de transparence du logo bug de chaîne. Plus bas = plus transparent. [Défaut : 25%]"
+
+msgctxt "#32325"
+msgid "Display Name"
+msgstr "Nom d'affichage"
+
+msgctxt "#32317"
+msgid "Genre / Title"
+msgstr "Genre / Titre"
+
+msgctxt "#33182"
+msgid "Enabled in discovered servers in the list below."
+msgstr "Activé dans les serveurs découverts dans la liste ci-dessous."
+
+msgctxt "#33138"
+msgid "Open the Kodi SmartPlaylist Editor for custom playlists."
+msgstr "Ouvrir l'éditeur SmartPlaylist Kodi pour les listes de lecture personnalisées."
+
+msgctxt "#33019"
+msgid "Add Adverts & Trailers"
+msgstr "Ajouter des publicités et des bandes-annonces"
+
+msgctxt "#32315"
+msgid "Start (HH:MM)"
+msgstr "Début (HH:MM)"

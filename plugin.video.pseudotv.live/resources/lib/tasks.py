@@ -233,6 +233,9 @@ class Tasks(object):
                             mpath = os.path.join(fpath, mpaa_label)
                             if not FileAccess.exists(mpath): 
                                 pDialog = __create(midx, mpaas_len, mpaa_label, mpath)
+                    npath = os.path.join(fpath, 'NR')  # fallback for unrated items
+                    if not FileAccess.exists(npath):
+                        pDialog = __create(mpaas_len, mpaas_len + 1, 'NR', npath)
                     continue
                     
                 # --- GENRES ---

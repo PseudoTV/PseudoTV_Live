@@ -2663,7 +2663,7 @@ msgid "Failed to save to remote server."
 msgstr ""
 
 msgctxt "#32277"
-msgid "No Guide Data - Check Back Later"
+msgid "No Guide Data"
 msgstr ""
 
 msgctxt "#32278"
@@ -2672,6 +2672,22 @@ msgstr ""
 
 msgctxt "#32279"
 msgid "No content available - check channel configuration"
+msgstr ""
+
+msgctxt "#32282"
+msgid "No programme schedule is available for this channel at the moment. The guide may still be building or queued - check back later."
+msgstr ""
+
+msgctxt "#32283"
+msgid "Channel Filter"
+msgstr ""
+
+msgctxt "#32284"
+msgid "Enable Channel Filter"
+msgstr ""
+
+msgctxt "#33283"
+msgid "Exclude this channel from the served M3U/XMLTV guide."
 msgstr ""
 
 msgctxt "#32280"
@@ -2693,4 +2709,344 @@ msgstr ""
 
 msgctxt "#34181"
 msgid "Write pseudotv.m3u, pseudotv.xml and genres.xml to the cache folder. Disabled by default: the guide and playlist are served from the SQLite cache, which is faster and avoids file-write races. Enable only if you use a local-file PVR (iptvsimple) configuration or need the files for external tools."
+msgstr ""
+
+msgctxt "#32285"
+msgid "Dayparting"
+msgstr ""
+
+msgctxt "#32286"
+msgid "Day Source"
+msgstr ""
+
+msgctxt "#32287"
+msgid "Night Source"
+msgstr ""
+
+msgctxt "#32288"
+msgid "Night Starts At (24h)"
+msgstr ""
+
+msgctxt "#32289"
+msgid "Night Ends At (24h)"
+msgstr ""
+
+msgctxt "#32290"
+msgid "Path Keyword Filter"
+msgstr ""
+
+msgctxt "#32291"
+msgid "Include / Exclude"
+msgstr ""
+
+msgctxt "#32292"
+msgid "Keywords"
+msgstr ""
+
+msgctxt "#32293"
+msgid "Audio / Language Preference"
+msgstr ""
+
+msgctxt "#32294"
+msgid "Audio Language"
+msgstr ""
+
+msgctxt "#32295"
+msgid "Subtitle Language"
+msgstr ""
+
+msgctxt "#32296"
+msgid "Content Rating Filter"
+msgstr ""
+
+msgctxt "#32297"
+msgid "Max MPAA Rating"
+msgstr ""
+
+msgctxt "#32298"
+msgid "Blocked Genres"
+msgstr ""
+
+msgctxt "#32299"
+msgid "Programme Length"
+msgstr ""
+
+msgctxt "#32300"
+msgid "Min Minutes"
+msgstr ""
+
+msgctxt "#32301"
+msgid "Max Minutes"
+msgstr ""
+
+msgctxt "#32302"
+msgid "Unwatched First"
+msgstr ""
+
+msgctxt "#32303"
+msgid "Unwatched First"
+msgstr ""
+
+msgctxt "#32304"
+msgid "Series Marathon"
+msgstr ""
+
+msgctxt "#32305"
+msgid "Episodes per Run"
+msgstr ""
+
+msgctxt "#32306"
+msgid "Recent First"
+msgstr ""
+
+msgctxt "#32307"
+msgid "Recent Days"
+msgstr ""
+
+msgctxt "#32308"
+msgid "Genre Boost"
+msgstr ""
+
+msgctxt "#32309"
+msgid "Genre"
+msgstr ""
+
+msgctxt "#32310"
+msgid "Boost"
+msgstr ""
+
+msgctxt "#32311"
+msgid "Programme Spacing"
+msgstr ""
+
+msgctxt "#32312"
+msgid "Interval (minutes)"
+msgstr ""
+
+msgctxt "#32313"
+msgid "Bumper Folder"
+msgstr ""
+
+msgctxt "#32314"
+msgid "Prime Time"
+msgstr ""
+
+msgctxt "#32315"
+msgid "Start (HH:MM)"
+msgstr ""
+
+msgctxt "#32316"
+msgid "End (HH:MM)"
+msgstr ""
+
+msgctxt "#32317"
+msgid "Genre / Title"
+msgstr ""
+
+msgctxt "#32318"
+msgid "Hide Groups"
+msgstr ""
+
+msgctxt "#32319"
+msgid "Groups"
+msgstr ""
+
+msgctxt "#32320"
+msgid "Logo Override"
+msgstr ""
+
+msgctxt "#32321"
+msgid "Logo Image"
+msgstr ""
+
+msgctxt "#32322"
+msgid "Renumber Channels"
+msgstr ""
+
+msgctxt "#32323"
+msgid "Start Number"
+msgstr ""
+
+msgctxt "#32324"
+msgid "Guide Name"
+msgstr ""
+
+msgctxt "#32325"
+msgid "Display Name"
+msgstr ""
+
+msgctxt "#32326"
+msgid "External Feed"
+msgstr ""
+
+msgctxt "#32327"
+msgid "Feed URL"
+msgstr ""
+
+msgctxt "#32328"
+msgid "Refresh Interval (minutes)"
+msgstr ""
+
+msgctxt "#32329"
+msgid "HTTP Headers"
+msgstr ""
+
+msgctxt "#32330"
+msgid "Pin Lock"
+msgstr ""
+
+msgctxt "#32331"
+msgid "Require a PIN to play locked channels or programmes at/above a locked rating."
+msgstr ""
+
+msgctxt "#32332"
+msgid "PIN"
+msgstr ""
+
+msgctxt "#32333"
+msgid "Lock Channel"
+msgstr ""
+
+msgctxt "#32334"
+msgid "Lock Rating"
+msgstr ""
+
+msgctxt "#32335"
+msgid "Building holiday content"
+msgstr ""
+
+msgctxt "#32336"
+msgid "Ordering episodes"
+msgstr ""
+
+msgctxt "#32337"
+msgid "Padding schedule"
+msgstr ""
+
+msgctxt "#32338"
+msgid "Distributing shows evenly"
+msgstr ""
+
+msgctxt "#32339"
+msgid "Filtering by path keywords"
+msgstr ""
+
+msgctxt "#32340"
+msgid "Matching audio/subtitle language"
+msgstr ""
+
+msgctxt "#32341"
+msgid "Filtering by rating/genre"
+msgstr ""
+
+msgctxt "#32342"
+msgid "Filtering by duration range"
+msgstr ""
+
+msgctxt "#32343"
+msgid "Moving unwatched first"
+msgstr ""
+
+msgctxt "#32344"
+msgid "Batching series runs"
+msgstr ""
+
+msgctxt "#32345"
+msgid "Moving recent first"
+msgstr ""
+
+msgctxt "#32346"
+msgid "Weighting genres"
+msgstr ""
+
+msgctxt "#32347"
+msgid "Inserting bumpers"
+msgstr ""
+
+msgctxt "#32348"
+msgid "Reserving primetime window"
+msgstr ""
+
+msgctxt "#32349"
+msgid "Forcing random sort"
+msgstr ""
+
+msgctxt "#32350"
+msgid "Shuffling content"
+msgstr ""
+
+msgctxt "#32351"
+msgid "Switching day/night source"
+msgstr ""
+
+msgctxt "#32352"
+msgid "Restoring resume schedule"
+msgstr ""
+
+msgctxt "#33293"
+msgid "Prefer files whose name or audio/subtitle stream matches a language tag (e.g. eng, [ENG], .eng., multi). Defaults to your Kodi language."
+msgstr ""
+
+msgctxt "#33285"
+msgid "Use a different content source during the day and at night."
+msgstr ""
+
+msgctxt "#33290"
+msgid "Only include (or exclude) files whose path contains these words. Separate with |."
+msgstr ""
+
+msgctxt "#33293"
+msgid "Prefer files whose name carries a language tag (e.g. eng, [ENG], .eng., multi)."
+msgstr ""
+
+msgctxt "#33296"
+msgid "Skip programmes rated higher than this or matching a genre you list."
+msgstr ""
+
+msgctxt "#33299"
+msgid "Only keep programmes within this length range. 0 = no limit."
+msgstr ""
+
+msgctxt "#33302"
+msgid "Play unwatched programmes first, then already-watched content."
+msgstr ""
+
+msgctxt "#33304"
+msgid "Play up to this many episodes of one show before switching."
+msgstr ""
+
+msgctxt "#33306"
+msgid "Pull programmes added within this many days to the front."
+msgstr ""
+
+msgctxt "#33308"
+msgid "Give matching genres extra airtime."
+msgstr ""
+
+msgctxt "#33311"
+msgid "Insert a bumper every N minutes of content."
+msgstr ""
+
+msgctxt "#33314"
+msgid "Reserve this time window for a chosen genre or title."
+msgstr ""
+
+msgctxt "#33318"
+msgid "Hide these channel groups from the served guide. Separate with |."
+msgstr ""
+
+msgctxt "#33320"
+msgid "Use this image as the channel logo in the guide."
+msgstr ""
+
+msgctxt "#33322"
+msgid "Number served channels starting at this value."
+msgstr ""
+
+msgctxt "#33324"
+msgid "Show this name in the guide."
+msgstr ""
+
+msgctxt "#33326"
+msgid "Pull content from a remote JSON/M3U URL (see schema)."
 msgstr ""

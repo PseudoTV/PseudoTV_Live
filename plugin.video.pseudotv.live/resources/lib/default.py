@@ -36,7 +36,10 @@ if __name__ == '__main__':
             
         if sysInfo.get('mode') is None:
             xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xbmcgui.ListItem())
-            if Globals.properties.getEXTProperty('%s.%s'%(ADDON_ID, 'has.Channels')) == "true":
+            # has.Channels EXT property is rarely set — fall back to the reliable
+            # PVR check so launching the addon opens the TV guide (at the PseudoTV
+            # group) instead of settings once channels are loaded.
+            if Globals.properties.getEXTProperty('%s.%s'%(ADDON_ID, 'has.Channels')) == "true" or Globals.builtin.getInfoBool('Pvr.HasTVChannels'):
                 Globals._openGuide()
             else:
                 Globals._openSettings()

@@ -32,12 +32,14 @@ class Plugin(object):
         self.jsonRPC = self.service.jsonRPC
         self.cache   = self.service.cache
         self.monitor = self.service.monitor
+        self.player  = self.service.player
         self.sysInfo = sysInfo
         self.sysInfo['seek'] = (sysInfo.get('seek') or abs(int(sysInfo.get('start',-1)) - int(sysInfo.get('now',-1))) if int(sysInfo.get('start',-1)) > 0 else -1)
         self.sysInfo["progresspercentage"] = round((self.sysInfo["seek"]/int(self.sysInfo["duration"])) * 100, 2) if self.sysInfo['seek'] > 0 else -1 
         
+        # Widgets don't include listitem meta, attempt to find matching meta with jsonrpc
         if not self.sysInfo.get('fitem'): 
-            self._updateSysInfo() #Widgets don't include listitem meta, attempt to find matching meta with jsonrpc
+            self._update()
 
         # keep vid mirroring the (possibly refreshed) fitem.file. When
         # pvr.iptvsimple left {catchup-id} unresolved the strip path blanked vid;
@@ -50,10 +52,18 @@ class Plugin(object):
         # unresolved when its EPG for the channel isn't loaded yet — the stripped
         # URL then carries no start/stop, so seek stays -1 and "current" programmes
         # play from the beginning. Recover the timeline from the live broadcast.
-        if self.sysInfo['seek'] < 0:
-            self._recoverTimeline()
-
-        self.sysInfo['isVOD']      = self.sysInfo.get('fitem',{}).get('file','-1') != self.sysInfo.get('vid','-1')
+        if self.sysInfo['seek'] < 0: 
+            self._recover()
+            
+        # isVOD: a standalone video request (play from the start) vs the channel's
+        # current live broadcast. Only when the requested path differs AND `now` is
+        # outside the fitem's [start, stop) window is it a one-off VOD — an
+        # in-progress programme is the live broadcast (its vid may be the catchup
+        # URL, so the path comparison alone would misfire).
+        fstart = Globals._epoch(self.sysInfo.get('fitem', {}).get('start', 0))
+        fstop  = Globals._epoch(self.sysInfo.get('fitem', {}).get('stop', 0))
+        in_window = fstart > 0 and fstop > 0 and fstart <= int(time.time()) < fstop
+        self.sysInfo['isVOD']      = self.sysInfo.get('fitem',{}).get('file','-1') != self.sysInfo.get('vid','-1') and not in_window
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
         self.sysInfo['isPlaylist'] = bool(Globals.settings.getSettingInt('Playback_Method'))
         mode = 'playlist' if any((self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist'])) else sysInfo.get('mode')
@@ -71,8 +81,8 @@ class Plugin(object):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
             
-    def _updateSysInfo(self):
-        self.log('[%s] _updateSysInfo'%(self.sysInfo.get('chid')))
+    def _update(self):
+        self.log('[%s] _update'%(self.sysInfo.get('chid')))
         if not self.service.player.isPlaying() and Globals.settings.getSettingBool('Debug_Enable'): Globals.dialog.notificationDialog('%s %s\n%s'%(LANGUAGE(32248),LANGUAGE(30223),LANGUAGE(32140)))
         with Globals.properties.suspendActivity():
             pvritem = self.jsonRPC.matchChannel(self.sysInfo.get('name'),self.sysInfo.get('chid'),self.sysInfo.get('radio',False),extend=False)
@@ -80,7 +90,7 @@ class Plugin(object):
             self.sysInfo['fitem'] = Globals._decodePlot(pvritem.get('broadcastnow',{}).get('plot',''))
             self.sysInfo['nitem'] = Globals._decodePlot(pvritem.get('broadcastnext',[{}])[0].get('plot',''))
         else:
-            self.log('[%s] _updateSysInfo, channel not found in PVR, may need refresh' % self.sysInfo.get('chid'), xbmc.LOGWARNING)
+            self.log('[%s] _update, channel not found in PVR, may need refresh' % self.sysInfo.get('chid'), xbmc.LOGWARNING)
             Globals.dialog.notificationDialog(LANGUAGE(32000))
                 
             
@@ -154,7 +164,7 @@ class Plugin(object):
         return []
                    
                    
-    def _recoverTimeline(self):
+    def _recover(self):
         """Recover start/stop/duration for live seek when the invoked URL carried
         unresolved {utc}/{duration}/{utcend} placeholders.
 
@@ -171,7 +181,7 @@ class Plugin(object):
           2. XMLTV — fallback when the ListItem lacks times.
         """
         try:
-            self.log('[%s] _recoverTimeline, seeking timeline' % self.sysInfo.get('chid'))
+            self.log('[%s] _recover, seeking timeline' % self.sysInfo.get('chid'))
             now = int(self.sysInfo.get('now', 0)) or int(time.time())
 
             def _apply(start_epoch, stop_epoch):
@@ -181,7 +191,7 @@ class Plugin(object):
                 self.sysInfo['duration'] = duration
                 self.sysInfo['seek']     = max(0, now - start_epoch)
                 self.sysInfo['progresspercentage'] = round((self.sysInfo['seek'] / duration) * 100, 2)
-                self.log('[%s] _recoverTimeline, start=%s stop=%s duration=%s seek=%s' % (
+                self.log('[%s] _recover, start=%s stop=%s duration=%s seek=%s' % (
                     self.sysInfo.get('chid'), start_epoch, stop_epoch, duration, self.sysInfo['seek']))
 
             # 1. fitem start/stop (epoch, from ListItem properties)
@@ -205,9 +215,9 @@ class Plugin(object):
                     _apply(int(Globals._strpTime(start, DTFORMAT).timestamp()),
                            int(Globals._strpTime(stop, DTFORMAT).timestamp()))
                     return
-            self.log('[%s] _recoverTimeline, no timeline covers now=%s, seek disabled' % (chid, now_str))
+            self.log('[%s] _recover, no timeline covers now=%s, seek disabled' % (chid, now_str))
         except Exception as e:
-            self.log('[%s] _recoverTimeline, failed: %s' % (self.sysInfo.get('chid'), e), xbmc.LOGDEBUG)
+            self.log('[%s] _recover, failed: %s' % (self.sysInfo.get('chid'), e), xbmc.LOGDEBUG)
 
 
     def _setResume(self, listitem: xbmcgui.ListItem) -> xbmcgui.ListItem:

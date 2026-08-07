@@ -314,6 +314,7 @@ XMLTVFLE            = 'pseudotv.xml'    # XMLTV EPG export
 GENREFLE            = 'genres.xml'      # Genre mapping definitions
 SEASONFLE           = 'seasons.json'    # Seasonal content definitions (HTTP-exposed)
 HOLIDAYFLE          = 'holidays.json'   # Holiday content definitions (HTTP-exposed)
+EXTERNALFEEDFLE     = 'externalfeed.json' # ExternalFeed rule sample feed (HTTP-exposed)
 
 # SQLite cache keys — M3U/XMLTV/genres data lives in cache.db (Phase 1 migration).
 M3U_CACHE_KEY       = 'm3u.data'        # {'stations', 'recordings', 'updated', 'version'}
@@ -386,6 +387,7 @@ NOTE_WAV            = os.path.join(SFX_LOC,'notify.wav') # Subtle notification s
 M3UFLE_DEFAULT      = os.path.join(REMOTE_LOC,'m3u.json')          # M3U item template
 SEASONS             = os.path.join(REMOTE_LOC,'seasons.json')      # Seasonal content definitions
 HOLIDAYS            = os.path.join(REMOTE_LOC,'holidays.json')     # Holiday content definitions
+EXTERNALFEED        = os.path.join(REMOTE_LOC,EXTERNALFEEDFLE)     # ExternalFeed rule sample feed
 GROUPFLE_DEFAULT    = os.path.join(REMOTE_LOC,'groups.xml')        # Default channel groups
 MANAGERPATH         = os.path.join(REMOTE_LOC,MANAGERFLE)          # Default manager HTML
 CHANNELFLE_DEFAULT  = os.path.join(REMOTE_LOC,CHANNELFLE)          # Default channel config
@@ -463,7 +465,21 @@ ACTION_PREVIOUS_MENU = [92,10,110,521,ACTION_SELECT_ITEM]
 # Actions are dispatched by the Builder/Player/Overlay via runActions().
 # Each constant defines a lifecycle hook where rule callbacks execute.
 # =============================================================================
-RULES_VERSION                              = 0.1  # Rules schema version
+RULES_VERSION                              = 0.2  # Rules schema version
+
+# Rule id migration: old myIds (pre-0.2, execution-order-irregular) -> the
+# renumbered execution-ordered scheme. Applied lazily to saved channel rule
+# dicts by Channels._verify / Backup.importChannels.
+RULES_ID_MIGRATION = {
+    2: 100, 50: 101, 51: 102, 52: 103, 53: 104, 54: 105, 55: 106,      # player
+    1: 200, 3: 201, 4: 202,                                            # overlay
+    3000: 300,                                                          # pause
+    497: 400,                                                           # rebuild
+    950: 505, 951: 506,                                                 # sort/limits
+    800: 600,                                                           # seasonal
+    999: 605, 998: 700, 1000: 701, 2999: 706, 505: 1100,                # random/order/even/pad/filter
+}
+
 
 # --- Channel Builder Actions ---
 RULES_ACTION_CHANNEL_CITEM                 = 1   # Persistent channel item modifications
@@ -480,6 +496,8 @@ RULES_ACTION_CHANNEL_TEMP_CITEM            = 11  # Temporary channel item modifi
 RULES_ACTION_CHANNEL_BUILD_FILELIST_RETURN = 12  # Final file list return point
 RULES_ACTION_CHANNEL_REQUEST_FILELIST_PRE  = 13  # Pre-request: file list before external fetch
 RULES_ACTION_CHANNEL_REQUEST_FILELIST_POST = 14  # Post-request: file list after external fetch
+RULES_ACTION_M3U_FILTER                    = 15  # Post-M3U http filter
+RULES_ACTION_XMLTV_FILTER                  = 16  # Post-XMLTV http filter
 
 # --- Player Actions ---
 RULES_ACTION_PLAYER_START  = 20  # Playback started

@@ -23,12 +23,10 @@ from typing import Any, Optional
 from variables import *
 from resources import Resources
 
-
 def _parse_position(value: str, fallback: tuple) -> tuple:
     """Parse a '(x, y)' string into a tuple, returning fallback on failure."""
     try:    return literal_eval(value)
     except: return fallback
-
 
 def _on_next_position() -> tuple:
     """Default position for on-next notification (bottom-left)."""
@@ -36,17 +34,13 @@ def _on_next_position() -> tuple:
     w, h = WH
     return (abs(int(w // 9)), abs(int(h // 16) - h) - 356)
 
-
 def _channel_bug_position() -> tuple:
     """Default position for channel bug (bottom-right)."""
     WH, _ = Globals.builtin.getResolution()
     w, h = WH
     return (abs(int(w // 9) - w) - 128, abs(int(h // 16) - h) - 128)
 
-
 class Busy(xbmcgui.WindowXMLDialog):
-
-
     def __init__(self, *args: Any, **kwargs: Any):
         self.isLocked = kwargs.pop('isLocked', False)
         super().__init__(*args, **kwargs)
@@ -81,19 +75,17 @@ class Busy(xbmcgui.WindowXMLDialog):
                 Globals.dialog.notificationDialog(LANGUAGE(32260))
                 
 class Background(xbmcgui.WindowXMLDialog):
-
-
+    videoWindow = None
     def __init__(self, *args: Any, **kwargs: Any):
         self.service = kwargs.pop('service', None)
         super().__init__(*args, **kwargs)
         
         self.player  = self.service.player if self.service else None
         playing_item = self.player.playingItem if (self.player and hasattr(self.player, 'playingItem')) else {}
-        
-        self.citem = playing_item.get('citem', {})
-        self.fitem = playing_item.get('fitem', {})
-        self.nitem = playing_item.get('nitem', {})
-        self.videoWindow = None
+        self.citem   = playing_item.get('citem', {})
+        self.fitem   = playing_item.get('fitem', {})
+        self.nitem   = playing_item.get('nitem', {})
+      
       
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"Background: {msg}", level)
@@ -109,10 +101,10 @@ class Background(xbmcgui.WindowXMLDialog):
             nextTitle = self.nitem.get('showlabel') or Globals.builtin.getInfoLabel('VideoPlayer.NextTitle') or chname
             onNextX, onNextY = _on_next_position()
 
-            nextTime = ""
+            nextTime  = ""
             start_val = self.nitem.get('start')
             if start_val:
-                try:              nextTime = Globals._epochTime(start_val).strftime('%I:%M%p')
+                try: nextTime = Globals._epochTime(start_val).strftime('%I:%M%p')
                 except Exception: 
                     self.log(f'onInit, failed to format nextTime from {start_val}', xbmc.LOGDEBUG)
                     nextTime = ""
@@ -123,40 +115,37 @@ class Background(xbmcgui.WindowXMLDialog):
                 self.close()
                 return
                 
+            try:
+                self.videoWindow = self.getControl(41000)
+                self._shrink()
+            except Exception as e:
+                self.log(f"onInit videowindow: {e}", xbmc.LOGDEBUG)
+                
             onNow  = nowTitle if chname in Globals._validString(nowTitle) else f"{nowTitle} on {chname}"
             onNext = f"@ {nextTime}: {nextTitle}"
             
             container_control = self.getControl(40001)
             if container_control:
                 container_control.setPosition(onNextX, onNextY)
-                container_control.setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo) + Window.IsVisible(fullscreenvideo)]')
-                container_control.setAnimations([
-                    ('WindowOpen' , f'effect=zoom start=80 end=100 center={onNextX},{onNextY} delay=160 tween=back time=240 reversible=false'),
-                    ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
-                    ('WindowClose', f'effect=zoom start=100 end=80 center={onNextX},{onNextY} delay=160 tween=back time=240 reversible=false'),
-                    ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
-                    ('Visible'    , f'effect=zoom start=80 end=100 center={onNextX},{onNextY} delay=160 tween=back time=240 reversible=false'),
-                    ('Visible'    , 'effect=fade end=100 time=240 reversible=false')
-                ])
+                # container_control.setVisibleCondition('[Player.Playing + !Window.IsVisible(fullscreeninfo) + Window.IsVisible(fullscreenvideo)]')
+                # container_control.setAnimations([
+                    # ('WindowOpen' , f'effect=zoom start=80 end=100 center={onNextX},{onNextY} delay=160 tween=back time=240 reversible=false'),
+                    # ('WindowOpen' , 'effect=fade start=0 end=100 delay=160 time=240 reversible=false'),
+                    # ('WindowClose', f'effect=zoom start=100 end=80 center={onNextX},{onNextY} delay=160 tween=back time=240 reversible=false'),
+                    # ('WindowClose', 'effect=fade start=100 end=0 time=240 reversible=false'),
+                    # ('Visible'    , f'effect=zoom start=80 end=100 center={onNextX},{onNextY} delay=160 tween=back time=240 reversible=false'),
+                    # ('Visible'    , 'effect=fade end=100 time=240 reversible=false')
+                # ])
             
-            logo_img = LOGO_COLOR if logo.endswith('wlogo.png') else logo
-            self.getControl(40002).setImage(logo_img)
-            info_text = f"{LANGUAGE(32104)} {onNow}[CR]{LANGUAGE(32116)} [B]{onNext}[B]"
-            self.getControl(40003).setText(info_text)
-            thumb_art = Globals._getThumb(self.nitem)
-            if thumb_art: self.getControl(40004).setImage(thumb_art)
-            
-            try:
-                self.videoWindow = self.getControl(41000)
-                self._shrinkVideo()
-            except Exception as e:
-                self.log(f"onInit videowindow: {e}", xbmc.LOGDEBUG)
+            self.getControl(40002).setImage(LOGO_COLOR if logo.endswith('wlogo.png') else logo)
+            self.getControl(40003).setText(f"{LANGUAGE(32104)} {onNow}[CR]{LANGUAGE(32116)} [B]{onNext}[B]")
+            self.getControl(40004).setImage(Globals._getThumb(self.nitem))
         except Exception as e:
             self.log(f"onInit execution failed: {str(e)}", xbmc.LOGERROR)
             self.close()
 
 
-    def _shrinkVideo(self):
+    def _shrink(self):
         if self.videoWindow is None: return
         try:
             WH, _ = Globals.builtin.getResolution()
@@ -178,10 +167,10 @@ class Background(xbmcgui.WindowXMLDialog):
                 self.videoWindow.setHeight(h)
                 xbmc.Monitor().waitForAbort(0.015)
         except Exception as e:
-            self.log(f"_shrinkVideo: {e}", xbmc.LOGDEBUG)
+            self.log(f"_shrink: {e}", xbmc.LOGDEBUG)
 
 
-    def _expandVideo(self):
+    def _expand(self):
         if self.videoWindow is None: return
         try:
             WH, _ = Globals.builtin.getResolution()
@@ -201,7 +190,7 @@ class Background(xbmcgui.WindowXMLDialog):
                 self.videoWindow.setHeight(h)
                 xbmc.Monitor().waitForAbort(0.015)
         except Exception as e:
-            self.log(f"_expandVideo: {e}", xbmc.LOGDEBUG)
+            self.log(f"_expand: {e}", xbmc.LOGDEBUG)
 
 class Replay(xbmcgui.WindowXMLDialog):
     closing = False
@@ -323,243 +312,263 @@ class Overlay(xbmcgui.WindowXMLDialog):
         self.service = kwargs.pop('service', None)
         super().__init__(*args, **kwargs)
         
-        self.monitor = self.service.monitor if self.service else None
-        self.player  = self.service.player if self.service else None
-        self.jsonRPC = self.player.jsonRPC if self.player else None
-        self.runActions = self.player.runActions if self.player else None
-        self.resources = Resources(self.service) if self.service else None
+        self.cntrlManager = {}
+        self._closing     = False
+        self.channelBug   = None
+        self.vignette     = None
+        self.onnext       = None
+        
+        self.monitor      = self.service.monitor if self.service else None
+        self.player       = self.service.player if self.service else None
+        self.jsonRPC      = self.player.jsonRPC if self.player else None
+        self.resources    = Resources(self.service) if self.service else None
+        self.runActions   = self.player.runActions if self.player else None
         
         playing_item = self.player.playingItem if (self.player and hasattr(self.player, 'playingItem')) else {}
         self.citem   = playing_item.get('citem', {})
         self.fitem   = playing_item.get('fitem', {})
         self.nitem   = playing_item.get('nitem', {})
         
-        self._vignette_visible = False
-        self._bug_visible      = False
-        self._onnext_visible   = False
-        self._onnext_sending   = False
-        self._closing          = False
+        # Kodi Fullscreen Video
+        WH, WIN     = Globals.builtin.getResolution()
+        self.window = xbmcgui.Window(12005) 
+        self.window_w, self.window_h = WH
         
         # Vignette
         self.enableVignette = False
-        self.defaultView = self.jsonRPC.getViewMode() if self.jsonRPC else 0
-        self.vinView = self.defaultView
-        self.vinImage = ''
+        self.defaultView    = self.jsonRPC.getViewMode() if self.jsonRPC else 0
+        self.vinView        = self.defaultView
+        self.vinImage       = ''
         
         # Channel bug
         self.enableChannelBug = Globals.settings.getSettingBool('Enable_ChannelBug')
         self.forceBugDiffuse  = Globals.settings.getSettingBool('Force_Diffuse')
         self.channelBugColor  = f"0x{Globals.settings.getSetting('ChannelBug_Color') or 'FFFFFFFF'}"
         self.channelBugFade   = Globals.settings.getSettingInt('ChannelBug_Transparency')
-        self.channelBugX, self.channelBugY = _parse_position(
-            Globals.settings.getSetting("Channel_Bug_Position_XY"), _channel_bug_position())
+        self.channelBugX, self.channelBugY = _parse_position(Globals.settings.getSetting("Channel_Bug_Position_XY"), _channel_bug_position())
 
 
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"Overlay: {msg}", level)
 
 
-    def onInit(self):
-        self.log("onInit")
-        self._setupVignette()
-        self._setupChannelBug()
+    def _hasControl(self, control: xbmcgui.Control) -> bool:
+        return control in self.cntrlManager
 
 
-    def _setupVignette(self):
-        if not self.enableVignette: return
+    def _isVisible(self, control: str) -> bool:
+        return self.cntrlManager.get(control, False)
+
+
+    def _setVisible(self, control: xbmcgui.Control, state: bool = False) -> bool:
+        if control is None: return False
         try:
-            control = self.getControl(40000)
-            control.setImage(self.vinImage)
-            control.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
-            if self.vinView != self.defaultView and self.jsonRPC:
-                timerit(self.jsonRPC.setViewMode)(0.5, [self.vinView])
-            self._vignette_visible = True
-        except Exception as e:
-            self.log(f"_setupVignette: {e}", xbmc.LOGERROR)
-
-
-    def _setupChannelBug(self):
-        if not self.enableChannelBug: return
-        try:
-            control = self.getControl(40005)
-            logo = self.citem.get('logo') or Globals.builtin.getInfoLabel('Player.Art(icon)') or LOGO
-            if   self.forceBugDiffuse:        control.setColorDiffuse(self.channelBugColor)
-            elif self.resources and self.resources.isMono(logo): control.setColorDiffuse(self.channelBugColor)
-            control.setImage(logo)
-            control.setPosition(self.channelBugX, self.channelBugY)
-            cid = control.getId()
-            control.setAnimations([('Conditional', f'effect=fade start=0 end=100 time=2000 delay=1000 condition=Control.IsVisible({cid}) reversible=false'),
-                                   ('Conditional', f'effect=fade start=100 end={self.channelBugFade} time=1000 delay=3000 condition=Control.IsVisible({cid}) reversible=false'),
-                                   ('Visible', f'effect=fade start={self.channelBugFade} end=100 time=2000 delay=5000 loop=true condition=Control.IsVisible({cid}) reversible=false'),
-                                   ('Visible', f'effect=fade start=100 end={self.channelBugFade} time=2000 delay=7000 loop=true condition=Control.IsVisible({cid}) reversible=false')])
-            self._bug_visible = True
-        except Exception as e:
-            self.log(f"_setupChannelBug: {e}", xbmc.LOGERROR)
-
-
-    def open(self):
-        if Globals.properties.isRunning('Overlay'): return
-        Globals.properties.setRunning('Overlay', True)
-        if not self.citem: return self.close()
-        if self.runActions: self.runActions(RULES_ACTION_OVERLAY_OPEN, self.citem, inherited=self)
-        self.log(f"open: vignette={self.enableVignette}, bug={self.enableChannelBug}")
-        self.show()
-
-
-    def updatePlayingItem(self, playing_item: Optional[dict] = None):
-        """Refresh overlay data when playback advances to a new program/channel.
-
-        The overlay caches citem/fitem/nitem at construction; without this the
-        channel bug logo and on-next row go stale after the playlist moves on.
-        Re-applies the channel bug and, if the on-next row is visible, repopulates it.
-        """
-        if playing_item is None and self.player:
-            playing_item = getattr(self.player, 'playingItem', {})
-        if not playing_item: return
-        self.citem = playing_item.get('citem', {})
-        self.fitem = playing_item.get('fitem', {})
-        self.nitem = playing_item.get('nitem', {})
-        self._setupChannelBug()
-        if self._onnext_visible:
-            self._populateOnNext()
-
-
-    def toggleVignette(self, state: bool):
-        if state == self._vignette_visible: return
-        try:
-            self.getControl(40000).setVisible(state)
-            self._vignette_visible = state
-        except Exception: pass
-
-
-    def toggleChannelBug(self, state: bool):
-        if state == self._bug_visible: return
-        try:
-            self.getControl(40005).setVisible(state)
-            self._bug_visible = state
-        except Exception: pass
-
-
-    def showOnNext(self, mode: Optional[int] = None):
-        """Show on-next notification. Mode: 1=text, 2=text+thumb+sfx, 3=toggleInfo, 4=UpNext signal."""
-        if mode is None: mode = Globals.settings.getSettingInt('OnNext_Mode')
-        if mode == 0 or self._onnext_visible: return
-
-        if mode == 3:
-            self.player.toggleInfo()
-            return
-
-        if mode == 4:
-            self._sendUpNextSignal()
-            return
-
-        # Modes 1, 2: populate controls
-        if not self._populateOnNext():
-            # overlay window not ready (closing / not yet open) — skip
-            # so we don't set _onnext_visible and trip hideOnNext on dead controls.
-            return
-
-        if mode == 2:
-            try: xbmc.playSFX(BING_WAV)
-            except: pass
-            # Auto-hide after ONNEXT_TIMER
-            timerit(self.hideOnNext)(float(ONNEXT_TIMER))
-
-        self._onnext_visible = True
-
-
-    def _populateOnNext(self) -> bool:
-        """Fill on-next text/thumbnail controls from current playing item.
-
-        Returns True on success; False if the overlay window's controls are not
-        available (e.g. the window is closing or not yet open) — caller should
-        then skip the on-next display.
-        """
-        try:
-            chname    = self.citem.get('name') or Globals.builtin.getInfoLabel('VideoPlayer.ChannelName')
-            nowTitle  = self.fitem.get('label') or Globals.builtin.getInfoLabel('VideoPlayer.Title')
-            nextTitle = self.nitem.get('showlabel') or Globals.builtin.getInfoLabel('VideoPlayer.NextTitle') or chname
-            onNextX, onNextY = _parse_position(
-                Globals.settings.getSetting("OnNext_Position_XY"), _on_next_position())
-
-            try:    nextTime = Globals._epochTime(self.nitem['start']).strftime('%I:%M%p')
-            except: nextTime = Globals.builtin.getInfoLabel('VideoPlayer.NextStartTime')
-
-            if not nextTime: return
-            onNow  = nowTitle if chname in Globals._validString(nowTitle) else f"{nowTitle} on {chname}"
-            onNext = f"@ {nextTime}: {nextTitle}"
-
-            container = self.getControl(40001)
-            container.setPosition(onNextX, onNextY)
-            container.setAnimations([
-                ('Visible', f'effect=slide start=100,0 end=0,0 center={onNextX},{onNextY} time=300 tween="back" reversible=false'),
-                ('Hidden',  f'effect=slide start=0,0 end=100,0 center={onNextX},{onNextY} time=200 reversible=false'),
-            ])
-            self.getControl(40003).setText(f"{LANGUAGE(32104)} {onNow}[CR]{LANGUAGE(32116)} [B]{onNext}[B]")
-
-            has_thumb = False
-            thumb_art = Globals._getThumb(self.nitem)
-            if thumb_art:
-                self.getControl(40004).setImage(thumb_art)
-                has_thumb = True
-
-            # Staggered fade: thumbnail first, text 200ms later
-            self.getControl(40001).setVisible(True)
-            self.getControl(40004).setAnimations([('Visible', 'effect=fade start=0 end=100 time=200 delay=0 reversible=false')])
-            self.getControl(40004).setVisible(has_thumb)
-            self.getControl(40003).setAnimations([('Visible', 'effect=fade start=0 end=100 time=200 delay=200 reversible=false')])
-            self.getControl(40003).setVisible(True)
-            return True
-        except Exception as e:
-            # transient UI race — window closing or controls not loaded yet.
-            self._onnext_visible = False
-            self.log(f"_populateOnNext: {e}", xbmc.LOGDEBUG)
+            control.setVisible(state)
+            return state
+        except Exception as e: 
+            self.log(f"_setVisible failed: {str(e)}", xbmc.LOGERROR)
+            self._delControl(control)
             return False
 
 
-    def hideOnNext(self):
-        if not self._onnext_visible: return
-        try:
-            self.getControl(40001).setVisible(False)
-            self.getControl(40003).setVisible(False)
-            self.getControl(40004).setVisible(False)
-            self._onnext_visible = False
-        except Exception: pass
+    def _addControl(self, control: xbmcgui.Control):
+        if control is None: return
+        if not self._hasControl(control):
+            try: 
+                self.window.addControl(control)
+                self.cntrlManager[control] = self._setVisible(control, True)
+            except Exception as e: 
+                self.log(f"_addControl failed: {str(e)}", xbmc.LOGERROR)
+                self._delControl(control)
+        
+        
+    def _delControl(self, control: xbmcgui.Control):
+        if self._hasControl(control):
+            try: self.window.removeControl(control)
+            except Exception as e: self.log(f"_delControl context ejection failure: {str(e)}", xbmc.LOGERROR)
+            self.cntrlManager.pop(control, None)  
+            
 
-
-    def _sendUpNextSignal(self):
-        """Send UpNext signal for external UpNext addon compatibility."""
-        if self._onnext_sending: return
-        self._onnext_sending = True
-        try:
-            data: dict = {}
-            data["notification_offset"] = int(floor(self.player.getRemainingTime())) + OSD_TIMER
-            def _map(item: dict) -> dict:
-                return {k: item.get(k, "") for k in ["episodeid","tvshowid","title","art","season","episode","showtitle","plot","playcount","rating","firstaired","runtime"]}
-            data["current_episode"] = _map(self.fitem)
-            data["next_episode"]    = _map(self.nitem)
-            hex_payload = binascii.hexlify(FileAccess.dumpJSON(data).encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING)
-            self.jsonRPC.notifyAll('upnext_data', hex_payload, f"{ADDON_ID}.SIGNAL")
-        except Exception as e:
-            self.log(f"_sendUpNextSignal: {e}", xbmc.LOGERROR)
-        finally:
-            self._onnext_sending = False
-
-
-    def close(self):
-        self.log("close")
-        self._closing = True
-        self.hideOnNext()
-        if self.vinView != self.defaultView and self.jsonRPC:
-            timerit(self.jsonRPC.setViewMode)(0.5, self.defaultView)
-        Globals.properties.setRunning('Overlay', False)
-
-
-    def onAction(self, act: xbmcgui.Action):
-        self._closing = True
-
+    def onInit(self):
+        self.log("onInit")
+        if self.runActions: 
+            self.runActions(RULES_ACTION_OVERLAY_OPEN, self.citem, inherited=self)
+            
+        self.log(f"_open: enableVignette = {self.enableVignette}", xbmc.LOGDEBUG)
+        if self.enableVignette:
+            try:
+                w_width, w_height = self.window.getWidth(), self.window.getHeight()
+                self.vignette = xbmcgui.ControlImage(0, 0, w_width, w_height, ' ', aspectRatio=0)
+                self._addControl(self.vignette)
+                self.vignette.setImage(self.vinImage)
+                if self.vinView != self.defaultView and self.jsonRPC: timerit(self.jsonRPC.setViewMode)(0.5, [self.vinView])
+                self.vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=240 delay=160 condition=True reversible=True')])
+            except Exception as e:
+                self.log(f"_open: {e}", xbmc.LOGERROR)
+        
+        self.log(f"_open: enableChannelBug = {self.enableChannelBug}", xbmc.LOGDEBUG)
+        if self.enableChannelBug:
+            try:
+                self.channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, ' ', aspectRatio=2)
+                self._addControl(self.channelBug)
+                
+                logo = self.citem.get('logo') or Globals.builtin.getInfoLabel('Player.Art(icon)') or LOGO
+                if   self.forceBugDiffuse:        self.channelBug.setColorDiffuse(self.channelBugColor)
+                elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
+                    
+                cid  = self.channelBug.getId()
+                self.channelBug.setImage(logo)
+                self.channelBug.setAnimations([('Conditional', f'effect=fade start=0 end=100 time=2000 delay=1000 condition=Control.IsVisible({cid}) reversible=false'),
+                                               ('Conditional', f'effect=fade start=100 end={self.channelBugFade} time=1000 delay=3000 condition=Control.IsVisible({cid}) reversible=false'),
+                                               ('Visible', f'effect=fade start={self.channelBugFade} end=100 time=2000 delay=5000 loop=true condition=Control.IsVisible({cid}) reversible=false'),
+                                               ('Visible', f'effect=fade start=100 end={self.channelBugFade} time=2000 delay=7000 loop=true condition=Control.IsVisible({cid}) reversible=false')])
+                self.log('_open, logo = %s, channelBugColor = %s, window = (%s,%s)'%(logo,self.channelBugColor,self.window_h, self.window_w))
+            except Exception as e:
+                self.log(f"_open: {e}", xbmc.LOGERROR)
+           
 
     def onClose(self):
         self.log("onClose")
         self._closing = True
-        Globals.properties.setRunning('Overlay', False)
+        for control in list(self.cntrlManager.keys()):
+            self._delControl(control)
+        # Let overlay rules (ShowChannelBug, SetScreenVingette, MST3k) restore
+        # their saved state — without this RULES_ACTION_OVERLAY_CLOSE is never
+        # dispatched and the save/restore branches stay dead.
+        if self.runActions:
+            try: self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.citem, None, inherited=self)
+            except Exception as e: self.log(f"onClose, runActions failed: {e}", xbmc.LOGERROR)
+        self.close()
+
+
+
+
+
+
+
+
+
+    # def update(self, playing_item: Optional[dict] = None):
+        # """Refresh overlay data when playback advances to a new program/channel.
+
+        # The overlay caches citem/fitem/nitem at construction; without this the
+        # channel bug logo and on-next row go stale after the playlist moves on.
+        # Re-applies the channel bug and, if the on-next row is visible, repopulates it.
+        # """
+        # if playing_item is None and self.player: playing_item = getattr(self.player, 'playingItem', {})
+        # if not playing_item: return
+        # self.citem = playing_item.get('citem', {})
+        # self.fitem = playing_item.get('fitem', {})
+        # self.nitem = playing_item.get('nitem', {})
+        # if self._onnext_visible:
+            # self._populateOnNext()
+
+
+    # def showOnNext(self, mode: Optional[int] = None):
+        # self.log(f"showOnNext: mode = {mode}", xbmc.LOGDEBUG)
+        # """Show on-next notification. Mode: 1=text, 2=text+thumb+sfx, 3=toggleInfo, 4=UpNext signal."""
+        # if mode is None: mode = Globals.settings.getSettingInt('OnNext_Mode')
+        # if mode == 0 or self._onnext_visible: return
+
+        # if mode == 3:
+            # self.player.toggleInfo()
+            # return
+
+        # if mode == 4:
+            # self._sendUpNextSignal()
+            # return
+
+        # # Modes 1, 2: populate controls
+        # if not self._populateOnNext():
+            # # overlay window not ready (closing / not yet open) — skip
+            # # so we don't set _onnext_visible and trip hideOnNext on dead controls.
+            # return
+
+        # if mode == 2:
+            # try: xbmc.playSFX(BING_WAV)
+            # except: pass
+            # # Auto-hide after ONNEXT_TIMER
+            # timerit(self.hideOnNext)(float(ONNEXT_TIMER))
+
+        # self._onnext_visible = True
+
+
+
+
+
+    # def _populateOnNext(self) -> bool:
+        # """Fill on-next text/thumbnail controls from current playing item.
+
+        # Returns True on success; False if the overlay window's controls are not
+        # available (e.g. the window is closing or not yet open) — caller should
+        # then skip the on-next display.
+        # """
+        # try:
+            # chname    = self.citem.get('name') or Globals.builtin.getInfoLabel('VideoPlayer.ChannelName')
+            # nowTitle  = self.fitem.get('label') or Globals.builtin.getInfoLabel('VideoPlayer.Title')
+            # nextTitle = self.nitem.get('showlabel') or Globals.builtin.getInfoLabel('VideoPlayer.NextTitle') or chname
+            # onNextX, onNextY = _parse_position(
+                # Globals.settings.getSetting("OnNext_Position_XY"), _on_next_position())
+
+            # try:    nextTime = Globals._epochTime(self.nitem['start']).strftime('%I:%M%p')
+            # except: nextTime = Globals.builtin.getInfoLabel('VideoPlayer.NextStartTime')
+
+            # if not nextTime: return
+            # onNow  = nowTitle if chname in Globals._validString(nowTitle) else f"{nowTitle} on {chname}"
+            # onNext = f"@ {nextTime}: {nextTitle}"
+
+            # container = self.getControl(40001)
+            # container.setPosition(onNextX, onNextY)
+            # container.setAnimations([
+                # ('Visible', f'effect=slide start=100,0 end=0,0 center={onNextX},{onNextY} time=300 tween="back" reversible=false'),
+                # ('Hidden',  f'effect=slide start=0,0 end=100,0 center={onNextX},{onNextY} time=200 reversible=false'),
+            # ])
+            # self.getControl(40003).setText(f"{LANGUAGE(32104)} {onNow}[CR]{LANGUAGE(32116)} [B]{onNext}[B]")
+
+            # has_thumb = False
+            # thumb_art = Globals._getThumb(self.nitem)
+            # if thumb_art:
+                # self.getControl(40004).setImage(thumb_art)
+                # has_thumb = True
+
+            # # Staggered fade: thumbnail first, text 200ms later
+            # self.getControl(40001).setVisible(True)
+            # self.getControl(40004).setAnimations([('Visible', 'effect=fade start=0 end=100 time=200 delay=0 reversible=false')])
+            # self.getControl(40004).setVisible(has_thumb)
+            # self.getControl(40003).setAnimations([('Visible', 'effect=fade start=0 end=100 time=200 delay=200 reversible=false')])
+            # self.getControl(40003).setVisible(True)
+            # return True
+        # except Exception as e:
+            # # transient UI race — window closing or controls not loaded yet.
+            # self._onnext_visible = False
+            # self.log(f"_populateOnNext: {e}", xbmc.LOGDEBUG)
+            # return False
+
+
+    # def hideOnNext(self):
+        # if not self._onnext_visible: return
+        # try:
+            # self.getControl(40001).setVisible(False)
+            # self.getControl(40003).setVisible(False)
+            # self.getControl(40004).setVisible(False)
+            # self._onnext_visible = False
+        # except Exception: pass
+
+
+    # def _sendUpNextSignal(self):
+        # """Send UpNext signal for external UpNext addon compatibility."""
+        # if self._onnext_sending: return
+        # self._onnext_sending = True
+        # try:
+            # data: dict = {}
+            # data["notification_offset"] = int(floor(self.player.getRemainingTime())) + OSD_TIMER
+            # def _map(item: dict) -> dict:
+                # return {k: item.get(k, "") for k in ["episodeid","tvshowid","title","art","season","episode","showtitle","plot","playcount","rating","firstaired","runtime"]}
+            # data["current_episode"] = _map(self.fitem)
+            # data["next_episode"]    = _map(self.nitem)
+            # hex_payload = binascii.hexlify(FileAccess.dumpJSON(data).encode(DEFAULT_ENCODING)).decode(DEFAULT_ENCODING)
+            # self.jsonRPC.notifyAll('upnext_data', hex_payload, f"{ADDON_ID}.SIGNAL")
+        # except Exception as e:
+            # self.log(f"_sendUpNextSignal: {e}", xbmc.LOGERROR)
+        # finally:
+            # self._onnext_sending = False
