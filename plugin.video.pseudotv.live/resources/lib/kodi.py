@@ -57,12 +57,11 @@ class Settings(object):
 
 
     def _getRealSettings(self, id: str = ADDON_ID) -> xbmcaddon.Addon:
-        if not hasattr(self, '_cachedSettings') or self._cachedSettings is None:
-            try: self._cachedSettings = xbmcaddon.Addon(id)
-            except Exception as e: 
-                self.log(f'_getRealSettings, failed to create Addon({id}), falling back to REAL_SETTINGS: {e}', xbmc.LOGWARNING)
-                self._cachedSettings = REAL_SETTINGS
-        return self._cachedSettings
+        # Use the single canonical Addon handle. A separate per-Settings instance
+        # can hold a stale in-memory copy of settings (e.g. Enable_Autotune) and
+        # ANY setSetting() through it rewrites settings.xml from that stale state,
+        # reverting the user's change — the "Enable_Autotune turns back on" bug.
+        return REAL_SETTINGS
 
     #GET
 
@@ -81,6 +80,8 @@ class Settings(object):
         try: 
             value = func(key)
             _SETTINGS_CACHE[cache_key] = (value, _now)
+            if len(_SETTINGS_CACHE) > SETTINGS_CACHE_MAX:  # bound unbounded growth
+                _SETTINGS_CACHE.clear()
             _LOG_SETTINGS = sys.modules['constants']._LOG_SETTINGS
             if _LOG_SETTINGS['enable']:
                 self.log(f'[{ADDON_ID}] {func.__name__}, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
@@ -525,6 +526,79 @@ class Settings(object):
         return self.getSettingBool('Notify_While_Playing')
             
             
+class _BoundedOrderedDict(OrderedDict):
+    """OrderedDict LRU that evicts the oldest entries to stay under a byte budget.
+
+    Used for Properties._memory_cache so stashed window-property values (some of
+    which are large dicts) can't balloon Kodi's resident set. When `owner` is
+    given, the bytes are also accounted against the shared global MemoryBudget,
+    so this cache combined with every other cache can never exceed the global cap.
+    Accounting is kept on every put/pop/popitem/clear; the budget is a soft
+    ceiling (sys.getsizeof underestimates nested containers, so trim early).
+    """
+
+    def __init__(self, max_bytes: int = 0, owner: Optional[str] = None):
+        super().__init__()
+        self.max_bytes = max_bytes
+        self.owner     = owner
+        self._bytes    = 0
+        if owner:
+            from cache import MemoryBudget
+            MemoryBudget.instance().register(owner, max_bytes)
+
+    @staticmethod
+    def _size(value: Any) -> int:
+        try: return sys.getsizeof(value)
+        except Exception: return 0
+
+    def _budget(self):
+        if not self.owner: return None
+        from cache import MemoryBudget
+        return MemoryBudget.instance()
+
+    def __setitem__(self, key: Any, value: Any):
+        budget = self._budget()
+        old = OrderedDict.get(self, key)
+        old_sz = self._size(old) if old is not None else 0
+        new_sz = self._size(value)
+        if old_sz and budget: budget.release(self.owner, old_sz)
+        if budget and not budget.acquire(self.owner, new_sz):
+            if old_sz and budget: budget.acquire(self.owner, old_sz)  # restore old allocation
+            return  # shared global cap reached elsewhere - refuse this stash
+        self._bytes = max(0, self._bytes - old_sz + new_sz)
+        OrderedDict.__setitem__(self, key, value)
+        self.move_to_end(key)
+        while self._bytes > self.max_bytes and len(self) > 1:
+            _, oldv = OrderedDict.popitem(self, last=False)
+            self._bytes -= self._size(oldv)
+            if budget: budget.release(self.owner, self._size(oldv))
+
+    def pop(self, key: Any, *args: Any) -> Any:
+        old = OrderedDict.get(self, key)
+        if old is not None:
+            self._bytes -= self._size(old)
+            b = self._budget()
+            if b: b.release(self.owner, self._size(old))
+        return OrderedDict.pop(self, key, *args)
+
+    def popitem(self, last: bool = True) -> Any:
+        key, value = OrderedDict.popitem(self, last=last)
+        self._bytes -= self._size(value)
+        b = self._budget()
+        if b: b.release(self.owner, self._size(value))
+        return key, value
+
+    def clear(self):
+        OrderedDict.clear(self)
+        self._bytes = 0
+        b = self._budget()
+        if b: b.reset(self.owner)
+
+    @property
+    def membytes(self) -> int:
+        return max(0, self._bytes)
+
+
 class Properties(object):
     dialog = None
 
@@ -537,7 +611,7 @@ class Properties(object):
         self.monitor    = service.monitor
         self.winID      = winID
         self.window     = xbmcgui.Window(winID)
-        self._memory_cache = OrderedDict()
+        self._memory_cache = _BoundedOrderedDict(PROPERTY_MEM_MAX, 'properties')
 
         
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
@@ -642,7 +716,7 @@ class Properties(object):
 
     def clrProperties(self):
         self.log('clrProperties')
-        self._memory_cache = OrderedDict()
+        self._memory_cache.clear()  # releases bytes from the shared global budget
         return self.window.clearProperties()
         
         
@@ -1848,11 +1922,12 @@ class Dialog(object):
                         if match:
                             message = '%s: %s' % (header.replace('%s, ' % (ADDON_NAME), ''), match.group(1))
                             percent = int(match.group(2))
-                    except Exception as e: pass
+                    except Exception:
+                        pass
                     self.log(f'_updateProgress [FG {percent}%] {message}', xbmc.LOGDEBUG)
                     dlg.update(percent, message)
                     self.monitor.waitForAbort(0.1)
-        except Exception as e:
+        except Exception:
             return None
         return dlg
         
@@ -1882,6 +1957,8 @@ class Dialog(object):
         dlg_id = id(dlg)
         last = _PROGRESS_THROTTLE.get(dlg_id, 0)
         if (now - last) >= min_interval:
+            if len(_PROGRESS_THROTTLE) > THROTTLE_MAX:  # bound unbounded dlg-id growth
+                _PROGRESS_THROTTLE.clear()
             _PROGRESS_THROTTLE[dlg_id] = now
             return self._updateProgress(dlg, percent, message, header)
         return dlg

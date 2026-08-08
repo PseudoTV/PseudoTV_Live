@@ -646,11 +646,12 @@ class Tasks(object):
 
 
     def chkSettingsChange(self, old_settings: dict = {}) -> dict:
-        """Check for settings changes and trigger appropriate actions."""
-        #if cleanstart ie del settings.xml, restore important values.
-        if Globals.settings.restoreSettings(Globals.settings.getCacheSetting('Utilities._runCleanup',default={})):
-            Globals.settings.setCacheSetting('Utilities._runCleanup',None)
-            
+        """Check for settings changes and trigger appropriate actions.
+
+        Clean-start settings (_runCleanup) are restored once in Service.__init__
+        at boot, not here — restoring on the first onSettingsChanged would
+        overwrite the user's just-made change.
+        """
         #settings changed actions.
         new_settings = Globals.settings.getCurrentSettings()
         for setting, old_value in list(old_settings.items()):
@@ -658,7 +659,7 @@ class Tasks(object):
             actions = {'User_Folder'     :{'func':self.setUserPath ,'args':(old_value,new_value)},
                        'Debug_Enable'    :{'func':self.chkDebugging,'args':(new_value,)},
                        'TCP_PORT'        :{'func':Globals.properties.setPendingRestart},
-                       'Enable_Autotune' :{'func':self.chkLibrary}}
+                       'Enable_Autotune' :{'func':Globals.properties.setPendingRestart}}  # just reload service; the autotune->user copy happens in the Manager on open
                        
             if setting in actions and old_value != new_value:
                 action = actions.get(setting)
@@ -702,7 +703,6 @@ class Tasks(object):
                         self.log(f"chkQUES logoQue {len(self.service.logoQue)}")
                         param = FileAccess.loadJSON(self.service.logoQue.pop(), skip_cache=True)
                         self.service._que(library.resources.getLogo,5,0,0,*({'name':param},library.resources.getImageCache(param),True))
-                        self.service._que(self.chkLogos,5,300)
                     except Exception as e: self.log("chkQUES failed!, queuing = %s logoQue: %s\n%s"%(len(self.service.logoQue),param,e))
                 if len(self.service.trailerQue) > 0:
                     try:
@@ -723,39 +723,12 @@ class Tasks(object):
 
     @debounceit(LOGO_REFRESH)
     def chkLogos(self):
-        try:
-            # Live in-memory dict (written by Resources.setImageCache) — the
-            # persisted cache setting only updates at shutdown via Service._save.
-            image_cache = getattr(self.service, 'imageCache', None) or Globals.settings.getCacheSetting('imageCache', default={})
-            if not image_cache: return
-            updated      = 0
-            channels     = Channels(Globals.getChannelKey(), writable=True)
-            library      = Library()
-            channel_map  = {c.get('name'): c for c in channels.getChannels() if c.get('name')}
-            library_data = library.getLibrary()
-            library_map  = {}
-            for type, items in (library_data or {}).items():
-                for item in (items or []):
-                    if item.get('name'): library_map[item['name']] = item
-            for name, cached in image_cache.items():
-                if not cached: continue
-                ch = channel_map.get(name)
-                if ch and cached != ch.get('logo'):
-                    ch['logo'] = cached
-                    ch['changed'] = True
-                    updated += 1
-                lib = library_map.get(name)
-                if lib and cached != lib.get('logo'):
-                    lib['logo'] = cached
-                    updated += 1
-            if updated > 0:
-                channels.setChannels()
-                for type, items in (library_data or {}).items():
-                    library.setLibrary(type, items)
-                self.log(f"chkLogos, updated {updated} logos", xbmc.LOGINFO)
-                Globals.properties.setPropTimer('chkChanged')
-            del channels, library
-        except Exception as e: self.log(f"chkLogos, logo update failed: {e}", xbmc.LOGDEBUG)
+        # ponytail: was rewriting resolved logos back into channel/library config
+        # files on every queue drain. The static /logos/{name} URL already serves
+        # whatever the in-memory imageCache holds (fallback -> queue -> fill), so
+        # persisting resolved logos is redundant churn. Kept as a no-op stub in case
+        # callers reference it; the queue no longer schedules it.
+        pass
  
      
     def setUserPath(self, old: str, new: str):

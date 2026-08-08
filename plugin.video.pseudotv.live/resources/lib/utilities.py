@@ -107,6 +107,12 @@ class Utilities(object):
                 return Globals.builtin.executebuiltin('RunScript(script.io.benchmark,%s)'%(Globals._escapeString(f'path={CACHE_LOC}')))
     
     @staticmethod
+    def qrWelcome():
+        # Welcome text + a QR code linking to this box's local manager UI.
+        manager = 'http://%s/manager.html'%(Globals.properties.getRemoteHost())
+        Globals.dialog.qrDialog(manager, LANGUAGE(32216).format(name=ADDON_NAME,author=ADDON_AUTHOR))
+
+    @staticmethod
     def qrWiki():
         Globals.dialog.qrDialog(URL_WIKI,LANGUAGE(32216).format(name=ADDON_NAME,author=ADDON_AUTHOR))
 
@@ -163,9 +169,26 @@ class Utilities(object):
                 return text  
                 
             with Globals.builtin.busy_dialog():
-                with FileAccess.stream(CHANGELOG_FLE) as fle:
-                    txt = __addColor(fle.read())
-                Globals.dialog.textviewer(txt, heading=(LANGUAGE(32045).format(name=ADDON_NAME,version=ADDON_VERSION)),usemono=True)
+                txt = ''
+                # Prefer the online changelog (raw GitHub) via the shared HTTP
+                # helper; fall back to the local bundled file when unreachable.
+                try:
+                    content = Globals.jsonRPC.requestURL(CHANGELOG_URL)
+                    if isinstance(content, bytes):
+                        content = content.decode(DEFAULT_ENCODING, 'replace')
+                    if content: txt = content
+                except Exception as e:
+                    LOG('Utilities: showChangelog, URL fetch failed, using local file: %s'%(e), xbmc.LOGDEBUG)
+                    txt = ''
+                if not txt:
+                    try:
+                        with FileAccess.stream(CHANGELOG_FLE) as fle:
+                            txt = fle.read()
+                    except Exception as e:
+                        LOG('Utilities: showChangelog, local file also failed: %s'%(e), xbmc.LOGWARNING)
+                        txt = ''
+                if not txt: raise Exception('no changelog available')
+                Globals.dialog.textviewer(__addColor(txt), heading=(LANGUAGE(32045).format(name=ADDON_NAME,version=ADDON_VERSION)),usemono=True)
         except Exception as e: LOG('Utilities: showChangelog failed! %s'%(e), xbmc.LOGERROR)
 
     @staticmethod
@@ -279,6 +302,9 @@ class Utilities(object):
             if param == 'Show_Menu':
                 ctl = (6,1)
                 return self.buildMenu()
+            elif param == 'Show_Welcome_QR':
+                ctl = (6,2)
+                return self.qrWelcome()
             elif param == 'Show_Wiki_QR':
                 ctl = (6,4)
                 return self.qrWiki()

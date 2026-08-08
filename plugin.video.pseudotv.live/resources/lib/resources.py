@@ -36,6 +36,44 @@ _PAREN_RE     = re.compile(r'\([^)]*\)')
 _NON_ALNUM_RE = re.compile(r'[^a-zA-Z0-9\s&]')
 _MULTI_WS_RE  = re.compile(r'\s+')
 
+
+def _xbtFrameSize(xbt: bytes, name: str) -> Optional[tuple]:
+    """Width/height of the named frame in a Textures.xbt archive (XBTF header)."""
+    if xbt[:4] != b'XBTF':
+        return None
+    nof = struct.unpack('<I', xbt[5:9])[0]
+    pos = 9
+    name = name.lower()
+    for _ in range(nof):
+        path = xbt[pos:pos + 256].split(b'\x00', 1)[0].decode('utf-8', 'replace').lower()
+        loop, nf = struct.unpack('<II', xbt[pos + 256:pos + 264]); pos += 264
+        for _ in range(nf):
+            w, h, fmt, psz, usz, dur, off = struct.unpack('<IIIQQIQ', xbt[pos:pos + 40]); pos += 40
+            if path == name:
+                return (w, h)
+    return None
+
+
+def _bgraToPNG(data: bytes, width: int, height: int) -> bytes:
+    """Encode a raw BGRA frame (XB_FMT_A8R8G8B8, as returned by the xbt VFS)
+    as a PNG. Stdlib-only; PIL not required."""
+    stride = width * 4
+    raw = bytearray()
+    for y in range(height):
+        row = bytearray(data[y * stride:(y + 1) * stride])
+        for x in range(0, stride, 4):
+            row[x], row[x + 2] = row[x + 2], row[x]  # BGRA -> RGBA
+        raw.append(0)
+        raw += row
+
+    def _chunk(tag: bytes, payload: bytes) -> bytes:
+        return (struct.pack('>I', len(payload)) + tag + payload
+                + struct.pack('>I', zlib.crc32(tag + payload) & 0xffffffff))
+
+    ihdr = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
+    return (b'\x89PNG\r\n\x1a\n' + _chunk(b'IHDR', ihdr)
+            + _chunk(b'IDAT', zlib.compress(bytes(raw), 6)) + _chunk(b'IEND', b''))
+
 class Resources(object):
 
 
@@ -95,6 +133,18 @@ class Resources(object):
         try:
             image = self.imageCache.get(chname)
             self.log('getImageCache, name = %s, image = %s'%(chname,image))
+            # Ignore stale entries pointing at non-existent resource/image paths so
+            # /logos/{name} serves the default until the queue re-resolves a real
+            # icon (old caches hold phantom resource:// URLs that don't exist).
+            if image is not None and image.startswith('resource://'):
+                try:
+                    real = FileAccess.translatePath(image)
+                    if not FileAccess.exists(real) or real.endswith(('/', '\\')):
+                        self.log('getImageCache, dropping stale logo: %s' % image)
+                        self.imageCache.pop(chname, None)
+                        image = None
+                except Exception:
+                    pass
             if image is not None:
                 try: self.imageCache.move_to_end(chname)
                 except Exception as e: self.log('getImageCache move_to_end failed: %s' % e, xbmc.LOGDEBUG)
@@ -128,28 +178,92 @@ class Resources(object):
                 if not logo: logo = self.getTVShowLogo(citem.get('name'))    # tvshow
                 if not logo: logo = self.generateOnline(citem)               # generative (online)
                 if not logo: logo = self.generateLocal(citem.get('name'))    # generative (local)
-                if logo: self.setImageCache(citem.get('name'), logo)         # cache
+                if logo: self.setImageCache(citem.get('name'), self._toWebImage(logo))  # cache (browser-loadable URL)
             self.log('[%s] getLogo, name = %s, lookup = %s, logo = %s'%(citem.get('id'),citem.get('name'),lookup,logo))
             return self._buildWebImage(citem.get('name'), logo, fallback)
         except Exception as e: self.log(f'getLogo failed!\n{e}\n{citem}', xbmc.LOGERROR)
         return LOGO
 
 
+    def _toWebImage(self, image: Optional[str] = None) -> str:
+        """Convert a Kodi VFS image (resource://, image://, special://) into a
+        browser-loadable URL on this addon's /image/ endpoint. Non-http sources
+        are passed through so the /image/ handler reads them directly via VFS
+        (xbt packs decompress natively) and re-encodes raw pixels to PNG. Plain
+        http(s) pass through."""
+        if not image or image.startswith(('http://', 'https://')):
+            return image or ''
+        remote = Globals.properties.getEXTProperty('%s.Remote_Host'%(ADDON_ID))
+        inner = image[len('image://'):] if image.startswith('image://') else image
+        return f'http://{remote}/image/{Globals._quoteString(inner)}'
+
+
+    def _readImage(self, path: str) -> Optional[bytes]:
+        """Read raw bytes for a Kodi VFS path (resource:// xbt packs decompress natively)."""
+        try:
+            with FileAccess.stream(path, 'rb') as fle:
+                return fle.readBytes()
+        except Exception as e:
+            self.log('readImage failed: %s' % e, xbmc.LOGDEBUG)
+        return None
+
+
+    def _xbtToPNG(self, img: str, data: bytes) -> Optional[bytes]:
+        """Re-encode a raw xbt frame (BGRA pixels) as PNG, cached in LOGO_LOC.
+        Returns None if the path isn't an xbt-backed resource:// logo."""
+        try:
+            if not img.startswith('resource://'):
+                return None
+            cache = os.path.join(FileAccess.translatePath(LOGO_LOC),
+                                 'xbt_%s.png' % FileAccess._getMD5(img))
+            if FileAccess.exists(cache):
+                with FileAccess.stream(cache, 'rb') as fle:
+                    return fle.readBytes()
+            addon_id, rest = img[len('resource://'):].split('/', 1)
+            name = rest.rsplit('/', 1)[-1]
+            # resource:// can't stat the .xbt itself (CResource only allows images),
+            # so resolve the real addon folder and read Textures.xbt from there.
+            addon = (Globals.settings.getAddonDetails(addon_id).get('path', '')
+                     if Globals.settings.hasAddon(addon_id) else '')
+            size = None
+            for rel in ('resources/Textures.xbt', 'Textures.xbt'):
+                xbt_path = os.path.join(addon, rel.replace('/', os.sep))
+                if FileAccess.exists(xbt_path):
+                    with FileAccess.stream(xbt_path, 'rb') as fle:
+                        size = _xbtFrameSize(fle.readBytes(), name)
+                    if size: break
+            if not size:
+                return None
+            width, height = size
+            if width * height * 4 != len(data):
+                return None
+            png = _bgraToPNG(data, width, height)
+            with FileAccess.open(cache, 'w') as fle:
+                fle.write(png)
+            return png
+        except Exception as e:
+            self.log('xbtToPNG failed: %s' % e, xbmc.LOGDEBUG)
+        return None
+
+
+    def _staticLogo(self, name: Optional[str]) -> str:
+        """The stable, self-hosted icon URL for a named item. Every consumer
+        (channel/library/m3u/xmltv) stores this static URL; the /logos/{name}
+        endpoint serves whatever the in-memory imageCache holds, so the icon
+        updates dynamically once the logo queue resolves it — no config rewrites."""
+        remote = Globals.properties.getEXTProperty('%s.Remote_Host'%(ADDON_ID))
+        return f'http://{remote}/logos/{Globals._quoteString(name)}'
+
+
     def _buildWebImage(self, name: Optional[str], image: Optional[str] = None, fallback: str = LOGO) -> str:
-        image = Globals._cleanImage(image)
-        if name and not image: 
-            # No logo resolved yet — return the /logos/{name} endpoint. When requested,
-            # the server resolves it via getImageCache (which falls back to LOGO and
-            # queues a lookup). Avoids storing a dead placeholder.
-            return f'http://{Globals.properties.getEXTProperty(f"{ADDON_ID}.Remote_Host")}/logos/{Globals._quoteString(name)}'
-        if not image:
-            # Dead placeholder: serve the LOGO var through the image endpoint.
-            return f'http://{Globals.properties.getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(fallback or LOGO)}'
-        if image.startswith(('image://')):
-            image = f'{Globals.properties.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
-        elif not image.startswith(('http','resource')):
-            image = f'http://{Globals.properties.getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(image)}'
-        return image
+        # Every named item resolves through the self-hosted /logos/{name} cache
+        # endpoint, which serves whatever the in-memory imageCache holds (filling
+        # via queueLogo when missing). The URL never changes — only the cache does,
+        # so channels/library/m3u/xmltv all get dynamic logos without rewriting.
+        if name:
+            return self._staticLogo(name)
+        # Unnamed fallback: serve the LOGO var through the image endpoint.
+        return f'http://{Globals.properties.getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(fallback or LOGO)}'
         
         
     def getLocalLogo(self, chname: str, select: bool = False) -> list:
@@ -180,11 +294,20 @@ class Resources(object):
             return Globals.settings.getSetting('Resource_Logos').split('|')
 
         def __exists(path: str) -> bool:
-            return FileAccess.exists(path)
+            # Accept any resource:// path Kodi can resolve — including .xbt texture
+            # packs, which render correctly inside Kodi (PVR/skin). We do NOT skip
+            # xbt here; failing the lookup would strip logos from Kodi, where they
+            # work. The web-browser rendering of xbt is handled at serve time.
+            try: return bool(FileAccess.exists(path))
+            except Exception: return False
 
         resources     = __getResources(citem.get('type','Custom'))
         checksum      = FileAccess._getMD5('|'.join([Globals.settings.getAddonDetails(id).get('version',ADDON_VERSION) for id in resources if Globals.settings.hasAddon(id)]))
-        cacheName     = 'getLogoResources.%s.%s' % (FileAccess._getMD5(citem.get('name')), select)
+        # v3: strict loose-file validation. Only resource:// logos backed by a real
+        # file on disk (root, media/, or resources/) are accepted — .xbt texture
+        # packs return raw pixels that browsers/PVR can't render, so they're
+        # skipped and the lookup falls through to the next source.
+        cacheName     = 'getLogoResources.v3.%s.%s' % (FileAccess._getMD5(citem.get('name')), select)
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
         if not cacheResponse:
             logos = []
@@ -192,12 +315,13 @@ class Resources(object):
             for name in names:
                 for id in resources:
                     if Globals.settings.hasAddon(id):
-                        logo = f'resource://{id}/{name}.png'
-                        if __exists(logo):
-                            self.log('getLogoResources, found %s'%(logo))
-                            logos.append(logo)
-                            if not select: 
-                                return self.cache.set(cacheName, logo, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                        for folder in ('resources/', 'media/', ''):
+                            logo = f'resource://{id}/{folder}{name}.png'
+                            if __exists(logo):
+                                self.log('getLogoResources, found %s'%(logo))
+                                logos.append(logo)
+                                if not select: 
+                                    return self.cache.set(cacheName, logo, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
             if logos: cacheResponse = self.cache.set(cacheName, logos, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
 
@@ -354,20 +478,47 @@ class Resources(object):
             except Exception as e: self.log(f'generateOnline failed!: {e}', xbmc.LOGERROR)
                 
                 
-    @cacheit(expiration=datetime.timedelta(minutes=15))
     def getTexture(self, url: str) -> Optional[str]:
+        """Resolve a Kodi image URL (resource://, image://, smb://, http) to its
+        cached texture file (special://userdata/Thumbnails/...) if Kodi has
+        decoded it. Returns None when not cached yet."""
         textures = self.jsonRPC.getTextures()
-        image = next((texture for texture in textures if texture.get('cachedurl','').lower() == url.lower()),None)
+        image = next((t for t in textures if t.get('url','').lower() == url.lower()), None)
         self.log('getTexture, url = %s\nimage = %s'%(url,image))
-        if not image is None: return f'special://userdata/Thumbnails/{image}'
-        
+        if image is not None and image.get('cachedurl'):
+            return f'special://userdata/Thumbnails/{image["cachedurl"]}'
+        return None
 
 
     def setTexture(self, url: str) -> str:
-        image = f'{Globals.properties.getEXTProperty("%s.Local_Host"%(ADDON_ID))}/image/image://%s{Globals.double_urlencode(image)}'
-        self.log('setTexture, url = %s\nimage = %s'%(url,image))
-        self.jsonRPC.requestURL(image)
-        return image
+        """Force Kodi to decode + cache a texture by rendering it in a hidden
+        WindowXMLDialog image control (this triggers CTextureCache::CacheImage),
+        then return its cached thumbnail path. Falls back to the source URL when
+        caching isn't ready (caller can retry via getTexture)."""
+        try:
+            import xbmcgui as _xbmcgui
+            import threading as _threading
+            class _CacheWindow(_xbmcgui.WindowXMLDialog):
+                def onInit(self):
+                    try: self.getControl(5000).setImage(url)
+                    except Exception as e:
+                        self.log(f'CacheWindow setImage failed: {e}', xbmc.LOGDEBUG)
+                    # brief visible render lets CTextureCache decode the image
+                    _threading.Timer(2.0, self.close).start()
+                def onAction(self, act):
+                    pass
+            win = _CacheWindow('plugin.video.pseudotv.live.texturecache.xml',
+                               ADDON_PATH, 'default')
+            win.doModal()
+            for _ in range(20):
+                cached = self.getTexture(url)
+                if cached: return cached
+                if self.monitor.abortRequested(): break
+                self.monitor.waitForAbort(0.5)
+            return url
+        except Exception as e:
+            self.log(f'setTexture failed: {e}', xbmc.LOGDEBUG)
+            return url
         
         
         

@@ -334,6 +334,10 @@ msgctxt "#30079"
 msgid "Something Went Wrong, Contact the plugin developer..."
 msgstr ""
 
+msgctxt "#32353"
+msgid "Show Welcome"
+msgstr ""
+
 msgctxt "#30080"
 msgid "3 Hours"
 msgstr ""

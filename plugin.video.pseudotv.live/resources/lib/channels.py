@@ -37,7 +37,7 @@ class Channels(object):
         self.channelRULE.pop("0", None)
         self._isAutotune = (CHANNEL_KEY_AUTOTUNE in self.channelKEY)
         self.channelDATA.update(self._load())
-        self.log(f'__init__ channelKEY = {self.channelKEY}')
+        self.log(f'__init__ channelKEY = {self.channelKEY}, template keys = {len(self.channelTEMP)}')
         
         
     @property
@@ -133,8 +133,7 @@ class Channels(object):
             self.channelDATA['uuid']     = Globals.settings.getMYUUID()
             self.channelDATA['channels'] = self.sortChannels(list(self._verify(channels)))
             if len(self.channelDATA['channels']) > 0: Globals.properties.setHasChannels(self.channelKEY, self.channelDATA)
-            if not self.isAutotune: Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
-            Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(list(self._verify(self.channelDATA.get('channels',[]))))))
+            Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
             self.log('setChannels, channels=%d' % len(self.channelDATA.get('channels',[])))
         return self._save()
         

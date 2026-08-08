@@ -44,6 +44,11 @@ ACTION_SHOW_INFO     = [11,24,401]
 ACTION_PREVIOUS_MENU = [92, 10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61448]
  
 class Manager(xbmcgui.WindowXMLDialog):
+    # Editable channel properties shown in the itemList. Mirrors the KEY_INPUT
+    # set in itemInput(); used to build the list independent of the channel
+    # template (which drops 'rules' into channelRULE and can be empty).
+    ITEM_KEYS = ['name', 'path', 'group', 'rules', 'radio', 'favorite', 'enable', 'changed']
+
     focusIndex     = -1
     spinner        = None
     chanList       = xbmcgui.ControlList
@@ -132,6 +137,13 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         try:
             with Globals.builtin.busy_dialog(lock=True):
+                # If autotune is disabled but the autotune key still holds channels,
+                # copy them to the user key so the user never starts with an empty
+                # channel list, then restart the service to load the user config.
+                if self._migrateAutotune():
+                    self.channels = Channels(Globals.getChannelKey(), writable=True)
+                    self.backup   = Backup(channels=self.channels)
+                    Globals.properties.setPendingRestart()
                 self.channelList   = self.channels.sortChannels(self.createChannelList(list(self.buildArray()), __loadChannels()))
                 self.newChannels   = self.channelList.copy()
                 self.openChannel   = kwargs.get('open')
@@ -186,6 +198,30 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if not channel.get('id'): 
                     return channel.get('number')
         return start
+
+
+    def _migrateAutotune(self) -> bool:
+        """If autotune is disabled but the autotune key still holds channels, copy
+        them into the user key (only when the user list is empty) so the user never
+        starts with an empty channel list. Returns True when a copy was made — the
+        caller should restart the service to load the user config."""
+        try:
+            if Globals.settings.getSettingBool('Enable_Autotune'):
+                return False
+            autotune = Channels(CHANNEL_KEY_AUTOTUNE).getChannels()
+            if not autotune:
+                return False
+            user = Channels(CHANNEL_KEY_USER)
+            if user.getChannels():
+                return False  # user already has channels - never clobber
+            # quick copy reusing the shared backup writer
+            Globals.settings.setCacheSetting(CHANNEL_KEY_USER, Backup._setChannels(autotune), FileAccess._getMD5(CHANNEL_KEY_USER), -1)
+            Globals.properties.setBackup(CHANNEL_KEY_USER, autotune)
+            self.log('autotune disabled: copied %d channels to user config' % len(autotune), xbmc.LOGINFO)
+            return True
+        except Exception as e:
+            self.log('_migrateAutotune failed: %s' % e, xbmc.LOGWARNING)
+            return False
 
     @cacheit(checksum=lambda: Globals.properties.getProcessID())
     def buildArray(self) -> list:
@@ -466,7 +502,15 @@ class Manager(xbmcgui.WindowXMLDialog):
         }
 
         lizLST = []
-        lizLST.extend([x for x in poolit(__buildItem)(list(self.newChannel.keys())) if x is not None])
+        # Sequential build (not poolit): these are trivial ListItem constructions
+        # with no I/O, and the shared executor pool can be saturated by a channel
+        # build — a timed-out poolit returns None and leaves the itemList blank.
+        # Iterate the canonical editable keys (ITEM_KEYS) so the list is populated
+        # even when the template is empty, and always shows the Rules row.
+        keys = list(self.newChannel.keys()) if self.newChannel else []
+        keys = [k for k in keys if k in self.ITEM_KEYS] or self.ITEM_KEYS
+        self.log('buildChannelItem, template keys = %s, using keys = %s' % (len(self.newChannel), keys))
+        lizLST.extend([it for it in [__buildItem(key) for key in keys] if it is not None])
         self.itemList.addItems(lizLST)
         matches = [idx for idx, liz in enumerate(lizLST) if liz.getProperty('key') == focuskey]
         if matches: self.itemList.selectItem(matches[0])

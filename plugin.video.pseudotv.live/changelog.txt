@@ -1,6 +1,5 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
 v.0.7.9+nightly
-- Added Japanese language translation support
 - Improved build logging with timestamped output and file persistence
 - Enhanced OpenCode integration with automatic PATH detection and timeout handling
 - Fixed translation parsing to handle # prefixed string IDs correctly
@@ -23,6 +22,21 @@ v.0.7.9+nightly
 - Optimized build process to run tests before generating changelog and translations
 - Enhanced OpenCode integration with PATH detection and timeout handling
 - Tweaked miscellaneous improvements and tweaks
+- Added Japanese (Japan) language translation support
+- Improved Translation workflow to skip already-translated strings and avoid redundant API calls
+- Added interactive build prompts with skip capability for developer workflow
+- Added ZIP filtering to exclude test files, dev artifacts, and documentation from release packages
+- Tweaked Miscellaneous build system improvements and tweaks
+- Improved Translation workflow to skip already-translated strings and avoid redundant API calls
+- Added ZIP filtering to exclude test files, dev artifacts, and documentation from release packages
+- Added Japanese (Japan) language translation support
+- Implemented automatic translation generation for Spanish, German, French, Portuguese, and Japanese using AI
+- Optimized build process to run tests before generating changelog and translations
+- Enhanced OpenCode integration with PATH detection and timeout handling
+- Improved build logging with timestamped output and file persistence
+- Added todo scanning feature to track pending work items
+- Added interactive build prompts with skip capability for developer workflow
+- Tweaked miscellaneous build system improvements and tweaks
 v.0.7.8+nightly
 - Fixed progress dialog not rendering from non-main threads (added waitForAbort after dlg.update).
 - Refactored chkPVRSync to pure state checker, returns findings dict; chkPVRRefresh accepts findings to avoid duplicate updatePVRStatus calls.
@@ -43,13 +57,11 @@ v.0.7.8+nightly
 - Replaced bare except handlers with proper exception logging across 18 files.
 - Optimized CustomQueue with dedup_keys, get_queued_dedup_keys, and automatic cleanup on task completion.
 - Added missing_epg to chkPVRSync rebuild_ids: channels with no EPG data are rebuilt alongside unloaded_by_pvr and empty_channels.
-
 v.0.7.5+nightly
 - Refactored CustomQueue and ThreadPoolExecutor.
 - Refactored "Clean Start" Utility Menu option. 
   - Purges M3U/XMLTV/Genre/Settings/Cache for a 100% clean start. No user files are deleted from the cache folder, only PseudoTV related files.
   - Purge excludes: Youtube Cookies, Fillers and Logo folders.
-  
 v.0.7.4+nightly
 - Moved Library, Channels, Server json files to internal database.
 - Improved Fillers and "Auto" post-roll fill.
@@ -57,7 +69,6 @@ v.0.7.4+nightly
 - Added include Extras/Specials to post-roll options.
   - Movie extras: https://kodi.wiki/view/Video_extras
   - TV specials: https://kodi.wiki/view/Naming_video_files/Episodes#Specials
-
 v.0.7.3+nightly
 - Improved Internal backups and channel export utilities.
 - Improved Automatic Auto-tuning, new channels if available are added based on your max future guidedata value.
@@ -66,12 +77,10 @@ v.0.7.3+nightly
 - Added Network hosted channel manger (W.I.P).
 - Improved MP4 duration parsing.
 - Added Support for YouTube cookies required for YouTube duration parsing; see wiki for details.
-  
 v.0.7.2+nightly
 - Improved Channel logo detection, and logo resource selection in settings.
 - Improved A.I. Integration.
 - Tweaked "Even Show Distribution" rules.
-
 v.0.7.1+nightly
 - Added "Recently Added Music" to Autotuning.
 - Added "Automatic" channels to settings; disables Channel Manager while active. Provides lazy configuration free channels that periodically update based on your "Future Days" LiveTV setting. Channels are curated from Kodi's top 25 content by category.
@@ -80,20 +89,17 @@ v.0.7.1+nightly
 - Thread aware Kodi properties.
 - Refactored playback core to improve VOD handling, overall performance, and .strm file compatibility.
   - All on-demand content will queue as playlists. Live programs will default to the users chosen playback method; found in settings.
-  
 v.0.7.0+nightly
 - Improved Autotuning
 - Added Memory Cache limit, settings found under Miscellaneous.
 - Tweaked Caching
 - Improved Media duration parsing.
 - Removed Support for Lazy "Mixed" Smartplaylists as "TV/Movie" Playlists. Achieve mixed content channels via the Channel Manager.
-
 v.0.6.9+nightly
 - Improved Asynchronous Executors.
 - Auto-tuning available in the channel manager, when no channels are configured. 
 - Channel Recovery available in the channel manager, when no channels are configured.
 - Automatic Channel backup after channel manager changes.
-
 v.0.6.8+nightly
 - Added Kodi trailers cache to improve trailer fillers.
 - Refactored Channel building, changes impact content aggregation; see wiki for details.
@@ -109,17 +115,12 @@ v.0.6.8+nightly
 - Replaced Kodi SimpleCache module with local cache function.
 - Added Artwork hosting/caching for all local logos.
 - Refactored Channel logo parsing.
-
 v.0.6.7+nightly
 - Introduced groundwork for Artificial Intelligence Integration (Currently Unavailable). 
-
 v.0.6.6+nightly
 - Improved Channel Manager Controls
-
-
 v.0.6.5+nightly
 - Improved HTTP server, strengthen gzip compression support.
-
 v.0.6.4+nightly
 - Advanced channel rules tweaked to include default values when channel rules are incorrectly configured.
 - Advanced channel rule "Quota" (498) and "PageLimit" (499) merged into a single rule "PageLimit & Padding".
@@ -128,14 +129,12 @@ v.0.6.4+nightly
 - Implemented a "Force Rebuild" rule in Advanced Channel settings, ensuring channels rebuild with every update.
 - Overhauled threading and queue management for improved efficiency.
 - Miscellaneous tweaks and enhancements.
-
 v.0.6.3+nightly
 - Eliminated the "AutoTune" tab to be replaced it with an "Auto Tuning" wizard in "Channels" (Work In Progress).
 - Added an interleaving toggle for both "Global" and "Advanced Rules", allowing round-robin channel interleaving; see the wiki for more info.
 - Enhanced Bonjour multi-room detection.
 - Improved IPTV-Simple setup and refresh process.
 - Refined playback handling when file names change.
-
 v.0.6.2
 - Optimized logo processing tasks to avoid deadlocks.
 - Fixed recurring "Offline" server alerts.
@@ -160,7 +159,6 @@ v.0.6.2
     - Limits & Sort Methods
     - Even Show Distribution
     - Force Episode Ordering
-	
 v.0.6.1
 - Improved logo detection.
 - Possible Fix for channel content not changing.
@@ -184,12 +182,10 @@ v.0.6.1
     users can delete their Kodi\portable_data\addons\script.module.simplecache\simplecache.db file while Kodi is not running. Forcing channel logos to repopulate. 
 - Notice: Let us aim to make PseudoTV Live 100% bug-free by its 5th anniversary (June 29, 2025).
   Please test thoroughly and help report issues: https://github.com/PseudoTV/PseudoTV_Live/wiki/Support
-
 v.0.6.0
 - Refactored Overlays.
 - Fixed "Run Autotune" in utilities menu.
 - Miscellaneous tweaks & improvements.
-
 v.0.5.9
 - Miscellaneous tweaks & improvements.
 - Added JSONRPC query timeout to Misc. settings (only viewable when debugging is enabled). 
@@ -198,7 +194,6 @@ v.0.5.9
   - This enhancement aims to resolve playback issues with PVR recordings and newly added saved searches.
   - Please if you have not done so already add 'pvr://' as a video source in Kodi to whitelist this directory.
 - Added support for saved PVR searches (currently supports PseudoTV Channels only); available under "Mixed" Autotuning.
-
 v.0.5.8
 - Enhanced Channel Manager UI and refactored code.
 - Resolved issues with some advanced channel rules not applying correctly.
@@ -218,7 +213,6 @@ v.0.5.8
 - Various tweaks to playback, error handling, channel bug, and on-next logic.
 - Improved stability and reduced memory burden from background service.
 - Fixed "Restart Percentage" setting to allow 0% (i.e., disable restart prompt).
-
 v.0.5.7
 - Enhanced stability by replacing Kodi's segfault-prone busy dialog with a custom busy Globals.DIALOG.
 - Improved "ON Next" options to include artwork or text-based prompts.
@@ -239,7 +233,6 @@ v.0.5.7
 - Improved overlay position utility to include On-Next position and future vignette position.
   - Added "Global" option for On-Next position, including advanced channel rules.
   - Added "Global" option for On-Next color change, including advanced channel rules.
-
 v.0.5.6
 - Improved vignette (W.I.P) available in advanced channel rules.
 - Added global interleaving value and advanced interleaving channel rule.
@@ -284,7 +277,6 @@ v.0.5.6
 - Added new channel path options to browse dialog utility.
   - "Import STRM" Import paths, i.e., directories within a STRM file. Not meant for STRMs containing individual media (directories only!).
   - "Basic Playlist" Create a channel from a single `.cue`, `.m3u`, `.m3u8`, `.strm`, `.pls`, `.wpl` file (content only!) (W.I.P).
-
 v.0.5.5
 - Added robust debugging with easy log submission and user UI (W.I.P).
   - Minimum debug level setting: Filter less important entries to reduce file size.
@@ -307,7 +299,6 @@ v.0.5.5
   - Fallback to "[All channels]" if no match is found.
 - Improved "Restart" button; restart button disabled by default.
 - Improved PVR backend refresh.
-
 v.0.5.4
 - Added provider metadata to recordings.
 - Refactored playback:
@@ -344,7 +335,6 @@ v.0.5.4
 - Fixed http hosted genres.
 - Improved multi-room advanced rule support via paired clients.
   - Advanced rules for playback, overlays, etc., are now shared between instances.
-
 v.0.5.3
 - Fixed channel manager "Add Path".
 - Tweaked PVR backend reload.
@@ -364,7 +354,6 @@ v.0.5.3
     Once paired, you can enable the new server in multi-room settings "Select Servers".
     PseudoTV Live will configure IPTV Simple PVR backend to use the selected server's files.
     Feature is a work-in-progress; please provide feedback and debug logs when necessary. Thank you!
-
 v.0.5.2
 - Added removal of invalid characters from channel names.
 - Moved logo folder to user folder (e.g., `\cache\logos`).
@@ -392,10 +381,8 @@ v.0.5.2
   - Allows users to build on-the-fly dynamic smart playlists without the need for a smart playlist or node.
 - Added the first round of advanced channel rules, more to come.
 - Added update available notification.
-
 v.0.5.1
 - Enhanced background services.
-
 v.0.5.0
 - Added seasonal channel cleanup.
 - Added YouTube duration detection (requires YouTube_DL).
@@ -408,7 +395,6 @@ v.0.5.0
 - Simplified filler settings. Advanced channel rules will feature more controls on release.
 - Refactored internal references and compressed data strings using zlib, reducing memory burden and Kodi EPG database size.
 - Tweaked onChange logic to improve callback performance.
-
 v.0.4.9
 - Improved MP4 duration metadata detection.
 - Fixed seasons returning incorrect holiday for the first week of April.
@@ -418,7 +404,6 @@ v.0.4.9
 - Improved "Auto" calculations for fillers.
   - "Auto" attempts to fill the time between media to the nearest 15-minute mark.
 - Fixed client detection issues introduced in the last build.
-
 v.0.4.8
 - The following steps are required:
   - Open PseudoTV Live settings, under Miscellaneous; click "Utility Menu" and select "Delete M3U/XMLTV".
@@ -430,7 +415,6 @@ v.0.4.8
 - Fixed TV bumpers and resources (W.I.P); see wiki for details.
 - Added TV adverts and resources (W.I.P); see wiki for details.
 - Added trailers and resources (W.I.P); see wiki for details.
-
 v.0.4.7
 - The following steps are required:
   - Open PseudoTV Live settings, under Miscellaneous; click "Utility Menu" and select "Delete M3U/XMLTV".
@@ -443,14 +427,12 @@ v.0.4.7
   - MPAA resources are available via the Lunatixz or PseudoTV repository.
 - Updated April seasonal channels.
 - Fixed channel bug not displaying the correct logo.
-
 v.0.4.6
 - Refactored seasonal & provisional autotuning.
 - Added "Even Show Distribution" rule; enabled by default under global settings.
   - TV Networks, TV Genres, Mixed Genres & Seasonal include even show distribution.
 - Autotuned TV genre, mixed genres are now random and no longer in episode order.
 - Temporarily disabled Bonjour announcement/discovery.
-
 v.0.4.5
 - The following steps are required:
   - Open PseudoTV Live settings, under Miscellaneous; click "Utility Menu" and select "Delete M3U/XMLTV".
@@ -464,13 +446,11 @@ v.0.4.5
 - Added "Rebuild Library" to the utility menu. Forces a library rebuild to detect recent Kodi library additions. Default behavior is for the library to self-update every few days to hours.
 - Added "Welcome" prompt to help new users understand and operate PseudoTV Live. Suggestions for improvements are welcome.
 - Removed "UpNext" support.
-
 v.0.4.4
 - Added "Network Folder" clients' ability to edit autotuned channels on server (W.I.P).
 - Moved `channels.json` and `library.json` files to "Centralized Folder" for network/client accessibility.
 - Improved overlay functions to reduce memory overhead.
 - Added "Show M3U/XMLTV" option to the utility menu (debugging tool).
-
 v.0.4.3
 - Added "Hack" method for automatically configuring IPTV-Simple (manual configuration no longer necessary).
 - Improved usability/notifications.
@@ -483,7 +463,6 @@ v.0.4.3
 - Temporarily disabled multi-room discovery/announcements.
 - Improved flow controls for background management (experimental - feedback appreciated).
 - Fixed "Move"/"Delete" channel manager buttons.
-
 v.0.4.2
 - Improved "Find More" context option. Now supports Embuary Helpers find similar.
 - Miscellaneous tweaks and bug fixes.
@@ -501,9 +480,14 @@ v.0.4.2
 - Tweaked UpNext not creating a new instance.
 - Fixed playback error introduced in the previous release.
 - Fixed playlist/play from here playback issues.
-
 v.0.4.1
 - Enhanced playback error detection.
 - Autotuned channels added to "Favorite" group.
 - Miscellaneous tweaks.
 - Fixed "library" content not respecting "specials" & "extras
+- Added Japanese (Japan) language translation support
+- Improved Translation workflow to skip already-translated strings and avoid redundant API calls
+- Added ZIP filtering to exclude test files, dev artifacts, and documentation from release packages
+- Added interactive build prompts with skip capability for developer workflow
+- Added timestamped build logging to generator.log for developer workflow
+- Tweaked Miscellaneous build system improvements and tweaks

@@ -608,6 +608,17 @@ class Service(object):
         self.queue       = CustomQueue(service=self)
         
         self.curchannels = self.tasks.getChannels()
+        # "Clean Start" (Utilities._runCleanup full=True) saved the pre-clean
+        # settings so they can be restored after settings.xml is regenerated.
+        # This MUST happen once at boot — doing it inside chkSettingsChange would
+        # restore the OLD value over a user's first manual edit (e.g. toggling
+        # Enable_Autotune), because that very edit triggers onSettingsChanged.
+        try:
+            _cleanup = Globals.settings.getCacheSetting('Utilities._runCleanup', default={})
+            if Globals.settings.restoreSettings(_cleanup):
+                Globals.settings.setCacheSetting('Utilities._runCleanup', None)
+        except Exception as e:
+            self.log('restore clean-start settings failed: %s' % e, xbmc.LOGWARNING)
         self.cursettings = Globals.settings.getCurrentSettings()
 
 

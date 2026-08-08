@@ -93,7 +93,8 @@ class M3U(object):
         try:
             if getattr(self, 'writable', False) and not getattr(self, '_saved', False):
                 self._save()
-        except Exception as e: pass
+        except Exception:
+            pass
             
             
     def __del__(self):

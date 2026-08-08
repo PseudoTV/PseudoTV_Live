@@ -7,6 +7,18 @@ import pytest
 import variables
 
 
+@pytest.fixture(autouse=True)
+def _reset_memory_budget():
+    """The MemoryBudget singleton persists across tests — reset used bytes and the
+    global cap so byte-budget assertions aren't polluted by earlier tests."""
+    from cache import MemoryBudget
+    from constants import GLOBAL_CACHE_MEM_MAX
+    budget = MemoryBudget.instance()
+    budget.max_bytes = GLOBAL_CACHE_MEM_MAX
+    budget.reset()
+    yield
+
+
 @pytest.fixture
 def cache_module():
     from cache import _Cache
@@ -196,3 +208,150 @@ class TestWriteBatching:
         # After successful flush the buffer is empty
         assert c._write_batch == []
         assert c._batch_dirty is False
+
+
+# ========================================================================
+# 7. In-memory mem-cache byte budget (_setMEM / _trimMEM)
+# ========================================================================
+class TestMemCacheBudget:
+    def _make(self):
+        from cache import _Cache
+        c = _Cache()
+        c.monitor = MagicMock(abortRequested=MagicMock(return_value=False))
+        c.window = MagicMock()
+        c._database = MagicMock()
+        return c
+
+    def test_setmem_tracks_bytes(self):
+        c = self._make()
+        c.max_entries = 1000
+        c.max_mem_bytes = 10 * 1024 * 1024
+        c._setMEM('a', 'chk', -1, {'x': 'y' * 100})
+        assert len(c._cache_idx) == 1
+        assert c._mem_bytes == c._cache_idx[0][1]
+        assert c.window.setProperty.called
+
+    def test_setmem_refuses_over_budget(self):
+        c = self._make()
+        c.max_entries = 1000
+        c.max_mem_bytes = 64  # tiny budget
+        c._setMEM('a', 'chk', -1, {'blob': 'x' * 1000})  # 1KB > 64B -> skipped
+        assert len(c._cache_idx) == 0
+        c.window.setProperty.assert_not_called()
+
+    def test_setmem_bounded_total(self):
+        c = self._make()
+        c.max_entries = 1000
+        c.max_mem_bytes = 512
+        for i in range(50):
+            c._setMEM('k%d' % i, 'chk', -1, {'data': 'v' * 20})
+        assert c._mem_bytes <= c.max_mem_bytes
+        assert len(c._cache_idx) <= c.max_entries
+
+    def test_trimMEM_evicts_when_over_byte_budget(self):
+        c = self._make()
+        c.max_entries = 1000
+        c.max_mem_bytes = 40
+        # simulate a budget blow-out (entries already present)
+        c._cache_idx.append(('k1', 100)); c._mem_bytes = 100
+        c._cache_idx.append(('k2', 50));  c._mem_bytes = 150
+        c._trimMEM()
+        assert c._mem_bytes <= c.max_mem_bytes
+        assert len(c._cache_idx) == 0
+        assert c.window.clearProperty.called
+
+    def test_checksum_cache_bounded(self):
+        from cache import _Cache
+        from unittest.mock import patch as _patch
+        _Cache._checksum_cache.clear()
+        c = _Cache()
+        c.global_checksum = 'v'
+        with _patch('cache.CHECKSUM_CACHE_MAX', 10):
+            for i in range(25):
+                c.getChecksum('key%d' % i)
+        assert len(_Cache._checksum_cache) <= 10
+
+
+# ========================================================================
+# 8. Properties._memory_cache byte-bounded LRU (_BoundedOrderedDict)
+# ========================================================================
+class TestBoundedOrderedDict:
+    def _make(self, max_bytes):
+        from kodi import _BoundedOrderedDict
+        return _BoundedOrderedDict(max_bytes)
+
+    def test_evicts_oldest_over_byte_budget(self):
+        d = self._make(200)
+        d['a'] = 'x' * 100   # ~141 bytes
+        d['b'] = 'y' * 100   # ~282 total -> evict 'a'
+        assert 'a' not in d
+        assert 'b' in d
+        assert d.membytes <= 200
+
+    def test_keeps_under_budget(self):
+        d = self._make(512)
+        for i in range(20):
+            d['k%d' % i] = 'v' * 10
+        assert d.membytes <= 512
+        assert len(d) <= 20
+
+    def test_update_does_not_double_count(self):
+        d = self._make(1024)
+        d['a'] = 'x' * 50
+        d['a'] = 'x' * 50  # replace same key
+        assert d.membytes < 100  # one ~91-byte entry, not two
+        assert len(d) == 1
+
+    def test_pop_decrements_bytes(self):
+        d = self._make(1024)
+        d['a'] = 'x' * 100
+        before = d.membytes
+        d.pop('a', None)
+        assert d.membytes == 0
+        assert before > 0
+
+    def test_clear_resets_bytes(self):
+        d = self._make(1024)
+        d['a'] = 'x' * 100
+        d.clear()
+        assert d.membytes == 0
+
+
+# ========================================================================
+# 9. Shared global MemoryBudget (combined caches can't exceed the global cap)
+# ========================================================================
+class TestGlobalBudget:
+    def test_own_cap_enforced(self):
+        from cache import MemoryBudget
+        b = MemoryBudget.instance()
+        b.max_bytes = 1000
+        b.register('render', 100)
+        assert b.acquire('render', 90) is True
+        assert b.acquire('render', 20) is False  # would exceed render's own cap
+
+    def test_combined_cannot_exceed_global(self):
+        from cache import MemoryBudget
+        b = MemoryBudget.instance()
+        b.max_bytes = 100
+        b.register('render', 80)
+        b.register('memcache', 80)
+        assert b.acquire('render', 50) is True
+        assert b.acquire('memcache', 40) is True   # 50+40 = 90 <= 100 global
+        assert b.acquire('memcache', 20) is False  # 90+20 = 110 > 100 -> refused globally
+        b.reset()
+
+    def test_release_frees_global(self):
+        from cache import MemoryBudget
+        b = MemoryBudget.instance()
+        b.max_bytes = 100
+        b.register('render', 80)
+        assert b.acquire('render', 80) is True
+        assert b.used() == 80
+        b.release('render', 80)
+        assert b.used() == 0
+        assert b.acquire('render', 80) is True
+        b.reset()
+
+    def test_fractions_sum_within_global(self):
+        from constants import GLOBAL_CACHE_MEM_MAX, CACHE_MEM_MAX, PROPERTY_MEM_MAX, RENDER_CACHE_MAX
+        assert CACHE_MEM_MAX + PROPERTY_MEM_MAX + RENDER_CACHE_MAX <= GLOBAL_CACHE_MEM_MAX

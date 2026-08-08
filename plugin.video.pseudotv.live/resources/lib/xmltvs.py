@@ -141,6 +141,27 @@ def applyGrouping(stations: list, channels: list) -> list:
     return stations
 
 
+def _storeRender(cache: dict, sig: tuple, data: bytes, name: str) -> bool:
+    """Cache rendered bytes under the shared 'render' MemoryBudget owner.
+
+    The M3U and XMLTV render caches share RENDER_CACHE_MAX (a fraction of the
+    global cache budget) — combined they can never exceed it. Old cached bytes
+    are released before stashing new ones.
+    """
+    from cache import MemoryBudget
+    budget = MemoryBudget.instance()
+    budget.register('render', RENDER_CACHE_MAX)
+    old = cache.get('data')
+    if old is not None:
+        budget.release('render', len(old))
+    if not data or len(data) >= RENDER_CACHE_MAX or not budget.acquire('render', len(data)):
+        if data and len(data) >= RENDER_CACHE_MAX:
+            LOG("%s, render too large (%s bytes), not caching" % (name, len(data)), xbmc.LOGWARNING)
+        return False
+    cache['sig'], cache['data'] = sig, data
+    return True
+
+
 def renderFilteredM3U(channels: list, runActions) -> bytes:
     """Get filtered M3U content using M3U class render() + filter pipeline.
 
@@ -168,11 +189,10 @@ def renderFilteredM3U(channels: list, runActions) -> bytes:
     m3u.render(buf, stations=_filter(stations))
     data = buf.getvalue()
     # never cache an implausibly large render — a half-written M3U read during a
-    # build once produced a 776MB blob served on every poll. Cap at 20MB.
-    if len(data) > 20 * 1024 * 1024:
-        LOG("renderFilteredM3U, render too large (%s bytes), not caching" % len(data), xbmc.LOGWARNING)
-        return data
-    _M3U_RENDER_CACHE = {'sig': sig, 'data': data}
+    # build once produced a 776MB blob served on every poll. The shared render
+    # budget (RENDER_CACHE_MAX) also refuses oversized or combined-over-budget
+    # stashes.
+    _storeRender(_M3U_RENDER_CACHE, sig, data, 'renderFilteredM3U')
     return data
 
 
@@ -200,9 +220,8 @@ def renderFilteredXMLTV(channels: list, runActions) -> bytes:
     buf = BytesIO()
     xmltv_obj.renderWithPlaceholders(buf, stations=_filter(xmltv_obj.m3u.getFilteredStations(programmes=xmltv_obj.getProgrammes())))
     data = buf.getvalue()
-    # don't cache implausibly large / empty renders
-    if data and len(data) < 100 * 1024 * 1024:
-        _XMLTV_RENDER_CACHE = {'sig': sig, 'data': data}
+    # don't cache implausibly large / empty renders (shared render budget cap)
+    _storeRender(_XMLTV_RENDER_CACHE, sig, data, 'renderFilteredXMLTV')
     return data
 
 
@@ -227,6 +246,12 @@ def getFilteredGenres() -> bytes:
                 return fle.readBytes()
         except Exception as e:
             LOG("getFilteredGenres, file fallback failed: %s" % e, xbmc.LOGDEBUG)
+    if FileAccess.exists(GENREFLE_DEFAULT):
+        try:
+            with FileAccess.stream(GENREFLE_DEFAULT) as fle:
+                return fle.readBytes()
+        except Exception as e:
+            LOG("getFilteredGenres, default fallback failed: %s" % e, xbmc.LOGDEBUG)
     return b''
 
 
@@ -341,7 +366,8 @@ class XMLTVS(object):
         try:
             if self.writable and not getattr(self, '_saved', False):
                 self._save()
-        except Exception as e: pass
+        except Exception:
+            pass
             
             
     def __del__(self):
@@ -429,8 +455,6 @@ class XMLTVS(object):
 
     def _save(self, reset: bool=True) -> bool:
         with self._lock:
-            if reset: data = self.resetData()
-            else:     data = self.XMLTVDATA['data']
             self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
             self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'], opt='PROGRAMMES')
             self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'], opt='RECORDINGS')
@@ -595,7 +619,6 @@ class XMLTVS(object):
             now_rounded_epoch = float(Globals._roundTimeDown(now_epoch, offset=60))
             now_str = Globals._epochTime(now_rounded_epoch, tz=False).strftime(DTFORMAT)
             min_end_epoch = now_epoch + horizon
-            min_end_str = Globals._epochTime(min_end_epoch, tz=False).strftime(DTFORMAT)
             ph_min_epoch = now_rounded_epoch + MIN_EPG_DURATION
             # Channels whose real guide covers now need no placeholder. For the
             # rest (no data at all, or a future-start guide that leaves today

@@ -211,6 +211,7 @@ class Builder(object):
             self.pErrors = []
             self.pCount  = 0
             self.cCount  = len(channels)
+            self.service.buildState = {'running': True, 'pct': 0, 'channel': '', 'built': 0, 'total': self.cCount}
             
             preview_results = {}
             updated = False
@@ -231,6 +232,7 @@ class Builder(object):
                             self.pHeader = ADDON_NAME
                             self.pName   = citem.get('name', '')
                             self.pCount  = int(idx * 100) // self.cCount
+                            self.service.buildState.update({'pct': self.pCount, 'channel': citem.get('name', ''), 'logo': citem.get('logo', ''), 'built': idx + 1})
                         
                             self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{self.pName}", header=self.pHeader)
                             
@@ -419,6 +421,7 @@ class Builder(object):
             else:
                 self.log("buildChannels, post-build sync check: PVR in sync", xbmc.LOGDEBUG)
 
+        self.service.buildState.update({'running': False, 'pct': 100})
         return preview_results if preview else None
 
 

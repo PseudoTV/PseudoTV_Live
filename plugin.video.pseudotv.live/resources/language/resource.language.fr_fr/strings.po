@@ -771,3 +771,15 @@ msgstr "Ajouter des publicités et des bandes-annonces"
 msgctxt "#32315"
 msgid "Start (HH:MM)"
 msgstr "Début (HH:MM)"
+
+msgctxt "#30080"
+msgid "3 Hours"
+msgstr "3 Heures"
+
+msgctxt "#32353"
+msgid "Show Welcome"
+msgstr "Afficher l'accueil"
+
+msgctxt "#30079"
+msgid "Something Went Wrong, Contact the plugin developer..."
+msgstr "Quelque chose s'est mal passé, contactez le développeur du plugin..."

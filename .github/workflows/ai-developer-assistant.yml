@@ -486,7 +486,7 @@ jobs:
               echo "**Issues found**"
               echo ""
               echo '```'
-              cat lint-raw.txt
+              sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' lint-raw.txt | grep -vE '^\s*(Read|Grep|Write|Glob|cd |\$ |EXIT:|DONE|AST parse|sed |python)' || true
               echo '```'
             else
               echo "No issues found."
@@ -558,7 +558,7 @@ jobs:
           {
             echo "## AI Code Review"
             echo ""
-            echo "$OPENCODE_OUTPUT" | sed 's/[[:cntrl:]]//g' || true
+            echo "$OPENCODE_OUTPUT" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | grep -vE '^\s*(Read|Grep|Write|Glob|cd |\$ |EXIT:|DONE|AST parse|sed |python)' || true
           } > ai-review-report.md
         continue-on-error: true
       - name: Upload Report

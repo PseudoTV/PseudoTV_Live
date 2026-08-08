@@ -771,3 +771,15 @@ msgstr "Instalar benchmark de E/S"
 msgctxt "#33137"
 msgid "Open the Kodi Node Editor for advanced SmartPlaylist creation."
 msgstr "Abrir el editor de nodos de Kodi para la creación avanzada de listas de reproducción inteligentes."
+
+msgctxt "#30080"
+msgid "3 Hours"
+msgstr "3 Horas"
+
+msgctxt "#32353"
+msgid "Show Welcome"
+msgstr "Mostrar Bienvenida"
+
+msgctxt "#30079"
+msgid "Something Went Wrong, Contact the plugin developer..."
+msgstr "Algo salió mal, contacta con el desarrollador del plugin..."

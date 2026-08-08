@@ -8,12 +8,6 @@ AGENTS.md
 # Session backups
 SESSION_BACKUP.md
 
-# Generated TODO list
-todo.md
-
-# Build log
-generator.log
-
 # Test infrastructure
 tests/
 pytest.ini

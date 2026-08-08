@@ -28,6 +28,7 @@ import re
 import sys
 import time
 import hashlib
+import msvcrt
 import datetime
 import subprocess
 import xml.etree.ElementTree
@@ -37,20 +38,16 @@ from shutil import copyfile, rmtree
 LOG_FILE = None
 
 def _prompt_skip(step_name, seconds=5):
-    try:
-        import msvcrt
-        _log(f"\n{step_name} — press any key to skip ({seconds}s)...")
-        for remaining in range(seconds, 0, -1):
-            _log(f"  {remaining}s remaining...")
-            if msvcrt.kbhit():
-                msvcrt.getch()
-                _log(f"Skipped {step_name}")
-                return True
-            time.sleep(1)
-        _log(f"Proceeding with {step_name}")
-        return False
-    except ImportError:
-        return False
+    _log(f"\n{step_name} — press any key to skip ({seconds}s)...")
+    for remaining in range(seconds, 0, -1):
+        _log(f"  {remaining}s remaining...")
+        if msvcrt.kbhit():
+            msvcrt.getch()
+            _log(f"Skipped {step_name}")
+            return True
+        time.sleep(1)
+    _log(f"Proceeding with {step_name}")
+    return False
 
 def _log(msg):
     ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -112,7 +109,12 @@ class Generator:
         self._zipit(GITPATH)
         _log("Finished updating addons xml and md5 files")
         if sys.stdin.isatty():
-            input("\nPress Enter to close...")
+            _log("\nPress any key to close (30s)...")
+            for _ in range(30):
+                if msvcrt.kbhit():
+                    msvcrt.getch()
+                    break
+                time.sleep(1)
 
     def _run_local_tests(self):
         """Run pytest on local test suite before building."""
@@ -436,25 +438,27 @@ class Generator:
         entries_text = '\n'.join(changelog_entries)
 
         if version in content:
-                _log(f"Appending {len(changelog_entries)} entries to existing {version} section")
-                lines = content.split('\n')
-                new_lines = []
-                in_ver = False
+            _log(f"Appending {len(changelog_entries)} entries to existing {version} section")
+            lines = content.split('\n')
+            new_lines = []
+            in_ver = False
+            inserted = False
 
-                for i, line in enumerate(lines):
-                    if line.strip() == version and not in_ver:
-                        in_ver = True
-                        new_lines.append(line)
+            for i, line in enumerate(lines):
+                if line.strip() == version and not in_ver:
+                    in_ver = True
+                    new_lines.append(line)
+                    continue
+
+                if in_ver and not inserted:
+                    next_is_end = (i + 1 < len(lines) and lines[i + 1].startswith('v.')) or i >= len(lines) - 1
+                    if not line.strip():
                         continue
-
-                    if in_ver:
-                        is_end = line.startswith('v.') or i >= len(lines) - 1
-                        if not line.strip() and not is_end:
-                            continue
-                        if is_end:
-                            new_lines.append(entries_text)
-                            in_ver = False
-
+                    new_lines.append(line)
+                    if next_is_end:
+                        new_lines.append(entries_text)
+                        inserted = True
+                else:
                     new_lines.append(line)
 
                 content = '\n'.join(new_lines)

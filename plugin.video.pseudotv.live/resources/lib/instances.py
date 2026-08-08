@@ -122,7 +122,7 @@ class Instances(object):
         ids = addon.getInstanceIds()
         non_zero = [i for i in ids if i > 0]
         if not non_zero:
-            self.log(f"_findPVRInstanceID, no instance IDs found")
+            self.log("_findPVRInstanceID, no instance IDs found")
             return False
         instance_id = non_zero[0]
         self.log(f"_findPVRInstanceID, auto-detected instance_id={instance_id} from {ids}")
@@ -156,11 +156,11 @@ class Instances(object):
                 if   hasattr(addon_settings, 'getString'): settings.update({key, addon_settings.getString(key)})
                 elif hasattr(addon_settings, 'getBool'):   settings.update({key, str(addon_settings.getBool(key))})
                 else:
-                    self.log(f"getSettings, Settings object has no getBool/getString")
+                    self.log("getSettings, Settings object has no getBool/getString")
                     continue
             return settings
         except (TypeError, AttributeError):
-            self.log(f"getSettings, instance API not available (waiting for Kodi #23648)")
+            self.log("getSettings, instance API not available (waiting for Kodi #23648)")
             return self._load(self.getPVRInstancePath(instanceName))
         except Exception as e:
             self.log(f"getSettings, ERROR: {e}", xbmc.LOGERROR)
@@ -182,7 +182,7 @@ class Instances(object):
             if silent is None: silent = self.settings.getSettingBool('Enable_Kodi_Access')
             addon = self._getPVRAddon()
             if not addon.supportsInstanceSettings():
-                self.log(f"setSettings, addon does not support instance settings")
+                self.log("setSettings, addon does not support instance settings")
                 raise Exception(TypeError)
             
             instance_id    = self._resolveInstanceID(addon)
@@ -191,11 +191,11 @@ class Instances(object):
                 if   hasattr(addon_settings, 'setBool'):   addon_settings.setBool(key, value.lower() == 'true')
                 elif hasattr(addon_settings, 'setString'): addon_settings.setString(key, value)
                 else:
-                    self.log(f"setSettings, Settings object has no setBool/setString")
+                    self.log("setSettings, Settings object has no setBool/setString")
                     continue
             return True
         except (TypeError, AttributeError):
-            self.log(f"setSettings, instance API not available (waiting for Kodi #23648)")
+            self.log("setSettings, instance API not available (waiting for Kodi #23648)")
             self._set(instanceName, settings, silent)
         except Exception as e:
             self.log(f"setSettings, ERROR: {e}", xbmc.LOGERROR)
@@ -383,7 +383,7 @@ class Instances(object):
         try:
             addon = self._getPVRAddon()
             if not addon.supportsInstanceSettings():
-                self.log(f"togglePVRReload, addon does not support instance settings")
+                self.log("togglePVRReload, addon does not support instance settings")
                 raise Exception(TypeError)
             
             instance_id = self._resolveInstanceID(addon)
@@ -403,17 +403,17 @@ class Instances(object):
                 MONITOR().waitForAbort(reload_wait)
                 addon_settings.setBool(key, org)
             else:
-                self.log(f"togglePVRReload, Settings object has no get/set methods")
+                self.log("togglePVRReload, Settings object has no get/set methods")
                 return False
             self.log(f"togglePVRReload, restored {key}={org}")
             return True
         except (TypeError, AttributeError):
-            self.log(f"togglePVRReload, instance API not available (waiting for Kodi #23648)")
+            self.log("togglePVRReload, instance API not available (waiting for Kodi #23648)")
             try:
                 addon = self._getPVRAddon()
                 instance_id = self._resolveInstanceID(addon)
                 if instance_id is None:
-                    self.log(f"togglePVRReload, could not resolve instance ID for fallback", xbmc.LOGERROR)
+                    self.log("togglePVRReload, could not resolve instance ID for fallback", xbmc.LOGERROR)
                     return False
                 instance_path = os.path.join(PVR_CLIENT_LOC, f'instance-settings-{instance_id}.xml')
                 if not FileAccess.exists(instance_path):
@@ -432,7 +432,7 @@ class Instances(object):
                 # returning False — direct XML write doesn't trigger pvr.iptvsimple's
                 # Process() loop. pvr.iptvsimple only monitors Kodi's in-memory settings API.
                 # Returning False lets chkPVRRefresh fall back to togglePVRBackend.
-                self.log(f"togglePVRReload, direct XML write may not trigger reload — returning False for brute fallback")
+                self.log("togglePVRReload, direct XML write may not trigger reload — returning False for brute fallback")
                 return False
             except Exception as e:
                 self.log(f"togglePVRReload, fallback ERROR: {e}", xbmc.LOGERROR)
@@ -467,7 +467,7 @@ class Instances(object):
             content = content.replace('</settings>', '    <setting id="kodi_addon_instance_enabled">false</setting>\n</settings>')
             with FileAccess.open(settings_path, 'w') as f:
                 f.write(content)
-            self.log(f"_disableMigratedPVRInstance, disabled Migrated Config with empty m3u path/url", xbmc.LOGINFO)
+            self.log("_disableMigratedPVRInstance, disabled Migrated Config with empty m3u path/url", xbmc.LOGINFO)
             return True
         except Exception as e:
             self.log(f"_disableMigratedPVRInstance, error: {e}", xbmc.LOGDEBUG)

@@ -771,3 +771,15 @@ msgstr "Fonte Noturna"
 msgctxt "#32295"
 msgid "Subtitle Language"
 msgstr "Idioma da Legenda"
+
+msgctxt "#30080"
+msgid "3 Hours"
+msgstr "3 Horas"
+
+msgctxt "#32353"
+msgid "Show Welcome"
+msgstr "Mostrar Boas-Vindas"
+
+msgctxt "#30079"
+msgid "Something Went Wrong, Contact the plugin developer..."
+msgstr "Algo deu errado, entre em contato com o desenvolvedor do plugin..."

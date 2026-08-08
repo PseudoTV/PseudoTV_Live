@@ -3,125 +3,347 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PseudoTV Live | Multi-Server Manager</title>
+    <title>PseudoTV Live | Manager</title>
     <style>
         :root {
-            --pstv-bg-dark: #002b4d; --pstv-bg-light: #005a92; --pstv-accent: #ffffff;
-            --pstv-input-bg: #1a4a70; --pstv-border: rgba(255, 255, 255, 0.3);
-            --pstv-focus: #5dade2; --pstv-dim: rgba(255, 255, 255, 0.4);
-            --pstv-success: #27ae60; --pstv-epg-bg: #001a2d; --pstv-epg-prog: #003d66;
-            --hour-width: 340px; --slot-width: 170px; --channel-col-width: 180px; --header-height: 35px;
+            --bg-dark: #002b4d; --bg-light: #005a92; --accent: #ffffff;
+            --input-bg: #1a4a70; --border: rgba(255,255,255,0.3);
+            --focus: #5dade2; --dim: rgba(255,255,255,0.4);
+            --success: #27ae60; --danger: #e74c3c; --epg-bg: #001a2d; --epg-prog: #003d66;
+            --hour-width: 340px; --slot-width: 170px; --channel-col-width: 180px;
         }
-
+        * { box-sizing: border-box; }
         body {
-            background: radial-gradient(circle, var(--pstv-bg-light) 0%, var(--pstv-bg-dark) 100%);
-            background-attachment: fixed; color: var(--pstv-accent);
-            font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center;
+            background: radial-gradient(circle, var(--bg-light) 0%, var(--bg-dark) 100%);
+            background-attachment: fixed; color: var(--accent);
+            font-family: 'Segoe UI', sans-serif; margin: 0; min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center;
         }
-
-        /* BUSY SPINNER & OVERLAY */
-        #busy-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
-            display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
-        }
-        .spinner { width: 80px; height: 80px; animation: rotate-spinner 1.2s linear infinite; }
-        @keyframes rotate-spinner { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        .banner { width: 100%; padding: 20px 0; text-align: center; }
+        .banner { width: 100%; padding: 20px 0 10px 0; text-align: center; }
         .banner img { max-width: 300px; filter: drop-shadow(0px 8px 15px rgba(0,0,0,0.4)); }
 
         .tab-bar { display: flex; gap: 5px; width: 95%; max-width: 1200px; z-index: 2; }
         .tab {
-            padding: 12px 25px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--pstv-border);
+            padding: 12px 25px; background: rgba(0,0,0,0.4); border: 1px solid var(--border);
             border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer;
-            font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--pstv-dim);
+            font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--dim);
         }
-        .tab.active { background: rgba(0, 0, 0, 0.2); color: var(--pstv-accent); border-top: 2px solid var(--pstv-focus); backdrop-filter: blur(12px); }
-
+        .tab.active { background: rgba(0,0,0,0.2); color: var(--accent); border-top: 2px solid var(--focus); }
+        .server-bar { display: flex; flex-wrap: wrap; gap: 5px; width: 95%; max-width: 1200px; z-index: 2; margin-bottom: 4px; }
+        .server-bar .tab { padding: 6px 14px; font-size: 0.65rem; }
+        .tab-spacer { flex: 1; }
         .container {
-            width: 95%; max-width: 1200px; background: rgba(0, 0, 0, 0.35); backdrop-filter: blur(12px);
-            border: 1px solid var(--pstv-border); border-radius: 0 12px 12px 12px;
+            width: 95%; max-width: 1200px; background: rgba(0,0,0,0.35); backdrop-filter: blur(12px);
+            border: 1px solid var(--border); border-radius: 0 12px 12px 12px;
             padding: 25px; margin-bottom: 50px; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
         }
-
         .tab-content { display: none; min-height: 400px; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .tab-content.active { display: block; }
 
-        /* EPG GRID */
-        .epg-outer-wrapper { position: relative; border: 1px solid var(--pstv-border); border-radius: 8px; height: 600px; overflow: auto; background: var(--pstv-epg-bg); }
-        .epg-table { display: flex; flex-direction: column; width: fit-content; min-width: 100%; }
-        .epg-header-row { display: flex; position: sticky; top: 0; z-index: 100; background: #003355; height: var(--header-height); }
-        .epg-corner { width: var(--channel-col-width); flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--pstv-focus); position: sticky; left: 0; z-index: 101; }
-        .time-slots-container { display: flex; }
-        .time-slot { width: var(--slot-width); min-width: var(--slot-width); border-right: 1px solid var(--pstv-border); font-size: 0.7rem; display: flex; align-items: center; padding-left: 10px; color: var(--pstv-focus); box-sizing: border-box; }
-        
-        .epg-data-row { display: flex; height: 60px; border-bottom: 1px solid var(--pstv-border); }
-        .epg-channel-name { width: var(--channel-col-width); flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--pstv-focus); position: sticky; left: 0; z-index: 50; display: flex; align-items: center; padding: 0 10px; font-size: 0.75rem; font-weight: bold; box-sizing: border-box; }
-        .epg-programs-container { position: relative; width: calc(var(--slot-width) * 48); height: 100%; }
-        
-        .epg-program { 
-            position: absolute; height: 84%; top: 8%; 
-            background: var(--pstv-epg-prog); 
-            border-right: 1px solid rgba(0,0,0,0.3); padding: 5px; box-sizing: border-box; 
-            font-size: 0.65rem; overflow: hidden; border-radius: 3px; 
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
-            color: white;
+        /* Instance bar */
+        .instance-bar { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .instance-bar label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+        .instance-bar select { flex: 1; }
+
+        /* Isolated channel frame */
+        .channel-frame {
+            border: 1px solid var(--focus); border-radius: 8px; padding: 15px;
+            background: rgba(0,0,0,0.25); margin-bottom: 20px;
         }
+        .frame-title { font-size: 0.7rem; color: var(--focus); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .frame-body { display: flex; flex-direction: column; gap: 15px; }
+        .channel-head { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .logo-preview { width: 90px; height: 90px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; flex-shrink: 0; }
+        .logo-preview:hover { border-color: var(--focus); }
+        .logo-preview img { width: 100%; height: 100%; object-fit: contain; }
+        .logo-placeholder { font-size: 0.6rem; color: var(--focus); opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
+        .channel-title { flex: 1; min-width: 0; }
+        .channel-title h3 { margin: 0 0 8px 0; font-size: 1rem; }
+        .channel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        textarea { width: 100%; background: var(--input-bg); border: 1px solid var(--border); border-radius: 4px; color: white; font-family: monospace; font-size: 0.75rem; padding: 8px; }
 
-        .config-header { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--pstv-border); }
-        .field-half { flex: 1; min-width: 280px; }
-        input, select { width: 100%; padding: 10px; background: var(--pstv-input-bg); border: 1px solid var(--pstv-border); border-radius: 4px; color: white; font-size: 0.9rem; }
+        /* Autotune lock banner */
+        .autotune-banner { display: flex; align-items: center; gap: 20px; justify-content: space-between;
+            border: 1px solid #f39c12; border-radius: 8px; padding: 14px 18px;
+            background: rgba(243,156,18,0.12); margin-bottom: 15px; flex-wrap: wrap; }
+        .autotune-banner .atb-text { flex: 1; min-width: 240px; }
+        .autotune-banner .atb-text b { color: #f39c12; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; }
+        .autotune-banner .atb-text p { margin: 4px 0 0 0; font-size: 0.72rem; opacity: 0.85; }
+        .autotune-banner button { white-space: nowrap; }
+        .channel-frame.dimmed { opacity: 0.4; pointer-events: none; }
+
+        input, select, textarea {
+            width: 100%; padding: 10px; background: var(--input-bg);
+            border: 1px solid var(--border); border-radius: 4px; color: white; font-size: 0.9rem;
+        }
         label { display: block; font-size: 0.65rem; margin-bottom: 5px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
-        .btn-save { background: var(--pstv-success); color: white; padding: 12px; width: 100%; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .info-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
-        .info-card h4 { margin: 0 0 5px 0; font-size: 0.65rem; text-transform: uppercase; color: var(--pstv-focus); }
-        .settings-tag { display: inline-block; background: var(--pstv-input-bg); padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; margin: 0 5px 5px 0; border: 1px solid var(--pstv-border); }
-        .logo-preview { height: 40px; margin-top: 5px; border-radius: 4px; background: rgba(0,0,0,0.2); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-field.full { grid-column: 1 / -1; }
+        .field-row { display: flex; gap: 8px; align-items: flex-end; }
+        .field-row input, .field-row select { flex: 1; }
+        .btn-action { background: var(--focus); color: #000; border: none; border-radius: 4px; padding: 10px 14px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        .btn-save { background: var(--success); color: white; }
+        .btn-cancel { background: #7f8c8d; color: white; }
+        .btn-bar { display: flex; gap: 15px; justify-content: flex-end; margin-top: 15px; }
+        .btn-bar button { padding: 12px 30px; border: none; border-radius: 6px; font-weight: bold; text-transform: uppercase; cursor: pointer; }
+
+        /* EPG */
+        .epg-outer { position: relative; border: 1px solid var(--border); border-radius: 8px; height: 600px; overflow: auto; background: var(--epg-bg); }
+        .epg-table { display: flex; flex-direction: column; width: fit-content; min-width: 100%; }
+        .epg-header-row { display: flex; position: sticky; top: 0; z-index: 100; background: #003355; height: 35px; }
+        .epg-corner { width: var(--channel-col-width); flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--focus); position: sticky; left: 0; z-index: 101; }
+        .time-slots-container { display: flex; }
+        .time-slot { width: var(--slot-width); min-width: var(--slot-width); border-right: 1px solid var(--border); font-size: 0.7rem; display: flex; align-items: center; padding-left: 10px; color: var(--focus); }
+        .epg-data-row { display: flex; height: 60px; border-bottom: 1px solid var(--border); }
+        .epg-channel-name { width: var(--channel-col-width); flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--focus); position: sticky; left: 0; z-index: 50; display: flex; align-items: center; padding: 0 10px; font-size: 0.75rem; font-weight: bold; }
+        .epg-programs-container { position: relative; width: calc(var(--slot-width) * 48); height: 100%; }
+        .epg-program { position: absolute; height: 84%; top: 8%; background: var(--epg-prog); border-right: 1px solid rgba(0,0,0,0.3); padding: 5px; font-size: 0.65rem; overflow: hidden; border-radius: 3px; color: white; text-shadow: 1px 1px 1px rgba(0,0,0,0.5); }
+
+        /* System info */
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+        .info-card { background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); min-width: 0; }
+        .info-card h4 { margin: 0 0 2px 0; font-size: 0.55rem; text-transform: uppercase; color: var(--focus); letter-spacing: 1px; opacity: 0.9; }
+        .info-card p { margin: 0; font-size: 0.72rem; word-break: break-all; color: var(--accent); }
+        .info-card.wide { grid-column: 1 / -1; }
+        .info-text { max-height: 320px; overflow: auto; font-size: 0.68rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; margin: 6px 0 0 0; }
+        .markdown-body { max-height: 620px; overflow: auto; font-size: 0.72rem; line-height: 1.5; margin: 6px 0 0 0; word-break: break-word; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 10px 0 4px; color: var(--focus); font-weight: bold; }
+        .markdown-body h1 { font-size: 1.0rem; } .markdown-body h2 { font-size: 0.9rem; }
+        .markdown-body h3 { font-size: 0.82rem; } .markdown-body h4 { font-size: 0.75rem; }
+        .markdown-body p { margin: 4px 0; }
+        .markdown-body ul, .markdown-body ol { margin: 4px 0; padding-left: 18px; }
+        .markdown-body li { margin: 1px 0; }
+        .markdown-body code { background: var(--input-bg); border: 1px solid var(--border); border-radius: 3px; padding: 0 3px; font-size: 0.7em; }
+        .markdown-body pre { background: rgba(0,0,0,0.35); border: 1px solid var(--border); border-radius: 6px; padding: 8px; overflow: auto; margin: 6px 0; }
+        .markdown-body pre code { background: none; border: none; padding: 0; }
+        .markdown-body a { color: var(--focus); text-decoration: none; border-bottom: 1px dashed var(--focus); }
+        .markdown-body a:hover { color: var(--accent); }
+        .markdown-body blockquote { margin: 4px 0; padding-left: 8px; border-left: 3px solid var(--border); opacity: 0.9; }
+        .markdown-body table { border-collapse: collapse; margin: 6px 0; font-size: 0.7rem; }
+        .markdown-body th, .markdown-body td { border: 1px solid var(--border); padding: 2px 6px; }
+        .markdown-body img { max-width: 100%; border-radius: 6px; }
+        .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+        .res-row { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; padding: 3px 0; font-size: 0.7rem; }
+        .res-rows { margin-top: 4px; }
+        .res-row .res-key { opacity: 0.7; text-transform: uppercase; font-size: 0.6rem; letter-spacing: 1px; min-width: 130px; }
+        .res-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+        .res-tag { background: var(--input-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1px 8px; font-size: 0.65rem; color: var(--accent); }
+        .remote-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px; }
+        .remote-links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 15px; }
+        .remote-link a { color: var(--focus); font-size: 0.75rem; text-decoration: none; border-bottom: 1px dashed var(--focus); }
+        .remote-link a:hover { color: var(--accent); }
+        .remote-frame { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; background: rgba(0,0,0,0.2); }
+        .remote-frame .frame-title { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.7rem; color: var(--focus); text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+        .remote-frame pre { margin: 0; padding: 10px 12px; font-size: 0.7rem; overflow: auto; max-height: 260px; white-space: pre-wrap; word-break: break-word; }
+        .remote-frame .remote-status { padding: 6px 12px; font-size: 0.65rem; opacity: 0.5; }
+
+        /* Digestible PVR / Logs panels */
+        .debug-panel { border: 1px solid var(--border); border-radius: 8px; margin-top: 16px; background: rgba(0,0,0,0.2); overflow: hidden; }
+        .debug-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+        .debug-header .frame-title { margin: 0; }
+        .debug-header select { width: auto; padding: 4px 8px; font-size: 0.7rem; }
+        .debug-body { padding: 10px 12px; }
+        .kv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+        .kv-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; padding: 6px 8px; }
+        .kv-card h4 { margin: 0 0 2px 0; font-size: 0.55rem; text-transform: uppercase; color: var(--focus); letter-spacing: 1px; opacity: 0.9; }
+        .kv-card p { margin: 0; font-size: 0.72rem; word-break: break-all; }
+        .kv-card.good p { color: var(--success); }
+        .kv-card.bad p { color: var(--danger); }
+        .kv-card.wide { grid-column: 1 / -1; }
+        .log-list { max-height: 320px; overflow: auto; font-size: 0.68rem; line-height: 1.5; }
+        .log-list .log-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05); word-break: break-word; }
+        .log-line.err { color: var(--danger); }
+        .log-line.warn { color: #f1c40f; }
+
+        /* Library / Seasons cards */
+        .lib-section { margin-bottom: 18px; }
+        .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+        .lib-card { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .lib-card img { width: 100%; height: 110px; object-fit: contain; background: var(--input-bg); }
+        .lib-card .lib-body { padding: 6px 8px; }
+        .lib-card .lib-body h4 { margin: 0; font-size: 0.72rem; line-height: 1.2; }
+        .lib-card .lib-body .lib-meta { font-size: 0.6rem; opacity: 0.7; margin-top: 2px; }
+        .lib-card.noimg .lib-body h4 { font-size: 0.65rem; }
+        .lib-type { font-size: 0.7rem; color: var(--focus); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 8px; cursor: pointer; user-select: none; }
+        .empty-note { font-size: 0.7rem; opacity: 0.6; padding: 8px 0; }
+
+        /* Seasons calendar */
+        .cal-nav { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; }
+        .cal-nav .cal-btn { background: var(--input-bg); border: 1px solid var(--border); color: white; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 0.9rem; }
+        .cal-nav .cal-btn:hover { border-color: var(--focus); }
+        .cal-nav .cal-title { font-size: 1.1rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; flex: 1; text-align: center; color: var(--focus); }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .cal-head { text-align: center; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; color: var(--focus); padding: 4px 0; }
+        .cal-blank { min-height: 92px; }
+        .cal-cell { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; min-height: 92px; padding: 5px; cursor: pointer; position: relative; transition: border-color 0.15s, transform 0.15s; overflow: hidden; }
+        .cal-cell:hover { border-color: var(--focus); transform: translateY(-2px); }
+        .cal-cell.editing { border-color: var(--success); box-shadow: 0 0 0 2px rgba(39,174,96,0.4); }
+        .cal-cell.today { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+        .cal-cell.empty { opacity: 0.5; }
+        .cal-cell.empty:hover { opacity: 0.95; }
+        .cal-cell img { width: 100%; height: 52px; object-fit: contain; background: var(--input-bg); border-radius: 4px; }
+        .cal-cell img.cal-default { background: transparent; border-radius: 0; opacity: 0.9; }
+        .cal-cell .cal-day { position: absolute; top: 3px; left: 6px; font-size: 0.62rem; font-weight: bold; background: rgba(0,0,0,0.65); border-radius: 4px; padding: 0 5px; color: var(--focus); }
+        .cal-cell .cal-name { font-size: 0.62rem; line-height: 1.15; margin-top: 4px; }
+        .cal-cell .cal-add { font-size: 1.2rem; color: var(--focus); opacity: 0.6; text-align: center; padding: 14px 0; }
+        .season-edit { border: 1px solid var(--success); border-radius: 8px; margin-top: 16px; padding: 15px; background: rgba(0,0,0,0.3); }
+        .season-edit .frame-title { color: var(--success); margin-bottom: 12px; }
+
+        /* Holiday query builder */
+        .holiday-type { margin-bottom: 18px; }
+        .holiday-type h3 { margin: 0 0 8px 0; font-size: 0.8rem; color: var(--focus); text-transform: uppercase; letter-spacing: 1px; }
+        .query-card { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.25); }
+        .query-card .q-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .query-card .q-head select { width: auto; }
+        .query-card .q-remove { margin-left: auto; cursor: pointer; opacity: 0.6; font-size: 0.9rem; }
+        .query-card .q-remove:hover { opacity: 1; color: var(--danger); }
+        .qb-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+        .qb-row select, .qb-row input { width: auto; flex: 0 1 auto; }
+        .qb-row .field { min-width: 110px; }
+        .qb-row .op { min-width: 120px; }
+        .qb-row .val { min-width: 200px; flex: 1; }
+        .qb-group { border: 1px dashed var(--border); border-radius: 6px; padding: 8px; margin: 6px 0 6px 18px; background: rgba(0,0,0,0.15); }
+        .qb-join { display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 6px 18px; }
+        .qb-join select { width: auto; }
+        .qb-tools { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .qb-tools button { background: var(--input-bg); border: 1px solid var(--border); color: white; border-radius: 4px; padding: 5px 10px; font-size: 0.65rem; cursor: pointer; }
+        .qb-tools button:hover { border-color: var(--focus); }
+        .qb-json { margin-top: 8px; font-size: 0.62rem; color: var(--dim); white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow: auto; }
+        .btn-add { background: var(--success); color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 0.7rem; }
+        .btn-add:hover { opacity: 0.9; }
+
+        .status-line { font-size: 0.7rem; opacity: 0.6; margin-bottom: 12px; }
+        .hidden { display: none; }
+        #busy { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 9999; }
+        #busy img { width: 80px; animation: spin 1.2s linear infinite; }
+        @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+        /* Floating Now Playing */
+        #nowPlaying { position: fixed; right: 16px; bottom: 16px; z-index: 9998; display: none;
+            background: rgba(0,0,0,0.85); border: 1px solid var(--focus); border-radius: 10px;
+            padding: 10px 12px; max-width: 320px; box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            align-items: center; gap: 10px; }
+        #nowPlaying img { width: 64px; height: 64px; object-fit: contain; border-radius: 6px; background: var(--input-bg); flex-shrink: 0; }
+        #nowPlaying .np-body { min-width: 0; }
+        #nowPlaying .np-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; color: var(--focus); opacity: 0.9; }
+        #nowPlaying .np-title { font-size: 0.78rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        #nowPlaying .np-meta { font-size: 0.65rem; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        #nowPlaying .np-close { position: absolute; top: 4px; right: 8px; cursor: pointer; opacity: 0.5; font-size: 0.8rem; }
+        #nowPlaying .np-close:hover { opacity: 1; }
+
+        /* Floating Build Status */
+        #buildStatus { position: fixed; right: 16px; top: 16px; z-index: 9997; display: none;
+            background: rgba(0,0,0,0.85); border: 1px solid var(--focus); border-radius: 10px;
+            padding: 10px 12px; width: 280px; box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            align-items: center; gap: 10px; }
+        #buildStatus img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; background: var(--input-bg); flex-shrink: 0; margin-right: 16px; }
+        #buildStatus .bs-body { min-width: 0; flex: 1; }
+        #buildStatus .bs-close { position: absolute; top: 4px; right: 8px; cursor: pointer; opacity: 0.5; font-size: 0.8rem; }
+        #buildStatus .bs-close:hover { opacity: 1; }
+        #buildStatus .bs-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; color: var(--focus); opacity: 0.9; }
+        #buildStatus .bs-title { font-size: 0.78rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        #buildStatus .bs-meta { font-size: 0.65rem; opacity: 0.7; margin-top: 2px; }
+        #buildStatus .bs-bar { height: 6px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+        #buildStatus .bs-fill { height: 100%; background: var(--focus); width: 0%; transition: width 0.4s; }
     </style>
 </head>
 <body>
-
-    <div id="busy-overlay">
-        <img src="http://{{ remote_host }}/image/{{ media_loc }}/spinner.png" class="spinner" alt="Loading...">
-        <p id="busy-text" style="margin-top:20px; font-weight:bold; letter-spacing:1px;">SYNCHRONIZING...</p>
+    <div id="busy"><img src="http://{{ remote_host }}/image/{{ media_loc }}/spinner.png" alt="Loading..."><p style="margin-top:15px;font-weight:bold;">WORKING...</p></div>
+    <div id="nowPlaying">
+        <div class="np-close" onclick="dismissNowPlaying()">&#10005;</div>
+        <img id="npImg" alt="" onerror="this.style.display='none'">
+        <div class="np-body">
+            <div class="np-label">Now Playing</div>
+            <div class="np-title" id="npTitle"></div>
+            <div class="np-meta" id="npMeta"></div>
+        </div>
     </div>
-
-    <div class="banner">
-        <img src="http://{{ remote_host }}/image/{{ media_loc }}/splashtext.png" alt="PseudoTV">
+    <div id="buildStatus">
+        <div class="bs-close" onclick="dismissBuildStatus()">&#10005;</div>
+        <div class="bs-body">
+            <div class="bs-label">Building</div>
+            <div class="bs-title" id="bsTitle">Idle</div>
+            <div class="bs-meta" id="bsMeta"></div>
+            <div class="bs-bar"><div class="bs-fill" id="bsFill"></div></div>
+        </div>
+        <img id="bsImg" alt="" onerror="this.style.display='none'">
     </div>
+    <div class="banner"><img src="http://{{ remote_host }}/image/{{ media_loc }}/splashtext.png" alt="PseudoTV"></div>
 
+    <!-- Row 1: server/instance tabs (populated from servers.json, local first) -->
+    <div class="server-bar" id="serverBar"></div>
+
+    <!-- Row 2: content tabs -->
     <div class="tab-bar">
-        <div id="btn-channels" class="tab active" onclick="navigateTab('channels')">Manager</div>
+        <div id="btn-channels" class="tab active" onclick="navigateTab('channels')">Channels</div>
+        <div id="btn-library" class="tab" onclick="navigateTab('library')">Library</div>
+        <div id="btn-seasons" class="tab" onclick="navigateTab('seasons')">Seasons</div>
+        <div id="btn-info" class="tab" onclick="navigateTab('info')">INFO</div>
+        <div class="tab-spacer"></div>
         <div id="btn-guide" class="tab" onclick="navigateTab('guide')">Live Guide</div>
-        <div id="btn-info" class="tab" onclick="navigateTab('info')">System Info</div>
     </div>
 
     <div class="container">
-        <div class="config-header">
-            <div class="field-half">
-                <label>Configuration Source</label>
-                <select id="serverSelector" onchange="onServerChange()"></select>
-            </div>
-            <div class="field-half">
-                <label>Selected Channel</label>
-                <select id="channelSelector" onchange="loadChannelForm()"></select>
-            </div>
-        </div>
-
+        <!-- ============ CHANNELS ============ -->
         <div id="tab-channels" class="tab-content active">
-            <form id="channelForm" style="display:none;" onsubmit="saveChannel(event)">
-                <div id="fieldsContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"></div>
-                <button type="submit" class="btn-save">Save Changes</button>
-            </form>
-            <div id="noChannelMsg" style="text-align:center; padding:40px; opacity:0.5;">Select a server and channel to begin.</div>
+            <div id="instanceStatus" class="status-line"></div>
+
+            <div class="autotune-banner hidden" id="autotuneBanner">
+                <div class="atb-text">
+                    <b>Automatic Channels Enabled</b>
+                    <p>PseudoTV is using its autotuned channel set. User-created channels are hidden while autotune is on.</p>
+                    <p>Disable autotune below to switch to your custom channels and start editing them.</p>
+                </div>
+                <button type="button" class="btn-action" onclick="disableAutotune()">Disable Autotune</button>
+            </div>
+
+            <div class="channel-frame hidden" id="channelFrame">
+                <div class="frame-title">CHANNEL SELECTION</div>
+                <div class="frame-body">
+                    <div>
+                        <label for="channelSelector">Select Channel</label>
+                        <select id="channelSelector" onchange="onChannelSelect()">
+                            <option value="">-- Select Channel --</option>
+                        </select>
+                    </div>
+                    <div id="channelForm" class="hidden">
+                        <div class="channel-head">
+                            <div class="logo-preview" onclick="promptLogoURL()" title="Click to set logo URL">
+                                <img id="channelLogoPreview" alt="" onerror="this.style.display='none'">
+                                <span id="channelLogoPlaceholder" class="logo-placeholder">Set Logo</span>
+                            </div>
+                            <div class="channel-title">
+                                <h3 id="channelTitle"></h3>
+                                <div class="channel-actions">
+                                    <button type="button" class="btn-action" onclick="promptLogoURL()">Logo URL</button>
+                                    <button type="button" class="btn-action" onclick="searchLogo()">Search</button>
+                                    <button type="button" class="btn-action" onclick="lookupLogo()">Get Logo</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-grid" id="channelFields"></div>
+                        <div class="form-field full" style="margin-top:15px;">
+                            <label for="ruleSelector">Rules</label>
+                            <select id="ruleSelector" onchange="loadRuleValues()">
+                                <option value="">-- Select Rule --</option>
+                            </select>
+                            <div id="ruleValueFields" style="margin-top:10px;"></div>
+                            <label style="margin-top:12px;">Rules JSON <span style="opacity:.6;">(editable — full channel ruleset)</span></label>
+                            <textarea id="rulesJSON" rows="8" spellcheck="false"></textarea>
+                        </div>
+                        <div class="btn-bar">
+                            <button type="button" class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+                            <button type="button" class="btn-save" onclick="saveChannel()">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
+        <!-- ============ LIVE GUIDE ============ -->
         <div id="tab-guide" class="tab-content">
-            <div class="epg-outer-wrapper" id="epgUI" style="display:none;">
+            <div id="guideStatus" class="status-line"></div>
+            <div class="epg-outer hidden" id="epgUI">
                 <div class="epg-table">
                     <div class="epg-header-row">
                         <div class="epg-corner"></div>
@@ -132,109 +354,511 @@
             </div>
         </div>
 
-        <div id="tab-info" class="tab-content">
-            <div id="noInfoMsg" style="text-align:center; padding:40px; opacity:0.5;">Select a server to view system details.</div>
-            <div id="infoDisplay" style="display:none;">
-                <h3 id="infoServerName" style="margin-top:0;">Server Details</h3>
-                <div class="info-grid" id="infoGrid"></div>
-                <div style="border-top:1px solid var(--pstv-border); padding-top:20px;">
-                    <h3>Active Resources</h3>
-                    <div id="settingsDisplay"></div>
+        <!-- ============ LIBRARY ============ -->
+        <div id="tab-library" class="tab-content">
+            <div id="libraryStatus" class="status-line"></div>
+            <div id="libraryGrid"></div>
+        </div>
+
+        <!-- ============ SEASONS (calendar + holiday editor) ============ -->
+        <div id="tab-seasons" class="tab-content">
+            <div class="cal-nav">
+                <button type="button" class="cal-btn" onclick="calShift(-1)">&#9664;</button>
+                <div class="cal-title" id="calTitle"></div>
+                <button type="button" class="cal-btn" onclick="calShift(1)">&#9654;</button>
+                <button type="button" class="cal-btn" onclick="calToday()">Today</button>
+            </div>
+            <div id="seasonsStatus" class="status-line"></div>
+            <div class="cal-grid" id="seasonsGrid"></div>
+            <div id="seasonEdit" class="season-edit hidden">
+                <div class="frame-title">EDIT <span id="editDayLabel"></span></div>
+                <div class="form-grid">
+                    <div class="form-field full"><label>Name</label><input type="text" id="editName"></div>
+                    <div class="form-field full"><label>Tagline</label><input type="text" id="editTagline"></div>
+                    <div class="form-field full"><label>Keyword</label><input type="text" id="editKeyword" onchange="syncHolidayBuilder()"></div>
+                    <div class="form-field full"><label>Logo URL</label><input type="text" id="editLogo"></div>
+                </div>
+                <div class="frame-title" style="margin-top:15px;">Holiday Library Rules <span style="opacity:.6;font-size:.6rem;">(keyed by keyword — episodes &amp; movies)</span></div>
+                <div class="holiday-type"><h3>Episodes</h3><div id="holEpisodes"></div>
+                    <button type="button" class="btn-add" onclick="addHolidayQuery('episodes')">+ Add Episode Query</button></div>
+                <div class="holiday-type"><h3>Movies</h3><div id="holMovies"></div>
+                    <button type="button" class="btn-add" onclick="addHolidayQuery('movies')">+ Add Movie Query</button></div>
+                <div class="btn-bar">
+                    <button type="button" class="btn-cancel" onclick="cancelSeasonEdit()">Cancel</button>
+                    <button type="button" class="btn-save" onclick="saveSeasonEdit()">Save</button>
                 </div>
             </div>
+        </div>
+
+        <!-- ============ SYSTEM INFO ============ -->
+        <div id="tab-info" class="tab-content">
+            <div id="infoStatus" class="status-line"></div>
+            <div id="infoGrid" class="info-grid"></div>
+            <div id="pvrSection" class="debug-panel">
+                <div class="debug-header">
+                    <div class="frame-title">PVR Sync Status</div>
+                    <select id="pvrFilter" onchange="renderPVR()">
+                        <option value="overview">Overview</option>
+                        <option value="m3u">M3U</option>
+                        <option value="xmltv">XMLTV</option>
+                        <option value="log">Log</option>
+                        <option value="notifications">Notifications</option>
+                    </select>
+                </div>
+                <div class="debug-body" id="pvrBody"></div>
+            </div>
+            <div id="logsSection" class="debug-panel">
+                <div class="debug-header">
+                    <div class="frame-title">Kodi Log</div>
+                    <select id="logsFilter" onchange="renderLogs()">
+                        <option value="summary">Summary</option>
+                        <option value="errors">Errors</option>
+                        <option value="project">Project Logs</option>
+                        <option value="system">System</option>
+                    </select>
+                </div>
+                <div class="debug-body" id="logsBody"></div>
+            </div>
+            <div id="remotesSection" class="remote-section"></div>
         </div>
     </div>
 
 <script>
-    let serverData = {}; 
-    let currentServerKey = "";
-    let genreColorMap = {}; // Key: Genre String (Title), Value: CSS Color
+    let serverData = {};
+    let activeInstance = null;   // {name, host, uuid}
+    let channels = [];
+    let activeRules = {};
+    let currentPaths = [];
+    let editingIndex = -1;
+    let genreColorMap = {};
 
-    // DVB/ETSI Standard Genre Color Palette
+    const ignoredKeys = ['type', 'catchup', 'catchup-source', 'url', 'id', 'holiday'];
+    const boolKeys = ['radio', 'favorite', 'enable', 'changed', 'enabled'];
+
     const genrePalette = {
-        "0x00": "#555555", // Undefined (Grey)
-        "0x10": "#1a5276", // Movie/Drama (Blue)
-        "0x20": "#7b241c", // News/Current Affairs (Brown)
-        "0x30": "#1d8348", // Show/Game Show (Green)
-        "0x40": "#2874a6", // Sports (Light Blue)
-        "0x50": "#af601a", // Children/Youth (Orange)
-        "0x60": "#633974", // Music/Ballet (Purple)
-        "0x70": "#a04000", // Arts/Culture (Rust)
-        "0x80": "#117864", // Social/Political (Teal)
-        "0x90": "#935116", // Education/Science (Tan)
-        "0xa0": "#1b4f72", // Leisure/Hobbies (Navy)
-        "0xb0": "#1a5276"  // Special Characteristics
+        "0x00":"#555555","0x10":"#1a5276","0x20":"#7b241c","0x30":"#1d8348","0x40":"#2874a6",
+        "0x50":"#af601a","0x60":"#633974","0x70":"#a04000","0x80":"#117864","0x90":"#935116","0xa0":"#1b4f72"
     };
 
-    function setBusy(isBusy, text = "SYNCHRONIZING...") {
-        document.getElementById('busy-text').innerText = text;
-        document.getElementById('busy-overlay').style.display = isBusy ? 'flex' : 'none';
+    function setBusy(on, text) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; if (text) document.querySelector('#busy p').innerText = text; }
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function safeUrl(u) { return /^(https?:|mailto:)/i.test(u) ? u : '#'; }
+
+    // Minimal dependency-free Markdown renderer (headings, lists, fenced code,
+    // links/images, bold/italic, tables, blockquote, hr). Source HTML is escaped;
+    // link targets restricted to http(s)/mailto.
+    function renderMarkdown(md) {
+        if (!md) return '';
+        const lines = String(md).replace(/\r\n?/g, '\n').split('\n');
+        function inline(raw) {
+            const codes = [];
+            let s = raw.replace(/`([^`]+)`/g, (m, c) => { codes.push(esc(c)); return '\u0000' + (codes.length - 1) + '\u0000'; });
+            s = esc(s);
+            s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (m, alt, u) => `<img src="${esc(safeUrl(u))}" alt="${esc(alt)}" loading="lazy" style="max-width:100%;">`);
+            s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, t, u) => `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener">${t}</a>`);
+            s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+            s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+            return s.replace(/\u0000(\d+)\u0000/g, (m, d) => '<code>' + codes[+d] + '</code>');
+        }
+        let html = '', i = 0, list = null, inCode = false;
+        const closeList = () => { if (list) { html += `</${list}>`; list = null; } };
+        while (i < lines.length) {
+            const line = lines[i];
+            if (inCode) {
+                if (/^```/.test(line)) { inCode = false; html += '</code></pre>'; }
+                else html += line + '\n';
+                i++; continue;
+            }
+            if (/^```/.test(line)) { closeList(); inCode = true; html += '<pre><code>'; i++; continue; }
+            if (!line.trim()) { closeList(); i++; continue; }
+            const h = line.match(/^(#{1,6})\s+(.*)$/);
+            if (h) { closeList(); const n = h[1].length; html += `<h${n}>${inline(h[2])}</h${n}>`; i++; continue; }
+            if (/^(\*{3,}|-{3,}|_{3,})$/.test(line.trim())) { closeList(); html += '<hr>'; i++; continue; }
+            if (/^>\s?/.test(line)) {
+                closeList(); const bq = [];
+                while (i < lines.length && /^>\s?/.test(lines[i])) { bq.push(inline(lines[i].replace(/^>\s?/, ''))); i++; }
+                html += `<blockquote>${bq.join('<br>')}</blockquote>`; continue;
+            }
+            if (/^\d+\.\s+/.test(line)) {
+                if (list !== 'ol') { closeList(); html += '<ol>'; list = 'ol'; }
+                html += `<li>${inline(line.replace(/^\d+\.\s+/, ''))}</li>`; i++; continue;
+            }
+            if (/^[-*+]\s+/.test(line)) {
+                if (list !== 'ul') { closeList(); html += '<ul>'; list = 'ul'; }
+                html += `<li>${inline(line.replace(/^[-*+]\s+/, ''))}</li>`; i++; continue;
+            }
+            if (/^\|.*\|$/.test(line.trim()) && /^\|[\s:|-]+\|$/.test((lines[i + 1] || '').trim())) {
+                closeList();
+                const head = line.trim().replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+                i += 2;
+                html += '<table><thead><tr>' + head.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+                while (i < lines.length && /^\|.*\|$/.test(lines[i].trim())) {
+                    const cs = lines[i].trim().replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+                    html += `<tr>${cs.map(c => `<td>${c}</td>`).join('')}</tr>`; i++;
+                }
+                html += '</tbody></table>'; continue;
+            }
+            closeList();
+            const para = [];
+            while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|```|>|[-*+]\s|\d+\.\s)/.test(lines[i]) && !/^(\*{3,}|-{3,}|_{3,})$/.test(lines[i].trim())) { para.push(lines[i]); i++; }
+            html += `<p>${inline(para.join('<br>'))}</p>`;
+        }
+        closeList();
+        if (inCode) html += '</code></pre>';
+        return html;
+    }
+
+    // Route image://, resource://, special:// and Kodi-webserver proxy URLs through
+    // this addon's own /image/ endpoint, which unwraps them to a real xbmcvfs path.
+    // A raw <img src> to those protocols (or Kodi's webserver) fails in the browser.
+    function logoURL(src) {
+        if (!src) return '';
+        if (src.startsWith('image://') || src.startsWith('resource://') || src.startsWith('special://')) {
+            return activeInstance ? `http://${activeInstance.host}/image/${encodeURIComponent(src)}` : src;
+        }
+        // Baked Kodi-webserver proxy URL: http://kodi:kodi@host:8080/image/image%3A//smb...
+        const m = src.match(/\/image\/(.+)$/);
+        if (m && /image%3a/i.test(m[1])) {
+            const inner = decodeURIComponent(m[1]);
+            return activeInstance ? `http://${activeInstance.host}/image/${encodeURIComponent(inner)}` : src;
+        }
+        return src;
+    }
+
+    // Normalize a logo value into the form consumers expect when it is stored in
+    // a channel/library config: an absolute http(s) URL. The channel 'logo' field
+    // is emitted verbatim into M3U as tvg-logo, so raw Kodi VFS paths
+    // (resource://, image://, special://) and bare local paths must become an
+    // /image/ API URL before saving — never store the raw protocol string.
+    function storeLogoURL(src) {
+        if (!src) return '';
+        src = src.trim();
+        if (/^https?:\/\//i.test(src)) return src;
+        return activeInstance ? `http://${activeInstance.host}/image/${encodeURIComponent(src)}` : src;
     }
 
     async function init() {
         setBusy(true);
         try {
-            const response = await fetch("http://{{ remote_host }}/api/servers.json");
-            const json = await response.json();
-            serverData = json.servers;
-            const sSelect = document.getElementById('serverSelector');
-            sSelect.add(new Option("-- Choose Server --", ""));
-            Object.keys(serverData).forEach(key => sSelect.add(new Option(key, key)));
-        } catch (e) { console.error(e); }
+            const res = await fetch('/api/servers.json');
+            const json = await res.json();
+            serverData = json.servers || {};
+            let localName = '';
+            // Always include the local instance (same-origin bonjour) so the
+            // server bar is never empty, even if servers.json/discovery is empty.
+            try {
+                const bRes = await fetch('/api/bonjour.json');
+                const bonjour = await bRes.json();
+                if (bonjour && bonjour.name && bonjour.host) {
+                    bonjour.enabled = true;
+                    localName = bonjour.name;
+                    serverData[bonjour.name] = bonjour;
+                }
+            } catch (e) { console.warn('local instance not resolved', e); }
+            const bar = document.getElementById('serverBar');
+            bar.innerHTML = '';
+            const enabled = Object.entries(serverData).filter(([,s]) => s.enabled);
+            if (enabled.length === 0) Object.entries(serverData).forEach(([k,s]) => enabled.push([k,s]));
+            // Local instance first, then the rest (sorted by name).
+            enabled.sort(([a], [b]) => a === localName ? -1 : b === localName ? 1 : a.localeCompare(b));
+            enabled.forEach(([name, srv]) => {
+                const t = document.createElement('div');
+                t.className = 'tab';
+                t.textContent = name;
+                t.title = srv.host;
+                t.onclick = () => selectServer(name);
+                bar.appendChild(t);
+            });
+            if (enabled.length === 0) document.getElementById('instanceStatus').innerText = 'No instances found.';
+            if (enabled.length) selectServer(enabled[0][0]);
+        } catch (e) { console.error('init', e); }
         finally { setBusy(false); }
     }
 
-    function onServerChange() {
-        currentServerKey = document.getElementById('serverSelector').value;
-        genreColorMap = {}; 
-        const cSelect = document.getElementById('channelSelector');
-        cSelect.innerHTML = '<option value="">-- Choose Channel --</option>';
-        document.getElementById('channelForm').style.display = 'none';
-        document.getElementById('noChannelMsg').style.display = 'block';
-        document.getElementById('epgUI').style.display = 'none';
-
-        if (!currentServerKey) return;
-        const server = serverData[currentServerKey];
-        server.channels.forEach((ch, i) => cSelect.add(new Option(`[${ch.number}] ${ch.name}`, i)));
-        updateInfoTab(server);
+    // ===================== CHANNELS =====================
+    function selectServer(name) {
+        const srv = serverData[name];
+        if (!srv) return;
+        activeInstance = { name, host: srv.host, uuid: srv.uuid };
+        document.querySelectorAll('#serverBar .tab').forEach(t => t.classList.toggle('active', t.textContent === name));
+        // Refresh the currently-open content tab for the newly selected server.
+        const open = document.querySelector('.tab-content.active');
+        if (open) {
+            const t = open.id.replace('tab-', '');
+            if (t === 'channels') fetchChannels();
+            else if (t === 'guide') loadGuide();
+            else if (t === 'info') loadInfo();
+            else if (t === 'library') loadLibrary();
+            else if (t === 'seasons') loadSeasons();
+        }
     }
 
-    async function loadGuide() {
-        if (!currentServerKey) return;
-        setBusy(true, "MAPPING GENRES & GUIDE...");
-        const server = serverData[currentServerKey];
-        
-        try {
-            // 1. Fetch Genre Map XML
-            if (server.remotes.genre) {
-                const gRes = await fetch(server.remotes.genre);
-                const gText = await gRes.text();
-                const gDoc = new DOMParser().parseFromString(gText, "text/xml");
-                gDoc.querySelectorAll('genre').forEach(g => {
-                    const fullId = g.getAttribute('genreId'); // e.g. "0x10"
-                    const genreTitle = g.textContent.trim().toLowerCase();
-                    // Get base genre (the high nibble, e.g. 0x10)
-                    if (fullId) {
-                        const baseId = fullId.substring(0, 3) + "0"; 
-                        if (genrePalette[baseId]) {
-                            genreColorMap[genreTitle] = genrePalette[baseId];
-                        }
-                    }
-                });
-            }
+    function loadChannels() { fetchChannels(); }
 
-            // 2. Fetch XMLTV
-            const response = await fetch(server.remotes.xmltv);
-            const xmlText = await response.text();
-            const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
-            
+    async function fetchChannels() {
+        const srv = activeInstance;
+        if (!srv) return;
+        document.getElementById('channelFrame').classList.add('hidden');
+        document.getElementById('channelForm').classList.add('hidden');
+        setBusy(true, 'LOADING CHANNELS...');
+        try {
+            // Check whether autotune owns the channel set — if so, lock the editor.
+            const autotune = await fetch(`http://${srv.host}/api/settings`)
+                .then(r => r.json()).then(s => !!s.Enable_Autotune).catch(() => false);
+            const banner = document.getElementById('autotuneBanner');
+            const frame = document.getElementById('channelFrame');
+            if (autotune) {
+                banner.classList.remove('hidden');
+                frame.classList.add('dimmed');
+            } else {
+                banner.classList.add('hidden');
+                frame.classList.remove('dimmed');
+            }
+            const res = await fetch(`http://${srv.host}/api/channels`);
+            const text = await res.text();
+            if (text.trim().startsWith('<')) {
+                alert('This instance is running an older HTTP server (it returned an HTML page for /api/channels).\nRestart Kodi (or reload the PseudoTV Live service) to load the updated API, then retry.');
+                return;
+            }
+            channels = JSON.parse(text);
+            document.getElementById('instanceStatus').innerText =
+                `Instance: ${srv.name} | Host: ${srv.host} | Channels: ${channels.length}${autotune ? ' (autotuned)' : ''}`;
+            const sel = document.getElementById('channelSelector');
+            sel.innerHTML = '<option value="">-- Select Channel --</option>';
+            channels.forEach((ch, i) => sel.add(new Option(`Ch ${ch.number}: ${ch.name}`, i)));
+            document.getElementById('channelFrame').classList.remove('hidden');
+        } catch (e) { alert('Failed to load channels: ' + e.message); }
+        finally { setBusy(false); }
+    }
+
+    async function disableAutotune() {
+        const srv = activeInstance;
+        if (!srv) return;
+        if (!confirm('Disable automatic channels and switch to your custom channel set?\nPseudoTV will restart to apply the change.')) return;
+        setBusy(true, 'DISABLING AUTOTUNE...');
+        try {
+            const res = await fetch(`http://${srv.host}/api/settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payload: { Enable_Autotune: false } })
+            });
+            const body = await res.json().catch(() => ({}));
+            if (res.ok && body.status === 'ok') {
+                alert('Autotune disabled. Waiting for PseudoTV to restart...');
+                document.getElementById('autotuneBanner').classList.add('hidden');
+                setTimeout(fetchChannels, 5000);
+            } else {
+                alert('Failed to disable autotune: ' + (body.error || res.status));
+            }
+        } catch (e) { alert('Failed to disable autotune: ' + e.message); }
+        finally { setBusy(false); }
+    }
+
+    function onChannelSelect() {
+        const idx = document.getElementById('channelSelector').value;
+        const form = document.getElementById('channelForm');
+        if (idx === '') { form.classList.add('hidden'); return; }
+        editingIndex = parseInt(idx);
+        const ch = channels[editingIndex];
+        activeRules = ch.rules || {};
+        currentPaths = Array.isArray(ch.path) ? ch.path.slice() : (ch.path ? [ch.path] : []);
+        document.getElementById('channelTitle').textContent = `Ch ${ch.number}: ${ch.name}`;
+        renderLogoPreview(ch.logo);
+        renderFields(ch, document.getElementById('channelFields'), '');
+        populateRuleSelector();
+        loadRulesJSON();
+        form.classList.remove('hidden');
+    }
+
+    function renderLogoPreview(logo) {
+        const img = document.getElementById('channelLogoPreview');
+        const ph = document.getElementById('channelLogoPlaceholder');
+        const src = logoURL(logo);
+        if (src) {
+            img.src = src;
+            img.style.display = '';
+            ph.style.display = 'none';
+        } else {
+            img.style.display = 'none';
+            ph.style.display = '';
+        }
+    }
+
+    function promptLogoURL() {
+        const current = document.getElementById('logo').value;
+        const url = prompt('Logo URL (image://, http://, or local path):', current);
+        if (url !== null) document.getElementById('logo').value = url;
+    }
+
+    async function lookupLogo() {
+        const ch = channels[editingIndex];
+        if (!ch) return;
+        const q = prompt('Resolve logo for:', ch.name || '');
+        if (!q) return;
+        setBusy(true, 'LOOKING UP LOGO...');
+        try {
+            const r = await fetch(`http://${activeInstance.host}/api/logo_lookup?name=${encodeURIComponent(q)}&type=${encodeURIComponent(ch.type || '')}`);
+            const d = await r.json();
+            if (d.url) { document.getElementById('logo').value = d.url; renderLogoPreview(d.url); }
+            else alert('No logo found for "' + q + '"');
+        } catch (e) { alert('Logo lookup failed: ' + e.message); }
+        finally { setBusy(false); }
+    }
+
+    function loadRulesJSON() {
+        const ta = document.getElementById('rulesJSON');
+        if (ta) ta.value = JSON.stringify(channels[editingIndex].rules || {}, null, 2);
+    }
+
+    function renderFields(obj, container, prefix) {
+        container.innerHTML = '';
+        // The logo field is handled in the channel head (preview + buttons) — skip it.
+        const hiddenFields = [...ignoredKeys, 'rules', 'logo'];
+        for (const key in obj) {
+            if (hiddenFields.includes(key)) continue;
+            const fieldId = prefix ? prefix + '.' + key : key;
+            const val = obj[key];
+            const full = key === 'path' || key === 'group';
+            const wrap = document.createElement('div');
+            wrap.className = 'form-field' + (full ? ' full' : '');
+            if (boolKeys.includes(key)) {
+                wrap.innerHTML = `<label>${key}</label><select id="${fieldId}" name="${fieldId}"><option value="true" ${val?'selected':''}>True</option><option value="false" ${val?'':'selected'}>False</option></select>`;
+            } else if (key === 'path') {
+                wrap.innerHTML = `<label>path</label><div class="field-row"><select id="${fieldId}" name="${fieldId}">${currentPaths.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select><button type="button" class="btn-action" onclick="addNewPath()">+ Add</button></div>`;
+            } else if (key === 'number') {
+                wrap.innerHTML = `<label>number</label><input type="number" id="${fieldId}" name="${fieldId}" value="${esc(val)}" min="1" max="{{ CHANNEL_LIMIT|safe }}">`;
+            } else if (key === 'name') {
+                wrap.innerHTML = `<label>name</label><input type="text" id="${fieldId}" name="${fieldId}" value="${esc(val)}">`;
+            } else if (key === 'group') {
+                wrap.innerHTML = `<label>group</label><input type="text" id="${fieldId}" name="${fieldId}" value="${esc(Array.isArray(val)?val.join(', '):val)}">`;
+            } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                const sec = document.createElement('div'); sec.className = 'form-field full';
+                sec.innerHTML = `<div style="border-left:2px solid var(--focus);padding-left:10px;"><label>${key}</label></div>`;
+                container.appendChild(sec);
+                renderFields(val, sec, fieldId);  // nested object
+                return;
+            } else {
+                wrap.innerHTML = `<label>${key}</label><input type="text" id="${fieldId}" name="${fieldId}" value="${esc(val)}">`;
+            }
+            container.appendChild(wrap);
+        }
+        // A hidden logo field still holds the URL value for saveChannel().
+        const logoInput = document.createElement('input');
+        logoInput.type = 'hidden'; logoInput.id = 'logo'; logoInput.name = 'logo';
+        logoInput.value = esc(obj.logo || '');
+        container.appendChild(logoInput);
+    }
+
+    function addNewPath() { const p = prompt('New Path:'); if (p && !currentPaths.includes(p)) { currentPaths.push(p); onChannelSelect(); } }
+    async function searchLogo() {
+        const ch = channels[editingIndex];
+        const q = prompt('Search logo:', (ch && ch.name) || '');
+        if (!q) return;
+        try {
+            const r = await fetch(`http://${activeInstance.host}/api/logo_search?q=${encodeURIComponent(q)}`);
+            const d = await r.json();
+            if (d.url) { document.getElementById('logo').value = d.url; renderLogoPreview(d.url); }
+            else alert('No logo found for "' + q + '"');
+        } catch (e) { alert('Logo search failed: ' + e.message); }
+    }
+
+    function populateRuleSelector() {
+        const sel = document.getElementById('ruleSelector');
+        sel.innerHTML = '<option value="">-- Select Rule --</option><option value="ADD_NEW">+ ADD NEW RULE ID</option>';
+        Object.keys(activeRules).forEach(rid => sel.add(new Option(`Rule ${rid}`, rid)));
+    }
+
+    function loadRuleValues() {
+        const rId = document.getElementById('ruleSelector').value;
+        const container = document.getElementById('ruleValueFields');
+        container.innerHTML = '';
+        if (rId === 'ADD_NEW') {
+            const nId = prompt('New Rule ID:');
+            if (nId) { activeRules[nId] = { values: { '0': 1, '1': 1, '2': 1, '3': 1 } }; populateRuleSelector(); loadRuleValues(); }
+            return;
+        }
+        if (!rId || !activeRules[rId]) return;
+        const vals = activeRules[rId].values || {};
+        for (const vKey in vals) {
+            const div = document.createElement('div');
+            div.style.marginBottom = '8px';
+            div.innerHTML = `<label>Value ${vKey}</label><input type="text" name="rules.${rId}.values.${vKey}" value='${esc(JSON.stringify(vals[vKey]))}'>`;
+            container.appendChild(div);
+        }
+    }
+
+    function coerce(value, key) {
+        if (key === 'number') { const n = parseInt(value); return isNaN(n) ? 0 : n; }
+        if (key === 'radio' || key === 'favorite' || key === 'enable' || key === 'changed' || key === 'enabled') return value === 'true' || value === true;
+        if (key === 'group') return String(value).split(',').map(s=>s.trim()).filter(Boolean);
+        if (key === 'path') return Array.isArray(value) ? value : [value].filter(Boolean);
+        return value;
+    }
+
+    function collectRules() {
+        const ta = document.getElementById('rulesJSON');
+        if (ta && ta.value.trim()) {
+            try { return JSON.parse(ta.value); }
+            catch (e) { throw new Error('Invalid Rules JSON: ' + e.message); }
+        }
+        return {};
+    }
+
+    async function saveChannel() {
+        if (editingIndex < 0) return;
+        setBusy(true, 'SAVING CHANNELS...');
+        try {
+            const edited = Object.assign({}, channels[editingIndex]);
+            document.querySelectorAll('#channelFields input, #channelFields select').forEach(el => {
+                if (el.id === 'logo') return; // collected via hidden input below
+                edited[el.id] = coerce(el.value, el.id);
+            });
+            edited.logo = storeLogoURL(document.getElementById('logo').value);
+            edited.rules = collectRules();
+            edited.path = currentPaths;
+            channels[editingIndex] = edited;
+            const res = await fetch(`http://${activeInstance.host}/api/channels`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uuid: activeInstance.uuid, payload: channels })
+            });
+            const body = await res.json().catch(() => ({}));
+            if (res.ok && body.status === 'ok') { alert('Channel Saved'); onChannelSelect(); }
+            else alert('Save failed: ' + (body.error || res.status));
+        } catch (e) { alert('Save error: ' + e.message); }
+        finally { setBusy(false); }
+    }
+
+    function cancelEdit() {
+        document.getElementById('channelForm').classList.add('hidden');
+        document.getElementById('channelSelector').value = '';
+    }
+    // ===================== LIVE GUIDE =====================
+    function parseXMLDate(s) { if (!s) return new Date(); return new Date(s.substring(0,4), s.substring(4,6)-1, s.substring(6,8), s.substring(8,10), s.substring(10,12)); }
+
+    async function loadGuide() {
+        if (!activeInstance) return;
+        setBusy(true, 'LOADING GUIDE...');
+        try {
+            const genreRes = await fetch(`http://${activeInstance.host}/remotes/genres.xml`);
+            const gText = await genreRes.text();
+            const gDoc = new DOMParser().parseFromString(gText, 'text/xml');
+            genreColorMap = {};
+            gDoc.querySelectorAll('genre').forEach(g => {
+                const id = g.getAttribute('genreId'); const title = g.textContent.trim().toLowerCase();
+                if (id) { const base = id.substring(0,3) + '0'; if (genrePalette[base]) genreColorMap[title] = genrePalette[base]; }
+            });
+            const xmlRes = await fetch(`http://${activeInstance.host}/api/xmltv`);
+            const xmlText = await xmlRes.text();
+            const xmlDoc = new DOMParser().parseFromString(xmlText, 'text/xml');
             buildEPG(xmlDoc);
-            document.getElementById('epgUI').style.display = 'block';
-            
-            const now = new Date();
-            const minSinceMidnight = (now.getHours() * 60) + now.getMinutes();
-            document.getElementById('epgUI').scrollLeft = (minSinceMidnight * (340/60)) - 100;
-        } catch (e) { console.error("Guide Load Error:", e); }
+            document.getElementById('guideStatus').innerText = `Guide for ${activeInstance.name}`;
+            document.getElementById('epgUI').classList.remove('hidden');
+            const now = new Date(); const mins = now.getHours()*60 + now.getMinutes();
+            document.getElementById('epgUI').scrollLeft = mins * (340/60) - 100;
+        } catch (e) { document.getElementById('guideStatus').innerText = 'Guide error: ' + e.message; }
         finally { setBusy(false); }
     }
 
@@ -243,126 +867,734 @@
         const rowsCont = document.getElementById('epg-rows-container');
         header.innerHTML = ''; rowsCont.innerHTML = '';
         const dayStart = new Date(); dayStart.setHours(0,0,0,0);
-        
         for (let i = 0; i < 48; i++) {
-            const t = new Date(dayStart.getTime() + (i * 30 * 60000));
-            header.innerHTML += `<div class="time-slot">${t.getHours() % 12 || 12}:${t.getMinutes() === 0 ? '00' : '30'} ${t.getHours() >= 12 ? 'PM' : 'AM'}</div>`;
+            const t = new Date(dayStart.getTime() + i*30*60000);
+            header.innerHTML += `<div class="time-slot">${t.getHours()%12||12}:${t.getMinutes()===0?'00':'30'} ${t.getHours()>=12?'PM':'AM'}</div>`;
         }
-
         xml.querySelectorAll('channel').forEach(ch => {
             const id = ch.getAttribute('id');
-            const row = document.createElement('div');
-            row.className = 'epg-data-row';
-            row.innerHTML = `<div class="epg-channel-name">${ch.querySelector('display-name').textContent}</div>`;
-            const progCont = document.createElement('div');
-            progCont.className = 'epg-programs-container';
-
+            const row = document.createElement('div'); row.className = 'epg-data-row';
+            row.innerHTML = `<div class="epg-channel-name">${esc(ch.querySelector('display-name').textContent)}</div>`;
+            const progCont = document.createElement('div'); progCont.className = 'epg-programs-container';
             xml.querySelectorAll(`programme[channel="${id}"]`).forEach(p => {
-                const start = parseXMLDate(p.getAttribute('start'));
-                const stop = parseXMLDate(p.getAttribute('stop'));
-                const offset = (start - dayStart) / 60000;
-                const duration = (stop - start) / 60000;
-                const pxPerMin = 340 / 60;
-
-                if (offset < 1440 && (offset + duration) > 0) {
-                    const div = document.createElement('div');
-                    div.className = 'epg-program';
-                    div.style.left = (offset * pxPerMin) + 'px';
-                    div.style.width = (duration * pxPerMin) + 'px';
-                    
-                    // Match Genre Color by finding matching category text
-                    const categories = p.querySelectorAll('category');
-                    categories.forEach(cat => {
+                const start = parseXMLDate(p.getAttribute('start')), stop = parseXMLDate(p.getAttribute('stop'));
+                const offset = (start - dayStart)/60000, dur = (stop - start)/60000, px = 340/60;
+                if (offset < 1440 && (offset+dur) > 0) {
+                    const div = document.createElement('div'); div.className = 'epg-program';
+                    div.style.left = (offset*px)+'px'; div.style.width = (dur*px)+'px';
+                    p.querySelectorAll('category').forEach(cat => {
                         const txt = cat.textContent.trim().toLowerCase();
-                        // Direct match or partial match for strings like "Movie / Drama"
-                        for (let [title, color] of Object.entries(genreColorMap)) {
-                            if (txt.includes(title) || title.includes(txt)) {
-                                div.style.backgroundColor = color;
-                                break;
-                            }
-                        }
+                        for (const [t,color] of Object.entries(genreColorMap)) { if (txt.includes(t) || t.includes(txt)) { div.style.backgroundColor = color; break; } }
                     });
-
-                    div.innerHTML = `<b>${p.querySelector('title').textContent}</b>`;
+                    div.innerHTML = `<b>${esc(p.querySelector('title').textContent)}</b>`;
                     progCont.appendChild(div);
                 }
             });
-            row.appendChild(progCont);
-            rowsCont.appendChild(row);
+            row.appendChild(progCont); rowsCont.appendChild(row);
         });
     }
 
-    function parseXMLDate(s) {
-        if(!s) return new Date();
-        return new Date(s.substring(0,4), s.substring(4,6)-1, s.substring(6,8), s.substring(8,10), s.substring(10,12));
+    // ===================== SYSTEM INFO =====================
+    let pvrData = null;
+    let logsData = null;
+
+    async function loadInfo() {
+        if (!activeInstance) return;
+        setBusy(true, 'LOADING SYSTEM INFO...');
+        try {
+            const [bRes, sRes, pRes, lRes] = await Promise.all([
+                fetch(`http://${activeInstance.host}/api/bonjour.json`),
+                fetch(`http://${activeInstance.host}/api/system`),
+                fetch(`http://${activeInstance.host}/api/pvr.json`),
+                fetch(`http://${activeInstance.host}/api/logs.json`)
+            ]);
+            const bonjour = await bRes.json();
+            const system = await sRes.json().catch(() => ({}));
+            pvrData = await pRes.json().catch(() => null);
+            logsData = await lRes.json().catch(() => null);
+            document.getElementById('infoStatus').innerText = `System Info for ${activeInstance.name}`;
+            renderInfoGrid(Object.assign({}, bonjour, system));
+            renderPVR();
+            renderLogs();
+            await renderRemotes(bonjour.remotes || {});
+        } catch (e) { document.getElementById('infoStatus').innerText = 'System info error: ' + e.message; }
+        finally { setBusy(false); }
+    }
+
+    function fmtTs(ts) { if (!ts || ts < 0) return ''; try { return new Date(ts*1000).toLocaleString(); } catch(e) { return String(ts); } }
+
+    function kvCard(k, v, cls) {
+        if (v === undefined || v === null || v === '') return '';
+        if (Array.isArray(v)) v = v.length;
+        if (typeof v === 'object') v = JSON.stringify(v).slice(0, 80);
+        return `<div class="kv-card ${cls||''}"><h4>${esc(k)}</h4><p>${esc(v)}</p></div>`;
+    }
+
+    function renderPVR() {
+        const view = document.getElementById('pvrFilter').value;
+        const body = document.getElementById('pvrBody');
+        if (!pvrData) { body.innerHTML = '<div class="empty-note">No PVR data (instance may not be a PVR provider).</div>'; return; }
+        const syncCls = s => ({fresh:'good', stale:'bad', outdated:'bad', unknown:''}[s] || '');
+        let html = '';
+        if (view === 'overview') {
+            const m3u = pvrData.m3u || {}, xml = pvrData.xmltv || {}, log = pvrData.log || {};
+            html = `<div class="kv-grid">`
+                + kvCard('Name', pvrData.name)
+                + kvCard('In Sync', pvrData.in_sync ? 'YES' : 'NO', pvrData.in_sync ? 'good' : 'bad')
+                + kvCard('PVR Connected', log.pvr_connected ? 'YES' : 'NO', log.pvr_connected ? 'good' : 'bad')
+                + kvCard('M3U State', m3u.sync_state, syncCls(m3u.sync_state))
+                + kvCard('XMLTV State', xml.sync_state, syncCls(xml.sync_state))
+                + kvCard('M3U Channels', m3u.channels)
+                + kvCard('XMLTV Channels', xml.channels)
+                + kvCard('XMLTV Programmes', xml.programmes)
+                + kvCard('Channels Available', log.channels_available)
+                + kvCard('Radio Available', log.radio_available)
+                + kvCard('M3U Missing EPG', m3u.missing_epg)
+                + kvCard('XMLTV Missing Local', xml.missing_from_local)
+                + kvCard('Last Update', fmtTs(log.last_update))
+                + '</div>';
+        } else if (view === 'm3u') {
+            const m3u = pvrData.m3u || {};
+            html = `<div class="kv-grid">`
+                + kvCard('URL', m3u.url)
+                + kvCard('Sync State', m3u.sync_state, syncCls(m3u.sync_state))
+                + kvCard('Channels', m3u.channels)
+                + kvCard('Channel IDs', m3u.channel_ids)
+                + kvCard('Last Write', fmtTs(m3u.last_write))
+                + kvCard('Missing EPG', m3u.missing_epg, m3u.missing_epg ? 'bad' : 'good')
+                + kvCard('Unloaded by PVR', m3u.unloaded_by_pvr, m3u.unloaded_by_pvr ? 'bad' : 'good')
+                + '</div>'
+                + (m3u.missing_epg && m3u.missing_epg.length ? `<div class="log-list">${m3u.missing_epg.slice(0,50).map(x=>`<div class="log-line err">${esc(x)}</div>`).join('')}</div>` : '');
+        } else if (view === 'xmltv') {
+            const xml = pvrData.xmltv || {};
+            html = `<div class="kv-grid">`
+                + kvCard('URL', xml.url)
+                + kvCard('Sync State', xml.sync_state, syncCls(xml.sync_state))
+                + kvCard('Channels', xml.channels)
+                + kvCard('Programmes', xml.programmes)
+                + kvCard('Channel IDs', xml.channel_ids)
+                + kvCard('Last Write', fmtTs(xml.last_write))
+                + kvCard('Missing from Local', xml.missing_from_local, xml.missing_from_local ? 'bad' : 'good')
+                + '</div>'
+                + (xml.missing_from_local && xml.missing_from_local.length ? `<div class="log-list">${xml.missing_from_local.slice(0,50).map(x=>`<div class="log-line err">${esc(x)}</div>`).join('')}</div>` : '');
+        } else if (view === 'log') {
+            const log = pvrData.log || {};
+            const errs = [].concat(log.m3u_errors||[], log.epg_errors||[]).slice(0,100);
+            html = `<div class="kv-grid">`
+                + kvCard('PVR Connected', log.pvr_connected ? 'YES' : 'NO', log.pvr_connected ? 'good' : 'bad')
+                + kvCard('Provider', log.pvr_provider)
+                + kvCard('PVR Instance', log.pvr_instance_id)
+                + kvCard('PVR Client', log.pvr_client_id)
+                + kvCard('Channels Loaded', log.channels_available)
+                + kvCard('M3U Errors', log.m3u_errors)
+                + kvCard('EPG Errors', log.epg_errors)
+                + kvCard('Connect Failed', log.connect_failed ? 'YES' : 'NO', log.connect_failed ? 'bad' : 'good')
+                + kvCard('URL Check Failed', log.url_check_failed ? 'YES' : 'NO', log.url_check_failed ? 'bad' : 'good')
+                + kvCard('Load Playlist Started', log.load_playlist && log.load_playlist.started)
+                + kvCard('Load EPG Started', log.load_epg && log.load_epg.started)
+                + kvCard('Genres Count', log.load_genres && log.load_genres.genres_count)
+                + '</div>'
+                + (errs.length ? `<div class="log-list">${errs.map(x=>`<div class="log-line err">${esc(x)}</div>`).join('')}</div>` : '');
+        } else if (view === 'notifications') {
+            const n = pvrData.notifications || {};
+            const evs = n.events || [];
+            html = `<div class="kv-grid">`
+                + kvCard('Last Event', n.last_event)
+                + kvCard('Last Time', fmtTs(n.last_time))
+                + '</div>'
+                + (evs.length ? `<div class="log-list">${evs.slice(-50).map(e=>`<div class="log-line">${esc(typeof e==='string'?e:JSON.stringify(e))}</div>`).join('')}</div>` : '');
+        }
+        body.innerHTML = html || '<div class="empty-note">No data.</div>';
+    }
+
+    function renderLogs() {
+        const view = document.getElementById('logsFilter').value;
+        const body = document.getElementById('logsBody');
+        if (!logsData) { body.innerHTML = '<div class="empty-note">No log data.</div>'; return; }
+        let html = '';
+        if (view === 'summary') {
+            const s = logsData.summary || {}, sys = logsData.system || {};
+            html = `<div class="kv-grid">`
+                + kvCard('Project Log Lines', s.project_logs)
+                + kvCard('Total Errors', s.total_errors, s.total_errors ? 'bad' : 'good')
+                + kvCard('Total Warnings', s.total_warnings, s.total_warnings ? 'warn' : 'good')
+                + kvCard('Lines Read', s.log_lines || sys.log_lines)
+                + kvCard('Last Modified', s.last_modified)
+                + kvCard('Kodi Build', sys.build)
+                + kvCard('OS', sys.os)
+                + kvCard('Free Memory', sys.memory_free)
+                + kvCard('Log Path', sys.log_path)
+                + '</div>';
+        } else if (view === 'errors') {
+            const errs = logsData.errors || [];
+            html = `<div class="kv-grid">${kvCard('Error Lines', errs.length, errs.length ? 'bad' : 'good')}</div>`
+                + (errs.length ? `<div class="log-list">${errs.slice(-200).map(x=>`<div class="log-line err">${esc(x)}</div>`).join('')}</div>` : '<div class="empty-note">No errors found.</div>');
+        } else if (view === 'project') {
+            const proj = logsData.project || [];
+            html = `<div class="kv-grid">${kvCard('Project Lines', proj.length)}</div>`
+                + (proj.length ? `<div class="log-list">${proj.slice(-300).map(x=>`<div class="log-line">${esc(x)}</div>`).join('')}</div>` : '<div class="empty-note">No project logs found.</div>');
+        } else if (view === 'system') {
+            const sys = logsData.system || {};
+            html = `<div class="kv-grid">` + Object.entries(sys).map(([k,v]) => kvCard(k, v)).join('') + '</div>';
+        }
+        body.innerHTML = html || '<div class="empty-note">No data.</div>';
+    }
+
+    function renderInfoGrid(bonjour) {
+        const grid = document.getElementById('infoGrid');
+        grid.innerHTML = '';
+        const specs = [
+            ['Instance', bonjour.name], ['Host', bonjour.host], ['Addon', bonjour.addon],
+            ['Version', bonjour.version], ['Build', bonjour.build], ['Platform', bonjour.platform],
+            ['Machine', bonjour.machine], ['Python', bonjour.python],
+            ['RAM', bonjour.ram_gb ? bonjour.ram_gb + ' GB' : ''], ['CPUs', bonjour.cpus],
+            ['Channels', bonjour.channels], ['Updated', bonjour.updated], ['UUID', bonjour.uuid],
+            ['Author', bonjour.author],
+        ];
+        specs.forEach(([k, v]) => {
+            if (v === undefined || v === null || v === '') return;
+            const card = document.createElement('div'); card.className = 'info-card';
+            card.innerHTML = `<h4>${k}</h4><p>${esc(v)}</p>`;
+            grid.appendChild(card);
+        });
+        // External links
+        const links = [
+            ['GitHub', bonjour.github], ['Wiki', bonjour.wiki], ['Support', bonjour.support],
+            ['README', bonjour.readme_url], ['Changelog', bonjour.changelog_url],
+        ].filter(([, u]) => u);
+        if (links.length) {
+            const card = document.createElement('div'); card.className = 'info-card wide';
+            card.innerHTML = '<h4>External Links</h4><div class="res-tags">' + links.map(([k, u]) =>
+                `<a class="res-tag" style="text-decoration:none;" href="${esc(u)}" target="_blank" rel="noopener">${k}</a>`).join('') + '</div>';
+            grid.appendChild(card);
+        }
+        // README / Changelog (collapsible, markdown-formatted). README starts
+        // expanded with a window tall enough to show the first image.
+        [['README', bonjour.readme, false], ['Changelog', bonjour.changelog, true]].forEach(([k, txt, startHidden]) => {
+            if (!txt) return;
+            const card = document.createElement('div'); card.className = 'info-card wide';
+            card.innerHTML = `<h4 onclick="toggleInfo(this)" style="cursor:pointer;">${k} <span style="opacity:.5;">(click to ${startHidden ? 'expand' : 'collapse'})</span></h4>
+                <div class="markdown-body ${startHidden ? 'hidden' : ''}">${renderMarkdown(txt)}</div>`;
+            grid.appendChild(card);
+        });
+        if (bonjour.settings) {
+            const card = document.createElement('div'); card.className = 'info-card wide';
+            // Build the full fragment first, then assign once — a second innerHTML
+            // append would auto-close the hidden container and leave the rows
+            // outside it (never collapsible).
+            let html = '<h4 onclick="toggleInfo(this)" style="cursor:pointer;">Active Resources <span style="opacity:.5;">(click to expand)</span></h4><div class="res-rows hidden">';
+            for (const [k, list] of Object.entries(bonjour.settings)) {
+                if (Array.isArray(list) && list.length) {
+                    html += `<div class="res-row"><span class="res-key">${k.replace(/_/g,' ')}</span><span class="res-tags">${list.filter(Boolean).map(i=>`<span class="res-tag">${esc(i)}</span>`).join('')}</span></div>`;
+                }
+            }
+            html += (html.includes('res-row') ? '' : '<p style="opacity:.6">None configured</p>') + '</div>';
+            card.innerHTML = html;
+            grid.appendChild(card);
+        }
+    }
+
+    function toggleInfo(h) {
+        const pre = h.nextElementSibling;
+        if (pre) pre.classList.toggle('hidden');
+    }
+
+    async function renderRemotes(remotes) {
+        const sec = document.getElementById('remotesSection');
+        sec.innerHTML = '<h2 style="font-size:1rem;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:10px;">Remote Endpoints</h2>';
+        // These are visualized elsewhere (EPG grid, channel list, Library/Seasons/
+        // PVR/Logs tabs) — show a link only.
+        const linkOnly = ['m3u', 'xmltv', 'genre', 'channels', 'holidays', 'seasons',
+                          'bonjour', 'servers', 'library', 'resume', 'pvr', 'logs'];
+        const links = document.createElement('div'); links.className = 'remote-links';
+        sec.appendChild(links);
+        for (const [key, url] of Object.entries(remotes)) {
+            if (linkOnly.includes(key)) {
+                const lnk = document.createElement('div'); lnk.className = 'remote-link';
+                lnk.innerHTML = `<a href="${esc(url)}" target="_blank" rel="noopener">${key}</a>`;
+                links.appendChild(lnk);
+                continue;
+            }
+            const frame = document.createElement('div'); frame.className = 'remote-frame';
+            frame.innerHTML = `<div class="frame-title">${key} <span style="opacity:.5;text-transform:none;letter-spacing:0;">— ${esc(url)}</span></div><pre>loading...</pre><div class="remote-status">fetching</div>`;
+            sec.appendChild(frame);
+            fetch(url).then(r => r.text()).then(text => {
+                let pretty = text;
+                let kind = 'text';
+                // JSON is always shown in full — never truncated.
+                try { pretty = JSON.stringify(JSON.parse(text), null, 2); kind = 'json'; } catch (e) {}
+                // Only log entries are ever truncated (kept to the latest N entries).
+                if (key === 'logs') {
+                    try {
+                        const arr = JSON.parse(text);
+                        const shown = Array.isArray(arr) ? arr.slice(-200) : arr;
+                        pretty = JSON.stringify(shown, null, 2);
+                        if (Array.isArray(arr) && arr.length > 200) pretty += '\n... (latest 200 of ' + arr.length + ' entries)';
+                        kind = 'json';
+                    } catch (e) { pretty = text.slice(-8000); }
+                }
+                frame.querySelector('pre').textContent = pretty;
+                frame.querySelector('.remote-status').textContent = `${(text.length/1024).toFixed(1)} KB · ${kind}`;
+            }).catch(e => {
+                frame.querySelector('pre').textContent = 'Error: ' + e.message;
+                frame.querySelector('.remote-status').textContent = 'failed';
+            });
+        }
+        if (links.children.length === 0) links.remove();
     }
 
     function navigateTab(t) {
-        document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+        // Row-2 content tabs only — the server bar (row 1) keeps its own active tab.
+        document.querySelectorAll('.tab-bar .tab, .tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById('btn-'+t).classList.add('active');
         document.getElementById('tab-'+t).classList.add('active');
+        if (t === 'channels') loadChannels();
         if (t === 'guide') loadGuide();
+        if (t === 'info') loadInfo();
+        if (t === 'library') loadLibrary();
+        if (t === 'seasons') loadSeasons();
     }
 
-    function updateInfoTab(server) {
-        document.getElementById('noInfoMsg').style.display = 'none';
-        document.getElementById('infoDisplay').style.display = 'block';
-        document.getElementById('infoServerName').innerText = server.name || currentServerKey;
-        const grid = document.getElementById('infoGrid');
-        grid.innerHTML = '';
-        ['uuid', 'host', 'version', 'python', 'machine', 'platform', 'build', 'updated'].forEach(key => {
-            if (server[key]) grid.innerHTML += `<div class="info-card"><h4>${key}</h4><p>${server[key]}</p></div>`;
+    // ===================== LIBRARY =====================
+    async function loadLibrary() {
+        if (!activeInstance) return;
+        setBusy(true, 'LOADING LIBRARY...');
+        try {
+            const res = await fetch(`http://${activeInstance.host}/api/library.json`);
+            const data = await res.json();
+            // API returns the {type: [items]} map directly — some older exports
+            // wrapped it as {library: {...}}, accept both.
+            const library = (data && data.library && !Array.isArray(data.library)) ? data.library : (data || {});
+            const cont = document.getElementById('libraryGrid');
+            cont.innerHTML = '';
+            let total = 0;
+            let collapsed = {};
+            try { collapsed = JSON.parse(localStorage.getItem('libCollapsed') || '{}') || {}; } catch (e) {}
+            for (const [type, items] of Object.entries(library)) {
+                if (!Array.isArray(items) || !items.length) continue;
+                total += items.length;
+                const sec = document.createElement('div'); sec.className = 'lib-section';
+                const grid = document.createElement('div'); grid.className = 'lib-grid';
+                grid.style.display = collapsed[type] ? 'none' : '';
+                const head = document.createElement('div'); head.className = 'lib-type'; head.dataset.type = type;
+                head.innerHTML = `${collapsed[type] ? '&#9656;' : '&#9662;'} ${esc(type)} (${items.length})`;
+                head.addEventListener('click', () => toggleLib(type));
+                items.forEach(it => grid.appendChild(buildLibCard(it)));
+                sec.appendChild(head); sec.appendChild(grid); cont.appendChild(sec);
+            }
+            document.getElementById('libraryStatus').innerText = `Library for ${activeInstance.name} — ${total} items`;
+            if (!total) document.getElementById('libraryStatus').innerText += ' — empty, run Autotune to populate.';
+        } catch (e) { document.getElementById('libraryStatus').innerText = 'Library error: ' + e.message; }
+        finally { setBusy(false); }
+    }
+
+    function toggleLib(type) {
+        let collapsed = {};
+        try { collapsed = JSON.parse(localStorage.getItem('libCollapsed') || '{}') || {}; } catch (e) {}
+        collapsed[type] = !collapsed[type];
+        try { localStorage.setItem('libCollapsed', JSON.stringify(collapsed)); } catch (e) {}
+        document.querySelectorAll('.lib-section').forEach(sec => {
+            const head = sec.querySelector('.lib-type');
+            if (!head || head.dataset.type !== type) return;
+            const grid = sec.querySelector('.lib-grid');
+            grid.style.display = collapsed[type] ? 'none' : '';
+            head.innerHTML = `${collapsed[type] ? '&#9656;' : '&#9662;'} ${esc(type)} (${grid.children.length})`;
         });
-        const settingsDiv = document.getElementById('settingsDisplay');
-        settingsDiv.innerHTML = '';
-        if (server.settings) {
-            for (const [key, list] of Object.entries(server.settings)) {
-                let html = `<div style="margin-bottom:15px;"><label>${key.replace('_', ' ')}</label>`;
-                if (Array.isArray(list)) list.forEach(item => { if(item) html += `<span class="settings-tag">${item}</span>`; });
-                settingsDiv.innerHTML += html + `</div>`;
-            }
+    }
+
+    function buildLibCard(it) {
+        const card = document.createElement('div'); card.className = 'lib-card';
+        const name = it.name || it.title || it.label || '';
+        const logo = it.logo || it.thumb || it.icon || '';
+        card.innerHTML = `${logo ? `<img src="${esc(logoURL(logo))}" loading="lazy" onerror="this.closest('.lib-card').classList.add('noimg')">` : ''}
+            <div class="lib-body"><h4>${esc(name)}</h4>
+            ${it.year ? `<div class="lib-meta">${esc(it.year)}</div>` : ''}
+            ${Array.isArray(it.path) && it.path.length ? `<div class="lib-meta">${esc(it.path.length)} path${it.path.length>1?'s':''}</div>` : ''}
+            </div>`;
+        return card;
+    }
+
+    // ===================== SEASONS (calendar + holiday editor) =====================
+    let seasonsData = {};
+    let holidaysData = {};
+    let seasonsEditKey = null;   // "Month|day"
+    let editingHoliday = null;
+    let calYear = 0, calMonth = 0;
+
+    const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const DOW = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+    // Kodi JSONRPC filter helper catalogs (same as pvr.iptvsimple smart rules).
+    const FILTER_FIELDS = ['title', 'plot', 'genre', 'year', 'tvshow', 'season', 'episode', 'actor',
+                           'director', 'studio', 'writer', 'country', 'mpaa', 'set', 'tag', 'dateadded',
+                           'playcount', 'runtime', 'rating', 'status', 'originaltitle', 'album', 'artist'];
+    const FILTER_OPS = ['contains', 'doesnotcontain', 'is', 'isnot', 'startswith', 'endswith',
+                        'greaterthan', 'lessthan', 'after', 'before', 'inthelast', 'regex'];
+    const SORT_METHODS = ['title', 'year', 'episode', 'dateadded', 'lastplayed', 'playcount', 'rating', 'runtime', 'sorttitle', 'random'];
+
+    async function loadSeasons() {
+        if (!activeInstance) return;
+        setBusy(true, 'LOADING SEASONS...');
+        try {
+            const [sRes, hRes] = await Promise.all([
+                fetch(`http://${activeInstance.host}/api/seasons`),
+                fetch(`http://${activeInstance.host}/api/holidays`)
+            ]);
+            seasonsData = await sRes.json();
+            holidaysData = await hRes.json();
+            const now = new Date();
+            calYear = now.getFullYear(); calMonth = now.getMonth();
+            document.getElementById('seasonsStatus').innerText = `Seasonal content for ${activeInstance.name} — click a day to edit`;
+            renderSeasons();
+        } catch (e) { document.getElementById('seasonsStatus').innerText = 'Seasons error: ' + e.message; }
+        finally { setBusy(false); }
+    }
+
+    function calShift(d) {
+        calMonth += d;
+        if (calMonth < 0) { calMonth = 11; calYear--; }
+        if (calMonth > 11) { calMonth = 0; calYear++; }
+        renderSeasons();
+    }
+
+    function calToday() {
+        const now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth();
+        renderSeasons();
+    }
+
+    function renderSeasons() {
+        document.getElementById('calTitle').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+        const grid = document.getElementById('seasonsGrid');
+        grid.innerHTML = '';
+        DOW.forEach(d => { const h = document.createElement('div'); h.className = 'cal-head'; h.textContent = d; grid.appendChild(h); });
+        const firstDow = new Date(calYear, calMonth, 1).getDay();
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+        const days = seasonsData[MONTH_NAMES[calMonth]] || {};
+        const now = new Date();
+        for (let i = 0; i < firstDow; i++) { const c = document.createElement('div'); c.className = 'cal-blank'; grid.appendChild(c); }
+        for (let d = 1; d <= daysInMonth; d++) {
+            grid.appendChild(buildSeasonCell(MONTH_NAMES[calMonth], String(d), days[String(d)] || {}, now));
         }
     }
 
-    function loadChannelForm() {
-        const idx = document.getElementById('channelSelector').value;
-        if (idx === "") return;
-        document.getElementById('noChannelMsg').style.display = 'none';
-        const form = document.getElementById('channelForm');
-        form.style.display = 'block';
-        const container = document.getElementById('fieldsContainer');
-        container.innerHTML = '';
-        const channel = serverData[currentServerKey].channels[idx];
-        for (const [key, value] of Object.entries(channel)) {
-            if (key === 'rules' || key === 'holiday') continue; 
-            const div = document.createElement('div');
-            div.innerHTML = `<label>${key}</label>`;
-            if (typeof value === 'boolean') {
-                const sel = document.createElement('select');
-                sel.name = key;
-                sel.add(new Option("True", "true", value, value));
-                sel.add(new Option("False", "false", !value, !value));
-                div.appendChild(sel);
+    // Inline calendar-event placeholder for named entries without a logo.
+    const CAL_DEFAULT = "data:image/svg+xml," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="10" fill="#1a4a70"/>' +
+        '<rect x="14" y="18" width="52" height="48" rx="6" fill="none" stroke="#5dade2" stroke-width="3"/>' +
+        '<line x1="14" y1="32" x2="66" y2="32" stroke="#5dade2" stroke-width="3"/>' +
+        '<line x1="26" y1="12" x2="26" y2="24" stroke="#5dade2" stroke-width="3"/>' +
+        '<line x1="54" y1="12" x2="54" y2="24" stroke="#5dade2" stroke-width="3"/>' +
+        '<circle cx="26" cy="42" r="3" fill="#5dade2"/><circle cx="40" cy="42" r="3" fill="#5dade2"/><circle cx="54" cy="42" r="3" fill="#5dade2"/>' +
+        '<circle cx="26" cy="54" r="3" fill="#5dade2"/><circle cx="40" cy="54" r="3" fill="#5dade2"/><circle cx="54" cy="54" r="3" fill="#5dade2"/></svg>');
+
+    function buildSeasonCell(m, day, info, now) {
+        const cell = document.createElement('div');
+        cell.className = 'cal-cell' + (info.name ? '' : ' empty');
+        if (now.getFullYear() === calYear && now.getMonth() === calMonth && now.getDate() === parseInt(day)) cell.classList.add('today');
+        if (seasonsEditKey === `${m}|${day}`) cell.classList.add('editing');
+        const img = info.logo ? `<img src="${esc(logoURL(info.logo))}" loading="lazy" onerror="this.style.display='none'">`
+                              : (info.name ? `<img src="${CAL_DEFAULT}" class="cal-default" alt="">` : '<div class="cal-add">+</div>');
+        cell.innerHTML = `
+            <div class="cal-day">${day}</div>
+            ${img}
+            ${info.name ? `<div class="cal-name">${esc(info.name)}</div>` : ''}`;
+        cell.onclick = () => editSeasonDay(m, day, info);
+        return cell;
+    }
+
+    function editSeasonDay(m, day, info) {
+        seasonsEditKey = `${m}|${day}`;
+        document.getElementById('editDayLabel').textContent = `${m} ${day}`;
+        document.getElementById('editName').value = info.name || '';
+        document.getElementById('editTagline').value = info.tagline || '';
+        document.getElementById('editKeyword').value = info.keyword || '';
+        document.getElementById('editLogo').value = info.logo || '';
+        document.getElementById('seasonEdit').classList.remove('hidden');
+        syncHolidayBuilder();
+        renderSeasons();
+    }
+
+    function syncHolidayBuilder() {
+        const kw = document.getElementById('editKeyword').value.trim();
+        if (!kw) {
+            document.getElementById('holEpisodes').innerHTML = '<div class="empty-note">Enter a keyword above to build holiday library rules.</div>';
+            document.getElementById('holMovies').innerHTML = '';
+            return;
+        }
+        editingHoliday = kw;
+        holidaysData[kw] = holidaysData[kw] || {episodes: [], movies: []};
+        renderHolidayType('episodes', holidaysData[kw].episodes || []);
+        renderHolidayType('movies', holidaysData[kw].movies || []);
+    }
+
+    function renderHolidayType(type, queries) {
+        const cont = document.getElementById(type === 'episodes' ? 'holEpisodes' : 'holMovies');
+        cont.innerHTML = '';
+        queries.forEach((q, i) => cont.appendChild(buildQueryCard(type, i, q)));
+    }
+
+    function buildQueryCard(type, idx, q) {
+        q = q || {};
+        const card = document.createElement('div'); card.className = 'query-card';
+        const sort = q.sort || {};
+        card.innerHTML = `
+            <div class="q-head">
+                <span>Query ${idx + 1}</span>
+                <label>Sort</label><select class="sort-method" onchange="holidaySortChanged(this)">${SORT_METHODS.map(m => `<option value="${m}" ${sort.method===m?'selected':''}>${m}</option>`).join('')}</select>
+                <select class="sort-order" onchange="holidaySortChanged(this)">
+                    <option value="ascending" ${sort.order==='ascending'?'selected':''}>ascending</option>
+                    <option value="descending" ${sort.order==='descending'?'selected':''}>descending</option>
+                </select>
+                <span class="q-remove" onclick="removeHolidayQuery('${type}',${idx})">&#10005;</span>
+            </div>
+            <div class="qb-builder"></div>
+            <div class="qb-json"></div>`;
+        card._model = q;
+        card._type = type;
+        card._idx = idx;
+        renderFilterBuilder(card.querySelector('.qb-builder'), q.filter || {}, card);
+        updateQueryJSON(card);
+        return card;
+    }
+
+    // Recursive AND/OR filter builder. Containers carry a data-path into the model
+    // tree ("" = root filter, "0" = and/or[0], "0.1" = nested group) so add/join
+    // mutations edit the real model, not a DOM copy.
+    function renderFilterBuilder(cont, node, card, path) {
+        cont.dataset.path = path || '';
+        cont.innerHTML = '';
+        const keys = Object.keys(node).filter(k => k !== 'field' && k !== 'operator' && k !== 'value');
+        if (keys.length && node[keys[0]] && Array.isArray(node[keys[0]])) {
+            const joinKey = keys[0];
+            const children = node[joinKey];
+            const join = document.createElement('div'); join.className = 'qb-join';
+            join.innerHTML = `<label>Join</label><select onchange="qbJoinChanged(this)"><option value="and" ${joinKey==='and'?'selected':''}>AND</option><option value="or" ${joinKey==='or'?'selected':''}>OR</option></select>`;
+            cont.appendChild(join);
+            children.forEach((child, i) => {
+                const g = document.createElement('div'); g.className = 'qb-group';
+                renderFilterBuilder(g, child, card, (path ? path + '.' : '') + i);
+                const rm = document.createElement('span'); rm.className = 'q-remove'; rm.textContent = '\u2715';
+                rm.onclick = () => { removeModelNode(card, g.dataset.path); renderFromModel(card); };
+                g.appendChild(rm);
+                cont.appendChild(g);
+            });
+            const tools = document.createElement('div'); tools.className = 'qb-tools';
+            tools.innerHTML = `<button onclick="qbAdd(this,'rule')">+ Rule</button>
+                               <button onclick="qbAdd(this,'group')">+ Group</button>`;
+            cont.appendChild(tools);
+        } else {
+            // leaf rule: field / operator / value
+            const row = document.createElement('div'); row.className = 'qb-row';
+            row.innerHTML = `
+                <select class="field" onchange="refreshQueryModel(this)"><option value="">-- field --</option>${FILTER_FIELDS.map(f => `<option value="${f}" ${node.field===f?'selected':''}>${f}</option>`).join('')}</select>
+                <select class="op" onchange="refreshQueryModel(this)"><option value="">-- op --</option>${FILTER_OPS.map(o => `<option value="${o}" ${node.operator===o?'selected':''}>${o}</option>`).join('')}</select>
+                <input class="val" placeholder="value (comma = list)" value="${esc(Array.isArray(node.value)?node.value.join(', '):node.value||'')}" onchange="refreshQueryModel(this)">
+                <span class="q-remove" onclick="removeModelNode(this.closest('.query-card'), this.closest('.qb-group').dataset.path); renderFromModel(this.closest('.query-card'))">&#10005;</span>`;
+            cont.appendChild(row);
+        }
+    }
+
+    function modelAt(filter, path) {
+        if (!path) return filter;
+        const parts = path.split('.');
+        let node = filter;
+        for (let i = 0; i < parts.length; i++) {
+            const key = node.and ? 'and' : (node.or ? 'or' : null);
+            if (!key) return null;
+            node = node[key][parseInt(parts[i])];
+        }
+        return node;
+    }
+
+    function removeModelNode(card, path) {
+        if (!path) { card._model.filter = {and: []}; return; }
+        const parts = path.split('.'); const leaf = parseInt(parts.pop());
+        const parent = modelAt(card._model.filter, parts.join('.'));
+        if (!parent) return;
+        const key = parent.and ? 'and' : (parent.or ? 'or' : null);
+        if (key) parent[key].splice(leaf, 1);
+    }
+
+    function renderFromModel(card) {
+        renderFilterBuilder(card.querySelector('.qb-builder'), card._model.filter || {}, card);
+        updateQueryJSON(card);
+    }
+
+    function qbJoinChanged(sel) {
+        const card = sel.closest('.query-card');
+        const path = sel.closest('.qb-group, .qb-builder').dataset.path;
+        const node = modelAt(card._model.filter, path);
+        if (!node) return;
+        const oldKey = node.and ? 'and' : (node.or ? 'or' : 'and');
+        const nk = sel.value;
+        if (nk !== oldKey) { node[nk] = node[oldKey]; delete node[oldKey]; }
+        renderFromModel(card);
+    }
+
+    function qbAdd(btn, kind) {
+        const card = btn.closest('.query-card');
+        const path = btn.closest('.qb-group, .qb-builder').dataset.path;
+        const node = modelAt(card._model.filter, path);
+        if (!node) return;
+        const key = node.and ? 'and' : (node.or ? 'or' : 'and');
+        node[key] = node[key] || [];
+        node[key].push(kind === 'group' ? {or: []} : {field: '', operator: 'contains', value: []});
+        renderFromModel(card);
+    }
+
+    function refreshQueryModel(el) {
+        const card = el.closest('.query-card');
+        const path = el.closest('.qb-group, .qb-builder').dataset.path;
+        const node = modelAt(card._model.filter, path);
+        if (!node) return;
+        node.field = el.closest('.qb-row').querySelector('.field').value;
+        node.operator = el.closest('.qb-row').querySelector('.op').value;
+        node.value = el.closest('.qb-row').querySelector('.val').value.split(',').map(s=>s.trim()).filter(Boolean);
+        updateQueryJSON(card);
+    }
+
+    function updateQueryJSON(card) {
+        const pre = card.querySelector('.qb-json');
+        if (pre) pre.textContent = JSON.stringify({sort: card._model.sort, filter: card._model.filter}, null, 2);
+    }
+
+    function holidaySortChanged(sel) {
+        const card = sel.closest('.query-card');
+        const sort = card._model.sort || {};
+        sort.method = card.querySelector('.sort-method').value;
+        sort.order = card.querySelector('.sort-order').value;
+        card._model.sort = sort;
+        updateQueryJSON(card);
+    }
+
+    function addHolidayQuery(type) {
+        if (!editingHoliday) return;
+        const h = holidaysData[editingHoliday];
+        h[type] = h[type] || [];
+        h[type].push({sort: {method: type === 'movies' ? 'year' : 'episode', order: 'ascending'},
+                      filter: {and: [{or: [{field: 'title', operator: 'contains', value: []}]}]}});
+        renderHolidayType(type, h[type]);
+    }
+
+    function removeHolidayQuery(type, idx) {
+        if (!editingHoliday) return;
+        holidaysData[editingHoliday][type].splice(idx, 1);
+        renderHolidayType(type, holidaysData[editingHoliday][type]);
+    }
+
+    function cancelSeasonEdit() {
+        seasonsEditKey = null;
+        editingHoliday = null;
+        document.getElementById('seasonEdit').classList.add('hidden');
+        renderSeasons();
+    }
+
+    async function saveSeasonEdit() {
+        if (!seasonsEditKey) return;
+        const [m, day] = seasonsEditKey.split('|');
+        const kw = document.getElementById('editKeyword').value.trim();
+        seasonsData[m] = seasonsData[m] || {};
+        seasonsData[m][day] = {
+            name: document.getElementById('editName').value.trim(),
+            tagline: document.getElementById('editTagline').value.trim(),
+            keyword: kw,
+            logo: storeLogoURL(document.getElementById('editLogo').value)
+        };
+        if (kw) {
+            // Flush builder edits back into the holidays model before saving.
+            holidaysData[kw] = holidaysData[kw] || {episodes: [], movies: []};
+            ['episodes', 'movies'].forEach(type => {
+                const cont = document.getElementById(type === 'episodes' ? 'holEpisodes' : 'holMovies');
+                const out = [];
+                cont.querySelectorAll('.query-card').forEach(card => out.push(card._model));
+                holidaysData[kw][type] = out;
+            });
+        }
+        setBusy(true, 'SAVING...');
+        try {
+            const [sRes, hRes] = await Promise.all([
+                fetch(`http://${activeInstance.host}/api/seasons`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payload: seasonsData })
+                }),
+                fetch(`http://${activeInstance.host}/api/holidays`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payload: holidaysData })
+                })
+            ]);
+            const sb = await sRes.json().catch(() => ({}));
+            const hb = await hRes.json().catch(() => ({}));
+            if (sRes.ok && sb.status === 'ok' && hRes.ok && hb.status === 'ok') {
+                document.getElementById('seasonsStatus').innerText = `Saved ${m} ${day}${kw ? ' + holiday "' + kw + '"' : ''}`;
+                cancelSeasonEdit();
             } else {
-                const input = document.createElement('input');
-                input.name = key;
-                input.value = Array.isArray(value) ? value.join(', ') : value;
-                div.appendChild(input);
-                if(key === 'logo') {
-                    const img = document.createElement('img');
-                    img.src = value; img.className = 'logo-preview';
-                    div.appendChild(img);
-                }
+                document.getElementById('seasonsStatus').innerText = 'Save failed: ' + (sb.error || hb.error || sRes.status);
             }
-            container.appendChild(div);
-        }
+        } catch (e) { document.getElementById('seasonsStatus').innerText = 'Save error: ' + e.message; }
+        finally { setBusy(false); }
     }
 
-    async function saveChannel(e) {
-        e.preventDefault();
-        setBusy(true);
-        setTimeout(() => { setBusy(false); alert("Channel updated!"); }, 800);
+    // ===================== NOW PLAYING =====================
+    let npDismissed = false;
+
+    function dismissNowPlaying() { npDismissed = true; document.getElementById('nowPlaying').style.display = 'none'; }
+
+    async function pollNowPlaying() {
+        if (!activeInstance || npDismissed) return;
+        const w = document.getElementById('nowPlaying');
+        try {
+            const res = await fetch(`http://${activeInstance.host}/api/playback`);
+            const p = await res.json();
+            if (!p || !p.is_playing || !p.is_pseudotv) { w.style.display = 'none'; return; }
+            const item = p.item || {};
+            const img = document.getElementById('npImg');
+            const src = logoURL(item.thumb || item.logo || (p.channel && p.channel.logo) || '');
+            img.src = src || '';
+            img.style.display = src ? '' : 'none';
+            document.getElementById('npTitle').textContent = item.title || (p.channel && p.channel.name) || '';
+            const parts = [];
+            if (p.channel && p.channel.name) parts.push(p.channel.name);
+            if (p.channel && p.channel.number) parts.push('Ch ' + p.channel.number);
+            if (item.season && item.episode) parts.push(`S${item.season}E${item.episode}`);
+            else if (item.year) parts.push(item.year);
+            document.getElementById('npMeta').textContent = parts.join(' \u00b7 ');
+            w.style.display = 'flex';
+        } catch (e) { /* keep previous state on transient errors */ }
     }
+    setInterval(pollNowPlaying, 3000);
+    if (activeInstance) pollNowPlaying();
+
+    // ===================== BUILD STATUS =====================
+    let bsDismissed = false;
+
+    function dismissBuildStatus() { bsDismissed = true; document.getElementById('buildStatus').style.display = 'none'; }
+
+    async function pollBuildStatus() {
+        if (!activeInstance || bsDismissed) return;
+        const w = document.getElementById('buildStatus');
+        try {
+            const res = await fetch(`http://${activeInstance.host}/api/build`);
+            const b = await res.json();
+            if (b.idle) { w.style.display = 'none'; return; }
+            document.getElementById('bsTitle').textContent = b.building
+                ? (b.channel || 'Building channels...')
+                : (b.pending ? 'Tasks queued...' : 'Working...');
+            document.getElementById('bsFill').style.width = (b.pct || 0) + '%';
+            const img = document.getElementById('bsImg');
+            const src = logoURL(b.logo || '');
+            img.src = src || '';
+            img.style.display = src ? '' : 'none';
+            const meta = [];
+            if (b.building && b.total) meta.push(`${b.built}/${b.total} channels`);
+            if (b.pending) meta.push(`${b.pending} queued`);
+            const other = (b.running || []).filter(n => n !== 'buildChannels');
+            if (other.length) meta.push(other.join(', '));
+            document.getElementById('bsMeta').textContent = meta.join(' \u00b7 ') || 'Working...';
+            w.style.display = 'flex';
+        } catch (e) { /* keep previous state on transient errors */ }
+    }
+    setInterval(pollBuildStatus, 3000);
+    if (activeInstance) pollBuildStatus();
 
     window.onload = init;
 </script>

@@ -60,6 +60,71 @@ def cacheit(expiration: datetime.timedelta = datetime.timedelta(minutes=15), che
         return wrapper
     return internal
     
+class MemoryBudget(object):
+    """Global, thread-safe byte budget shared by every in-memory cache.
+
+    A single global cap (GLOBAL_CACHE_MEM_MAX, chosen by RAM/SoC) bounds the
+    combined memory of all caches. Each cache registers an owner with a
+    per-task cap (a fraction of the global). acquire() refuses a stash when it
+    would exceed the owner's cap OR the shared global cap, so no combination
+    of caches can blow the budget. Caches release() bytes as they evict.
+    """
+    _instance = None
+    _lock = Lock()
+
+    @classmethod
+    def instance(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
+
+    def __init__(self):
+        self.max_bytes = GLOBAL_CACHE_MEM_MAX
+        self._l = RLock()
+        self._owners = {}
+
+    def register(self, owner: str, cap: int):
+        with self._l:
+            self._owners[owner] = {'used': 0, 'cap': int(cap)}
+
+    def cap(self, owner: str) -> int:
+        with self._l:
+            return self._owners.get(owner, {}).get('cap', self.max_bytes)
+
+    def used(self, owner: str = None) -> int:
+        with self._l:
+            if owner: return self._owners.get(owner, {}).get('used', 0)
+            return sum(a['used'] for a in self._owners.values())
+
+    def acquire(self, owner: str, size: int) -> bool:
+        """Reserve `size` bytes for `owner`. False if it would exceed the owner's
+        per-task cap or the shared global cap (combined across all caches)."""
+        if size <= 0: return True
+        with self._l:
+            acc   = self._owners.get(owner)
+            cap   = acc['cap'] if acc else self.max_bytes
+            total = sum(a['used'] for a in self._owners.values())
+            if acc and acc['used'] + size > cap: return False
+            if total + size > self.max_bytes: return False
+            if acc: acc['used'] += size
+            return True
+
+    def release(self, owner: str, size: int):
+        with self._l:
+            acc = self._owners.get(owner)
+            if acc and size > 0:
+                acc['used'] = max(0, acc['used'] - size)
+
+    def reset(self, owner: str = None):
+        with self._l:
+            if owner:
+                acc = self._owners.get(owner)
+                if acc: acc['used'] = 0
+            else:
+                for a in self._owners.values(): a['used'] = 0
+
+
 class Cache(object):
     def __init__(self, mem_cache: bool = False, disable_cache: bool = False):
         self.monitor = MONITOR()
@@ -121,6 +186,8 @@ class _Cache(object):
         self.monitor        = monitor
         self.window         = xbmcgui.Window(winID)
         self.max_entries    = MAX_CACHE_SIZE
+        self.max_mem_bytes  = CACHE_MEM_MAX   # hard byte budget for the mem cache
+        self._mem_bytes     = 0               # running total of encoded mem-cache bytes
         self.dbfile         = FileAccess.translatePath(CACHE_FLE)
         self.timeout        = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         self._trim          = False
@@ -316,13 +383,27 @@ class _Cache(object):
         return None
 
     def _setMEM(self, endpoint: str, checksum: Any, expires: int, data: Any):
-        """Store a value in the in-memory window property cache, evicting if entry count limit exceeded."""
+        """Store a value in the in-memory window property cache.
+
+        Enforces this cache's own byte cap (max_mem_bytes) plus the shared
+        global MemoryBudget: trims the oldest entries to make room, and refuses
+        a stash that would exceed either cap or a single value larger than the
+        whole budget.
+        """
         try:
-            if len(self._cache_idx) >= self.max_entries: return
+            budget = MemoryBudget.instance()
+            budget.register('memcache', self.max_mem_bytes)
             encoded_data = FileAccess._encodeString((expires, data, checksum))
-            item_size = sys.getsizeof(encoded_data)
-            self.window.setProperty('%s.%s' % (ADDON_ID, endpoint), encoded_data)
-            self._cache_idx.append((endpoint, item_size))
+            item_size    = sys.getsizeof(encoded_data)
+            if item_size > self.max_mem_bytes: return  # never cache one oversized value
+            with self._lock:
+                self._trimMEM()  # free room if at the count, per-cache or global cap
+                if len(self._cache_idx) >= self.max_entries: return
+                if self._mem_bytes + item_size > self.max_mem_bytes: return
+                if not budget.acquire('memcache', item_size): return  # global budget exhausted
+                self.window.setProperty('%s.%s' % (ADDON_ID, endpoint), encoded_data)
+                self._cache_idx.append((endpoint, item_size))
+                self._mem_bytes += item_size
         except Exception as e:
             self.log("_setMEM failed: %s" % e)
 
@@ -341,16 +422,24 @@ class _Cache(object):
             self._trimMEM()
              
     def _trimMEM(self):
-        """Evict oldest in-memory cache entries until entry count fits within max_entries."""
+        """Evict oldest in-memory cache entries until the count, this cache's byte
+        budget and the shared global MemoryBudget all fit."""
         if not self._exit and not self._trim:
             try:
                 self._trim = True
+                budget = MemoryBudget.instance()
+                budget.register('memcache', self.max_mem_bytes)
                 initial_count = len(self._cache_idx)
-                while not self.monitor.abortRequested() and len(self._cache_idx) > self.max_entries:
+                while not self.monitor.abortRequested() and self._cache_idx and \
+                      (len(self._cache_idx) > self.max_entries or
+                       self._mem_bytes > self.max_mem_bytes or
+                       budget.used() > budget.max_bytes):
                     endpoint, size = self._cache_idx.popleft()
+                    self._mem_bytes = max(0, self._mem_bytes - size)
+                    budget.release('memcache', size)
                     self.window.clearProperty('%s.%s' % (ADDON_ID, endpoint))
                 trimmed = initial_count - len(self._cache_idx)
-                if trimmed: self.log('_trimMEM, evicted %d entries (count: %d -> %d, max=%d)' % (trimmed, initial_count, len(self._cache_idx), self.max_entries), xbmc.LOGDEBUG)
+                if trimmed: self.log('_trimMEM, evicted %d entries (%d -> %d, max=%d, %.1fMB own / %.1fMB global)' % (trimmed, initial_count, len(self._cache_idx), self.max_entries, budget.used('memcache')/1048576.0, budget.used()/1048576.0), xbmc.LOGDEBUG)
             except Exception as e: 
                 self.log("_trimMEM failed: %s" % e, xbmc.LOGERROR)
             finally: 
@@ -366,6 +455,8 @@ class _Cache(object):
                     self._database = self._open()
                 if self._database:
                     self._cache_idx.clear()
+                    self._mem_bytes = 0
+                    MemoryBudget.instance().reset('memcache')
                     self._database.execute("DROP TABLE IF EXISTS cache;")
                     self._database.execute("VACUUM;")
                     self._database.commit()
@@ -422,6 +513,8 @@ class _Cache(object):
         combined = "%s-%s" % (self.global_checksum, stringinput) if self.global_checksum else str(stringinput)
         result = zlib.adler32(combined.encode(DEFAULT_ENCODING)) & 0xffffffff
         _Cache._checksum_cache[cache_key] = result
+        if len(_Cache._checksum_cache) > CHECKSUM_CACHE_MAX:  # bound unbounded growth
+            _Cache._checksum_cache.clear()
         return result
         
     @staticmethod

@@ -109,9 +109,6 @@ class XSP(object):
                         try: sort.update({'method':order[0].firstChild.data})
                         except Exception as e: self.log('parseXSP order method failed: %s' % e, xbmc.LOGDEBUG)
 
-                    try: limit = int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue)
-                    except Exception: limit = 0
-
                     paths = []
                     for rule in dom.getElementsByTagName("rule"):
                         if rule.getAttribute("field").lower() == "title" and rule.getAttribute("operator").lower() in ["is", "contains"]:

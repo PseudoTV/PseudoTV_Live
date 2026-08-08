@@ -76,12 +76,12 @@ class Seasonal(object):
 
     def getSeason(self, key: str) -> Dict[str, Any]:
         self.log('getSeason, key = %s' % (key))
-        return FileAccess.getJSON(HOLIDAYS).get(key,{})
+        return self.getHolidaysData().get(key,{})
 
 
     def getSeasons(self, month: str) -> Dict[str, Any]:
         self.log('getSeasons, month = %s' % (month))
-        return FileAccess.getJSON(SEASONS).get(month,{})
+        return self.getSeasonsData().get(month,{})
 
 
     @cacheit(expiration=datetime.timedelta(minutes=15))
@@ -124,25 +124,28 @@ class Seasonal(object):
 
 
     # ---- CRUD for the seasonal/holiday JSON data ----------------------------
-    # Backed by the HTTP-exposed remotes/seasons.json + holidays.json. These are
-    # the primitives a future HTTP editor feature will use to amend the lists;
-    # all writes go through FileAccess.setJSON (atomic + file-locked).
+    # Mirrors the Channels pattern: seed from the shipped default file, then all
+    # user edits persist to a version-keyed cache setting (writable cache.db in
+    # the profile dir). Reads fall back to the default when no user copy exists;
+    # writes NEVER touch REMOTE_LOC, so an addon update can't wipe amendments.
 
     def getSeasonsData(self) -> Dict[str, Any]:
         """Return the full seasons.json: {month: {day: {name, tagline, keyword, logo}}}."""
-        return FileAccess.getJSON(SEASONS)
+        return Globals.settings.getCacheSetting(SEASONS_KEY, FileAccess._getMD5(SEASONS_KEY),
+                                                default=FileAccess.getJSON(SEASONS))
 
     def getHolidaysData(self) -> Dict[str, Any]:
         """Return the full holidays.json: {keyword: {episodes: [...], movies: [...]}}."""
-        return FileAccess.getJSON(HOLIDAYS)
+        return Globals.settings.getCacheSetting(HOLIDAYS_KEY, FileAccess._getMD5(HOLIDAYS_KEY),
+                                                default=FileAccess.getJSON(HOLIDAYS))
 
     def setSeasonsData(self, data: Dict[str, Any]) -> bool:
-        """Persist the full seasons.json."""
-        return FileAccess.setJSON(SEASONS, data)
+        """Persist the full seasons.json to the user cache setting (never REMOTE_LOC)."""
+        return Globals.settings.setCacheSetting(SEASONS_KEY, data, FileAccess._getMD5(SEASONS_KEY), life=-1)
 
     def setHolidaysData(self, data: Dict[str, Any]) -> bool:
-        """Persist the full holidays.json."""
-        return FileAccess.setJSON(HOLIDAYS, data)
+        """Persist the full holidays.json to the user cache setting (never REMOTE_LOC)."""
+        return Globals.settings.setCacheSetting(HOLIDAYS_KEY, data, FileAccess._getMD5(HOLIDAYS_KEY), life=-1)
 
     def _monthKey(self, month: str) -> str:
         """Normalize a month name to the seasons.json key form (e.g. 'january' -> 'January')."""
@@ -179,20 +182,20 @@ class Seasonal(object):
         return False
 
     def loadSeasons(self, url: Optional[str] = None) -> bool:
-        """Load seasons.json from a URL (defaults to the local HTTP server)."""
-        return self._loadJSON(SEASONS, SEASONFLE, url)
+        """Load seasons.json from a URL into the user cache setting (defaults to the local HTTP server)."""
+        return self._loadJSON(SEASONS_KEY, SEASONFLE, url)
 
     def loadHolidays(self, url: Optional[str] = None) -> bool:
-        """Load holidays.json from a URL (defaults to the local HTTP server)."""
-        return self._loadJSON(HOLIDAYS, HOLIDAYFLE, url)
+        """Load holidays.json from a URL into the user cache setting (defaults to the local HTTP server)."""
+        return self._loadJSON(HOLIDAYS_KEY, HOLIDAYFLE, url)
 
-    def _loadJSON(self, dest: str, fle: str, url: Optional[str] = None) -> bool:
+    def _loadJSON(self, key: str, fle: str, url: Optional[str] = None) -> bool:
         if url is None:
             url = 'http://%s/%s' % (Globals.properties.getRemoteHost(), fle)
         try:
             resp = requests.get(url, timeout=10)
             if resp.ok:
-                return FileAccess.setJSON(dest, resp.json())
+                return Globals.settings.setCacheSetting(key, resp.json(), FileAccess._getMD5(key), life=-1)
         except Exception as e:
             self.log('_loadJSON, %s failed: %s' % (fle, e), xbmc.LOGDEBUG)
         return False

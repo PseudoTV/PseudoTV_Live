@@ -87,12 +87,35 @@ class Library(object):
         libraryDATA = (self.libraryDATA or FileAccess.getJSON(LIBRARYFLE_DEFAULT))
         if type is None: items = libraryDATA.get('library')
         else:            items = libraryDATA.get('library',{}).get(type,[])
+        # Re-normalize logos to the stable self-hosted URL on read. Older cache
+        # entries (pre-static-url) may hold baked image:// or Kodi-webserver
+        # proxy URLs; serving the /logos/{name} URL lets the logo queue update
+        # them dynamically instead of shipping a dead image path.
+        items = self._normalizeLogos(items)
         self.log('getLibrary, type = %s, items = %s'%(type, len(items)))
+        return items
+
+
+    def _normalizeLogos(self, items: Any) -> Any:
+        def __fix(logo: Any, name: Any) -> Any:
+            if not isinstance(logo, str) or not logo: return logo
+            if logo.startswith(('http://', 'https://')) and '/logos/' in logo: return logo  # already static
+            return self.resources._staticLogo(name)
+        if isinstance(items, dict):
+            return {k: self._normalizeLogos(v) for k, v in items.items()}
+        if isinstance(items, list):
+            out = []
+            for it in items:
+                if isinstance(it, dict) and it.get('name'):
+                    it = dict(it); it['logo'] = __fix(it.get('logo'), it.get('name'))
+                out.append(self._normalizeLogos(it) if isinstance(it, (dict, list)) else it)
+            return out
         return items
         
         
     def setLibrary(self, type: str, items: list = []) -> bool:
         self.log('setLibrary, type = %s, items = %s'%(type,len(items)))
+        items = self._normalizeLogos(items)  # persist stable /logos/{name} URLs
         existing = self.libraryDATA.get('library', {}).get(type, [])
         if existing == items:
             self.log('setLibrary, type = %s, no change, skipping save' % type)

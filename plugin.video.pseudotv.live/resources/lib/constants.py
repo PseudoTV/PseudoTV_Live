@@ -115,6 +115,23 @@ else:                                                       # High-Performance M
     MAX_CACHE_SIZE = 1000 * CPU_COUNT                       # LRU cache Scale with available RAM/cores
     
 # =============================================================================
+# Shared in-memory cache budget. ONE global number (GLOBAL_CACHE_MEM_MAX,
+# chosen by available RAM / SoC) bounds the TOTAL memory all of the addon's
+# in-memory caches may consume. Each cache is allotted a fraction of it; the
+# fractions sum to <= 100% and a MemoryBudget singleton additionally refuses a
+# stash when the combined usage would exceed the global cap. So no combination
+# of caches (window-property mem cache, Properties LRU, M3U/XMLTV renders)
+# can ever blow the budget.
+# =============================================================================
+GLOBAL_CACHE_MEM_MAX = (128 if IS_CONSTRAINED_SOC else 512) * 1024 * 1024
+CACHE_MEM_MAX        = int(GLOBAL_CACHE_MEM_MAX * 0.40)  # _Cache window-property mem cache
+PROPERTY_MEM_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.20)  # Properties._memory_cache
+RENDER_CACHE_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.35)  # served M3U+XMLTV render caches (shared)
+THROTTLE_MAX         = 256                                                 # _PROGRESS_THROTTLE entry cap
+CHECKSUM_CACHE_MAX   = 10000                                               # _Cache._checksum_cache entry cap
+SETTINGS_CACHE_MAX   = 1000                                                # constants._SETTINGS_CACHE entry cap
+    
+# =============================================================================
 # Service Timing (all values in seconds)
 # =============================================================================
 DISCOVERY_TIMER     = 60     # Zeroconf network discovery broadcast interval
@@ -387,6 +404,11 @@ NOTE_WAV            = os.path.join(SFX_LOC,'notify.wav') # Subtle notification s
 M3UFLE_DEFAULT      = os.path.join(REMOTE_LOC,'m3u.json')          # M3U item template
 SEASONS             = os.path.join(REMOTE_LOC,'seasons.json')      # Seasonal content definitions
 HOLIDAYS            = os.path.join(REMOTE_LOC,'holidays.json')     # Holiday content definitions
+# User-edited seasonal/holiday data persists in a version-keyed cache setting
+# (writable cache.db in the profile dir), seeded from the shipped defaults.
+# Never write to REMOTE_LOC — an addon update overwrites it.
+SEASONS_KEY         = 'Seasonal.data'                               # User seasonal content cache key
+HOLIDAYS_KEY        = 'Holiday.data'                                # User holiday content cache key
 EXTERNALFEED        = os.path.join(REMOTE_LOC,EXTERNALFEEDFLE)     # ExternalFeed rule sample feed
 GROUPFLE_DEFAULT    = os.path.join(REMOTE_LOC,'groups.xml')        # Default channel groups
 MANAGERPATH         = os.path.join(REMOTE_LOC,MANAGERFLE)          # Default manager HTML
@@ -419,10 +441,12 @@ COLOR_FAVORITE_CHANNEL    = 'yellow'     # Channel status: user favorite
 # =============================================================================
 # External URLs
 # =============================================================================
+URL_GITHUB                = 'https://github.com/PseudoTV/PseudoTV_Live'
 URL_WIKI                  = 'https://github.com/PseudoTV/PseudoTV_Live/wiki'
 URL_SUPPORT               = 'https://forum.kodi.tv/showthread.php?tid=346803'
 URL_WIN_BONJOUR           = 'https://support.apple.com/en-us/106380'
-URL_README                = 'https://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/README.md'
+URL_README                = f'https://github.com/PseudoTV/PseudoTV_Live/blob/{ADDON_BRANCH}/plugin.video.pseudotv.live/README.md'
+URL_CHANGELOG             = f'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/{ADDON_BRANCH}/plugin.video.pseudotv.live/changelog.txt'
 
 # =============================================================================
 # Bundled Images / Media Assets

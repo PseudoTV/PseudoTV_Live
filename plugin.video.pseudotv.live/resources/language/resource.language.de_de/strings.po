@@ -771,3 +771,15 @@ msgstr "I/O-Benchmark installieren"
 msgctxt "#33137"
 msgid "Open the Kodi Node Editor for advanced SmartPlaylist creation."
 msgstr "Öffnet den Kodi-Knoteneditor für erweiterte SmartPlaylist-Erstellung."
+
+msgctxt "#30080"
+msgid "3 Hours"
+msgstr "3 Stunden"
+
+msgctxt "#32353"
+msgid "Show Welcome"
+msgstr "Willkommen anzeigen"
+
+msgctxt "#30079"
+msgid "Something Went Wrong, Contact the plugin developer..."
+msgstr "Etwas ist schiefgelaufen, kontaktieren Sie den Plugin-Entwickler..."
