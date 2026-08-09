@@ -37,3 +37,22 @@ Repository Installation:
 
 * [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
 * Copyright 2009-2025
+
+
+[ ]()
+[[[https://github.com/PseudoTV/PseudoTV_Live/blob/master/wiki/images/pseudotv.png | height = 100px ]]](https://www.pseudotvlive.com)
+[ ]()
+[[[https://github.com/PseudoTV/PseudoTV_Live/blob/master/wiki/images/youtube.png | height = 100px ]]](https://www.youtube.com/@PseudoTVLive)
+[ ]()
+[ ]()
+[[[https://github.com/PseudoTV/PseudoTV_Live/blob/master/wiki/images/github.png | height = 100px ]]](https://github.com/PseudoTV/PseudoTV_Live/discussions)
+[ ]()
+[[[https://github.com/PseudoTV/PseudoTV_Live/blob/master/wiki/images/reddit.png | height = 100px ]]](https://www.reddit.com/r/PseudoTV)
+[ ]()
+[[[https://github.com/PseudoTV/PseudoTV_Live/blob/master/wiki/images/discord.png | height = 100px ]]](https://discord.com/channels/726310663605190662/726310664032878602)
+[ ]()
+[[[https://github.com/PseudoTV/PseudoTV_Live/blob/master/wiki/images/bluesky.png | height = 100px ]]](https://bsky.app/profile/pseudotv.com)
+[ ]()
+[[[https://github.com/PseudoTV/PseudoTV_Live/blob/master/wiki/images/instagram.png | height = 100px ]]]()
+[ ]()
+[[[https://github.com/PseudoTV/PseudoTV_Live/blob/master/wiki/images/kodi.png | height = 100px ]]](https://forum.kodi.tv/forumdisplay.php?fid=231)
