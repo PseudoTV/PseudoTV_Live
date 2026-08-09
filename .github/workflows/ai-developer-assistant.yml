@@ -461,7 +461,7 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
-          FILES=$(cat lint_files.txt | head -5)
+          FILES=$(cat lint_files.txt 2>/dev/null | head -5 || true)
           if [ -z "$FILES" ]; then
             echo "No Python files changed"
             echo "has_errors=false" >> $GITHUB_OUTPUT
