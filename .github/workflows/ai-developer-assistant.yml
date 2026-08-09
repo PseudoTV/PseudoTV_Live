@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
   actions: write
 
@@ -231,9 +231,10 @@ jobs:
       - name: Run Ruff
         id: check-ruff
         run: |
-          ruff check plugin.video.pseudotv.live/resources/lib --select=F,E9,W6 --ignore=F401,F403,F405 --output-format=concise 2>&1 > ruff-raw.txt || true
+          ruff check plugin.video.pseudotv.live/resources/lib --select=F,E9,W6 --ignore=F401,F403,F405 --output-format=concise > ruff-raw.txt 2>&1 || true
           
           ISSUES=$(grep -cE "^[^ ].*:[0-9]+:[0-9]+:" ruff-raw.txt 2>/dev/null || echo "0")
+          ISSUES=$(echo "$ISSUES" | tr -d '[:space:]')
           echo "issues=${ISSUES:-0}" >> $GITHUB_OUTPUT
           
           if [ "${ISSUES:-0}" -gt 0 ]; then
@@ -402,7 +403,7 @@ jobs:
       - name: Run F-String Checker
         id: check-fstring
         run: |
-          python .github/scripts/fstring_check.py plugin.video.pseudotv.live/resources/lib 2>&1 > fstring-raw.txt || true
+          python .github/scripts/fstring_check.py plugin.video.pseudotv.live/resources/lib > fstring-raw.txt 2>&1 || true
           
           if grep -q "^ERRORS:" fstring-raw.txt 2>/dev/null; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
@@ -470,7 +471,7 @@ jobs:
           
           # Lint each file separately
           for FILE in $FILES; do
-            opencode run --model opencode/mimo-v2.5-free --file "$FILE" "Lint this Python file for syntax errors, import errors, undefined variables, and security concerns. Only report actual issues found." 2>&1 >> lint-raw.txt || true
+            opencode run --model opencode-go/deepseek-v4-flash --file "$FILE" "Lint this Python file for syntax errors, import errors, undefined variables, and security concerns. Only report actual issues found." 2>&1 >> lint-raw.txt || true
           done
           
           if grep -qiE "(error|issue|problem)" lint-raw.txt 2>/dev/null; then
@@ -553,7 +554,7 @@ jobs:
             fi
           done
           
-          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Review PseudoTV Live code changes. FILES: $FILES DIFF: $DIFF LINT RESULTS: $LINT_RESULTS Check: 1) Breaking changes 2) Bugs 3) Pattern violations 4) Missing imports 5) Kodi compatibility. Risk: LOW/MEDIUM/HIGH" 2>&1 || true)
+          OPENCODE_OUTPUT=$(opencode run --model opencode-go/deepseek-v4-flash "Review PseudoTV Live code changes. FILES: $FILES DIFF: $DIFF LINT RESULTS: $LINT_RESULTS Check: 1) Breaking changes 2) Bugs 3) Pattern violations 4) Missing imports 5) Kodi compatibility. Risk: LOW/MEDIUM/HIGH" 2>&1 || true)
           
           {
             echo "## AI Code Review"
@@ -704,6 +705,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: ${{ github.repository }}.wiki
+          token: ${{ secrets.WIKI_PAT }}
           path: wiki
 
       - name: Install OpenCode
@@ -717,15 +719,24 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
       - name: Generate Wiki Updates
+        continue-on-error: true
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
-          if [ -f "wiki/Getting-Started.md" ]; then
-            opencode run --model opencode/mimo-v2.5-free "Do NOT read any files or use glob tool. Review this Kodi addon changelog and the existing Getting Started wiki page below. Update the Features section if any new features from the changelog are missing. Keep existing format. Output ONLY the full updated page content. CHANGELOG: $CHANGELOG EXISTING PAGE: $(cat wiki/Getting-Started.md)" > wiki/Getting-Started.md 2>&1
-          fi
-          if [ -f "wiki/Development.md" ]; then
-            opencode run --model opencode/mimo-v2.5-free "Do NOT read any files or use glob tool. Review this Kodi addon changelog and the existing Development wiki page below. Update if any new rules or plugin changes are relevant. Keep existing format. Output ONLY the full page content. CHANGELOG: $CHANGELOG EXISTING PAGE: $(cat wiki/Development.md)" > wiki/Development.md 2>&1
-          fi
+          safe_update() {
+            local file="$1"
+            local tmp=$(mktemp)
+            opencode run --model opencode-go/deepseek-v4-flash "$2" > "$tmp" 2>&1 || true
+            if [ -s "$tmp" ] && head -c 100 "$tmp" | grep -q "^#"; then
+              cp "$tmp" "$file"
+              echo "Updated $file"
+            else
+              echo "Skipped $file"
+            fi
+            rm -f "$tmp"
+          }
+          safe_update "wiki/Getting-Started.md" "Do NOT read any files or use glob tool. Review this Kodi addon changelog and the existing Getting Started wiki page below. Update the Features section if any new features from the changelog are missing. Keep existing format. Output ONLY the full updated page content. CHANGELOG: $CHANGELOG EXISTING PAGE: $(cat wiki/Getting-Started.md)"
+          safe_update "wiki/Development.md" "Do NOT read any files or use glob tool. Review this Kodi addon changelog and the existing Development wiki page below. Update if any new rules or plugin changes are relevant. Keep existing format. Output ONLY the full page content. CHANGELOG: $CHANGELOG EXISTING PAGE: $(cat wiki/Development.md)"
 
       - name: Commit and Push
         run: |
@@ -737,5 +748,6 @@ jobs:
             echo "No wiki changes to commit"
           else
             git commit -m "Auto-update wiki from commit ${{ github.sha }}"
+            git remote set-url origin https://x-access-token:${{ secrets.WIKI_PAT }}@github.com/${{ github.repository }}.wiki.git
             git push
           fi
