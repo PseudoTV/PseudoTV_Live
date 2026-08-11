@@ -18,15 +18,15 @@
 #
 # -*- coding: utf-8 -*-
 import sys
-from typing      import Dict, Optional
 from variables   import *
 from fileaccess  import FileAccess
+from typing      import Dict, Optional
 
-_INSTANCE_NAME_RE = re.compile(r'<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE)
-_INSTANCE_NAME2_RE = re.compile(r'<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE)
+_INSTANCE_NAME_RE    = re.compile(r'<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE)
+_INSTANCE_NAME2_RE   = re.compile(r'<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE)
 _INSTANCE_ENABLED_RE = re.compile(r'<setting id=\"kodi_addon_instance_enabled\"', re.IGNORECASE)
-_M3U_PATH_RE = re.compile(r'<setting id=\"m3uPath\"[^>]*>(.*?)\</setting>', re.IGNORECASE)
-_M3U_URL_RE = re.compile(r'<setting id=\"m3uUrl\"[^>]*>(.*?)\</setting>', re.IGNORECASE)
+_M3U_PATH_RE         = re.compile(r'<setting id=\"m3uPath\"[^>]*>(.*?)\</setting>', re.IGNORECASE)
+_M3U_URL_RE          = re.compile(r'<setting id=\"m3uUrl\"[^>]*>(.*?)\</setting>', re.IGNORECASE)
 
 # transient PVR load errors (e.g. pvr.iptvsimple fetching the XMLTV while
 # the builder rewrites it) expire after this many seconds so they can't keep the
@@ -193,6 +193,12 @@ class Instances(object):
                 else:
                     self.log("setSettings, Settings object has no setBool/setString")
                     continue
+            # The instance-settings API persists in Kodi's memory only — it does
+            # NOT materialize (or update) the on-disk instance-settings XML. A
+            # missing/stale file then leaves direct-file readers pointing at
+            # nothing. Mirror the same values to disk via _save.
+            try: self._save(self.getPVRInstancePath(instanceName), settings)
+            except Exception as e: self.log(f"setSettings, disk mirror failed: {e}", xbmc.LOGDEBUG)
             return True
         except (TypeError, AttributeError):
             self.log("setSettings, instance API not available (waiting for Kodi #23648)")

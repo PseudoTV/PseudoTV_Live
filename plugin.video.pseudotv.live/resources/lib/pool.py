@@ -17,177 +17,15 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from typing import Any, Callable, Optional
 from variables import *
+from typing    import Any, Callable, Optional
 
-class ExecutorPool:
-    """Thread pool executor wrapper for parallel task execution.
-    
-    Provides methods for submitting fire-and-forget tasks, executing with timeouts,
-    and running functions over multiple items in parallel. Settings are cached with
-    a 30-second TTL to avoid repeated Kodi API calls on every invocation.
-    """
-
-
-    def __init__(self, workers: Optional[int] = None):
-        if workers is None: workers = THREAD_WORKERS
-        self._workers  = workers
-        self._executor = ThreadPoolExecutor(max_workers=workers)
-        self._executor_settings = {'timeout': None, 'enabled': None, 'last_check': 0}
-        self._SETTINGS_TTL = 30
-        self.log('__init__, workers=%d' % workers, xbmc.LOGINFO)
-    
-    def __del__(self):
-        self.shutdown()
-
-
-    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
-        LOG('%s: %s' % (self.__class__.__name__, msg), level)
-
-
-    def isShutdown(self) -> bool:
-        """Check if the thread pool has been shut down."""
-        try: return self._executor._shutdown
-        except AttributeError: return False
-            
-    def shutdown(self, wait: bool = False, cancel: bool = True):
-        try: 
-            self._executor.shutdown(wait=wait, cancel_futures=cancel)
-            self.log("shutdown, executor stopped (wait=%s, cancel=%s)" % (wait, cancel), xbmc.LOGINFO)
-        except Exception as e: self.log("shutdown failed: %s" % e, xbmc.LOGWARNING)
-
-
-    def _getExecutorSettings(self) -> dict:
-        """Get cached executor settings (timeout, enabled). Re-checks every 30s.
-        
-        Returns:
-            dict with 'timeout' (int), 'enabled' (bool), 'last_check' (float).
-        """
-        now = time.time()
-        if now - self._executor_settings['last_check'] > self._SETTINGS_TTL:
-            self._executor_settings['timeout'] = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-            self._executor_settings['enabled'] = REAL_SETTINGS.getSetting('Enable_Executor') == 'true'
-            # Auto-enable while playing gives concurrent JSONRPC — too aggressive on
-            # low-RAM SoC devices where the pool threads fight for limited resources.
-            if not self._executor_settings['enabled'] and not IS_CONSTRAINED_SOC and xbmc.getCondVisibility('Player.Playing'):
-                self._executor_settings['enabled'] = True
-            self._executor_settings['last_check'] = now
-        return self._executor_settings
-            
-    def submit(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> bool:
-        """Submit a function to the thread pool without blocking (fire-and-forget)."""
-        if self.isShutdown():
-            self.log('submit, pool was shutdown, skipping', xbmc.LOGWARNING)
-            return False
-        try:
-            self._executor.submit(func, *args, **kwargs)
-            return True
-        except Exception as e:
-            self.log("submit, %s failed: %s" % (func.__name__, e), xbmc.LOGERROR)
-            return False
-
-
-    def executor(self, func: Callable[..., Any], timeout: Optional[float] = None, *args: Any, **kwargs: Any) -> Any:
-        """Execute a single function in the thread pool with a timeout.
-        
-        Args:
-            func: Callable to execute.
-            timeout: Seconds to wait for result (defaults to API_Timeout setting).
-            *args, **kwargs: Arguments passed to func.
-        
-        Returns:
-            The function's return value, or None on timeout/shutdown/error.
-        
-        Example:
-            result = pool.executor(jsonRPC.sendJSON, 10, command)
-        """
-        settings = self._getExecutorSettings()
-        if timeout is None: timeout = settings['timeout']
-        if not settings['enabled']:
-            return self.execute(func, *args, **kwargs)
-        if self.isShutdown():
-            self.log('executor, pool was shutdown, skipping', xbmc.LOGWARNING)
-            return None
-            
-        with timeit(func):
-            try:
-                future = self._executor.submit(func, *args, **kwargs)
-                return future.result(timeout=float(timeout))
-            except TimeoutError:
-                self.log("executor, %s timed out after %ds" % (func.__name__, timeout), xbmc.LOGWARNING)
-                future.cancel()
-            except Exception as e: 
-                self.log("executor, %s failed: %s" % (func.__name__, e), xbmc.LOGERROR)
-
-
-    def execute(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-        """Execute a function synchronously with timing."""
-        try:
-            with timeit(func):
-                return func(*args, **kwargs)
-        except Exception as e: self.log(f"execute, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
-
-
-    def _wrapped_partial(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> partial:
-        """Create a partial function that preserves the original function's metadata."""
-        partial_func = partial(func, *args, **kwargs)
-        update_wrapper(partial_func, func)
-        return partial_func
-        
-    def executors(self, func: Callable[..., Any], items: Optional[list] = None, timeout: Optional[float] = None, *args: Any, **kwargs: Any) -> Optional[list]:
-        """Execute a function over multiple items in parallel, returning collected results.
-        
-        Args:
-            func: Callable to execute per item.
-            items: List of items to process.
-            timeout: Seconds to wait for all results (defaults to API_Timeout setting).
-            *args, **kwargs: Additional arguments passed to func.
-        
-        Returns:
-            List of non-None results, or falls back to sequential generator on failure.
-        
-        Example:
-            results = pool.executors(jsonRPC.getDuration, file_list, 30)
-        """
-        if items is None: items = []
-        settings = self._getExecutorSettings()
-        if timeout is None: timeout = settings['timeout']
-        if settings['enabled']:
-            if self.isShutdown(): 
-                self._executor = ThreadPoolExecutor(max_workers=self._workers)
-                
-            with timeit(func):
-                futures = {self._executor.submit(func, i, *args, **kwargs): i for i in items}
-                results = []
-                for future in as_completed(futures, timeout=float(timeout)):
-                    try: results.append(future.result())
-                    except Exception as e: self.log(f"executors, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
-                if results: return results
-        return self.generator(func, items, *args, **kwargs)
-
-
-    def generator(self, func: Callable[..., Any], items: Optional[list] = None, *args: Any, **kwargs: Any) -> list:
-        """Execute a function over items sequentially, filtering out None results.
-        
-        Args:
-            func: Callable to execute per item.
-            items: List of items to process.
-            *args, **kwargs: Additional arguments passed to func.
-        
-        Returns:
-            List of non-None results.
-        
-        Example:
-            results = pool.generator(jsonRPC.getDuration, file_list)
-        """
-        if items is None: items = []
-        self.log("generator, items = %s"%(len(items)))
-        try:
-            with timeit(func):
-                results = [func(i, *args, **kwargs) for i in items]
-                return [r for r in results if r is not None]
-        except Exception as e: self.log(f"generator, func = {func.__name__} failed! {e}", xbmc.LOGERROR) 
-        return []
+_MONITOR = None
+def _getMonitor() -> Any:
+    """Get cached MONITOR instance (created once, reused across all calls)."""
+    global _MONITOR
+    if _MONITOR is None: _MONITOR = MONITOR()
+    return _MONITOR
 
 @contextmanager
 def timeit(method: Callable[..., Any]) -> Any:
@@ -206,13 +44,6 @@ def timeit(method: Callable[..., Any]) -> Any:
         elapsed = (time.time() - start_time) * 1000
         if elapsed > 1.0:
             LOG('%s timeit => %.2f ms'%(method.__qualname__.replace('.',': '), elapsed), xbmc.LOGDEBUG)
-
-_MONITOR = None
-def _getMonitor() -> Any:
-    """Get cached MONITOR instance (created once, reused across all calls)."""
-    global _MONITOR
-    if _MONITOR is None: _MONITOR = MONITOR()
-    return _MONITOR
 
 def debounceit(wait: Optional[float] = None, monitor: Optional[Any] = None) -> Callable:
     """Decorator that debounces method calls, delaying execution until quiet period elapses.
@@ -269,8 +100,6 @@ def debounceit(wait: Optional[float] = None, monitor: Optional[Any] = None) -> C
         return wrapper
     return decorator
     
-_EXECUTOR_POOL = ExecutorPool()
-    
 def executeit(method: Callable[..., Any]) -> Callable:
     """Decorator that runs a method in the global executor pool with timeout handling.
     
@@ -299,7 +128,6 @@ def executeit(method: Callable[..., Any]) -> Callable:
             LOG(f"pool: executeit, unhandled exception inside {method.__name__}, failed!\n{method_err}", xbmc.LOGERROR)
             return None
     return wrapper
-    
 
 def threadit(method: Callable[..., Any]) -> Callable:
     """Decorator that runs a method in a background thread, skipping if already active.
@@ -348,7 +176,6 @@ def threadit(method: Callable[..., Any]) -> Callable:
     wrapper._lock = Lock()
     return wrapper
     
-
 def timerit(method: Callable[..., Any]) -> Callable:
     """Decorator that schedules a method to run after a delay, cancelling previous pending calls.
     
@@ -407,7 +234,6 @@ def timerit(method: Callable[..., Any]) -> Callable:
             timer.start()
         return timer
     return wrapper
-    
 
 def poolit(method: Callable[..., Any]) -> Callable:
     """Decorator that runs a method over items in parallel via the executor pool with supervisor thread.
@@ -432,6 +258,10 @@ def poolit(method: Callable[..., Any]) -> Callable:
         def __worker():
             try:
                 if monitor.abortRequested(): return
+                # executors() honours its own timeout internally and cancels
+                # pending futures when it expires — so the worker thread stops
+                # issuing new SMB/JSONRPC work the moment the supervisor gives up,
+                # instead of running the whole batch to completion in the background.
                 execution_state['result'] = _EXECUTOR_POOL.executors(method, items, wait, *args, **kwargs)
                 LOG(f"pool: {method.__qualname__} pool completed on {current_thread().name}", xbmc.LOGINFO)
             except Exception: execution_state['error'] = traceback.format_exc()
@@ -452,3 +282,180 @@ def poolit(method: Callable[..., Any]) -> Callable:
             return None
         return execution_state['result']
     return wrapper
+
+class ExecutorPool:
+    """Thread pool executor wrapper for parallel task execution.
+    
+    Provides methods for submitting fire-and-forget tasks, executing with timeouts,
+    and running functions over multiple items in parallel. Settings are cached with
+    a 30-second TTL to avoid repeated Kodi API calls on every invocation.
+    """
+    def __init__(self, workers: Optional[int] = None):
+        if workers is None: workers = THREAD_WORKERS
+        self._workers  = workers
+        self._executor = ThreadPoolExecutor(max_workers=workers)
+        self._executor_settings = {'timeout': None, 'enabled': None, 'last_check': 0}
+        self._SETTINGS_TTL = 30
+        self.log('__init__, workers=%d' % workers, xbmc.LOGINFO)
+    
+    def __del__(self):
+        self.shutdown()
+
+    def log(self, msg: str, level: int = xbmc.LOGDEBUG):
+        LOG('%s: %s' % (self.__class__.__name__, msg), level)
+
+    def isShutdown(self) -> bool:
+        """Check if the thread pool has been shut down."""
+        try: return self._executor._shutdown
+        except AttributeError: return False
+            
+    def shutdown(self, wait: bool = False, cancel: bool = True):
+        try: 
+            self._executor.shutdown(wait=wait, cancel_futures=cancel)
+            self.log("shutdown, executor stopped (wait=%s, cancel=%s)" % (wait, cancel), xbmc.LOGINFO)
+        except Exception as e: self.log("shutdown failed: %s" % e, xbmc.LOGWARNING)
+
+    def _getExecutorSettings(self) -> dict:
+        """Get cached executor settings (timeout, enabled). Re-checks every 30s.
+        
+        Returns:
+            dict with 'timeout' (int), 'enabled' (bool), 'last_check' (float).
+        """
+        now = time.time()
+        if now - self._executor_settings['last_check'] > self._SETTINGS_TTL:
+            self._executor_settings['timeout'] = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
+            self._executor_settings['enabled'] = REAL_SETTINGS.getSetting('Enable_Executor') == 'true'
+            # Auto-enable while playing gives concurrent JSONRPC — too aggressive on
+            # low-RAM SoC devices where the pool threads fight for limited resources.
+            if not self._executor_settings['enabled'] and not IS_CONSTRAINED_SOC and xbmc.getCondVisibility('Player.Playing'):
+                self._executor_settings['enabled'] = True
+            self._executor_settings['last_check'] = now
+        return self._executor_settings
+            
+    def submit(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> bool:
+        """Submit a function to the thread pool without blocking (fire-and-forget)."""
+        if self.isShutdown():
+            self.log('submit, pool was shutdown, skipping', xbmc.LOGWARNING)
+            return False
+        try:
+            self._executor.submit(func, *args, **kwargs)
+            return True
+        except Exception as e:
+            self.log("submit, %s failed: %s" % (func.__name__, e), xbmc.LOGERROR)
+            return False
+
+    def executor(self, func: Callable[..., Any], timeout: Optional[float] = None, *args: Any, **kwargs: Any) -> Any:
+        """Execute a single function in the thread pool with a timeout.
+        
+        Args:
+            func: Callable to execute.
+            timeout: Seconds to wait for result (defaults to API_Timeout setting).
+            *args, **kwargs: Arguments passed to func.
+        
+        Returns:
+            The function's return value, or None on timeout/shutdown/error.
+        
+        Example:
+            result = pool.executor(jsonRPC.sendJSON, 10, command)
+        """
+        settings = self._getExecutorSettings()
+        if timeout is None: timeout = settings['timeout']
+        if not settings['enabled']:
+            return self.execute(func, *args, **kwargs)
+        if self.isShutdown():
+            self.log('executor, pool was shutdown, skipping', xbmc.LOGWARNING)
+            return None
+            
+        with timeit(func):
+            try:
+                future = self._executor.submit(func, *args, **kwargs)
+                return future.result(timeout=float(timeout))
+            except TimeoutError:
+                # Grab a result that landed just at the deadline before giving up,
+                # then cancel the future so it can't keep running in the background.
+                try: return future.result(timeout=0)
+                except Exception: pass
+                future.cancel()
+                self.log("executor, %s timed out after %ds" % (func.__name__, timeout), xbmc.LOGWARNING)
+            except Exception as e: 
+                self.log("executor, %s failed: %s" % (func.__name__, e), xbmc.LOGERROR)
+
+    def execute(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+        """Execute a function synchronously with timing."""
+        try:
+            with timeit(func):
+                return func(*args, **kwargs)
+        except Exception as e: self.log(f"execute, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
+
+    def _wrapped_partial(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> partial:
+        """Create a partial function that preserves the original function's metadata."""
+        partial_func = partial(func, *args, **kwargs)
+        update_wrapper(partial_func, func)
+        return partial_func
+        
+    def executors(self, func: Callable[..., Any], items: Optional[list] = None, timeout: Optional[float] = None, *args: Any, **kwargs: Any) -> Optional[list]:
+        """Execute a function over multiple items in parallel, returning collected results.
+        
+        Args:
+            func: Callable to execute per item.
+            items: List of items to process.
+            timeout: Seconds to wait for all results (defaults to API_Timeout setting).
+            *args, **kwargs: Additional arguments passed to func.
+        
+        Returns:
+            List of non-None results, or falls back to sequential generator on failure.
+        
+        Example:
+            results = pool.executors(jsonRPC.getDuration, file_list, 30)
+        """
+        if items is None: items = []
+        settings = self._getExecutorSettings()
+        if timeout is None: timeout = settings['timeout']
+        if settings['enabled']:
+            if self.isShutdown(): 
+                self._executor = ThreadPoolExecutor(max_workers=self._workers)
+            ran_parallel = False
+            with timeit(func):
+                futures = {self._executor.submit(func, i, *args, **kwargs): i for i in items}
+                results = []
+                try:
+                    for future in as_completed(futures, timeout=float(timeout)):
+                        ran_parallel = True
+                        try: results.append(future.result())
+                        except Exception as e: self.log(f"executors, func = {func.__name__} failed! {e}", xbmc.LOGERROR)
+                except TimeoutError:
+                    ran_parallel = True
+                    # Cancel still-pending futures so a timed-out batch can't keep
+                    # spawning SMB/JSONRPC work in the background (the orphan-worker
+                    # pile-up that freezes low-RAM boxes under poolit).
+                    for future in futures:
+                        future.cancel()
+                    self.log(f"executors, {func.__name__} timed out after {timeout}s; cancelled pending futures", xbmc.LOGWARNING)
+            if ran_parallel:
+                return results  # pool ran — return what it produced, no serial re-run
+        return self.generator(func, items, *args, **kwargs)
+
+    def generator(self, func: Callable[..., Any], items: Optional[list] = None, *args: Any, **kwargs: Any) -> list:
+        """Execute a function over items sequentially, filtering out None results.
+        
+        Args:
+            func: Callable to execute per item.
+            items: List of items to process.
+            *args, **kwargs: Additional arguments passed to func.
+        
+        Returns:
+            List of non-None results.
+        
+        Example:
+            results = pool.generator(jsonRPC.getDuration, file_list)
+        """
+        if items is None: items = []
+        self.log("generator, items = %s"%(len(items)))
+        try:
+            with timeit(func):
+                results = [func(i, *args, **kwargs) for i in items]
+                return [r for r in results if r is not None]
+        except Exception as e: self.log(f"generator, func = {func.__name__} failed! {e}", xbmc.LOGERROR) 
+        return []
+
+_EXECUTOR_POOL = ExecutorPool()

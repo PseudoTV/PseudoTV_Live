@@ -117,6 +117,12 @@ class Tasks(object):
     def chkDiscovery(self):
         """Start discovery service and schedule periodic refresh."""
         timerit(Discovery)(0.1,*(self.service, Multiroom(service=self.service)))
+        # Deliver any queued seasonal/holiday edits to remotes that are back online.
+        try:
+            from webpoint import WebPoint
+            WebPoint(service=self.service).flushSeasonalSync()
+        except Exception as e:
+            self.log('chkDiscovery flushSeasonalSync failed: %s' % e, xbmc.LOGDEBUG)
         self.log('chkDiscovery')
         self.service._que(self.chkDiscovery,1,300)#5MINS
          
@@ -689,7 +695,12 @@ class Tasks(object):
                     try:
                         self.log(f"chkQUES postQue {len(self.service.postQue)}")
                         param = self.service.postQue.pop()
-                        self.service._que(self.jsonRPC.requestURL,3,0,0,*param)
+                        # Queued as (url, params_json, payload_json, header_json, timeout, file, life)
+                        url, params, payload, header, timeout, file, life = param
+                        params  = FileAccess.loadJSON(params)  if params  else {}
+                        payload = FileAccess.loadJSON(payload) if payload else {}
+                        header  = FileAccess.loadJSON(header)  if header  else {}
+                        self.service._que(self.jsonRPC.requestURL,3,0,0,url,params,payload,header,timeout,file,life)
                     except Exception as e: self.log("chkQUES failed!, queuing = %s postQue: %s\n%s"%(len(self.service.postQue),param,e))
                 if len(self.service.jsonQue) > 0:
                     try:

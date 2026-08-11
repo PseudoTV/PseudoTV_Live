@@ -37,6 +37,22 @@ v.0.7.9+nightly
 - Added todo scanning feature to track pending work items
 - Added interactive build prompts with skip capability for developer workflow
 - Tweaked miscellaneous build system improvements and tweaks
+- Fixed queued tasks failing when the executor pool shuts down during a restart; tasks now fall back to running synchronously
+- Optimized memory usage by charging the JSON file cache to the shared memory budget with byte caps
+- Optimized cache memory budget allocation across render, JSON, and TV shows caches
+- Tweaked miscellaneous improvements and tweaks
+- Fixed cache clearing so values set to None now properly delete entries, removing stale cached data from both memory and database layers
+- Optimized memory usage by rebalancing cache budgets across render, JSON file, and TV show library caches
+- Optimized channel template loading by memoizing the default template, avoiding repeated disk reads
+- Added timeout and error throttling for AI image generation to prevent repeated failure dialogs
+- Tweaked low-memory (SoC) devices to use fewer worker threads to avoid lockups
+- Tweaked Miscellaneous improvements and tweaks
+- Fixed cache database growing unboundedly by implementing expired-entry cleanup, preventing cache.db bloat (up to 300+MB on low-RAM devices)
+- Fixed cache clearing so values set to None now properly delete entries from both memory and database layers, removing stale cached data
+- Optimized channel template loading by memoizing the default template and deep-copying per instance, avoiding repeated disk reads
+- Improved build workflow by caching AI responses keyed on prompt hash so identical translation/changelog/TODO requests are not re-sent
+- Optimized channel loading so reads no longer rewrite settings.xml to disk on every poll and instance construction
+- Tweaked Miscellaneous improvements and tweaks
 v.0.7.8+nightly
 - Fixed progress dialog not rendering from non-main threads (added waitForAbort after dlg.update).
 - Refactored chkPVRSync to pure state checker, returns findings dict; chkPVRRefresh accepts findings to avoid duplicate updatePVRStatus calls.

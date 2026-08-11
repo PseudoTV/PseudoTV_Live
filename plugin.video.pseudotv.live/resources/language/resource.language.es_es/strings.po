@@ -783,3 +783,591 @@ msgstr "Mostrar Bienvenida"
 msgctxt "#30079"
 msgid "Something Went Wrong, Contact the plugin developer..."
 msgstr "Algo salió mal, contacta con el desarrollador del plugin..."
+
+msgctxt "#33013"
+msgid "AutoTune from Recommended (Supported) services installed on Kodi and supplied by IPTV Manager. Support does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgstr "AutoTune desde los servicios recomendados (compatibles) instalados en Kodi y proporcionados por IPTV Manager. El soporte no implica una relación entre proyectos; PseudoTV no es responsable del contenido proporcionado por plugins de terceros."
+
+msgctxt "#33049"
+msgid "Where runtime comes from.\n[B]Kodi metadata:[/B] faster. [B]File metadata:[/B] precise but slower."
+msgstr "De dónde proviene la duración.\n[B]Metadatos de Kodi:[/B] más rápido. [B]Metadatos de archivo:[/B] precisos pero más lentos."
+
+msgctxt "#30031"
+msgid "Trailer Resources"
+msgstr "Recursos de tráileres"
+
+msgctxt "#30135"
+msgid "Include"
+msgstr "Incluir"
+
+msgctxt "#33125"
+msgid "Include Coming Soon Trailers from the IMDB Trailer plugin."
+msgstr "Incluir tráileres de próximos estrenos del plugin de tráileres de IMDB."
+
+msgctxt "#30210"
+msgid "Auto tuning"
+msgstr "Sintonización automática"
+
+msgctxt "#30027"
+msgid "Logo Resource Packs"
+msgstr "Paquetes de recursos de logotipos"
+
+msgctxt "#33155"
+msgid "Reload IPTV Simple after channel changes.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: ON."
+msgstr "Recargar IPTV Simple después de cambios de canales.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B] - recomendado: ACTIVADO."
+
+msgctxt "#32107"
+msgid "Restore Channels"
+msgstr "Restaurar canales"
+
+msgctxt "#30202"
+msgid "Failed to validate Path! Force Approval? *Forced channels may fail to build or playback properly."
+msgstr "¡Error al validar la ruta! ¿Forzar aprobación? *Los canales forzados pueden fallar al generarse o reproducirse."
+
+msgctxt "#30225"
+msgid "Extra Metadata Details"
+msgstr "Detalles de metadatos adicionales"
+
+msgctxt "#32034"
+msgid "{name} not found, Please Install!"
+msgstr "{name} no encontrado, ¡instálalo!"
+
+msgctxt "#32111"
+msgid "Recover Channels from a backup?"
+msgstr "¿Recuperar canales desde una copia de seguridad?"
+
+msgctxt "#33053"
+msgid "Include Season 00 and movie extras.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "Incluir temporada 00 y extras de películas.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B]"
+
+msgctxt "#30030"
+msgid "Advert Resources"
+msgstr "Recursos de anuncios"
+
+msgctxt "#30098"
+msgid "TCP Port"
+msgstr "Puerto TCP"
+
+msgctxt "#32229"
+msgid "OnNext Position"
+msgstr "Posición de OnNext"
+
+msgctxt "#32218"
+msgid "Not Needed..."
+msgstr "No es necesario..."
+
+msgctxt "#33068"
+msgid "Advance seasonal holiday channels to the nearest upcoming holiday.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "Adelantar los canales de festivos estacionales a la festividad más próxima.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B]"
+
+msgctxt "#30211"
+msgid "Interleave Repeats"
+msgstr "Repetir en intercalado"
+
+msgctxt "#33078"
+msgid "Stop playback after the system is idle for this long.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - 0 disables."
+msgstr "Detener la reproducción después de que el sistema esté inactivo durante este tiempo.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B] - 0 lo desactiva."
+
+msgctxt "#30050"
+msgid "Prefer Kodi Metadata"
+msgstr "Preferir metadatos de Kodi"
+
+msgctxt "#30032"
+msgid "Resources"
+msgstr "Recursos"
+
+msgctxt "#30037"
+msgid "Guide Ahead (Future Days)"
+msgstr "Guía por adelantado (días futuros)"
+
+msgctxt "#30096"
+msgid "Genre URL"
+msgstr "URL de género"
+
+msgctxt "#30105"
+msgid "Detect Compatible Addons"
+msgstr "Detectar addons compatibles"
+
+msgctxt "#32182"
+msgid "ZeroConf Status"
+msgstr "Estado de ZeroConf"
+
+msgctxt "#32033"
+msgid "Update Status"
+msgstr "Estado de actualización"
+
+msgctxt "#30044"
+msgid "Channel Bug Diffuse Color"
+msgstr "Color de difusión del logo de canal"
+
+msgctxt "#32183"
+msgid "Select server to remove."
+msgstr "Seleccione el servidor a eliminar."
+
+msgctxt "#30028"
+msgid "Rating Resources"
+msgstr "Recursos de clasificaciones"
+
+msgctxt "#30226"
+msgid "Enable Smart Shuffling"
+msgstr "Habilitar reproducción aleatoria inteligente"
+
+msgctxt "#30160"
+msgid "Editors & Settings"
+msgstr "Editores y ajustes"
+
+msgctxt "#33150"
+msgid "Keep building channels while media is playing.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - disable if playback stutters."
+msgstr "Seguir generando canales mientras se reproduce contenido.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B] - desactívelo si la reproducción se entrecorta."
+
+msgctxt "#30222"
+msgid "Playback Timeout"
+msgstr "Tiempo de espera de reproducción"
+
+msgctxt "#30094"
+msgid "M3U URL"
+msgstr "URL M3U"
+
+msgctxt "#30159"
+msgid "Support Forum"
+msgstr "Foro de soporte"
+
+msgctxt "#32217"
+msgid "Install Bonjour (QR)"
+msgstr "Instalar Bonjour (QR)"
+
+msgctxt "#30199"
+msgid "Request"
+msgstr "Solicitud"
+
+msgctxt "#33042"
+msgid "Show overlay visuals (channel bug, vignette, OSD).\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "Mostrar visuales superpuestas (logo de canal, viñeta, OSD).\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B]"
+
+msgctxt "#30169"
+msgid "OSD Display Time"
+msgstr "Tiempo de visualización del OSD"
+
+msgctxt "#33174"
+msgid "Enable the vignette overlay effect during playback. [Default: Disabled]"
+msgstr "Habilitar el efecto de viñeta superpuesta durante la reproducción. [Por defecto: Desactivado]"
+
+msgctxt "#33061"
+msgid "Seconds to ignore when live timing differs from the offset.\n[B]Default:[/B] [B][COLOR=white]60[/COLOR][/B]"
+msgstr "Segundos a ignorar cuando la sincronización en vivo difiere del desplazamiento.\n[B]Por defecto:[/B] [B][COLOR=white]60[/COLOR][/B]"
+
+msgctxt "#30219"
+msgid "Allow AI Integration"
+msgstr "Permitir integración de IA"
+
+msgctxt "#33070"
+msgid "Allow PseudoTV Live to configure IPTV Simple/IPTV Manager automatically. [Default: Disabled] [Recommended: Enabled]"
+msgstr "Permitir que PseudoTV Live configure IPTV Simple/IPTV Manager automáticamente. [Por defecto: Desactivado] [Recomendado: Activado]"
+
+msgctxt "#30166"
+msgid "Submit Snapshot"
+msgstr "Enviar captura de estado"
+
+msgctxt "#33126"
+msgid "Use trailers from your Kodi library.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "Usar tráileres de tu biblioteca de Kodi.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B]"
+
+msgctxt "#30209"
+msgid "Channel Bug Transparency"
+msgstr "Transparencia del logo de canal"
+
+msgctxt "#33172"
+msgid "Which channel list loads when the Channel Manager opens.\n[B]Default:[/B] [B][COLOR=white]Auto[/COLOR][/B]"
+msgstr "Qué lista de canales se carga al abrir el Administrador de canales.\n[B]Por defecto:[/B] [B][COLOR=white]Automático[/COLOR][/B]"
+
+msgctxt "#33225"
+msgid "Parse additional media metadata during builds.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "Analizar metadatos adicionales de medios durante la generación.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B]"
+
+msgctxt "#33062"
+msgid "Skip content near the end past this percent.\n[B]Default:[/B] [B][COLOR=white]98%[/COLOR][/B] - 100% disables."
+msgstr "Omitir el contenido cerca del final a partir de este porcentaje.\n[B]Por defecto:[/B] [B][COLOR=white]98%[/COLOR][/B] - 100% lo desactiva."
+
+msgctxt "#30154"
+msgid "Restart Unavailable..."
+msgstr "Reinicio no disponible..."
+
+msgctxt "#33058"
+msgid "How channels are sent to the player.\n[B]PVR Callback:[/B] plays via PVR. [B]Playlist:[/B] queues a playlist."
+msgstr "Cómo se envían los canales al reproductor.\n[B]PVR Callback:[/B] reproduce mediante PVR. [B]Lista de reproducción:[/B] pone en cola una lista de reproducción."
+
+msgctxt "#33048"
+msgid "Choose which discovered servers to use.\n[B]Default:[/B] [B][COLOR=white]Auto[/COLOR][/B]"
+msgstr "Elegir qué servidores descubiertos usar.\n[B]Por defecto:[/B] [B][COLOR=white]Automático[/COLOR][/B]"
+
+msgctxt "#30139"
+msgid "Random Pre-Roll Chance"
+msgstr "Probabilidad de pre-roll aleatorio"
+
+msgctxt "#33100"
+msgid "Configure as client that pulls channels from remote server. [Default: Disabled]"
+msgstr "Configurar como cliente que obtiene canales de un servidor remoto. [Por defecto: Desactivado]"
+
+msgctxt "#30183"
+msgid "Interleave TV & Movies after Ordering"
+msgstr "Intercalar TV y películas después del ordenamiento"
+
+msgctxt "#33043"
+msgid "Show the channel logo in a corner during playback.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "Mostrar el logo del canal en una esquina durante la reproducción.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B]"
+
+msgctxt "#30064"
+msgid "Add Custom Group"
+msgstr "Añadir grupo personalizado"
+
+msgctxt "#30165"
+msgid "Remote UI"
+msgstr "Interfaz remota"
+
+msgctxt "#30055"
+msgid "Include 3D Media"
+msgstr "Incluir contenido 3D"
+
+msgctxt "#30012"
+msgid "Shared Cache Folder"
+msgstr "Carpeta de caché compartida"
+
+msgctxt "#33105"
+msgid "Scan for addons that can provide channel content.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "Buscar addons que puedan proporcionar contenido para canales.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B]"
+
+msgctxt "#30140"
+msgid "Build Filler Folders"
+msgstr "Generar carpetas de relleno"
+
+msgctxt "#30002"
+msgid "Debug Level"
+msgstr "Nivel de depuración"
+
+msgctxt "#30053"
+msgid "Include Specials/Extras"
+msgstr "Incluir especiales/extras"
+
+msgctxt "#30182"
+msgid "Force Random Order"
+msgstr "Forzar orden aleatorio"
+
+msgctxt "#33130"
+msgid ""
+msgstr ""
+
+msgctxt "#33198"
+msgid "Speeds up builds and menu loading by running several tasks at once. Uses more CPU and memory.\nEnable on desktop PCs with 4+ cores and plenty of RAM. Keep off on low-power devices (Shield, Fire Stick, SoC boxes) - it can cause lockups and crashes there. [B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "Acelera la generación y la carga de menús ejecutando varias tareas a la vez. Usa más CPU y memoria.\nActívelo en PC de escritorio con 4+ núcleos y mucha RAM. Manténgalo desactivado en dispositivos de bajo consumo (Shield, Fire Stick, cajas SoC); puede causar bloqueos y fallos allí. [B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B]"
+
+msgctxt "#30131"
+msgid "Disable Trakt Scrobbling"
+msgstr "Desactivar el registro de Trakt"
+
+msgctxt "#30180"
+msgid "Group TV shows in blocks"
+msgstr "Agrupar series en bloques"
+
+msgctxt "#33226"
+msgid "Randomize channel content order. Changes apply gradually. [Default: Disabled]"
+msgstr "Aleatorizar el orden del contenido de los canales. Los cambios se aplican gradualmente. [Por defecto: Desactivado]"
+
+msgctxt "#30106"
+msgid "Utilities"
+msgstr "Utilidades"
+
+msgctxt "#33044"
+msgid "Tint applied to the channel bug.\n[B]Default:[/B] [B][COLOR=white]White (#FFFFFFFF)[/COLOR][/B]"
+msgstr "Tinte aplicado al logo de canal.\n[B]Por defecto:[/B] [B][COLOR=white]Blanco (#FFFFFFFF)[/COLOR][/B]"
+
+msgctxt "#33166"
+msgid "Upload a debug snapshot for review.\n[B]Tip:[/B] Sends to paste.kodi.tv."
+msgstr "Subir una captura de depuración para revisión.\n[B]Consejo:[/B] Se envía a paste.kodi.tv."
+
+msgctxt "#33036"
+msgid "Guide & OSD"
+msgstr "Guía y OSD"
+
+msgctxt "#30068"
+msgid "Nearest Holiday"
+msgstr "Festividad más próxima"
+
+msgctxt "#33121"
+msgid "Group episodes in blocks for even scheduling.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "Agrupar episodios en bloques para una programación uniforme.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B]"
+
+msgctxt "#30075"
+msgid "More Info"
+msgstr "Más información"
+
+msgctxt "#33084"
+msgid "[COLOR=orange][B]Important:[/B][/COLOR] Turns off caching. Only for experts.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "[COLOR=orange][B]Importante:[/B][/COLOR] Desactiva el almacenamiento en caché. Solo para expertos.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B]"
+
+msgctxt "#30049"
+msgid "Duration Source"
+msgstr "Fuente de duración"
+
+msgctxt "#32150"
+msgid "Build During Playback"
+msgstr "Generar durante la reproducción"
+
+msgctxt "#30052"
+msgid "Save Durations to Library"
+msgstr "Guardar duraciones en la biblioteca"
+
+msgctxt "#33012"
+msgid "Store the addon cache in a shared location.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: ON to reduce SSD wear."
+msgstr "Almacenar la caché del addon en una ubicación compartida.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B] - recomendado: ACTIVADO para reducir el desgaste del SSD."
+
+msgctxt "#33153"
+msgid "Offer to restart when progress passes this percent.\n[B]Default:[/B] [B][COLOR=white]55%[/COLOR][/B] - 0 disables."
+msgstr "Ofrecer reiniciar cuando el progreso supere este porcentaje.\n[B]Por defecto:[/B] [B][COLOR=white]55%[/COLOR][/B] - 0 lo desactiva."
+
+msgctxt "#33015"
+msgid "Items requested per library scan call.\n[B]Default:[/B] [B][COLOR=white]25[/COLOR][/B] - 0 = unlimited."
+msgstr "Elementos solicitados por llamada de escaneo de biblioteca.\n[B]Por defecto:[/B] [B][COLOR=white]25[/COLOR][/B] - 0 = sin límite."
+
+msgctxt "#33211"
+msgid "Allow repeats when interleaving paths.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "Permitir repeticiones al intercalar rutas.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B]"
+
+msgctxt "#33224"
+msgid "Subfolder levels to scan.\n[B]Default:[/B] [B][COLOR=white]1[/COLOR][/B] - 0 = root only."
+msgstr "Niveles de subcarpetas a escanear.\n[B]Por defecto:[/B] [B][COLOR=white]1[/COLOR][/B] - 0 = solo la raíz."
+
+msgctxt "#33055"
+msgid "Include 3D content when building channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "Incluir contenido 3D al generar canales.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B]"
+
+msgctxt "#30170"
+msgid "Show OSD on Change"
+msgstr "Mostrar OSD al cambiar"
+
+msgctxt "#30134"
+msgid "Random Post-Roll Chance"
+msgstr "Probabilidad de post-roll aleatorio"
+
+msgctxt "#33045"
+msgid "Show what's up next near the end of a program.\n[B]Default:[/B] [B][COLOR=white]Artwork[/COLOR][/B] - built-in. [B]UpNext:[/B] requires the Up-Next addon."
+msgstr "Mostrar qué viene después cerca del final de un programa.\n[B]Por defecto:[/B] [B][COLOR=white]Artwork[/COLOR][/B] - integrado. [B]UpNext:[/B] requiere el addon Up-Next."
+
+msgctxt "#30181"
+msgid "Force Episode Order"
+msgstr "Forzar orden de episodios"
+
+msgctxt "#33129"
+msgid "Server Status"
+msgstr "Estado del servidor"
+
+msgctxt "#33212"
+msgid "Show popup notifications while media plays.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "Mostrar notificaciones emergentes mientras se reproduce contenido.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B]"
+
+msgctxt "#30069"
+msgid "Third-Party"
+msgstr "Terceros"
+
+msgctxt "#30099"
+msgid "Server Added ({name})"
+msgstr "Servidor añadido ({name})"
+
+msgctxt "#30149"
+msgid "Clean Up Recordings"
+msgstr "Limpiar grabaciones"
+
+msgctxt "#32108"
+msgid "Replace existing Backup from"
+msgstr "Reemplazar la copia de seguridad existente desde"
+
+msgctxt "#33085"
+msgid "Extend EPG guide data beyond default range to fill schedule gaps."
+msgstr "Ampliar los datos de la guía EPG más allá del rango predeterminado para cubrir huecos en la programación."
+
+msgctxt "#33157"
+msgid "Open Kodi's PVR & Live TV settings.\n[B]Tip:[/B] Where IPTV Simple is configured."
+msgstr "Abrir la configuración de PVR y TV en vivo de Kodi.\n[B]Consejo:[/B] Donde se configura IPTV Simple."
+
+msgctxt "#33071"
+msgid "Open the IPTV Simple Client addon settings directly.\n[B]Tip:[/B] Check the active M3U/XMLTV URLs here."
+msgstr "Abrir directamente los ajustes del addon IPTV Simple Client.\n[B]Consejo:[/B] Compruebe aquí las URL M3U/XMLTV activas."
+
+msgctxt "#30217"
+msgid "OpenRouter API Key"
+msgstr "Clave API de OpenRouter"
+
+msgctxt "#30156"
+msgid "Enable ZeroConf"
+msgstr "Habilitar ZeroConf"
+
+msgctxt "#33046"
+msgid "Remove a paired multiroom server from the discovered servers list."
+msgstr "Eliminar un servidor multihabitación emparejado de la lista de servidores descubiertos."
+
+msgctxt "#30179"
+msgid "Interleave Set Size"
+msgstr "Tamaño del conjunto de intercalado"
+
+msgctxt "#32151"
+msgid "Creating Backup"
+msgstr "Creando copia de seguridad"
+
+msgctxt "#33054"
+msgid "Include .strm stream files in channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "Incluir archivos de flujo .strm en los canales.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B]"
+
+msgctxt "#30201"
+msgid "API Timeout"
+msgstr "Tiempo de espera de la API"
+
+msgctxt "#30133"
+msgid "Player"
+msgstr "Reproductor"
+
+msgctxt "#30168"
+msgid "Project Wiki"
+msgstr "Wiki del proyecto"
+
+msgctxt "#30220"
+msgid "Artwork Style"
+msgstr "Estilo de carátulas"
+
+msgctxt "#33000"
+msgid "Utilities, documentation links, debugging tools, and expert options."
+msgstr "Utilidades, enlaces de documentación, herramientas de depuración y opciones de experto."
+
+msgctxt "#30218"
+msgid "Generate Artwork"
+msgstr "Generar carátulas"
+
+msgctxt "#33222"
+msgid "Seconds before retrying failed playback.\n[B]Default:[/B] [B][COLOR=white]90[/COLOR][/B]"
+msgstr "Segundos antes de reintentar una reproducción fallida.\n[B]Por defecto:[/B] [B][COLOR=white]90[/COLOR][/B]"
+
+msgctxt "#32267"
+msgid "Keep Debug Enabled"
+msgstr "Mantener la depuración habilitada"
+
+msgctxt "#33074"
+msgid "Allow PseudoTV to adjust Kodi settings.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - recommended: ON."
+msgstr "Permitir que PseudoTV ajuste los ajustes de Kodi.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B] - recomendado: ACTIVADO."
+
+msgctxt "#30231"
+msgid "Image Model"
+msgstr "Modelo de imagen"
+
+msgctxt "#33056"
+msgid "Insert bumpers, ratings, adverts, and trailers between programs.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "Insertar cabeceras, clasificaciones, anuncios y tráileres entre programas.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B]"
+
+msgctxt "#33220"
+msgid "Describes how you want your generated logos to look - style, colors, and mood. These attributes shape each logo the AI creates.\n[B]Tip:[/B] The channel name, theme, and rendering format are handled automatically, so just describe the look you want."
+msgstr "Describe cómo quieres que se vean tus logos generados: estilo, colores y ambiente. Estos atributos dan forma a cada logo que crea la IA.\n[B]Consejo:[/B] El nombre del canal, el tema y el formato de renderizado se gestionan automáticamente, así que solo describe el aspecto que deseas."
+
+msgctxt "#32110"
+msgid "Backup Channels"
+msgstr "Copia de seguridad de canales"
+
+msgctxt "#30153"
+msgid "Restart Prompt (%)"
+msgstr "Aviso de reinicio (%)"
+
+msgctxt "#30233"
+msgid "Include Kodi Extras"
+msgstr "Incluir extras de Kodi"
+
+msgctxt "#33131"
+msgid "Don't send PseudoTV playback to Trakt.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - scrobbling active."
+msgstr "No enviar la reproducción de PseudoTV a Trakt.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B] - registro activo."
+
+msgctxt "#30038"
+msgid "AutoTune"
+msgstr "Sintonización automática"
+
+msgctxt "#30198"
+msgid "Parallel Processing"
+msgstr "Procesamiento en paralelo"
+
+msgctxt "#30212"
+msgid "Playback Notifications"
+msgstr "Notificaciones de reproducción"
+
+msgctxt "#30074"
+msgid "Access Kodi Settings"
+msgstr "Acceder a los ajustes de Kodi"
+
+msgctxt "#30045"
+msgid "Show OnNext"
+msgstr "Mostrar OnNext"
+
+msgctxt "#30063"
+msgid "Guide Grouping"
+msgstr "Agrupación de la guía"
+
+msgctxt "#30054"
+msgid "Include .strm Files"
+msgstr "Incluir archivos .strm"
+
+msgctxt "#30132"
+msgid "Rollback Watched"
+msgstr "Deshacer visto"
+
+msgctxt "#30095"
+msgid "XMLTV URL"
+msgstr "URL XMLTV"
+
+msgctxt "#33098"
+msgid "Port for the HTTP server.\n[B]Default:[/B] [B][COLOR=white]50001[/COLOR][/B] - change only if in use."
+msgstr "Puerto para el servidor HTTP.\n[B]Por defecto:[/B] [B][COLOR=white]50001[/COLOR][/B] - cambie solo si está en uso."
+
+msgctxt "#30036"
+msgid "Guide History (Past Days)"
+msgstr "Historial de la guía (días pasados)"
+
+msgctxt "#30013"
+msgid "Tweaks"
+msgstr "Ajustes finos"
+
+msgctxt "#30213"
+msgid "Client Only"
+msgstr "Solo cliente"
+
+msgctxt "#30171"
+msgid "Hide OSD on change"
+msgstr "Ocultar OSD al cambiar"
+
+msgctxt "#33001"
+msgid "[COLOR=yellow][B]Notice:[/B][/COLOR] Writes detailed debug info to kodi.log.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - disable unless troubleshooting."
+msgstr "[COLOR=yellow][B]Aviso:[/B][/COLOR] Escribe información de depuración detallada en kodi.log.\n[B]Por defecto:[/B] [B][COLOR=white]ACTIVADO[/COLOR][/B] - desactívelo salvo para solucionar problemas."
+
+msgctxt "#30001"
+msgid "Enable Debug Logging"
+msgstr "Habilitar registro de depuración"
+
+msgctxt "#30097"
+msgid "Port {port} is In-Use! Port {available} is available on this instance  All PseudoTV Instances must be configured to use the same port."
+msgstr "¡El puerto {port} está en uso! El puerto {available} está disponible en esta instancia. Todas las instancias de PseudoTV deben configurarse para usar el mismo puerto."
+
+msgctxt "#33213"
+msgid "Run this instance as a client with no local channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "Ejecutar esta instancia como cliente sin canales locales.\n[B]Por defecto:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B]"
+
+msgctxt "#30155"
+msgid "Auto PVR Refresh"
+msgstr "Refresco automático de PVR"
+
+msgctxt "#32230"
+msgid "Pause Channel"
+msgstr "Pausar canal"
+
+msgctxt "#30150"
+msgid "Copy Logo Folder?"
+msgstr "¿Copiar carpeta de logos?"
+
+msgctxt "#30232"
+msgid "Contextual Model"
+msgstr "Modelo contextual"
+
+msgctxt "#30029"
+msgid "Bumper Resources"
+msgstr "Recursos de cabeceras"

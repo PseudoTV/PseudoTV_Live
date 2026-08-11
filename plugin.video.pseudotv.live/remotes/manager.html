@@ -22,7 +22,7 @@
         .banner { width: 100%; padding: 20px 0 10px 0; text-align: center; }
         .banner img { max-width: 300px; filter: drop-shadow(0px 8px 15px rgba(0,0,0,0.4)); }
 
-        .tab-bar { display: flex; gap: 5px; width: 95%; max-width: 1200px; z-index: 2; }
+        .tab-bar { display: flex; flex-wrap: wrap; gap: 5px; width: 95%; max-width: 1200px; z-index: 2; }
         .tab {
             padding: 12px 25px; background: rgba(0,0,0,0.4); border: 1px solid var(--border);
             border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer;
@@ -71,6 +71,12 @@
         .autotune-banner .atb-text p { margin: 4px 0 0 0; font-size: 0.72rem; opacity: 0.85; }
         .autotune-banner button { white-space: nowrap; }
         .channel-frame.dimmed { opacity: 0.4; pointer-events: none; }
+        /* Instance offline: banner + dim/disable all interactive controls so the
+           user can't edit data that can't be pushed to the unreachable host. */
+        .offline-banner { background: rgba(231,76,60,.15); border: 1px solid #e74c3c; color: #ff8a80; border-radius: 6px; padding: 8px 12px; font-size: .72rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .offline-banner b { letter-spacing: 1px; }
+        .tab-content.offline { opacity: .45; pointer-events: none; filter: grayscale(.4); }
+        .tab-content.offline .offline-banner { opacity: 1; pointer-events: auto; filter: none; }
 
         input, select, textarea {
             width: 100%; padding: 10px; background: var(--input-bg);
@@ -82,22 +88,59 @@
         .field-row { display: flex; gap: 8px; align-items: flex-end; }
         .field-row input, .field-row select { flex: 1; }
         .btn-action { background: var(--focus); color: #000; border: none; border-radius: 4px; padding: 10px 14px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        .btn-toggle { background: var(--input-bg); color: var(--dim); border: 1px solid var(--border); border-radius: 4px; padding: 8px 14px; font-weight: bold; cursor: pointer; font-size: 0.7rem; min-width: 70px; }
+        .btn-toggle.on { background: var(--success); color: #000; border-color: var(--success); }
+        .action-row { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
+        .toggle-row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+        /* Rule picker */
+        .rule-picker { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
+        .rule-picker.hidden { display: none; }
+        .rule-picker .rp-box { background: #001a2d; border: 1px solid var(--focus); border-radius: 10px; padding: 15px; width: 460px; max-width: 94%; max-height: 80vh; display: flex; flex-direction: column; }
+        .rule-picker .rp-head { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--focus); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
+        .rule-picker .rp-close { float: right; cursor: pointer; opacity: 0.6; }
+        .rule-picker .rp-list { overflow: auto; flex: 1; }
+        .rule-picker .rp-row { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.72rem; }
+        .rule-picker .rp-row:hover { background: rgba(255,255,255,0.06); }
+        .rule-picker .rp-set { opacity: 0.5; font-size: 0.6rem; text-transform: uppercase; }
         .btn-save { background: var(--success); color: white; }
         .btn-cancel { background: #7f8c8d; color: white; }
+        .btn-clear { background: var(--danger); color: white; }
+        .btn-move { background: var(--focus); color: #000; }
         .btn-bar { display: flex; gap: 15px; justify-content: flex-end; margin-top: 15px; }
         .btn-bar button { padding: 12px 30px; border: none; border-radius: 6px; font-weight: bold; text-transform: uppercase; cursor: pointer; }
 
         /* EPG */
-        .epg-outer { position: relative; border: 1px solid var(--border); border-radius: 8px; height: 600px; overflow: auto; background: var(--epg-bg); }
-        .epg-table { display: flex; flex-direction: column; width: fit-content; min-width: 100%; }
+        .epg-outer { position: relative; border: 1px solid var(--border); border-radius: 8px; height: 560px; overflow: auto; background: var(--epg-bg); }
+        .epg-table { display: flex; flex-direction: column; width: fit-content; min-width: 100%; position: relative; }
+        /* Vertical "now" timebar — scrolls with the guide content, spans the
+           full channel-rows height, sits above programmes but below the sticky
+           header. Position/refresh handled in JS (left = channel col + nowMin*px). */
+        .now-timebar { position: absolute; top: 35px; bottom: 0; width: 2px; z-index: 50; pointer-events: none; }
+        .now-timebar .now-head { position: absolute; top: -35px; left: -14px; background: var(--focus, #e74c3c); color: #000; font-size: 0.58rem; font-weight: bold; padding: 2px 5px; border-radius: 3px; white-space: nowrap; }
         .epg-header-row { display: flex; position: sticky; top: 0; z-index: 100; background: #003355; height: 35px; }
         .epg-corner { width: var(--channel-col-width); flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--focus); position: sticky; left: 0; z-index: 101; }
         .time-slots-container { display: flex; }
-        .time-slot { width: var(--slot-width); min-width: var(--slot-width); border-right: 1px solid var(--border); font-size: 0.7rem; display: flex; align-items: center; padding-left: 10px; color: var(--focus); }
-        .epg-data-row { display: flex; height: 60px; border-bottom: 1px solid var(--border); }
-        .epg-channel-name { width: var(--channel-col-width); flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--focus); position: sticky; left: 0; z-index: 50; display: flex; align-items: center; padding: 0 10px; font-size: 0.75rem; font-weight: bold; }
+        .time-slot { width: var(--slot-width); min-width: var(--slot-width); border-right: 1px solid var(--border); font-size: 0.68rem; display: flex; align-items: center; padding-left: 10px; color: var(--focus); }
+        .epg-data-row { display: flex; height: 58px; border-bottom: 1px solid var(--border); }
+        .epg-channel-name { width: var(--channel-col-width); flex-shrink: 0; background: #002b4d; border-right: 2px solid var(--focus); position: sticky; left: 0; z-index: 50; display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+        .epg-channel-name img { width: 30px; height: 30px; object-fit: contain; border-radius: 4px; background: var(--input-bg); flex-shrink: 0; }
+        .epg-channel-name .epg-ch-label { min-width: 0; }
+        .epg-channel-name .epg-ch-num { font-size: 0.58rem; color: var(--focus); opacity: 0.8; }
+        .epg-channel-name .epg-ch-title { font-size: 0.72rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .epg-programs-container { position: relative; width: calc(var(--slot-width) * 48); height: 100%; }
-        .epg-program { position: absolute; height: 84%; top: 8%; background: var(--epg-prog); border-right: 1px solid rgba(0,0,0,0.3); padding: 5px; font-size: 0.65rem; overflow: hidden; border-radius: 3px; color: white; text-shadow: 1px 1px 1px rgba(0,0,0,0.5); }
+        .epg-program { position: absolute; height: 84%; top: 8%; background: var(--epg-prog); border-right: 1px solid rgba(0,0,0,0.3); padding: 4px 6px; font-size: 0.64rem; overflow: hidden; border-radius: 4px; color: white; text-shadow: 1px 1px 1px rgba(0,0,0,0.5); cursor: pointer; white-space: nowrap; text-overflow: ellipsis; transition: box-shadow 0.15s, filter 0.15s; }
+        .epg-program:hover { filter: brightness(1.25); box-shadow: 0 0 0 1px var(--focus); z-index: 2; }
+        .epg-program.selected { outline: 2px solid var(--focus); outline-offset: -2px; filter: brightness(1.3); }
+        .epg-detail { margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(0,0,0,0.35); padding: 12px; display: flex; gap: 16px; align-items: flex-start; }
+        .epg-detail .epg-d-imgs { display: flex; align-items: center; flex-shrink: 0; }
+        .epg-detail .epg-d-ch { width: 110px; height: 44px; object-fit: contain; border-radius: 6px; background: var(--input-bg); align-self: flex-start; flex-shrink: 0; margin-left: auto; }
+        .epg-detail .epg-d-thumb { width: 200px; max-height: 130px; object-fit: contain; border-radius: 8px; background: var(--input-bg); }
+        .epg-detail .epg-d-play { color: var(--success); text-decoration: none; border: 1px solid var(--success); border-radius: 4px; padding: 1px 8px; font-size: 0.62rem; margin-left: 4px; white-space: nowrap; }
+        .epg-detail .epg-d-play:hover { background: var(--success); color: #000; }
+        .epg-detail .epg-d-body { min-width: 0; flex: 1; }
+        .epg-detail .epg-d-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 4px; }
+        .epg-detail .epg-d-meta { font-size: 0.68rem; opacity: 0.75; margin-bottom: 6px; }
+        .epg-detail .epg-d-desc { font-size: 0.72rem; opacity: 0.9; line-height: 1.45; }
 
         /* System info */
         .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
@@ -166,6 +209,14 @@
         .lib-card.noimg .lib-body h4 { font-size: 0.65rem; }
         .lib-type { font-size: 0.7rem; color: var(--focus); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 8px; cursor: pointer; user-select: none; }
         .empty-note { font-size: 0.7rem; opacity: 0.6; padding: 8px 0; }
+        /* Resume tab: grey out the button when there are no entries, style the cards */
+        .tab.dim { opacity: 0.35; }
+        .resume-card { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .resume-card .lib-card-title { font-size: 0.72rem; font-weight: bold; word-break: break-word; }
+        .resume-meta { font-size: 0.6rem; opacity: 0.75; word-break: break-all; }
+        .resume-bar { height: 6px; background: var(--input-bg); border-radius: 3px; overflow: hidden; }
+        .resume-fill { height: 100%; background: var(--focus); }
+        .resume-play { align-self: flex-start; font-size: 0.65rem; color: var(--accent); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; }
 
         /* Seasons calendar */
         .cal-nav { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; }
@@ -213,6 +264,7 @@
         .btn-add:hover { opacity: 0.9; }
 
         .status-line { font-size: 0.7rem; opacity: 0.6; margin-bottom: 12px; }
+        .sync-note { font-size: 0.68rem; opacity: 0.55; margin: -6px 0 12px 0; color: var(--dim, #999); }
         .hidden { display: none; }
         #busy { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 9999; }
         #busy img { width: 80px; animation: spin 1.2s linear infinite; }
@@ -224,10 +276,14 @@
             padding: 10px 12px; max-width: 320px; box-shadow: 0 8px 25px rgba(0,0,0,0.6);
             align-items: center; gap: 10px; }
         #nowPlaying img { width: 64px; height: 64px; object-fit: contain; border-radius: 6px; background: var(--input-bg); flex-shrink: 0; }
-        #nowPlaying .np-body { min-width: 0; }
+        #nowPlaying .np-body { min-width: 0; flex: 1; }
         #nowPlaying .np-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; color: var(--focus); opacity: 0.9; }
         #nowPlaying .np-title { font-size: 0.78rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
         #nowPlaying .np-meta { font-size: 0.65rem; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        #nowPlaying .np-provider { font-size: 0.6rem; opacity: 0.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+        #nowPlaying .np-plot { font-size: 0.6rem; opacity: 0.75; line-height: 1.35; margin-top: 4px; max-height: 2.7em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        #nowPlaying .np-bar { height: 5px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+        #nowPlaying .np-fill { height: 100%; background: var(--focus); width: 0%; transition: width 0.5s; }
         #nowPlaying .np-close { position: absolute; top: 4px; right: 8px; cursor: pointer; opacity: 0.5; font-size: 0.8rem; }
         #nowPlaying .np-close:hover { opacity: 1; }
 
@@ -245,6 +301,19 @@
         #buildStatus .bs-meta { font-size: 0.65rem; opacity: 0.7; margin-top: 2px; }
         #buildStatus .bs-bar { height: 6px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 4px; margin-top: 8px; overflow: hidden; }
         #buildStatus .bs-fill { height: 100%; background: var(--focus); width: 0%; transition: width 0.4s; }
+
+        /* Channel path browser */
+        .path-browser { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
+        .path-browser.hidden { display: none; }
+        .path-browser .pb-box { background: #001a2d; border: 1px solid var(--focus); border-radius: 10px; padding: 15px; width: 560px; max-width: 94%; max-height: 80vh; display: flex; flex-direction: column; }
+        .path-browser .pb-head { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--focus); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
+        .path-browser .pb-path { float: left; color: var(--accent); letter-spacing: 0; text-transform: none; font-size: 0.65rem; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .path-browser .pb-close { float: right; cursor: pointer; opacity: 0.6; }
+        .path-browser .pb-nav { display: flex; gap: 8px; margin-bottom: 8px; }
+        .path-browser .pb-list { overflow: auto; flex: 1; min-height: 220px; }
+        .path-browser .pb-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.72rem; }
+        .path-browser .pb-row:hover { background: rgba(255,255,255,0.06); }
+        .path-browser .pb-row .pb-icon { opacity: 0.6; }
     </style>
 </head>
 <body>
@@ -268,6 +337,19 @@
         </div>
         <img id="bsImg" alt="" onerror="this.style.display='none'">
     </div>
+    <div id="pathBrowser" class="path-browser hidden">
+        <div class="pb-box">
+            <div class="pb-head">Browse Path
+                <span class="pb-path" id="pbPath">Sources</span>
+                <span class="pb-close" onclick="document.getElementById('pathBrowser').classList.add('hidden')">&#10005;</span>
+            </div>
+            <div class="pb-nav">
+                <button type="button" class="btn-action" id="pbUp" onclick="pbUp()">&#8593; Up</button>
+                <button type="button" class="btn-action" id="pbSelect" onclick="pbSelect()">Select This Folder</button>
+            </div>
+            <div class="pb-list" id="pbList"></div>
+        </div>
+    </div>
     <div class="banner"><img src="http://{{ remote_host }}/image/{{ media_loc }}/splashtext.png" alt="PseudoTV"></div>
 
     <!-- Row 1: server/instance tabs (populated from servers.json, local first) -->
@@ -277,10 +359,11 @@
     <div class="tab-bar">
         <div id="btn-channels" class="tab active" onclick="navigateTab('channels')">Channels</div>
         <div id="btn-library" class="tab" onclick="navigateTab('library')">Library</div>
-        <div id="btn-seasons" class="tab" onclick="navigateTab('seasons')">Seasons</div>
+        <div id="btn-resume" class="tab" onclick="navigateTab('resume')">Resume</div>
+        <div id="btn-guide" class="tab" onclick="navigateTab('guide')">Guide</div>
         <div id="btn-info" class="tab" onclick="navigateTab('info')">INFO</div>
         <div class="tab-spacer"></div>
-        <div id="btn-guide" class="tab" onclick="navigateTab('guide')">Live Guide</div>
+        <div id="btn-seasons" class="tab" onclick="navigateTab('seasons')">Seasons</div>
     </div>
 
     <div class="container">
@@ -302,7 +385,7 @@
                 <div class="frame-body">
                     <div>
                         <label for="channelSelector">Select Channel</label>
-                        <select id="channelSelector" onchange="onChannelSelect()">
+                        <select id="channelSelector" onchange="channelSelectionChanged()">
                             <option value="">-- Select Channel --</option>
                         </select>
                     </div>
@@ -315,32 +398,42 @@
                             <div class="channel-title">
                                 <h3 id="channelTitle"></h3>
                                 <div class="channel-actions">
-                                    <button type="button" class="btn-action" onclick="promptLogoURL()">Logo URL</button>
                                     <button type="button" class="btn-action" onclick="searchLogo()">Search</button>
-                                    <button type="button" class="btn-action" onclick="lookupLogo()">Get Logo</button>
                                 </div>
                             </div>
                         </div>
                         <div class="form-grid" id="channelFields"></div>
                         <div class="form-field full" style="margin-top:15px;">
                             <label for="ruleSelector">Rules</label>
-                            <select id="ruleSelector" onchange="loadRuleValues()">
-                                <option value="">-- Select Rule --</option>
-                            </select>
+                            <div class="field-row">
+                                <select id="ruleSelector" onchange="loadRuleValues()">
+                                    <option value="">-- Select Rule --</option>
+                                </select>
+                                <button type="button" class="btn-action" onclick="showRulePicker()">+ Add</button>
+                            </div>
                             <div id="ruleValueFields" style="margin-top:10px;"></div>
-                            <label style="margin-top:12px;">Rules JSON <span style="opacity:.6;">(editable — full channel ruleset)</span></label>
-                            <textarea id="rulesJSON" rows="8" spellcheck="false"></textarea>
                         </div>
-                        <div class="btn-bar">
-                            <button type="button" class="btn-cancel" onclick="cancelEdit()">Cancel</button>
-                            <button type="button" class="btn-save" onclick="saveChannel()">Save</button>
+                        <div id="rulePicker" class="rule-picker hidden">
+                            <div class="rp-box">
+                                <div class="rp-head">Add Rule <span class="rp-close" onclick="document.getElementById('rulePicker').classList.add('hidden')">&#10005;</span></div>
+                                <div class="rp-list" id="rulePickerList"></div>
+                            </div>
+                        </div>
+                        <div class="action-row">
+                            <div class="toggle-row" id="toggleRow"></div>
+                            <div class="btn-bar">
+                                <button type="button" class="btn-clear" onclick="clearChannel()" title="Reset to a blank channel template">Clear</button>
+                                <button type="button" class="btn-move" onclick="moveChannel()" title="Assign a free channel number">Move</button>
+                                <button type="button" class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+                                <button type="button" class="btn-save" onclick="saveChannel()">Save</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ============ LIVE GUIDE ============ -->
+        <!-- ============ GUIDE ============ -->
         <div id="tab-guide" class="tab-content">
             <div id="guideStatus" class="status-line"></div>
             <div class="epg-outer hidden" id="epgUI">
@@ -352,12 +445,19 @@
                     <div id="epg-rows-container"></div>
                 </div>
             </div>
+            <div class="epg-detail hidden" id="epgDetail"></div>
         </div>
 
         <!-- ============ LIBRARY ============ -->
         <div id="tab-library" class="tab-content">
             <div id="libraryStatus" class="status-line"></div>
             <div id="libraryGrid"></div>
+        </div>
+
+        <!-- ============ RESUME (playback resume entries) ============ -->
+        <div id="tab-resume" class="tab-content">
+            <div id="resumeStatus" class="status-line"></div>
+            <div id="resumeGrid" class="lib-grid"></div>
         </div>
 
         <!-- ============ SEASONS (calendar + holiday editor) ============ -->
@@ -369,6 +469,7 @@
                 <button type="button" class="cal-btn" onclick="calToday()">Today</button>
             </div>
             <div id="seasonsStatus" class="status-line"></div>
+            <div class="sync-note">Seasonal edits are saved to this instance and synced to all enabled multiroom instances.</div>
             <div class="cal-grid" id="seasonsGrid"></div>
             <div id="seasonEdit" class="season-edit hidden">
                 <div class="frame-title">EDIT <span id="editDayLabel"></span></div>
@@ -396,7 +497,7 @@
             <div id="infoGrid" class="info-grid"></div>
             <div id="pvrSection" class="debug-panel">
                 <div class="debug-header">
-                    <div class="frame-title">PVR Sync Status</div>
+                    <div class="frame-title">PVR Status</div>
                     <select id="pvrFilter" onchange="renderPVR()">
                         <option value="overview">Overview</option>
                         <option value="m3u">M3U</option>
@@ -430,7 +531,102 @@
     let activeRules = {};
     let currentPaths = [];
     let editingIndex = -1;
+    let formSnapshot = null;   // serialized form state right after a channel loads
     let genreColorMap = {};
+    let localName = '';        // friendly name of the LOCAL instance (set in init); used by loadSeasons
+
+    // authHeaders() adds the per-install UUID bearer token to every mutating
+    // POST. The server (MyHandler._authorized) accepts this header OR the legacy
+    // body 'uuid' field, so old payloads keep working after a server update.
+    function authHeaders() {
+        const h = { 'Content-Type': 'application/json' };
+        const u = activeInstance ? activeInstance.uuid : '';
+        if (u) h['Authorization'] = 'Bearer ' + u;
+        return h;
+    }
+
+    // ---- per-instance offline handling + read-only cache --------------------
+    // When a multiroom host is unreachable, tabs (channels/library/guide/info)
+    // fall back to the last good snapshot we cached for that host, show an
+    // "offline" banner, and dim/disable every control so nothing is edited
+    // against a host that can't receive the change.
+    const OFFLINE_TABS = ['channels', 'library', 'guide', 'info'];
+
+    function cacheKey(host, type) { return 'pstv_mgr:' + host + ':' + type; }
+
+    function cacheGet(host, type) {
+        try { return JSON.parse(localStorage.getItem(cacheKey(host, type))); }
+        catch (e) { return null; }
+    }
+    function cacheSet(host, type, data) {
+        try { localStorage.setItem(cacheKey(host, type), JSON.stringify(data)); }
+        catch (e) { /* storage full/blocked — cache is best-effort */ }
+    }
+    function cacheDel(host, type) { try { localStorage.removeItem(cacheKey(host, type)); } catch (e) {} }
+
+    function setInstanceOffline(offline) {
+        if (!activeInstance) return;
+        activeInstance.online = !offline;
+        // Banner text lives in a dedicated element; rebuild on first use.
+        let banner = document.getElementById('offlineBanner');
+        OFFLINE_TABS.forEach(t => {
+            const tc = document.getElementById('tab-' + t);
+            if (!tc) return;
+            if (offline) tc.classList.add('offline');
+            else tc.classList.remove('offline');
+        });
+        document.querySelectorAll('.tab-content').forEach(tc => {
+            if (tc.querySelector('.offline-banner') && !offline) tc.querySelector('.offline-banner').remove();
+        });
+        if (offline) {
+            OFFLINE_TABS.forEach(t => {
+                const tc = document.getElementById('tab-' + t);
+                if (!tc || tc.querySelector('.offline-banner')) return;
+                const b = document.createElement('div');
+                b.className = 'offline-banner';
+                b.innerHTML = '<b>&#9888; ' + esc((activeInstance && activeInstance.name) || 'Instance') + ' is OFFLINE</b><span>Showing last cached data — edits are disabled until the instance is reachable.</span>';
+                tc.insertBefore(b, tc.firstChild);
+            });
+        }
+    }
+
+    // Probe a host: 2.5s timeout so an unreachable multiroom box doesn't hang
+    // every tab switch. Returns true if the API answers.
+    async function hostOnline(host) {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 2500);
+        try {
+            const r = await fetch(`http://${host}/api/bonjour.json`, { signal: ctl.signal });
+            clearTimeout(timer);
+            return r.ok;
+        } catch (e) { clearTimeout(timer); return false; }
+    }
+
+    // Fetch with offline fallback: try the live host, cache successes, and on
+    // failure serve the cached snapshot (if any) so tabs stay populated.
+    // Returns the data, or null when the host is offline AND no cache exists —
+    // callers render a "no cached data" default instead of stale data.
+    async function fetchTabData(host, type, path) {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 3000);
+        try {
+            const res = await fetch(`http://${host}${path}`, { signal: ctl.signal });
+            clearTimeout(timer);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const text = await res.text();
+            let data = text;
+            try { data = JSON.parse(text); } catch (e) { /* keep raw text (xml, etc.) */ }
+            cacheSet(host, type, data);
+            setInstanceOffline(false);
+            return data;
+        } catch (e) {
+            clearTimeout(timer);
+            const cached = cacheGet(host, type);
+            setInstanceOffline(true);
+            if (cached !== null) return cached;
+            return null;   // offline + no snapshot — caller shows default/empty
+        }
+    }
 
     const ignoredKeys = ['type', 'catchup', 'catchup-source', 'url', 'id', 'holiday'];
     const boolKeys = ['radio', 'favorite', 'enable', 'changed', 'enabled'];
@@ -450,11 +646,19 @@
     // link targets restricted to http(s)/mailto.
     function renderMarkdown(md) {
         if (!md) return '';
-        const lines = String(md).replace(/\r\n?/g, '\n').split('\n');
+        // Hide commented-out HTML (e.g. disabled README banner rows) like markdown.
+        const lines = String(md).replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '').split('\n');
         function inline(raw) {
             const codes = [];
             let s = raw.replace(/`([^`]+)`/g, (m, c) => { codes.push(esc(c)); return '\u0000' + (codes.length - 1) + '\u0000'; });
             s = esc(s);
+            // Restore a safe inline-HTML whitelist (<img>/<a>/<p>/<br>) so README
+            // banner rows render; esc() otherwise turns the tags into text.
+            const dec = (a) => a.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'");
+            s = s.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+            s = s.replace(/&amp;nbsp;/gi, '&nbsp;');
+            s = s.replace(/&lt;\/(a|p)&gt;/gi, '</$1>');
+            s = s.replace(/&lt;(img|a|p)([\s\S]*?)&gt;/gi, (m, tag, a) => '<' + tag + dec(a) + '>');
             s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (m, alt, u) => `<img src="${esc(safeUrl(u))}" alt="${esc(alt)}" loading="lazy" style="max-width:100%;">`);
             s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, t, u) => `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener">${t}</a>`);
             s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -516,6 +720,12 @@
     function logoURL(src) {
         if (!src) return '';
         if (src.startsWith('image://') || src.startsWith('resource://') || src.startsWith('special://')) {
+            // Kodi image:// URLs carry a trailing slash — drop it before serving.
+            const clean = src.replace(/\/+$/, '');
+            return activeInstance ? `http://${activeInstance.host}/image/${encodeURIComponent(clean)}` : src;
+        }
+        // Bare local path (C:\..., /...) or other VFS protocol — serve via /image/.
+        if (!/^https?:\/\//i.test(src) && !src.startsWith('data:')) {
             return activeInstance ? `http://${activeInstance.host}/image/${encodeURIComponent(src)}` : src;
         }
         // Baked Kodi-webserver proxy URL: http://kodi:kodi@host:8080/image/image%3A//smb...
@@ -545,7 +755,7 @@
             const res = await fetch('/api/servers.json');
             const json = await res.json();
             serverData = json.servers || {};
-            let localName = '';
+            localName = '';
             // Always include the local instance (same-origin bonjour) so the
             // server bar is never empty, even if servers.json/discovery is empty.
             try {
@@ -583,6 +793,8 @@
         if (!srv) return;
         activeInstance = { name, host: srv.host, uuid: srv.uuid };
         document.querySelectorAll('#serverBar .tab').forEach(t => t.classList.toggle('active', t.textContent === name));
+        // Probe reachability async; tabs dim + fall back to cached data if offline.
+        hostOnline(srv.host).then(online => setInstanceOffline(!online));
         // Refresh the currently-open content tab for the newly selected server.
         const open = document.querySelector('.tab-content.active');
         if (open) {
@@ -591,6 +803,7 @@
             else if (t === 'guide') loadGuide();
             else if (t === 'info') loadInfo();
             else if (t === 'library') loadLibrary();
+            else if (t === 'resume') loadResume();
             else if (t === 'seasons') loadSeasons();
         }
     }
@@ -605,8 +818,10 @@
         setBusy(true, 'LOADING CHANNELS...');
         try {
             // Check whether autotune owns the channel set — if so, lock the editor.
-            const autotune = await fetch(`http://${srv.host}/api/settings`)
-                .then(r => r.json()).then(s => !!s.Enable_Autotune).catch(() => false);
+            // Tolerate string 'true'/'false' from older servers, not just bools.
+            const autotuneVal = (await fetch(`http://${srv.host}/api/settings`)
+                .then(r => r.json()).catch(() => ({}))).Enable_Autotune;
+            const autotune = autotuneVal === true || autotuneVal === 'true' || autotuneVal === 1;
             const banner = document.getElementById('autotuneBanner');
             const frame = document.getElementById('channelFrame');
             if (autotune) {
@@ -616,20 +831,36 @@
                 banner.classList.add('hidden');
                 frame.classList.remove('dimmed');
             }
-            const res = await fetch(`http://${srv.host}/api/channels`);
-            const text = await res.text();
-            if (text.trim().startsWith('<')) {
+            const text = await fetchTabData(srv.host, 'channels', '/api/channels');
+            if (typeof text === 'string' && text.trim().startsWith('<')) {
                 alert('This instance is running an older HTTP server (it returned an HTML page for /api/channels).\nRestart Kodi (or reload the PseudoTV Live service) to load the updated API, then retry.');
                 return;
             }
-            channels = JSON.parse(text);
+            if (text === null) {
+                // Offline + no cached snapshot — no error, just a clean empty state.
+                channels = [];
+                document.getElementById('instanceStatus').innerText =
+                    `Instance: ${srv.name} | Host: ${srv.host} | OFFLINE — no cached channels`;
+                const sel = document.getElementById('channelSelector');
+                sel.innerHTML = '<option value="">-- Select Channel --</option>';
+                return;
+            }
+            channels = Array.isArray(text) ? text : JSON.parse(text);
             document.getElementById('instanceStatus').innerText =
-                `Instance: ${srv.name} | Host: ${srv.host} | Channels: ${channels.length}${autotune ? ' (autotuned)' : ''}`;
+                `Instance: ${srv.name} | Host: ${srv.host} | Channels: ${channels.length}${autotune ? ' (autotuned)' : ''}${srv.online === false ? ' | OFFLINE (cached)' : ''}`;
             const sel = document.getElementById('channelSelector');
             sel.innerHTML = '<option value="">-- Select Channel --</option>';
             channels.forEach((ch, i) => sel.add(new Option(`Ch ${ch.number}: ${ch.name}`, i)));
             document.getElementById('channelFrame').classList.remove('hidden');
-        } catch (e) { alert('Failed to load channels: ' + e.message); }
+        } catch (e) {
+            if (srv.online === false) {
+                document.getElementById('instanceStatus').innerText =
+                    `Instance: ${srv.name} | Host: ${srv.host} | OFFLINE — no cached channels`;
+            } else {
+                document.getElementById('instanceStatus').innerText =
+                    `Instance: ${srv.name} | Failed to load channels: ${e.message}`;
+            }
+        }
         finally { setBusy(false); }
     }
 
@@ -641,7 +872,7 @@
         try {
             const res = await fetch(`http://${srv.host}/api/settings`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ payload: { Enable_Autotune: false } })
             });
             const body = await res.json().catch(() => ({}));
@@ -656,20 +887,83 @@
         finally { setBusy(false); }
     }
 
-    function onChannelSelect() {
+    // Serialize the live form state (fields, toggles, paths, rules, logo) so we
+    // can detect unsaved edits and (optionally) carry them onto another channel.
+    function formState() {
+        const f = {};
+        document.querySelectorAll('#channelFields input, #channelFields select').forEach(el => {
+            if (el.id === 'logo') return;
+            f[el.id] = el.value;
+        });
+        document.querySelectorAll('#toggleRow .btn-toggle').forEach(b => { f['__' + b.dataset.key] = b.dataset.val; });
+        f['__paths'] = JSON.stringify(currentPaths);
+        f['__rules'] = JSON.stringify(collectRules());
+        const logo = document.getElementById('logo');
+        f['__logo'] = logo ? logo.value : '';
+        return JSON.stringify(f);
+    }
+    function formDirty() { return editingIndex >= 0 && formSnapshot !== null && formState() !== formSnapshot; }
+
+    function collectEdits() {
+        const edits = {};
+        document.querySelectorAll('#channelFields input, #channelFields select').forEach(el => {
+            if (el.id === 'logo') return;
+            edits[el.id] = coerce(el.value, el.id);
+        });
+        document.querySelectorAll('#toggleRow .btn-toggle').forEach(b => { edits[b.dataset.key] = b.dataset.val === 'true'; });
+        const logo = document.getElementById('logo');
+        if (logo) edits.logo = logo.value;
+        edits.rules = collectRules();
+        edits.path = currentPaths.slice();
+        return edits;
+    }
+
+    function channelSelectionChanged() {
+        const sel = document.getElementById('channelSelector');
+        const newIdx = sel.value;
+        const prevIdx = editingIndex;
+        if (newIdx === String(prevIdx)) { if (newIdx !== '') onChannelSelect(); return; }
+        if (!formDirty()) { onChannelSelect(); return; }
+        const keep = confirm('Continue and save settings?\nYour unsaved changes will carry over to the selected channel (not posted to the server).\n\nCancel keeps the previous settings before your changes.');
+        if (keep) {
+            onChannelSelect(collectEdits());
+        } else {
+            sel.value = String(prevIdx);   // revert selection, reload pre-edit settings
+            onChannelSelect();
+        }
+    }
+
+    function onChannelSelect(overlay) {
         const idx = document.getElementById('channelSelector').value;
         const form = document.getElementById('channelForm');
         if (idx === '') { form.classList.add('hidden'); return; }
         editingIndex = parseInt(idx);
-        const ch = channels[editingIndex];
-        activeRules = ch.rules || {};
+        const ch = Object.assign({}, channels[editingIndex], overlay || {});
+        activeRules = ch.rules && typeof ch.rules === 'object' ? ch.rules : {};
         currentPaths = Array.isArray(ch.path) ? ch.path.slice() : (ch.path ? [ch.path] : []);
         document.getElementById('channelTitle').textContent = `Ch ${ch.number}: ${ch.name}`;
         renderLogoPreview(ch.logo);
         renderFields(ch, document.getElementById('channelFields'), '');
+        renderToggles(ch);
         populateRuleSelector();
-        loadRulesJSON();
         form.classList.remove('hidden');
+        formSnapshot = formState();
+    }
+
+    function renderToggles(ch) {
+        const row = document.getElementById('toggleRow');
+        if (!row) return;
+        row.innerHTML = '';
+        ['enable', 'radio', 'favorite'].forEach(k => {
+            if (!(k in ch)) return;
+            const val = !!ch[k];
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'btn-toggle' + (val ? ' on' : ''); b.dataset.key = k; b.dataset.val = val ? 'true' : 'false';
+            b.dataset.label = k.charAt(0).toUpperCase() + k.slice(1) + ': ';
+            b.textContent = b.dataset.label + (val ? 'ON' : 'OFF');
+            b.onclick = () => toggleField(b);
+            row.appendChild(b);
+        });
     }
 
     function renderLogoPreview(logo) {
@@ -707,25 +1001,18 @@
         finally { setBusy(false); }
     }
 
-    function loadRulesJSON() {
-        const ta = document.getElementById('rulesJSON');
-        if (ta) ta.value = JSON.stringify(channels[editingIndex].rules || {}, null, 2);
-    }
-
     function renderFields(obj, container, prefix) {
         container.innerHTML = '';
         // The logo field is handled in the channel head (preview + buttons) — skip it.
-        const hiddenFields = [...ignoredKeys, 'rules', 'logo'];
+        const hiddenFields = [...ignoredKeys, 'rules', 'logo', 'number', 'changed'];
         for (const key in obj) {
-            if (hiddenFields.includes(key)) continue;
+            if (hiddenFields.includes(key) || boolKeys.includes(key)) continue;
             const fieldId = prefix ? prefix + '.' + key : key;
             const val = obj[key];
             const full = key === 'path' || key === 'group';
             const wrap = document.createElement('div');
             wrap.className = 'form-field' + (full ? ' full' : '');
-            if (boolKeys.includes(key)) {
-                wrap.innerHTML = `<label>${key}</label><select id="${fieldId}" name="${fieldId}"><option value="true" ${val?'selected':''}>True</option><option value="false" ${val?'':'selected'}>False</option></select>`;
-            } else if (key === 'path') {
+            if (key === 'path') {
                 wrap.innerHTML = `<label>path</label><div class="field-row"><select id="${fieldId}" name="${fieldId}">${currentPaths.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select><button type="button" class="btn-action" onclick="addNewPath()">+ Add</button></div>`;
             } else if (key === 'number') {
                 wrap.innerHTML = `<label>number</label><input type="number" id="${fieldId}" name="${fieldId}" value="${esc(val)}" min="1" max="{{ CHANNEL_LIMIT|safe }}">`;
@@ -751,35 +1038,140 @@
         container.appendChild(logoInput);
     }
 
-    function addNewPath() { const p = prompt('New Path:'); if (p && !currentPaths.includes(p)) { currentPaths.push(p); onChannelSelect(); } }
-    async function searchLogo() {
-        const ch = channels[editingIndex];
-        const q = prompt('Search logo:', (ch && ch.name) || '');
-        if (!q) return;
-        try {
-            const r = await fetch(`http://${activeInstance.host}/api/logo_search?q=${encodeURIComponent(q)}`);
-            const d = await r.json();
-            if (d.url) { document.getElementById('logo').value = d.url; renderLogoPreview(d.url); }
-            else alert('No logo found for "' + q + '"');
-        } catch (e) { alert('Logo search failed: ' + e.message); }
+    // Path browser — mirrors Manager.getPaths' browseSources flow via /api/browse.
+    let pbCurrent = '', pbParent = undefined;
+
+    function addNewPath() { showPathBrowser(); }
+
+    async function showPathBrowser() {
+        pbCurrent = ''; pbParent = undefined;
+        await pbLoad('');
+        document.getElementById('pathBrowser').classList.remove('hidden');
     }
 
-    function populateRuleSelector() {
+    async function pbLoad(path) {
+        pbCurrent = path || '';
+        const pbl = document.getElementById('pbList');
+        pbl.innerHTML = '<div class="empty-note">Loading...</div>';
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 15000);
+        try {
+            const r = await fetch(`http://${activeInstance.host}/api/browse?path=${encodeURIComponent(path || '')}`, { signal: ctl.signal });
+            const d = await r.json();
+            pbParent = d.parent;
+            document.getElementById('pbPath').textContent = d.path || 'Sources';
+            document.getElementById('pbUp').disabled = d.parent === undefined || d.parent === null;
+            document.getElementById('pbSelect').disabled = !d.path;
+            pbl.innerHTML = '';
+            (d.items || []).forEach(it => {
+                const row = document.createElement('div');
+                row.className = 'pb-row';
+                row.title = it.file || it.label;
+                row.innerHTML = `<span class="pb-icon">${it.dir ? '&#128193;' : '&#128196;'}</span><span>${esc(it.label || it.file || '')}</span>`;
+                row.onclick = () => it.dir ? pbLoad(it.file) : pbPick(it.file);
+                pbl.appendChild(row);
+            });
+            if (!(d.items || []).length) pbl.innerHTML = '<div class="empty-note">Empty folder</div>';
+        } catch (e) { pbl.innerHTML = '<div class="empty-note">Browse timed out or failed: ' + e.message + '</div>'; }
+        finally { clearTimeout(timer); }
+    }
+
+    function pbUp() { if (pbParent !== undefined) pbLoad(pbParent === null ? '' : pbParent); }
+
+    function pbPick(path) {
+        if (!path) return;
+        if (!currentPaths.includes(path)) currentPaths.push(path);
+        document.getElementById('pathBrowser').classList.add('hidden');
+        onChannelSelect();
+    }
+
+    function pbSelect() {
+        if (!pbCurrent) return;
+        pbPick(pbCurrent);
+    }
+    async function searchLogo() {
+        const ch = channels[editingIndex];
+        if (!ch) return;
+        const q = prompt('Search logo for:', (ch && ch.name) || '');
+        if (!q) return;
+        setBusy(true, 'SEARCHING LOGOS...');
+        try {
+            const r = await fetch(`http://${activeInstance.host}/api/logo_select?name=${encodeURIComponent(q)}&type=${encodeURIComponent(ch.type || '')}`);
+            const d = await r.json();
+            const logos = (d.logos || []).filter(x => x && x.url);
+            if (!logos.length) { alert('No logos found for "' + q + '"'); return; }
+            // Picking a result only fills the logo field — it's saved to the
+            // channel when the user clicks Save.
+            showLogoPicker(logos, (url) => {
+                document.getElementById('logo').value = storeLogoURL(url);
+                renderLogoPreview(url);
+            });
+        } catch (e) { alert('Logo search failed: ' + e.message); }
+        finally { setBusy(false); }
+    }
+
+    function showLogoPicker(logos, onSelect) {
+        const modal = document.getElementById('logoPicker');
+        const grid = document.getElementById('logoPickerGrid');
+        grid.innerHTML = '';
+        logos.forEach(l => {
+            const cell = document.createElement('div');
+            cell.className = 'lp-cell';
+            cell.title = l.name || '';
+            cell.innerHTML = `<img src="${esc(logoURL(l.url))}" loading="lazy" onerror="this.closest('.lp-cell').classList.add('noimg')"><div class="lp-name">${esc((l.name || '').split('/').pop())}</div>`;
+            cell.onclick = () => { modal.classList.add('hidden'); onSelect(l.url); };
+            grid.appendChild(cell);
+        });
+        modal.classList.remove('hidden');
+    }
+
+    let allRules = [];
+    async function populateRuleSelector() {
         const sel = document.getElementById('ruleSelector');
-        sel.innerHTML = '<option value="">-- Select Rule --</option><option value="ADD_NEW">+ ADD NEW RULE ID</option>';
-        Object.keys(activeRules).forEach(rid => sel.add(new Option(`Rule ${rid}`, rid)));
+        sel.innerHTML = '<option value="">-- Select Rule --</option>';
+        if (!allRules.length) {
+            try { allRules = await fetch(`http://${activeInstance.host}/api/rules`).then(r => r.json()); } catch (e) { allRules = []; }
+        }
+        const nameOf = {};
+        (allRules || []).forEach(r => nameOf[String(r.myId)] = r.name || '');
+        Object.keys(activeRules || {}).forEach(rid => {
+            sel.add(new Option(`Rule ${rid} — ${nameOf[rid] || 'custom'}`, rid));
+        });
+    }
+
+    async function showRulePicker() {
+        const list = document.getElementById('rulePickerList');
+        if (!allRules.length) {
+            try { allRules = await fetch(`http://${activeInstance.host}/api/rules`).then(r => r.json()); } catch (e) { allRules = []; }
+        }
+        list.innerHTML = '';
+        const set = new Set(Object.keys(activeRules || {}));
+        (allRules || []).forEach(r => {
+            const rid = String(r.myId);
+            const row = document.createElement('div');
+            row.className = 'rp-row';
+            row.innerHTML = `<span>Rule ${rid} — ${esc(r.name || '')}</span>${set.has(rid) ? '<span class="rp-set">set</span>' : ''}`;
+            row.onclick = () => pickRule(rid);
+            list.appendChild(row);
+        });
+        document.getElementById('rulePicker').classList.remove('hidden');
+    }
+
+    function pickRule(rid) {
+        if (!activeRules[rid]) activeRules[rid] = { values: { '0': 1, '1': 1, '2': 1, '3': 1 } };
+        document.getElementById('rulePicker').classList.add('hidden');
+        populateRuleSelector();
+        document.getElementById('ruleSelector').value = rid;
+        loadRuleValues();
     }
 
     function loadRuleValues() {
         const rId = document.getElementById('ruleSelector').value;
         const container = document.getElementById('ruleValueFields');
         container.innerHTML = '';
-        if (rId === 'ADD_NEW') {
-            const nId = prompt('New Rule ID:');
-            if (nId) { activeRules[nId] = { values: { '0': 1, '1': 1, '2': 1, '3': 1 } }; populateRuleSelector(); loadRuleValues(); }
-            return;
-        }
-        if (!rId || !activeRules[rId]) return;
+        if (!rId) return;
+        // Selecting a rule that isn't set yet adopts it with default values.
+        if (!activeRules[rId]) activeRules[rId] = { values: { '0': 1, '1': 1, '2': 1, '3': 1 } };
         const vals = activeRules[rId].values || {};
         for (const vKey in vals) {
             const div = document.createElement('div');
@@ -787,6 +1179,13 @@
             div.innerHTML = `<label>Value ${vKey}</label><input type="text" name="rules.${rId}.values.${vKey}" value='${esc(JSON.stringify(vals[vKey]))}'>`;
             container.appendChild(div);
         }
+    }
+
+    function toggleField(btn) {
+        const on = btn.dataset.val !== 'true';
+        btn.dataset.val = on ? 'true' : 'false';
+        btn.classList.toggle('on', on);
+        btn.textContent = btn.dataset.label + (on ? 'ON' : 'OFF');
     }
 
     function coerce(value, key) {
@@ -798,16 +1197,27 @@
     }
 
     function collectRules() {
-        const ta = document.getElementById('rulesJSON');
-        if (ta && ta.value.trim()) {
-            try { return JSON.parse(ta.value); }
-            catch (e) { throw new Error('Invalid Rules JSON: ' + e.message); }
-        }
-        return {};
+        // Value inputs update the active rule's values; the rest come from
+        // activeRules (the channel's rule set). Builds the {rid: {values}} map.
+        document.querySelectorAll('#ruleValueFields input').forEach(el => {
+            const m = el.name.match(/^rules\.(.+)\.values\.(.+)$/);
+            if (!m) return;
+            let val;
+            try { val = JSON.parse(el.value); } catch (e) { val = el.value; }
+            activeRules[m[1]] = activeRules[m[1]] || { values: {} };
+            activeRules[m[1]].values[m[2]] = val;
+        });
+        return JSON.parse(JSON.stringify(activeRules || {}));
     }
 
     async function saveChannel() {
         if (editingIndex < 0) return;
+        // Validate inputs (mirrors Manager.validateInputs): name 2-127 chars,
+        // at least one path. Never save an invalid channel.
+        const nameEl = document.getElementById('name');
+        const name = (nameEl ? nameEl.value : '').toString().trim();
+        if (name.length < 2 || name.length > 127) { alert('Channel name must be 2-127 characters.'); return; }
+        if (!Array.isArray(currentPaths) || !currentPaths.length) { alert('Channel must have at least one path — use the "+ Add" path browser.'); return; }
         setBusy(true, 'SAVING CHANNELS...');
         try {
             const edited = Object.assign({}, channels[editingIndex]);
@@ -815,14 +1225,28 @@
                 if (el.id === 'logo') return; // collected via hidden input below
                 edited[el.id] = coerce(el.value, el.id);
             });
+            // enable/radio/favorite are toggle buttons in the action row — read state.
+            document.querySelectorAll('#toggleRow .btn-toggle').forEach(btn => {
+                edited[btn.dataset.key] = btn.dataset.val === 'true';
+            });
             edited.logo = storeLogoURL(document.getElementById('logo').value);
             edited.rules = collectRules();
             edited.path = currentPaths;
-            channels[editingIndex] = edited;
+            edited.changed = true;  // any save marks the channel changed
+            // Validate through the server (mirrors Manager.validateInputs: name
+            // sanitize/length, setName fallback, group cleaning) before saving.
+            const vRes = await fetch(`http://${activeInstance.host}/api/channel/validate`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ payload: edited })
+            });
+            const vData = await vRes.json().catch(() => ({}));
+            const final = (vData && vData.citem && typeof vData.citem === 'object') ? vData.citem : edited;
+            channels[editingIndex] = final;
             const res = await fetch(`http://${activeInstance.host}/api/channels`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uuid: activeInstance.uuid, payload: channels })
+                headers: authHeaders(),
+                body: JSON.stringify({ payload: channels })
             });
             const body = await res.json().catch(() => ({}));
             if (res.ok && body.status === 'ok') { alert('Channel Saved'); onChannelSelect(); }
@@ -835,63 +1259,214 @@
         document.getElementById('channelForm').classList.add('hidden');
         document.getElementById('channelSelector').value = '';
     }
-    // ===================== LIVE GUIDE =====================
+
+    async function clearChannel() {
+        if (editingIndex < 0) return;
+        if (!confirm('Clear this channel to a blank template?')) return;
+        try {
+            let blank = {};
+            try { blank = await fetch(`http://${activeInstance.host}/api/template`).then(r => r.json()); } catch (e) {}
+            blank = (blank && typeof blank === 'object' && !Array.isArray(blank)) ? Object.assign({}, blank) : {};
+            // Keep the slot identity; blank the editable config.
+            blank.number = channels[editingIndex].number;
+            blank.id = channels[editingIndex].id;
+            blank.name = ''; blank.path = []; blank.group = []; blank.logo = '';
+            blank.rules = {}; blank.radio = false; blank.favorite = false; blank.enable = true;
+            channels[editingIndex] = blank;
+            onChannelSelect();
+        } catch (e) { alert('Clear failed: ' + e.message); }
+    }
+
+    function moveChannel() {
+        if (editingIndex < 0) return;
+        const used = channels.filter((c, i) => i !== editingIndex)
+            .map(c => c.number).filter(n => n != null && !isNaN(n)).sort((a, b) => a - b);
+        const free = [];
+        for (let n = 1; n <= 999; n++) { if (!used.includes(n)) free.push(n); }
+        const hint = used.length ? (' Used: ' + [...new Set(used)].join(', ')) : '';
+        const inp = prompt('Move to a free channel number (1-999).' + hint, '');
+        if (inp === null) return;
+        const n = parseInt(inp, 10);
+        if (isNaN(n) || n < 1 || n > 999) { alert('Invalid channel number.'); return; }
+        if (used.includes(n)) { alert('Channel ' + n + ' is already in use.'); return; }
+        channels[editingIndex].number = n;
+        onChannelSelect();
+    }
+    // ===================== GUIDE =====================
     function parseXMLDate(s) { if (!s) return new Date(); return new Date(s.substring(0,4), s.substring(4,6)-1, s.substring(6,8), s.substring(8,10), s.substring(10,12)); }
+
+    let epgPage = 0, epgPages = 1, epgLoading = false, epgScroller = null;
 
     async function loadGuide() {
         if (!activeInstance) return;
         setBusy(true, 'LOADING GUIDE...');
         try {
-            const genreRes = await fetch(`http://${activeInstance.host}/remotes/genres.xml`);
-            const gText = await genreRes.text();
-            const gDoc = new DOMParser().parseFromString(gText, 'text/xml');
+            const gText = await fetchTabData(activeInstance.host, 'genres', '/remotes/genres.xml');
+            const gDoc = new DOMParser().parseFromString(String(gText), 'text/xml');
             genreColorMap = {};
             gDoc.querySelectorAll('genre').forEach(g => {
                 const id = g.getAttribute('genreId'); const title = g.textContent.trim().toLowerCase();
                 if (id) { const base = id.substring(0,3) + '0'; if (genrePalette[base]) genreColorMap[title] = genrePalette[base]; }
             });
-            const xmlRes = await fetch(`http://${activeInstance.host}/api/xmltv`);
-            const xmlText = await xmlRes.text();
-            const xmlDoc = new DOMParser().parseFromString(xmlText, 'text/xml');
-            buildEPG(xmlDoc);
-            document.getElementById('guideStatus').innerText = `Guide for ${activeInstance.name}`;
-            document.getElementById('epgUI').classList.remove('hidden');
+            document.getElementById('epg-rows-container').innerHTML = '';
+            document.getElementById('epg-time-header').innerHTML = '';
+            buildEPGHeader();
+            const d = await fetchTabData(activeInstance.host, 'guide', '/api/guide?page=0');
+            appendEPGPage(d);
+            epgPage = d.page || 0; epgPages = d.pages || 1;
+            const ui = document.getElementById('epgUI');
+            ui.classList.remove('hidden');
             const now = new Date(); const mins = now.getHours()*60 + now.getMinutes();
-            document.getElementById('epgUI').scrollLeft = mins * (340/60) - 100;
+            ui.scrollLeft = mins * (340/60) - 100;
+            setupEPGScroll(ui);
+            updateNowBar();
+            document.getElementById('guideStatus').innerText = `Guide for ${activeInstance.name} — ${d.total || 0} channels` + (activeInstance.online === false ? ' | OFFLINE (cached)' : '');
         } catch (e) { document.getElementById('guideStatus').innerText = 'Guide error: ' + e.message; }
         finally { setBusy(false); }
     }
 
-    function buildEPG(xml) {
+    function setupEPGScroll(ui) {
+        if (epgScroller) { ui.removeEventListener('scroll', epgScroller); epgScroller = null; }
+        epgScroller = () => {
+            if (epgLoading || epgPage >= epgPages - 1) return;
+            if (ui.scrollTop + ui.clientHeight > ui.scrollHeight - 400) loadEPGPage(epgPage + 1);
+        };
+        ui.addEventListener('scroll', epgScroller);
+    }
+
+    async function loadEPGPage(page) {
+        if (epgLoading || !activeInstance) return;
+        epgLoading = true;
+        const status = document.getElementById('guideStatus');
+        status.innerText += ' (loading more...)';
+        try {
+            const d = await fetch(`http://${activeInstance.host}/api/guide?page=${page}`).then(r => r.json());
+            appendEPGPage(d);
+            epgPage = d.page || page; epgPages = d.pages || epgPages;
+            status.innerText = `Guide for ${activeInstance.name} — ${d.total || 0} channels`;
+        } catch (e) { /* keep current state on error */ }
+        finally { epgLoading = false; }
+    }
+
+    function buildEPGHeader() {
         const header = document.getElementById('epg-time-header');
-        const rowsCont = document.getElementById('epg-rows-container');
-        header.innerHTML = ''; rowsCont.innerHTML = '';
         const dayStart = new Date(); dayStart.setHours(0,0,0,0);
         for (let i = 0; i < 48; i++) {
             const t = new Date(dayStart.getTime() + i*30*60000);
             header.innerHTML += `<div class="time-slot">${t.getHours()%12||12}:${t.getMinutes()===0?'00':'30'} ${t.getHours()>=12?'PM':'AM'}</div>`;
         }
-        xml.querySelectorAll('channel').forEach(ch => {
-            const id = ch.getAttribute('id');
+    }
+
+    // Vertical "now" timebar: a 2px line at the current minute position that
+    // scrolls with the guide content (inside .epg-table) and spans the channel
+    // rows. left = channel column width + nowMinutes * px-per-minute. Refreshed
+    // every 60s so it stays accurate while the tab is open.
+    let nowBarTimer = null;
+    function updateNowBar() {
+        const table = document.querySelector('.epg-table');
+        if (!table) return;
+        let bar = table.querySelector('.now-timebar');
+        if (!bar) {
+            bar = document.createElement('div'); bar.className = 'now-timebar';
+            bar.innerHTML = '<div class="now-head"></div>';
+            table.appendChild(bar);
+        }
+        const now = new Date();
+        const mins = now.getHours()*60 + now.getMinutes() + now.getSeconds()/60;
+        const px = 340/60;
+        const chCol = getComputedStyle(document.documentElement).getPropertyValue('--channel-col-width').trim().replace('px','') || 180;
+        bar.style.left = (parseFloat(chCol) + mins * px) + 'px';
+        bar.style.background = 'var(--focus, #e74c3c)';
+        bar.querySelector('.now-head').textContent = `${now.getHours()%12||12}:${String(now.getMinutes()).padStart(2,'0')}`;
+        if (nowBarTimer) clearTimeout(nowBarTimer);
+        nowBarTimer = setTimeout(updateNowBar, 60000);
+    }
+    function stopNowBar() { if (nowBarTimer) { clearTimeout(nowBarTimer); nowBarTimer = null; } }
+
+    function appendEPGPage(data) {
+        const rowsCont = document.getElementById('epg-rows-container');
+        const byChan = {};
+        (data.programmes || []).forEach(p => { (byChan[p.channel] = byChan[p.channel] || []).push(p); });
+        const dayStart = new Date(); dayStart.setHours(0,0,0,0);
+        // Sort channels by number ascending so the guide reads top-to-bottom
+        // like a real TV listing (Ch 1 at the top).
+        (data.channels || []).slice().sort((a, b) => {
+            const na = Number(a.num), nb = Number(b.num);
+            return (isNaN(na) ? Infinity : na) - (isNaN(nb) ? Infinity : nb);
+        }).forEach(ch => {
+            const num = ch.num, name = ch.name || '', logo = ch.logo || '';
             const row = document.createElement('div'); row.className = 'epg-data-row';
-            row.innerHTML = `<div class="epg-channel-name">${esc(ch.querySelector('display-name').textContent)}</div>`;
+            row.innerHTML = `<div class="epg-channel-name">${logo ? `<img src="${esc(logoURL(logo))}" loading="lazy" onerror="this.style.display='none'">` : ''}<div class="epg-ch-label">${num ? `<div class="epg-ch-num">Ch ${esc(num)}</div>` : ''}<div class="epg-ch-title">${esc(name)}</div></div></div>`;
             const progCont = document.createElement('div'); progCont.className = 'epg-programs-container';
-            xml.querySelectorAll(`programme[channel="${id}"]`).forEach(p => {
-                const start = parseXMLDate(p.getAttribute('start')), stop = parseXMLDate(p.getAttribute('stop'));
+            (byChan[ch.id] || []).forEach(p => {
+                const start = parseXMLDate(p.start), stop = parseXMLDate(p.stop);
                 const offset = (start - dayStart)/60000, dur = (stop - start)/60000, px = 340/60;
                 if (offset < 1440 && (offset+dur) > 0) {
                     const div = document.createElement('div'); div.className = 'epg-program';
                     div.style.left = (offset*px)+'px'; div.style.width = (dur*px)+'px';
-                    p.querySelectorAll('category').forEach(cat => {
-                        const txt = cat.textContent.trim().toLowerCase();
-                        for (const [t,color] of Object.entries(genreColorMap)) { if (txt.includes(t) || t.includes(txt)) { div.style.backgroundColor = color; break; } }
+                    (p.genre || []).forEach(g => {
+                        const t = String(g).toLowerCase();
+                        for (const [key,color] of Object.entries(genreColorMap)) { if (t.includes(key) || key.includes(t)) { div.style.backgroundColor = color; return; } }
                     });
-                    div.innerHTML = `<b>${esc(p.querySelector('title').textContent)}</b>`;
+                    div.innerHTML = `<b>${esc(p.title || '')}</b>`;
+                    div.title = p.title || '';
+                    div.onclick = () => {
+                        document.querySelectorAll('.epg-program.selected').forEach(e => e.classList.remove('selected'));
+                        div.classList.add('selected');
+                        showEPGDetail({ title: p.title, desc: p.desc, icon: p.icon, cats: p.genre, channel: name, num, start, stop,
+                                        chLogo: logo, vid: p.vid, subTitle: p['sub-title'], length: p.length, stars: p.stars, rating: p.rating,
+                                        date: p.date, epnum: p['episode-num'], credits: p.credits, country: p.country,
+                                        language: p.language, aspect: p.aspect });
+                    };
                     progCont.appendChild(div);
                 }
             });
             row.appendChild(progCont); rowsCont.appendChild(row);
         });
+    }
+
+    function fmtTime(d) { return `${d.getHours()%12||12}:${String(d.getMinutes()).padStart(2,'0')} ${d.getHours()>=12?'PM':'AM'}`; }
+
+    function cleanPlot(s) {
+        if (!s) return '';
+        return String(s)
+            .replace(/\[COLOR[^\]]*\]\s*[\s\S]*?\s*\[\/COLOR\]/gi, '')  // drop the whole COLOR block
+            .replace(/\[[\/]?COLOR[^\]]*\]/gi, '')                       // stray/unclosed color tags
+            .replace(/\[[\/]?[BIU]\]/gi, '')                             // [B] [I] [U] formatting tags
+            .replace(/\s+/g, ' ').trim();
+    }
+
+    function showEPGDetail(p) {
+        const box = document.getElementById('epgDetail');
+        const chThumb = p.chLogo ? logoURL(p.chLogo) : '';
+        const thumb = p.icon ? logoURL(p.icon) : '';
+        const meta = [p.num ? 'Ch ' + p.num : '', p.channel || ''].filter(Boolean).join(' \u00b7 ');
+        const time = (p.start && p.stop) ? fmtTime(p.start) + ' - ' + fmtTime(p.stop) : '';
+        const year = p.date ? p.date.substring(0, 4) : '';
+        const rating = [p.rating, p.stars ? p.stars + ' stars' : ''].filter(Boolean).join(' \u00b7 ');
+        const credits = [];
+        ['director','writer','actor','studio'].forEach(k => {
+            const list = p.credits && p.credits[k];
+            if (list && list.length) credits.push(`${k.charAt(0).toUpperCase()+k.slice(1)}: ${list.join(', ')}`);
+        });
+        let html = '';
+        if (thumb) html += `<div class="epg-d-imgs"><img class="epg-d-thumb" src="${esc(thumb)}" onerror="this.style.display='none'"></div>`;
+        html += `<div class="epg-d-body">`;
+        html += `<div class="epg-d-title">${esc(p.title || '')}</div>`;
+        if (p.subTitle) html += `<div class="epg-d-meta">${esc(p.subTitle)}</div>`;
+        if (meta) html += `<div class="epg-d-meta">${esc(meta)}</div>`;
+        if (time) html += `<div class="epg-d-meta">${esc(time)}${p.length ? ' \u00b7 ' + esc(p.length) + 'm' : ''}${year ? ' \u00b7 ' + esc(year) : ''}${p.vid ? ' \u00b7 <a class="epg-d-play" href="' + esc(p.vid) + '" target="_blank" rel="noopener">&#9654; Play</a>' : ''}</div>`;
+        if ((p.cats || []).length) html += `<div class="epg-d-meta">${esc(p.cats.join(' \u00b7 '))}</div>`;
+        if (rating) html += `<div class="epg-d-meta">${esc(rating)}</div>`;
+        if (p.epnum) html += `<div class="epg-d-meta">S/E ${esc(p.epnum)}</div>`;
+        const extras = [p.country, p.language, p.aspect ? p.aspect + ' aspect' : ''].filter(Boolean);
+        if (extras.length) html += `<div class="epg-d-meta">${esc(extras.join(' \u00b7 '))}</div>`;
+        if (credits.length) html += `<div class="epg-d-meta">${esc(credits.join(' \u00b7 '))}</div>`;
+        if (p.desc) html += `<div class="epg-d-desc">${esc(cleanPlot(p.desc))}</div>`;
+        html += `</div>`;
+        if (chThumb) html += `<img class="epg-d-ch" src="${esc(chThumb)}" onerror="this.style.display='none'">`;
+        box.innerHTML = html;
+        box.classList.remove('hidden');
     }
 
     // ===================== SYSTEM INFO =====================
@@ -902,21 +1477,20 @@
         if (!activeInstance) return;
         setBusy(true, 'LOADING SYSTEM INFO...');
         try {
-            const [bRes, sRes, pRes, lRes] = await Promise.all([
-                fetch(`http://${activeInstance.host}/api/bonjour.json`),
-                fetch(`http://${activeInstance.host}/api/system`),
-                fetch(`http://${activeInstance.host}/api/pvr.json`),
-                fetch(`http://${activeInstance.host}/api/logs.json`)
-            ]);
-            const bonjour = await bRes.json();
-            const system = await sRes.json().catch(() => ({}));
-            pvrData = await pRes.json().catch(() => null);
-            logsData = await lRes.json().catch(() => null);
-            document.getElementById('infoStatus').innerText = `System Info for ${activeInstance.name}`;
+            // bonjour is the core "meta" snapshot — cache it separately so an
+            // offline instance still fills the grid from the last known state.
+            const bonjour = await fetchTabData(activeInstance.host, 'bonjour', '/api/bonjour.json');
+            let system = {}, pvr = null, logs = null;
+            system = await fetchTabData(activeInstance.host, 'system', '/api/system') || {};
+            pvr    = await fetchTabData(activeInstance.host, 'pvr', '/api/pvr.json') || null;
+            logs   = await fetchTabData(activeInstance.host, 'logs', '/api/logs.json') || null;
+            pvrData = pvr;
+            logsData = logs;
+            document.getElementById('infoStatus').innerText = `System Info for ${activeInstance.name}` + (activeInstance.online === false ? ' | OFFLINE (cached)' : '');
             renderInfoGrid(Object.assign({}, bonjour, system));
             renderPVR();
             renderLogs();
-            await renderRemotes(bonjour.remotes || {});
+            await renderRemotes((bonjour && bonjour.remotes) || {});
         } catch (e) { document.getElementById('infoStatus').innerText = 'System info error: ' + e.message; }
         finally { setBusy(false); }
     }
@@ -1011,6 +1585,10 @@
         const view = document.getElementById('logsFilter').value;
         const body = document.getElementById('logsBody');
         if (!logsData) { body.innerHTML = '<div class="empty-note">No log data.</div>'; return; }
+        // Accept both string entries and the dict style {time, level, message}.
+        const fmt = (x) => (typeof x === 'object' && x !== null)
+            ? (x.message || x.msg || x.text || [x.time, x.level].filter(Boolean).join(' ') || JSON.stringify(x))
+            : x;
         let html = '';
         if (view === 'summary') {
             const s = logsData.summary || {}, sys = logsData.system || {};
@@ -1028,11 +1606,11 @@
         } else if (view === 'errors') {
             const errs = logsData.errors || [];
             html = `<div class="kv-grid">${kvCard('Error Lines', errs.length, errs.length ? 'bad' : 'good')}</div>`
-                + (errs.length ? `<div class="log-list">${errs.slice(-200).map(x=>`<div class="log-line err">${esc(x)}</div>`).join('')}</div>` : '<div class="empty-note">No errors found.</div>');
+                + (errs.length ? `<div class="log-list">${errs.slice(-200).map(x=>`<div class="log-line err">${esc(fmt(x))}</div>`).join('')}</div>` : '<div class="empty-note">No errors found.</div>');
         } else if (view === 'project') {
             const proj = logsData.project || [];
             html = `<div class="kv-grid">${kvCard('Project Lines', proj.length)}</div>`
-                + (proj.length ? `<div class="log-list">${proj.slice(-300).map(x=>`<div class="log-line">${esc(x)}</div>`).join('')}</div>` : '<div class="empty-note">No project logs found.</div>');
+                + (proj.length ? `<div class="log-list">${proj.slice(-300).map(x=>`<div class="log-line">${esc(fmt(x))}</div>`).join('')}</div>` : '<div class="empty-note">No project logs found.</div>');
         } else if (view === 'system') {
             const sys = logsData.system || {};
             html = `<div class="kv-grid">` + Object.entries(sys).map(([k,v]) => kvCard(k, v)).join('') + '</div>';
@@ -1068,21 +1646,12 @@
                 `<a class="res-tag" style="text-decoration:none;" href="${esc(u)}" target="_blank" rel="noopener">${k}</a>`).join('') + '</div>';
             grid.appendChild(card);
         }
-        // README / Changelog (collapsible, markdown-formatted). README starts
-        // expanded with a window tall enough to show the first image.
-        [['README', bonjour.readme, false], ['Changelog', bonjour.changelog, true]].forEach(([k, txt, startHidden]) => {
-            if (!txt) return;
-            const card = document.createElement('div'); card.className = 'info-card wide';
-            card.innerHTML = `<h4 onclick="toggleInfo(this)" style="cursor:pointer;">${k} <span style="opacity:.5;">(click to ${startHidden ? 'expand' : 'collapse'})</span></h4>
-                <div class="markdown-body ${startHidden ? 'hidden' : ''}">${renderMarkdown(txt)}</div>`;
-            grid.appendChild(card);
-        });
         if (bonjour.settings) {
             const card = document.createElement('div'); card.className = 'info-card wide';
             // Build the full fragment first, then assign once — a second innerHTML
             // append would auto-close the hidden container and leave the rows
             // outside it (never collapsible).
-            let html = '<h4 onclick="toggleInfo(this)" style="cursor:pointer;">Active Resources <span style="opacity:.5;">(click to expand)</span></h4><div class="res-rows hidden">';
+            let html = '<h4 onclick="toggleInfo(this)" style="cursor:pointer;">Resources <span style="opacity:.5;">(click to expand)</span></h4><div class="res-rows hidden">';
             for (const [k, list] of Object.entries(bonjour.settings)) {
                 if (Array.isArray(list) && list.length) {
                     html += `<div class="res-row"><span class="res-key">${k.replace(/_/g,' ')}</span><span class="res-tags">${list.filter(Boolean).map(i=>`<span class="res-tag">${esc(i)}</span>`).join('')}</span></div>`;
@@ -1092,6 +1661,15 @@
             card.innerHTML = html;
             grid.appendChild(card);
         }
+        // README / Changelog (collapsible, markdown-formatted). README starts
+        // expanded with a window tall enough to show the first image.
+        [['README', bonjour.readme, false], ['Changelog', bonjour.changelog, true]].forEach(([k, txt, startHidden]) => {
+            if (!txt) return;
+            const card = document.createElement('div'); card.className = 'info-card wide';
+            card.innerHTML = `<h4 onclick="toggleInfo(this)" style="cursor:pointer;">${k} <span style="opacity:.5;">(click to ${startHidden ? 'expand' : 'collapse'})</span></h4>
+                <div class="markdown-body ${startHidden ? 'hidden' : ''}">${renderMarkdown(txt)}</div>`;
+            grid.appendChild(card);
+        });
     }
 
     function toggleInfo(h) {
@@ -1145,6 +1723,7 @@
 
     function navigateTab(t) {
         // Row-2 content tabs only — the server bar (row 1) keeps its own active tab.
+        if (t !== 'guide') stopNowBar();
         document.querySelectorAll('.tab-bar .tab, .tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById('btn-'+t).classList.add('active');
         document.getElementById('tab-'+t).classList.add('active');
@@ -1152,6 +1731,7 @@
         if (t === 'guide') loadGuide();
         if (t === 'info') loadInfo();
         if (t === 'library') loadLibrary();
+        if (t === 'resume') loadResume();
         if (t === 'seasons') loadSeasons();
     }
 
@@ -1160,8 +1740,7 @@
         if (!activeInstance) return;
         setBusy(true, 'LOADING LIBRARY...');
         try {
-            const res = await fetch(`http://${activeInstance.host}/api/library.json`);
-            const data = await res.json();
+            const data = await fetchTabData(activeInstance.host, 'library', '/api/library.json');
             // API returns the {type: [items]} map directly — some older exports
             // wrapped it as {library: {...}}, accept both.
             const library = (data && data.library && !Array.isArray(data.library)) ? data.library : (data || {});
@@ -1182,9 +1761,47 @@
                 items.forEach(it => grid.appendChild(buildLibCard(it)));
                 sec.appendChild(head); sec.appendChild(grid); cont.appendChild(sec);
             }
-            document.getElementById('libraryStatus').innerText = `Library for ${activeInstance.name} — ${total} items`;
+            document.getElementById('libraryStatus').innerText = `Library for ${activeInstance.name} — ${total} items` + (activeInstance.online === false ? ' | OFFLINE (cached)' : '');
             if (!total) document.getElementById('libraryStatus').innerText += ' — empty, run Autotune to populate.';
         } catch (e) { document.getElementById('libraryStatus').innerText = 'Library error: ' + e.message; }
+        finally { setBusy(false); }
+    }
+
+    // ===================== RESUME =====================
+    async function loadResume() {
+        if (!activeInstance) return;
+        setBusy(true, 'LOADING RESUME...');
+        const status = document.getElementById('resumeStatus');
+        const grid = document.getElementById('resumeGrid');
+        try {
+            const entries = await fetchTabData(activeInstance.host, 'resume', '/api/resume');
+            const list = Array.isArray(entries) ? entries : [];
+            if (!list.length) {
+                // No resume entries: grey the tab out, show a hint, keep it empty.
+                document.getElementById('btn-resume').classList.add('dim');
+                status.innerText = 'No resume entries — nothing is paused/in-progress.';
+                grid.innerHTML = '';
+                return;
+            }
+            document.getElementById('btn-resume').classList.remove('dim');
+            status.innerText = `${list.length} resume entr${list.length === 1 ? 'y' : 'ies'} for ${activeInstance.name}` + (activeInstance.online === false ? ' | OFFLINE (cached)' : '');
+            grid.innerHTML = '';
+            list.forEach(e => {
+                const card = document.createElement('div'); card.className = 'lib-card resume-card';
+                const pct = (e.total > 0) ? Math.round((e.position / e.total) * 100) : 0;
+                const file = e.file || '';
+                const name = file.split(/[\\/]/).pop() || e.key;
+                const when = (e.time && e.time > 0) ? new Date(e.time * 1000).toLocaleString() : '';
+                card.innerHTML = `<div class="lib-card-title">${esc(name)}</div>`
+                    + `<div class="resume-meta">${esc(file)}</div>`
+                    + `<div class="resume-bar"><div class="resume-fill" style="width:${pct}%"></div></div>`
+                    + `<div class="resume-meta">${pct}% · idx ${e.idx}${when ? ' · ' + esc(when) : ''}${e.instance ? ' · ' + esc(e.instance) : ''}</div>`
+                    + `<a class="resume-play" href="${esc(e.url)}" target="_blank" rel="noopener">&#9654; Resume</a>`;
+                grid.appendChild(card);
+            });
+        } catch (e) {
+            status.innerText = 'Resume error: ' + e.message;
+        }
         finally { setBusy(false); }
     }
 
@@ -1222,7 +1839,7 @@
     let calYear = 0, calMonth = 0;
 
     const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const DOW = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+    const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
     // Kodi JSONRPC filter helper catalogs (same as pvr.iptvsimple smart rules).
     const FILTER_FIELDS = ['title', 'plot', 'genre', 'year', 'tvshow', 'season', 'episode', 'actor',
@@ -1233,18 +1850,22 @@
     const SORT_METHODS = ['title', 'year', 'episode', 'dateadded', 'lastplayed', 'playcount', 'rating', 'runtime', 'sorttitle', 'random'];
 
     async function loadSeasons() {
-        if (!activeInstance) return;
+        // Seasons/holidays are LOCAL-first: they belong to the instance serving
+        // this manager (same origin), and edits are synced out to multiroom
+        // instances server-side (WebPoint.syncSeasonalToRemotes). They must NOT
+        // follow the selected server-bar instance — the calendar is always the
+        // local instance's, regardless of which remote tab is active.
         setBusy(true, 'LOADING SEASONS...');
         try {
             const [sRes, hRes] = await Promise.all([
-                fetch(`http://${activeInstance.host}/api/seasons`),
-                fetch(`http://${activeInstance.host}/api/holidays`)
+                fetch('/api/seasons'),
+                fetch('/api/holidays')
             ]);
             seasonsData = await sRes.json();
             holidaysData = await hRes.json();
             const now = new Date();
             calYear = now.getFullYear(); calMonth = now.getMonth();
-            document.getElementById('seasonsStatus').innerText = `Seasonal content for ${activeInstance.name} — click a day to edit`;
+            document.getElementById('seasonsStatus').innerText = `Seasonal content (${localName || 'local instance'}) — click a day to edit. Changes sync to all enabled multiroom instances.`;
             renderSeasons();
         } catch (e) { document.getElementById('seasonsStatus').innerText = 'Seasons error: ' + e.message; }
         finally { setBusy(false); }
@@ -1512,13 +2133,16 @@
         }
         setBusy(true, 'SAVING...');
         try {
+            // Save to the LOCAL instance (same-origin) to match loadSeasons —
+            // the calendar is always the local instance's. The server pushes
+            // the change out to all enabled multiroom instances.
             const [sRes, hRes] = await Promise.all([
-                fetch(`http://${activeInstance.host}/api/seasons`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                fetch('/api/seasons', {
+                    method: 'POST', headers: authHeaders(),
                     body: JSON.stringify({ payload: seasonsData })
                 }),
-                fetch(`http://${activeInstance.host}/api/holidays`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                fetch('/api/holidays', {
+                    method: 'POST', headers: authHeaders(),
                     body: JSON.stringify({ payload: holidaysData })
                 })
             ]);
@@ -1580,15 +2204,21 @@
                 ? (b.channel || 'Building channels...')
                 : (b.pending ? 'Tasks queued...' : 'Working...');
             document.getElementById('bsFill').style.width = (b.pct || 0) + '%';
+            // Logo only belongs to the channel being built — hide it when just
+            // draining queue tasks so the empty box doesn't show a stale icon.
             const img = document.getElementById('bsImg');
-            const src = logoURL(b.logo || '');
-            img.src = src || '';
-            img.style.display = src ? '' : 'none';
+            if (b.building && b.logo) {
+                img.src = logoURL(b.logo);
+                img.style.display = '';
+            } else {
+                img.style.display = 'none';
+            }
             const meta = [];
             if (b.building && b.total) meta.push(`${b.built}/${b.total} channels`);
             if (b.pending) meta.push(`${b.pending} queued`);
             const other = (b.running || []).filter(n => n !== 'buildChannels');
             if (other.length) meta.push(other.join(', '));
+            if (b.running_more) meta.push(`+${b.running_more} more`);
             document.getElementById('bsMeta').textContent = meta.join(' \u00b7 ') || 'Working...';
             w.style.display = 'flex';
         } catch (e) { /* keep previous state on transient errors */ }

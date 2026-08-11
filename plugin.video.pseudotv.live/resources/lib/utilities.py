@@ -300,35 +300,35 @@ class Utilities(object):
             LOG('Utilities: param = %s'%(param))
 
             if param == 'Show_Menu':
-                ctl = (6,1)
+                ctl = (6,0)  # misc -> Utility_MENU
                 return self.buildMenu()
             elif param == 'Show_Welcome_QR':
-                ctl = (6,2)
+                ctl = (6,1)  # misc -> Show_Welcome_QR
                 return self.qrWelcome()
             elif param == 'Show_Wiki_QR':
-                ctl = (6,4)
+                ctl = (6,4)  # misc -> Show_Wiki_QR
                 return self.qrWiki()
             elif param == 'Show_Support_QR':
-                ctl = (6,5)
+                ctl = (6,3)  # misc -> Show_Support_QR
                 return self.qrSupport()
             elif param == 'Show_Remote_UI':
-                ctl = (6,6)
+                ctl = (6,5)  # misc -> Show_Remote_UI
                 return self.qrRemote()
             elif param == 'Show_Changelog':
-                ctl = (6,8)
+                ctl = (6,2)  # misc -> Show_Changelog
                 return self.showChangeLOG()
                 
             #Globals
             if param.startswith('Move_Channelbug'):
-                ctl = (3,15)
+                ctl = (2,14)  # globals -> Channel_Bug_Position_XY
                 self.openPositionUtil(1)
             elif param.startswith('Move_OnNext'):
-                ctl = (3,15)
+                ctl = (2,7)   # globals -> OnNext_Position_XY
                 self.openPositionUtil(2)
                 
             #Multi-Room
             elif param == 'Show_ZeroConf_QR':
-                ctl = (5,5)
+                ctl = (4,9)  # sharing -> Show_ZeroConf_QR
                 Utilities(sys.argv).qrBonjourDL()
                 
             #Misc. Scripts
@@ -341,7 +341,7 @@ class Utilities(object):
                 
             #Misc. Debug
             elif param == 'Debug_QR':
-                ctl = (6,1)
+                ctl = (6,6)  # misc -> Debug_Enable
                 return Utilities(sys.argv).qrDebug()
             return Globals._openSettings(ctl)
 

@@ -145,6 +145,19 @@ class Resources(object):
                         image = None
                 except Exception:
                     pass
+            # Local generated logos (special:// or absolute paths) can go missing
+            # too — e.g. an interrupted AI-image save or a cache cleanup that
+            # cleared LOGO_LOC. Treat a missing local file the same as a phantom
+            # resource://: drop the stale entry and fall back to the default so
+            # /logos/{name} never 404s on a vanished file.
+            elif image is not None and not image.startswith(('http://', 'https://')):
+                try:
+                    if not FileAccess.exists(image) or image.endswith(('/', '\\')):
+                        self.log('getImageCache, dropping stale local logo: %s' % image)
+                        self.imageCache.pop(chname, None)
+                        image = None
+                except Exception:
+                    pass
             if image is not None:
                 try: self.imageCache.move_to_end(chname)
                 except Exception as e: self.log('getImageCache move_to_end failed: %s' % e, xbmc.LOGDEBUG)
@@ -178,24 +191,11 @@ class Resources(object):
                 if not logo: logo = self.getTVShowLogo(citem.get('name'))    # tvshow
                 if not logo: logo = self.generateOnline(citem)               # generative (online)
                 if not logo: logo = self.generateLocal(citem.get('name'))    # generative (local)
-                if logo: self.setImageCache(citem.get('name'), self._toWebImage(logo))  # cache (browser-loadable URL)
+                if logo: self.setImageCache(citem.get('name'), Globals._toWebImage(logo))  # cache (browser-loadable URL)
             self.log('[%s] getLogo, name = %s, lookup = %s, logo = %s'%(citem.get('id'),citem.get('name'),lookup,logo))
             return self._buildWebImage(citem.get('name'), logo, fallback)
         except Exception as e: self.log(f'getLogo failed!\n{e}\n{citem}', xbmc.LOGERROR)
         return LOGO
-
-
-    def _toWebImage(self, image: Optional[str] = None) -> str:
-        """Convert a Kodi VFS image (resource://, image://, special://) into a
-        browser-loadable URL on this addon's /image/ endpoint. Non-http sources
-        are passed through so the /image/ handler reads them directly via VFS
-        (xbt packs decompress natively) and re-encodes raw pixels to PNG. Plain
-        http(s) pass through."""
-        if not image or image.startswith(('http://', 'https://')):
-            return image or ''
-        remote = Globals.properties.getEXTProperty('%s.Remote_Host'%(ADDON_ID))
-        inner = image[len('image://'):] if image.startswith('image://') else image
-        return f'http://{remote}/image/{Globals._quoteString(inner)}'
 
 
     def _readImage(self, path: str) -> Optional[bytes]:
@@ -212,8 +212,7 @@ class Resources(object):
         """Re-encode a raw xbt frame (BGRA pixels) as PNG, cached in LOGO_LOC.
         Returns None if the path isn't an xbt-backed resource:// logo."""
         try:
-            if not img.startswith('resource://'):
-                return None
+            if not img.startswith('resource://'): return None
             cache = os.path.join(FileAccess.translatePath(LOGO_LOC),
                                  'xbt_%s.png' % FileAccess._getMD5(img))
             if FileAccess.exists(cache):
@@ -235,8 +234,7 @@ class Resources(object):
             if not size:
                 return None
             width, height = size
-            if width * height * 4 != len(data):
-                return None
+            if width * height * 4 != len(data): return None
             png = _bgraToPNG(data, width, height)
             with FileAccess.open(cache, 'w') as fle:
                 fle.write(png)
@@ -316,12 +314,15 @@ class Resources(object):
                 for id in resources:
                     if Globals.settings.hasAddon(id):
                         for folder in ('resources/', 'media/', ''):
-                            logo = f'resource://{id}/{folder}{name}.png'
-                            if __exists(logo):
-                                self.log('getLogoResources, found %s'%(logo))
-                                logos.append(logo)
-                                if not select: 
-                                    return self.cache.set(cacheName, logo, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                            # packs mix .png and .jpg textures (e.g. genre icons
+                            # are .jpg, studios are .png) — try every extension.
+                            for ext in IMG_EXTS:
+                                logo = f'resource://{id}/{folder}{name}{ext}'
+                                if __exists(logo):
+                                    self.log('getLogoResources, found %s'%(logo))
+                                    logos.append(logo)
+                                    if not select:
+                                        return self.cache.set(cacheName, logo, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
             if logos: cacheResponse = self.cache.set(cacheName, logos, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
 
@@ -361,7 +362,21 @@ class Resources(object):
         if self._tvshows_by_title is None:
             try:
                 items = self.jsonRPC.getTVshows()
-                self._tvshows_by_title = {str(item.get('title','')).casefold(): item for item in (items or []) if item.get('title')}
+                index = {str(item.get('title','')).casefold(): item for item in (items or []) if item.get('title')}
+                # Account the full-library index against the shared MemoryBudget so
+                # a large video library can't silently consume global memory.
+                try:
+                    from cache import MemoryBudget
+                    budget = MemoryBudget.instance()
+                    budget.register('tvshows', TVSHOWS_MEM_MAX)
+                    size = sys.getsizeof(index)
+                    if size <= TVSHOWS_MEM_MAX and budget.acquire('tvshows', size):
+                        self._tvshows_by_title = index
+                    else:
+                        self.log(f'getTVShowLogo: library index ({size} bytes) over TVSHOWS_MEM_MAX, logo lookups degraded', xbmc.LOGWARNING)
+                        self._tvshows_by_title = {}
+                except Exception:
+                    self._tvshows_by_title = index
             except Exception as e:
                 self.log(f'getTVShowLogo: getTVshows failed!\n{e}', xbmc.LOGWARNING)
                 self._tvshows_by_title = {}
@@ -474,7 +489,14 @@ class Resources(object):
 
     def generateOnline(self, citem: dict, select: bool = False) -> Optional[str]:
         if self.openRouter:
-            try: return self.openRouter.getImage(citem, 3 if select else 1, Globals.settings.getSetting('Generative_Image_Model'), select)
+            try:
+                count = 3 if select else 1
+                result = self.openRouter.getImage(citem, count, Globals.settings.getSetting('Generative_Image_Model'))
+                # getImage returns a path (count==1) or list (count>1); keep the
+                # return type stable for getLogo (str) and selectLogo (list).
+                if isinstance(result, list):
+                    return result[0] if result and not select else result
+                return result
             except Exception as e: self.log(f'generateOnline failed!: {e}', xbmc.LOGERROR)
                 
                 

@@ -24,6 +24,7 @@ import random, base64, binascii, hashlib, heapq, zlib
 import time, datetime, calendar, sqlite3
 import requests, traceback, threading
 import codecs, shutil, errno, copy
+import pyqrcode, socket
 
 from functools             import partial, reduce, update_wrapper, wraps
 from six.moves             import urllib 
@@ -43,12 +44,15 @@ from operator              import itemgetter
 from math                  import ceil, floor, sqrt
 from requests.adapters     import HTTPAdapter, Retry
 from concurrent.futures    import ThreadPoolExecutor, as_completed
+from uuid                  import uuid1, uuid4, UUID
+from infotagger.listitem   import ListItemInfoTag
 
-import pyqrcode
-
-from uuid                import uuid1, uuid4, UUID
-from infotagger.listitem import ListItemInfoTag
-
+# Shared reentrant lock for the guide/data classes (M3U, XMLTVS, Channels).
+# The underlying SQLite cache already serializes DB writes in _Cache._lock, so
+# these per-class locks only guard in-memory mutation. One shared lock reads
+# clearer than a per-class RLock and still allows a class to call into another
+# (e.g. XMLTVS -> m3u.delStation) reentrantly.
+DATA_LOCK = RLock()
 
 # =============================================================================
 # Addon Identity
@@ -103,7 +107,7 @@ IS_CONSTRAINED_SOC  = TOTAL_RAM_GB <= 3.5
 CPU_COUNT           = os.cpu_count() or 1                   # Number of CPU cores
 if IS_CONSTRAINED_SOC:                                      # SoC Mode: Cap threads strictly to core count to protect limited RAM
     CPU_CYCLE      = 0.016
-    THREAD_WORKERS = min(4, CPU_COUNT)
+    THREAD_WORKERS = min(2, CPU_COUNT)   # SoC: 2 workers — heavy builds + JSONRPC contention lock up low-RAM boxes
     QUEUE_CHUNK    = 8
     BATCH_SIZE     = 4
     MAX_CACHE_SIZE = 5000
@@ -124,9 +128,12 @@ else:                                                       # High-Performance M
 # can ever blow the budget.
 # =============================================================================
 GLOBAL_CACHE_MEM_MAX = (128 if IS_CONSTRAINED_SOC else 512) * 1024 * 1024
-CACHE_MEM_MAX        = int(GLOBAL_CACHE_MEM_MAX * 0.40)  # _Cache window-property mem cache
+CACHE_MEM_MAX        = int(GLOBAL_CACHE_MEM_MAX * 0.30)  # _Cache window-property mem cache
 PROPERTY_MEM_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.20)  # Properties._memory_cache
-RENDER_CACHE_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.35)  # served M3U+XMLTV render caches (shared)
+RENDER_CACHE_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.30)  # served M3U+XMLTV render caches (shared)
+XMLTV_MEM_MAX        = int(GLOBAL_CACHE_MEM_MAX * 0.25)  # _XMLTV_HOLDER guide blob (programmes/channels)
+JSON_CACHE_MEM_MAX   = int(GLOBAL_CACHE_MEM_MAX * 0.05)  # FileAccess._json_cache LRU
+TVSHOWS_MEM_MAX      = int(GLOBAL_CACHE_MEM_MAX * 0.10)  # Resources._tvshows_by_title library index
 THROTTLE_MAX         = 256                                                 # _PROGRESS_THROTTLE entry cap
 CHECKSUM_CACHE_MAX   = 10000                                               # _Cache._checksum_cache entry cap
 SETTINGS_CACHE_MAX   = 1000                                                # constants._SETTINGS_CACHE entry cap
@@ -174,6 +181,10 @@ LOCK_MAX_FILE_DELAY   = 0.5  # Delay between file lock retry attempts
 LANG                = 'en'   # Default language (todo: parse kodi region settings)
 DEFAULT_ENCODING    = "utf-8"
 PROMPT_DELAY        = 4      # Dialog prompt auto-close delay (seconds)
+NOTIFY_AI_ERROR_INTERVAL = 300  # Min seconds between AI API error dialogs (don't spam)
+NOTIFY_AI_DAILY_MAX  = 2     # Max AI failure dialogs per day (any AI error path)
+AI_IMAGE_TIMEOUT    = 120    # OpenRouter image-generation request timeout (seconds)
+AI_IMAGE_MAX_TOKENS = 4096   # Cap output tokens so image requests fit small key budgets
 AUTOCLOSE_DELAY     = 300    # Auto-close timeout for dialogs (5 minutes)
 SELECT_DELAY        = 900    # Selection dialog timeout (15 minutes)
 RADIO_ITEM_LIMIT    = 250    # Maximum radio/music items per channel
@@ -489,21 +500,20 @@ ACTION_PREVIOUS_MENU = [92,10,110,521,ACTION_SELECT_ITEM]
 # Actions are dispatched by the Builder/Player/Overlay via runActions().
 # Each constant defines a lifecycle hook where rule callbacks execute.
 # =============================================================================
-RULES_VERSION                              = 0.2  # Rules schema version
+RULES_VERSION = 0.2  # Rules schema version
 
 # Rule id migration: old myIds (pre-0.2, execution-order-irregular) -> the
 # renumbered execution-ordered scheme. Applied lazily to saved channel rule
 # dicts by Channels._verify / Backup.importChannels.
 RULES_ID_MIGRATION = {
-    2: 100, 50: 101, 51: 102, 52: 103, 53: 104, 54: 105, 55: 106,      # player
-    1: 200, 3: 201, 4: 202,                                            # overlay
+    2: 100, 50: 101, 51: 102, 52: 103, 53: 104, 54: 105, 55: 106,       # player
+    1: 200, 3: 201, 4: 202,                                             # overlay
     3000: 300,                                                          # pause
     497: 400,                                                           # rebuild
     950: 505, 951: 506,                                                 # sort/limits
     800: 600,                                                           # seasonal
     999: 605, 998: 700, 1000: 701, 2999: 706, 505: 1100,                # random/order/even/pad/filter
 }
-
 
 # --- Channel Builder Actions ---
 RULES_ACTION_CHANNEL_CITEM                 = 1   # Persistent channel item modifications
@@ -564,11 +574,10 @@ def LOG(event: Any, level: int = xbmc.LOGDEBUG, throttle: float = float(SERVICE_
     # is off (default) this short-circuits immediately after one cached read.
     _now = time.time()
     if _now - _LOG_SETTINGS['ts'] > _LOG_SETTINGS_TTL:
-        _LOG_SETTINGS['ts']    = _now
+        _LOG_SETTINGS['ts']     = _now
         _LOG_SETTINGS['enable'] = REAL_SETTINGS.getSetting('Debug_Enable') == 'true'
         _LOG_SETTINGS['level']  = int((REAL_SETTINGS.getSetting('Debug_Level') or "3"))
-    if not _LOG_SETTINGS['enable'] and level < 3:
-        return
+    if not _LOG_SETTINGS['enable'] and level < 3: return
     DEBUG_LEVELS = {0: xbmc.LOGDEBUG, 1: xbmc.LOGINFO, 2: xbmc.LOGWARNING, 3: xbmc.LOGERROR, 4: xbmc.LOGFATAL}
     DEBUG_LEVEL  = DEBUG_LEVELS[_LOG_SETTINGS['level']]
     if len(str(event)) > LOG_MAX_LENGTH: event = '%s...[TRUNCATED]' % str(event)[:LOG_MAX_LENGTH]

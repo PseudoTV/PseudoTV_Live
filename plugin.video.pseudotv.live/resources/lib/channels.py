@@ -26,10 +26,17 @@ from multiroom  import Multiroom
 #todo create dataclasses for all jsons
 # https://pypi.org/project/dataclasses-json/
 class Channels(object):
+    _default_data = None   # memoized static default template (CHANNELFLE_DEFAULT)
+
     def __init__(self, key: str, writable: bool = False):
         self._lock       = RLock()
         self.writable    = writable
-        self.channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT)
+        if Channels._default_data is None:
+            Channels._default_data = FileAccess.getJSON(CHANNELFLE_DEFAULT)
+        # Deep-copy the memoized template per instance: _load()/pop(0)/update()
+        # mutate this instance's structure and must never alias the shared copy.
+        import copy
+        self.channelDATA = copy.deepcopy(Channels._default_data)
         self.channelKEY  = f'{key}.{self.channelDATA.get("version","0.0.0")}'
         channels = self.channelDATA.get('channels') or []
         self.channelTEMP = channels.pop(0) if channels else {}
@@ -65,7 +72,10 @@ class Channels(object):
 
     def _load(self) -> dict:
         channelDATA = Globals.settings.getCacheSetting(self.channelKEY, FileAccess._getMD5(self.channelKEY), default=self.channelDATA)
-        Globals.settings.setSetting('Open_Manager','[B]%s[/B] Channels'%(len(list(self._verify(channelDATA.get('channels',[]))))))
+        # Not updating 'Open_Manager' here: this runs on every Channels() construction
+        # (each HTTP M3U/XMLTV poll, rules load, etc.) and setSetting rewrites
+        # settings.xml from disk each time. The display count is refreshed in
+        # setChannels() (the write path) instead — a read must not write.
         self.log('_load, channels=%d' % len(channelDATA.get('channels',[])))
         return channelDATA
     

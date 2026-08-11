@@ -131,21 +131,71 @@ class Seasonal(object):
 
     def getSeasonsData(self) -> Dict[str, Any]:
         """Return the full seasons.json: {month: {day: {name, tagline, keyword, logo}}}."""
-        return Globals.settings.getCacheSetting(SEASONS_KEY, FileAccess._getMD5(SEASONS_KEY),
-                                                default=FileAccess.getJSON(SEASONS))
+        return self._getMetaData(SEASONS_KEY, SEASONS)
 
     def getHolidaysData(self) -> Dict[str, Any]:
         """Return the full holidays.json: {keyword: {episodes: [...], movies: [...]}}."""
-        return Globals.settings.getCacheSetting(HOLIDAYS_KEY, FileAccess._getMD5(HOLIDAYS_KEY),
-                                                default=FileAccess.getJSON(HOLIDAYS))
+        return self._getMetaData(HOLIDAYS_KEY, HOLIDAYS)
 
     def setSeasonsData(self, data: Dict[str, Any]) -> bool:
         """Persist the full seasons.json to the user cache setting (never REMOTE_LOC)."""
-        return Globals.settings.setCacheSetting(SEASONS_KEY, data, FileAccess._getMD5(SEASONS_KEY), life=-1)
+        ok = Globals.settings.setCacheSetting(SEASONS_KEY, data, FileAccess._getMD5(SEASONS_KEY), life=-1)
+        self._seedMeta(SEASONS_KEY, SEASONS)
+        return ok
 
     def setHolidaysData(self, data: Dict[str, Any]) -> bool:
         """Persist the full holidays.json to the user cache setting (never REMOTE_LOC)."""
-        return Globals.settings.setCacheSetting(HOLIDAYS_KEY, data, FileAccess._getMD5(HOLIDAYS_KEY), life=-1)
+        ok = Globals.settings.setCacheSetting(HOLIDAYS_KEY, data, FileAccess._getMD5(HOLIDAYS_KEY), life=-1)
+        self._seedMeta(HOLIDAYS_KEY, HOLIDAYS)
+        return ok
+
+    def _seedMeta(self, key: str, master_fle: str):
+        """Record the shipped master snapshot as the merge base so a later master
+        update can adopt defaults the user didn't customize."""
+        try:
+            master = FileAccess.getJSON(master_fle) or {}
+            Globals.settings.setCacheSetting('%s.meta' % key, {'prev': master},
+                                             FileAccess._getMD5('%s.meta' % key), life=-1)
+        except Exception as e:
+            self.log('_seedMeta, %s failed: %s' % (key, e), xbmc.LOGDEBUG)
+
+    def _getMetaData(self, key: str, master_fle: str) -> Dict[str, Any]:
+        """Return the user cache for `key`, merged when the shipped master changed.
+
+        Uses the snapshot recorded at save time (via _seedMeta) as the 3-way base:
+        entries the user left at their default adopt the new master meta, user edits
+        are preserved, and brand-new master entries are added. Never writes REMOTE_LOC.
+        """
+        master = FileAccess.getJSON(master_fle) or {}
+        user = Globals.settings.getCacheSetting(key, FileAccess._getMD5(key), default={}) or {}
+        meta = Globals.settings.getCacheSetting('%s.meta' % key, FileAccess._getMD5('%s.meta' % key), default={}) or {}
+        prev = meta.get('prev') if isinstance(meta, dict) else {}
+        if prev and master != prev:
+            merged = self._mergeMeta(master, dict(user), prev)
+            if merged != user:
+                Globals.settings.setCacheSetting(key, merged, FileAccess._getMD5(key), life=-1)
+                user = merged
+            Globals.settings.setCacheSetting('%s.meta' % key, {'prev': master},
+                                             FileAccess._getMD5('%s.meta' % key), life=-1)
+        return user if user else master
+
+    @staticmethod
+    def _mergeMeta(master: Any, user: Any, base: Any) -> Any:
+        """Recursive 3-way merge. Where the user's value still equals the previous
+        master (base), adopt the new master value; user-customized values are kept;
+        new master keys are added."""
+        if isinstance(master, dict) and isinstance(user, dict):
+            out = dict(user)
+            base = base or {}
+            for k, v in master.items():
+                if k not in out:
+                    out[k] = copy.deepcopy(v)
+                elif isinstance(v, dict) and isinstance(out.get(k), dict):
+                    out[k] = Seasonal._mergeMeta(v, out.get(k), base.get(k))
+                elif base.get(k) == out.get(k):
+                    out[k] = copy.deepcopy(v)
+            return out
+        return copy.deepcopy(master) if user == base else user
 
     def _monthKey(self, month: str) -> str:
         """Normalize a month name to the seasons.json key form (e.g. 'january' -> 'January')."""

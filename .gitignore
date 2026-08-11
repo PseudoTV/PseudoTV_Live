@@ -1,6 +1,7 @@
 *.db
 *.pyc
 __pycache__/
+.ai_cache/
 plugin.video.pseudotv.live/remotes/genres.json
 plugin.video.pseudotv.live/.idea/
 plugin.video.pseudotv.live/findings.md

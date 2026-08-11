@@ -22,6 +22,7 @@ from variables    import *
 from library    import Library
 from channels   import Channels
 from typing import Optional
+import copy
 
 class Backup(object):
 
@@ -119,7 +120,10 @@ class Backup(object):
 
     @staticmethod
     def _setChannels(channels: list) -> dict:
-        channelDATA = FileAccess.getJSON(CHANNELFLE_DEFAULT).copy()
+        # Memoize the static default template; each call gets a fresh copy.
+        if not hasattr(Backup, '_default_data') or Backup._default_data is None:
+            Backup._default_data = FileAccess.getJSON(CHANNELFLE_DEFAULT)
+        channelDATA = copy.deepcopy(Backup._default_data)
         channelDATA['name']     = Globals.properties.getFriendlyName()
         channelDATA['uuid']     = Globals.settings.getMYUUID()
         channelDATA['channels'] = channels
@@ -168,7 +172,7 @@ class Backup(object):
     @threadit
     def run(self):
         with Globals.builtin.busy_dialog():
-            ctl = (0,1) #settings return focus
+            ctl = (0,4) # channels -> Export_Channels / backup & restore
             try:
                 param = self.sysARG[1]
             except Exception as e:

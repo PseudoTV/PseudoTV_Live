@@ -17,15 +17,13 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from typing              import Optional, Tuple
 from variables           import *
 from _services           import _Service
 from rules               import RulesList
 from infotagger.listitem import ListItemInfoTag
+from typing              import Optional, Tuple
 
 class Plugin(object):
-
-
     def __init__(self, mode: str = 'playlist', sysInfo: dict = {}):
         self.service = _Service()   
         self.pool    = self.service.pool
@@ -76,11 +74,9 @@ class Plugin(object):
             elif mode in ['vod','dvr']:             self.playVOD()
             elif mode in ['playlist','broadcast']:  self.playPlaylist()
         
-        
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
-            
     def _update(self):
         self.log('[%s] _update'%(self.sysInfo.get('chid')))
         if not self.service.player.isPlaying() and Globals.settings.getSettingBool('Debug_Enable'): Globals.dialog.notificationDialog('%s %s\n%s'%(LANGUAGE(32248),LANGUAGE(30223),LANGUAGE(32140)))
@@ -93,7 +89,6 @@ class Plugin(object):
             self.log('[%s] _update, channel not found in PVR, may need refresh' % self.sysInfo.get('chid'), xbmc.LOGWARNING)
             Globals.dialog.notificationDialog(LANGUAGE(32000))
                 
-            
     def _quePlaylist(self, listitems: list, pltype: int = xbmc.PLAYLIST_VIDEO, shuffle: Optional[bool] = None) -> Optional[Tuple[xbmc.PlayList, xbmcgui.ListItem]]:
         def __add(listitem: xbmcgui.ListItem):
             if listitem.getPath():
@@ -111,7 +106,6 @@ class Plugin(object):
             if shuffle: playlist.shuffle()
             else:       playlist.unshuffle()
             return playlist, listitems[0]
-
 
     def _getPVRItems(self) -> list:
         def __findCurrent(items: list, byFile: bool = True, found: int = -1) -> list:
@@ -162,7 +156,6 @@ class Plugin(object):
             else: Globals.dialog.notificationDialog(LANGUAGE(32164))
         else: Globals.dialog.notificationDialog(LANGUAGE(32000))
         return []
-                   
                    
     def _recover(self):
         """Recover start/stop/duration for live seek when the invoked URL carried
@@ -219,7 +212,6 @@ class Plugin(object):
         except Exception as e:
             self.log('[%s] _recover, failed: %s' % (self.sysInfo.get('chid'), e), xbmc.LOGDEBUG)
 
-
     def _setResume(self, listitem: xbmcgui.ListItem) -> xbmcgui.ListItem:
         if self.sysInfo.get('seek',0) > Globals.settings.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
             self.log('[%s] _setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), listitem.getPath()))
@@ -227,7 +219,6 @@ class Plugin(object):
             infoTag = ListItemInfoTag(listitem,'video')
             infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
         return listitem
-
         
     @threadit
     def playLive(self):
@@ -252,7 +243,6 @@ class Plugin(object):
             listitem.setProperty('sysInfo',FileAccess._encodeString(self.sysInfo))
             self._resolveURL(True, listitem)
     
-            
     @threadit
     def playRadio(self, limit: int = RADIO_ITEM_LIMIT):
         def __buildfItem(item: dict = {}) -> xbmcgui.ListItem:
@@ -270,7 +260,6 @@ class Plugin(object):
         listitems = poolit(__buildfItem)(__buildPlaylist(self.sysInfo.get('chid'),self.sysInfo.get('name')))
         self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_MUSIC, shuffle=True)))
                
-                      
     @threadit         
     def playPaused(self):
         def __buildfItem(item: dict = {}) -> Optional[xbmcgui.ListItem]:
@@ -303,7 +292,6 @@ class Plugin(object):
         listitems = self.__buildPlaylist(self.sysInfo.get('chid'), self.sysInfo.get('name'))
         self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
             
-            
     @threadit         
     def playVOD(self):
         self.log('[%s] playVOD, vid = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('vid')))
@@ -311,7 +299,6 @@ class Plugin(object):
         self.sysInfo["progresspercentage"] = -1
         Globals.dialog.notificationDialog(f"{LANGUAGE(32185).format(name='VOD')}: [B]{self.sysInfo['fitem'].get('label')}[/B]\n{self.sysInfo['fitem'].get('episodelabel')}")
         self._resolveURL(True, Globals.listitems.buildItemListItem(self.sysInfo.get('fitem')))
-            
             
     @threadit
     def playPlaylist(self):
@@ -334,7 +321,6 @@ class Plugin(object):
         listitems = poolit(__buildfItem)(nextitems)
         self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
         
-            
     def _playCheck(self, path: str, found: bool, listitem: Optional[xbmcgui.ListItem] = None) -> Tuple[str, bool, xbmcgui.ListItem]:
         def __findMissing(listitem: xbmcgui.ListItem) -> Tuple[bool, xbmcgui.ListItem]:
             label = (self.sysInfo['fitem'].get('label') or listitem.getLabel())
@@ -373,7 +359,6 @@ class Plugin(object):
         if self.sysInfo['isPlaylist']: return path, found, listitem
         else:                          return listitem.getPath(), found, listitem
 
-
     def _play(self, file: str, listitem: Optional[xbmcgui.ListItem] = None, wait: int = 30):
         #PVR Live Channel Detection workaround.
         if listitem is None: listitem = xbmcgui.ListItem()
@@ -395,7 +380,6 @@ class Plugin(object):
         if self.player.isPlayingAudio(): window = 'visualisation'
         else:                            window = 'fullscreenvideo'
         timerit(Globals.builtin.executewindow)(1.0,*('ActivateWindow(%s)'%(window),True,False,self.player.isPlaying))
-
 
     def _resolveURL(self, found: bool = False, listitem: Optional[xbmcgui.ListItem] = None):
         self.log(f"[{self.sysInfo.get('chid')}] _resolveURL, found = {found}: {listitem.getPath()}")

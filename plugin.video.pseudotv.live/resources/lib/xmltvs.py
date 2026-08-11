@@ -18,6 +18,8 @@
 
 # -*- coding: utf-8 -*-
 import xmltv
+import gzip
+import sys
 
 from variables   import *
 from m3u         import M3U
@@ -92,6 +94,12 @@ _GENRE_INDEX = None
 # =========================================================================
 _M3U_RENDER_CACHE = {'sig': None, 'data': None}
 _XMLTV_RENDER_CACHE = {'sig': None, 'data': None}
+# Single-flight guard for M3U/XMLTV re-renders. pvr.iptvsimple polls both
+# every ~30s; without this, a render-cache miss during a build lets concurrent
+# polls each start a full re-render of the 40MB+ XMLTV programme blob, pegging
+# every core and hanging Kodi's UI on weak SoC boxes. Renders hold the lock so
+# only one runs at a time; the rest block and reuse its output.
+_RENDER_LOCK = RLock()
 
 
 def m3u_render_signature() -> tuple:
@@ -144,25 +152,55 @@ def applyGrouping(stations: list, channels: list) -> list:
 def _storeRender(cache: dict, sig: tuple, data: bytes, name: str) -> bool:
     """Cache rendered bytes under the shared 'render' MemoryBudget owner.
 
-    The M3U and XMLTV render caches share RENDER_CACHE_MAX (a fraction of the
-    global cache budget) — combined they can never exceed it. Old cached bytes
-    are released before stashing new ones.
+    Stores the raw bytes plus a gzip copy so pvr.iptvsimple polls that send
+    Accept-Encoding: gzip don't re-compress the 40MB+ XMLTV on every request.
+    On constrained SOCs an oversized render is REFUSED (returns False) so the
+    blob isn't pinned in RAM outside the budget — the next poll re-renders
+    instead, trading a little CPU for bounded memory (a 40MB+ resident render
+    on a 3GB box with zero free swap is what tipped Kodi's GLES texture loader
+    into the Scudo misaligned-free aborts).
     """
     from cache import MemoryBudget
     budget = MemoryBudget.instance()
     budget.register('render', RENDER_CACHE_MAX)
-    old = cache.get('data')
-    if old is not None:
-        budget.release('render', len(old))
-    if not data or len(data) >= RENDER_CACHE_MAX or not budget.acquire('render', len(data)):
-        if data and len(data) >= RENDER_CACHE_MAX:
-            LOG("%s, render too large (%s bytes), not caching" % (name, len(data)), xbmc.LOGWARNING)
+    for key in ('data', 'gz'):
+        old = cache.get(key)
+        if old is not None:
+            budget.release('render', len(old))
+    if not data:
         return False
-    cache['sig'], cache['data'] = sig, data
+    gz = gzip.compress(data, compresslevel=5)
+    # On constrained SOCs an oversized render must not be pinned resident — it
+    # tipped Kodi's GLES texture loader into Scudo misaligned-free aborts. Keep
+    # only the raw data for the current poll (gz re-compressed on demand), drop
+    # it as soon as a poll needs the gz form, and let the next poll re-render.
+    # This trades a little CPU for bounded RAM.
+    if IS_CONSTRAINED_SOC and len(data) + len(gz) > RENDER_CACHE_MAX:
+        cache['sig'], cache['data'], cache['gz'] = sig, data, None
+        return True
+    if (len(data) + len(gz)) < RENDER_CACHE_MAX:
+        try: budget.acquire('render', len(data) + len(gz))
+        except Exception: pass
+    cache['sig'], cache['data'], cache['gz'] = sig, data, gz
     return True
 
 
-def renderFilteredM3U(channels: list, runActions) -> bytes:
+def _cached_bytes(cache: dict, sig: tuple, compress: bool) -> Optional[bytes]:
+    """Return the cached render for sig in the requested form, else None."""
+    if cache['sig'] != sig:
+        return None
+    if compress:
+        gz = cache.get('gz')
+        if gz is None:
+            # Oversized constrained-SOC render: serve gz once, then release the
+            # raw data so the big blob doesn't stay resident until the next sig.
+            gz = gzip.compress(cache['data'], compresslevel=5)
+            cache['data'] = None
+        return gz
+    return cache.get('data')
+
+
+def renderFilteredM3U(channels: list, runActions, compress: bool = False) -> bytes:
     """Get filtered M3U content using M3U class render() + filter pipeline.
 
     Rendered output is cached keyed by source file mtimes — pvr.iptvsimple
@@ -171,32 +209,44 @@ def renderFilteredM3U(channels: list, runActions) -> bytes:
     """
     global _M3U_RENDER_CACHE
     sig = m3u_render_signature()
-    if _M3U_RENDER_CACHE['sig'] == sig:
-        return _M3U_RENDER_CACHE['data']
-    from io import BytesIO
-    m3u = M3U()
-    # runActions dispatches by citem['id'] — iterate every configured channel to
-    # let its M3U_FILTER rule act (each receives the list from the previous one).
-    def _filter(stations):
-        for citem in channels:
-            stations = runActions(RULES_ACTION_M3U_FILTER, citem, stations)
-        return stations
-    buf = BytesIO()
-    # Reflect Enable_Grouping (and channel group edits) in the served group-title
-    # on the fly, before the per-channel M3U_FILTER rules run — so GroupHide sees
-    # the grouped groups without waiting for a rebuild.
-    stations = applyGrouping(m3u.getFilteredStations(), channels)
-    m3u.render(buf, stations=_filter(stations))
-    data = buf.getvalue()
-    # never cache an implausibly large render — a half-written M3U read during a
-    # build once produced a 776MB blob served on every poll. The shared render
-    # budget (RENDER_CACHE_MAX) also refuses oversized or combined-over-budget
-    # stashes.
-    _storeRender(_M3U_RENDER_CACHE, sig, data, 'renderFilteredM3U')
-    return data
+    cached = _cached_bytes(_M3U_RENDER_CACHE, sig, compress)
+    if cached is not None:
+        return cached
+    with _RENDER_LOCK:
+        # Another request rendered while we waited on the lock — reuse it.
+        cached = _cached_bytes(_M3U_RENDER_CACHE, sig, compress)
+        if cached is not None:
+            return cached
+        # A running build keeps bumping the data versions, so re-rendering on
+        # every pvr poll chases a moving target: each poll fires a full
+        # re-render of the 40MB+ XMLTV and saturates CPU, hanging Kodi's UI on
+        # weak SoC boxes. Serve the last-good render until the build settles.
+        if _M3U_RENDER_CACHE['data'] is not None and Globals.properties.isRunning('Builder.buildChannels'):
+            return _M3U_RENDER_CACHE['gz'] if compress else _M3U_RENDER_CACHE['data']
+        from io import BytesIO
+        m3u = M3U()
+        # runActions dispatches by citem['id'] — iterate every configured channel
+        # to let its M3U_FILTER rule act (each receives the list from the prev).
+        def _filter(stations):
+            for citem in channels:
+                stations = runActions(RULES_ACTION_M3U_FILTER, citem, stations)
+            return stations
+        buf = BytesIO()
+        # Reflect Enable_Grouping (and channel group edits) in the served
+        # group-title on the fly, before the per-channel M3U_FILTER rules run —
+        # so GroupHide sees the grouped groups without waiting for a rebuild.
+        stations = applyGrouping(m3u.getFilteredStations(), channels)
+        m3u.render(buf, stations=_filter(stations))
+        data = buf.getvalue()
+        # never cache an implausibly large render — a half-written M3U read during
+        # a build once produced a 776MB blob served on every poll. The shared
+        # render budget (RENDER_CACHE_MAX) also refuses oversized or
+        # combined-over-budget stashes.
+        _storeRender(_M3U_RENDER_CACHE, sig, data, 'renderFilteredM3U')
+        return _cached_bytes(_M3U_RENDER_CACHE, sig, compress)
 
 
-def renderFilteredXMLTV(channels: list, runActions) -> bytes:
+def renderFilteredXMLTV(channels: list, runActions, compress: bool = False) -> bytes:
     """Get XMLTV content with temporary placeholder programmes injected.
 
     Channels whose EPG doesn't reach the Min_Days horizon — including no-guide
@@ -207,22 +257,35 @@ def renderFilteredXMLTV(channels: list, runActions) -> bytes:
     """
     global _XMLTV_RENDER_CACHE
     sig = xmltv_render_signature()
-    if _XMLTV_RENDER_CACHE['sig'] == sig:
-        return _XMLTV_RENDER_CACHE['data']
-    from io import BytesIO
-    xmltv_obj = XMLTVS()
-    # runActions dispatches by citem['id'] — iterate every configured channel
-    # so each channel's XMLTV_FILTER rule can act on the served set (chained).
-    def _filter(stations):
-        for citem in channels:
-            stations = runActions(RULES_ACTION_XMLTV_FILTER, citem, stations)
-        return stations
-    buf = BytesIO()
-    xmltv_obj.renderWithPlaceholders(buf, stations=_filter(xmltv_obj.m3u.getFilteredStations(programmes=xmltv_obj.getProgrammes())))
-    data = buf.getvalue()
-    # don't cache implausibly large / empty renders (shared render budget cap)
-    _storeRender(_XMLTV_RENDER_CACHE, sig, data, 'renderFilteredXMLTV')
-    return data
+    cached = _cached_bytes(_XMLTV_RENDER_CACHE, sig, compress)
+    if cached is not None:
+        return cached
+    with _RENDER_LOCK:
+        # Another request rendered while we waited on the lock — reuse it.
+        cached = _cached_bytes(_XMLTV_RENDER_CACHE, sig, compress)
+        if cached is not None:
+            return cached
+        # A running build keeps bumping the data versions, so re-rendering on
+        # every pvr poll chases a moving target: each poll fires a full
+        # re-render of the 40MB+ programme blob and saturates CPU, hanging
+        # Kodi's UI on weak SoC boxes. Serve the last-good render until the
+        # build settles — the next poll after it finishes re-renders once.
+        if _XMLTV_RENDER_CACHE['data'] is not None and Globals.properties.isRunning('Builder.buildChannels'):
+            return _XMLTV_RENDER_CACHE['gz'] if compress else _XMLTV_RENDER_CACHE['data']
+        from io import BytesIO
+        xmltv_obj = XMLTVS()
+        # runActions dispatches by citem['id'] — iterate every configured channel
+        # so each channel's XMLTV_FILTER rule can act on the served set (chained).
+        def _filter(stations):
+            for citem in channels:
+                stations = runActions(RULES_ACTION_XMLTV_FILTER, citem, stations)
+            return stations
+        buf = BytesIO()
+        xmltv_obj.renderWithPlaceholders(buf, stations=_filter(xmltv_obj.m3u.getFilteredStations(programmes=xmltv_obj.getProgrammes())))
+        data = buf.getvalue()
+        # don't cache implausibly large / empty renders (shared render budget cap)
+        _storeRender(_XMLTV_RENDER_CACHE, sig, data, 'renderFilteredXMLTV')
+        return _cached_bytes(_XMLTV_RENDER_CACHE, sig, compress)
 
 
 def getFilteredGenres() -> bytes:
@@ -345,11 +408,28 @@ def clearXMLTVCache():
     for key in (XMLTV_CHANNELS_KEY, XMLTV_PROGRAMMES_KEY, XMLTV_RECORDINGS_KEY, XMLTV_META_KEY):
         Globals.settings.clrCacheSetting(key)
 
+
+def _holder_bytes(channels: list, programmes: list) -> int:
+    """Rough resident byte estimate for the in-memory guide holder.
+
+    The holder keeps the full programme list resident to make serving O(1), but
+    on constrained SOCs a 26MB+ pickled blob becomes far larger as live dicts and
+    tips Kodi's allocator into OOM (Scudo misaligned-free aborts). Estimate via
+    sys.getsizeof on a sample so we can cap it against XMLTV_MEM_MAX and fall
+    back to reading the DB on each render instead of pinning the list.
+    """
+    total = sys.getsizeof(channels)
+    if programmes:
+        n = min(200, len(programmes))
+        sample = sum(sys.getsizeof(p) for p in programmes[:n])
+        total += int(sample / max(1, n) * len(programmes))
+    return total
+
 class XMLTVS(object):
     
     def __init__(self, file: str = XMLTVFLEPATH, writable: bool = False, m3u: Optional[M3U] = None):
         if m3u is None: m3u = M3U(writable=writable)
-        self._lock      = RLock()
+        self._lock      = DATA_LOCK
         self.m3u        = m3u
         self.writable   = writable
         self.XMLTVFile  = file
@@ -418,6 +498,14 @@ class XMLTVS(object):
                 else:
                     channels, recordings = self._clean(channels, 'id')
                     programmes = self._clean(programmes, 'channel')
+                # Cap the resident guide blob against the shared memory budget.
+                # On constrained SOCs the full programme list (live dicts, far
+                # larger than its pickled 26MB) is NOT pinned in the holder —
+                # renders re-read it from the DB cache instead, keeping RAM flat.
+                size = _holder_bytes(channels, programmes)
+                if IS_CONSTRAINED_SOC and size > XMLTV_MEM_MAX:
+                    self.log(f"_load, capping in-memory guide ({size//1048576}MB > {XMLTV_MEM_MAX//1048576}MB), loading programmes per-render", xbmc.LOGINFO)
+                    programmes = []
                 _XMLTV_HOLDER.update(sig=sig, channels=channels,
                                      programmes=programmes, recordings=recordings)
         data = self.resetData()
@@ -530,7 +618,7 @@ class XMLTVS(object):
                                   generator_info_url  = self.cleanString(data.get('generator-info-url', '')),
                                   generator_info_name = self.cleanString(data.get('generator-info-name', '')))
             for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
-                writer.addChannel(channel)
+                writer.addChannel(self._offsetChannel(channel))
             for program in self.XMLTVDATA['programmes']:
                 writer.addProgramme(self._offsetProgramme(program))
             tmp_file = '%s.tmp' % (self.XMLTVFile)
@@ -569,19 +657,37 @@ class XMLTVS(object):
                               generator_info_url  = self.cleanString(data['generator-info-url']),
                               generator_info_name = self.cleanString(data['generator-info-name']))
         for channel in (recordings + channels):
-            writer.addChannel(channel)
+            writer.addChannel(self._offsetChannel(channel))
         for program in programmes:
             writer.addProgramme(self._offsetProgramme(program))
         writer.write(fle, pretty_print=True)
 
 
+    def _offsetChannel(self, channel: dict) -> dict:
+        """Return a copy of a channel with any raw smb:///nfs:// icon rewritten
+        to the self-hosted /image/ URL, so Kodi's image loader never opens SMB
+        directly (avoids the libsmbclient idle-close crash)."""
+        c = dict(channel)
+        icons = c.get('icon') or []
+        if isinstance(icons, list) and icons and isinstance(icons[0], dict) and icons[0].get('src'):
+            c['icon'] = [dict(icons[0], src=Globals._toWebImage(icons[0]['src']))]
+        return c
+
+
     def _offsetProgramme(self, program: dict) -> dict:
         """Return a copy of a programme with the local UTC offset appended to its
         start/stop, so pvr.iptvsimple parses the LOCAL DTFORMAT times correctly
-        (it assumes UTC otherwise, which shifts catchup seek by the UTC offset)."""
+        (it assumes UTC otherwise, which shifts catchup seek by the UTC offset).
+        Also rewrites raw smb:///nfs:// artwork to the self-hosted /image/ URL so
+        Kodi's image loader fetches icons over HTTP (avoiding the libsmbclient
+        idle-close crash)."""
         p = dict(program)
         if p.get('start'): p['start'] = '%s %s' % (p['start'], _utcOffset())
         if p.get('stop'):  p['stop']  = '%s %s' % (p['stop'],  _utcOffset())
+        icons = p.get('icon') or []
+        if isinstance(icons, list) and icons and isinstance(icons[0], dict) and icons[0].get('src'):
+            icons = [dict(icons[0], src=Globals._toWebImage(icons[0]['src']))]
+            p['icon'] = icons
         return p
 
 
@@ -611,7 +717,7 @@ class XMLTVS(object):
             served = {s.get('id') for s in stations if s.get('id')}
             channels = [{'id': s['id'],
                          'display-name': [(self.cleanString(s.get('name', '')), LANG)],
-                         'icon': [{'src': s.get('logo', '')}]}
+                         'icon': [{'src': Globals._toWebImage(s.get('logo', ''))}]}
                         for s in stations if s.get('id')]
             programmes = [p for p in programmes if p.get('channel') in served]
         try:
@@ -666,7 +772,7 @@ class XMLTVS(object):
                 'desc'    : [(desc, LANG)],
                 'start'   : Globals._epochTime(start, tz=False).strftime(DTFORMAT),
                 'stop'    : Globals._epochTime(stop, tz=False).strftime(DTFORMAT),
-                'icon'    : [{'src': logo}],
+                'icon'    : [{'src': Globals._toWebImage(logo)}],
                 'length'  : {'units': 'seconds', 'length': str(max(0, int(stop - start)))}}
     
     
@@ -975,7 +1081,13 @@ class XMLTVS(object):
         
     def getProgrammes(self) -> list:
         self.log('getProgrammes')
-        return self.sortProgrammes(self.XMLTVDATA.get('programmes',[]))
+        programmes = self.XMLTVDATA.get('programmes', [])
+        if not programmes and not self.writable:
+            # Holder was capped (constrained SOC) — re-read the guide from the DB
+            # cache for this render. Sorted once; not pinned back into the holder.
+            programmes = Globals.settings.getCacheSetting(XMLTV_PROGRAMMES_KEY) or []
+            programmes = self._clean(programmes, 'channel')
+        return self.sortProgrammes(programmes)
 
 
     def findChannel(self, citem: dict, channels: list=None) -> tuple:

@@ -459,3 +459,767 @@ msgstr "ウェルカムメッセージを表示"
 msgctxt "#30079"
 msgid "Something Went Wrong, Contact the plugin developer..."
 msgstr "問題が発生しました。プラグイン開発者にお問い合わせください..."
+
+msgctxt "#33013"
+msgid "AutoTune from Recommended (Supported) services installed on Kodi and supplied by IPTV Manager. Support does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgstr "Kodiにインストールされ、IPTV Managerから提供される推奨(対応)サービスの自動チューニング。サポートはプロジェクト間の関係を意味するものではなく、PseudoTVはサードパーティプラグインが提供するコンテンツについて責任を負いません。"
+
+msgctxt "#33003"
+msgid "AutoTune from Recommended (Supported) plugins installed on Kodi. Support does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgstr "Kodiにインストールされた推奨(対応)プラグインの自動チューニング。サポートはプロジェクト間の関係を意味するものではなく、PseudoTVはサードパーティプラグインが提供するコンテンツについて責任を負いません。"
+
+msgctxt "#33049"
+msgid "Where runtime comes from.\n[B]Kodi metadata:[/B] faster. [B]File metadata:[/B] precise but slower."
+msgstr "再生時間の取得元。\n[B]Kodiメタデータ:[/B] 高速。[B]ファイルメタデータ:[/B] 正確だが低速。"
+
+msgctxt "#30031"
+msgid "Trailer Resources"
+msgstr "予告編リソース"
+
+msgctxt "#30135"
+msgid "Include"
+msgstr "含める"
+
+msgctxt "#33108"
+msgid "Open the PseudoTV Live addon settings."
+msgstr "PseudoTV Liveアドオンの設定を開きます。"
+
+msgctxt "#33125"
+msgid "Include Coming Soon Trailers from the IMDB Trailer plugin."
+msgstr "IMDB Trailerプラグインの近日公開予告編を含めます。"
+
+msgctxt "#30210"
+msgid "Auto tuning"
+msgstr "自動チューニング"
+
+msgctxt "#30027"
+msgid "Logo Resource Packs"
+msgstr "ロゴリソースパック"
+
+msgctxt "#33155"
+msgid "Reload IPTV Simple after channel changes.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: ON."
+msgstr "チャンネル変更後にIPTV Simpleを再読み込みします。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B] - 推奨: ON。"
+
+msgctxt "#32107"
+msgid "Restore Channels"
+msgstr "チャンネルを復元"
+
+msgctxt "#30202"
+msgid "Failed to validate Path! Force Approval? *Forced channels may fail to build or playback properly."
+msgstr "パスの検証に失敗しました!強制承認しますか? *強制されたチャンネルはビルドまたは再生が正しく行われない場合があります。"
+
+msgctxt "#30225"
+msgid "Extra Metadata Details"
+msgstr "追加メタデータ詳細"
+
+msgctxt "#32034"
+msgid "{name} not found, Please Install!"
+msgstr "{name}が見つかりません。インストールしてください!"
+
+msgctxt "#32111"
+msgid "Recover Channels from a backup?"
+msgstr "バックアップからチャンネルを復元しますか?"
+
+msgctxt "#33053"
+msgid "Include Season 00 and movie extras.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "シーズン00と映画の特典を含めます。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#30030"
+msgid "Advert Resources"
+msgstr "広告リソース"
+
+msgctxt "#30098"
+msgid "TCP Port"
+msgstr "TCPポート"
+
+msgctxt "#32229"
+msgid "OnNext Position"
+msgstr "OnNextの位置"
+
+msgctxt "#33184"
+msgid "Enable channel building and compilation processes."
+msgstr "チャンネルのビルドとコンパイル処理を有効にします。"
+
+msgctxt "#32218"
+msgid "Not Needed..."
+msgstr "不要です..."
+
+msgctxt "#33068"
+msgid "Advance seasonal holiday channels to the nearest upcoming holiday.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "季節限定の祝日チャンネルを直近の祝日に合わせて進めます。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#30211"
+msgid "Interleave Repeats"
+msgstr "繰り返しのインターリーブ"
+
+msgctxt "#33078"
+msgid "Stop playback after the system is idle for this long.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - 0 disables."
+msgstr "システムがこの時間アイドル状態になったら再生を停止します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B] - 0で無効。"
+
+msgctxt "#30050"
+msgid "Prefer Kodi Metadata"
+msgstr "Kodiメタデータを優先"
+
+msgctxt "#33182"
+msgid "Discovery status of this instance.\n[B]Default:[/B] [B][COLOR=white]Shows live status[/COLOR][/B]."
+msgstr "このインスタンスの検出ステータス。\n[B]既定:[/B] [B][COLOR=white]ライブステータスを表示[/COLOR][/B]。"
+
+msgctxt "#30032"
+msgid "Resources"
+msgstr "リソース"
+
+msgctxt "#30037"
+msgid "Guide Ahead (Future Days)"
+msgstr "ガイド先読み(未来日数)"
+
+msgctxt "#30096"
+msgid "Genre URL"
+msgstr "ジャンルURL"
+
+msgctxt "#33110"
+msgid "Save your channels and rules as a backup file.\n[B]Tip:[/B] Keep a copy before major changes."
+msgstr "チャンネルとルールをバックアップファイルとして保存します。\n[B]ヒント:[/B] 大きな変更の前にコピーを保存しておきましょう。"
+
+msgctxt "#33219"
+msgid "[COLOR=red][B]Warning:[/B][/COLOR] AI features may incur API costs.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - enable at your own discretion."
+msgstr "[COLOR=red][B]警告:[/B][/COLOR] AI機能はAPI費用が発生する場合があります。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B] - 自己責任で有効化してください。"
+
+msgctxt "#30105"
+msgid "Detect Compatible Addons"
+msgstr "互換アドオンの検出"
+
+msgctxt "#32182"
+msgid "ZeroConf Status"
+msgstr "ZeroConfステータス"
+
+msgctxt "#32033"
+msgid "Update Status"
+msgstr "更新ステータス"
+
+msgctxt "#30044"
+msgid "Channel Bug Diffuse Color"
+msgstr "チャンネルバグのディフューズカラー"
+
+msgctxt "#32183"
+msgid "Select server to remove."
+msgstr "削除するサーバーを選択してください。"
+
+msgctxt "#33137"
+msgid "Open Kodi's node editor for advanced smartplaylist creation.\n[B]Tip:[/B] Nodes bundle multiple playlists."
+msgstr "高度なスマートプレイリスト作成用にKodiのノードエディタを開きます。\n[B]ヒント:[/B] ノードは複数のプレイリストをまとめます。"
+
+msgctxt "#30028"
+msgid "Rating Resources"
+msgstr "レーティングリソース"
+
+msgctxt "#33229"
+msgid "Where the OnNext popup appears.\n[B]Default:[/B] [B][COLOR=white]Auto[/COLOR][/B]"
+msgstr "OnNextポップアップの表示位置。\n[B]既定:[/B] [B][COLOR=white]自動[/COLOR][/B]"
+
+msgctxt "#30226"
+msgid "Enable Smart Shuffling"
+msgstr "スマートシャッフルを有効化"
+
+msgctxt "#30160"
+msgid "Editors & Settings"
+msgstr "エディタと設定"
+
+msgctxt "#33009"
+msgid "Upload a debug log for review.\n[B]Tip:[/B] Sends to paste.kodi.tv."
+msgstr "レビュー用にデバッグログをアップロードします。\n[B]ヒント:[/B] paste.kodi.tvに送信されます。"
+
+msgctxt "#33150"
+msgid "Keep building channels while media is playing.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - disable if playback stutters."
+msgstr "メディア再生中もチャンネルのビルドを続行します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B] - 再生が途切れる場合は無効にしてください。"
+
+msgctxt "#30222"
+msgid "Playback Timeout"
+msgstr "再生タイムアウト"
+
+msgctxt "#33180"
+msgid "Build Filler Template folders based on your channels."
+msgstr "チャンネルに基づいてフィラーテンプレートフォルダを作成します。"
+
+msgctxt "#30094"
+msgid "M3U URL"
+msgstr "M3U URL"
+
+msgctxt "#30159"
+msgid "Support Forum"
+msgstr "サポートフォーラム"
+
+msgctxt "#32217"
+msgid "Install Bonjour (QR)"
+msgstr "Bonjourをインストール(QR)"
+
+msgctxt "#33016"
+msgid "Global Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see wiki for details. Changes will propagate slowly over time and may not be instantaneous."
+msgstr "グローバルフィラールールはすべてのチャンネルに適用され、アドバンストチャンネルマネージャーのルールはチャンネルごとに適用されます。*詳細はwikiを参照してください。変更は時間をかけて徐々に反映され、即座には反映されない場合があります。"
+
+msgctxt "#33170"
+msgid "Display the OSD when the channel changes.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "チャンネル変更時にOSDを表示します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#30199"
+msgid "Request"
+msgstr "リクエスト"
+
+msgctxt "#33042"
+msgid "Show overlay visuals (channel bug, vignette, OSD).\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "オーバーレイ表示(チャンネルバグ、ビネット、OSD)を表示します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#33139"
+msgid "Chance a random video is used when none matches.\n[B]Default:[/B] [B][COLOR=white]25%[/COLOR][/B]"
+msgstr "一致する動画がない場合にランダムな動画が使用される確率。\n[B]既定:[/B] [B][COLOR=white]25%[/COLOR][/B]"
+
+msgctxt "#30169"
+msgid "OSD Display Time"
+msgstr "OSD表示時間"
+
+msgctxt "#33174"
+msgid "Enable the vignette overlay effect during playback. [Default: Disabled]"
+msgstr "再生中にビネットオーバーレイ効果を有効にします。[既定: 無効]"
+
+msgctxt "#33061"
+msgid "Seconds to ignore when live timing differs from the offset.\n[B]Default:[/B] [B][COLOR=white]60[/COLOR][/B]"
+msgstr "ライブタイミングがオフセットと異なる場合に無視する秒数。\n[B]既定:[/B] [B][COLOR=white]60[/COLOR][/B]"
+
+msgctxt "#30219"
+msgid "Allow AI Integration"
+msgstr "AI統合を許可"
+
+msgctxt "#33113"
+msgid "Apply the tint even to full-color logos.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "フルカラーのロゴにも色合いを適用します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#33070"
+msgid "Allow PseudoTV Live to configure IPTV Simple/IPTV Manager automatically. [Default: Disabled] [Recommended: Enabled]"
+msgstr "PseudoTV LiveがIPTV Simple/IPTV Managerを自動的に設定できるようにします。[既定: 無効] [推奨: 有効]"
+
+msgctxt "#30166"
+msgid "Submit Snapshot"
+msgstr "スナップショットを送信"
+
+msgctxt "#30203"
+msgid "Instance Name"
+msgstr "インスタンス名"
+
+msgctxt "#33165"
+msgid "Show a QR to open the remote web UI.\n[B]Tip:[/B] Control PseudoTV from a browser."
+msgstr "リモートWeb UIを開くQRコードを表示します。\n[B]ヒント:[/B] ブラウザからPseudoTVを操作できます。"
+
+msgctxt "#33126"
+msgid "Use trailers from your Kodi library.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "Kodiライブラリの予告編を使用します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#30209"
+msgid "Channel Bug Transparency"
+msgstr "チャンネルバグの透明度"
+
+msgctxt "#33172"
+msgid "Which channel list loads when the Channel Manager opens.\n[B]Default:[/B] [B][COLOR=white]Auto[/COLOR][/B]"
+msgstr "チャンネルマネージャーを開いたときに読み込まれるチャンネルリスト。\n[B]既定:[/B] [B][COLOR=white]自動[/COLOR][/B]"
+
+msgctxt "#33225"
+msgid "Parse additional media metadata during builds.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "ビルド中に追加のメディアメタデータを解析します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#33062"
+msgid "Skip content near the end past this percent.\n[B]Default:[/B] [B][COLOR=white]98%[/COLOR][/B] - 100% disables."
+msgstr "このパーセントを超える末尾付近のコンテンツをスキップします。\n[B]既定:[/B] [B][COLOR=white]98%[/COLOR][/B] - 100%で無効。"
+
+msgctxt "#33209"
+msgid "Opacity of the channel bug logo.\n[B]Default:[/B] [B][COLOR=white]25%[/COLOR][/B]"
+msgstr "チャンネルバグロゴの不透明度。\n[B]既定:[/B] [B][COLOR=white]25%[/COLOR][/B]"
+
+msgctxt "#33214"
+msgid "Rebuild channels when a playlist file changes.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "プレイリストファイルが変更されたときにチャンネルを再ビルドします。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#30154"
+msgid "Restart Unavailable..."
+msgstr "再起動できません..."
+
+msgctxt "#33058"
+msgid "How channels are sent to the player.\n[B]PVR Callback:[/B] plays via PVR. [B]Playlist:[/B] queues a playlist."
+msgstr "チャンネルのプレイヤーへの送信方法。\n[B]PVR Callback:[/B] PVR経由で再生。[B]Playlist:[/B] プレイリストをキューに入れます。"
+
+msgctxt "#33048"
+msgid "Choose which discovered servers to use.\n[B]Default:[/B] [B][COLOR=white]Auto[/COLOR][/B]"
+msgstr "使用する検出済みサーバーを選択します。\n[B]既定:[/B] [B][COLOR=white]自動[/COLOR][/B]"
+
+msgctxt "#30139"
+msgid "Random Pre-Roll Chance"
+msgstr "ランダムプレロール確率"
+
+msgctxt "#33100"
+msgid "Configure as client that pulls channels from remote server. [Default: Disabled]"
+msgstr "リモートサーバーからチャンネルを取得するクライアントとして設定します。[既定: 無効]"
+
+msgctxt "#30183"
+msgid "Interleave TV & Movies after Ordering"
+msgstr "並べ替え後にTVと映画をインターリーブ"
+
+msgctxt "#33043"
+msgid "Show the channel logo in a corner during playback.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "再生中にチャンネルロゴを隅に表示します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#33010"
+msgid "AutoTune Mixed content collected from your Kodi Library."
+msgstr "Kodiライブラリから収集した混合コンテンツの自動チューニング。"
+
+msgctxt "#30064"
+msgid "Add Custom Group"
+msgstr "カスタムグループを追加"
+
+msgctxt "#30165"
+msgid "Remote UI"
+msgstr "リモートUI"
+
+msgctxt "#33019"
+msgid "Play adverts and trailers after programs.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "番組の後に広告と予告編を再生します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#30055"
+msgid "Include 3D Media"
+msgstr "3Dメディアを含める"
+
+msgctxt "#33159"
+msgid "Show a QR to the support forum.\n[B]Tip:[/B] Get help from the community."
+msgstr "サポートフォーラムへのQRコードを表示します。\n[B]ヒント:[/B] コミュニティからヘルプを得られます。"
+
+msgctxt "#30012"
+msgid "Shared Cache Folder"
+msgstr "共有キャッシュフォルダ"
+
+msgctxt "#33105"
+msgid "Scan for addons that can provide channel content.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "チャンネルコンテンツを提供できるアドオンをスキャンします。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#30140"
+msgid "Build Filler Folders"
+msgstr "フィラーフォルダをビルド"
+
+msgctxt "#30002"
+msgid "Debug Level"
+msgstr "デバッグレベル"
+
+msgctxt "#30053"
+msgid "Include Specials/Extras"
+msgstr "スペシャル/特典を含める"
+
+msgctxt "#30182"
+msgid "Force Random Order"
+msgstr "ランダム順を強制"
+
+msgctxt "#33130"
+msgid ""
+msgstr ""
+
+msgctxt "#33198"
+msgid "Speeds up builds and menu loading by running several tasks at once. Uses more CPU and memory.\nEnable on desktop PCs with 4+ cores and plenty of RAM. Keep off on low-power devices (Shield, Fire Stick, SoC boxes) - it can cause lockups and crashes there. [B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "複数のタスクを同時に実行することで、ビルドとメニューの読み込みを高速化します。より多くのCPUとメモリを使用します。\n4コア以上のデスクトップPCと十分なRAMがある環境では有効にしてください。低消費電力デバイス(Shield、Fire Stick、SoCボックス)では無効のままにしてください。それらのデバイスではフリーズやクラッシュを引き起こす可能性があります。[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#30131"
+msgid "Disable Trakt Scrobbling"
+msgstr "Traktスクロブリングを無効化"
+
+msgctxt "#30180"
+msgid "Group TV shows in blocks"
+msgstr "TV番組をブロック単位でグループ化"
+
+msgctxt "#33181"
+msgid "Prefer episode order over playlist sorting.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "プレイリストの並べ替えよりもエピソード順を優先します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#33226"
+msgid "Randomize channel content order. Changes apply gradually. [Default: Disabled]"
+msgstr "チャンネルコンテンツの順序をランダム化します。変更は徐々に適用されます。[既定: 無効]"
+
+msgctxt "#30106"
+msgid "Utilities"
+msgstr "ユーティリティ"
+
+msgctxt "#33044"
+msgid "Tint applied to the channel bug.\n[B]Default:[/B] [B][COLOR=white]White (#FFFFFFFF)[/COLOR][/B]"
+msgstr "チャンネルバグに適用される色合い。\n[B]既定:[/B] [B][COLOR=white]白(#FFFFFFFF)[/COLOR][/B]"
+
+msgctxt "#33166"
+msgid "Upload a debug snapshot for review.\n[B]Tip:[/B] Sends to paste.kodi.tv."
+msgstr "レビュー用にデバッグスナップショットをアップロードします。\n[B]ヒント:[/B] paste.kodi.tvに送信されます。"
+
+msgctxt "#33036"
+msgid "Guide & OSD"
+msgstr "ガイドとOSD"
+
+msgctxt "#33138"
+msgid "Open Kodi's SmartPlaylist editor to build custom playlists.\n[B]Tip:[/B] Playlists can be used as channel paths."
+msgstr "カスタムプレイリストを作成するためのKodiのSmartPlaylistエディタを開きます。\n[B]ヒント:[/B] プレイリストはチャンネルパスとして使用できます。"
+
+msgctxt "#30068"
+msgid "Nearest Holiday"
+msgstr "直近の祝日"
+
+msgctxt "#33149"
+msgid "Remove stale or orphaned recording entries from the guide.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "ガイドから古いまたは孤立した録画エントリを削除します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#33121"
+msgid "Group episodes in blocks for even scheduling.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "均等なスケジュールのためエピソードをブロック単位でグループ化します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#30075"
+msgid "More Info"
+msgstr "詳細情報"
+
+msgctxt "#33023"
+msgid "Artwork changes will propagate slowly over time and are not instantaneous."
+msgstr "アートワークの変更は時間をかけて徐々に反映され、即座には反映されません。"
+
+msgctxt "#33084"
+msgid "[COLOR=orange][B]Important:[/B][/COLOR] Turns off caching. Only for experts.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "[COLOR=orange][B]重要:[/B][/COLOR] キャッシュを無効にします。エキスパート向けです。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#33052"
+msgid "Write file-parsed runtimes to Kodi's database.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: ON for accurate EPG."
+msgstr "ファイル解析された再生時間をKodiのデータベースに書き込みます。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B] - 正確なEPGのために推奨: ON。"
+
+msgctxt "#30049"
+msgid "Duration Source"
+msgstr "再生時間のソース"
+
+msgctxt "#32150"
+msgid "Build During Playback"
+msgstr "再生中のビルド"
+
+msgctxt "#33230"
+msgid "Automatically create a channel lineup from your video library.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: ON for a quick start."
+msgstr "ビデオライブラリからチャンネルラインナップを自動的に作成します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B] - クイックスタートのために推奨: ON。"
+
+msgctxt "#30052"
+msgid "Save Durations to Library"
+msgstr "再生時間をライブラリに保存"
+
+msgctxt "#33012"
+msgid "Store the addon cache in a shared location.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: ON to reduce SSD wear."
+msgstr "アドオンのキャッシュを共有の場所に保存します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B] - SSDの摩耗を減らすために推奨: ON。"
+
+msgctxt "#33153"
+msgid "Offer to restart when progress passes this percent.\n[B]Default:[/B] [B][COLOR=white]55%[/COLOR][/B] - 0 disables."
+msgstr "進行状況がこのパーセントを超えたときに再起動を提案します。\n[B]既定:[/B] [B][COLOR=white]55%[/COLOR][/B] - 0で無効。"
+
+msgctxt "#33015"
+msgid "Items requested per library scan call.\n[B]Default:[/B] [B][COLOR=white]25[/COLOR][/B] - 0 = unlimited."
+msgstr "ライブラリスキャン呼び出しごとに要求するアイテム数。\n[B]既定:[/B] [B][COLOR=white]25[/COLOR][/B] - 0 = 無制限。"
+
+msgctxt "#33211"
+msgid "Allow repeats when interleaving paths.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "パスをインターリーブするときに繰り返しを許可します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#33224"
+msgid "Subfolder levels to scan.\n[B]Default:[/B] [B][COLOR=white]1[/COLOR][/B] - 0 = root only."
+msgstr "スキャンするサブフォルダの階層。\n[B]既定:[/B] [B][COLOR=white]1[/COLOR][/B] - 0 = ルートのみ。"
+
+msgctxt "#33055"
+msgid "Include 3D content when building channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "チャンネルをビルドするときに3Dコンテンツを含めます。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#30170"
+msgid "Show OSD on Change"
+msgstr "変更時にOSDを表示"
+
+msgctxt "#30134"
+msgid "Random Post-Roll Chance"
+msgstr "ランダムポストロール確率"
+
+msgctxt "#33045"
+msgid "Show what's up next near the end of a program.\n[B]Default:[/B] [B][COLOR=white]Artwork[/COLOR][/B] - built-in. [B]UpNext:[/B] requires the Up-Next addon."
+msgstr "番組の終わり近くに次に再生するものを表示します。\n[B]既定:[/B] [B][COLOR=white]アートワーク[/COLOR][/B] - 内蔵。[B]UpNext:[/B] Up-Nextアドオンが必要です。"
+
+msgctxt "#33183"
+msgid "Shuffle channel content randomly.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "チャンネルコンテンツをランダムにシャッフルします。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#30181"
+msgid "Force Episode Order"
+msgstr "エピソード順を強制"
+
+msgctxt "#33129"
+msgid "Server Status"
+msgstr "サーバーステータス"
+
+msgctxt "#33212"
+msgid "Show popup notifications while media plays.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "メディア再生中にポップアップ通知を表示します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#33002"
+msgid "Minimum level logged.\n[B]Default:[/B] [B][COLOR=white]LOGERROR[/COLOR][/B] - use LOGDEBUG when reporting bugs."
+msgstr "ログに記録する最小レベル。\n[B]既定:[/B] [B][COLOR=white]LOGERROR[/COLOR][/B] - バグを報告する場合はLOGDEBUGを使用してください。"
+
+msgctxt "#33017"
+msgid "Play ratings and bumpers before programs.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "番組の前にレーティングとバンパーを再生します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#30069"
+msgid "Third-Party"
+msgstr "サードパーティ"
+
+msgctxt "#30099"
+msgid "Server Added ({name})"
+msgstr "サーバーを追加しました ({name})"
+
+msgctxt "#30149"
+msgid "Clean Up Recordings"
+msgstr "録画のクリーンアップ"
+
+msgctxt "#32108"
+msgid "Replace existing Backup from"
+msgstr "既存のバックアップを置き換える元"
+
+msgctxt "#33085"
+msgid "Extend EPG guide data beyond default range to fill schedule gaps."
+msgstr "スケジュールの隙間を埋めるために、既定の範囲を超えてEPGガイドデータを拡張します。"
+
+msgctxt "#33157"
+msgid "Open Kodi's PVR & Live TV settings.\n[B]Tip:[/B] Where IPTV Simple is configured."
+msgstr "KodiのPVRとライブTVの設定を開きます。\n[B]ヒント:[/B] IPTV Simpleが設定される場所です。"
+
+msgctxt "#33071"
+msgid "Open the IPTV Simple Client addon settings directly.\n[B]Tip:[/B] Check the active M3U/XMLTV URLs here."
+msgstr "IPTV Simple Clientアドオンの設定を直接開きます。\n[B]ヒント:[/B] アクティブなM3U/XMLTV URLをここで確認できます。"
+
+msgctxt "#33168"
+msgid "Show a QR to the PseudoTV Live wiki.\n[B]Tip:[/B] Full documentation."
+msgstr "PseudoTV Live wikiへのQRコードを表示します。\n[B]ヒント:[/B] 完全なドキュメント。"
+
+msgctxt "#30217"
+msgid "OpenRouter API Key"
+msgstr "OpenRouter APIキー"
+
+msgctxt "#30156"
+msgid "Enable ZeroConf"
+msgstr "ZeroConfを有効化"
+
+msgctxt "#33046"
+msgid "Remove a paired multiroom server from the discovered servers list."
+msgstr "検出済みサーバーリストからペアリングされたマルチルームサーバーを削除します。"
+
+msgctxt "#30179"
+msgid "Interleave Set Size"
+msgstr "インターリーブセットサイズ"
+
+msgctxt "#32151"
+msgid "Creating Backup"
+msgstr "バックアップを作成中"
+
+msgctxt "#33054"
+msgid "Include .strm stream files in channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "チャンネルに.strmストリームファイルを含めます。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#33140"
+msgid "Create per-channel filler folders under the cache folder.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "キャッシュフォルダの下にチャンネルごとのフィラーフォルダを作成します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#33037"
+msgid "Open Kodi PVR and Live TV settings for IPTV Simple configuration."
+msgstr "IPTV Simple設定用にKodiのPVRとライブTVの設定を開きます。"
+
+msgctxt "#33114"
+msgid "Confirm Paths"
+msgstr "パスを確認"
+
+msgctxt "#30201"
+msgid "API Timeout"
+msgstr "APIタイムアウト"
+
+msgctxt "#30133"
+msgid "Player"
+msgstr "プレイヤー"
+
+msgctxt "#30168"
+msgid "Project Wiki"
+msgstr "プロジェクトWiki"
+
+msgctxt "#30220"
+msgid "Artwork Style"
+msgstr "アートワークスタイル"
+
+msgctxt "#33000"
+msgid "Utilities, documentation links, debugging tools, and expert options."
+msgstr "ユーティリティ、ドキュメントリンク、デバッグツール、エキスパートオプション。"
+
+msgctxt "#30218"
+msgid "Generate Artwork"
+msgstr "アートワークを生成"
+
+msgctxt "#33222"
+msgid "Seconds before retrying failed playback.\n[B]Default:[/B] [B][COLOR=white]90[/COLOR][/B]"
+msgstr "失敗した再生を再試行するまでの秒数。\n[B]既定:[/B] [B][COLOR=white]90[/COLOR][/B]"
+
+msgctxt "#32267"
+msgid "Keep Debug Enabled"
+msgstr "デバッグを有効のまま維持"
+
+msgctxt "#33050"
+msgid "Auto-Add Servers"
+msgstr "サーバーを自動追加"
+
+msgctxt "#33074"
+msgid "Allow PseudoTV to adjust Kodi settings.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - recommended: ON."
+msgstr "PseudoTVがKodiの設定を調整することを許可します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B] - 推奨: ON。"
+
+msgctxt "#33179"
+msgid "Interleave paths in groups of this size.\n[B]Default:[/B] [B][COLOR=white]1[/COLOR][/B] - 0 disables."
+msgstr "このサイズのグループでパスをインターリーブします。\n[B]既定:[/B] [B][COLOR=white]1[/COLOR][/B] - 0で無効。"
+
+msgctxt "#30231"
+msgid "Image Model"
+msgstr "画像モデル"
+
+msgctxt "#33056"
+msgid "Insert bumpers, ratings, adverts, and trailers between programs.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "番組の間にバンパー、レーティング、広告、予告編を挿入します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#33220"
+msgid "Describes how you want your generated logos to look - style, colors, and mood. These attributes shape each logo the AI creates.\n[B]Tip:[/B] The channel name, theme, and rendering format are handled automatically, so just describe the look you want."
+msgstr "生成されるロゴの見た目(スタイル、色、雰囲気)を説明します。これらの属性がAIが作成する各ロゴを形作ります。\n[B]ヒント:[/B] チャンネル名、テーマ、レンダリング形式は自動的に処理されるので、望む見た目だけを説明してください。"
+
+msgctxt "#32110"
+msgid "Backup Channels"
+msgstr "チャンネルをバックアップ"
+
+msgctxt "#30153"
+msgid "Restart Prompt (%)"
+msgstr "再起動プロンプト (%)"
+
+msgctxt "#30233"
+msgid "Include Kodi Extras"
+msgstr "Kodiの特典を含める"
+
+msgctxt "#33131"
+msgid "Don't send PseudoTV playback to Trakt.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - scrobbling active."
+msgstr "PseudoTVの再生をTraktに送信しません。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B] - スクロブリングがアクティブ。"
+
+msgctxt "#30038"
+msgid "AutoTune"
+msgstr "自動チューニング"
+
+msgctxt "#33201"
+msgid "Seconds to wait for a Kodi API reply.\n[B]Default:[/B] [B][COLOR=white]90[/COLOR][/B]"
+msgstr "Kodi APIの応答を待つ秒数。\n[B]既定:[/B] [B][COLOR=white]90[/COLOR][/B]"
+
+msgctxt "#30198"
+msgid "Parallel Processing"
+msgstr "並列処理"
+
+msgctxt "#30212"
+msgid "Playback Notifications"
+msgstr "再生通知"
+
+msgctxt "#30074"
+msgid "Access Kodi Settings"
+msgstr "Kodi設定にアクセス"
+
+msgctxt "#30045"
+msgid "Show OnNext"
+msgstr "OnNextを表示"
+
+msgctxt "#30063"
+msgid "Guide Grouping"
+msgstr "ガイドのグループ化"
+
+msgctxt "#33111"
+msgid "Seconds between Kodi API calls.\n[B]Default:[/B] [B][COLOR=white]2[/COLOR][/B] - higher = more stable, slower."
+msgstr "Kodi API呼び出しの間隔(秒)。\n[B]既定:[/B] [B][COLOR=white]2[/COLOR][/B] - 高くするとより安定し、遅くなります。"
+
+msgctxt "#33033"
+msgid "Shows whether a newer PseudoTV Live build is available.\n[B]Default:[/B] [B][COLOR=white]Auto[/COLOR][/B] - set by the addon."
+msgstr "新しいPseudoTV Liveビルドが利用可能かどうかを表示します。\n[B]既定:[/B] [B][COLOR=white]自動[/COLOR][/B] - アドオンによって設定されます。"
+
+msgctxt "#33112"
+msgid "Where the channel bug appears.\n[B]Default:[/B] [B][COLOR=white]Auto[/COLOR][/B]"
+msgstr "チャンネルバグが表示される位置。\n[B]既定:[/B] [B][COLOR=white]自動[/COLOR][/B]"
+
+msgctxt "#30054"
+msgid "Include .strm Files"
+msgstr ".strmファイルを含める"
+
+msgctxt "#30132"
+msgid "Rollback Watched"
+msgstr "視聴済みをロールバック"
+
+msgctxt "#30095"
+msgid "XMLTV URL"
+msgstr "XMLTV URL"
+
+msgctxt "#33098"
+msgid "Port for the HTTP server.\n[B]Default:[/B] [B][COLOR=white]50001[/COLOR][/B] - change only if in use."
+msgstr "HTTPサーバーのポート。\n[B]既定:[/B] [B][COLOR=white]50001[/COLOR][/B] - 使用中の場合のみ変更してください。"
+
+msgctxt "#30036"
+msgid "Guide History (Past Days)"
+msgstr "ガイド履歴(過去日数)"
+
+msgctxt "#30013"
+msgid "Tweaks"
+msgstr "微調整"
+
+msgctxt "#30213"
+msgid "Client Only"
+msgstr "クライアントのみ"
+
+msgctxt "#33027"
+msgid "Choose the logo packs used for channel artwork.\n[B]Default:[/B] [B][COLOR=white]PseudoTV + studio logos[/COLOR][/B]."
+msgstr "チャンネルアートワークに使用するロゴパックを選択します。\n[B]既定:[/B] [B][COLOR=white]PseudoTV + スタジオロゴ[/COLOR][/B]。"
+
+msgctxt "#30171"
+msgid "Hide OSD on change"
+msgstr "変更時にOSDを非表示"
+
+msgctxt "#33001"
+msgid "[COLOR=yellow][B]Notice:[/B][/COLOR] Writes detailed debug info to kodi.log.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - disable unless troubleshooting."
+msgstr "[COLOR=yellow][B]注意:[/B][/COLOR] 詳細なデバッグ情報をkodi.logに書き込みます。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B] - トラブルシューティング以外では無効にしてください。"
+
+msgctxt "#30001"
+msgid "Enable Debug Logging"
+msgstr "デバッグログを有効化"
+
+msgctxt "#30097"
+msgid "Port {port} is In-Use! Port {available} is available on this instance  All PseudoTV Instances must be configured to use the same port."
+msgstr "ポート {port} は使用中です! このインスタンスではポート {available} が利用可能です。すべてのPseudoTVインスタンスは同じポートを使用するように設定する必要があります。"
+
+msgctxt "#33213"
+msgid "Run this instance as a client with no local channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgstr "このインスタンスをローカルチャンネルのないクライアントとして実行します。\n[B]既定:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+
+msgctxt "#33132"
+msgid "Restore playcount and resume point when playback ends.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgstr "再生終了時に再生回数と再開ポイントを復元します。\n[B]既定:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+
+msgctxt "#30155"
+msgid "Auto PVR Refresh"
+msgstr "自動PVR更新"
+
+msgctxt "#32230"
+msgid "Pause Channel"
+msgstr "チャンネルを一時停止"
+
+msgctxt "#33232"
+msgid "Change sorting methods like episode order, random order."
+msgstr "エピソード順やランダム順などの並べ替え方法を変更します。"
+
+msgctxt "#30150"
+msgid "Copy Logo Folder?"
+msgstr "ロゴフォルダをコピーしますか?"
+
+msgctxt "#30232"
+msgid "Contextual Model"
+msgstr "コンテキストモデル"
+
+msgctxt "#30205"
+msgid "Run CPU Benchmark"
+msgstr "CPUベンチマークを実行"
+
+msgctxt "#30029"
+msgid "Bumper Resources"
+msgstr "バンパーリソース"

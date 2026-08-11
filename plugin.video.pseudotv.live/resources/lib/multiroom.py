@@ -23,7 +23,7 @@ from variables   import *
 from _services   import _Service
 
 class Multiroom(object):
-
+    _default_data = None   # memoized static default template (SERVERFLE_DEFAULT)
 
     def __init__(self, sysARG: list = sys.argv, service: Optional[_Service] = None):
         if service is None: service = _Service()
@@ -32,7 +32,12 @@ class Multiroom(object):
         self.service    = service
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
-        self.serverData = FileAccess.getJSON(SERVERFLE_DEFAULT)
+        if Multiroom._default_data is None:
+            Multiroom._default_data = FileAccess.getJSON(SERVERFLE_DEFAULT)
+        # Deep-copy the memoized template: _load()/addServer() mutate this
+        # instance's structure and must never alias the shared copy.
+        import copy
+        self.serverData = copy.deepcopy(Multiroom._default_data)
         self.serverKEY  = f'{SERVERS_KEY}.{self.serverData.get("version","0.0.0")}'
         self.serverData.update(self._load())
 
@@ -221,10 +226,10 @@ class Multiroom(object):
         try:    param = self.sysARG[1]
         except Exception: param = None
         if param == 'Enable_ZeroConf': 
-            ctl = (5,1)
+            ctl = (4,6)  # sharing -> ZeroConf_Status
             self._chkZeroConf()
         elif param == 'Select_Servers': 
-            ctl = (5,11)
+            ctl = (4,7)  # sharing -> Select_server
             Globals.settings.setSettingBool('Enable_Client',True)
             self._selServer()
         return Globals._openSettings(ctl)

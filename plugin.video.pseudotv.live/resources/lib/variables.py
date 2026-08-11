@@ -17,12 +17,11 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from typing import Any, Optional, Sequence
 from constants   import *
 from fileaccess  import FileAccess, FileLock
 from kodi        import Kodi, Settings, Properties, ListItems, Builtin, Dialog
 from pool        import debounceit, timeit, poolit, executeit, timerit, threadit, ExecutorPool
-import socket
+from typing      import Any, Optional, Sequence
 
 # =============================================================================
 # Runtime Cache Paths (resolved from user settings at import time)
@@ -34,7 +33,6 @@ M3UFLEPATH      = os.path.join(CACHE_LOC,M3UFLE)                        # Active
 XMLTVFLEPATH    = os.path.join(CACHE_LOC,XMLTVFLE)                      # Active XMLTV EPG path
 GENREFLEPATH    = os.path.join(CACHE_LOC,GENREFLE)                      # Active genre mappings path
 PROVIDERFLEPATH = os.path.join(CACHE_LOC,PROVIDERFLE)                   # Active provider config path
-
 
 class Globals:
     """Central service hub and utility collection.
@@ -125,11 +123,18 @@ class Globals:
         
     @staticmethod
     def _openSettings(ctl: tuple = (0,1), id: str = ADDON_ID) -> bool:
+        # ctl = (category_index, setting_index), 0-based.
+        # The addon settings window (SettingsCategory.xml) exposes:
+        #   control id 3 = category grouplist (left)
+        #   control id 5 = settings grouplist (right)
+        # SetFocus(controlId, subItemId, absolute) moves focus to that list item.
+        # (The old ctl-200 / ctl-180 offsets produced negative control IDs that
+        # matched nothing, so focus never actually moved.)
         xbmc.executebuiltin(f'Addon.OpenSettings({id})')
         xbmc.sleep(100)
-        xbmc.executebuiltin('SetFocus(%i)'%(ctl[0]-200))
+        xbmc.executebuiltin('SetFocus(3, %i, absolute)' % int(ctl[0]))
         xbmc.sleep(50)
-        xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]-180))
+        xbmc.executebuiltin('SetFocus(5, %i, absolute)' % int(ctl[1]))
         return True
 
     @staticmethod
@@ -168,6 +173,22 @@ class Globals:
                    item.get(key))
             if art: return art
         return {0:LOGO_LANDSCAPE,1:LOGO_POSTER}[opt]
+
+    @staticmethod
+    def _toWebImage(image: Optional[str] = None) -> str:
+        """Convert a Kodi VFS image (resource://, image://, special://, smb://,
+        nfs://) into a browser-loadable URL on this addon's /image/ endpoint.
+
+        Emitting raw smb:// artwork into the served M3U/XMLTV makes Kodi's image
+        loader open SMB files directly, which races Kodi's Samba idle-close and
+        crashes libsmbclient (use-after-free SIGSEGV). Rewriting to /image/ keeps
+        all artwork over HTTP. Plain http(s) pass through unchanged.
+        """
+        if not image or image.startswith(('http://', 'https://')): return image or ''
+        remote = Globals.properties.getEXTProperty('%s.Remote_Host' % (ADDON_ID))
+        inner = image[len('image://'):] if image.startswith('image://') else image
+        inner = inner.replace('\\', '/')
+        return f'http://{remote}/image/{Globals._quoteString(inner)}'
 
     @staticmethod
     def _getDummyIcon(text: Any, background: str = COLOR_BACKGROUND, color: str = COLOR_TEXT) -> str:

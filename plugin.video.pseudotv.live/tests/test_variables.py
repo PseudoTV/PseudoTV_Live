@@ -702,3 +702,67 @@ class TestCleanGroups:
             citem = {'group': ['Movies', 'Action']}
             result = globals_class._cleanGroups(citem)
             assert result['group'] == ['PseudoTV Live']
+
+# ========================================================================
+# 37. _openSettings focus offsets
+# ========================================================================
+
+class TestOpenSettingsFocus:
+    def test_open_settings_uses_correct_control_ids(self, globals_class):
+        """SetFocus must target the settings window's real controls: category
+        grouplist id=3 and settings grouplist id=5 (per SettingsCategory.xml),
+        using 0-based subitem indices — NOT the old negative ctl-200/ctl-180."""
+        calls = []
+        def fake_builtin(cmd):
+            calls.append(cmd)
+        with patch('variables.xbmc.executebuiltin', side_effect=fake_builtin), \
+             patch('variables.xbmc.sleep'):
+            globals_class._openSettings((5, 7))
+        focus_calls = [c for c in calls if c.startswith('SetFocus(')]
+        assert focus_calls == ['SetFocus(3, 5, absolute)', 'SetFocus(5, 7, absolute)']
+
+    def test_open_settings_default_focus_channels(self, globals_class):
+        """Default (0,1) focuses the channels category's first setting."""
+        calls = []
+        with patch('variables.xbmc.executebuiltin', side_effect=calls.append), \
+             patch('variables.xbmc.sleep'):
+            globals_class._openSettings()
+        focus_calls = [c for c in calls if c.startswith('SetFocus(')]
+        assert focus_calls == ['SetFocus(3, 0, absolute)', 'SetFocus(5, 1, absolute)']
+
+
+# ========================================================================
+# _toWebImage - rewrite SMB/VFS artwork to self-hosted /image/ URL
+# ========================================================================
+
+class TestToWebImage:
+    """Raw smb:///nfs:// artwork in the served M3U/XMLTV made Kodi's image
+    loader open SMB directly, racing Kodi's Samba idle-close and crashing
+    libsmbclient. _toWebImage rewrites VFS paths to the /image/ endpoint."""
+
+    def _make(self, globals_class):
+        from variables import Globals
+        # remote host is read from Globals.properties
+        props = MagicMock()
+        props.getEXTProperty.return_value = '192.168.0.53:50001'
+        return globals_class, props
+
+    def test_smb_rewritten_to_image_url(self, globals_class):
+        from variables import Globals
+        with patch('variables.Globals.properties.getEXTProperty', return_value='192.168.0.53:50001'):
+            out = Globals._toWebImage('smb://USERNAME:PASSWORD@192.168.0.51/TV/Show/clearlogo.png')
+        assert out.startswith('http://192.168.0.53:50001/image/')
+        # decoded inner path must be the SMB path (forward slashes)
+        import urllib.parse
+        decoded = urllib.parse.unquote(out.split('/image/')[1])
+        assert decoded == 'smb://USERNAME:PASSWORD@192.168.0.51/TV/Show/clearlogo.png'
+
+    def test_http_passes_through(self, globals_class):
+        from variables import Globals
+        out = Globals._toWebImage('http://example.com/logo.png')
+        assert out == 'http://example.com/logo.png'
+
+    def test_empty_returns_empty(self, globals_class):
+        from variables import Globals
+        assert Globals._toWebImage('') == ''
+        assert Globals._toWebImage(None) == ''

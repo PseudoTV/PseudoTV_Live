@@ -17,14 +17,12 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
-from typing import Any, Dict, List, Optional
+import ratings
 from variables  import *
 from resources  import Resources
-import ratings
+from typing     import Any, Dict, List, Optional
 
 class Fillers(object):
-
-
     def __init__(self, citem: Dict[str, Any] = {}, builder: Any = None):
         self.citem      = citem
         self.builder    = builder
@@ -42,7 +40,6 @@ class Fillers(object):
         if not self._hasFillerItems():
             self.fillSources()
 
-
     def _hasFillerItems(self) -> bool:
         for values in self.bctTypes.values():
             if not values.get('enabled', False): continue
@@ -51,10 +48,8 @@ class Fillers(object):
                 return True
         return False
 
-
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s' % (self.__class__.__name__, msg), level)
-
 
     def fillSources(self) -> Dict[str, Any]:
         def _build(ftype: str, path: str, checksum: str = ADDON_VERSION, expiration: datetime.timedelta = datetime.timedelta(minutes=15)) -> Dict[str, List[Dict[str, Any]]]:
@@ -119,7 +114,6 @@ class Fillers(object):
             self.log('fillSources, type = %s, items = %s' % (ftype, len(values['items'])))
         return values
         
-        
     def _getFillterItem(self, ftype: str, count: int = 1, keys: List[Any] = ['resources'], chance: bool = False, passes: Optional[int] = None) -> List[Dict[str, Any]]:
         tmpLST: List[Dict[str, Any]] = []
         filler = self.bctTypes.get(ftype, {})
@@ -139,7 +133,6 @@ class Fillers(object):
             tmpLST.extend(self._getFillterItem(ftype, count, ['resources'], Globals._chanceBool(filler.get('chance', 0)), passes - 1))
         return tmpLST
 
-
     def _getExtras(self, fileItem: Dict[str, Any]) -> List[Dict[str, Any]]:
         items: List[Dict[str, Any]] = []
         try:# https://kodi.wiki/view/Video_extras
@@ -149,8 +142,6 @@ class Fillers(object):
         self.log('[%s] _getExtras, items = %s'%(self.citem.get('id'), len(items)))
         return items
         
-
-
     def _getPreRoll(self, fileItem: Dict[str, Any]) -> List[Dict[str, Any]]:
         # pre roll - bumpers/ratings
         nfileList: List[Dict[str, Any]] = []
@@ -175,7 +166,6 @@ class Fillers(object):
                     nfileList.extend(self.builder.buildCells(self.citem, dur, entries=1, info=item))
         return Globals._setDictLST(nfileList)
         
-        
     def _getPostRoll(self, fileItem: Dict[str, Any], nextItem: Dict[str, Any] = {}, remaining_seconds: int = 0) -> List[Dict[str, Any]]:
         # post roll - adverts/trailers/extras
         items: List[Dict[str, Any]] = []
@@ -193,7 +183,6 @@ class Fillers(object):
                         items.extend(self._getFillterItem(ftype, numberToFetch, keys, Globals._chanceBool(filler.get('chance', 0))))
                     if ftype == 'extras' and filler.get('incKODI',False) and ('movieid' in item or 'tvshowid' in item):
                         items.extend(self._getExtras(item))
-                        
         if items:
             iteration     = 0
             post_counter  = 0
@@ -221,8 +210,6 @@ class Fillers(object):
                     post_counter += 1
         return nfileList
         
-
-
     def injectFillers(self, fileList: List[Dict[str, Any]], slot_size_mins: int = 30) -> List[Dict[str, Any]]:
         self.log('[%s] injectFillers, IN fileList = %s'%(self.citem.get('id'), len(fileList)))
         nfileList: List[Dict[str, Any]] = []

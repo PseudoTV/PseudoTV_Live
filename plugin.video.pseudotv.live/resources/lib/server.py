@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import gzip, mimetypes, socket, errno, queue
+import gzip, mimetypes, socket, errno, queue, re
 
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
@@ -25,6 +25,7 @@ from typing                    import Any, Optional
 from zeroconf                  import *
 from variables                 import *
 from channels                  import Channels
+from webpoint                  import ChannelManager, WebPoint
 from library                   import Library
 from resources                 import Resources
 from multiroom                 import Multiroom
@@ -122,6 +123,8 @@ class MyHandler(BaseHTTPRequestHandler):
         self.service    = service
         self.monitor    = service.monitor
         self.resources  = Resources(service)
+        self.cm         = ChannelManager(service)
+        self.wp         = WebPoint(service)
         # Cache the rule dispatcher on the service keyed by (channel key, channel
         # count) — rebuilding RulesList (loadRules over every channel) on each HTTP
         # request was wasteful under pvr.iptvsimple polling. Channels are reloaded
@@ -160,16 +163,16 @@ class MyHandler(BaseHTTPRequestHandler):
         return q
 
 
-    def _send(self, data: Any, path: str = '', code: int = 200, ctype: Optional[str] = None, compress: bool = False, cors: bool = False):
+    def _send(self, data: Any, path: str = '', code: int = 200, ctype: Optional[str] = None, compress: bool = False, cors: bool = False, gz: bool = False):
         if isinstance(data, str): data = data.encode(DEFAULT_ENCODING)
-        if compress:
+        if compress and not gz:
             data = gzip.compress(data, compresslevel=5)
         if ctype is None:
             ctype = {'.json':'application/json', '.m3u':'application/vnd.apple.mpegurl',
                      '.xml':'application/xml', '.html':'text/html'}.get(
                         os.path.splitext(path)[1].lower(), mimetypes.guess_type(path)[0] or 'application/octet-stream')
         self.send_response(code)  # status line must precede any headers
-        if compress:
+        if compress or gz:
             self.send_header("Content-Encoding", "gzip")
         if cors:
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -208,7 +211,7 @@ class MyHandler(BaseHTTPRequestHandler):
             prev = img
             img = Globals._unquoteString(img)
             if img == prev: break
-        if '..' in img: return self._sendError(400, 'Invalid path')
+        if re.search(r'(^|[\\/])\.\.([\\/]|$)', img): return self._sendError(400, 'Invalid path')
         if not img: return self._sendFile(LOGO, False)
         # legacy cache entries wrapped resource:// in image:// — unwrap.
         if img.startswith('image://'):
@@ -235,6 +238,11 @@ class MyHandler(BaseHTTPRequestHandler):
                 return self._send(data, img)
         full = os.path.join(MEDIA_LOC, os.path.basename(img.replace('\\', '/')))
         if FileAccess.exists(full): return self._sendFile(full, False)
+        # Resolved path doesn't exist (stale cache / deleted generated logo) —
+        # degrade to the default addon logo instead of 404 so Kodi's mime probe
+        # never breaks on a vanished image.
+        self.log('_serveImage, missing image [%s], serving default logo' % img, xbmc.LOGDEBUG)
+        if FileAccess.exists(LOGO): return self._sendFile(LOGO, False)
         return self._sendError(404, 'File Not Found [%s]' % self.path)
 
 
@@ -282,125 +290,9 @@ class MyHandler(BaseHTTPRequestHandler):
 
 
     # ======================= channel save / helpers =======================
-    @staticmethod
-    def _coerce(value: Any, key: str = '') -> Any:
-        """Coerce a form value back into a channel field type."""
-        if isinstance(value, (bool, int, float)): return value
-        if isinstance(value, list): return [MyHandler._coerce(v) for v in value]
-        if isinstance(value, dict): return {k: MyHandler._coerce(v) for k, v in value.items()}
-        if isinstance(value, str):
-            s = value.strip()
-            if key in ('path', 'group'):
-                try:
-                    v = literal_eval(s)
-                    if isinstance(v, list): return v
-                except Exception: pass
-                return [s] if s else []
-            low = s.lower()
-            if low in ('on', 'true', '1'): return True
-            if low in ('off', 'false', '0', ''): return False
-            try: return int(s)
-            except Exception: pass
-            try: return float(s)
-            except Exception: pass
-            return value
-        return value
+    # ======================= channel manager (delegates to ChannelManager) =======================
 
 
-    def _saveChannel(self, data: dict):
-        if not isinstance(data, dict): return self._sendError(400, 'invalid payload')
-        chan = Channels(Globals.getChannelKey(), writable=True)
-        nchan = dict(chan.getTemplate())
-        rules = {}
-        for key, val in data.items():
-            if key.startswith('rules.'):
-                parts = key.split('.')
-                if len(parts) >= 4 and parts[2] == 'values':
-                    rid = parts[1]
-                    rules.setdefault(rid, {}).setdefault('values', {})['.'.join(parts[3:])] = self._coerce(val)
-                continue
-            nchan[key] = self._coerce(val, key)
-        nchan['rules'] = rules
-        try: nchan['number'] = int(nchan.get('number', 0))
-        except Exception: nchan['number'] = 0
-        if isinstance(nchan.get('path'), str):
-            nchan['path'] = [nchan['path']] if nchan['path'] else []
-        if not nchan.get('id'):
-            nchan['id'] = Globals._getChannelID(nchan.get('name', ''), nchan.get('path', []), nchan['number'], uuid=chan.channelDATA.get('uuid'))
-        chans = chan.getChannels()
-        num   = nchan['number']
-        idx   = next((i for i, c in enumerate(chans) if c.get('number') == num or (nchan['id'] and c.get('id') == nchan['id'])), None)
-        if idx is None: chans.append(nchan)
-        else:           chans[idx] = dict(chans[idx], **nchan)
-        ok = chan.setChannels(list(chan._verify(chans)))
-        return self._sendJSON({'status': 'ok' if ok else 'error', 'number': num}, 200 if ok else 400)
-
-
-    def _saveChannels(self, payload: Any):
-        if not isinstance(payload, list): payload = [payload]
-        chan = Channels(Globals.getChannelKey(), writable=True)
-        ok = chan.setChannels(list(chan._verify(payload)))
-        return self._sendJSON({'status': 'ok' if ok else 'error'}, 200 if ok else 400)
-
-
-    def _searchLogo(self, query: str):
-        q = (query or '').strip().lower()
-        if not q: return self._sendJSON({'url': ''})
-        jsonRPC = self.service.jsonRPC
-        arts = []
-        try:
-            for method, key in (('VideoLibrary.GetMovies', 'movies'), ('VideoLibrary.GetTVShows', 'tvshows')):
-                param = {"method": method, "params": {"properties": ["art", "title", "originaltitle"],
-                                                      "filter": {"field": "title", "operator": "contains", "value": q}}}
-                result = jsonRPC.sendJSON(param).get('result', {})
-                arts.extend(item.get('art', {}) for item in result.get(key, []))
-        except Exception as e:
-            self.log('logo_search failed: %s' % e, xbmc.LOGDEBUG)
-        for art in arts:
-            for k in ('thumb', 'poster', 'icon', 'landscape', 'fanart'):
-                if art.get(k): return self._sendJSON({'url': art[k]})
-        return self._sendJSON({'url': ''})
-
-
-    def _lookupLogo(self, name: str, type: str = ''):
-        """Run the addon's full logo resolution (Resources.getLogo lookup=True):
-        local folders -> resource addons -> TV show art -> generative. Caches the
-        result so the static /logos/{name} URL serves it immediately after."""
-        if not name: return self._sendJSON({'url': ''})
-        try:
-            from resources import Resources
-            resources = Resources(self.service)
-            url = resources.getLogo({'name': name, 'type': type or 'Custom'}, lookup=True)
-            return self._sendJSON({'url': url, 'name': name})
-        except Exception as e:
-            self.log('logo_lookup failed: %s' % e, xbmc.LOGDEBUG)
-            return self._sendJSON({'url': ''})
-
-
-    def _serversPayload(self) -> dict:
-        """serverData guaranteed to include the local instance (always enabled)
-        alongside the enabled remote instances discovered via zeroconf."""
-        data = Multiroom(service=self.service).serverData
-        servers = data.setdefault('servers', {})
-        try:
-            local = Globals.settings.getBonjour()
-            local['enabled'] = True
-            local['online']  = True
-            servers[local.get('name') or Globals.properties.getFriendlyName()] = local
-        except Exception as e:
-            self.log('_serversPayload, local instance failed: %s' % e, xbmc.LOGDEBUG)
-        return data
-
-
-    def _verifyUUID(self, uuid: str) -> bool:
-        if uuid == Globals.settings.getMYUUID(): return True
-        try:
-            from multiroom import Multiroom
-            return any(s.get('uuid') == uuid for s in list(Multiroom().serverData.values()))
-        except Exception: return False
-
-
-    # ======================= handlers =======================
     def do_HEAD(self):
         self.log('do_HEAD, incoming path = %s' % (self.path))
         # Mirror GET so HEAD mime probes (Kodi's GetMimeType) see the real
@@ -423,6 +315,29 @@ class MyHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
+    def _authorized(self, incoming: Optional[dict] = None) -> bool:
+        """Guard mutating POST endpoints with the instance UUID.
+
+        Accepts the per-install UUID (Globals.getMYUUID) either as a bearer token
+        (`Authorization: Bearer <uuid>`) or in the existing `uuid` body field the
+        web UI already sends. The UUID is auto-generated per install, needs no
+        setup, and is already exposed to the browser via /api/bonjour.json and
+        the {uuid} template placeholder. No shared secret to misconfigure.
+        """
+        if incoming is None: incoming = {}
+        try:
+            expected = Globals.settings.getMYUUID()
+        except Exception:
+            return True  # UUID unavailable — don't lock the user out
+        if not expected:
+            return True  # no UUID yet — behave as before
+        auth = self.headers.get('Authorization', '')
+        if auth.strip().lower() == ('bearer %s' % expected).lower():
+            return True
+        body_uuid = incoming.get('uuid')
+        return bool(body_uuid) and str(body_uuid) == expected
+
+
     def do_POST(self):
         self.log('do_POST, incoming path = %s' % (self.path))
         path = self._path()
@@ -431,22 +346,28 @@ class MyHandler(BaseHTTPRequestHandler):
         except Exception as e:
             self.log(f'do_POST, failed to parse incoming body: {e}', xbmc.LOGWARNING)
             incoming = {}
+        if not self._authorized(incoming):
+            self.log('do_POST, unauthorized write attempt: %s' % path, xbmc.LOGWARNING)
+            return self._sendError(401, 'unauthorized')
 
         if path.startswith('/api/'):
             return self._apiPOST(path, incoming)
 
         if path == '/remote/form.json':  # generic payload editor (form.html)
             payload = incoming.get('payload')
-            if isinstance(payload, list):                        return self._saveChannels(payload)
+            if isinstance(payload, list):
+                p, code = self.cm.saveChannels(payload)
+                return self._sendJSON(p, code)
             if isinstance(payload, dict) and isinstance(payload.get('channels'), list):
-                return self._saveChannels(payload.get('channels'))
+                p, code = self.cm.saveChannels(payload.get('channels'))
+                return self._sendJSON(p, code)
             if isinstance(payload, dict) and ('resume' in payload or 'filelist' in payload):
                 Globals.settings.setCacheSetting('form.payload', payload, FileAccess._getMD5('form.payload'), datetime.timedelta(days=84))
                 return self._sendJSON({'status': 'ok'})
             return self._sendError(400, 'unrecognized payload')
 
         if path.startswith('/filelist/'):  # resume data
-            if incoming.get('uuid') and not self._verifyUUID(incoming.get('uuid')):
+            if incoming.get('uuid') and not self.cm.verifyUUID(incoming.get('uuid')):
                 return self._sendError(403, 'invalid uuid')
             key = path.replace('/filelist/', '')
             Globals.settings.setCacheSetting(key, incoming.get('payload'), FileAccess._getMD5(key), datetime.timedelta(days=84))
@@ -457,30 +378,45 @@ class MyHandler(BaseHTTPRequestHandler):
 
     def _apiPOST(self, path: str, incoming: dict):
         if path == '/api/save':
-            return self._saveChannel(incoming.get('payload', incoming))
+            payload, code = self.cm.saveChannel(incoming.get('payload', incoming))
+            return self._sendJSON(payload, code)
         if path in (f'/api/{CHANNELFLE}', '/api/channels'):
-            if incoming.get('uuid') and not self._verifyUUID(incoming.get('uuid')):
+            if incoming.get('uuid') and not self.cm.verifyUUID(incoming.get('uuid')):
                 return self._sendError(403, 'invalid uuid')
             _publish({'type': 'channels.saved', 'count': len(incoming.get('payload', incoming.get('channels', [])) or [])})
-            return self._saveChannels(incoming.get('payload', incoming.get('channels')))
+            payload, code = self.cm.saveChannels(incoming.get('payload', incoming.get('channels')))
+            return self._sendJSON(payload, code)
         if path == '/api/settings':
             return self._updateSettings(incoming.get('payload', incoming))
         if path == '/api/actions':
             return self._runAction(incoming)
         if path == '/api/imports':
-            return self._manageImports('POST', incoming)
+            p, code = self.wp.manageImports('POST', incoming)
+            return self._sendJSON(p, code)
         if path == '/api/backups':
-            return self._manageBackups('POST', incoming)
+            p, code = self.wp.manageBackups('POST', incoming)
+            return self._sendJSON(p, code)
         if path == '/api/seasons':
-            ok = self._seasonal().setSeasonsData(incoming.get('payload', incoming))
+            ok = self.wp.seasonal().setSeasonsData(incoming.get('payload', incoming))
+            if ok: self.wp.syncSeasonalToRemotes('seasons', incoming.get('payload', incoming))
             _publish({'type': 'seasons.saved'})
             return self._sendJSON({'status': 'ok' if ok else 'error'}, 200 if ok else 400)
         if path == '/api/holidays':
-            ok = self._seasonal().setHolidaysData(incoming.get('payload', incoming))
+            ok = self.wp.seasonal().setHolidaysData(incoming.get('payload', incoming))
+            if ok: self.wp.syncSeasonalToRemotes('holidays', incoming.get('payload', incoming))
             _publish({'type': 'holidays.saved'})
             return self._sendJSON({'status': 'ok' if ok else 'error'}, 200 if ok else 400)
+        if path == '/api/channel/validate':
+            citem = incoming.get('payload', incoming)
+            return self._sendJSON({'citem': self.cm.validateChannel(citem) if isinstance(citem, dict) else {}})
+        if path == '/api/groups':
+            return self._sendJSON(self.cm.addGroup(incoming))
         if path.startswith('/api/channels/'):
-            return self._channelCRUD('PUT', path, incoming)
+            payload, code = self.cm.channelCRUD('PUT', path, incoming)
+            if code == 200:
+                cid = Globals._unquoteString(path.split('/api/channels/', 1)[1])
+                _publish({'type': 'channel.updated', 'id': cid})
+            return self._sendJSON(payload, code)
         return self._sendError(404, 'unknown api: %s' % path)
 
 
@@ -488,76 +424,49 @@ class MyHandler(BaseHTTPRequestHandler):
         ch_key = Globals.getChannelKey()
         routes = {
             f'/api/{BONJOURFLE}': lambda: Globals.settings.getBonjour(),
-            f'/api/{SERVERFLE}':  lambda: self._serversPayload(),
+            f'/api/{SERVERFLE}':  lambda: self.wp.serversPayload(),
             f'/api/{LIBRARYFLE}': lambda: Library(self.service).getLibrary(),
-            f'/api/{CHANNELFLE}': lambda: Channels(ch_key).getChannels(),
+            f'/api/{CHANNELFLE}': lambda: self.cm.channels(),
             f'/api/{PVRFLE}':     lambda: dict(Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(), Globals.properties.getFriendlyName()),
-                                               playback=self._playbackJSON()),
+                                               playback=self.wp.playbackJSON()),
             f'/api/{LOGSFLE}':    lambda: Globals.builtin.parseKodiLog(),
-            '/api/channels':      lambda: Channels(ch_key).getChannels(),
+            '/api/channels':      lambda: self.cm.channels(),
             '/api/template':      lambda: Channels(ch_key).getTemplate(),
             '/api/bonjour':       lambda: Globals.settings.getBonjour(),
-            '/api/settings':      lambda: self._currentSettings(),
-            '/api/rules':         lambda: self._rulesJSON(),
-            '/api/system':        lambda: self._systemInfo(),
-            '/api/playback':      lambda: self._playbackJSON(),
-            '/api/build':         lambda: self._buildStatus(),
-            '/api/guide':         lambda: self._guideJSON(),
-            '/api/imports':       lambda: self._manageImports('GET'),
-            '/api/backups':       lambda: self._manageBackups('GET'),
-            '/api/seasons':       lambda: self._seasonal().getSeasonsData(),
-            '/api/holidays':      lambda: self._seasonal().getHolidaysData(),
+            '/api/settings':      lambda: self.cm.currentSettings(),
+            '/api/rules':         lambda: self.wp.rulesJSON(),
+            '/api/system':        lambda: self.wp.systemInfo(),
+            '/api/playback':      lambda: self.wp.playbackJSON(),
+            '/api/build':         lambda: self.wp.buildStatus(),
+            '/api/guide':         lambda: self.wp.guideJSON(query.get('page', 0)),
+            '/api/imports':       lambda: self.wp.manageImports('GET')[0],
+            '/api/backups':       lambda: self.wp.manageBackups('GET')[0],
+            '/api/groups':        lambda: self.cm.groups(),
+            '/api/seasons':       lambda: self.wp.seasonal().getSeasonsData(),
+            '/api/holidays':      lambda: self.wp.seasonal().getHolidaysData(),
+            '/api/resume':        lambda: self.wp.resumeJSON(),
         }
         if path in routes:
             return self._sendJSON(routes[path](), cors=True)
         if path == '/api/xmltv':
             return self._send(renderFilteredXMLTV(self.channels, self.runActions), path, ctype='application/xml', compress=compress, cors=True)
         if path == '/api/logo_search':
-            return self._searchLogo(query.get('q', ''))
+            return self._sendJSON(self.cm.searchLogo(query.get('q', '')))
         if path == '/api/logo_lookup':
-            return self._lookupLogo(query.get('name', ''), query.get('type', ''))
+            return self._sendJSON(self.cm.lookupLogo(query.get('name', ''), query.get('type', '')))
+        if path == '/api/logo_select':
+            return self._sendJSON(self.cm.selectLogo(query.get('name', ''), query.get('type', '')))
+        if path == '/api/browse':
+            return self._sendJSON(self.cm.browsePath(query.get('path', '')))
         if path == '/api/events':
             return self._sse()
         if path.startswith('/api/channels/'):
-            return self._channelCRUD('GET', path)
+            payload, code = self.cm.channelCRUD('GET', path)
+            return self._sendJSON(payload, code)
         return self._sendError(404, 'unknown api: %s' % path)
 
 
     # ======================= extended API endpoints =======================
-    def _buildStatus(self) -> dict:
-        """Channel-build progress + background queue summary for the manager widget."""
-        queue = getattr(self.service, 'queue', None)
-        running, pending = [], 0
-        if queue is not None:
-            try:
-                running = [getattr(task, 'func', None).__name__ for task in queue.running.values()]
-                pending = len(queue.heap)
-            except Exception as e:
-                self.log('buildStatus queue failed: %s' % e, xbmc.LOGDEBUG)
-        build = getattr(self.service, 'buildState', None) or {}
-        building = bool(build.get('running', False))
-        return {
-            'building': building,
-            'pct': build.get('pct', 0),
-            'channel': build.get('channel', ''),
-            'logo': build.get('logo', ''),
-            'built': build.get('built', 0),
-            'total': build.get('total', 0),
-            'running': running,
-            'pending': pending,
-            'idle': not building and not running and pending == 0,
-        }
-
-
-    def _currentSettings(self) -> dict:
-        settings = Globals.settings.getCurrentSettings()
-        for k in ('Remote_NAME', 'Remote_M3U', 'Remote_XMLTV', 'Remote_GENRE', 'Min_Days',
-                  'Max_Days', 'Enable_Grouping', 'Remote_Status', 'Enable_Executor'):
-            try: settings[k] = Globals.settings.getSetting(k)
-            except Exception: pass
-        return settings
-
-
     def _updateSettings(self, data: dict):
         if not isinstance(data, dict): return self._sendError(400, 'invalid payload')
         for k, v in data.items():
@@ -567,145 +476,12 @@ class MyHandler(BaseHTTPRequestHandler):
                 else:                     Globals.settings.setSetting(k, str(v))
             except Exception as e:
                 self.log('settings update failed %s: %s' % (k, e), xbmc.LOGDEBUG)
+        # Kodi doesn't emit onSettingsChanged for API-driven setting changes, so
+        # disabling autotune here never triggered the migrate+restart. Do it now.
+        if data.get('Enable_Autotune') is False:
+            self.cm.migrateAutotune()
         _publish({'type': 'settings.updated', 'keys': list(data.keys())})
         return self._sendJSON({'status': 'ok'})
-
-
-    def _rulesJSON(self) -> list:
-        out = []
-        for rule in RulesList().allRules():
-            out.append({'myId': rule.myId, 'name': rule.name, 'description': rule.description,
-                        'optionLabels': rule.optionLabels, 'optionValues': rule.optionValues,
-                        'selectBoxOptions': getattr(rule, 'selectBoxOptions', [])})
-        return out
-
-
-    def _systemInfo(self) -> dict:
-        import platform as _platform
-        info = {'name': Globals.properties.getFriendlyName(),
-                'host': Globals.properties.getRemoteHost(),
-                'addon': ADDON_NAME, 'version': ADDON_VERSION,
-                'channel_key': Globals.getChannelKey(), 'channels': len(self.channels),
-                'python': _platform.python_version(), 'machine': _platform.machine(),
-                'os': _platform.platform(), 'uuid': Globals.settings.getMYUUID(),
-                'author': ADDON_AUTHOR,
-                'github': URL_GITHUB, 'wiki': URL_WIKI, 'support': URL_SUPPORT,
-                'readme_url': URL_README, 'changelog_url': URL_CHANGELOG,
-                'readme': self._readFile(README_FLE),
-                'changelog': self._readFile(CHANGELOG_FLE)}
-        try:
-            from constants import TOTAL_RAM_GB, CPU_COUNT, IS_CONSTRAINED_SOC
-            info.update({'ram_gb': TOTAL_RAM_GB, 'cpus': CPU_COUNT, 'constrained_soc': IS_CONSTRAINED_SOC})
-        except Exception: pass
-        return info
-
-
-    def _readFile(self, path: str, limit: int = 20000) -> str:
-        try:
-            with FileAccess.stream(path) as fle:
-                txt = fle.read()
-            if isinstance(txt, bytes): txt = txt.decode(DEFAULT_ENCODING, 'replace')
-            return txt[:limit]
-        except Exception:
-            return ''
-
-
-    def _playbackJSON(self) -> dict:
-        """Lightweight live playback snapshot for the manager UI.
-
-        Read from the running service's Player (playingItem keeps the current
-        channel/item dicts fresh across channel changes). Everything returned is
-        JSON-safe: sets/slices are normalized and only whitelisted keys kept.
-        """
-        player = getattr(self.service, 'player', None)
-        out = {'is_playing': False, 'is_pseudotv': False, 'provider': None,
-               'channel': None, 'item': {}}
-        try:
-            if player is None or not player.isPlaying(): return out
-            item = dict(getattr(player, 'playingItem', None) or {})
-            out['is_playing'] = True
-            out['is_pseudotv'] = bool(item.get('isPseudoTV', False))
-            citem = item.get('citem') or {}
-            fitem = item.get('fitem') or {}
-            out['channel'] = {'name': citem.get('name'), 'number': citem.get('number'),
-                              'id': citem.get('id'), 'logo': citem.get('logo', '')}
-            if out['is_pseudotv']:
-                out['provider'] = "%s (%s)" % (ADDON_NAME, Globals.properties.getFriendlyName())
-            else:
-                out['provider'] = item.get('provider') or Globals.builtin.getInfoLabel('PVR.BackendName') or None
-            out['item'] = {k: fitem.get(k) for k in
-                           ('title', 'thumb', 'logo', 'plot', 'genre', 'year', 'runtime',
-                            'season', 'episode', 'file') if fitem.get(k) is not None}
-            if not out['item'] and citem:  # channel-level fallback for radio/unknown
-                out['item'] = {'title': citem.get('name'), 'thumb': citem.get('logo', ''),
-                               'genre': citem.get('group')}
-        except Exception as e:
-            self.log(f"_playbackJSON failed: {e}", xbmc.LOGDEBUG)
-        return out
-
-
-    def _seasonal(self):
-        from seasonal import Seasonal
-        return Seasonal()
-
-
-    @staticmethod
-    def _first(value: Any, default: str = ''):
-        if isinstance(value, list):
-            if not value: return default
-            item = value[0]
-            return item[0] if isinstance(item, (list, tuple)) and item else item
-        return value if value is not None else default
-
-
-    def _guideJSON(self) -> dict:
-        try:
-            from xmltvs import XMLTVS
-            xml = XMLTVS()
-            out = {'channels': [], 'programmes': []}
-            for ch in xml.getChannels()[:300]:
-                icon = ch.get('icon') or []
-                icon_src = icon[0].get('src') if isinstance(icon, list) and icon and isinstance(icon[0], dict) else (ch.get('logo') or '')
-                out['channels'].append({'id': ch.get('id'), 'name': self._first(ch.get('display-name')), 'logo': icon_src})
-            for p in xml.getProgrammes()[:2000]:
-                out['programmes'].append({'channel': p.get('channel'), 'start': p.get('start'), 'stop': p.get('stop'),
-                                          'title': self._first(p.get('title')),
-                                          'genre': [self._first(g) for g in (p.get('category') or [])]})
-            return out
-        except Exception as e:
-            self.log('guide failed: %s' % e, xbmc.LOGDEBUG)
-            return {'channels': [], 'programmes': []}
-
-
-    def _channelCRUD(self, method: str, path: str, incoming: Optional[dict] = None):
-        cid = Globals._unquoteString(path.split('/api/channels/', 1)[1])
-        if not cid: return self._sendError(400, 'missing channel id')
-        chan = Channels(Globals.getChannelKey(), writable=True)
-        chans = chan.getChannels()
-        if method == 'GET':
-            for c in chans:
-                if c.get('id') == cid: return self._sendJSON(c, cors=True)
-            return self._sendError(404, 'channel not found')
-        if method == 'PUT':
-            if not isinstance(incoming, dict): return self._sendError(400, 'invalid payload')
-            channel = incoming.get('payload', incoming)
-            if not isinstance(channel, dict): return self._sendError(400, 'invalid channel')
-            for i, c in enumerate(chans):
-                if c.get('id') == cid:
-                    chans[i] = dict(c, **channel)
-                    break
-            else:
-                channel['id'] = cid
-                chans.append(channel)
-            ok = chan.setChannels(list(chan._verify(chans)))
-            _publish({'type': 'channel.updated', 'id': cid})
-            return self._sendJSON({'status': 'ok' if ok else 'error'}, 200 if ok else 400)
-        if method == 'DELETE':
-            chans = [c for c in chans if c.get('id') != cid]
-            ok = chan.setChannels(list(chan._verify(chans)))
-            _publish({'type': 'channel.deleted', 'id': cid})
-            return self._sendJSON({'status': 'ok' if ok else 'error'}, 200 if ok else 400)
-        return self._sendError(405, 'method not allowed')
 
 
     def _runAction(self, incoming: dict):
@@ -739,33 +515,6 @@ class MyHandler(BaseHTTPRequestHandler):
             return self._sendError(500, str(e))
         _publish({'type': 'action', 'action': action})
         return self._sendJSON({'status': 'ok', 'action': action})
-
-
-    def _manageImports(self, method: str, incoming: Optional[dict] = None):
-        try:
-            from backup import Backup
-            backup = Backup()
-            if method == 'GET':
-                return self._sendJSON({'imports': backup.getImports()}, cors=True)
-            fle = (incoming.get('payload', {}) or {}).get('file') if isinstance(incoming.get('payload'), dict) else incoming.get('file')
-            ok = backup.importChannels(fle) if fle else False
-            return self._sendJSON({'status': 'ok' if ok else 'error'}, 200 if ok else 400)
-        except Exception as e:
-            self.log('imports %s failed: %s' % (method, e), xbmc.LOGERROR)
-            return self._sendError(500, str(e))
-
-
-    def _manageBackups(self, method: str, incoming: Optional[dict] = None):
-        try:
-            from backup import Backup
-            backup = Backup()
-            if method == 'GET':
-                return self._sendJSON({'backups': backup.getBackups()}, cors=True)
-            ok = backup.backupChannels()
-            return self._sendJSON({'status': 'ok' if ok else 'error'}, 200 if ok else 400)
-        except Exception as e:
-            self.log('backups %s failed: %s' % (method, e), xbmc.LOGERROR)
-            return self._sendError(500, str(e))
 
 
     def _sse(self):
@@ -829,16 +578,16 @@ class MyHandler(BaseHTTPRequestHandler):
             # --- core feed files ---
             if path == '/favicon.ico': return self._sendFile(ICON_WEB, compress)
             if path.endswith(Globals.properties.getProcessID()):
-                if   M3UFLE.lower() in path:  return self._send(renderFilteredM3U(self.channels, self.runActions), path, ctype='application/vnd.apple.mpegurl', compress=compress, cors=True)
-                elif XMLTVFLE.lower() in path:return self._send(renderFilteredXMLTV(self.channels, self.runActions), path, ctype='application/xml', compress=compress, cors=True)
+                if   M3UFLE.lower() in path:  return self._send(renderFilteredM3U(self.channels, self.runActions, compress), path, ctype='application/vnd.apple.mpegurl', gz=compress, cors=True)
+                elif XMLTVFLE.lower() in path:return self._send(renderFilteredXMLTV(self.channels, self.runActions, compress), path, ctype='application/xml', gz=compress, cors=True)
                 elif GENREFLE.lower() in path:return self._send(getFilteredGenres(), path, ctype='application/xml', compress=compress, cors=True)
-                elif SEASONFLE.lower()  in path: return self._send(FileAccess.dumpJSON(self._seasonal().getSeasonsData()), path, ctype='application/json', compress=compress, cors=True)
-                elif HOLIDAYFLE.lower() in path: return self._send(FileAccess.dumpJSON(self._seasonal().getHolidaysData()), path, ctype='application/json', compress=compress, cors=True)
-            if   path.endswith(f'/{M3UFLE.lower()}'):  return self._send(renderFilteredM3U(self.channels, self.runActions), path, ctype='application/vnd.apple.mpegurl', compress=compress, cors=True)
-            elif path.endswith(f'/{XMLTVFLE.lower()}'):return self._send(renderFilteredXMLTV(self.channels, self.runActions), path, ctype='application/xml', compress=compress, cors=True)
+                elif SEASONFLE.lower()  in path: return self._send(FileAccess.dumpJSON(self.wp.seasonal().getSeasonsData()), path, ctype='application/json', compress=compress, cors=True)
+                elif HOLIDAYFLE.lower() in path: return self._send(FileAccess.dumpJSON(self.wp.seasonal().getHolidaysData()), path, ctype='application/json', compress=compress, cors=True)
+            if   path.endswith(f'/{M3UFLE.lower()}'):  return self._send(renderFilteredM3U(self.channels, self.runActions, compress), path, ctype='application/vnd.apple.mpegurl', gz=compress, cors=True)
+            elif path.endswith(f'/{XMLTVFLE.lower()}'):return self._send(renderFilteredXMLTV(self.channels, self.runActions, compress), path, ctype='application/xml', gz=compress, cors=True)
             elif path.endswith(f'/{GENREFLE.lower()}'):return self._send(getFilteredGenres(), path, ctype='application/xml', compress=compress, cors=True)
-            elif path.endswith(f'/{SEASONFLE.lower()}'):return self._send(FileAccess.dumpJSON(self._seasonal().getSeasonsData()), path, ctype='application/json', compress=compress, cors=True)
-            elif path.endswith(f'/{HOLIDAYFLE.lower()}'):return self._send(FileAccess.dumpJSON(self._seasonal().getHolidaysData()), path, ctype='application/json', compress=compress, cors=True)
+            elif path.endswith(f'/{SEASONFLE.lower()}'):return self._send(FileAccess.dumpJSON(self.wp.seasonal().getSeasonsData()), path, ctype='application/json', compress=compress, cors=True)
+            elif path.endswith(f'/{HOLIDAYFLE.lower()}'):return self._send(FileAccess.dumpJSON(self.wp.seasonal().getHolidaysData()), path, ctype='application/json', compress=compress, cors=True)
             elif path.endswith(f'/{EXTERNALFEEDFLE.lower()}'): return self._sendFile(EXTERNALFEED, compress)
             elif path.startswith('/filelist/'):
                 key = path.replace('/filelist/', '')
@@ -859,10 +608,12 @@ class MyHandler(BaseHTTPRequestHandler):
                 return self._serveHTML(name)
 
             return self._sendError(404, "File Not Found [%s]" % self.path)
-        except FileNotFoundError: self._sendError(404, "File Not Found [%s]" % self.path)
+        except FileNotFoundError:
+            self._sendError(404, "File Not Found [%s]" % self.path)
         except Exception as e:
             self.log("do_GET, failed!\n%s" % (e), xbmc.LOGERROR)
-            self._sendError(500, "Internal Server Error")
+            try: self._sendError(500, "Internal Server Error")
+            except Exception as e2: self.log("do_GET, error response failed: %s" % e2, xbmc.LOGDEBUG)
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -885,9 +636,11 @@ class HTTP(Thread):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
 
-    def _chkPort(self, host: str, port: int = None) -> int:
+    def _chkPort(self, host: str, port: int = None, silent: Optional[bool] = None) -> int:
         if port is None:
             port = Globals.settings.getSettingInt('TCP_PORT')
+        if silent is None:
+            silent = not Globals.settings.showDialog(silent)
         def __isAvailable(host: str, tmpPort: int) -> bool:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 try:
@@ -906,7 +659,7 @@ class HTTP(Thread):
             else:
                 self.log(f"_chkPort {tmpPort} is in use. Trying next port.")
                 tmpPort += 1
-        if tmpPort != port: Globals.dialog.notificationDialog(LANGUAGE(30097).format(port=port,available=tmpPort))
+        if tmpPort != port: Globals.dialog.notificationDialog(LANGUAGE(30097).format(port=port,available=tmpPort), silent=silent)
         self.log("_chkPort, port available = %s"%(tmpPort))
         return tmpPort
 

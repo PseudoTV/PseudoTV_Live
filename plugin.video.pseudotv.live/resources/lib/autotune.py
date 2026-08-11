@@ -93,11 +93,10 @@ class Autotune(object):
         
     def run(self):  
         with Globals.builtin.busy_dialog():
-            ctl = (1,1) #settings return focus
+            ctl = (0,1) # channels -> Enable_Autotune
             try:    param = self.sysARG[1]
             except Exception: param = None
             if param.replace('_',' ') in AUTOTUNE_TYPES:
-                ctl = (1,AUTOTUNE_TYPES.index(param.replace('_',' '))+1)
                 self.selectAutotune(param.replace('_',' '))
             elif param == 'Clear_Autotune' :  self.clrLibrary()
             elif param == 'Clear_BlackList':  self.clrBlacklist()

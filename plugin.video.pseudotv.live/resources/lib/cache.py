@@ -17,9 +17,9 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from typing import Any, Callable, Optional
 from variables   import *
 from fileaccess  import FileAccess
+from typing      import Any, Callable, Optional
 
 def cacheit(expiration: datetime.timedelta = datetime.timedelta(minutes=15), checksum: Any = None) -> Callable:
     """Decorator that caches function results in the instance's cache, keyed by arguments."""
@@ -138,7 +138,12 @@ class Cache(object):
 
     def set(self, name: str, value: Any, checksum: Any = None, expiration: datetime.timedelta = datetime.timedelta(minutes=15)) -> Any:
         if checksum is None: checksum = ADDON_VERSION
-        if not any((self.disable_cache,value is None)):
+        if value is None:
+            # None == explicit delete: callers use setCacheSetting(key, None)
+            # to clear an entry (e.g. consume-and-clear markers). Previously the
+            # None write was silently dropped, leaving stale data cached.
+            self.cache._clr(name)
+        elif not self.disable_cache:
             self.cache._set(name, value, checksum, expiration)
             self.log('set [%s], type=%s, expires=%s, value=%.64s' % (name, type(value).__name__, expiration, str(value)))
         return value
@@ -346,9 +351,24 @@ class _Cache(object):
         self._execute_sql(query, (endpoint, expires, FileAccess.dumpPICKLE(data), checksum))
 
     def _clr(self, endpoint: str):
-        """Delete all cache entries matching the endpoint prefix."""
+        """Delete all cache entries matching the endpoint prefix (DB + mem)."""
         query = "DELETE FROM cache WHERE id LIKE ?"
         self._execute_sql(query, (endpoint + '%',))
+        if self.enable_mem_cache and not self._exit:
+            # Purge matching in-memory entries too — a DB-only delete leaves a
+            # stale window-property hit that _get would still return.
+            budget = MemoryBudget.instance()
+            budget.register('memcache', self.max_mem_bytes)
+            with self._lock:
+                remaining = deque()
+                for ep, size in self._cache_idx:
+                    if ep.startswith(endpoint):
+                        self._mem_bytes = max(0, self._mem_bytes - size)
+                        budget.release('memcache', size)
+                        self.window.clearProperty('%s.%s' % (ADDON_ID, ep))
+                    else:
+                        remaining.append((ep, size))
+                self._cache_idx = remaining
 
     def _getDB(self, endpoint: str, checksum: Any, cur_time: int) -> Optional[Any]:
         """Fetch a value from the database cache, checking expiration and checksum validity."""
@@ -420,6 +440,28 @@ class _Cache(object):
             self._cleanDB()
         else:                                                 
             self._trimMEM()
+
+    def _cleanDB(self):
+        """Purge expired cache rows so the DB never grows unboundedly.
+
+        Historically called (and referenced by _chkClean) but never implemented —
+        expired rows (esp. the multi-MB movie/tvshow library dumps) accumulated
+        forever, bloating cache.db to 300+MB on low-RAM SOCs.
+        """
+        with self._lock:
+            try:
+                self._flush_batch()
+                if self._database is None:
+                    self._database = self._open()
+                if self._database:
+                    cur_time = self.getTimestamp(datetime.datetime.now())
+                    cur = self._database.execute("DELETE FROM cache WHERE expires >= 0 AND expires < ?", (cur_time,))
+                    deleted = cur.rowcount
+                    self._database.commit()
+                    if deleted:
+                        self.log('_cleanDB, purged %d expired entries' % deleted, xbmc.LOGINFO)
+            except Exception as e:
+                self.log("_cleanDB failed: %s" % e, xbmc.LOGERROR)
              
     def _trimMEM(self):
         """Evict oldest in-memory cache entries until the count, this cache's byte
@@ -482,6 +524,7 @@ class _Cache(object):
                     self._checkpointing = True
                     self._flush_batch()
                     self._database.execute("PRAGMA wal_checkpointing(FULL);")
+                    self._chkClean()
                 except Exception as e:
                     self.log("_checkpoint failed: %s" % e, xbmc.LOGERROR)
                 finally:

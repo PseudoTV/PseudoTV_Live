@@ -342,9 +342,11 @@
         const payload = Object.fromEntries(formData.entries());
 
         try {
+            const h = { 'Content-Type': 'application/json' };
+            if (serverEntry && serverEntry.uuid) h['Authorization'] = 'Bearer ' + serverEntry.uuid;
             const res = await fetch(`${activeBaseUrl}/api/save`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: h,
                 body: JSON.stringify(payload)
             });
             if (res.ok) {

@@ -16,18 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from variables    import *
-from typing       import Union
-from threading    import Thread
 import variables
+from variables    import *
+from threading    import Thread
+from typing       import Union
 
 _VIDEOID_RE  = re.compile(r'videoid\=(.*)' , re.IGNORECASE)
 _VIDEO_ID_RE = re.compile(r'video_id\=(.*)', re.IGNORECASE)
 _ISO8601_RE  = re.compile(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', re.IGNORECASE)
 
 class YTParser(object):
-
-
     def _parseISO8601Duration(self, duration: str) -> int:
         match = _ISO8601_RE.match(duration)
         if match:
@@ -37,14 +35,12 @@ class YTParser(object):
             return (hours * 3600) + (minutes * 60) + seconds
         return 0
 
-
     def _getVideoID(self, filename: str) -> Union[str, None]:
         match = _VIDEOID_RE.search(filename) if 'videoid' in filename else None
         if match: return match.group(1)
         match = _VIDEO_ID_RE.search(filename) if 'video_id' in filename else None
         if match: return match.group(1)
         return None
-
 
     def _getDurationViaYTPlugin(self, vID: str) -> int:
         try:
@@ -62,7 +58,6 @@ class YTParser(object):
         except Exception as e:
             LOG("YTParser: _getDurationViaYTPlugin, failed!\n%s"%e, xbmc.LOGDEBUG)
         return 0
-
 
     def _getDurationViaYDL(self, vID: str, filename: str) -> int:
         # Run extract_info in a watchdog thread: youtube_dl can hang indefinitely on
@@ -88,7 +83,6 @@ class YTParser(object):
             LOG("YTParser: _getDurationViaYDL, [%s] timed out after %ss"%(vID, YDL_TIMEOUT), xbmc.LOGWARNING)
         return result[0]
 
-
     def _cookiesFile(self) -> str:
         """Resolve the YouTube cookies file: a user-supplied path from settings
         (Youtube_Cookies) if set and present, else the default generated file."""
@@ -101,7 +95,6 @@ class YTParser(object):
         except Exception:
             pass
         return FileAccess.translatePath(YOUTUBE_COOKIES)
-
 
     def _youtube_cookie_md5(self) -> str:
         """md5 of the YouTube cookies file, memoized on the file's (mtime, size).
@@ -124,7 +117,6 @@ class YTParser(object):
         except Exception:
             return 'nocookie'
 
-
     def _getYouTubeDuration(self, video_id: str) -> Union[int, None]:
         """Cached YouTube duration (incl. failed 0), or None when uncached or the
         cookies file changed (re-auth) — caller should re-parse."""
@@ -132,14 +124,12 @@ class YTParser(object):
         value = variables.Globals.settings.cache.get('yt.duration.%s' % video_id, checksum=self._youtube_cookie_md5())
         return round(value) if value is not None else None
 
-
     def _setYouTubeDuration(self, video_id: str, duration: int) -> int:
         """Cache a YouTube duration (incl. 0) keyed on the cookies-file md5."""
         if video_id:
             variables.Globals.settings.cache.set('yt.duration.%s' % video_id, round(duration),
                                        checksum=self._youtube_cookie_md5(), expiration=datetime.timedelta(days=28))
         return duration
-
 
     def determineLength(self, filename: str) -> Union[int, float]:
         dur = 0

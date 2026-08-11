@@ -161,6 +161,9 @@ jobs:
   addon-check:
     name: Kodi Addon Checker
     runs-on: ubuntu-latest
+    outputs:
+      errors: ${{ steps.kodi-check.outputs.errors }}
+      warnings: ${{ steps.kodi-check.outputs.warnings }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7

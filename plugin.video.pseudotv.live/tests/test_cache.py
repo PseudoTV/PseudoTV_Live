@@ -355,3 +355,50 @@ class TestGlobalBudget:
     def test_fractions_sum_within_global(self):
         from constants import GLOBAL_CACHE_MEM_MAX, CACHE_MEM_MAX, PROPERTY_MEM_MAX, RENDER_CACHE_MAX
         assert CACHE_MEM_MAX + PROPERTY_MEM_MAX + RENDER_CACHE_MAX <= GLOBAL_CACHE_MEM_MAX
+
+
+# ========================================================================
+# 10. _cleanDB purges expired rows (cache.db bloat guard)
+# ========================================================================
+class TestCleanDB:
+    """_cleanDB was referenced by _chkClean but never defined — expired rows
+    (multi-MB movie/tvshow dumps) accumulated forever, bloating cache.db to
+    300+MB on low-RAM SOCs. Verify the purge actually deletes them."""
+
+    def _make(self):
+        import tempfile
+        from cache import _Cache
+        c = _Cache()
+        c.monitor = MagicMock(abortRequested=MagicMock(return_value=False))
+        c.window = MagicMock(getProperty=MagicMock(return_value=None))
+        c._database = MagicMock()
+        return c
+
+    def test_cleanDB_deletes_expired_rows(self):
+        import datetime
+        c = self._make()
+        now = c.getTimestamp(datetime.datetime.now())
+        cur = MagicMock(rowcount=2)
+        c._database.execute.return_value = cur
+        c._flush_batch = MagicMock()
+        c._cleanDB()
+        args = [a[0] for a in c._database.execute.call_args_list if 'DELETE FROM cache' in (a[0][0] if isinstance(a[0], tuple) else str(a[0]))]
+        assert args, 'cleanDB must issue a DELETE'
+        c._database.commit.assert_called_once()
+
+    def test_cleanDB_defined(self, cache_module):
+        assert hasattr(cache_module, '_cleanDB'), '_cleanDB must exist (was missing)'
+        assert callable(cache_module._cleanDB)
+
+    def test_checkpoint_triggers_cleanup(self):
+        import datetime
+        from cache import _Cache
+        c = _Cache()
+        c.monitor = MagicMock(abortRequested=MagicMock(return_value=False))
+        c.window = MagicMock(getProperty=MagicMock(return_value=None))
+        c._database = MagicMock()
+        c._checkpointing = False
+        c._flush_batch = MagicMock()
+        with patch.object(c, '_chkClean') as chk:
+            c._checkpoint()
+        chk.assert_called_once()

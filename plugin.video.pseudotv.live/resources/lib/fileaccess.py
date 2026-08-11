@@ -17,8 +17,9 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
+import sys
 from variables   import *
-from typing import Any, Generator, Iterator, List, Optional, Tuple, Union
+from typing      import Any, Generator, Iterator, List, Optional, Tuple, Union
 
 class FileAccess(object):
     _JSON_CACHE_MAX = 512
@@ -130,11 +131,27 @@ class FileAccess(object):
                 cached = FileAccess._json_cache.get(item)
                 if cached is not None:
                     FileAccess._json_cache.move_to_end(item)
-                    return cached.copy() if hasattr(cached, 'copy') else cached
+                    result = cached[0]
+                    return result.copy() if hasattr(result, 'copy') else result
                 result = json.loads(item)
-                FileAccess._json_cache[item] = result
-                if len(FileAccess._json_cache) > FileAccess._JSON_CACHE_MAX:
-                    FileAccess._json_cache.popitem(last=False)
+                # Charge the parsed value + key to the shared MemoryBudget so this
+                # global LRU counts against GLOBAL_CACHE_MEM_MAX like every cache.
+                try:
+                    from cache import MemoryBudget
+                    budget = MemoryBudget.instance()
+                    budget.register('jsoncache', JSON_CACHE_MEM_MAX)
+                    size = sys.getsizeof(item) + sys.getsizeof(result)
+                    # Evict oldest until the count cap, this cache's byte cap, and
+                    # the shared global cap all fit (oversized values never cache).
+                    while FileAccess._json_cache and (
+                            len(FileAccess._json_cache) >= FileAccess._JSON_CACHE_MAX or
+                            budget.used('jsoncache') + size > JSON_CACHE_MEM_MAX):
+                        _, (_r, sz) = FileAccess._json_cache.popitem(last=False)
+                        budget.release('jsoncache', sz)
+                    if budget.acquire('jsoncache', size):
+                        FileAccess._json_cache[item] = (result, size)
+                except Exception as e:
+                    LOG("FileAccess: loadJSON budget failed: %s" % e, xbmc.LOGDEBUG)
                 return result
             return json.loads(item)
         except (json.JSONDecodeError, TypeError):
@@ -437,10 +454,7 @@ class FileAccess(object):
                 return xbmcvfs.mkdir(path)
         return bool(xbmcvfs.exists(path))
 
-
 class VFSFile:
-
-
     def __init__(self, filename: str, mode: str):
         self.monitor  = MONITOR()
         self.filename = filename
@@ -456,14 +470,11 @@ class VFSFile:
         if self.currentFile is None:
             LOG(f"FileAccess: VFSFile open, failed!\n{e}", xbmc.LOGERROR)
 
-
     def __enter__(self) -> 'VFSFile':
         return self
 
-
     def __exit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Any):
         self.close()
-
 
     def read(self, num_bytes: int = 0) -> Union[bytes, str]:
         try:
@@ -483,14 +494,11 @@ class VFSFile:
         if self.currentFile:
             return self.currentFile.close()
 
-
     def seek(self, num_bytes: int, offset: int = 0) -> int:
         return self.currentFile.seek(num_bytes, offset)
 
-
     def size(self) -> int:
         return self.currentFile.size()
-
 
     def tell(self) -> int:
         try:
@@ -498,13 +506,11 @@ class VFSFile:
         except Exception:
             return self.currentFile.seek(0, 1)
 
-
     def readlines(self) -> List[str]:
         try:
             return ''.join(list(self.readline())).split('\n')
         except Exception:
             return self.read().split('\n')
-
 
     def readline(self) -> Generator[str, None, None]:
         try:
@@ -520,10 +526,7 @@ class VFSFile:
                 break
             yield data
 
-
 class FileLock:
-
-
     def __init__(self, filename: str, timeout: Optional[float] = None, delay: Optional[float] = None):
         if timeout is None: timeout = LOCK_MAX_FILE_TIMEOUT
         if delay is None: delay = LOCK_MAX_FILE_DELAY

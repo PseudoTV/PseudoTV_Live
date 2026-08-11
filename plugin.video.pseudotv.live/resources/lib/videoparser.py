@@ -65,7 +65,6 @@ class VideoParser(object):
         self.VFSPaths = ['resource://','plugin://','upnp://','pvr://']
         self.YTPaths  = ['plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious']
 
-
     def getVideoLength(self, filename: str, fileitem: dict = {}, jsonRPC: Any = None) -> float:
         duration = jsonRPC._getDuration(filename)
         if duration == 0:

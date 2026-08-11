@@ -72,7 +72,7 @@ class M3U(object):
 
 
     def __init__(self, file: str = M3UFLEPATH, writable: bool = False):
-        self._lock       = RLock()
+        self._lock       = DATA_LOCK
         self.EPGArtwork  = int((Globals.settings.getSetting('EPG_Artwork') or "0"))
         self.writable    = writable
         self.stationFile = file
@@ -334,7 +334,7 @@ class M3U(object):
                     station.get('number', ''),
                     station.get('id', ''),
                     station.get('name', ''),
-                    station.get('logo', ''),
+                    Globals._toWebImage(station.get('logo', '')),
                     ';'.join(station.get('group', [])),
                     str(station.get('radio', False)),
                     station.get('catchup', ''),

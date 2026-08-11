@@ -47,6 +47,14 @@ def _fileQueryFields(jsonRPC: Any) -> list:
 
 class JSONRPC(object):
 
+    # Global JSON-RPC rate limiter. xbmc.executeJSONRPC marshals every call onto
+    # Kodi's main thread, so a build firing calls as fast as the pool allows
+    # saturates the JSON-RPC engine (the exact load that crashes Kodi's native
+    # JSON-RPC on low-RAM SoCs — see XBMCJsonRPC.Ping SIGSEGV in logcat).
+    # API_Delay seconds minimum between consecutive dispatches, shared by all
+    # JSONRPC instances so parallel workers can't burst past the limit.
+    _sendLock = Lock()
+    _lastSend = 0.0
 
     def __init__(self, service: Optional['_Service'] = None):
         self.runtimeThreshold = 15 #todo user setting % of allowed difference between runtime and duration before overriding runtime.
@@ -83,22 +91,33 @@ class JSONRPC(object):
         def __setCache() -> Any:       return self.cache.set('requestURL.%s'%(FileAccess._getMD5((url,params,payload,file))), results, expiration=life)
         def __setQueue(): 
             if hasattr(self.service,'postQue'): 
-                self.service.postQue.add((url, params, payload, header, timeout, file, life))
+                # postQue is a set — dict args are unhashable. Store the tuple as a
+                # stable JSON string so a failed POST can be replayed from the queue.
+                queued = (url, FileAccess.dumpJSON(params or {}), FileAccess.dumpJSON(payload or {}),
+                          FileAccess.dumpJSON(header or {}), timeout, file, life)
+                self.service.postQue.add(queued)
             
         results = None
+        self.last_status = None  # HTTP status of the last request (for auth checks)
+        self.last_error  = None  # parsed error body (OpenRouter standard {"error": {...}})
 
         try:
             headers = HEADER.copy()
             headers.update(header)
             if payload: response = self._session.post(url, json=payload, files=file, headers=headers, timeout=timeout)
             else:       response = self._session.get(url, params=params, headers=headers, timeout=timeout)
+            self.last_status = response.status_code
+            try:
+                self.last_error = response.json()
+            except Exception:
+                self.last_error = {'error': {'message': str(response.content)[:200]}}
             response.raise_for_status()  # Raise an exception for HTTP errors
             content_type = response.headers.get('Content-Type', '').lower()
             if 'application/json' in content_type: results = response.json()
             else:                                  results = response.content
             self.log("requestURL %s, status=%s, type=%s" % (url, response.status_code, type(results).__name__))
             if results: return __setCache()
-        except Exception as e: 
+        except Exception as e:
             self.log("requestURL %s failed: %s" % (url, e))
             __getCache()
         finally: #retry failed post
@@ -173,11 +192,39 @@ class JSONRPC(object):
             return None
 
 
+    def _throttle(self):
+        """Enforce API_Delay seconds between consecutive JSON-RPC dispatches.
+
+        Sleeps the remainder of the interval before the next send. Uses the
+        abortable monitor wait so shutdown can't hang on the cooldown, and a
+        shared class lock so multiple JSONRPC instances / pool workers serialize
+        to a single global rate instead of each bypassing the limit.
+        """
+        delay = float(REAL_SETTINGS.getSetting('API_Delay') or "1")
+        if delay <= 0: return
+        with JSONRPC._sendLock:
+            now = time.time()
+            wait = delay - (now - JSONRPC._lastSend)
+            if wait <= 0:
+                JSONRPC._lastSend = now
+                return
+            # Reserve the next slot so concurrent callers stack onto it.
+            JSONRPC._lastSend = now + wait
+        monitor = getattr(getattr(self, 'service', None), 'monitor', None)
+        if monitor is not None:
+            monitor.waitForAbort(wait)
+        else:
+            time.sleep(wait)
+
     def sendJSON(self, param: dict, timeout: Optional[int] = None) -> dict:
         command = param
         command["jsonrpc"] = "2.0"
         command["id"] = f"{ADDON_ID}.local"
         if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
+        # Rate-limit dispatch: space calls API_Delay seconds apart so a heavy build
+        # can't flood Kodi's JSON-RPC engine (main-thread marshaled). Interruptible
+        # sleep so shutdown/Kodi-exit unblocks promptly.
+        self._throttle()
         # Files.GetDirectory marshals onto Kodi's main thread via xbmc.executeJSONRPC,
         # freezing the UI for the duration of slow network listings. Send it over the
         # local web server instead (own thread); fall back in-process if unreachable.
@@ -408,21 +455,21 @@ class JSONRPC(object):
     def getSongs(self, cache: bool = True) -> list:
         param = {"method":"AudioLibrary.GetSongs","params":{"properties":self.getEnums("Audio.Fields.Song", type='items')}}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('songs', [])
+        if cache: return self.cacheJSON(param, timeout=timeout).get('result',{}).get('songs', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('songs', [])
 
 
     def getArtists(self, cache: bool = True) -> list:
         param = {"method":"AudioLibrary.GetArtists","params":{"properties":self.getEnums("Audio.Fields.Artist", type='items')}}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('artists', [])
+        if cache: return self.cacheJSON(param, timeout=timeout).get('result',{}).get('artists', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('artists', [])
 
 
     def getAlbums(self, cache: bool = True) -> list:
         param = {"method":"AudioLibrary.GetAlbums","params":{"properties":self.getEnums("Audio.Fields.Album", type='items')}}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('albums', [])
+        if cache: return self.cacheJSON(param, timeout=timeout).get('result',{}).get('albums', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('albums', [])
 
      
@@ -437,14 +484,14 @@ class JSONRPC(object):
     def getEpisodes(self, cache: bool = True) -> list:
         param = {"method":"VideoLibrary.GetEpisodes","params":{"properties":self.getEnums("Video.Fields.Episode", type='items')}}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('episodes', [])
+        if cache: return self.cacheJSON(param, timeout=timeout).get('result',{}).get('episodes', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('episodes', [])
 
 
     def getTVshows(self, cache: bool = True) -> list:
         param = {"method":"VideoLibrary.GetTVShows","params":{"properties":self.getEnums("Video.Fields.TVShow", type='items')}}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('tvshows', [])
+        if cache: return self.cacheJSON(param, timeout=timeout).get('result',{}).get('tvshows', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('tvshows', [])
 
 
@@ -457,7 +504,7 @@ class JSONRPC(object):
     def getMovies(self, cache: bool = True) -> list:
         param = {"method":"VideoLibrary.GetMovies","params":{"properties":self.getEnums("Video.Fields.Movie", type='items')}}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: return self.cacheJSON(param, timeout).get('result',{}).get('movies', [])
+        if cache: return self.cacheJSON(param, timeout=timeout).get('result',{}).get('movies', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('movies', [])
 
 
@@ -499,7 +546,7 @@ class JSONRPC(object):
         if param is None: param = {}
         param   = {"method":method,"params":param}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: results = self.cacheJSON(param, timeout).get('result',{})
+        if cache: results = self.cacheJSON(param, timeout=timeout).get('result',{})
         else:     results = self.sendJSON(param, timeout).get('result',{})
         return results.get((key or list(results.keys())[0]),[]), results.get('limits',{}), results.get('error',{})
         

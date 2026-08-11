@@ -57,6 +57,39 @@ def _log(msg):
         with open(LOG_FILE, 'a', encoding='utf-8') as f:
             f.write(line + '\n')
 
+# ponytail: file cache keyed on prompt hash so identical AI requests are not re-sent
+CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.ai_cache')
+
+def _run_opencode(prompt):
+    """Run opencode once per unique prompt; identical prompts return the cached response."""
+    key = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+    cache_file = os.path.join(CACHE_DIR, key + '.txt')
+    if os.path.isfile(cache_file):
+        with open(cache_file, 'r', encoding='utf-8') as f:
+            cached = f.read()
+        _log(f"AI cache hit ({key[:8]})")
+        return cached
+
+    opencode_bin = os.path.join(_opencode_dir, 'opencode.exe')
+    if not os.path.isfile(opencode_bin):
+        _log("OpenCode binary not found")
+        return None
+    try:
+        result = subprocess.run(
+            [opencode_bin, 'run', '--model', OPENCODE_MODEL, prompt],
+            cwd=GITPATH, capture_output=True, text=True,
+            encoding='utf-8', errors='replace', timeout=120
+        )
+    except Exception as e:
+        _log(f"OpenCode failed: {e}")
+        return None
+
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    with open(cache_file, 'w', encoding='utf-8') as f:
+        f.write(result.stdout)
+    _log(f"AI cache miss, saved ({key[:8]})")
+    return result.stdout
+
 GITPATH = os.path.dirname(os.path.abspath(__file__))
 ZIPPATH = os.path.join(GITPATH, 'zips')
 
@@ -256,28 +289,12 @@ class Generator:
                 f"Strings:\n{strings_text}"
             )
 
-            opencode_bin = os.path.join(_opencode_dir, 'opencode.exe')
-            if not os.path.isfile(opencode_bin):
-                _log("OpenCode binary not found, skipping translations")
-                return
-            try:
-                result = subprocess.run(
-                    [opencode_bin, 'run', '--model', OPENCODE_MODEL, prompt],
-                    cwd=GITPATH, capture_output=True, text=True,
-                    encoding='utf-8', errors='replace', timeout=120
-                )
-            except FileNotFoundError:
-                _log(f"OpenCode CLI not found, skipping")
-                return
-            except subprocess.TimeoutExpired:
-                _log(f"OpenCode timed out for {lang_name}, skipping")
-                continue
-            except Exception as e:
-                _log(f"Error running OpenCode for {lang_name}: {e}")
-                continue
-
             translations = {}
-            for line in result.stdout.strip().split('\n'):
+            output = _run_opencode(prompt)
+            if output is None:
+                _log(f"Translation failed for {lang_name}, skipping")
+                continue
+            for line in output.strip().split('\n'):
                 line = line.strip()
                 if '|' in line and (line[0].isdigit() or (line.startswith('#') and len(line) > 1 and line[1].isdigit())):
                     parts = line.split('|', 1)
@@ -394,30 +411,9 @@ class Generator:
             f"Output ONLY the dash-prefixed lines, nothing else."
         )
 
-        try:
-            opencode_bin = os.path.join(_opencode_dir, 'opencode.exe')
-            if not os.path.isfile(opencode_bin):
-                _log(f"OpenCode binary not found at {opencode_bin}, skipping changelog generation")
-                return
-            try:
-                result = subprocess.run(
-                    [opencode_bin, 'run', '--model', OPENCODE_MODEL, prompt],
-                    cwd=GITPATH,
-                    capture_output=True,
-                    text=True,
-                    encoding='utf-8',
-                    errors='replace',
-                    timeout=120
-                )
-                raw_output = result.stdout
-            except FileNotFoundError:
-                _log("OpenCode CLI not found, skipping changelog generation")
-                return
-        except subprocess.TimeoutExpired:
-            _log("OpenCode timed out (120s), skipping changelog generation")
-            return
-        except Exception as e:
-            _log(f"Error running OpenCode: {e}")
+        raw_output = _run_opencode(prompt)
+        if raw_output is None:
+            _log("OpenCode failed, skipping changelog generation")
             return
 
         changelog_entries = []
@@ -537,16 +533,10 @@ class Generator:
             f"TODOs:\n{todos_text}"
         )
 
-        try:
-            result = subprocess.run(
-                [opencode_bin, 'run', '--model', OPENCODE_MODEL, prompt],
-                cwd=GITPATH, capture_output=True, text=True,
-                encoding='utf-8', errors='replace', timeout=120
-            )
-            self._write_todo_md(todos, result.stdout)
-        except Exception as e:
-            _log(f"OpenCode analysis failed: {e}, writing raw TODOs")
-            self._write_todo_md(todos, None)
+        output = _run_opencode(prompt)
+        if output is None:
+            _log("OpenCode analysis failed, writing raw TODOs")
+        self._write_todo_md(todos, output)
 
     def _write_todo_md(self, todos, analysis):
         rows = []

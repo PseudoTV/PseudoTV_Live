@@ -17,12 +17,10 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-from typing import Any, Optional, Callable
-from variables     import *
+from variables import *
+from typing    import Any, Optional, Callable
 
 class Task(object):
-
-
     def __init__(self, func: Callable, args: tuple = (), kwargs: Optional[dict] = None, priority: int = 3, execute_at: float = 0):
         self.func         = func
         self.args         = args
@@ -33,10 +31,8 @@ class Task(object):
         self.created_at   = time.time()
         self.task_key     = None
 
-
     def cancel(self):
         self.is_cancelled = True
-
 
     def __lt__(self, other: "Task") -> bool:
         return self.priority < other.priority
@@ -46,7 +42,6 @@ class CustomQueue(object):
     AGE_BOOST_STEP     = 1.0 # priority levels boosted per interval
     MAX_HEAP_SIZE      = 500 # hard limit to prevent memory growth
     LOG_THROTTLE       = 5.0 # seconds between repeated log messages per task
-
 
     def __init__(self, service: Any, workers: int = THREAD_WORKERS):
         self.service  = service
@@ -78,7 +73,6 @@ class CustomQueue(object):
     def _get_task_key(self, func: Callable, args: tuple, kwargs: dict) -> tuple:
         return (func.__name__, tuple(self._freeze(arg) for arg in args), tuple(sorted((k, self._freeze(v)) for k, v in kwargs.items())) if kwargs else ())
 
-
     def _fmt_args(self, args: tuple, kwargs: dict, maxlen: int = 60) -> str:
         parts = []
         for a in args[:3]:
@@ -91,13 +85,11 @@ class CustomQueue(object):
         if len(sig) > maxlen: sig = sig[:maxlen-3] + '...'
         return f'({sig})' if sig else '()'
 
-
     def _compute_score(self, task: Task) -> float:
         wait_time    = max(0.0, time.time() - task.created_at)
         aging_boost  = (wait_time / self.AGE_BOOST_INTERVAL) * self.AGE_BOOST_STEP
         eff_priority = max(1.0, task.priority - aging_boost)
         return task.execute_at + (eff_priority * 2.0)
-
 
     def _evict_lowest(self):
         """Remove the lowest-priority task from the queue when heap is full."""
@@ -114,7 +106,6 @@ class CustomQueue(object):
         self.heap[worst_idx] = self.heap[-1]
         self.heap.pop()
         if self.heap: heapq.heapify(self.heap)
-
 
     def push(self, package: tuple, priority: int = 3, delay: int = 0, timer: int = 0, dedup_keys: Optional[set] = None):
         """Push a task to the priority queue.
@@ -174,7 +165,6 @@ class CustomQueue(object):
             self.queueThread.daemon = True
             self.queueThread.start()
 
-
     def pop(self) -> Optional[Task]:
         with self.lock:
             while not self.monitor.abortRequested() and self.heap:
@@ -193,7 +183,6 @@ class CustomQueue(object):
                 return task
             return None
 
-
     def _finish(self, task: Task):
         """Clean up a completed task — remove from running set and clear dedup keys."""
         if task and task.task_key:
@@ -205,7 +194,6 @@ class CustomQueue(object):
                     self._dedup_registry.pop(dk, None)
                 if dedup_keys:
                     self.log(f"_finish, {task.func.__name__} cleared {len(dedup_keys)} dedup keys", xbmc.LOGDEBUG)
-
 
     def get_queued_dedup_keys(self, key_prefix: str = '') -> set:
         """Get all dedup keys currently queued (pending or running) matching prefix.
@@ -222,7 +210,6 @@ class CustomQueue(object):
         """
         with self.lock:
             return {dk for dk in self._dedup_registry if dk.startswith(key_prefix)}
-
 
     def execute(self):
         self.log("execute, Thread execution loop active.", xbmc.LOGINFO)
@@ -270,7 +257,16 @@ class CustomQueue(object):
                 self.log(f"execute, {task.func.__name__} (Priority: {task.priority}).", xbmc.LOGDEBUG)
                 try:
                     if self.useExecutor:
-                        future = self.pool._executor.submit(task.func, *task.args, **task.kwargs)
+                        try:
+                            future = self.pool._executor.submit(task.func, *task.args, **task.kwargs)
+                        except (RuntimeError, AttributeError) as pool_err:
+                            # Pool shut down (e.g. after a pendingRestart while
+                            # Enable_Executor is on) — run synchronously rather than
+                            # killing the queue for every remaining task.
+                            self.log(f"execute, pool unavailable ({pool_err}), running {task.func.__name__} synchronously", xbmc.LOGWARNING)
+                            task.func(*task.args, **task.kwargs)
+                            self._finish(task)
+                            continue
                         future.add_done_callback(lambda f, t=task: self._finish(t))
                         future.add_done_callback(self._future_callback)
                     else: 

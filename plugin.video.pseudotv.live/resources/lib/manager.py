@@ -214,8 +214,9 @@ class Manager(xbmcgui.WindowXMLDialog):
             user = Channels(CHANNEL_KEY_USER)
             if user.getChannels():
                 return False  # user already has channels - never clobber
-            # quick copy reusing the shared backup writer
-            Globals.settings.setCacheSetting(CHANNEL_KEY_USER, Backup._setChannels(autotune), FileAccess._getMD5(CHANNEL_KEY_USER), -1)
+            # Write through the Channels class (writable so _save persists) so the
+            # versioned key (Channels.1.0.0) matches what Channels() reads.
+            Channels(CHANNEL_KEY_USER, writable=True).setChannels(autotune)
             Globals.properties.setBackup(CHANNEL_KEY_USER, autotune)
             self.log('autotune disabled: copied %d channels to user config' % len(autotune), xbmc.LOGINFO)
             return True

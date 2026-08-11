@@ -244,3 +244,113 @@ class TestFutureStartClamp:
         if start_epoch > fallback_epoch:
             start_epoch = fallback_epoch
         assert start_epoch == 1785780000.0
+
+
+# ========================================================================
+# SMB artwork rewrite (libsmbclient crash mitigation)
+# ========================================================================
+
+class TestM3UWriteSMBLogoRewrite:
+    """M3U._write must never emit a raw smb:// logo: rewrite to /image/ so
+    Kodi's image loader uses HTTP instead of opening SMB (avoids the
+    libsmbclient idle-close SIGSEGV)."""
+
+    def _write(self, logo):
+        import io
+        import m3u
+        obj = m3u.M3U.__new__(m3u.M3U)
+        obj.M3UDATA = {'data': '#EXTM3U', 'recordings': [], 'stations': [
+            {'number': 1, 'id': 'x@PseudoTV_Live', 'name': 'Test',
+             'logo': logo, 'group': [], 'radio': False, 'catchup': '',
+             'label': 'Test', 'url': 'plugin://x'}]}
+        obj.getMitem = lambda: m3u.M3U.getMitem(obj)
+        buf = io.StringIO()
+        obj._write(buf)
+        return buf.getvalue()
+
+    def test_smb_logo_rewritten_to_http(self):
+        from unittest.mock import patch
+        with patch('variables.Globals.properties.getEXTProperty', return_value='192.168.0.53:50001'):
+            out = self._write('smb://USER:PASS@192.168.0.51/TV/Show/clearlogo.png')
+        assert 'smb://' not in out
+        assert 'tvg-logo="http://192.168.0.53:50001/image/' in out
+
+    def test_http_logo_unchanged(self):
+        out = self._write('http://example.com/logo.png')
+        assert 'tvg-logo="http://example.com/logo.png"' in out
+
+
+class TestXMLTVOffsetSanitization:
+    """XMLTV _offsetProgramme/_offsetChannel must rewrite smb:// icons to the
+    self-hosted /image/ URL before the guide is served."""
+
+    def _make(self):
+        import xmltvs
+        obj = xmltvs.XMLTVS.__new__(xmltvs.XMLTVS)
+        obj.log = lambda *a, **k: None
+        return obj
+
+    def test_programme_smb_icon_rewritten(self):
+        from unittest.mock import patch
+        obj = self._make()
+        prog = {'start': '20260803000000', 'stop': '20260803010000',
+                'icon': [{'src': 'smb://U:P@192.168.0.51/TV/Show/thumb.png'}]}
+        with patch('variables.Globals.properties.getEXTProperty', return_value='192.168.0.53:50001'):
+            out = obj._offsetProgramme(prog)
+        assert 'smb://' not in out['icon'][0]['src']
+        assert out['icon'][0]['src'].startswith('http://192.168.0.53:50001/image/')
+
+    def test_channel_smb_icon_rewritten(self):
+        from unittest.mock import patch
+        obj = self._make()
+        ch = {'id': 'X', 'icon': [{'src': 'smb://U:P@192.168.0.51/TV/Show/clearlogo.png'}]}
+        with patch('variables.Globals.properties.getEXTProperty', return_value='192.168.0.53:50001'):
+            out = obj._offsetChannel(ch)
+        assert out['icon'][0]['src'].startswith('http://192.168.0.53:50001/image/')
+
+    def test_http_icon_unchanged(self):
+        obj = self._make()
+        ch = {'id': 'X', 'icon': [{'src': 'http://example.com/l.png'}]}
+        assert obj._offsetChannel(ch)['icon'][0]['src'] == 'http://example.com/l.png'
+
+
+class TestXMLTVHolderCap:
+    """On constrained SOCs the in-memory XMLTV holder must not pin the full
+    26MB+ programme list — it caps against XMLTV_MEM_MAX and getProgrammes
+    re-reads from the DB cache per render instead."""
+
+    def _make(self):
+        import xmltvs
+        obj = xmltvs.XMLTVS.__new__(xmltvs.XMLTVS)
+        obj.log = lambda *a, **k: None
+        obj.writable = False
+        obj.m3u = None
+        return obj
+
+    def test_holder_bytes_estimates_resident_size(self):
+        import xmltvs
+        progs = [{'channel': 'x', 'start': '20260101000000', 'stop': '20260101010000',
+                  'title': [('A' * 50, 'en')]} for _ in range(1000)]
+        size = xmltvs._holder_bytes([], progs)
+        assert size > 100 * 1000  # 1000 dicts x ~100B minimum
+
+    def test_getprogrammes_falls_back_to_db_when_capped(self):
+        from unittest.mock import patch, MagicMock
+        import xmltvs
+        obj = self._make()
+        obj.XMLTVDATA = {'programmes': []}  # capped holder -> empty
+        cached = [{'channel': 'x', 'start': '20260101000000', 'stop': '20260101010000', 'title': [('T', 'en')]}]
+        obj._clean = MagicMock(return_value=cached)  # bypass _slugify regex
+        with patch('variables.Globals.settings.getCacheSetting', return_value=cached):
+            out = obj.getProgrammes()
+        assert len(out) == 1
+        assert out[0]['channel'] == 'x'
+
+    def test_getprogrammes_uses_holder_when_present(self):
+        import xmltvs
+        obj = self._make()
+        obj.XMLTVDATA = {'programmes': [{'channel': 'x', 'start': '20260101000000', 'stop': '20260101010000', 'title': [('T', 'en')]}]}
+        with __import__('unittest.mock').mock.patch('variables.Globals.settings.getCacheSetting') as gcs:
+            out = obj.getProgrammes()
+        gcs.assert_not_called()  # holder has data, no DB re-read
+        assert len(out) == 1
