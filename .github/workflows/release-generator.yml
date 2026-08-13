@@ -1,0 +1,63 @@
+name: Release Generator
+
+on:
+  push:
+    branches: [master, nightly]
+    paths:
+      - 'zips/**'
+      - 'addons.xml'
+      - 'addons.xml.md5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: releases
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish Addon Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Publish Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          addon="repository.pseudotv"
+          dir="zips/$addon"
+          [ -f "$addon/addon.xml" ] || { echo "No addon.xml for $addon"; exit 0; }
+
+          version=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('$addon/addon.xml').getroot().get('version'))" 2>/dev/null || echo "")
+          name=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('$addon/addon.xml').getroot().get('name'))" 2>/dev/null || echo "$addon")
+          [ -n "$version" ] || { echo "No version found for $addon"; exit 0; }
+
+          zip_file="$dir/$addon-$version.zip"
+          [ -f "$zip_file" ] || { echo "No zip for current version $version"; exit 0; }
+
+          # On push, only act if the repo zip actually changed
+          if [ "${{ github.event_name }}" = "push" ] && ! git diff --name-only HEAD~1 HEAD -- "$zip_file" | grep -q .; then
+            echo "Repo zip unchanged, skipping"
+            exit 0
+          fi
+
+          tag="$addon-$version"
+          notes="**$name** version **$version**\n\nAuto-generated release for the PseudoTV repository."
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Updating release $tag"
+            gh release upload "$tag" "$zip_file" --clobber
+          else
+            echo "Creating release $tag"
+            gh release create "$tag" "$zip_file" \
+              --title "$name v$version" \
+              --notes "$notes"
+          fi
