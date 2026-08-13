@@ -53,6 +53,11 @@ v.0.7.9+nightly
 - Improved build workflow by caching AI responses keyed on prompt hash so identical translation/changelog/TODO requests are not re-sent
 - Optimized channel loading so reads no longer rewrite settings.xml to disk on every poll and instance construction
 - Tweaked Miscellaneous improvements and tweaks
+- Optimized channel template loading by memoizing the default template and deep-copying it per instance, avoiding repeated disk reads
+- Tweaked autotune and backup/restore menus to open focused on the relevant channels settings (Enable Autotune / Export Channels) instead of a generic position
+- Improved build workflow by caching AI responses keyed on prompt hash so identical translation, changelog, and TODO requests are not re-sent
+- Removed the automated AI code review engine from the CI workflow
+- Tweaked Miscellaneous improvements and tweaks
 v.0.7.8+nightly
 - Fixed progress dialog not rendering from non-main threads (added waitForAbort after dlg.update).
 - Refactored chkPVRSync to pure state checker, returns findings dict; chkPVRRefresh accepts findings to avoid duplicate updatePVRStatus calls.
