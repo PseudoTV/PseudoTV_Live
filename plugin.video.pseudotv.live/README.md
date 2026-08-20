@@ -1,5 +1,4 @@
 ![PseudoTV Live](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/plugin.video.pseudotv.live/resources/images/fanart.jpg)
-[![PseudoTV Live](https://opengraph.githubassets.com/b515e27858c045536f54116a571f79bda90cde077f4a9e87af8908cb0801b6a2/PseudoTV/PseudoTV_Live)](https://opengraph.githubassets.com/b515e27858c045536f54116a571f79bda90cde077f4a9e87af8908cb0801b6a2/PseudoTV/PseudoTV_Live)
 
 # PseudoTV Live for Kodi™
 
@@ -7,11 +6,116 @@
 
 ## What is it?
 
-PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) into linear TV similar to broadcast television, complete with configurable channels & Advanced channel rules. Interface provided by Kodi via IPTV Simple PVR Backend.
+PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc…) into
+**linear broadcast-style television** — complete with configurable channels,
+advanced channel rules, an EPG guide, timeshift/catchup, and multi-room sync.
+The interface is provided by Kodi via the IPTV Simple PVR backend.
 
 ## What it isn't!
 
-PseudoTV Live is not an IPTV service, it does not provide content or support live streams. Users are required to supply media via Kodi library. 
+PseudoTV Live is **not** an IPTV service. It does not provide content or support
+live streams. Users are required to supply media through their own Kodi library.
+
+---
+
+## Features
+
+### Linear TV from your own library
+- Turns movies, TV shows, music, playlists, and smart playlists into always-on
+  channels with a real TV guide.
+- Auto-generated **EPG (XMLTV)** with artwork, genres, ratings, and plot synopses.
+- Per-channel **numbering, grouping, favorites, and radio** support.
+
+### Advanced Channel Rules
+- A rich rules engine (`rules.py`, ~2,200 lines) for building and curating
+  channel lineups: filters, ordering, filler injection, bumper/rating/advert
+  placement, season/episode rounding, and playback resume.
+- **Auto-Tune**: one-click generation of a complete channel list from your
+  library (TV networks, TV/movie genres, studios, music genres, recommended,
+  seasonal, services).
+
+### EPG Guide & Playback
+- Full 24/7 guide with **now-playing** rows, placeholder rows for no-guide
+  channels, and **catchup/VOD** support.
+- **Timeshift**, resume, and PVR recording integration.
+
+### Multi-Room (Multi-Instance)
+- Discover other PseudoTV Live instances on your LAN via **zeroconf/bonjour**.
+- Share channel data, seasonal/holiday content, and server status between rooms.
+- Each room gets its own IPTV Simple instance; edits sync out to enabled remotes.
+
+### Built-in Web UI
+- A self-hosted HTTP manager (channel editor, EPG grid, library browser,
+  seasonal/holiday calendar, system info, PVR status, logs, backups/imports).
+- Serve M3U, XMLTV, genres, and logos to any PVR client or browser.
+
+### Seasonal & Holiday Content
+- Calendar-based holiday programming and library rules (episodes & movies
+  keyed by keyword), with a **3-way merge** so shipped defaults update without
+  clobbering your customizations.
+
+### AI-Generated Artwork (optional)
+- Optional **OpenRouter AI image generation** for channel logos, with a curated
+  fallback model chain and **BYOK** (bring-your-own-key) support.
+
+### Fillers, Ratings, Bumpers, Adverts & Trailers
+- MPAA ratings cards, bumpers, adverts, and trailers woven into channels.
+- Optional resource addons provide the media (see Resources below).
+
+### Overlays & Extras
+- Channel bug / overlay, on-info overlays, OSD timers, and idle handling.
+
+---
+
+## Resources
+
+PseudoTV Live ships with and/or depends on the following optional resource addons:
+
+- **Images**: `resource.images.pseudotv.logos`, `resource.images.studios.white`,
+  `resource.images.studios.coloured`, `resource.images.moviegenreicons.white/.transparent`,
+  `resource.images.musicgenreicons.text`, `resource.images.overlays.crttv`
+- **Video**: `resource.videos.bumpers.pseudotv`, `resource.videos.bumpers.kodi`,
+  `resource.videos.ratings.mpaa.classic`, `resource.videos.adverts.pseudotv`,
+  `resource.videos.trailers.pseudotv`
+
+---
+
+## Requirements
+
+- Kodi **19 (Matrix)** or newer
+- `pvr.iptvsimple` (IPTV Simple Client) enabled
+- A populated Kodi video/music library
+
+## Install
+
+Install from the **PseudoTV Repository** (`repository.pseudotv`), or sideload the
+addon zip. After install, enable the addon and run **Auto-Tune** (or import your
+own channel set) from the Channel Manager.
+
+---
+
+## Quick Start
+
+1. Install and enable PseudoTV Live + IPTV Simple Client.
+2. Open **PseudoTV Live** → Channel Manager.
+3. Choose **Auto-Tune** to build channels from your library, or create channels
+   manually (library paths, playlists, smart playlists).
+4. Return to Kodi's **Live TV** section — your channels and EPG appear there.
+5. Optional: open the **web UI** (`http://<host>:50001/manager.html`) for the
+   full manager, EPG grid, seasonal calendar, and system diagnostics.
+
+---
+
+## Configuration Categories
+
+| Category | What you can set |
+|----------|------------------|
+| Channels | Autotune, channel manager, default channel set, import/export |
+| Options  | Grouping, favorites, clean recordings, recommended content |
+| Global   | TCP port, host/name, PVR reload, Kodi access, debug |
+| Fillers  | Bumpers, ratings, adverts, trailers, filler folders |
+| Multi-room | Server discovery, auto-allow, remote sync |
+| Integrations | OpenRouter AI artwork, generative model, web UI |
 
 ---
 

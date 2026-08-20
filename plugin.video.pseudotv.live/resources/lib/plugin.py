@@ -354,7 +354,13 @@ class Plugin(object):
             
         #File Exists
         if listitem is None: listitem = xbmcgui.ListItem()
-        if not FileAccess.exists(listitem.getPath()): found, listitem = __findMissing(listitem)
+        # Skip the existence stat for network shares (smb/nfs/dav). iptvsimple
+        # already validated the live broadcast file, and a stat round-trip here
+        # serializes behind _NET_VFS_LOCK — stalling channel switches by ~50s while
+        # a concurrent library scanner saturates the share. The player errors
+        # naturally on a genuinely missing file.
+        from fileaccess import isNetVFS
+        if not isNetVFS(listitem.getPath()) and not FileAccess.exists(listitem.getPath()): found, listitem = __findMissing(listitem)
         #TODO ROBOUST ERROR CORRECTION
         if self.sysInfo['isPlaylist']: return path, found, listitem
         else:                          return listitem.getPath(), found, listitem

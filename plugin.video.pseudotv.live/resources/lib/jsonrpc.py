@@ -536,8 +536,19 @@ class JSONRPC(object):
         param.setdefault("properties", _fileQueryFields(self))
         param   = {"method":"Files.GetDirectory","params":param}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: results = self.cacheJSON(param, expiration, checksum, timeout).get('result',{})
-        else:     results = self.sendJSON(param, timeout).get('result',{})
+        # Listing a videodb:///musicdb:// source resolves to smb:// library files,
+        # which Kodi's Files.GetDirectory handler enumerates via libsmbclient.
+        # Serialize it with FileAccess._NET_VFS_LOCK so it can't race our own
+        # shared-context VFS calls (smbc_free_context SIGSEGV).
+        directory = str(param.get('params', {}).get('directory', ''))
+        if directory.startswith(('smb://', 'nfs://', 'dav://', 'webdav://', 'upnp://', 'videodb://', 'musicdb://')):
+            from fileaccess import _NET_VFS_LOCK, isNetVFS
+            with _NET_VFS_LOCK:
+                if cache: results = self.cacheJSON(param, expiration, checksum, timeout).get('result',{})
+                else:     results = self.sendJSON(param, timeout).get('result',{})
+        else:
+            if cache: results = self.cacheJSON(param, expiration, checksum, timeout).get('result',{})
+            else:     results = self.sendJSON(param, timeout).get('result',{})
         if 'filedetails' in results: return results.get('filedetails',[]), results.get('limits',{}), results.get('error',{})
         else:                        return results.get('files',[]), results.get('limits',{}), results.get('error',{})
 
@@ -561,12 +572,22 @@ class JSONRPC(object):
 
     def getStreamDetails(self, path: str, media: str = 'video') -> dict:
         if _globals()._isStack(path): path = _globals()._splitStacks(path)[0]
+        from fileaccess import _NET_VFS_LOCK, isNetVFS
         param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}
+        # Shared-context VFS (smb/nfs/dav) file details hit libsmbclient — serialize.
+        if isNetVFS(path):
+            with _NET_VFS_LOCK:
+                return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=FileAccess._getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
         return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=FileAccess._getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
 
     def getFileDetails(self, file: str, media: str = 'video', properties: list = ["duration","runtime"]) -> dict:
-        return self.cacheJSON({"method":"Files.GetFileDetails","params":{"file":file,"media":media,"properties":properties}})
+        from fileaccess import _NET_VFS_LOCK, isNetVFS
+        param = {"method":"Files.GetFileDetails","params":{"file":file,"media":media,"properties":properties}}
+        if isNetVFS(file):
+            with _NET_VFS_LOCK:
+                return self.cacheJSON(param)
+        return self.cacheJSON(param)
 
 
     def getViewMode(self) -> dict:
@@ -619,8 +640,18 @@ class JSONRPC(object):
         
         
     def getPVRChannels(self, radio: bool = False) -> list:
+        # Cache briefly (cross-process, DB-backed): every live channel switch calls
+        # _update -> matchChannel -> getPVRChannels, and PVR.GetChannels marshals on
+        # Kodi's main thread — which a concurrent library scan saturates, stalling
+        # channel changes by ~50s. matchChannel's own 15s cache is too short to bridge
+        # back-to-back switches once a scan is running.
+        cacheName = 'getPVRChannels.%s' % (FileAccess._getMD5(str(radio)))
+        cached = (self.cache.get(cacheName, checksum=ADDON_VERSION) or [])
+        if cached: return cached
         param = {"method":"PVR.GetChannels","params":{"channelgroupid":{True:'allradio',False:'alltv'}[radio],"properties":self.getEnums("PVR.Fields.Channel", type='items')}}
-        return self.sendJSON(param).get('result',{}).get('channels', [])
+        channels = self.sendJSON(param).get('result',{}).get('channels', [])
+        if channels: self.cache.set(cacheName, channels, checksum=ADDON_VERSION, expiration=datetime.timedelta(seconds=60))
+        return channels
 
 
     def getPVRChannelsDetails(self, id: int) -> list:

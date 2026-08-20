@@ -80,7 +80,28 @@ class Settings(object):
             if _LOG_SETTINGS['enable']:
                 self.log(f'[{ADDON_ID}] {func.__name__}, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
             return value
-        except Exception as e: self.log("_getSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
+        except Exception as e:
+            # ponytail: Kodi 22 Beta's CAddonSettings model can lose a setting's type
+            # (throws "Invalid setting type" despite a valid settings.xml). Coerce the
+            # string form instead of surfacing the error each read. Upstream Kodi fix
+            # is the real cure; this keeps the addon working meanwhile.
+            try:
+                raw = self._getRealSettings().getSetting(key)
+                if raw in (None, ''):
+                    # empty/unknown value -> safe typed default so callers get a
+                    # usable result instead of None; avoids per-read log spam.
+                    if   cache_key[0] == 'getSettingBool':   value = False
+                    elif cache_key[0] == 'getSettingInt':    value = 0
+                    elif cache_key[0] == 'getSettingNumber': value = 0.0
+                    else: value = ''
+                elif cache_key[0] == 'getSettingBool':   value = str(raw).lower() == 'true'
+                elif cache_key[0] == 'getSettingInt':    value = int(float(raw))
+                elif cache_key[0] == 'getSettingNumber': value = float(raw)
+                else: value = str(raw)
+                _SETTINGS_CACHE[cache_key] = (value, _now)
+                return value
+            except Exception as e:
+                self.log("_getSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
       
     def getSetting(self, key: str) -> str:
         return self._getSetting(self._getRealSettings().getSetting,key)

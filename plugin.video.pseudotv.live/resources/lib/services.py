@@ -205,7 +205,7 @@ class Player(xbmc.Player):
   
     def _onCheckpoint(self, playingItem: Optional[dict] = None):
         self.log("_onCheckpoint, playingItem")
-        if playingItem is None: playingItem = {}
+        if playingItem is None: playingItem = self.getplayingItem()
         if self.isPlayingPseudoTV() and not self.isPlayingFiller() and playingItem.get('isPlaylist', False):
             playingFile = self.getPlayerFile()
             if self.pendingItem.get('item', {}).get('file') == playingItem.get('item', {}).get('file') == playingFile:

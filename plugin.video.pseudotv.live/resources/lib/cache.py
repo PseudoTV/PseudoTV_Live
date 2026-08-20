@@ -377,7 +377,8 @@ class _Cache(object):
         cache_data = cursor.fetchone() if cursor else None
         
         if not cache_data:                                   return None
-        if cache_data[0] >= 0 and cache_data[0] <= cur_time: return None
+        expires = cache_data[0] if cache_data[0] is not None else -1
+        if expires >= 0 and expires <= cur_time:             return None
         if checksum and cache_data[2] != checksum:           return None
 
         try:

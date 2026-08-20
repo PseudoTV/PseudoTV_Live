@@ -474,7 +474,7 @@ jobs:
           
           # Lint each file separately
           for FILE in $FILES; do
-            opencode run --model opencode-go/deepseek-v4-flash --file "$FILE" "Lint this Python file for syntax errors, import errors, undefined variables, and security concerns. Only report actual issues found." 2>&1 >> lint-raw.txt || true
+            opencode run --model opencode/mimo-v2.5-free --file "$FILE" "Lint this Python file for syntax errors, import errors, undefined variables, and security concerns. Only report actual issues found." 2>&1 >> lint-raw.txt || true
           done
           
           if grep -qiE "(error|issue|problem)" lint-raw.txt 2>/dev/null; then
@@ -557,7 +557,7 @@ jobs:
             fi
           done
           
-          OPENCODE_OUTPUT=$(opencode run --model opencode-go/deepseek-v4-flash "Review PseudoTV Live code changes. FILES: $FILES DIFF: $DIFF LINT RESULTS: $LINT_RESULTS Check: 1) Breaking changes 2) Bugs 3) Pattern violations 4) Missing imports 5) Kodi compatibility. Risk: LOW/MEDIUM/HIGH" 2>&1 || true)
+          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Review PseudoTV Live code changes. FILES: $FILES DIFF: $DIFF LINT RESULTS: $LINT_RESULTS Check: 1) Breaking changes 2) Bugs 3) Pattern violations 4) Missing imports 5) Kodi compatibility. Risk: LOW/MEDIUM/HIGH" 2>&1 || true)
           
           {
             echo "## AI Code Review"
@@ -729,7 +729,7 @@ jobs:
           safe_update() {
             local file="$1"
             local tmp=$(mktemp)
-            opencode run --model opencode-go/deepseek-v4-flash "$2" > "$tmp" 2>&1 || true
+            opencode run --model opencode/mimo-v2.5-free "$2" > "$tmp" 2>&1 || true
             if [ -s "$tmp" ] && head -c 100 "$tmp" | grep -q "^#"; then
               cp "$tmp" "$file"
               echo "Updated $file"

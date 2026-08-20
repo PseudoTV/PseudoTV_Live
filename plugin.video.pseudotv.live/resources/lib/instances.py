@@ -25,8 +25,12 @@ from typing      import Dict, Optional
 _INSTANCE_NAME_RE    = re.compile(r'<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE)
 _INSTANCE_NAME2_RE   = re.compile(r'<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE)
 _INSTANCE_ENABLED_RE = re.compile(r'<setting id=\"kodi_addon_instance_enabled\"', re.IGNORECASE)
-_M3U_PATH_RE         = re.compile(r'<setting id=\"m3uPath\"[^>]*>(.*?)\</setting>', re.IGNORECASE)
-_M3U_URL_RE          = re.compile(r'<setting id=\"m3uUrl\"[^>]*>(.*?)\</setting>', re.IGNORECASE)
+_M3U_PATH_RE         = re.compile(r'<setting id=\"m3uPath\"[^>]*>(.*?)\</setting>', re.IGNORECASE|re.DOTALL)
+_M3U_URL_RE          = re.compile(r'<setting id=\"m3uUrl\"[^>]*>(.*?)\</setting>', re.IGNORECASE|re.DOTALL)
+# Empty m3u setting: either self-closing (<setting id="m3uUrl" default="true" />)
+# or a paired tag with no text content. Kodi writes empty URL instances with the
+# self-closing form, which the pair-matching regexes above never match.
+_EMPTY_M3U_RE        = re.compile(r'<setting id=\"(?:m3uPath|m3uUrl)\"[^>]*/\s*>|<setting id=\"(?:m3uPath|m3uUrl)\"[^>]*>\s*\</setting>', re.IGNORECASE)
 
 # transient PVR load errors (e.g. pvr.iptvsimple fetching the XMLTV while
 # the builder rewrites it) expire after this many seconds so they can't keep the
@@ -448,33 +452,60 @@ class Instances(object):
             return False
 
     def _disableMigratedPVRInstance(self) -> bool:
-        """Disable pvr.iptvsimple Migrated Config instance if it has empty m3u path/url.
-        
-        Kodi's Migrated Config (instance 0, settings.xml) has m3uPathType=URL
-        but an empty m3uUrl, which blocks the entire PVR addon from connecting.
-        Writes kodi_addon_instance_enabled=false to prevent this.
-        
-        Returns True if the file was modified (caller should trigger PVR reload).
+        """Disable pvr.iptvsimple Migrated Config instance(s) with an empty m3u.
+
+        Kodi's "Migrated Add-on Config" instance (settings.xml, and sometimes a
+        separate instance-settings-1.xml) has m3uPathType=URL but an empty
+        m3uUrl, which registers a bogus 0-channel PVR instance. That channel
+        churn (0 -> full list) races Kodi's Android TV channel publisher
+        (TvUtil -> XBMCJsonRPC) at boot and crashes with a null CLog deref.
+
+        Writes kodi_addon_instance_enabled=false on any such file.
+
+        Returns True if any file was modified (caller should trigger PVR reload).
         """
         try:
+            changed = False
+            # 1. Legacy instance 0 (settings.xml)
             settings_path = FileAccess.translatePath(f'special://userdata/addon_data/{PVR_CLIENT_ID}/settings.xml')
-            if not FileAccess.exists(settings_path): return False
-            with FileAccess.open(settings_path, 'r') as f:
-                content = f.read()
-            if not content: return False
-            # Instance 0 (settings.xml) is always Kodi's Migrated Config — no name in file
-            if 'instance-settings-' in settings_path: return False
-            path_match = _M3U_PATH_RE.search(content)
-            url_match  = _M3U_URL_RE.search(content)
-            has_path = path_match and path_match.group(1).strip()
-            has_url  = url_match  and url_match.group(1).strip()
-            if has_path or has_url: return False
-            if _INSTANCE_ENABLED_RE.search(content): return False
-            content = content.replace('</settings>', '    <setting id="kodi_addon_instance_enabled">false</setting>\n</settings>')
-            with FileAccess.open(settings_path, 'w') as f:
-                f.write(content)
-            self.log("_disableMigratedPVRInstance, disabled Migrated Config with empty m3u path/url", xbmc.LOGINFO)
-            return True
+            if FileAccess.exists(settings_path):
+                try:
+                    with FileAccess.open(settings_path, 'r') as f:
+                        content = f.read()
+                    if content and 'instance-settings-' not in settings_path:
+                        # Empty if no populated m3u path/url AND no explicit enabled=false
+                        empty_path = not _M3U_PATH_RE.search(content)
+                        empty_url  = not _M3U_URL_RE.search(content)
+                        if empty_path and empty_url and _EMPTY_M3U_RE.search(content) and not _INSTANCE_ENABLED_RE.search(content):
+                            content = content.replace('</settings>', '    <setting id="kodi_addon_instance_enabled">false</setting>\n</settings>')
+                            with FileAccess.open(settings_path, 'w') as f:
+                                f.write(content)
+                            self.log("_disableMigratedPVRInstance, disabled Migrated Config (settings.xml) with empty m3u", xbmc.LOGINFO)
+                            changed = True
+                except Exception as e:
+                    self.log(f"_disableMigratedPVRInstance, settings.xml error: {e}", xbmc.LOGDEBUG)
+            # 2. Named instance files (instance-settings-*.xml) that mirror the
+            #    empty Migrated Config — disable any with no m3u path/url either.
+            if FileAccess.exists(PVR_CLIENT_LOC):
+                for file in FileAccess.listdir(PVR_CLIENT_LOC)[1]:
+                    if not file.startswith('instance-settings-'): continue
+                    path = os.path.join(PVR_CLIENT_LOC, file)
+                    try:
+                        with FileAccess.open(path, 'r') as f:
+                            content = f.read()
+                        if not content: continue
+                        # Skip our own PseudoTV instance (has an m3u URL).
+                        if _M3U_PATH_RE.search(content) or _M3U_URL_RE.search(content): continue
+                        if not _EMPTY_M3U_RE.search(content): continue
+                        if _INSTANCE_ENABLED_RE.search(content): continue
+                        content = content.replace('</settings>', '    <setting id="kodi_addon_instance_enabled">false</setting>\n</settings>')
+                        with FileAccess.open(path, 'w') as f:
+                            f.write(content)
+                        self.log(f"_disableMigratedPVRInstance, disabled empty instance {file}", xbmc.LOGINFO)
+                        changed = True
+                    except Exception as e:
+                        self.log(f"_disableMigratedPVRInstance, {file} error: {e}", xbmc.LOGDEBUG)
+            return changed
         except Exception as e:
             self.log(f"_disableMigratedPVRInstance, error: {e}", xbmc.LOGDEBUG)
             return False

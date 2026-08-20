@@ -477,7 +477,6 @@ class OpenRouter(object):
                 try:
                     stem = self._logoStem(citem)
                     file_name = f"{stem}_{idx}.{ext}" if count > 1 else f"{stem}.{ext}"
-                    file_path = os.path.join(LOGO_LOC, file_name)
                     raw = base64.b64decode(b64_data + '=' * (-len(b64_data) % 4))
                     with FileAccess.stream(os.path.join(TEMP_LOC, file_name), "w") as f:
                         f.write(raw)

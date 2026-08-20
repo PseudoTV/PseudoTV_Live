@@ -58,6 +58,15 @@ v.0.7.9+nightly
 - Improved build workflow by caching AI responses keyed on prompt hash so identical translation, changelog, and TODO requests are not re-sent
 - Removed the automated AI code review engine from the CI workflow
 - Tweaked Miscellaneous improvements and tweaks
+- Fixed crashes (SIGSEGV) on devices using SMB network shares by serializing all SMB file access to prevent thread-safety races in libsmbclient, stopping random lockups on the Shield during concurrent scans
+- Fixed disabled PVR Migrated Config instances failing to disable when their empty m3u path/url is written as a self-closing tag or in separate instance files, preventing bogus 0-channel PVR instances that crashed the Android TV channel publisher at boot
+- Removed the automated AI code review engine from the CI workflow
+- Fixed cache entries with NULL expiry timestamps being incorrectly treated as already-expired, keeping valid cached data accessible
+- Fixed crashes (SIGSEGV) on network-attached devices by serializing SMB/NFS/DAV VFS access across threads, preventing libsmbclient/libnfs context races during concurrent scans
+- Fixed PVR Migrated Config instances with empty m3u path/url not being disabled when written as self-closing tags or multiline values, preventing bogus 0-channel instances that crashed the Android TV channel publisher at boot
+- Removed the automated AI code review engine from the CI workflow
+- Added test coverage for network VFS handling, NULL-expiry cache behavior, and JSON/m3u/XMLTV schema validation
+- Tweaked Miscellaneous improvements and tweaks
 v.0.7.8+nightly
 - Fixed progress dialog not rendering from non-main threads (added waitForAbort after dlg.update).
 - Refactored chkPVRSync to pure state checker, returns findings dict; chkPVRRefresh accepts findings to avoid duplicate updatePVRStatus calls.

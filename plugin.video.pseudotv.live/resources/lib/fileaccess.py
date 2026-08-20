@@ -21,6 +21,21 @@ import sys
 from variables   import *
 from typing      import Any, Generator, Iterator, List, Optional, Tuple, Union
 
+# Kodi's VFS sources backed by a shared C library hold a single session/context
+# (libsmbclient for smb://, libnfs for nfs://, libdav for dav://) and are NOT
+# thread-safe: concurrent exists()/open()/listdir() on them from multiple addon
+# threads races the context teardown (smbc_free_context) and SIGSEGVs — seen on
+# the bedroom Shield under Powertoys scraper + PseudoTV. curl-based schemes
+# (http/https/ftp) are thread-safe and need no lock.
+_NET_VFS_PREFIXES = ('smb://', 'nfs://', 'dav://', 'webdav://', 'upnp://')
+
+def isNetVFS(path: str) -> bool:
+    """True if a path is served by a shared-context Kodi VFS backend (not curl)."""
+    return isinstance(path, str) and path.lower().startswith(_NET_VFS_PREFIXES)
+
+# One lock serializes all such access across the addon's threads.
+_NET_VFS_LOCK = RLock()
+
 class FileAccess(object):
     _JSON_CACHE_MAX = 512
     _json_cache = OrderedDict()
@@ -204,6 +219,10 @@ class FileAccess(object):
     @staticmethod
     def open(filename: str, mode: str, encoding: str = DEFAULT_ENCODING) -> 'VFSFile':
         try:
+            # Serialize shared-context VFS access (smb/nfs/dav) — see isNetVFS.
+            if isNetVFS(filename):
+                with _NET_VFS_LOCK:
+                    return VFSFile(filename, mode)
             return VFSFile(filename, mode)
         except UnicodeDecodeError:
             return VFSFile(filename, mode)  # Fallback logic retained from original
@@ -339,7 +358,13 @@ class FileAccess(object):
                 filepath = (filepath.split('stack://')[1].split(' , '))[0]
             except Exception as e:
                 LOG(f"FileAccess: exists, stack:// parse failed!\n{e}", xbmc.LOGDEBUG)
-        
+
+        # Serialize shared-context VFS access (smb/nfs/dav) — libsmbclient's
+        # smbc_free_context races under concurrent calls from different threads.
+        if isNetVFS(filepath):
+            with _NET_VFS_LOCK:
+                return xbmcvfs.exists(filepath)
+
         exists = xbmcvfs.exists(filepath)
         if not exists and not filepath.endswith('\\'):
             filepath_slashed = os.path.join(filepath, '')
