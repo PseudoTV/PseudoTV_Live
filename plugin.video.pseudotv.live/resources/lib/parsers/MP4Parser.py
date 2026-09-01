@@ -426,13 +426,22 @@ class MP4Parser:
         Updates self.MovieHeader with parsed values.
         """
         try:
-            self.MovieHeader.version = struct.unpack('>b', self.File.readBytes(1))[0]
+            version_data = self.File.readBytes(1)
+            if not version_data or len(version_data) < 1:
+                return
+            self.MovieHeader.version = struct.unpack('>b', version_data)[0]
             self.File.read(3)   # skip flags for now
     
             if self.MovieHeader.version == 1:
-                data = struct.unpack('>QQIQQ', self.File.readBytes(36))
+                data = self.File.readBytes(36)
+                if not data or len(data) < 36:
+                    return
+                data = struct.unpack('>QQIQQ', data)
             else:
-                data = struct.unpack('>IIIII', self.File.readBytes(20))
+                data = self.File.readBytes(20)
+                if not data or len(data) < 20:
+                    return
+                data = struct.unpack('>IIIII', data)
 
             self.MovieHeader.created = data[0]
             self.MovieHeader.modified = data[1]

@@ -1132,7 +1132,8 @@ class ListItems(object):
             infoTag.set_info(info)
             if not media.lower() == 'music': 
                 infoTag.set_cast(cast)
-                infoTag.set_unique_ids(uniqueid)
+                if isinstance(uniqueid, dict):
+                    infoTag.set_unique_ids(uniqueid)
                 
             for ainfo in streamInfo.get('audio',[]):    infoTag.add_stream_info('audio'   , ainfo)
             for vinfo in streamInfo.get('video',[]):    infoTag.add_stream_info('video'   , vinfo)
