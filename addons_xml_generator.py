@@ -119,7 +119,7 @@ LANGUAGES = {
     'jaJP': 'Japanese (Japan)',
 }
 
-OPENCODE_MODEL = 'opencode-go/deepseek-v4-flash'
+OPENCODE_MODEL = 'opencode/mimo-v2-5-free'
 
 
 class Generator:

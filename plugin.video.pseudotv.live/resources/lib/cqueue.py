@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 from variables import *
 from typing    import Any, Optional, Callable
+from concurrent.futures import CancelledError
 
 class Task(object):
     def __init__(self, func: Callable, args: tuple = (), kwargs: Optional[dict] = None, priority: int = 3, execute_at: float = 0):
@@ -282,6 +283,8 @@ class CustomQueue(object):
     def _future_callback(self, future: Any):
         try: 
             future.result(timeout=0)
+        except CancelledError:
+            pass  # expected during pool shutdown — not an error
         except Exception as e: 
             self.log(f"_future_callback, failed! {e}", xbmc.LOGERROR)
 

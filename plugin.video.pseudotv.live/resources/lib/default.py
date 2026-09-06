@@ -68,6 +68,7 @@ if __name__ == '__main__':
                     # a blank/missing vid made isVOD True, routing live playback to
                     # playVOD's branch which zeroes seek and skips _setResume.
                     sysInfo.update({'mode':sysInfo.get('mode'),'sysARG':sysARG,'fitem':fitem,'nitem':nitem,'chid':chid,'vid':fitem.get('file','-1'),'name':name,'title':(Globals._unquoteString(sysInfo.get('title','')) or Globals.builtin.getInfoLabel('ListItem.label')),'radio':sysInfo.get('mode') == "radio"})
+                    sysInfo['_skipRecover'] = True  # fitem already resolved, skip expensive XMLTV lookup
                     _run(sysInfo.get('mode'), sysInfo)
                     sys.exit()
             xbmcplugin.setResolvedUrl(int(sysARG[1]), False, xbmcgui.ListItem())

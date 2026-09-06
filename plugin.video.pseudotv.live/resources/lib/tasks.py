@@ -65,6 +65,7 @@ class Tasks(object):
         """Initialize host-side checks and setup."""
         self.service._que(self.chkDirs          ,1)
         self.service._que(self.chkCrash         ,1)
+        self.service._que(self.chkSyncCrash     ,1)
         self.service._que(self.chkPVRSync       ,1)
         self.service._que(self.chkLibrary       ,2,0,0,*(None,False))
         self.service._que(self.chkTrailers      ,5)
@@ -141,6 +142,38 @@ class Tasks(object):
                 # if channels.setChannels(chanLST):
                     # Globals.dialog.okDialog(f'Kodi encountered a fatal crash while parsing a [B]{ADDON_NAME}[\B] channel.\nPlease check the channel configuration for [B]{citem.get('name')}[\B]\n Channel [B]{citem.get('number')}[\B] temporarily disabled!', usethread=False)
                 # del channels
+
+
+    def chkSyncCrash(self):
+        """Detect SyncChannelJobService crash loops on Android TV.
+        
+        Tracks boot timestamps in cache. If 5+ boots happen within 10 minutes,
+        it's a crash loop — notify the user with a wiki link for the fix.
+        """
+        WINDOW = 600  # 10 minutes
+        THRESHOLD = 5
+        CACHE_KEY = 'KODI.SYNC_CRASH.TIMESTAMPS'
+        try:
+            timestamps = Globals.settings.getCacheSetting(CACHE_KEY, default=[])
+            if not isinstance(timestamps, list): timestamps = []
+            now = time.time()
+            # Prune timestamps outside the detection window
+            timestamps = [t for t in timestamps if now - t < WINDOW]
+            timestamps.append(now)
+            Globals.settings.setCacheSetting(CACHE_KEY, timestamps,
+                                             life=datetime.timedelta(hours=1))
+            if len(timestamps) >= THRESHOLD:
+                self.log(f'chkSyncCrash, crash loop detected ({len(timestamps)} boots in {WINDOW}s)', xbmc.LOGWARNING)
+                Globals.settings.setCacheSetting(CACHE_KEY, [])  # reset
+                Globals.dialog.okDialog(
+                    'Kodi is crash-looping on Android TV channel sync.\n\n'
+                    'This is a known Kodi issue — PseudoTV is not affected.\n'
+                    'To fix, disable the sync service via ADB:\n\n'
+                    '[B]adb shell pm disable-user --user 0 org.xbmc.kodi/.channels.SyncChannelJobService[/B]\n\n'
+                    'See the PseudoTV wiki for full instructions.',
+                    usethread=False)
+        except Exception as e:
+            self.log(f'chkSyncCrash, failed: {e}', xbmc.LOGDEBUG)
   
   
     def chkQueTimer(self):
@@ -745,6 +778,10 @@ class Tasks(object):
     def setUserPath(self, old: str, new: str):
         """Copy user data folder from old path to new path."""
         self.log('setUserPath, old = %s, new = %s'%(old,new))
+        if not old or not new:
+            self.log('setUserPath, skipping copy (old or new is empty)')
+            if new: Globals.properties.setPendingRestart()
+            return
         dia = Globals.dialog.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
         with Globals.properties.interruptActivity():
             FileAccess.copyFolder(old, new, dia)

@@ -201,6 +201,11 @@ class JSONRPC(object):
         to a single global rate instead of each bypassing the limit.
         """
         delay = float(REAL_SETTINGS.getSetting('API_Delay') or "1")
+        # During channel builds, use 1/4 the delay — the JSON-RPC server can
+        # handle the faster rate and builds are the main bottleneck on SOC.
+        svc = getattr(self, 'service', None)
+        if svc and getattr(getattr(svc, 'buildState', None), 'running', False):
+            delay = max(0.25, delay * 0.25)
         if delay <= 0: return
         with JSONRPC._sendLock:
             now = time.time()
@@ -571,6 +576,7 @@ class JSONRPC(object):
 
 
     def getStreamDetails(self, path: str, media: str = 'video') -> dict:
+        if not path: return {}
         if _globals()._isStack(path): path = _globals()._splitStacks(path)[0]
         from fileaccess import _NET_VFS_LOCK, isNetVFS
         param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}

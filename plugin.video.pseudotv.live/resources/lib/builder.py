@@ -18,6 +18,7 @@
 
 # -*- coding: utf-8 -*-
 from collections import deque
+from pool import DaemonThreadPoolExecutor
 from typing import Any, Optional
 
 from variables    import *
@@ -125,6 +126,7 @@ class Builder(object):
         self.monitor   = service.monitor
         self.jsonRPC   = service.jsonRPC
         self.cache     = service.cache
+        self._probe_pool = DaemonThreadPoolExecutor(max_workers=min(8, CPU_COUNT))
         self.holiday   = self.seasonal.getHoliday()
         self.channels  = Channels(Globals.getChannelKey(), writable=True)
         self.resources = Resources(service)
@@ -133,8 +135,19 @@ class Builder(object):
 
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
-        
 
+    def probeTrailers(self, items: list) -> dict:
+        """Parallelize YouTube trailer duration probes on _probe_pool. Returns {item: duration}."""
+        futures = {}
+        for item in items:
+            path = item.get('trailer') if isinstance(item, dict) else None
+            if path:
+                futures[item] = self._probe_pool.submit(self.jsonRPC.getDuration, path, None, False, False)
+        results = {}
+        for item, f in futures.items():
+            try: results[item] = f.result(timeout=30)
+            except Exception: results[item] = 0
+        return results
 
     def getVerifiedChannels(self, channels: Optional[list] = None) -> list:
         if channels is None: 
@@ -226,8 +239,19 @@ class Builder(object):
                         self.log('buildChannels, pre-computing filler sources')
                         Fillers({}, self)
                     
+                    build_start = time.time()
+                    BUILD_BUDGET = 600  # 10 minute build budget — re-queues remaining channels
+
                     for idx, citem in enumerate(channels):
                         try:
+                            # Build time budget: prevent runaway builds on low-power devices.
+                            # Re-queue remaining channels to resume on the next cycle.
+                            if idx > 0 and (time.time() - build_start) > BUILD_BUDGET:
+                                self.log(f"buildChannels, budget exceeded after {int(time.time() - build_start)}s — re-queuing {len(channels)-idx} remaining channels")
+                                self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
+                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                                break
+
                             self._buildIdx = idx
                             self.pHeader = ADDON_NAME
                             self.pName   = citem.get('name', '')
@@ -422,6 +446,7 @@ class Builder(object):
                 self.log("buildChannels, post-build sync check: PVR in sync", xbmc.LOGDEBUG)
 
         self.service.buildState.update({'running': False, 'pct': 100})
+        self._probe_pool.shutdown(wait=False, cancel_futures=True)
         return preview_results if preview else None
 
 
@@ -647,25 +672,28 @@ class Builder(object):
 
         default_type = query.get('key', 'files')
         sort_method = sort.get("method", "")
+        # Pre-probe trailer durations in parallel to avoid ~3s serial YouTube
+        # probes blocking the service thread during addTrailer queue processing.
+        trailer_items = [item for item in items if isinstance(item, dict) and item.get('trailer')]
+        if trailer_items:
+            try: self.probeTrailers(trailer_items)
+            except Exception as e: self.log(f"[{citem.get('id')}] buildFiles, trailer pre-probe failed: {e}", xbmc.LOGWARNING)
         # Parallelize only pure-I/O duration probes. vfs-prefixed paths (plugin://,
         # pvr://, resource://) resolve through xbmc.executeJSONRPC, which is not
         # thread-safe, so they and 'stack://' paths stay on the serial path. Items
-        # carrying duration/runtime metadata skip the probe unless accurate. Gated
-        # by Enable_Executor; when disabled all probes fall back to the serial call.
+        # carrying duration/runtime metadata skip the probe unless accurate. Uses a
+        # dedicated pool to avoid JSON-RPC timeouts starving probe threads.
         probe_futures = {}
-        probe_pool = getattr(getattr(self, 'service', None), 'pool', None)
-        if probe_pool is not None and getattr(probe_pool, '_executor', None):
-            try:
-                if probe_pool._getExecutorSettings().get('enabled'):
-                    _vfs = tuple(VFS_TYPES) if 'VFS_TYPES' in globals() else ()
-                    for idx, item in enumerate(items):
-                        if _shouldProbe(item, self.accurateDuration, _vfs):
-                            probe_futures[idx] = probe_pool._executor.submit(
-                                self.jsonRPC.getDuration, item.get('file'), item,
-                                self.accurateDuration, self.saveDuration)
-            except Exception as e:
-                self.log(f"[{citem.get('id')}] buildFiles, parallel probe setup failed: {e}", xbmc.LOGWARNING)
-                probe_futures = {}
+        _vfs = tuple(VFS_TYPES) if 'VFS_TYPES' in globals() else ()
+        try:
+            for idx, item in enumerate(items):
+                if _shouldProbe(item, self.accurateDuration, _vfs):
+                    probe_futures[idx] = self._probe_pool.submit(
+                        self.jsonRPC.getDuration, item.get('file'), item,
+                        self.accurateDuration, self.saveDuration)
+        except Exception as e:
+            self.log(f"[{citem.get('id')}] buildFiles, parallel probe setup failed: {e}", xbmc.LOGWARNING)
+            probe_futures = {}
         for idx, item in enumerate(items):
             if not isinstance(item, dict): continue
             
@@ -806,7 +834,7 @@ class Builder(object):
                 item['art']['icon'] = citem.get('logo', '')
                     
                 if item.get('trailer') and hasattr(self.service,'_que'): 
-                    self.service._que(self.jsonRPC.addTrailer, 3, 0, 0, item)
+                    self.service._que(self.jsonRPC.addTrailer, 3, 0, 0, item, defer_save=True)
                     
                 if sort_method == 'episode' and (season + episode) > 0: 
                     seasoneplist.append((season, episode, item))
@@ -826,6 +854,8 @@ class Builder(object):
             dirList  = Globals._randomShuffle(dirList)
             fileList = Globals._randomShuffle(fileList)
             
+        if hasattr(self.jsonRPC, 'flushTrailers'):
+            self.jsonRPC.flushTrailers()
         total_dur = sum(item.get('duration', 0) for item in fileList if isinstance(item, dict))
         self.log(f"[{citem.get('id')}] buildFiles, returning [{len(fileList)}] files, [{len(dirList)}] dirs, total duration = {total_dur}s ({total_dur // 3600}h {(total_dur % 3600) // 60}m)")
         return fileList, dirList
@@ -833,8 +863,9 @@ class Builder(object):
 
     def is3D(self, item: dict) -> bool:
         if 'is3D' in item: return item['is3D']
-        elif not item.get('streamdetails',{}).get('video',[]) and not item.get('file','').startswith(tuple(VFS_TYPES)):
-            item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
+        file = item.get('file') or ''
+        if not item.get('streamdetails',{}).get('video',[]) and not file.startswith(tuple(VFS_TYPES)):
+            item['streamdetails'] = self.jsonRPC.getStreamDetails(file, item.get('media','video'))
         details = item.get('streamdetails',{})
         if 'video' in details and details.get('video') != [] and len(details.get('video')) > 0:
             if len(details['video'][0]['stereomode'] or []) > 0: return True

@@ -261,9 +261,10 @@ class _Cache(object):
         with self._lock:
             if self._exit:
                 return None
-            if self._checkpointing: 
-                if self.monitor.waitForAbort(1.0): return None
-                return self._execute_sql(query, data)
+            if self._checkpointing:
+                # WAL checkpoint in progress — skip this query rather than
+                # recurse (which blew the stack when checkpointing stalled).
+                return None
             if self._database is None:
                 self._database = self._open()
                 

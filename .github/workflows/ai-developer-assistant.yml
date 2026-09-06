@@ -557,12 +557,43 @@ jobs:
             fi
           done
           
-          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Review PseudoTV Live code changes. FILES: $FILES DIFF: $DIFF LINT RESULTS: $LINT_RESULTS Check: 1) Breaking changes 2) Bugs 3) Pattern violations 4) Missing imports 5) Kodi compatibility. Risk: LOW/MEDIUM/HIGH" 2>&1 || true)
+          OPENCODE_OUTPUT=$(opencode run --model opencode/mimo-v2.5-free "Review PseudoTV Live code changes. IMPORTANT: Output ONLY the final review. No todo lists, no tool calls, no read/grep output, no intermediate steps, no thinking. For each changed file use this exact format:\n\nfilename - short description\nRisk: LOW/MEDIUM/HIGH\n<analysis paragraph>\n\nFILES: $FILES DIFF: $DIFF LINT RESULTS: $LINT_RESULTS Check: 1) Breaking changes 2) Bugs 3) Pattern violations 4) Missing imports 5) Kodi compatibility." 2>&1 || true)
+          
+          echo "$OPENCODE_OUTPUT" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' > /tmp/ai_raw.txt
+          
+          python3 << 'PYFILTER' > /tmp/ai_filtered.txt
+          import sys, re
+          text = open('/tmp/ai_raw.txt').read()
+          lines = text.splitlines()
+          out = []
+          for line in lines:
+              s = line.strip()
+              if not s:
+                  if out and out[-1] != '': out.append('')
+                  continue
+              if re.match(r'^(→|✱|•|!|✗|Todo|Todos)', s): continue
+              if re.match(r'^\[([✓\u2022 ]) ?\]', s): continue
+              if any(p in s for p in ['permission requested','auto-rejecting','Explore Agent','Subagent failed','Error: Subagent','permission to use']): continue
+              if re.match(r'^(Let me |Now let |Here is |Read plugin|Grep |Glob )', s): continue
+              if re.match(r'^(Read |EXIT:|DONE|AST parse|\$ )', s): continue
+              if re.match(r'^(find |grep |cd |apt |pip |install |curl |git )', s): continue
+              out.append(line)
+          result = []
+          prev = False
+          for l in out:
+              if l == '':
+                  if not prev: result.append('')
+                  prev = True
+              else:
+                  result.append(l)
+                  prev = False
+          print('\n'.join(result).strip())
+          PYFILTER
           
           {
             echo "## AI Code Review"
             echo ""
-            echo "$OPENCODE_OUTPUT" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | grep -vE '^\s*(Read|Grep|Write|Glob|cd |\$ |EXIT:|DONE|AST parse|sed |python)' || true
+            cat /tmp/ai_filtered.txt
           } > ai-review-report.md
         continue-on-error: true
       - name: Upload Report

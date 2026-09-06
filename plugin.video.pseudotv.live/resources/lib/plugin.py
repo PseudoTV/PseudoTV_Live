@@ -50,7 +50,9 @@ class Plugin(object):
         # unresolved when its EPG for the channel isn't loaded yet — the stripped
         # URL then carries no start/stop, so seek stays -1 and "current" programmes
         # play from the beginning. Recover the timeline from the live broadcast.
-        if self.sysInfo['seek'] < 0: 
+        # Skip when _skipRecover is set (catchup retry path) — fitem is already
+        # resolved and the XMLTV lookup would block the main thread too long.
+        if self.sysInfo['seek'] < 0 and not self.sysInfo.get('_skipRecover'):
             self._recover()
             
         # isVOD: a standalone video request (play from the start) vs the channel's
@@ -64,7 +66,11 @@ class Plugin(object):
         self.sysInfo['isVOD']      = self.sysInfo.get('fitem',{}).get('file','-1') != self.sysInfo.get('vid','-1') and not in_window
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
         self.sysInfo['isPlaylist'] = bool(Globals.settings.getSettingInt('Playback_Method'))
-        mode = 'playlist' if any((self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist'])) else sysInfo.get('mode')
+        # isPlaylist only applies to VOD/STRM content — not normal live channels.
+        # Without this guard, the global Playback_Method setting forces every live
+        # channel into playPlaylist(), showing a "Playlist" toast and playing via
+        # Kodi's playlist player instead of the normal PVR live path.
+        mode = 'playlist' if any((self.sysInfo['isVOD'],self.sysInfo['isSTRM'],self.sysInfo['isPlaylist'] and (self.sysInfo['isVOD'] or self.sysInfo['isSTRM']))) else sysInfo.get('mode')
         self.log(f'__init__, mode = {mode}, sysInfo = {self.sysInfo}')
         
         with Globals.builtin.busy_dialog():
@@ -213,7 +219,16 @@ class Plugin(object):
             self.log('[%s] _recover, failed: %s' % (self.sysInfo.get('chid'), e), xbmc.LOGDEBUG)
 
     def _setResume(self, listitem: xbmcgui.ListItem) -> xbmcgui.ListItem:
-        if self.sysInfo.get('seek',0) > Globals.settings.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
+        seek = int(self.sysInfo.get('seek', 0) or 0)
+        duration = int(self.sysInfo.get('duration', 0) or 0)
+        # If seek is past 80% of duration, the file was nearly finished — starting
+        # from the seek point causes large audio sync errors and player instability.
+        if duration > 0 and seek > (duration * 60 * 0.8):
+            self.log('[%s] _setResume, seek %.0fs past 80%% of duration %ds — resetting to start' % (self.sysInfo.get('chid'), seek, duration * 60))
+            seek = 0
+            self.sysInfo['seek'] = 0
+            self.sysInfo['progresspercentage'] = 0
+        if seek > Globals.settings.getSettingInt('Seek_Tolerance') and self.sysInfo.get('progresspercentage',100) < 100:
             self.log('[%s] _setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), listitem.getPath()))
             listitem.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
             infoTag = ListItemInfoTag(listitem,'video')

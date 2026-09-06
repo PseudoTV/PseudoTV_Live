@@ -265,8 +265,9 @@ class M3U(object):
                 'updated'   : time.time(),
                 'version'   : (old.get('version', 0) or 0) + 1}, life=-1)
             # Optional physical export for local-file PVR configs / external tools.
+            # Runs async — cache write above is the source of truth; file is a mirror.
             if Globals.settings.getSettingBool('Enable_File_Export'):
-                self._save_export()
+                Thread(target=self._save_export, daemon=True).start()
 
             self._saved = True
             # Update PVR status with current M3U/XMLTV data

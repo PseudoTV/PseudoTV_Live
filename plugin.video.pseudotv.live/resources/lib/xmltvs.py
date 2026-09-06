@@ -562,6 +562,19 @@ class XMLTVS(object):
                     if Globals.settings.getCacheSetting(XMLTV_META_KEY):
                         self.log("_save, refusing to overwrite existing XMLTV with empty dataset", xbmc.LOGWARNING)
                         return False
+                # Guard against a partial build clobbering the full cache:
+                # if the new programme set covers fewer channels than the existing
+                # cache, merge — keep programmes for channels NOT in the new set
+                # so a mid-build crash doesn't lose previously-built guides.
+                existing_programmes = Globals.settings.getCacheSetting(XMLTV_PROGRAMMES_KEY) or []
+                if existing_programmes:
+                    new_channel_ids = {p.get('channel') for p in self.XMLTVDATA['programmes'] if p.get('channel')}
+                    existing_channel_ids = {p.get('channel') for p in existing_programmes if p.get('channel')}
+                    if len(new_channel_ids) < len(existing_channel_ids):
+                        # Keep programmes for channels not in the new set
+                        kept = [p for p in existing_programmes if p.get('channel') not in new_channel_ids]
+                        self.XMLTVDATA['programmes'] = kept + self.XMLTVDATA['programmes']
+                        self.log(f"_save, merged programmes: kept {len(kept)} old + {len(self.XMLTVDATA['programmes']) - len(kept)} new = {len(self.XMLTVDATA['programmes'])} total", xbmc.LOGINFO)
                 # Persist to the SQLite cache (transactional; avoids file-lock races
                 # with HTTP serving / pvr.iptvsimple). Version token increments on
                 # every save, invalidating the holder and HTTP render caches.
@@ -586,7 +599,7 @@ class XMLTVS(object):
                 # schema existed; addProgram/delBroadcast/clrProgrammes keep it synced.
                 self._backfill_programmes_table()
                 if Globals.settings.getSettingBool('Enable_File_Export'):
-                    self._save_export()
+                    Thread(target=self._save_export, daemon=True).start()
 
                 self._saved = True
                 # Update PVR status with current M3U/XMLTV data
@@ -865,23 +878,23 @@ class XMLTVS(object):
     def _backfill_programmes_table(self):
         """Sync the indexed programmes table with the in-memory guide.
 
-        Runs on every save: for each channel present in XMLTVDATA its table rows
-        are rebuilt from the in-memory set, so the table (used by
-        loadStopTimes/hasProgrammes for the build's coverage check) can never
-        drift from the served blob (used by the HTTP guide). A stale table once
-        reported guides that covered today while the served XMLTV did not — the
-        channel was marked 'guide sufficient' yet showed no guide data.
+        Runs on every save: the entire table is cleared first, then only the
+        channels present in XMLTVDATA are re-inserted. This prevents stale
+        rows from a previous larger build from accumulating when a partial
+        build (e.g. crash mid-build) writes fewer channels — without the
+        full clear, the old rows stayed in the DB and drifted from the served
+        cache, causing M3U filtering mismatches.
         """
         try:
             db = self._programme_db()
             with self._lock:
+                db.execute("DELETE FROM programmes")
                 by_channel = {}
                 for p in self.XMLTVDATA['programmes']:
                     ch = p.get('channel')
                     if ch:
                         by_channel.setdefault(ch, []).append(p)
                 for ch_id, progs in by_channel.items():
-                    db.execute("DELETE FROM programmes WHERE channel=?", (ch_id,))
                     if progs:
                         rows = [(ch_id, p.get('start'), p.get('stop'), FileAccess.dumpPICKLE(p)) for p in progs]
                         db.execute("INSERT OR REPLACE INTO programmes(channel,start,stop,data) VALUES(?,?,?,?)", rows)
@@ -1086,7 +1099,28 @@ class XMLTVS(object):
             # Holder was capped (constrained SOC) — re-read the guide from the DB
             # cache for this render. Sorted once; not pinned back into the holder.
             programmes = Globals.settings.getCacheSetting(XMLTV_PROGRAMMES_KEY) or []
+            if not programmes:
+                return []
             programmes = self._clean(programmes, 'channel')
+        # If programmes has entries but fewer channels than the M3U station set,
+        # the cache is stale (e.g. partial build wrote fewer channels than are
+        # configured). Read the full programme list from the DB so the serve
+        # path doesn't silently drop channels that DO have guide data.
+        # NOTE: DB data is already clean (cleaned at write time), so skip
+        # _clean here to avoid the _clean→cleanStations→hasProgrammes→
+        # getProgrammes recursion cycle.
+        if programmes and not self.writable:
+            try:
+                db = self._programme_db()
+                cur = db.execute("SELECT COUNT(DISTINCT channel) FROM programmes") if db else None
+                db_count = cur.fetchone()[0] if cur else 0
+                mem_count = len({p.get('channel') for p in programmes if p.get('channel')})
+                if db_count > mem_count:
+                    self.log(f"getProgrammes, cache stale ({mem_count} channels) vs DB ({db_count}), re-reading", xbmc.LOGINFO)
+                    rows = db.execute("SELECT data FROM programmes").fetchall() if db else []
+                    programmes = [FileAccess.loadPICKLE(r[0]) for r in rows if r[0]]
+            except Exception as e:
+                self.log(f"getProgrammes, DB fallback failed: {e}", xbmc.LOGDEBUG)
         return self.sortProgrammes(programmes)
 
 
@@ -1436,10 +1470,19 @@ class XMLTVS(object):
                 # reader's loadPICKLE fails on it — genres would serve empty.
                 Globals.settings.setCacheSetting(GENRES_CACHE_KEY, xml_bytes.decode(DEFAULT_ENCODING), life=-1)
                 if Globals.settings.getSettingBool('Enable_File_Export'):
-                    with FileLock(GENREFLEPATH):
-                        with FileAccess.open(GENREFLEPATH, "w") as xmlData:
-                            xmlData.write(xml_bytes)
+                    Thread(target=self._writeGenreFile, args=(xml_bytes,), daemon=True).start()
                 _GENRE_SIG = sig
                 return True
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
         except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
+
+
+    @staticmethod
+    def _writeGenreFile(xml_bytes: bytes):
+        """Write genres.xml to disk (async, daemon thread)."""
+        try:
+            with FileLock(GENREFLEPATH):
+                with FileAccess.open(GENREFLEPATH, "w") as xmlData:
+                    xmlData.write(xml_bytes)
+        except Exception as e:
+            LOG("_writeGenreFile failed! %s" % e, xbmc.LOGERROR)

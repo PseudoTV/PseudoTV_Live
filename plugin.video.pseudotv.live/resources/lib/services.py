@@ -49,6 +49,8 @@ class Player(xbmc.Player):
         self.runActions     = None
         self.playingThread  = None
         self.playingStopped = Event()
+        self._lastStopTime  = {}  # {chid: timestamp} — EOF loop detection cooldown
+        self._lastPlayTime  = {}  # {chid: timestamp} — rapid channel-switch debounce
         
         self.enableOverlay     = Globals.settings.getSettingBool('Overlay_Enable')
         self.infoOnChange      = Globals.settings.getSettingBool('Enable_OnInfo')
@@ -56,6 +58,7 @@ class Player(xbmc.Player):
         self.rollbackPlaycount = Globals.settings.getSettingBool('Rollback_Watched')
         self.saveDuration      = Globals.settings.getSettingBool('Store_Duration')
         self.minDuration       = Globals.settings.getSettingInt('Seek_Tolerance')
+        self._newChannel       = False  # skip minDuration gate on first _after_ channel change
         self.maxProgress       = Globals.settings.getSettingInt('Seek_Threshold')
         self.sleepTime         = Globals.settings.getSettingInt('Idle_Timer')
         self.runWhilePlaying   = Globals.settings.getSettingBool('Run_While_Playing')
@@ -229,7 +232,11 @@ class Player(xbmc.Player):
             elif _remaining >= (OSD_TIMER * 2):
                 self.toggleBackground(False)
                 _played = ceil(self.getPlayedTime())
-                if _played > self.minDuration: 
+                # On new channel change, show overlay immediately — don't wait
+                # for minDuration gate (Seek_Tolerance can be 60s+, during which
+                # the channel bug is invisible to the user).
+                if _played > self.minDuration or self._newChannel:
+                    self._newChannel = False
                     if self.overlay is None:
                         self.log(f"_onPlaying, _played {_played}")
                         self.toggleOverlay(True)
@@ -252,6 +259,27 @@ class Player(xbmc.Player):
             oldInfo = self.playingItem
             newChan = oldInfo.get('chid', 'unknown') != playingItem.get('chid','unavailable')
             if newChan:
+                # EOF loop detection: if the same channel was stopped < 10s ago,
+                # PVR is likely relaunching after an early EOF. Skip heavy rules
+                # processing to avoid constant overlay create/destroy cycles.
+                chid = playingItem.get('chid', '')
+                lastStop = self._lastStopTime.get(chid, 0)
+                if lastStop and (time.time() - lastStop) < 10:
+                    self.log(f"_onPlay, EOF loop cooldown — skipping rules for {chid}")
+                    self._newChannel = False
+                    return
+                # Rapid channel-switch debounce: if any channel started < 3s ago,
+                # skip heavy rules/overlay to avoid player state conflicts from
+                # rapid user channel surfing.
+                now = time.time()
+                lastPlay = max(self._lastPlayTime.values()) if self._lastPlayTime else 0
+                if lastPlay and (now - lastPlay) < 3:
+                    self.log(f"_onPlay, rapid switch debounce — skipping rules (last play {now - lastPlay:.1f}s ago)")
+                    self._newChannel = False
+                    self._lastPlayTime[chid] = now
+                    return
+                self._lastPlayTime[chid] = now
+                self._newChannel = True
                 self.runActions  = RulesList([playingItem.get('citem', {})]).runActions
                 self.playingItem = self._runActions(RULES_ACTION_PLAYER_START, playingItem.get('citem', {}), playingItem, inherited=self)
                 Globals.properties.setTrakt(self.disableTrakt)
@@ -315,6 +343,11 @@ class Player(xbmc.Player):
         self.toggleOverlay(False)
         self.toggleBackground(False)
         
+        # Track stop time per channel for EOF loop detection.
+        chid = playingItem.get('chid', '')
+        if chid:
+            self._lastStopTime[chid] = time.time()
+        
         if playingItem:
             Globals.properties.setTrakt(False)
             if playingItem.get('isPlaylist', False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
@@ -372,7 +405,7 @@ class Player(xbmc.Player):
             try:
                 if state and self.overlay is None:
                     self.overlay = Overlay(OVERLAY_XML, ADDON_PATH, "default", "1080i", service=self.service)
-                    if hasattr(self.overlay, 'show'): self.overlay.show()
+                    self.overlay.onInit()
                 elif not state:
                     if hasattr(self.overlay, 'close'): self.overlay.onClose()
                     self.overlay = None
@@ -381,16 +414,16 @@ class Player(xbmc.Player):
 
     def toggleOnNext(self, state: bool = False):
         self.log(f"toggleOnNext, state = {state}")
-        # if not self.overlay is None:
-            # cur_fitem = self.playingItem.get('fitem', {})
-            # if cur_fitem.get('file') and cur_fitem.get('file') != self.overlay.fitem.get('file'):
-                # self.overlay.update(self.playingItem)
-                                
-            # total_time = int(self.getPlayerTime() * (self.maxProgress / 100))
-            # threshold = abs((total_time - (total_time * 0.75)) - (ONNEXT_TIMER * 3))
-            # if (threshold >= _remaining >= Globals._roundupDIV(threshold, 3)):
-                # self.log(f"toggleOnNext, total_time {total_time}")
-                # self.overlay.showOnNext()
+        if self.overlay is None: return
+        cur_fitem = self.playingItem.get('fitem', {})
+        if cur_fitem.get('file') and cur_fitem.get('file') != self.overlay.fitem.get('file'):
+            self.overlay.update(self.playingItem)
+        total_time = self.getPlayerTime()
+        threshold = max(60, min(total_time * 0.15, 600))
+        _remaining = floor(self.getRemainingTime())
+        if threshold >= _remaining >= max(20, threshold // 3):
+            self.log(f"toggleOnNext, remaining {_remaining:.0f}s, threshold {threshold:.0f}s")
+            self.overlay.showOnNext()
 
 
     # @debounceit(OSD_TIMER)
@@ -445,7 +478,7 @@ class Monitor(xbmc.Monitor):
         with self._play_lock:
             while not self.abortRequested() and not self.player.playingStopped.is_set():
                 if not self.player.isPlayingPseudoTV(): break
-                if self.waitForAbort(0.5): break
+                if self.waitForAbort(0.25): break
                 self.log("_onPlay, loop")
                 self.player._onPlaying()
             self.log("_onPlay, stopped")
@@ -768,14 +801,20 @@ class Service(object):
             self.pool.shutdown(wait=False, cancel=True)
             self.cache.shutdown()
         _Service().pool.shutdown(wait=False, cancel=True)
-        # module-level pool is never shut down otherwise -> non-daemon
-        # executor threads leak and block Kodi's script exit (5s force-kill hang).
+        # Module-level pool shutdown. DaemonThreadPoolExecutor ensures worker
+        # threads are daemon, so they won't block interpreter exit.
         try:
-            import sys
             from pool import _EXECUTOR_POOL
             _EXECUTOR_POOL.shutdown(wait=False, cancel=True)
         except Exception as e:
             self.log(f"_stop, _EXECUTOR_POOL shutdown failed: {e}", xbmc.LOGDEBUG)
+        # Give daemon executor threads a brief window to finish current I/O
+        # before interpreter exit. Daemon threads are killed automatically,
+        # but a short join lets clean completions finish gracefully.
+        for thread in threading.enumerate():
+            if thread.name.startswith('ThreadPoolExecutor-') and thread.is_alive():
+                try: thread.join(timeout=2)
+                except Exception: pass
         Globals.properties._clrTrash(Globals.properties.getProcessID())
         self.log(f"_stop, service shutdown sequence. Restart state: {pendingRestart}")
         return pendingRestart

@@ -284,6 +284,17 @@ class FileAccess(object):
         return path
 
     @staticmethod
+    @staticmethod
+    def _updateDlg(dia: Any, percent: int, message: str = '') -> None:
+        """Update a progress dialog, handling both custom Dialog and raw xbmcgui.DialogProgress."""
+        try:
+            if hasattr(dia, '_updateProgress'):
+                dia._updateProgress(dia, percent, message=message)
+            elif hasattr(dia, 'update'):
+                dia.update(percent, message)
+        except Exception:
+            pass
+
     def copyFolder(src: str, dest_dir: str, dia: Any = None, move: bool = False) -> Any:
         """Recursively copy/move a folder with optional progress dialog."""
         LOG(f"FileAccess: copyFolder {src} to {dest_dir}")
@@ -291,14 +302,14 @@ class FileAccess(object):
             FileAccess.mkdirs(dest_dir)
         
         if dia is not None:
-            dia._updateProgress(dia, 0, message=f"{LANGUAGE(32051)}\n{src}")
+            FileAccess._updateDlg(dia, 0, message=f"{LANGUAGE(32051)}\n{src}")
 
         subs, files = FileAccess.listdir(src)
         
         for fidx, file in enumerate(files):
             progress = int(fidx * 100) // max(len(files), 1)
             if dia is not None:
-                dia._updateProgress(dia, progress, message=f'copying {file} {progress}%\n{fidx}/{len(files)}')
+                FileAccess._updateDlg(dia, progress, message=f'copying {file} {progress}%\n{fidx}/{len(files)}')
             
             src_file = os.path.join(src, file)
             dest_file = os.path.join(dest_dir, file)
@@ -310,7 +321,7 @@ class FileAccess(object):
         for sidx, sub in enumerate(subs):
             progress = int(sidx * 100) // max(len(subs), 1)
             if dia is not None:
-                dia._updateProgress(dia, progress, message=f'copying {sub} {progress}%\n{sidx}/{len(subs)}')
+                FileAccess._updateDlg(dia, progress, message=f'copying {sub} {progress}%\n{sidx}/{len(subs)}')
             FileAccess.copyFolder(os.path.join(src, sub), os.path.join(dest_dir, sub), dia, move)
         return dia
 

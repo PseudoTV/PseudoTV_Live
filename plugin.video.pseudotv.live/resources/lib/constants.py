@@ -103,20 +103,26 @@ def _getFreeMEM() -> int:
 # =============================================================================
 
 TOTAL_RAM_GB        = _getTotalMEM()
-IS_CONSTRAINED_SOC  = TOTAL_RAM_GB <= 3.5
+IS_CONSTRAINED_SOC  = TOTAL_RAM_GB <= 2.5
 CPU_COUNT           = os.cpu_count() or 1                   # Number of CPU cores
-if IS_CONSTRAINED_SOC:                                      # SoC Mode: Cap threads strictly to core count to protect limited RAM
+if TOTAL_RAM_GB <= 2.5:                                      # Low-End SoC: Fire Stick, low-RAM boxes
     CPU_CYCLE      = 0.016
-    THREAD_WORKERS = min(2, CPU_COUNT)   # SoC: 2 workers — heavy builds + JSONRPC contention lock up low-RAM boxes
+    THREAD_WORKERS = min(2, CPU_COUNT)
     QUEUE_CHUNK    = 8
     BATCH_SIZE     = 4
     MAX_CACHE_SIZE = 5000
-else:                                                       # High-Performance Mode: Scale smoothly up to 32 threads
-    CPU_CYCLE      = 0.016 if CPU_COUNT < 4 else 0.008      # Minimum sleep interval (~60Hz) Faster polling loops on multi-core systems
-    THREAD_WORKERS = min(32, CPU_COUNT * 2)                 # Max thread pool workers (capped at 32) 2 threads per core, scaling smoothly up to a maximum of 32
-    QUEUE_CHUNK    = max(4, 32 // CPU_COUNT)                # Queue Chunking: High-core machines grab smaller, nimbler chunks to avoid lock contention; Low-core machines grab larger chunks to minimize the overhead of fetching. 
-    BATCH_SIZE     = 128 // QUEUE_CHUNK                     # Batch size for parallel operations Fewer cores run small, conservative batches; higher cores run larger parallel bursts.
-    MAX_CACHE_SIZE = 1000 * CPU_COUNT                       # LRU cache Scale with available RAM/cores
+elif TOTAL_RAM_GB <= 4.0:                                    # Mid-Range: Shield Pro, Apple TV
+    CPU_CYCLE      = 0.016
+    THREAD_WORKERS = min(4, CPU_COUNT)
+    QUEUE_CHUNK    = max(4, 16 // CPU_COUNT)
+    BATCH_SIZE     = 64 // QUEUE_CHUNK
+    MAX_CACHE_SIZE = 8000
+else:                                                        # High-Performance: Desktop
+    CPU_CYCLE      = 0.016 if CPU_COUNT < 4 else 0.008
+    THREAD_WORKERS = min(32, CPU_COUNT * 2)
+    QUEUE_CHUNK    = max(4, 32 // CPU_COUNT)
+    BATCH_SIZE     = 128 // QUEUE_CHUNK
+    MAX_CACHE_SIZE = 1000 * CPU_COUNT
     
 # =============================================================================
 # Shared in-memory cache budget. ONE global number (GLOBAL_CACHE_MEM_MAX,
@@ -127,7 +133,7 @@ else:                                                       # High-Performance M
 # of caches (window-property mem cache, Properties LRU, M3U/XMLTV renders)
 # can ever blow the budget.
 # =============================================================================
-GLOBAL_CACHE_MEM_MAX = (128 if IS_CONSTRAINED_SOC else 512) * 1024 * 1024
+GLOBAL_CACHE_MEM_MAX = (128 if IS_CONSTRAINED_SOC else 256 if TOTAL_RAM_GB <= 4.0 else 512) * 1024 * 1024
 CACHE_MEM_MAX        = int(GLOBAL_CACHE_MEM_MAX * 0.30)  # _Cache window-property mem cache
 PROPERTY_MEM_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.20)  # Properties._memory_cache
 RENDER_CACHE_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.30)  # served M3U+XMLTV render caches (shared)

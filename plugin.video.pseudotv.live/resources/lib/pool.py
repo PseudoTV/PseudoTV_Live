@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 from variables import *
 from typing    import Any, Callable, Optional
+from concurrent.futures import CancelledError
 
 _MONITOR = None
 def _getMonitor() -> Any:
@@ -283,6 +284,29 @@ def poolit(method: Callable[..., Any]) -> Callable:
         return execution_state['result']
     return wrapper
 
+class DaemonThreadPoolExecutor(ThreadPoolExecutor):
+    """ThreadPoolExecutor subclass that forces worker threads to be daemon threads.
+    
+    Daemon threads don't prevent interpreter exit — if the main thread ends
+    (e.g. Kodi aborts the script), daemon workers are killed automatically.
+    This prevents the 5s force-kill hang when executor threads are blocked in
+    I/O calls during shutdown.
+    """
+    def _adjust_thread_count(self):
+        if len(self._threads) < self._max_workers:
+            import weakref, threading
+            from concurrent.futures.thread import _worker, _threads_queues
+            num_threads = len(self._threads)
+            thread_name = '%s_%d' % (self._thread_name_prefix or self, num_threads)
+            t = threading.Thread(name=thread_name, target=_worker,
+                                 args=(weakref.ref(self, lambda _, q=self._work_queue: q.put(None)),
+                                       self._create_worker_context(),
+                                       self._work_queue))
+            t.daemon = True
+            t.start()
+            self._threads.add(t)
+            _threads_queues[t] = self._work_queue
+
 class ExecutorPool:
     """Thread pool executor wrapper for parallel task execution.
     
@@ -293,7 +317,7 @@ class ExecutorPool:
     def __init__(self, workers: Optional[int] = None):
         if workers is None: workers = THREAD_WORKERS
         self._workers  = workers
-        self._executor = ThreadPoolExecutor(max_workers=workers)
+        self._executor = DaemonThreadPoolExecutor(max_workers=workers)
         self._executor_settings = {'timeout': None, 'enabled': None, 'last_check': 0}
         self._SETTINGS_TTL = 30
         self.log('__init__, workers=%d' % workers, xbmc.LOGINFO)
@@ -370,6 +394,8 @@ class ExecutorPool:
             try:
                 future = self._executor.submit(func, *args, **kwargs)
                 return future.result(timeout=float(timeout))
+            except CancelledError:
+                pass  # expected during pool shutdown
             except TimeoutError:
                 # Grab a result that landed just at the deadline before giving up,
                 # then cancel the future so it can't keep running in the background.
@@ -413,7 +439,7 @@ class ExecutorPool:
         if timeout is None: timeout = settings['timeout']
         if settings['enabled']:
             if self.isShutdown(): 
-                self._executor = ThreadPoolExecutor(max_workers=self._workers)
+                self._executor = DaemonThreadPoolExecutor(max_workers=self._workers)
             ran_parallel = False
             with timeit(func):
                 futures = {self._executor.submit(func, i, *args, **kwargs): i for i in items}
