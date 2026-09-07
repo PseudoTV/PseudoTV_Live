@@ -456,9 +456,10 @@ class Writer:
             if 'length' in programme['length']:
                 self.settext(l, programme['length']['length'], with_lang=False)
 
-        # Icon
-        if 'icon' in programme:
-            self.seticons(p, programme['icon'])
+        # Icon — fall back to 'thumb' for programmes without explicit icon
+        icon = programme.get('icon') or ([{'src': programme['thumb']}] if programme.get('thumb') else None)
+        if icon:
+            self.seticons(p, icon)
 
         # URL
         if 'url' in programme:

@@ -18,3 +18,4 @@ plugin.video.pseudotv.live/pytest.ini
 .github/scripts/ai_engine.py
 translations_merge_summary.md
 plugin.video.pseudotv.live/.last_kodi_sha
+plugin.video.pseudotv.live/TODO_PERFORMANCE.md

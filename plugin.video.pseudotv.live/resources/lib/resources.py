@@ -358,13 +358,23 @@ class Resources(object):
         """Fetch the full TV-show list once per Resources instance and index it by
         title. getTVShowLogo is called per-channel during a build — re-fetching the
         entire library (1237 shows x ~50 props) for every channel blows up memory.
+        Persists the index to SQLite so it survives service restarts.
         """
         if self._tvshows_by_title is None:
             try:
+                # Try SQLite cache first — avoids JSON-RPC on restart
+                try:
+                    cacheName = 'tvshows.library.index'
+                    cached = self.cache.get(cacheName, checksum=ADDON_VERSION)
+                    if cached is not None:
+                        self._tvshows_by_title = cached
+                        self.log('getTVShowLogo: loaded %d shows from cache' % len(cached), xbmc.LOGDEBUG)
+                        return self._tvshows_by_title
+                except Exception:
+                    pass
+
                 items = self.jsonRPC.getTVshows()
                 index = {str(item.get('title','')).casefold(): item for item in (items or []) if item.get('title')}
-                # Account the full-library index against the shared MemoryBudget so
-                # a large video library can't silently consume global memory.
                 try:
                     from cache import MemoryBudget
                     budget = MemoryBudget.instance()
@@ -373,12 +383,20 @@ class Resources(object):
                     if size <= TVSHOWS_MEM_MAX and budget.acquire('tvshows', size):
                         self._tvshows_by_title = index
                     else:
-                        self.log(f'getTVShowLogo: library index ({size} bytes) over TVSHOWS_MEM_MAX, logo lookups degraded', xbmc.LOGWARNING)
+                        self.log('getTVShowLogo: library index (%d bytes) over TVSHOWS_MEM_MAX, logo lookups degraded' % size, xbmc.LOGWARNING)
                         self._tvshows_by_title = {}
                 except Exception:
                     self._tvshows_by_title = index
+
+                # Persist to SQLite for next restart
+                try:
+                    if self._tvshows_by_title:
+                        self.cache.set(cacheName, self._tvshows_by_title, checksum=ADDON_VERSION,
+                                       expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                except Exception:
+                    pass
             except Exception as e:
-                self.log(f'getTVShowLogo: getTVshows failed!\n{e}', xbmc.LOGWARNING)
+                self.log('getTVShowLogo: getTVshows failed!\n%s' % e, xbmc.LOGWARNING)
                 self._tvshows_by_title = {}
         return self._tvshows_by_title or None
 

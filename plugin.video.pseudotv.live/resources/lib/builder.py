@@ -410,6 +410,13 @@ class Builder(object):
                                     self.log(f"[{citem.get('id')}] buildChannels, station added but no programmes, placeholder skipped", xbmc.LOGDEBUG)
                                 if station_added: complete.add(citem.get('id'))
                                 self.log(f"[{citem.get('id')}] buildChannels, station added to m3u/epg: {station_added}")
+                                # Bump XMLTV version after each channel so the render
+                                # cache is invalidated and pvr.iptvsimple picks up
+                                # fresh data on its next poll (incremental EPG updates).
+                                try:
+                                    old_meta = Globals.settings.getCacheSetting(XMLTV_META_KEY) or {}
+                                    Globals.settings.setCacheSetting(XMLTV_META_KEY, {'updated': time.time(), 'version': (old_meta.get('version', 0) or 0) + 1}, life=-1)
+                                except Exception: pass
                             elif _update or _changed:
                                 self._resetPagination(citem)
                                 # Keep the station even when the rebuild produced no
@@ -785,6 +792,9 @@ class Builder(object):
                 item["showlabel"]    = f"{tvtitle} - {item['episodelabel']}" if item['episodelabel'] else tvtitle
             else:
                 tagline = item.get("tagline", "")
+                if not tagline:
+                    premiered = item.get("premiered") or item.get("aired")
+                    tagline = "Premiered %s" % premiered if premiered else ""
                 item["episodetitle"] = tagline
                 item["episodelabel"] = tagline
                 item["showlabel"]    = f"{item.get('title', '')} - {tagline}" if tagline else item.get('title', '')

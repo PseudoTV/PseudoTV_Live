@@ -67,28 +67,47 @@ def _run_opencode(prompt):
     if os.path.isfile(cache_file):
         with open(cache_file, 'r', encoding='utf-8') as f:
             cached = f.read()
-        _log(f"AI cache hit ({key[:8]})")
-        return cached
+        if cached.strip():
+            _log(f"AI cache hit ({key[:8]})")
+            return cached
+        _log(f"AI cache empty ({key[:8]}), re-running")
+        os.remove(cache_file)
 
     opencode_bin = os.path.join(_opencode_dir, 'opencode.exe')
     if not os.path.isfile(opencode_bin):
         _log("OpenCode binary not found")
         return None
-    try:
-        result = subprocess.run(
-            [opencode_bin, 'run', '--model', OPENCODE_MODEL, prompt],
-            cwd=GITPATH, capture_output=True, text=True,
-            encoding='utf-8', errors='replace', timeout=120
-        )
-    except Exception as e:
-        _log(f"OpenCode failed: {e}")
+
+    output = None
+    for attempt in range(3):
+        try:
+            result = subprocess.run(
+                [opencode_bin, 'run', '--model', OPENCODE_MODEL, prompt],
+                cwd=GITPATH, capture_output=True, text=True,
+                encoding='utf-8', errors='replace', timeout=180
+            )
+        except Exception as e:
+            _log(f"OpenCode failed (attempt {attempt+1}): {e}")
+            time.sleep(2)
+            continue
+
+        output = (result.stdout or '').strip()
+        if output:
+            break
+        _log(f"AI returned empty (attempt {attempt+1}, rc={result.returncode})")
+        if result.stderr:
+            _log(f"AI stderr: {result.stderr[:200]}")
+        time.sleep(2)
+
+    if not output:
+        _log("AI returned empty after 3 attempts, not caching")
         return None
 
     os.makedirs(CACHE_DIR, exist_ok=True)
     with open(cache_file, 'w', encoding='utf-8') as f:
-        f.write(result.stdout)
+        f.write(output)
     _log(f"AI cache miss, saved ({key[:8]})")
-    return result.stdout
+    return output
 
 GITPATH = os.path.dirname(os.path.abspath(__file__))
 ZIPPATH = os.path.join(GITPATH, 'zips')
@@ -119,7 +138,7 @@ LANGUAGES = {
     'jaJP': 'Japanese (Japan)',
 }
 
-OPENCODE_MODEL = 'opencode/mimo-v2-5-free'
+OPENCODE_MODEL = 'opencode/mimo-v2.5-free'
 
 
 class Generator:

@@ -52,7 +52,7 @@ class Tasks(object):
         """Run client-side initialization."""
         self.service._que(self.chkPVRBackend    ,1)
         self.service._que(self.chkPVRLoadSetting,1)
-        self.service._que(self.chkHTTP          ,1)
+        # chkHTTP removed — started from _start() before _wait() for faster online
         self.service._que(self.chkDebugging     ,1)
         self.service._que(self.chkVersion       ,1)
         self.service._que(self.chkKodiSettings  ,1)
@@ -69,6 +69,7 @@ class Tasks(object):
         self.service._que(self.chkPVRSync       ,1)
         self.service._que(self.chkLibrary       ,2,0,0,*(None,False))
         self.service._que(self.chkTrailers      ,5)
+        self.service._que(self._precomputeFillers,1)
         self.log('_initialize, _host...')
 
 
@@ -99,6 +100,19 @@ class Tasks(object):
         timerit(HTTP)(0.1,self.service)
         Globals.properties.setEXTProperty(f'{ADDON_ID}.Local_Host', self.jsonRPC.getLocalHost())
         self.log('chkHTTP')
+
+
+    def _precomputeFillers(self):
+        """Warm filler cache before first build to avoid cold-build delay on SMB."""
+        if not Globals.settings.getSettingBool('Enable_Fillers'): return
+        try:
+            from builder import Builder
+            from fillers import Fillers
+            builder = Builder(self.service)
+            Fillers({}, builder)
+            self.log('_precomputeFillers, filler cache warmed')
+        except Exception as e:
+            self.log('_precomputeFillers, failed: %s' % e, xbmc.LOGDEBUG)
         
         
     def chkDebugging(self, disable: bool = False):

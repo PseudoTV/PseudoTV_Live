@@ -283,6 +283,11 @@ def renderFilteredXMLTV(channels: list, runActions, compress: bool = False) -> b
         buf = BytesIO()
         xmltv_obj.renderWithPlaceholders(buf, stations=_filter(xmltv_obj.m3u.getFilteredStations(programmes=xmltv_obj.getProgrammes())))
         data = buf.getvalue()
+        # Append version comment — unique per data version forces pvr.iptvsimple
+        # to detect a change on its next poll without a PVR toggle.
+        version = Globals.settings.getCacheSetting(XMLTV_META_KEY, default={}).get('version', 0)
+        if version:
+            data = data.replace(b'</tv>', ('<!-- pseudotv:%d -->\n</tv>' % version).encode(), 1)
         # don't cache implausibly large / empty renders (shared render budget cap)
         _storeRender(_XMLTV_RENDER_CACHE, sig, data, 'renderFilteredXMLTV')
         return _cached_bytes(_XMLTV_RENDER_CACHE, sig, compress)
@@ -435,6 +440,7 @@ class XMLTVS(object):
         self.XMLTVFile  = file
         self.XMLTVDATA  = {}
         self.XMLTVDATA  = self._load()
+        self._programmes_dirty = False  # tracks whether programmes changed since last save
         
         
     def __enter__(self) -> 'XMLTVS':
@@ -543,7 +549,10 @@ class XMLTVS(object):
 
     def _save(self, reset: bool=True) -> bool:
         with self._lock:
-            self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
+            # Only sort and backfill when programmes actually changed — avoids
+            # O(n log n) sort + O(n) DELETE/INSERT on every save for unchanged data.
+            if getattr(self, '_programmes_dirty', False):
+                self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
             self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'], opt='PROGRAMMES')
             self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'], opt='RECORDINGS')
             self.log('_save, writable=%s, file=%s, reset=%s, channels=%d, programmes=%d, recordings=%d' % (
@@ -595,9 +604,12 @@ class XMLTVS(object):
                     _XMLTV_HOLDER['channels']   = list(self.XMLTVDATA['channels'])
                     _XMLTV_HOLDER['programmes'] = list(self.XMLTVDATA['programmes'])
                     _XMLTV_HOLDER['recordings'] = list(self.XMLTVDATA['recordings'])
-                # Backfill the indexed programmes table for rows written before the
-                # schema existed; addProgram/delBroadcast/clrProgrammes keep it synced.
-                self._backfill_programmes_table()
+                # Backfill the indexed programmes table — only when data changed.
+                # addProgram/delBroadcast/clrProgrammes/truncateProgrammes keep the
+                # table synced incrementally; full backfill is only needed for safety.
+                if getattr(self, '_programmes_dirty', False):
+                    self._backfill_programmes_table()
+                    self._programmes_dirty = False
                 if Globals.settings.getSettingBool('Enable_File_Export'):
                     Thread(target=self._save_export, daemon=True).start()
 
@@ -1146,13 +1158,15 @@ class XMLTVS(object):
         item['start']         = fItem.get('start', '')
         item['stop']          = fItem.get('stop', '')
         item['title']         = fItem.get('label', '')
-        item['desc']          = fItem.get('plot', '')
+        item['desc']          = fItem.get('plot', '') if fItem.get('plot', '').lower() not in ('unavailable', 'n/a', '') else ''
         item['length']        = fItem.get('duration', 0)
-        item['sub-title']     = (fItem.get('episodetitle') or '')
+        ep = fItem.get('episodetitle', '')
+        item['sub-title'] = '' if ep.lower() == item['title'].lower() else ep
         item['categories']    = (fItem.get('genre')        or ['Undefined'])[:5]#trim list to five
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
         item['thumb']                = Globals._getThumb(fItem,self.m3u.EPGArtwork)            #unify thumbnail by user preference 
+        item['icon']                 = [{'src': item['thumb']}]                                 #map thumb to XMLTV <icon> element
         fItem.get('art',{})['thumb'] = Globals._getThumb(fItem,{0:1,1:0}[self.m3u.EPGArtwork]) #unify thumbnail artwork, opposite of EPG_Artwork
          
         if item['type'] == 'movie': item['date'] = (fItem.get('premiered')  or fItem.get('releasedate') or fItem.get('firstaired'))
@@ -1302,6 +1316,7 @@ class XMLTVS(object):
             self.log('[%s] addProgram'%(id))
             self.XMLTVDATA['programmes'].append(pitem)
             self._add_program_row(pitem)
+            self._programmes_dirty = True
             return True
 
 
@@ -1331,6 +1346,7 @@ class XMLTVS(object):
         with self._lock:
             self.XMLTVDATA['programmes'] = [program for program in self.XMLTVDATA['programmes'] if program.get('channel') != citem.get('id')]
             self._del_channel_programmes(citem.get('id'))
+            self._programmes_dirty = True
             self.log('clrProgrammes, removing channel %s programmes' % citem.get('id'))
             return True
 
@@ -1361,6 +1377,7 @@ class XMLTVS(object):
                 for program in self.XMLTVDATA['programmes']:
                     if program.get('channel') == ch_id:
                         self._add_program_row(program)
+                self._programmes_dirty = True
             return removed
 
 
@@ -1371,6 +1388,7 @@ class XMLTVS(object):
             self.XMLTVDATA['channels']   = list([channel for channel in channels if channel.get('id') != citem.get('id')])
             self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != citem.get('id')])
             self._del_channel_programmes(citem.get('id'))
+            self._programmes_dirty = True
             self.log('delBroadcast, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.XMLTVDATA['channels']),len(programmes),len(self.XMLTVDATA['programmes'])))
             return True
         

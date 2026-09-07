@@ -51,6 +51,8 @@ class Player(xbmc.Player):
         self.playingStopped = Event()
         self._lastStopTime  = {}  # {chid: timestamp} — EOF loop detection cooldown
         self._lastPlayTime  = {}  # {chid: timestamp} — rapid channel-switch debounce
+        self._pvrRetried    = set()  # {chid} — channels already retried this session (prevents infinite loop)
+        self._pvrFailCount  = {}  # {chid: count} — consecutive PVR stream failures per channel
         
         self.enableOverlay     = Globals.settings.getSettingBool('Overlay_Enable')
         self.infoOnChange      = Globals.settings.getSettingBool('Enable_OnInfo')
@@ -265,9 +267,13 @@ class Player(xbmc.Player):
                 chid = playingItem.get('chid', '')
                 lastStop = self._lastStopTime.get(chid, 0)
                 if lastStop and (time.time() - lastStop) < 10:
-                    self.log(f"_onPlay, EOF loop cooldown — skipping rules for {chid}")
-                    self._newChannel = False
-                    return
+                    # Allow PVR stream failure retries (stopped < 2s ago)
+                    if (time.time() - lastStop) < 2:
+                        self.log(f"_onPlay, PVR retry for {chid}")
+                    else:
+                        self.log(f"_onPlay, EOF loop cooldown — skipping rules for {chid}")
+                        self._newChannel = False
+                        return
                 # Rapid channel-switch debounce: if any channel started < 3s ago,
                 # skip heavy rules/overlay to avoid player state conflicts from
                 # rapid user channel surfing.
@@ -316,9 +322,9 @@ class Player(xbmc.Player):
         self.log("_onChange")
         if playingItem is None: playingItem = {}
         self.toggleOverlay(False)
+        self.toggleBackground(False)
         if playingItem:
             if not playingItem.get('isPlaylist', False):
-                self.toggleBackground(self.enableOverlay)
                 # Prefer direct PVR playback by channelid (reliable channel targeting);
                 # fall back to the resolved pvr:// path when the channel can't be matched.
                 if not (self.jsonRPC and self.jsonRPC.playChannel(playingItem)):
@@ -347,6 +353,25 @@ class Player(xbmc.Player):
         chid = playingItem.get('chid', '')
         if chid:
             self._lastStopTime[chid] = time.time()
+            # PVR stream failure retry: if the same channel was started < 2s ago,
+            # Kodi failed to open the PVR stream. Retry after a short delay.
+            # Track consecutive failures — if the same stream keeps failing,
+            # trigger a PVR refresh to reset the stream state.
+            lastPlay = self._lastPlayTime.get(chid, 0)
+            if lastPlay and (time.time() - lastPlay) < 2:
+                self._pvrFailCount[chid] = self._pvrFailCount.get(chid, 0) + 1
+                fail_count = self._pvrFailCount[chid]
+                self.log(f"_onStop, PVR stream failure #{fail_count} for {chid}")
+                if fail_count < 3 and chid not in self._pvrRetried:
+                    self.log(f"_onStop, retrying {chid} in 2s")
+                    self._pvrRetried.add(chid)
+                    timerit(self.service.jsonRPC.playChannel)(2.0, playingItem)
+                elif fail_count >= 3:
+                    self.log(f"_onStop, {chid} failed {fail_count} times — triggering PVR refresh")
+                    self._pvrFailCount[chid] = 0
+                    self._pvrRetried.discard(chid)
+                    if hasattr(self.service, '_que') and hasattr(self.service, 'tasks'):
+                        self.service._que(self.service.tasks.chkPVRRefresh, 1, 0)
         
         if playingItem:
             Globals.properties.setTrakt(False)
@@ -773,6 +798,7 @@ class Service(object):
 
 
     def _start(self) -> bool:
+        self._que(self.tasks.chkHTTP, 1) # Start HTTP server immediately — no PVR dependency
         if not self.isClient: self._que(self.tasks._host, 1)
         self._wait() # Wait for PVR Backend to initialize.
         self._que(self.tasks.chkPVRRefresh, 2) # After PVR loaded — stale guard needs Pvr.HasTVChannels=True.

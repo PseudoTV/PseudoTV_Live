@@ -180,7 +180,7 @@ class MyHandler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Content-Length", len(data))
         self.send_header("Content-type", ctype)
-        if ctype == 'text/html':
+        if ctype in ('text/html', 'application/vnd.apple.mpegurl', 'application/xml'):
             self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
         self.end_headers()
         self.log('do_GET, __sendChunk [%s], path = %s, compress = %s' % (ctype, path, compress))
@@ -211,6 +211,7 @@ class MyHandler(BaseHTTPRequestHandler):
             prev = img
             img = Globals._unquoteString(img)
             if img == prev: break
+        img = img.rstrip('/')  # Kodi artwork paths may have trailing slashes
         if re.search(r'(^|[\\/])\.\.([\\/]|$)', img): return self._sendError(400, 'Invalid path')
         if not img: return self._sendFile(LOGO, False)
         # legacy cache entries wrapped resource:// in image:// — unwrap.
@@ -445,6 +446,7 @@ class MyHandler(BaseHTTPRequestHandler):
             '/api/seasons':       lambda: self.wp.seasonal().getSeasonsData(),
             '/api/holidays':      lambda: self.wp.seasonal().getHolidaysData(),
             '/api/resume':        lambda: self.wp.resumeJSON(),
+            '/api/refresh':       lambda: self._refreshCache(),
         }
         if path in routes:
             return self._sendJSON(routes[path](), cors=True)
@@ -467,6 +469,19 @@ class MyHandler(BaseHTTPRequestHandler):
 
 
     # ======================= extended API endpoints =======================
+    def _refreshCache(self):
+        """Invalidate the XMLTV render cache and trigger PVR refresh.
+
+        The render cache invalidation ensures the next pvr.iptvsimple HTTP poll
+        serves fresh content. The chkPVRRefresh trigger forces pvr.iptvsimple to
+        re-fetch immediately via the useEpgGenreText flip.
+        """
+        from xmltvs import _XMLTV_RENDER_CACHE
+        _XMLTV_RENDER_CACHE['sig'] = None
+        Globals.properties.setPropTimer('chkPVRRefresh')
+        self.log('_refreshCache, XMLTV render cache invalidated + PVR refresh queued')
+        return {'status': 'ok', 'message': 'render cache invalidated + PVR refresh queued'}
+
     def _updateSettings(self, data: dict):
         if not isinstance(data, dict): return self._sendError(400, 'invalid payload')
         for k, v in data.items():

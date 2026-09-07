@@ -101,6 +101,7 @@ def debounceit(wait: Optional[float] = None, monitor: Optional[Any] = None) -> C
         return wrapper
     return decorator
     
+    
 def executeit(method: Callable[..., Any]) -> Callable:
     """Decorator that runs a method in the global executor pool with timeout handling.
     

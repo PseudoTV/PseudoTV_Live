@@ -43,7 +43,6 @@ class Settings(object):
     dialog = None
     def __init__(self, service: Optional[_Service] = None):
         if service is None: service = _Service()
-        self.pool      = service.pool
         self.cache     = service.cache
         self.jsonRPC   = service.jsonRPC
         self.monitor   = service.monitor
@@ -566,7 +565,6 @@ class Properties(object):
     dialog = None
     def __init__(self, service: Optional[_Service] = None, winID: int = 10131):
         if service is None: service = _Service()
-        self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
         self.monitor    = service.monitor
@@ -1054,7 +1052,6 @@ class ListItems(object):
     
     def __init__(self, service: Optional[_Service] = None):
         if service is None: service = _Service()
-        self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
         self.monitor    = service.monitor
@@ -1223,7 +1220,6 @@ class Builtin(object):
         if service is None: service = _Service()
         self.lock       = Lock()
         self.busy       = None
-        self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
         self.monitor    = service.monitor
@@ -1506,7 +1502,6 @@ class Dialog(object):
     def __init__(self, service: Optional[_Service] = None):
         if service is None: service = _Service()
         self.service    = service
-        self.pool       = service.pool
         self.jsonRPC    = service.jsonRPC
         self.cache      = service.cache
         self.monitor    = service.monitor

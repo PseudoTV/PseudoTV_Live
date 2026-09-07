@@ -431,14 +431,11 @@ class Overlay(xbmcgui.WindowXMLDialog):
         # Create OnNext controls dynamically (not XML-defined since dialog isn't shown)
         onNextX, onNextY = _on_next_position()
         try:
-            self.onNextGroup = xbmcgui.ControlGroup(40001)
-            self.onNextGroup.setPosition(onNextX, onNextY)
+            self.onNextGroup = xbmcgui.ControlGroup(onNextX, onNextY, 960, 380)
             self._addControl(self.onNextGroup)
             self.onNextThumb = xbmcgui.ControlImage(0, 0, 240, 135, '', aspectRatio=2)
             self.onNextGroup.addControl(self.onNextThumb)
-            self.onNextText = xbmcgui.ControlTextBox(0, 140, 960, 70, 'font27')
-            self.onNextText.setTextColor('0xFFFFFFFF')
-            self.onNextText.setShadowColor('0x80000000')
+            self.onNextText = xbmcgui.ControlLabel(0, 140, 960, 70, '', font='font27', textColor='0xFFFFFFFF', shadowColor='0x80000000')
             self.onNextGroup.addControl(self.onNextText)
         except Exception as e:
             self.log(f"_open, onNext controls: {e}", xbmc.LOGERROR)
@@ -537,7 +534,7 @@ class Overlay(xbmcgui.WindowXMLDialog):
                 ('Visible', f'effect=slide start=100,0 end=0,0 center={onNextX},{onNextY} time=300 tween="back" reversible=false'),
                 ('Hidden',  f'effect=slide start=0,0 end=100,0 center={onNextX},{onNextY} time=200 reversible=false'),
             ])
-            self.onNextText.setText(f"{LANGUAGE(32104)} {onNow}[CR]{LANGUAGE(32116)} [B]{onNext}[B]")
+            self.onNextText.setLabel(f"{LANGUAGE(32104)} {onNow}[CR]{LANGUAGE(32116)} [B]{onNext}[B]")
 
             has_thumb = False
             thumb_art = Globals._getThumb(self.nitem)

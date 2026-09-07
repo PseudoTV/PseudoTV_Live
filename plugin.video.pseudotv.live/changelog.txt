@@ -1,4 +1,13 @@
 ### NOTICE: The nightly branch is in alpha; things will break! ####
+v.0.8.0+nightly
+- Removed Pseudotv Live Web Interface addon
+- Improved Channel build time budget (10 min limit) to prevent runaway builds on low-power devices
+- Improved Parallel trailer duration probing for faster channel builds
+- Added Incremental EPG updates via XMLTV version bumps after each channel
+- Fixed 3D detection crash when file path is None
+- Added Fallback to premiered/aired date for movie tagline
+- Optimized Trailer saves deferred until batch completion
+- Refined AI cache retry logic with empty cache detection
 v.0.7.9+nightly
 - Improved build logging with timestamped output and file persistence
 - Enhanced OpenCode integration with automatic PATH detection and timeout handling
