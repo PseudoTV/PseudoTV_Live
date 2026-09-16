@@ -611,6 +611,7 @@ class Monitor(xbmc.Monitor):
     @debounceit(SERVICE_INTERVAL)
     def onSettingsChanged(self):
         self.log('onSettingsChanged; queuing settings synchronization...')
+        if self.service.pendingShutdown: return  # Don't process during shutdown
         # Drop the getSetting read cache so changed settings take effect immediately.
         import sys
         try:

@@ -393,6 +393,7 @@ class Overlay(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         self.log("onInit")
+        if self._closing: return  # Skip if overlay is closing — prevents race with onClose
         if self.runActions: 
             self.runActions(RULES_ACTION_OVERLAY_OPEN, self.citem, inherited=self)
             

@@ -34,7 +34,23 @@ def isNetVFS(path: str) -> bool:
     return isinstance(path, str) and path.lower().startswith(_NET_VFS_PREFIXES)
 
 # One lock serializes all such access across the addon's threads.
+# libsmbclient's smbc_free_context races under concurrent calls, so all
+# network VFS operations must serialize. Use a bounded timeout to prevent
+# indefinite blocking when a slow SMB operation holds the lock.
 _NET_VFS_LOCK = RLock()
+_NET_VFS_TIMEOUT = 30  # seconds — max wait for the VFS lock
+
+from contextlib import contextmanager
+
+@contextmanager
+def _net_vfs_guard():
+    """Acquire the VFS lock with a timeout to prevent indefinite blocking."""
+    acquired = _NET_VFS_LOCK.acquire(timeout=_NET_VFS_TIMEOUT)
+    try:
+        yield acquired
+    finally:
+        if acquired:
+            _NET_VFS_LOCK.release()
 
 class FileAccess(object):
     _JSON_CACHE_MAX = 512
@@ -221,7 +237,7 @@ class FileAccess(object):
         try:
             # Serialize shared-context VFS access (smb/nfs/dav) — see isNetVFS.
             if isNetVFS(filename):
-                with _NET_VFS_LOCK:
+                with _net_vfs_guard():
                     return VFSFile(filename, mode)
             return VFSFile(filename, mode)
         except UnicodeDecodeError:
@@ -373,7 +389,7 @@ class FileAccess(object):
         # Serialize shared-context VFS access (smb/nfs/dav) — libsmbclient's
         # smbc_free_context races under concurrent calls from different threads.
         if isNetVFS(filepath):
-            with _NET_VFS_LOCK:
+            with _net_vfs_guard():
                 return xbmcvfs.exists(filepath)
 
         exists = xbmcvfs.exists(filepath)

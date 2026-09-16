@@ -205,7 +205,7 @@ class JSONRPC(object):
         # handle the faster rate and builds are the main bottleneck on SOC.
         svc = getattr(self, 'service', None)
         if svc and getattr(getattr(svc, 'buildState', None), 'running', False):
-            delay = max(0.25, delay * 0.25)
+            delay = max(0.5, delay * 0.25)
         if delay <= 0: return
         with JSONRPC._sendLock:
             now = time.time()
@@ -543,12 +543,12 @@ class JSONRPC(object):
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
         # Listing a videodb:///musicdb:// source resolves to smb:// library files,
         # which Kodi's Files.GetDirectory handler enumerates via libsmbclient.
-        # Serialize it with FileAccess._NET_VFS_LOCK so it can't race our own
+        # Serialize it with _net_vfs_guard so it can't race our own
         # shared-context VFS calls (smbc_free_context SIGSEGV).
         directory = str(param.get('params', {}).get('directory', ''))
         if directory.startswith(('smb://', 'nfs://', 'dav://', 'webdav://', 'upnp://', 'videodb://', 'musicdb://')):
-            from fileaccess import _NET_VFS_LOCK, isNetVFS
-            with _NET_VFS_LOCK:
+            from fileaccess import _net_vfs_guard, isNetVFS
+            with _net_vfs_guard():
                 if cache: results = self.cacheJSON(param, expiration, checksum, timeout).get('result',{})
                 else:     results = self.sendJSON(param, timeout).get('result',{})
         else:
@@ -578,20 +578,20 @@ class JSONRPC(object):
     def getStreamDetails(self, path: str, media: str = 'video') -> dict:
         if not path: return {}
         if _globals()._isStack(path): path = _globals()._splitStacks(path)[0]
-        from fileaccess import _NET_VFS_LOCK, isNetVFS
+        from fileaccess import _net_vfs_guard, isNetVFS
         param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}
         # Shared-context VFS (smb/nfs/dav) file details hit libsmbclient — serialize.
         if isNetVFS(path):
-            with _NET_VFS_LOCK:
+            with _net_vfs_guard():
                 return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=FileAccess._getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
         return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=FileAccess._getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
 
     def getFileDetails(self, file: str, media: str = 'video', properties: list = ["duration","runtime"]) -> dict:
-        from fileaccess import _NET_VFS_LOCK, isNetVFS
+        from fileaccess import _net_vfs_guard, isNetVFS
         param = {"method":"Files.GetFileDetails","params":{"file":file,"media":media,"properties":properties}}
         if isNetVFS(file):
-            with _NET_VFS_LOCK:
+            with _net_vfs_guard():
                 return self.cacheJSON(param)
         return self.cacheJSON(param)
 
@@ -626,6 +626,42 @@ class JSONRPC(object):
         return next((result for result in results if result.get('addonid','').lower() == id.lower()),None)
 
 
+    def getLocalPVRClient(self) -> Optional[dict]:
+        """Find the pvr.iptvsimple clientid for the local PseudoTV instance.
+        
+        Fallback chain:
+        1. Match by local HTTP server address in instance M3U URL
+        2. Match by friendly name in instance settings
+        3. First pvr.iptvsimple client (legacy fallback)
+        """
+        local_host = Globals.properties.getEXTProperty(f'{ADDON_ID}.Remote_Host')
+        friendly_name = Globals.properties.getFriendlyName()
+        
+        for client in self.getPVRClients():
+            if client.get('addonid', '').lower() != PVR_CLIENT_ID.lower(): continue
+            instance_id = client.get('instanceid')
+            if instance_id is None: continue
+            try:
+                settings_path = FileAccess.translatePath(
+                    f'special://profile/addon_data/{PVR_CLIENT_ID}/instance-settings-{instance_id}.xml')
+                if not FileAccess.exists(settings_path): continue
+                from xml.etree.ElementTree import parse as ETparse
+                tree = ETparse(settings_path)
+                # Fallback 1: match by local server address in M3U URL
+                m3u_url = tree.findtext('.//setting[@id="m3uUrl"]', '')
+                if local_host and local_host in m3u_url:
+                    return client
+                # Fallback 2: match by friendly name
+                remote_name = tree.findtext('.//setting[@id="remote_NAME"]', '')
+                if friendly_name and remote_name == friendly_name:
+                    return client
+            except Exception:
+                continue
+        
+        # Fallback 3: first pvr.iptvsimple client (legacy)
+        return self.getPVRClient()
+
+
     def getPVRChannelGroups(self, match: Optional[str] = None, radio: bool = False) -> Any:
         if match is None: match = ADDON_NAME
         param   = {"method":"PVR.GetChannelGroups","params":{"channeltype":{True:'radio',False:'tv'}[radio]}}
@@ -640,7 +676,13 @@ class JSONRPC(object):
         
 
 
-    def PVRScan(self, id: int) -> dict:
+    def PVRScan(self, id: Optional[int] = None) -> dict:
+        """Trigger a PVR channel scan. If no clientid provided, finds the local
+        PseudoTV instance by M3U URL or friendly name match."""
+        if id is None:
+            client = self.getLocalPVRClient()
+            if not client: return {}
+            id = client.get('clientid')
         param = {"method":"PVR.Scan","params":{"clientid":id}}
         return self.sendJSON(param).get('result',{})
         

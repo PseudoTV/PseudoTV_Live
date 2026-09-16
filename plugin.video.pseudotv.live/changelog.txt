@@ -8,6 +8,8 @@ v.0.8.0+nightly
 - Added Fallback to premiered/aired date for movie tagline
 - Optimized Trailer saves deferred until batch completion
 - Refined AI cache retry logic with empty cache detection
+- Added Thread exception hook for Python 3.8+ daemon threads to prevent Kodi crashes
+- Tweaked Version bump to 0.8.0+nightly
 v.0.7.9+nightly
 - Improved build logging with timestamped output and file persistence
 - Enhanced OpenCode integration with automatic PATH detection and timeout handling

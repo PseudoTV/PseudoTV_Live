@@ -30,6 +30,19 @@ def _excepthook(exc_type, exc_value, exc_tb):
 
 sys.excepthook = _excepthook
 
+# Catch exceptions in daemon threads — without this, thread-level crashes
+# (e.g., C extension segfaults in pool workers) bypass the hook and kill Kodi.
+if sys.version_info >= (3, 8):
+    import threading
+    def _thread_excepthook(args):
+        tb = ''.join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback))
+        try:
+            from constants import LOG, ADDON_ID
+            LOG(f'{ADDON_ID}: Thread exception in {args.thread.name}:\n{tb}', 3)
+        except Exception:
+            sys.stderr.write(f'PseudoTV Live thread exception in {args.thread.name}: {tb}\n')
+    threading.excepthook = _thread_excepthook
+
 # --- imports needed BEFORE globals to define Service class early ---
 from kodi_six  import xbmc, xbmcgui
 from threading import Thread

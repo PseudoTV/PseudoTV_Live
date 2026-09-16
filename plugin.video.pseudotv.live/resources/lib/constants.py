@@ -134,10 +134,10 @@ else:                                                        # High-Performance:
 # can ever blow the budget.
 # =============================================================================
 GLOBAL_CACHE_MEM_MAX = (128 if IS_CONSTRAINED_SOC else 256 if TOTAL_RAM_GB <= 4.0 else 512) * 1024 * 1024
-CACHE_MEM_MAX        = int(GLOBAL_CACHE_MEM_MAX * 0.30)  # _Cache window-property mem cache
-PROPERTY_MEM_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.20)  # Properties._memory_cache
-RENDER_CACHE_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.30)  # served M3U+XMLTV render caches (shared)
-XMLTV_MEM_MAX        = int(GLOBAL_CACHE_MEM_MAX * 0.25)  # _XMLTV_HOLDER guide blob (programmes/channels)
+CACHE_MEM_MAX        = int(GLOBAL_CACHE_MEM_MAX * 0.25)  # _Cache window-property mem cache
+PROPERTY_MEM_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.15)  # Properties._memory_cache
+RENDER_CACHE_MAX     = int(GLOBAL_CACHE_MEM_MAX * 0.25)  # served M3U+XMLTV render caches (shared)
+XMLTV_MEM_MAX        = int(GLOBAL_CACHE_MEM_MAX * 0.20)  # _XMLTV_HOLDER guide blob (programmes/channels)
 JSON_CACHE_MEM_MAX   = int(GLOBAL_CACHE_MEM_MAX * 0.05)  # FileAccess._json_cache LRU
 TVSHOWS_MEM_MAX      = int(GLOBAL_CACHE_MEM_MAX * 0.10)  # Resources._tvshows_by_title library index
 THROTTLE_MAX         = 256                                                 # _PROGRESS_THROTTLE entry cap
@@ -561,6 +561,7 @@ HEADER = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 # Logging
 # =============================================================================
 _LOG_THROTTLE  = {}  # {(event, level): (last_log_timestamp, skip_count)} - for throttled log dedup
+_LOG_THROTTLE_MAX = 5000  # max entries before LRU eviction — prevents unbounded growth on SOC
 _LOG_LAST_KEY  = None  # last (event, level) key that was logged - for consecutive duplicate detection
 _LOG_SETTINGS  = {'ts': 0, 'enable': False, 'level': 3}  # cached Debug_Enable/Level for LOG TTL
 _LOG_SETTINGS_TTL = 5.0  # seconds to cache debug settings before re-reading from Kodi
@@ -601,6 +602,13 @@ def LOG(event: Any, level: int = xbmc.LOGDEBUG, throttle: float = float(SERVICE_
                 skip_msg = 'Skipped %d duplicate messages..' % (prev_skip)
                 if level >= DEBUG_LEVEL: xbmc.log(skip_msg, level)
         _LOG_THROTTLE[key] = (now, 0)
+        # Prevent unbounded growth on SOC — evict oldest 10% when cap exceeded
+        if len(_LOG_THROTTLE) > _LOG_THROTTLE_MAX:
+            evict_count = _LOG_THROTTLE_MAX // 10
+            for _ in range(evict_count):
+                if _LOG_THROTTLE:
+                    oldest_key = min(_LOG_THROTTLE, key=lambda k: _LOG_THROTTLE[k][0])
+                    del _LOG_THROTTLE[oldest_key]
         _LOG_LAST_KEY = key
     event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
     if level >= DEBUG_LEVEL:

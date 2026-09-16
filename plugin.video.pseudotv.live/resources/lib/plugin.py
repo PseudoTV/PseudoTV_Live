@@ -371,7 +371,7 @@ class Plugin(object):
         if listitem is None: listitem = xbmcgui.ListItem()
         # Skip the existence stat for network shares (smb/nfs/dav). iptvsimple
         # already validated the live broadcast file, and a stat round-trip here
-        # serializes behind _NET_VFS_LOCK — stalling channel switches by ~50s while
+        # serializes behind _net_vfs_guard — stalling channel switches by ~50s while
         # a concurrent library scanner saturates the share. The player errors
         # naturally on a genuinely missing file.
         from fileaccess import isNetVFS

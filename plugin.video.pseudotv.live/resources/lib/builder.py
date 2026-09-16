@@ -126,7 +126,11 @@ class Builder(object):
         self.monitor   = service.monitor
         self.jsonRPC   = service.jsonRPC
         self.cache     = service.cache
-        self._probe_pool = DaemonThreadPoolExecutor(max_workers=min(8, CPU_COUNT))
+        # Shared probe pool across Builder instances — prevents thread stacking
+        # during rapid re-queuing on SOC systems.
+        if not hasattr(Builder, '_shared_probe_pool') or Builder._shared_probe_pool is None:
+            Builder._shared_probe_pool = DaemonThreadPoolExecutor(max_workers=min(8, CPU_COUNT))
+        self._probe_pool = Builder._shared_probe_pool
         self.holiday   = self.seasonal.getHoliday()
         self.channels  = Channels(Globals.getChannelKey(), writable=True)
         self.resources = Resources(service)
