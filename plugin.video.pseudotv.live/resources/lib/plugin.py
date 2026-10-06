@@ -221,10 +221,13 @@ class Plugin(object):
     def _setResume(self, listitem: xbmcgui.ListItem) -> xbmcgui.ListItem:
         seek = int(self.sysInfo.get('seek', 0) or 0)
         duration = int(self.sysInfo.get('duration', 0) or 0)
-        # If seek is past 80% of duration, the file was nearly finished — starting
-        # from the seek point causes large audio sync errors and player instability.
-        if duration > 0 and seek > (duration * 60 * 0.8):
-            self.log('[%s] _setResume, seek %.0fs past 80%% of duration %ds — resetting to start' % (self.sysInfo.get('chid'), seek, duration * 60))
+        # Near the end: seek deep into large network files causes audio sync
+        # errors and player instability. Shares Seek_Threshold with the playlist
+        # advance check (default 98, min 85, 100 disables) — a hardcoded 0.8
+        # fired below the slider's own minimum and zeroed valid EPG offsets.
+        threshold = Globals.settings.getSettingInt('Seek_Threshold')
+        if duration > 0 and 0 < threshold < 100 and seek > (duration * threshold / 100.0):
+            self.log('[%s] _setResume, seek %.0fs past %d%% of duration %ds — resetting to start' % (self.sysInfo.get('chid'), seek, threshold, duration))
             seek = 0
             self.sysInfo['seek'] = 0
             self.sysInfo['progresspercentage'] = 0
@@ -232,7 +235,7 @@ class Plugin(object):
             self.log('[%s] _setResume, seek = %s, progresspercentage = %s\npath = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('seek',0), self.sysInfo.get('progresspercentage',100), listitem.getPath()))
             listitem.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
             infoTag = ListItemInfoTag(listitem,'video')
-            infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+            infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':duration})
         return listitem
         
     @threadit

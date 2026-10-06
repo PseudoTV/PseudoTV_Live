@@ -96,12 +96,10 @@ class M3U(object):
         except Exception:
             pass
             
-            
-    def __del__(self):
-        try:
-            if getattr(self, 'writable', False) and not getattr(self, '_saved', False):
-                self._save()
-        except Exception: pass
+    # No __del__ save: a GC-collected instance may hold state staler than what
+    # another process just committed (deferred-commit cache); writing it back
+    # clobbers the newer data. with-scope flush (__exit__) + explicit _save()
+    # cover every writable path.
         
         
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
@@ -267,7 +265,7 @@ class M3U(object):
             # Optional physical export for local-file PVR configs / external tools.
             # Runs async — cache write above is the source of truth; file is a mirror.
             if Globals.settings.getSettingBool('Enable_File_Export'):
-                Thread(target=self._save_export, daemon=True).start()
+                Thread(target=self._save_export, name=f"{ADDON_ID}.m3u.export", daemon=True).start()
 
             self._saved = True
             # Update PVR status with current M3U/XMLTV data

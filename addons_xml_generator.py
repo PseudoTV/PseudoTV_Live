@@ -138,7 +138,7 @@ LANGUAGES = {
     'jaJP': 'Japanese (Japan)',
 }
 
-OPENCODE_MODEL = 'opencode/mimo-v2.5-free'
+OPENCODE_MODEL = 'opencode/mimo-v2.6-flash-free'
 
 
 class Generator:

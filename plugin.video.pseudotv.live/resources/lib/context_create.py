@@ -100,20 +100,26 @@ def _autotune(start: int = 1, count: int = -1, automatic: bool = False):
                         if hasServers: menu.append(Globals.listitems.buildMenuListItem(LANGUAGE(30173),LANGUAGE(32215),url='__server'))
                     select = Globals.dialog.selectDialog(menu,multi=False)
                     if not select is None: 
-                        try: return eval(menu[select].getPath())()
-                        except Exception as e: LOG("Create: _autotune, failed! %s"%(e), xbmc.LOGERROR)
+                        # dict dispatch — avoids eval() on listitem paths
+                        handlers = {'__manager': __open, '__settings': __settings,
+                                    '__import': __import, '__backup': __backup, '__server': __server}
+                        handler = handlers.get(menu[select].getPath())
+                        if handler:
+                            try:    return handler()
+                            except Exception as e: LOG("Create: _autotune, failed! %s"%(e), xbmc.LOGERROR)
                 return False #Cancel
         
         with Globals.dialog._progressDialog("", LANGUAGE(30038)) as pDialog:
-            items   = []
+            videos, music = [], []
             manager = Manager(MANAGER_XML, ADDON_PATH, "default", start=False, channel=-1)
             if count <= 0: count = AUTOTUNE_CHANNEL_LIMIT
             for idx, type in enumerate(AUTOTUNE_TYPES):
                 
                 pDialog = Globals.dialog._updateProgress(pDialog, int(idx*100//len(AUTOTUNE_TYPES)), type, header='%s, %s'%(ADDON_NAME,LANGUAGE(32021)))
-                samples = Globals._randomSamples(manager.getLibrary(type), count)
-                items.extend([s for s in samples if s])
-            if items: manager._addChannels(start, Globals._randomShuffle(items))
+                samples = [s for s in Globals._randomSamples(manager.getLibrary(type), count) if s]
+                # Music types stay out of the shuffled tv/movie pool - appended last.
+                (music if type in AUTOTUNE_MUSIC_TYPES else videos).extend(samples)
+            if videos or music: manager._addChannels(start, Globals._randomShuffle(videos) + music)
             manager.closeManager()
             del manager
         Globals.properties.setPropTimer('chkChannels')# Refresh Channel Changed!

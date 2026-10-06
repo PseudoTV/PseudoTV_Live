@@ -21,6 +21,7 @@ from typing import Any, Optional, Iterator
 from variables   import *
 from videoparser import VideoParser
 from _services   import _Service
+from cache       import getDurationCache # after variables -> cache is fully loaded
 import ratings
 
 # Lazy import to avoid circular dependency (variables.py defines Globals after kodi.py loads)
@@ -95,9 +96,10 @@ class JSONRPC(object):
                 # stable JSON string so a failed POST can be replayed from the queue.
                 queued = (url, FileAccess.dumpJSON(params or {}), FileAccess.dumpJSON(payload or {}),
                           FileAccess.dumpJSON(header or {}), timeout, file, life)
-                self.service.postQue.add(queued)
+                self.service._cappedAdd(self.service.postQue, queued)
             
         results = None
+        request_failed = False
         self.last_status = None  # HTTP status of the last request (for auth checks)
         self.last_error  = None  # parsed error body (OpenRouter standard {"error": {...}})
 
@@ -118,32 +120,12 @@ class JSONRPC(object):
             self.log("requestURL %s, status=%s, type=%s" % (url, response.status_code, type(results).__name__))
             if results: return __setCache()
         except Exception as e:
+            request_failed = True
             self.log("requestURL %s failed: %s" % (url, e))
-            __getCache()
+            results = __getCache()  # stale-while-error fallback — return cached copy
         finally: #retry failed post
-            if results is None and payload: __setQueue()
+            if request_failed and payload: __setQueue()
         return results 
-        
-        
-    def sendRemote(self, param: dict, ip: Optional[str] = None, timeout: Optional[int] = None) -> Optional[dict]:
-        """Send JSON-RPC command via raw TCP socket to Kodi webserver."""
-        if ip is None: ip = (xbmc.getIPAddress() or gethostbyname(gethostname()) or '0.0.0.0')
-        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        try:
-            command = param
-            command["jsonrpc"] = "2.0"
-            command["id"] = f"{ADDON_ID}.remote"
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(float(timeout))
-            sock.connect((ip, 9090))
-            sock.sendall(command.encode(DEFAULT_ENCODING))
-            return FileAccess.loadJSON(sock.recv(4096).decode(DEFAULT_ENCODING), skip_cache=True)
-        except socket.timeout:
-            self.log("sendRemote to %s timed out (timeout=%ds)" % (ip, timeout), xbmc.LOGERROR)
-            return None
-        finally:
-            sock.close()
-        
 
 
     def _webServerURL(self) -> Optional[str]:
@@ -166,6 +148,14 @@ class JSONRPC(object):
         return '%s://%slocalhost:%s' % ('https' if secure else 'http', user, port)
 
 
+    # Circuit breaker for the HTTP JSON-RPC path. After N consecutive connection
+    # failures, skip the HTTP attempt entirely (avoids burning 90s per call during
+    # a network partition) and fall back to the in-process path for a cooldown.
+    _http_breaker_failures = 0
+    _http_breaker_until   = 0.0
+    _HTTP_BREAKER_THRESHOLD = 3
+    _HTTP_BREAKER_COOLDOWN  = 30  # seconds
+
     def _httpJSONRPC(self, command: dict, timeout: Optional[int] = None) -> Optional[dict]:
         """POST a JSON-RPC command to the local web server (own thread).
 
@@ -175,6 +165,10 @@ class JSONRPC(object):
         keeping the window responsive. Returns None when unreachable so sendJSON can
         fall back to the in-process call.
         """
+        # Circuit breaker: skip HTTP attempt during cooldown window
+        if time.time() < JSONRPC._http_breaker_until:
+            return None
+
         url = self._webServerURL()
         if not url: return None
         if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
@@ -184,11 +178,20 @@ class JSONRPC(object):
             response = _requests.post(url + '/jsonrpc', json=command, timeout=timeout, headers=HEADER, verify=False)
             if response.status_code != 200:
                 self.log("_httpJSONRPC %s status = %s" % (command.get('method', '?'), response.status_code), xbmc.LOGWARNING)
+                JSONRPC._http_breaker_failures += 1
+                if JSONRPC._http_breaker_failures >= JSONRPC._HTTP_BREAKER_THRESHOLD:
+                    JSONRPC._http_breaker_until = time.time() + JSONRPC._HTTP_BREAKER_COOLDOWN
+                    JSONRPC._http_breaker_failures = 0
                 return None
+            JSONRPC._http_breaker_failures = 0  # success resets the breaker
             data = response.json() or {}
             return data if isinstance(data, dict) else None
         except Exception as e:
             self.log("_httpJSONRPC %s failed: %s" % (command.get('method', '?'), e), xbmc.LOGWARNING)
+            JSONRPC._http_breaker_failures += 1
+            if JSONRPC._http_breaker_failures >= JSONRPC._HTTP_BREAKER_THRESHOLD:
+                JSONRPC._http_breaker_until = time.time() + JSONRPC._HTTP_BREAKER_COOLDOWN
+                JSONRPC._http_breaker_failures = 0
             return None
 
 
@@ -258,7 +261,7 @@ class JSONRPC(object):
 
 
     def queueJSON(self, param: dict):
-        if hasattr(self.service,'jsonQue'): self.service.jsonQue.add(FileAccess.dumpJSON(param, sortkey=True))
+        if hasattr(self.service,'jsonQue'): self.service._cappedAdd(self.service.jsonQue, FileAccess.dumpJSON(param, sortkey=True))
 
 
     def cacheJSON(self, param: dict, life: Optional[datetime.timedelta] = None, checksum: Optional[str] = None, timeout: Optional[int] = None) -> dict:
@@ -324,6 +327,7 @@ class JSONRPC(object):
         if items: walk.setdefault(path,[]).extend([_i for _i in items if _i])
         for sub in subs:
             if depth <= 0: break
+            if self.service.interrupt(): break  # abort check on recursion
             depth -= 1
             walk.update(self.walkListDirectory(os.path.join(path,sub), exts, depth, checksum, expiration))
         return walk
@@ -444,7 +448,7 @@ class JSONRPC(object):
     def getAddonDetails(self, addonid: Optional[str] = None, cache: bool = True) -> dict:
         if addonid is None: addonid = ADDON_ID
         param   = {"method":"Addons.GetAddonDetails","params":{"addonid":addonid,"properties":self.getEnums("Addon.Fields", type='items')}}
-        version = Globals.settings.getAddonDetails(addonid).get('version')
+        version = _globals().settings.getAddonDetails(addonid).get('version')
         if cache: return self.cacheJSON(param, checksum=version).get('result',{}).get('addon', {})
         else:     return self.sendJSON(param).get('result',{}).get('addon', {})
 
@@ -634,8 +638,8 @@ class JSONRPC(object):
         2. Match by friendly name in instance settings
         3. First pvr.iptvsimple client (legacy fallback)
         """
-        local_host = Globals.properties.getEXTProperty(f'{ADDON_ID}.Remote_Host')
-        friendly_name = Globals.properties.getFriendlyName()
+        local_host = _globals().properties.getEXTProperty(f'{ADDON_ID}.Remote_Host')
+        friendly_name = _globals().properties.getFriendlyName()
         
         for client in self.getPVRClients():
             if client.get('addonid', '').lower() != PVR_CLIENT_ID.lower(): continue
@@ -767,22 +771,45 @@ class JSONRPC(object):
         return path
         
         
+    @staticmethod
+    def _durationEntry(seconds: int, src: str, path: str) -> dict:
+        """Durable-store entry: value + source + file fingerprint (size/mtime).
+
+        No fingerprint when the path can't be stat'd (SMB flake, mock) - the
+        read side then trusts the cache instead of re-probing."""
+        entry = {'d': round(seconds), 'src': src, 'ts': time.time()}
+        fp = FileAccess.stat(path)
+        if fp: entry['size'], entry['mtime'] = fp
+        return entry
+
+
     def _setRuntime(self, item: Optional[dict] = None, runtime: int = 0, save: Optional[bool] = None): #set runtime collected by player, accurate meta.
         if item is None: item = {}
         if save is None: save = REAL_SETTINGS.getSetting('Store_Duration') == 'true'
         runtime = round(runtime)
-        md5 = FileAccess._getMD5(item.get('file'))
-        self.cache.set('getRuntime.%s'%(md5), runtime, checksum=md5, expiration=datetime.timedelta(days=28))
+        path = item.get('file')
+        md5 = FileAccess._getMD5(path)
+        if 0 < runtime <= DURATION_MAX:
+            # durable, never expires: player-collected runtimes are expensive to re-earn
+            getDurationCache()._set('getRuntime.%s'%(md5), self._durationEntry(runtime, 'player', path), checksum=md5, delta_time=-1)
+        elif runtime < 0 or runtime > DURATION_MAX:
+            self.log('_setRuntime, implausible runtime rejected: %ss %s' % (runtime, path), xbmc.LOGWARNING)
         if not item.get('file','plugin://').startswith(tuple(VFS_TYPES)) and save and runtime > 0: self.queDuration(item, runtime=runtime)
-    
-        
+
+
     def _getRuntime(self, item: Optional[dict] = None) -> int: #get runtime collected by player, else less accurate provider meta
         if item is None: item = {}
         file_key = item.get('file')
         md5 = FileAccess._getMD5(file_key)
-        runtime = self.cache.get('getRuntime.%s'%(md5), checksum=md5)
+        # No fingerprint validation here: this is the hot getDuration() entry
+        # point (every build/list item). Runtime entries self-refresh on the
+        # next playback/parse; only parser results (below) carry the stat cost.
+        entry = getDurationCache()._get('getRuntime.%s'%(md5), checksum=md5)
+        if isinstance(entry, dict):  runtime = entry.get('d', 0)
+        elif isinstance(entry, (int, float)): runtime = entry # legacy row
+        else:                        runtime = 0
         return round(runtime or item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
-        
+
 
 
     def _setDuration(self, path: str, item: Optional[dict] = None, duration: int = 0, save: Optional[bool] = None) -> int: #set VideoParser cache
@@ -790,14 +817,29 @@ class JSONRPC(object):
         if save is None: save = REAL_SETTINGS.getSetting('Store_Duration') == 'true'
         duration = round(duration)
         md5 = FileAccess._getMD5(path)
-        self.cache.set('getDuration.%s'%(md5), duration, checksum=md5, expiration=datetime.timedelta(days=28))
+        if 0 < duration <= DURATION_MAX:
+            # durable, never expires: an accurate parse costs a slow SMB container read
+            getDurationCache()._set('getDuration.%s'%(md5), self._durationEntry(duration, 'parser', path), checksum=md5, delta_time=-1)
+        elif duration < 0 or duration > DURATION_MAX:
+            self.log('_setDuration, implausible parse rejected: %ss %s' % (duration, path), xbmc.LOGWARNING)
         if save and item: self.queDuration(item, duration)
         return duration
 
 
     def _getDuration(self, path: str) -> int: #get VideoParser cache
         md5 = FileAccess._getMD5(path)
-        return round(self.cache.get('getDuration.%s'%(md5), checksum=md5) or self._getRuntime({'file':path}))
+        entry = getDurationCache()._get('getDuration.%s'%(md5), checksum=md5)
+        if isinstance(entry, dict):
+            d = entry.get('d', 0)
+            if not (0 < d <= DURATION_MAX): return 0 # corrupt/implausible - re-probe
+            if 'size' in entry:
+                fp = FileAccess.stat(path)
+                # File replaced/edited -> cached value no longer applies; return 0
+                # so the caller re-probes and overwrites. Unstatable -> trust cache.
+                if fp and (fp[0] != entry['size'] or fp[1] != entry['mtime']): return 0
+            return round(d)
+        if isinstance(entry, (int, float)) and entry: return round(entry) # legacy row
+        return round(self._getRuntime({'file':path}))
 
 
     def getDuration(self, path: str, item: Optional[dict] = None, accurate: Optional[bool] = None, save: Optional[bool] = None) -> int:
@@ -808,6 +850,11 @@ class JSONRPC(object):
         def __parseDuration(runtime: int, path: str, item: Optional[dict] = None, save: bool = False) -> int:
             if item is None: item = {}
             duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
+            if duration and not (0 < duration <= DURATION_MAX):
+                # Corrupt container parse (garbage length) - never let it enter
+                # scheduling or the durable store; metadata runtime still wins below.
+                self.log('getDuration, implausible parse rejected: %ss %s' % (duration, path), xbmc.LOGWARNING)
+                duration = 0
             if   runtime == 0: runtime = duration
             elif round(_globals()._percentDiff(runtime, duration)) <= self.runtimeThreshold: runtime = duration
             if save and duration != runtime: self.queDuration(item, runtime)
@@ -875,7 +922,7 @@ class JSONRPC(object):
             try:
                 params = param.get(item.get('type'))
                 self.log('quePlaycount, params = %s'%(params.get('params',{})))
-                if hasattr(self.service, 'jsonQue'): self.service.jsonQue.add(FileAccess.dumpJSON(params, sortkey=True))
+                if hasattr(self.service, 'jsonQue'): self.service._cappedAdd(self.service.jsonQue, FileAccess.dumpJSON(params, sortkey=True))
             except Exception as e: self.log('quePlaycount failed: %s' % e, xbmc.LOGDEBUG)
                 
                 
@@ -973,11 +1020,15 @@ class JSONRPC(object):
     @contextmanager
     def detectRPCCrash(self, citem: dict) -> Iterator[None]:
         """Context manager to save/restore channel item on JSON-RPC crash."""
-        REAL_SETTINGS.setSetting('KODI.CRASH.JSONRPC.CITEM', FileAccess.dumpJSON(citem))
+        # _globals() not bare Globals: jsonrpc is imported mid variables-cycle and
+        # misses the name (forum-informed lazy pattern at the top of this file);
+        # a raw REAL_SETTINGS write here would also flush a stale settings
+        # snapshot (forum thread 356746).
+        _globals().settings.setSetting('KODI.CRASH.JSONRPC.CITEM', FileAccess.dumpJSON(citem))
         try: yield
         except Exception as e: self.log('detectRPCCrash: %s' % e, xbmc.LOGDEBUG)
         finally:
-            REAL_SETTINGS.setSetting('KODI.CRASH.JSONRPC.CITEM', '')
+            _globals().settings.setSetting('KODI.CRASH.JSONRPC.CITEM', '')
 
 
     def getLocalHost(self, local: bool = False) -> str:
@@ -1150,6 +1201,7 @@ class JSONRPC(object):
         elif 'tvshowid'in item: key = 'tvshows'
         else: return
         fitem = item.copy()
+        if not fitem.get('trailer'): return
         dur = self.getDuration(fitem.get('trailer'), accurate=bool(int(REAL_SETTINGS.getSetting('Duration_Type') or "0")), save=False)
         if dur > 0:
             # When defer_save, accumulate into an in-memory batch and write the
@@ -1168,7 +1220,7 @@ class JSONRPC(object):
                          'duration':dur, 
                          'file':fitem.get('trailer'),
                          'added':time.time()})#todo remove old entries.
-            self.log(f'addTrailer [{key}] {fitem.get("duration",0)}, {fitem.get("file")}')
+            self.log(f'addTrailer [{key}] {fitem.get('duration',0)}, {fitem.get('file')}')
             for genre in (fitem.get('genre',[]) or ['resources']):
                 if fitem not in trailers.setdefault(key,{}).setdefault(genre.lower(),[]):
                     trailers.setdefault(key,{}).setdefault(genre.lower(),[]).append(fitem)
@@ -1186,16 +1238,16 @@ class JSONRPC(object):
                 
     def setTrailers(self, trailers: Optional[dict] = None) -> bool:
         if trailers is None: trailers = {'movies':{},'tvshows':{}}
-        self.log(f'setTrailers [Movies] = {len(trailers.get("movies",{}))}')
-        self.log(f'setTrailers [TVShows] = {len(trailers.get("tvshows",{}))}')
+        self.log(f'setTrailers [Movies] = {len(trailers.get('movies',{}))}')
+        self.log(f'setTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
         return self.cache.set('trailers', trailers, expiration=datetime.timedelta(days=365))
                                 
                         
     def getTrailers(self, genre: Optional[str] = None) -> Any:
         #todo clean old trailers by "added" epoch
         trailers = self.cache.get('trailers') or {'movies':{},'tvshows':{}}
-        self.log(f'getTrailers [Movies] = {len(trailers.get("movies",{}))}')
-        self.log(f'getTrailers [TVShows] = {len(trailers.get("tvshows",{}))}')
+        self.log(f'getTrailers [Movies] = {len(trailers.get('movies',{}))}')
+        self.log(f'getTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
         if not genre is None: return trailers.get(genre,[])
         return trailers #return all
         

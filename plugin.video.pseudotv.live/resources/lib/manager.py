@@ -108,7 +108,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if select is not None: 
                     return __loadChannels(lizLST[select].getLabel())
                 else:                  
-                    return
+                    return [] # cancel falls back to local channels (None breaks len() downstream)
             elif name:
                 self.server = Multiroom().serverData.get(name, {})
                 return self.server.get('channels', [])
@@ -177,6 +177,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         try:
+            self.lastActionTime = time.time() # instance-level: swallow the first .5s of input (dialog-open double fire)
             self.focusItems    = {}
             self.spinner       = self.getControl(4)
             self.chanList      = self.getControl(5)
@@ -186,7 +187,9 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.right_button3 = self.getControl(9003)
             self.right_button4 = self.getControl(9004)
             self.fillChanList(self.newChannels, focus=self.focusIndex, channel=self.openChannel)
-            self.log('onInit, backup=%s' % self.backup.backupChannels(CHANNEL_KEY_LATEST, silent=True))
+            # disk write on the GUI thread stalls dialog open — defer to a timer thread
+            timerit(self.backup.backupChannels)(1.0, CHANNEL_KEY_LATEST, True)
+            self.log('onInit, backup queued')
         except Exception as e: 
             LOG("Manager.onInit failed: %s" % (e), xbmc.LOGERROR)
             self.closeManager()
@@ -201,28 +204,14 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def _migrateAutotune(self) -> bool:
-        """If autotune is disabled but the autotune key still holds channels, copy
-        them into the user key (only when the user list is empty) so the user never
-        starts with an empty channel list. Returns True when a copy was made — the
-        caller should restart the service to load the user config."""
-        try:
-            if Globals.settings.getSettingBool('Enable_Autotune'):
-                return False
-            autotune = Channels(CHANNEL_KEY_AUTOTUNE).getChannels()
-            if not autotune:
-                return False
-            user = Channels(CHANNEL_KEY_USER)
-            if user.getChannels():
-                return False  # user already has channels - never clobber
-            # Write through the Channels class (writable so _save persists) so the
-            # versioned key (Channels.1.0.0) matches what Channels() reads.
-            Channels(CHANNEL_KEY_USER, writable=True).setChannels(autotune)
-            Globals.properties.setBackup(CHANNEL_KEY_USER, autotune)
-            self.log('autotune disabled: copied %d channels to user config' % len(autotune), xbmc.LOGINFO)
-            return True
-        except Exception as e:
-            self.log('_migrateAutotune failed: %s' % e, xbmc.LOGWARNING)
-            return False
+        """If autotune is disabled, copy the last known autotuned channel set into
+        the user key (only when the user list is empty) so the user never opens an
+        empty Manager. Thin wrapper over the shared recovery-aware helper
+        (channels.py); restart=False because our caller sets pending restart."""
+        from channels import migrateAutotuneToUser
+        result = migrateAutotuneToUser(restart=False)
+        if result: self.log('_migrateAutotune, copied autotune channels to user config')
+        return result
 
     @cacheit(checksum=lambda: Globals.properties.getProcessID())
     def buildArray(self) -> list:
@@ -301,7 +290,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.selItem(self.chanList, self.setFocusPOS(lizLST))
             else:             
                 self.selItem(self.chanList, focus)
-            self.setFocus(self.chanList)
+            self.setFocusCntrl(self.chanList)
             if channel: 
                 self.buildChannelItem(channel)
 
@@ -350,7 +339,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     
                 self.setVisibility(self.itemList, False)
                 self.setVisibility(self.chanList, True)
-                self.setFocus(self.chanList)
+                self.setFocusCntrl(self.chanList)
                 self.selItem(self.chanList, focus)
                 
                 if self.madeChanges:
@@ -381,6 +370,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                     if len(self.oldChannels) == 0: 
                         if self.hasBackups: 
                             self.setLabels(self.right_button3, LANGUAGE(32112))
+                        else:
+                            self.setLabels(self.right_button3, '') # stale label from a prior state kept this visible/clickable
                         self.setEnableCondition(self.right_button3, '[String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
                     else: 
                         self.setLabels(self.right_button3, LANGUAGE(32136))
@@ -389,13 +380,13 @@ class Manager(xbmcgui.WindowXMLDialog):
                     self.setLabels(self.right_button4, LANGUAGE(32061))
                     self.setEnableCondition(self.right_button4, '[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Property(chname))]')
 
-                self.setFocus(self.right_button1)
+                self.setFocusCntrl(self.right_button1)
             elif hasattr(self.itemList, 'reset'): # channelitems
                 self.itemList.reset()
                 self.setVisibility(self.chanList, False)
                 self.setVisibility(self.itemList, True)
                 self.selItem(self.itemList, focus)
-                self.setFocus(self.itemList)
+                self.setFocusCntrl(self.itemList)
                 
                 if self.madeItemchange:
                     self.setLabels(self.right_button1, LANGUAGE(32240)) #Confirm
@@ -430,6 +421,12 @@ class Manager(xbmcgui.WindowXMLDialog):
             cntrl.selectItem(focus)
         except Exception as e: 
             self.log('selItem failed: %s' % e, xbmc.LOGDEBUG)
+
+
+    def setFocusCntrl(self, cntrl: Any):
+        # focus on a hidden/destroyed control throws — don't let it abort the caller
+        try: self.setFocus(cntrl)
+        except Exception as e: self.log('setFocus failed: %s' % e, xbmc.LOGDEBUG)
            
     def getRuleAbbr(self, citem: dict, myId: int, optionindex: int) -> Any:
         value = citem.get('rules', {}).get(myId, {}).get('values', {}).get(optionindex)
@@ -515,7 +512,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.itemList.addItems(lizLST)
         matches = [idx for idx, liz in enumerate(lizLST) if liz.getProperty('key') == focuskey]
         if matches: self.itemList.selectItem(matches[0])
-        self.setFocus(self.itemList)
+        self.setFocusCntrl(self.itemList)
 
 
     def itemInput(self, channelListItem: xbmcgui.ListItem = xbmcgui.ListItem()) -> dict:
@@ -867,13 +864,15 @@ class Manager(xbmcgui.WindowXMLDialog):
             try:
                 if Globals.dialog.yesnoDialog(LANGUAGE(32100)):   
                     Globals.settings.setAutotuned(True)
-                    items = []
+                    videos, music = [], []
                     for idx, type in enumerate(AUTOTUNE_TYPES):
                         try:
-                            samples = self.getLibrary(type)
-                            items.extend([s for s in samples if s])
+                            samples = [s for s in self.getLibrary(type) if s]
+                            (music if type in AUTOTUNE_MUSIC_TYPES else videos).extend(samples)
                         except Exception as e: self.log('autoTune getLibrary(%s) failed: %s' % (type, e), xbmc.LOGDEBUG)
-                    self._addChannels(start, Globals._randomSamples(items,AUTOTUNE_CHANNEL_LIMIT))
+                    # Videos keep the channel cap; music is sampled and APPENDED after
+                    # the video block (never mixed into the tv/movie pool).
+                    self._addChannels(start, Globals._randomSamples(videos, AUTOTUNE_CHANNEL_LIMIT) + Globals._randomSamples(music, AUTOTUNE_CHANNEL_LIMIT))
             except Exception as e: self.log("autoTune, failed! %s"%(e), xbmc.LOGERROR)
 
 
@@ -925,7 +924,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                                   "radio"   : radio,
                                   "favorite": False})
                     self.newChannels[number-1] = Globals._cleanGroups(citem)
-            if number is not None and self.madeChanges and self.launchManager: self.fillChanList(self.newChannels,True,focus=number)
+            if number is not None and self.madeChanges and self.launchManager: self.fillChanList(self.newChannels,True,focus=max(0, number-1)) # selectItem() is 0-based
             return True
                 
          
@@ -967,7 +966,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if not isinstance(fileList, list) or not fileList: Globals.dialog.notificationDialog(LANGUAGE(32274))
                 elif fileList: lizLST.extend(poolit(__buildItem)(fileList))
             if len(lizLST) > 0: return Globals.dialog.selectDialog(lizLST, header='%s: [B]%s[/B] - Build Time: [B]%ss[/B]'%(LANGUAGE(32235),citem.get('name','Untitled'),f"{run_time:.2f}"))
-            if retCntrl: self.setFocusId(retCntrl)
+            if retCntrl:
+                try:     self.setFocusId(retCntrl)
+                except Exception as e: self.log('setFocusId failed: %s' % e, xbmc.LOGDEBUG)
 
 
     def getMontiorList(self) -> xbmcgui.ListItem:
@@ -1083,7 +1084,10 @@ class Manager(xbmcgui.WindowXMLDialog):
     def setLabels(self, cntrl: Any, label: str = '', label2: str = ''):
         try: 
             if isinstance(cntrl, int): cntrl = self.getControl(cntrl)
-            cntrl.setLabel(str(label), str(label2))
+            # setLabel's 2nd positional is font, NOT label2 (label2 is last):
+            # passing '' here set the font to "", GetFont("") returns nullptr
+            # and the button renders no glyphs (label still reads non-empty).
+            cntrl.setLabel(str(label))
             self.setVisibility(cntrl,(len(label) > 0 or len(label2) > 0))
         except Exception as e: self.log("setLabels, failed! %s"%(e), xbmc.LOGERROR)
     
@@ -1158,8 +1162,14 @@ class Manager(xbmcgui.WindowXMLDialog):
     
    
     def saveChanges(self, start: int = 1, close: bool = True):
-        """Validate and persist channel changes to M3U/XMLTV."""
+        """Validate and persist channel changes to M3U/XMLTV.
+
+        `start` is the 1-based channel number to refocus after save (a citem
+        dict is also accepted for call-site convenience); converted to the
+        0-based list index fillChanList()/selectItem() expect."""
+        if isinstance(start, dict): start = start.get('number', 1)
         if not isinstance(start, int): start = 1
+        focus = max(0, start - 1)
         def __yesno() -> bool:
             if   self.launchManager: return Globals.dialog.yesnoDialog(LANGUAGE(32076))
             elif not self.server:    return True
@@ -1181,6 +1191,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     if self.server: #remote save
                         try:
                             self.jsonRPC.requestURL('http://%s/%s'%(self.server.get('host'), CHANNELFLE), payload={'uuid':Globals.settings.getMYUUID(),'name':self.friendly,'payload':channels})
+                            self.madeChanges = False # reset here too or close→save→close recurses
                             Globals.dialog.notificationDialog(LANGUAGE(32152))  # "Changes Applied!"
                             Globals.properties.setPropTimer('chkPVRRefresh')#refresh pvr guide
                         except Exception as e:
@@ -1194,13 +1205,13 @@ class Manager(xbmcgui.WindowXMLDialog):
                             Globals.properties.setPropTimer('chkChannels')# Refresh Channel Changed!
                             Globals.properties.setPropTimer('chkPVRRefresh')# Refresh PVR to re-scan M3U
                             if self.launchManager: 
-                                self.fillChanList(self.newChannels,True,focus=start)
+                                self.fillChanList(self.newChannels,True,focus=focus)
             else: self.madeChanges = False
         if close: self.closeManager()
             
             
     def getFocusItems(self, controlId: Optional[int] = None) -> dict:
-        if controlId in [5,6,7,9000,9001,9002,9003,9004]:
+        if controlId in [5,6,7,10,9000,9001,9002,9003,9004]: # 10 = logo button; without it switchLogo gets a stale/empty citem
             label, label2 = self.getLabels(controlId)
             try:     snum = int(Globals._cleanLabel(label.replace("|",'')))
             except Exception:  snum = 1
@@ -1231,20 +1242,24 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def onAction(self, act: xbmcgui.WindowXMLDialog):
-        actionId = act.getId()
-        if  (time.time() - self.lastActionTime) < .5 and actionId not in ACTION_PREVIOUS_MENU: pass #ACTION_INVALID # during certain times we just want to discard all input
-        else:
-            if actionId in ACTION_PREVIOUS_MENU:
-                if self.isLocked(): Globals.dialog.notificationDialog(LANGUAGE(32260))
-                else:
-                    with self.toggleSpinner(condition=Globals.properties.isRunning('Manager.toggleSpinner')==False):
-                        self.log('onAction: actionId = %s, locked = %s'%(actionId,self.isLocked()))
-                        if   xbmcgui.getCurrentWindowDialogId() == "13001": Globals.builtin.executebuiltin('Action(Back)')
-                        elif self.isVisible(self.chanList): self.closeManager()
-                        else:
-                            focusItems = self.getFocusItems()
-                            if self.isVisible(self.itemList):
-                                self.closeChannel(focusItems.get('citem'),focusItems.get('chpos', 0))
+        try:
+            actionId = act.getId()
+            if  (time.time() - self.lastActionTime) < .5 and actionId not in ACTION_PREVIOUS_MENU: pass #ACTION_INVALID # during certain times we just want to discard all input
+            else:
+                if actionId in ACTION_PREVIOUS_MENU:
+                    if self.isLocked(): Globals.dialog.notificationDialog(LANGUAGE(32260))
+                    else:
+                        with self.toggleSpinner(condition=Globals.properties.isRunning('Manager.toggleSpinner')==False):
+                            self.log('onAction: actionId = %s, locked = %s'%(actionId,self.isLocked()))
+                            if   xbmcgui.getCurrentWindowDialogId() == 13001: Globals.builtin.executebuiltin('Action(Back)') #int, not str
+                            elif self.isVisible(self.chanList): self.closeManager()
+                            else:
+                                focusItems = self.getFocusItems()
+                                if self.isVisible(self.itemList):
+                                    self.closeChannel(focusItems.get('citem'),focusItems.get('chpos', 0))
+        except Exception as e:
+            # exceptions escaping a Kodi callback leave the spinner/lock stuck
+            self.log('onAction failed: %s'%e, xbmc.LOGERROR)
             
             
     def onFocus(self, controlId: int):
@@ -1252,40 +1267,56 @@ class Manager(xbmcgui.WindowXMLDialog):
 
         
     def onClick(self, controlId: int):
-        if (self.isLocked() or (time.time() - self.lastActionTime) < .5 and controlId not in [9000,9001,9002,9003,9004]): Globals.dialog.notificationDialog(LANGUAGE(32260))
-        else:
-            with self.toggleSpinner(condition=Globals.properties.isRunning('Manager.toggleSpinner')==False):
-                self.log('onClick: controlId = %s, locked = %s'%(controlId,self.isLocked()))
-                if controlId == 0: self.closeManager()
-                else:
-                    focusItems = self.getFocusItems(controlId)
-                    if   controlId == 5:  self.buildChannelItem(focusItems.get('citem')) #item list
-                    elif controlId == 6:  self.buildChannelItem(self.itemInput(focusItems.get('item')),focusItems.get('item').getProperty('key'))
-                    elif controlId == 10: self.switchLogo(focusItems.get('citem'), focusItems.get('chpos',0))#logo button
-                    elif controlId in [9001,9002,9003,9004]: #side buttons
-                        if   focusItems.get('label') == LANGUAGE(32059): self.saveChanges(focusItems.get('citem', {}).get('number', 1), close=False)     #Save 
-                        elif focusItems.get('label') == LANGUAGE(32061): self.clearChannel(focusItems.get('citem'), focusItems.get('chpos',0))           #Delete
-                        elif focusItems.get('label') == LANGUAGE(32239): self.clearChannel(focusItems.get('citem'), focusItems.get('chpos',0), open=True)#Clear
-                        elif focusItems.get('label') == LANGUAGE(32136): self.moveChannel(focusItems.get('citem'), focusItems.get('chpos',0))            #Move 
-                        elif focusItems.get('label') == LANGUAGE(32062): #Close
-                            if   self.isVisible(self.itemList): self.closeChannel(focusItems.get('citem'), focus=focusItems.get('chpos',0))
-                            elif self.isVisible(self.chanList): self.closeManager()
-                        elif focusItems.get('label') == LANGUAGE(32060): #Cancel
-                            if self.isVisible(self.itemList): 
-                                self.madeItemchange = False
-                                self.closeChannel(focusItems.get('citem'), focus=focusItems.get('chpos',0))
-                            elif self.isVisible(self.chanList):
-                                self.madeChanges = False
-                                self.closeManager()
-                        elif focusItems.get('label') == LANGUAGE(32240): #Confirm
-                            if   self.isVisible(self.itemList): self.saveChannelItems(focusItems.get('citem'))
-                            elif self.isVisible(self.chanList): self.saveChanges(focusItems.get('citem'))
-                        elif focusItems.get('label') == LANGUAGE(32235): #Preview
-                            if self.isVisible(self.itemList) and self.madeItemchange: self.closeChannel(focusItems.get('citem'), focus=focusItems.get('chpos',0), open=True)
-                            self.previewChannel(focusItems.get('citem'), focusItems.get('retCntrl'))
-                        # elif focusItems.get('label') == LANGUAGE(32110): self.backup.backupChannels(CHANNEL_KEY_LATEST) #Backup - todo
-                        elif focusItems.get('label') == LANGUAGE(32112): self.autoRecovery() #Recover
-                        elif focusItems.get('label') == LANGUAGE(30038): self.autoTune(focusItems.get('number',1)) #AutoTune
-                        elif focusItems.get('label') == LANGUAGE(30229): self.selectPredefined(focusItems.get('number',1)) #Predefined
+        try:
+            if (self.isLocked() or (time.time() - self.lastActionTime) < .5 and controlId not in [9000,9001,9002,9003,9004]): Globals.dialog.notificationDialog(LANGUAGE(32260))
+            else:
+                with self.toggleSpinner(condition=Globals.properties.isRunning('Manager.toggleSpinner')==False):
+                    self.log('onClick: controlId = %s, locked = %s'%(controlId,self.isLocked()))
+                    if controlId == 0: self.closeManager()
+                    else:
+                        focusItems = self.getFocusItems(controlId)
+                        if   controlId == 5:  self.buildChannelItem(focusItems.get('citem')) #item list
+                        elif controlId == 6:  self.buildChannelItem(self.itemInput(focusItems.get('item')),focusItems.get('item').getProperty('key'))
+                        elif controlId == 10: self.switchLogo(focusItems.get('citem'), focusItems.get('chpos',0))#logo button
+                        elif controlId in [9001,9002,9003,9004]: self._sideButton(controlId, focusItems)
+        except Exception as e:
+            # exceptions escaping a Kodi callback leave the spinner/lock stuck
+            self.log('onClick[%s] failed: %s'%(controlId, e), xbmc.LOGERROR)
+
+
+    def _sideButton(self, controlId: int, focusItems: dict):
+        """Dispatch side buttons by view + edit state — replaces label-string
+        matching (labels are display text read back off the control; any
+        change to them silently disabled dispatch). Mirrors the label
+        assignment in togglechanList()."""
+        citem = focusItems.get('citem') or {}
+        chpos = focusItems.get('chpos', 0)
+        if self.isVisible(self.itemList): # channel-item editor view
+            if   controlId == 9001:
+                if   self.madeItemchange: self.saveChannelItems(citem)                                       #Confirm
+                else:                     self.closeChannel(citem, focus=chpos)                              #Close
+            elif controlId == 9002: #Cancel
+                self.madeItemchange = False
+                self.closeChannel(citem, focus=chpos)
+            elif controlId == 9003: #Preview
+                if self.madeItemchange: self.closeChannel(citem, focus=chpos, open=True)
+                self.previewChannel(citem, focusItems.get('retCntrl'))
+            elif controlId == 9004: self.clearChannel(citem, chpos, open=True)                               #Clear
+        else: # channel list view
+            if   controlId == 9001:
+                if   self.madeChanges: self.saveChanges(citem.get('number', 1), close=False)                 #Save
+                else:                  self.closeManager()                                                   #Close
+            elif controlId == 9002:
+                if self.madeChanges: #Cancel
+                    self.madeChanges = False
+                    self.closeManager()
+                elif len(self.oldChannels) == 0: self.autoTune(focusItems.get('number',1))                   #AutoTune
+                else:                           self.selectPredefined(focusItems.get('number',1))            #Predefined
+            elif controlId == 9003:
+                if self.madeChanges: self.moveChannel(citem, chpos)                                          #Move
+                elif len(self.oldChannels) == 0:
+                    if self.hasBackups: self.autoRecovery()                                                  #Recover
+                else: self.moveChannel(citem, chpos)                                                         #Move
+            elif controlId == 9004: self.clearChannel(citem, chpos)                                          #Delete
                             
                             

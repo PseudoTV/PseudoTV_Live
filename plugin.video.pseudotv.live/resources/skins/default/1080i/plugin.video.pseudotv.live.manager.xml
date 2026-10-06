@@ -3,6 +3,7 @@
     <backgroundcolor>0x00000000</backgroundcolor>
     <onload>SetProperty(plugin.video.pseudotv.live.MANAGER_OVERLAY.Running,true,10000)</onload>
     <onunload>SetProperty(plugin.video.pseudotv.live.MANAGER_OVERLAY.Running,false,10000)</onunload>
+    <defaultcontrol>5</defaultcontrol> <!-- fallback if onInit focus setup fails early -->
     <controls>
         <animation type="WindowOpen" reversible="false">
             <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240"/>
@@ -77,6 +78,7 @@
                     <onclick>noop</onclick>
                 </control>
                 <control type="radiobutton">
+                    <description>close button - unfocused was vendor_icon.png (addon logo); label is screen-reader only</description>
                     <right>10</right>
                     <top>11</top>
                     <width>48</width>
@@ -85,11 +87,12 @@
                     <radioheight>48</radioheight>
                     <texturefocus/>
                     <texturenofocus/>
-                    <label/>
+                    <label>Close</label>
+                    <textcolor>00FFFFFF</textcolor> <!-- invisible: icon is the affordance -->
                     <textureradioofffocus colordiffuse="EEFFFFFF">dialogs/close.png</textureradioofffocus>
-                    <textureradiooffnofocus colordiffuse="EEFFFFFF">vendor_icon.png</textureradiooffnofocus>
+                    <textureradiooffnofocus colordiffuse="80FFFFFF">dialogs/close.png</textureradiooffnofocus>
                     <textureradioonfocus colordiffuse="EEFFFFFF">dialogs/close.png</textureradioonfocus>
-                    <textureradioonnofocus colordiffuse="EEFFFFFF">vendor_icon.png</textureradioonnofocus>
+                    <textureradioonnofocus colordiffuse="80FFFFFF">dialogs/close.png</textureradioonnofocus>
                     <onclick>Action(close)</onclick>
                     <visible>!Skin.HasSetting(touchmode)</visible>
                 </control>
@@ -228,7 +231,7 @@
                     <font>font12</font>
                     <align>justify</align>
                     <label condition="Control.IsVisible(5)">$INFO[Container(5).ListItem.Property(description)]</label>
-                    <textcolor>dimgray</textcolor>
+                    <textcolor>#A0A0A0</textcolor>
                     <visible>Control.IsVisible(5)</visible>
                     <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
                     <animation type="Visible" reversible="false">
@@ -327,7 +330,7 @@
                     <font>font12</font>
                     <align>justify</align>
                     <label condition="Control.IsVisible(6)">$INFO[Container(6).ListItem.Property(description)]</label>
-                    <textcolor>dimgray</textcolor>
+                    <textcolor>#A0A0A0</textcolor>
                     <visible>Control.IsVisible(6)</visible>
                     <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
                     <animation type="Visible" reversible="false">
@@ -443,7 +446,8 @@
                     <effect type="slide" start="300,0" end="0,0" time="250" tween="sine" easing="out" delay="100"/>
                     <effect type="fade" start="0" end="100" time="250" delay="100"/>
                 </animation>
-                <onup>10</onup>
+                <onup condition="Control.IsVisible(5)">5</onup>
+                <onup condition="!Control.IsVisible(5)">10</onup> <!-- 10 (logo btn) is hidden while list 5 shows -->
                 <onleft condition="Control.IsVisible(5)">5</onleft>
                 <onleft condition="Control.IsVisible(6)">6</onleft>
                 <onright condition="Control.IsVisible(5)">5</onright>
@@ -501,15 +505,15 @@
                 </control>
             </control>
 			<control type="label">
-				<description>version label</description>
-				<bottom>-15</bottom>
-                <right>-50</right>
-				<width>300</width>
+				<description>version label - header right; was bottom -15/right -50 (clipped off-window, overlapped button 9004)</description>
+				<left>1100</left>
+				<top>0</top>
+				<right>70</right>
 				<height>70</height>
 				<font>font12</font>
-				<align>justify</align>
-				<textcolor>dimgray</textcolor>
-				<autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+				<align>right</align>
+				<aligny>center</aligny>
+				<textcolor>#C0C0C0</textcolor>
 				<label>[B]$INFO[System.AddonVersion(plugin.video.pseudotv.live),v.,][/B]</label>
 			</control>
         </control>

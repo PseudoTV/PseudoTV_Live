@@ -435,29 +435,34 @@ class Builder(object):
                         except Exception as e: 
                             self.log(f"Channel compiler faulted critically at index execution point: {str(e)}", xbmc.LOGERROR)
 
-        # Ensure every local M3U station has an XMLTV entry: only channels from the
-        # local channels.json matter; remote multiroom stations are excluded.
-        epg_ids = {ch.get('id') for ch in epg.getChannels()}
-        for citem in channels:
-            if citem.get('id') not in epg_ids:
-                self.log(f"[{citem.get('id')}] buildChannels, missing XMLTV entry for {citem.get('name','')}, placeholder skipped", xbmc.LOGDEBUG)
+        # Ensure buildState.running is always reset, even on exception.
+        # Otherwise the throttle stays in reduced-delay mode forever and
+        # webpoint reports a build in progress indefinitely.
+        try:
+            # Ensure every local M3U station has an XMLTV entry: only channels from the
+            # local channels.json matter; remote multiroom stations are excluded.
+            epg_ids = {ch.get('id') for ch in epg.getChannels()}
+            for citem in channels:
+                if citem.get('id') not in epg_ids:
+                    self.log(f"[{citem.get('id')}] buildChannels, missing XMLTV entry for {citem.get('name','')}, placeholder skipped", xbmc.LOGDEBUG)
 
-        self.channels.setChannels()
+            self.channels.setChannels()
 
-        # Run chkPVRSync AFTER _save completes — sees updated channel_ids
-        if updated:
-            self.log(f"Channel compilation finished: {len(complete)} stations added, {len(changes)} channels updated, {len(preview_results)} previews", xbmc.LOGINFO)
-            in_sync, findings = self.service.tasks.chkPVRSync()
-            if not in_sync:
-                self.log("buildChannels, post-build sync check: PVR out of sync, triggering immediate refresh", xbmc.LOGDEBUG)
-                # Pass findings to chkPVRRefresh so it sees epg_expired/missing_epg
-                # rather than recomputing with empty defaults (which skipped rebuilds).
-                self.service.tasks.chkPVRRefresh(findings=findings)
-            else:
-                self.log("buildChannels, post-build sync check: PVR in sync", xbmc.LOGDEBUG)
-
-        self.service.buildState.update({'running': False, 'pct': 100})
-        self._probe_pool.shutdown(wait=False, cancel_futures=True)
+            # Run chkPVRSync AFTER _save completes — sees updated channel_ids
+            if updated:
+                self.log(f"Channel compilation finished: {len(complete)} stations added, {len(changes)} channels updated, {len(preview_results)} previews", xbmc.LOGINFO)
+                in_sync, findings = self.service.tasks.chkPVRSync()
+                if not in_sync:
+                    self.log("buildChannels, post-build sync check: PVR out of sync, triggering immediate refresh", xbmc.LOGDEBUG)
+                    # Pass findings to chkPVRRefresh so it sees epg_expired/missing_epg
+                    # rather than recomputing with empty defaults (which skipped rebuilds).
+                    self.service.tasks.chkPVRRefresh(findings=findings)
+                else:
+                    self.log("buildChannels, post-build sync check: PVR in sync", xbmc.LOGDEBUG)
+        finally:
+            self.service.buildState.update({'running': False, 'pct': 100})
+            self._probe_pool.shutdown(wait=False, cancel_futures=True)
+            Builder._shared_probe_pool = None  # allow recreation on next build
         return preview_results if preview else None
 
 

@@ -257,6 +257,7 @@ class Utilities(object):
             with Globals.properties.chkRunning('Utilities.openPositionUtil'):
                 with Globals.builtin.busy_dialog():
                     from overlaytool import OverlayTool
+                overlaytool = None # or `del` in finally raises UnboundLocalError, masking the original error
                 try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", Focus_IDX=idx)
                 except Exception as e: LOG("Utilities: openPositionUtil, failed! %s"%(e), xbmc.LOGERROR)
                 finally: del overlaytool

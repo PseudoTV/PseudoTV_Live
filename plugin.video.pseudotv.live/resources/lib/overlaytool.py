@@ -28,15 +28,18 @@ def _getResolution() -> tuple:
     return Globals.builtin.getResolution()
 
 class OverlayTool(xbmcgui.WindowXMLDialog):
-    focusControl   = None
-    focusCycle     = None
-    focusCycleLST  = []
-    focusCNTRLST   = {}
-    lastActionTime = time.time()
-    posx, posy     = 0, 0
-    
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         """Initialize overlay tool with XML dialog configuration."""
+        # Instance attrs: class-level lists/dicts persist across instances, so a
+        # second OverlayTool run kept the first (destroyed) window's controls in
+        # the focus cycle. lastActionTime also lived at class level (= module
+        # import time), making the input-discard window dead after startup.
+        self.focusControl   = None
+        self.focusCycle     = None
+        self.focusCycleLST  = []
+        self.focusCNTRLST   = {}
+        self.lastActionTime = time.time()
+        self.posx, self.posy = 0, 0
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.log('__init__, args = %s, kwargs = %s'%(args,kwargs))
         with Globals.builtin.busy_dialog():
@@ -145,10 +148,10 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
             posx, posy = cntrl.getX(), cntrl.getY()
             if  cntrl == self.channelBug:
                 if (posx != self.channelBugX or posy != self.channelBugY):
-                    changes[cntrl] = posx, posy, (posx == self.autoBugX & posy == self.autoBugY)
+                    changes[cntrl] = posx, posy, (posx == self.autoBugX and posy == self.autoBugY) # `&` binds tighter than `==`
             elif cntrl == self.onNext_Artwork:
                 if (posx != self.onNextX or posy != self.onNextY):
-                    changes[cntrl] = posx, posy, (posx == self.autoNextX & posy == self.autoNextY)
+                    changes[cntrl] = posx, posy, (posx == self.autoNextX and posy == self.autoNextY)
           
         if changes:
             self.log('save, saving %s'%(changes))
@@ -191,11 +194,11 @@ class OverlayTool(xbmcgui.WindowXMLDialog):
         """Handle user input actions for control positioning."""
         actionId = act.getId()
         self.log('onAction: actionId = %s'%(actionId))
-        lastaction = time.time() - self.lastActionTime
-        # during certain times we just want to discard all input
-        if lastaction < 3 and lastaction > 1 and actionId not in ACTION_PREVIOUS_MENU:
+        # discard the first .5s of input (dialog-open double fire); was a dead
+        # 1-3s window off a class-level timestamp
+        if (time.time() - self.lastActionTime) < .5 and actionId not in ACTION_PREVIOUS_MENU:
             self.log('Not allowing actions')
-        elif actionId in ACTION_SELECT_ITEM:   self.switch(self.focusCycle())
+        elif actionId in ACTION_SELECT_ITEM:   self.switch(self.focusCycle() if self.focusCycle else None)
         elif actionId in ACTION_PREVIOUS_MENU: self.save()
         else:
             if   actionId == ACTION_MOVE_UP:    self.posy-=1

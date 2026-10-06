@@ -439,7 +439,8 @@ class ShowChannelBug(BaseRule): #OVERLAY RULES [200-202]
         self.onActionSelect(optionindex, LANGUAGE(32223).format(type=''))
         if self.optionValues[optionindex] == self.selectBoxOptions[optionindex][1]:
             from overlaytool import OverlayTool
-            try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=1, Channel_Bug_Position_XY=self.optionValues[optionindex], ChannelBug_Color=self.optionValues[3])
+            overlaytool = None # or `del` in finally raises UnboundLocalError, masking the original error
+            try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=1, Channel_Bug_Position_XY=self.optionValues[optionindex], ChannelBug_Color=self.optionValues[2]) # [2]=color, [3] is Force_Diffuse bool
             except Exception as e: self.log("getPosition, failed! %s"%(e), xbmc.LOGERROR)
             finally: del overlaytool
             value = Globals.properties.getProperty("Channel_Bug_Position_XY")
@@ -517,6 +518,7 @@ class ShowOnNext(BaseRule):
         self.onActionSelect(optionindex, LANGUAGE(32223).format(type=''))
         if self.optionValues[optionindex] == self.selectBoxOptions[optionindex][1]:
             from overlaytool import OverlayTool
+            overlaytool = None # or `del` in finally raises UnboundLocalError, masking the original error
             try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=0, OnNext_Position_XY=self.optionValues[optionindex], OnNext_Color=self.optionValues[2])
             except Exception as e: self.log("getPosition, failed! %s"%(e), xbmc.LOGERROR)
             finally: del overlaytool
@@ -539,15 +541,15 @@ class ShowOnNext(BaseRule):
         if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0]  = bool(player.OnNextMode)
             self.storedValues[1]  = player.onNextPosition
-            self.storedValues[2]  = player.onNextMode
+            self.storedValues[2]  = player.OnNextMode # attr is OnNextMode - lowercase raised AttributeError, killing the rule
             player.onNextPosition = self.optionValues[1]
             player.OnNextMode     = self.optionValues[2]
-            self.log("runAction, restoring onNextPosition = %s, onNextMode = %s"%(player.onNextPosition, player.onNextMode))
+            self.log("runAction, setting onNextPosition = %s, OnNextMode = %s"%(player.onNextPosition, player.OnNextMode))
 
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.onNextPosition = self.storedValues[1]
-            player.onNextMode     = self.storedValues[2]
-            self.log("runAction, restoring onNextPosition = %s, onNextMode = %s"%(player.onNextPosition, player.onNextMode))
+            player.OnNextMode     = self.storedValues[2]
+            self.log("runAction, restoring onNextPosition = %s, OnNextMode = %s"%(player.onNextPosition, player.OnNextMode))
         return parameter
 
 
@@ -1944,7 +1946,7 @@ class PauseRule(BaseRule): #PRE-BUILD RULES [300]
         self._builder = builder
         duration = self._getTotDuration(citem.get('id'), filelist)
         updated = self._getResumeData(citem.get('id')).get('updated',{})
-        try:    viewed = '%s: %s (%s)'%(LANGUAGE(32250),Globals._epochTime(updated.get('time')).strftime(BACKUP_TIME_FORMAT),updated.get('instance'))
+        try:    viewed = '%s: %s (%s)'%(LANGUAGE(32250),Globals._epochTime(updated.get('time'), tz=False).strftime(BACKUP_TIME_FORMAT),updated.get('instance'))
         except Exception: viewed = LANGUAGE(32251)
         return builder.buildCells(citem, duration=duration, entries=1,
                                   info={"title":'%s (%s)'%(citem.get('name'),LANGUAGE(32145)),

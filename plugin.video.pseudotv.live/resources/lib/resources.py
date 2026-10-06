@@ -117,7 +117,7 @@ class Resources(object):
 
     def queueLogo(self, chname: str) -> str:
         if hasattr(self.service,'logoQue'):
-            try: self.service.logoQue.add(chname)
+            try: self.service._cappedAdd(self.service.logoQue, chname)
             except Exception as e: self.log(f'queueLogo failed!\n{e}', xbmc.LOGWARNING)
         return 'http://%s/logos/%s?%s'%(self.remoteHost,Globals._quoteString(chname),self.processID) # host channel logos
 

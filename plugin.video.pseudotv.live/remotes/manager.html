@@ -102,6 +102,19 @@
         .rule-picker .rp-row { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.72rem; }
         .rule-picker .rp-row:hover { background: rgba(255,255,255,0.06); }
         .rule-picker .rp-set { opacity: 0.5; font-size: 0.6rem; text-transform: uppercase; }
+
+        /* Logo search picker (showLogoPicker) — markup/CSS were missing entirely, so the Search button always threw */
+        .logo-picker { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
+        .logo-picker.hidden { display: none; }
+        .logo-picker .lp-box { background: #001a2d; border: 1px solid var(--focus); border-radius: 10px; padding: 15px; width: 640px; max-width: 94%; max-height: 80vh; display: flex; flex-direction: column; }
+        .logo-picker .lp-head { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--focus); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
+        .logo-picker .lp-close { float: right; cursor: pointer; opacity: 0.6; }
+        .logo-picker .lp-grid { overflow: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+        .lp-cell { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: pointer; text-align: center; }
+        .lp-cell:hover { background: rgba(255,255,255,0.1); border-color: var(--focus); }
+        .lp-cell img { width: 64px; height: 64px; object-fit: contain; }
+        .lp-cell.noimg img { display: none; }
+        .lp-name { font-size: 0.6rem; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .btn-save { background: var(--success); color: white; }
         .btn-cancel { background: #7f8c8d; color: white; }
         .btn-clear { background: var(--danger); color: white; }
@@ -419,6 +432,12 @@
                                 <div class="rp-list" id="rulePickerList"></div>
                             </div>
                         </div>
+                        <div id="logoPicker" class="logo-picker hidden">
+                            <div class="lp-box">
+                                <div class="lp-head">Select Logo <span class="lp-close" onclick="document.getElementById('logoPicker').classList.add('hidden')">&#10005;</span></div>
+                                <div class="lp-grid" id="logoPickerGrid"></div>
+                            </div>
+                        </div>
                         <div class="action-row">
                             <div class="toggle-row" id="toggleRow"></div>
                             <div class="btn-bar">
@@ -567,8 +586,6 @@
     function setInstanceOffline(offline) {
         if (!activeInstance) return;
         activeInstance.online = !offline;
-        // Banner text lives in a dedicated element; rebuild on first use.
-        let banner = document.getElementById('offlineBanner');
         OFFLINE_TABS.forEach(t => {
             const tc = document.getElementById('tab-' + t);
             if (!tc) return;
@@ -637,7 +654,7 @@
     };
 
     function setBusy(on, text) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; if (text) document.querySelector('#busy p').innerText = text; }
-    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); } // ' too: rule values land in value='...' attrs
 
     function safeUrl(u) { return /^(https?:|mailto:)/i.test(u) ? u : '#'; }
 
@@ -1455,7 +1472,7 @@
         html += `<div class="epg-d-title">${esc(p.title || '')}</div>`;
         if (p.subTitle) html += `<div class="epg-d-meta">${esc(p.subTitle)}</div>`;
         if (meta) html += `<div class="epg-d-meta">${esc(meta)}</div>`;
-        if (time) html += `<div class="epg-d-meta">${esc(time)}${p.length ? ' \u00b7 ' + esc(p.length) + 'm' : ''}${year ? ' \u00b7 ' + esc(year) : ''}${p.vid ? ' \u00b7 <a class="epg-d-play" href="' + esc(p.vid) + '" target="_blank" rel="noopener">&#9654; Play</a>' : ''}</div>`;
+        if (time) html += `<div class="epg-d-meta">${esc(time)}${p.length ? ' \u00b7 ' + esc(p.length) + 'm' : ''}${year ? ' \u00b7 ' + esc(year) : ''}${p.vid ? ' \u00b7 <a class="epg-d-play" href="' + esc(safeUrl(p.vid)) + '" target="_blank" rel="noopener">&#9654; Play</a>' : ''}</div>`;
         if ((p.cats || []).length) html += `<div class="epg-d-meta">${esc(p.cats.join(' \u00b7 '))}</div>`;
         if (rating) html += `<div class="epg-d-meta">${esc(rating)}</div>`;
         if (p.epnum) html += `<div class="epg-d-meta">S/E ${esc(p.epnum)}</div>`;

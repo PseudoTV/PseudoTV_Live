@@ -86,7 +86,10 @@ class MemoryBudget(object):
 
     def register(self, owner: str, cap: int):
         with self._l:
-            self._owners[owner] = {'used': 0, 'cap': int(cap)}
+            if owner not in self._owners:  # don't reset `used` on hot-path re-registration
+                self._owners[owner] = {'used': 0, 'cap': int(cap)}
+            else:
+                self._owners[owner]['cap'] = int(cap)
 
     def cap(self, owner: str) -> int:
         with self._l:
@@ -186,14 +189,14 @@ class _Cache(object):
     enable_mem_cache = False
     clean_interval   = MAX_GUIDEDAYS * 86400
 
-    def __init__(self, monitor: Any = None, winID: int = 10000):
+    def __init__(self, monitor: Any = None, winID: int = 10000, dbfile: Optional[str] = None):
         self._lock          = RLock() 
         self.monitor        = monitor
         self.window         = xbmcgui.Window(winID)
         self.max_entries    = MAX_CACHE_SIZE
         self.max_mem_bytes  = CACHE_MEM_MAX   # hard byte budget for the mem cache
         self._mem_bytes     = 0               # running total of encoded mem-cache bytes
-        self.dbfile         = FileAccess.translatePath(CACHE_FLE)
+        self.dbfile         = FileAccess.translatePath(dbfile or CACHE_FLE)
         self.timeout        = int(REAL_SETTINGS.getSetting('API_Timeout') or "10") * 2
         self._trim          = False
         self._clean         = False
@@ -207,10 +210,10 @@ class _Cache(object):
         self._batch_limit   = 64   # flush when this many writes accumulate
         self._batch_dirty   = False
 
-    def __del__(self):
-        try: self._chkClean()
-        except AttributeError: pass
-        
+    # No __del__: GC-time DB work can fire mid-teardown; the expired-row purge
+    # runs deterministically from _checkpoint() during queue drains and from
+    # _shutdown() below (interval is measured in days, so nothing is lost).
+
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s' % (self.__class__.__name__, msg), level)
 
@@ -246,6 +249,28 @@ class _Cache(object):
                     self.log('_open, database locked, retrying in 1s (attempt %d/%d)' % (retries + 1, LOCK_MAX_FILE_TIMEOUT), xbmc.LOGDEBUG)
                     if self.monitor.waitForAbort(1.0): break
                     retries += 1
+                except sqlite3.DatabaseError as e:
+                    # Corrupt cache.db — rename to .bak and recreate so the addon
+                    # doesn't run cache-less forever with zero user-visible signal.
+                    self.log("_open, database corrupted: %s — renaming to .bak" % e, xbmc.LOGERROR)
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                    try:
+                        bak = self.dbfile + '.bak'
+                        if FileAccess.exists(bak): FileAccess.remove(bak)
+                        os.rename(self.dbfile, bak)
+                        self.log("_open, corrupt DB renamed to %s" % bak, xbmc.LOGWARNING)
+                    except Exception as rename_err:
+                        self.log("_open, rename failed: %s" % rename_err, xbmc.LOGERROR)
+                    # Retry once with a fresh file
+                    try:
+                        conn = sqlite3.connect(self.dbfile, timeout=db_timeout, check_same_thread=False)
+                        conn.execute("PRAGMA journal_mode=WAL")
+                        return conn
+                    except Exception:
+                        return None
                 except Exception as e: 
                     self.log("_open failed: %s" % str(e), xbmc.LOGERROR)
                     break
@@ -432,14 +457,19 @@ class _Cache(object):
     def _chkClean(self):
         """Check if the cache needs periodic cleanup based on last execution time."""
         cur_time = self.getTimestamp(datetime.datetime.now())
+        marker   = "%s.CACHE.LastExecuted" % (ADDON_ID)
         try:
-            lastexec = self.window.getProperty("%s.CACHE.LastExecuted" % (ADDON_ID))
-            lastexec = int(lastexec) if lastexec else cur_time
+            lastexec = self.window.getProperty(marker)
+            # Missing marker = never purged (was treated as "just ran", which
+            # meant _cleanDB never executed and cache.db grew unbounded).
+            lastexec = int(lastexec) if lastexec else 0
         except Exception:
-            lastexec = cur_time
+            lastexec = 0
             
         if (lastexec + self.clean_interval) < cur_time: 
             self._cleanDB()
+            try: self.window.setProperty(marker, str(cur_time))
+            except Exception: pass
         else:                                                 
             self._trimMEM()
 
@@ -525,7 +555,7 @@ class _Cache(object):
                 try:
                     self._checkpointing = True
                     self._flush_batch()
-                    self._database.execute("PRAGMA wal_checkpointing(FULL);")
+                    self._database.execute("PRAGMA wal_checkpoint(FULL);")
                     self._chkClean()
                 except Exception as e:
                     self.log("_checkpoint failed: %s" % e, xbmc.LOGERROR)
@@ -539,8 +569,9 @@ class _Cache(object):
                 try:
                     self.log('_shutdown, committing and closing database', xbmc.LOGINFO)
                     self._flush_batch()          # write buffered entries before exit
+                    self._chkClean()             # deterministic expired-row purge (was GC-time only)
                     self._exit = True
-                    self._database.execute("PRAGMA wal_checkpointing(TRUNCATE);")
+                    self._database.execute("PRAGMA wal_checkpoint(TRUNCATE);")
                 except Exception as e:
                     self.log("_shutdown SQL commands failed: %s" % e, xbmc.LOGERROR)
                 finally:
@@ -567,3 +598,70 @@ class _Cache(object):
         """Convert a datetime object to a Unix timestamp integer."""
         try:              return int(date_time.timestamp())
         except Exception: return int(time.mktime(date_time.timetuple()))
+
+
+# ===================== Durable parsed-duration store =====================
+_DURATION_CACHE: Optional['_Cache'] = None
+
+
+def getDurationCache(dbfile: Optional[str] = None) -> '_Cache':
+    """Durable store for parsed duration/runtime values.
+
+    Separate DB (durations.db) from cache.db: parsing durations costs slow SMB
+    container reads, so the results must survive clean-starts/wipes of
+    cache.db, and they never expire (rows use expires=-1). DB-only (no mem
+    cache) so the service and plugin processes always see each other's writes.
+
+    dbfile override returns a standalone instance (tests/tools); the default
+    resolves to a per-process singleton, migrated once from legacy cache.db rows.
+    """
+    global _DURATION_CACHE
+    if dbfile is not None:
+        return _Cache(monitor=MONITOR(), dbfile=dbfile)
+    if _DURATION_CACHE is None:
+        _DURATION_CACHE = _Cache(monitor=MONITOR(), dbfile=DURATION_FLE)
+        try:    _migrateLegacyDurations(_DURATION_CACHE)
+        except Exception as e: LOG('getDurationCache, legacy migration failed: %s' % e, xbmc.LOGWARNING)
+    return _DURATION_CACHE
+
+
+def _migrateLegacyDurations(dst: '_Cache'):
+    """One-time import of legacy getDuration./getRuntime. rows from cache.db.
+
+    Those lived in the wipeable main cache with a 28-day expiry; parsed
+    durations are expensive, so they move to the durable store wrapped as
+    {'d': seconds, 'src': 'legacy'} (no file fingerprint - trusted until the
+    file is next re-probed). Idempotent: keys already in dst are skipped.
+    """
+    import sqlite3
+    import urllib.parse as _urlparse
+    src_path = FileAccess.translatePath(CACHE_FLE)
+    if not FileAccess.exists(src_path): return # fresh install - nothing to import
+    conn = None
+    try:
+        # read-only + GLOB (uses the id index; LIKE would full-scan a 300MB db)
+        conn = sqlite3.connect('file:%s?mode=ro' % _urlparse.quote(src_path), uri=True, timeout=5)
+        rows = conn.execute("SELECT id, data FROM cache WHERE id GLOB 'getDuration.*' OR id GLOB 'getRuntime.*'").fetchall()
+    except Exception as e:
+        LOG('_migrateLegacyDurations, read failed: %s' % e, xbmc.LOGWARNING)
+        rows = []
+    finally:
+        if conn is not None:
+            try: conn.close()
+            except Exception: pass
+    if not rows: return
+    imported = skipped = 0
+    for key, blob in rows:
+        try:
+            value = FileAccess.loadPICKLE(blob)
+            md5   = key.split('.', 1)[1]
+            if dst._get(key, checksum=md5) is not None:
+                skipped += 1
+                continue
+            if not isinstance(value, dict):
+                value = {'d': round(value or 0), 'src': 'legacy'}
+            dst._set(key, value, checksum=md5, delta_time=-1)
+            imported += 1
+        except Exception:
+            continue
+    LOG('_migrateLegacyDurations, imported = %d, skipped = %d' % (imported, skipped), xbmc.LOGINFO)

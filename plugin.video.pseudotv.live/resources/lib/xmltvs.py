@@ -92,8 +92,13 @@ _GENRE_INDEX = None
 # dispatcher. pvr.iptvsimple polls these repeatedly, so rendered bytes are
 # cached keyed by the data version tokens + grouping state.
 # =========================================================================
-_M3U_RENDER_CACHE = {'sig': None, 'data': None}
-_XMLTV_RENDER_CACHE = {'sig': None, 'data': None}
+_M3U_RENDER_CACHE = {'sig': None, 'data': None, 'ts': 0}
+_XMLTV_RENDER_CACHE = {'sig': None, 'data': None, 'ts': 0}
+# During builds, serve the last-good render for at most this long after a save
+# before re-rendering. The old build-scoped freeze served stale bytes for the
+# WHOLE build (back-to-back requeues kept the flag set), so pvr.iptvsimple's
+# EPG cycle pulled a pre-build snapshot for ~90 minutes.
+RENDER_STALE_SECS = 60
 # Single-flight guard for M3U/XMLTV re-renders. pvr.iptvsimple polls both
 # every ~30s; without this, a render-cache miss during a build lets concurrent
 # polls each start a full re-render of the 40MB+ XMLTV programme blob, pegging
@@ -176,13 +181,26 @@ def _storeRender(cache: dict, sig: tuple, data: bytes, name: str) -> bool:
     # it as soon as a poll needs the gz form, and let the next poll re-render.
     # This trades a little CPU for bounded RAM.
     if IS_CONSTRAINED_SOC and len(data) + len(gz) > RENDER_CACHE_MAX:
-        cache['sig'], cache['data'], cache['gz'] = sig, data, None
+        cache['sig'], cache['data'], cache['gz'], cache['ts'] = sig, data, None, time.time()
         return True
     if (len(data) + len(gz)) < RENDER_CACHE_MAX:
         try: budget.acquire('render', len(data) + len(gz))
         except Exception: pass
-    cache['sig'], cache['data'], cache['gz'] = sig, data, gz
+    cache['sig'], cache['data'], cache['gz'], cache['ts'] = sig, data, gz, time.time()
     return True
+
+
+def _withinStaleWindow(cache: dict) -> bool:
+    """True when the stored render may still be served during a build.
+
+    data present AND stored less than RENDER_STALE_SECS ago. The old
+    build-scoped freeze served stale bytes for the ENTIRE build (requeued
+    tasks keep the flag set), so pvr.iptvsimple's EPG cycle kept pulling a
+    pre-build snapshot instead of the channels the build had already saved.
+    """
+    if cache.get('data') is None:
+        return False
+    return (time.time() - cache.get('ts', 0)) < RENDER_STALE_SECS
 
 
 def _cached_bytes(cache: dict, sig: tuple, compress: bool) -> Optional[bytes]:
@@ -220,8 +238,9 @@ def renderFilteredM3U(channels: list, runActions, compress: bool = False) -> byt
         # A running build keeps bumping the data versions, so re-rendering on
         # every pvr poll chases a moving target: each poll fires a full
         # re-render of the 40MB+ XMLTV and saturates CPU, hanging Kodi's UI on
-        # weak SoC boxes. Serve the last-good render until the build settles.
-        if _M3U_RENDER_CACHE['data'] is not None and Globals.properties.isRunning('Builder.buildChannels'):
+        # weak SoC boxes. Serve the last-good render briefly after a save
+        # (see _withinStaleWindow) instead of for the whole build.
+        if _withinStaleWindow(_M3U_RENDER_CACHE) and Globals.properties.isRunning('Builder.buildChannels'):
             return _M3U_RENDER_CACHE['gz'] if compress else _M3U_RENDER_CACHE['data']
         from io import BytesIO
         m3u = M3U()
@@ -268,9 +287,10 @@ def renderFilteredXMLTV(channels: list, runActions, compress: bool = False) -> b
         # A running build keeps bumping the data versions, so re-rendering on
         # every pvr poll chases a moving target: each poll fires a full
         # re-render of the 40MB+ programme blob and saturates CPU, hanging
-        # Kodi's UI on weak SoC boxes. Serve the last-good render until the
-        # build settles — the next poll after it finishes re-renders once.
-        if _XMLTV_RENDER_CACHE['data'] is not None and Globals.properties.isRunning('Builder.buildChannels'):
+        # Kodi's UI on weak SoC boxes. Serve the last-good render briefly after
+        # a save (see _withinStaleWindow) instead of for the whole build —
+        # the build-scoped freeze starved the served guide for the whole build.
+        if _withinStaleWindow(_XMLTV_RENDER_CACHE) and Globals.properties.isRunning('Builder.buildChannels'):
             return _XMLTV_RENDER_CACHE['gz'] if compress else _XMLTV_RENDER_CACHE['data']
         from io import BytesIO
         xmltv_obj = XMLTVS()
@@ -374,15 +394,23 @@ def _matchGenreId(category: str) -> Optional[str]:
     return None
 
 
-def _utcOffset() -> str:
+def _utcOffset(for_time: Optional[datetime.datetime] = None) -> str:
     """Local UTC offset as an XMLTV '+HHMM'/'-HHMM' suffix (e.g. '-0400').
 
     pvr.iptvsimple interprets XMLTV start/stop as UTC unless an explicit offset
     is present. Our schedule stores LOCAL %Y%m%d%H%M%S, so without this suffix
-    pvr.iptvsimple misreads the times and catchup seek drifts by the UTC offset,
-    landing playback on a programme from hours earlier.
+    pvr.iptvsimple misreads the times and catchup seek drifts by the UTC offset.
+
+    When `for_time` is provided, the offset is computed from that specific
+    datetime (correct across DST boundaries). When None, uses the current time.
     """
-    delta = datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta(0)
+    if for_time is not None:
+        try:
+            delta = for_time.astimezone().utcoffset() or datetime.timedelta(0)
+        except Exception:
+            delta = datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta(0)
+    else:
+        delta = datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta(0)
     total = int(delta.total_seconds())
     sign = '-' if total < 0 else '+'
     total = abs(total)
@@ -433,12 +461,15 @@ def _holder_bytes(channels: list, programmes: list) -> int:
 class XMLTVS(object):
     
     def __init__(self, file: str = XMLTVFLEPATH, writable: bool = False, m3u: Optional[M3U] = None):
+        self._owns_m3u = m3u is None # we created it -> WE must flush it (no more GC __del__ save)
         if m3u is None: m3u = M3U(writable=writable)
         self._lock      = DATA_LOCK
         self.m3u        = m3u
         self.writable   = writable
         self.XMLTVFile  = file
         self.XMLTVDATA  = {}
+        self._m3u_dirty = False # owned-m3u forwarded deletions pending flush; init BEFORE
+                                # _load() - cleanStations runs during load and marks it
         self.XMLTVDATA  = self._load()
         self._programmes_dirty = False  # tracks whether programmes changed since last save
         
@@ -455,12 +486,9 @@ class XMLTVS(object):
         except Exception:
             pass
             
-            
-    def __del__(self):
-        try:
-            if self.writable and not getattr(self, '_saved', False):
-                self._save()
-        except Exception: pass
+    # No __del__ save: GC may hold state staler than another process's committed
+    # write (deferred-commit cache) — writing it back clobbers the newer data.
+    # with-scope flush (__exit__) + explicit _save() cover every writable path.
             
             
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
@@ -611,9 +639,19 @@ class XMLTVS(object):
                     self._backfill_programmes_table()
                     self._programmes_dirty = False
                 if Globals.settings.getSettingBool('Enable_File_Export'):
-                    Thread(target=self._save_export, daemon=True).start()
+                    Thread(target=self._save_export, name=f"{ADDON_ID}.xmltv.export", daemon=True).start()
 
                 self._saved = True
+                # Flush the owned m3u (cleanStations/cleanRecordings forwarded
+                # station deletions into it; its GC __del__ save is gone).
+                # Owned only - a caller-provided m3u flushes via its own with-scope
+                # __exit__. Skipped when the playlist is now empty so an empty/failed
+                # guide load can't mass-delete stations (mirrors the XMLTV empty-guard).
+                if getattr(self, '_owns_m3u', False) and getattr(self, '_m3u_dirty', False) and self.m3u is not None:
+                    self._m3u_dirty = False
+                    try:
+                        if self.m3u.getStations(): self.m3u._save()
+                    except Exception as e: self.log("_save, owned m3u flush failed: %s" % e, xbmc.LOGDEBUG)
                 # Update PVR status with current M3U/XMLTV data
                 try:
                     status = Globals.settings.instances.updatePVRStatus(Globals.properties.getRemoteHost(), Globals.properties.getFriendlyName())
@@ -703,12 +741,20 @@ class XMLTVS(object):
         """Return a copy of a programme with the local UTC offset appended to its
         start/stop, so pvr.iptvsimple parses the LOCAL DTFORMAT times correctly
         (it assumes UTC otherwise, which shifts catchup seek by the UTC offset).
-        Also rewrites raw smb:///nfs:// artwork to the self-hosted /image/ URL so
-        Kodi's image loader fetches icons over HTTP (avoiding the libsmbclient
-        idle-close crash)."""
+        The offset is computed from the programme's own start time so it is
+        correct across DST boundaries. Also rewrites raw smb:///nfs:// artwork
+        to the self-hosted /image/ URL so Kodi's image loader fetches icons
+        over HTTP (avoiding the libsmbclient idle-close crash)."""
         p = dict(program)
-        if p.get('start'): p['start'] = '%s %s' % (p['start'], _utcOffset())
-        if p.get('stop'):  p['stop']  = '%s %s' % (p['stop'],  _utcOffset())
+        prog_time = None
+        if p.get('start'):
+            try:
+                prog_time = Globals._strpTime(p['start'], DTFORMAT)
+            except Exception:
+                prog_time = None
+        offset = _utcOffset(prog_time)
+        if p.get('start'): p['start'] = '%s %s' % (p['start'], offset)
+        if p.get('stop'):  p['stop']  = '%s %s' % (p['stop'],  offset)
         icons = p.get('icon') or []
         if isinstance(icons, list) and icons and isinstance(icons[0], dict) and icons[0].get('src'):
             icons = [dict(icons[0], src=Globals._toWebImage(icons[0]['src']))]
@@ -865,7 +911,16 @@ class XMLTVS(object):
         if not _PROG_TABLE_READY:
             for ddl in _PROG_DDL:
                 cache.execute(ddl)
-            _PROG_TABLE_READY = True
+            # Verify the table actually exists before marking ready —
+            # cache.execute returns None on both success and failure,
+            # so we probe with a lightweight SELECT.
+            try:
+                if cache.execute("SELECT COUNT(*) FROM programmes", ()) is not None:
+                    _PROG_TABLE_READY = True
+                else:
+                    self.log("_programme_db, DDL did not create programmes table", xbmc.LOGWARNING)
+            except Exception:
+                self.log("_programme_db, DDL verification failed", xbmc.LOGWARNING)
         return cache
 
 
@@ -1029,6 +1084,7 @@ class XMLTVS(object):
             for id, hasProgram in programs.items():
                 if id and not hasProgram:
                     self.m3u.delStation({'id':id})
+                    self._m3u_dirty = True # owned m3u mutated - flush with our next _save
                     self.delBroadcast({'id':id})
                     self.log('cleanStations, removing = %s; no programmes!'%(id))
         return programmes
@@ -1041,6 +1097,7 @@ class XMLTVS(object):
             for id, hasProgram in programs.items():
                 if id and not hasProgram:
                     self.m3u.delRecording({'id':id})
+                    self._m3u_dirty = True # owned m3u mutated - flush with our next _save
                     self.delRecording({'id':id})
                     self.log('cleanRecordings, removing = %s; no programmes!'%(id))
         return programmes
@@ -1488,7 +1545,7 @@ class XMLTVS(object):
                 # reader's loadPICKLE fails on it — genres would serve empty.
                 Globals.settings.setCacheSetting(GENRES_CACHE_KEY, xml_bytes.decode(DEFAULT_ENCODING), life=-1)
                 if Globals.settings.getSettingBool('Enable_File_Export'):
-                    Thread(target=self._writeGenreFile, args=(xml_bytes,), daemon=True).start()
+                    Thread(target=self._writeGenreFile, args=(xml_bytes,), name=f"{ADDON_ID}.genre.export", daemon=True).start()
                 _GENRE_SIG = sig
                 return True
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)

@@ -224,6 +224,9 @@ AUTOTUNE_TYPES      = ["Playlists",   # Autotune source categories (order matche
                        "Recommended",
                        "Services"]
 
+AUTOTUNE_MUSIC_TYPES = ["Music Genres",  # Music types excluded from the shuffled pool -
+                        "Mixed Music"]    # appended at the END of the autotuned channel list
+
 GROUP_TYPES         = ['Addon',       # Channel grouping categories (includes autotune types)
                        'Custom',
                        'Directory', 
@@ -407,6 +410,8 @@ CHANNEL_EXPORT_FLE  = os.path.join(BACKUP_LOC,CHANNELFLE)                       
 CHANNEL_BACKUP_FLE  = os.path.join(BACKUP_LOC,'%s.json'%(CHANNEL_KEY_BACKUP.lower()))         # Channel backup path
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')                              # Kodi settings override
 CACHE_FLE           = os.path.join(SETTINGS_LOC,'cache.db')                                  # SQLite cache database
+DURATION_FLE        = os.path.join(SETTINGS_LOC,'durations.db')                              # Durable parsed duration/runtime store - separate DB so clean-starts/wipes of cache.db can't destroy expensive SMB parses
+DURATION_MAX        = 864000                                                                # Plausibility cap (10 days, seconds) - parser output beyond this is rejected, not persisted
 YOUTUBE_COOKIES     = os.path.join(SETTINGS_LOC,'www.youtube.com_cookies.txt')               # YouTube auth cookies
 
 # =============================================================================
@@ -562,6 +567,7 @@ HEADER = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 # =============================================================================
 _LOG_THROTTLE  = {}  # {(event, level): (last_log_timestamp, skip_count)} - for throttled log dedup
 _LOG_THROTTLE_MAX = 5000  # max entries before LRU eviction — prevents unbounded growth on SOC
+MAX_QUEUE_SIZE = 5000  # cap for postQue/jsonQue/logoQue/trailerQue sets — prevents unbounded growth
 _LOG_LAST_KEY  = None  # last (event, level) key that was logged - for consecutive duplicate detection
 _LOG_SETTINGS  = {'ts': 0, 'enable': False, 'level': 3}  # cached Debug_Enable/Level for LOG TTL
 _LOG_SETTINGS_TTL = 5.0  # seconds to cache debug settings before re-reading from Kodi
@@ -602,13 +608,20 @@ def LOG(event: Any, level: int = xbmc.LOGDEBUG, throttle: float = float(SERVICE_
                 skip_msg = 'Skipped %d duplicate messages..' % (prev_skip)
                 if level >= DEBUG_LEVEL: xbmc.log(skip_msg, level)
         _LOG_THROTTLE[key] = (now, 0)
-        # Prevent unbounded growth on SOC — evict oldest 10% when cap exceeded
+        # Prevent unbounded growth on SOC - evict oldest 10% when cap exceeded.
+        # try/except: this runs INSIDE parsers (MKV/TS LOG calls) on build threads;
+        # a concurrent writer inserting mid-iteration raises RuntimeError
+        # ("dictionary changed size during iteration") which aborted the parse and
+        # zeroed the item's duration. Eviction is best-effort - logging must never raise.
         if len(_LOG_THROTTLE) > _LOG_THROTTLE_MAX:
-            evict_count = _LOG_THROTTLE_MAX // 10
-            for _ in range(evict_count):
-                if _LOG_THROTTLE:
-                    oldest_key = min(_LOG_THROTTLE, key=lambda k: _LOG_THROTTLE[k][0])
-                    del _LOG_THROTTLE[oldest_key]
+            try:
+                evict_count = _LOG_THROTTLE_MAX // 10
+                for _ in range(evict_count):
+                    if _LOG_THROTTLE:
+                        oldest_key = min(_LOG_THROTTLE, key=lambda k: _LOG_THROTTLE[k][0])
+                        del _LOG_THROTTLE[oldest_key]
+            except (RuntimeError, KeyError, ValueError):
+                pass
         _LOG_LAST_KEY = key
     event = '%s-%s-%s' % (ADDON_ID, ADDON_VERSION, event)
     if level >= DEBUG_LEVEL:

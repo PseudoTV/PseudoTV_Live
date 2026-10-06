@@ -102,7 +102,17 @@ class ChannelManager(object):
 
 
     def channels(self) -> list:
-        return Channels(Globals.getChannelKey()).getChannels()
+        chans = Channels(Globals.getChannelKey()).getChannels()
+        if not chans:
+            # Heal-on-read: autotune off but the active key is empty (a disable
+            # path that never migrated, or a stale-write wipe) — copy from the
+            # recovery snapshots so the webui dropdown/M3U aren't left at 0.
+            # restart=False: setChannels -> notifyDataChanged -> chkPVRRefresh
+            # rebuilds the playlist without a service reload.
+            from channels import migrateAutotuneToUser
+            if migrateAutotuneToUser(restart=False):
+                chans = Channels(Globals.getChannelKey()).getChannels()
+        return chans
 
 
     def saveChannel(self, data: dict) -> tuple:
@@ -344,27 +354,10 @@ class ChannelManager(object):
 
 
     def migrateAutotune(self) -> bool:
-        """When autotune is disabled, copy the autotuned channels into the user key
-        (only if the user list is empty) so disabling never leaves an empty set."""
-        try:
-            if Globals.settings.getSettingBool('Enable_Autotune'):
-                return False
-            autotune = Channels(CHANNEL_KEY_AUTOTUNE).getChannels()
-            if not autotune:
-                return False
-            user = Channels(CHANNEL_KEY_USER)
-            if user.getChannels():
-                return False  # user already has channels — never clobber
-            # Write through the Channels class (writable so _save persists) — this
-            # uses the versioned key (Channels.1.0.0) that Channels() reads.
-            Channels(CHANNEL_KEY_USER, writable=True).setChannels(autotune)
-            Globals.properties.setBackup(CHANNEL_KEY_USER, autotune)
-            Globals.properties.setPendingRestart()
-            self.log('autotune disabled: copied %d channels to user config + pending restart' % len(autotune), xbmc.LOGINFO)
-            return True
-        except Exception as e:
-            self.log('migrateAutotune failed: %s' % e, xbmc.LOGWARNING)
-            return False
+        """When autotune is disabled, copy the autotuned channels into the user key.
+        Thin wrapper over the shared recovery-aware helper (channels.py)."""
+        from channels import migrateAutotuneToUser
+        return migrateAutotuneToUser(restart=True)
 
 
     def channelCRUD(self, method: str, path: str, incoming: Optional[dict] = None) -> Optional[tuple]:

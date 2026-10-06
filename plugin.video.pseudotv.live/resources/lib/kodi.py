@@ -51,12 +51,15 @@ class Settings(object):
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG('%s: %s'%(self.__class__.__name__,msg),level)
         
-    def _getRealSettings(self, id: str = ADDON_ID) -> xbmcaddon.Addon:
-        # Use the single canonical Addon handle. A separate per-Settings instance
-        # can hold a stale in-memory copy of settings (e.g. Enable_Autotune) and
-        # ANY setSetting() through it rewrites settings.xml from that stale state,
-        # reverting the user's change — the "Enable_Autotune turns back on" bug.
-        return REAL_SETTINGS
+    def _getRealSettings(self, id: str = ADDON_ID) -> Any:
+        # Fresh handle per access (forum thread 356746): an Addon object snapshots
+        # settings when constructed. With <reuselanguageinvoker> that object lives
+        # for the whole invoker session, so (a) reads never see settings changed
+        # via Kodi's settings dialog, and (b) ANY setSetting through it flushes the
+        # stale snapshot over settings.xml, reverting the newer changes - the old
+        # "Enable_Autotune turns back on" bug. Callers use the handle transiently
+        # (read-now / write-one-key-now), so no two live handles ever diverge.
+        return xbmcaddon.Addon(id=id)
 
     #GET
     def _getSetting(self, func: Callable, key: str) -> Any:
@@ -449,7 +452,8 @@ class Settings(object):
         return False
 
     def getCurrentSettings(self) -> dict:
-        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT', 'Enable_Autotune', 'Open_Router_APIKEY', 'Enable_Kodi_Access']
+        # API key excluded — this is served on unauthenticated GET /api/settings
+        settings = ['User_Folder', 'Debug_Enable', 'TCP_PORT', 'Enable_Autotune', 'Enable_Kodi_Access']
         return dict([(setting,self.getSetting(setting)) for setting in settings])
               
     def restoreSettings(self, settings: dict = {}) -> bool:
@@ -457,13 +461,11 @@ class Settings(object):
 
     def getFileCRC(self, file: str) -> bool:
         try:
-            fle = FileAccess.open(file,'r')
-            crc = binascii.crc32(fle.read().encode(DEFAULT_ENCODING))
+            with FileAccess.stream(file, 'r') as fle:
+                crc = binascii.crc32(fle.read().encode(DEFAULT_ENCODING))
         except Exception as e:
             self.log("getFileCRC, failed! %s %s"%(file,e), xbmc.LOGERROR)
             return False
-        finally:
-            fle.close()
         name  = 'getFileCRC.%s'%(FileAccess._getMD5(file))
         cache = self.getCacheSetting(name, checksum=crc)
         if not cache or cache != crc:
@@ -1426,6 +1428,9 @@ class Builtin(object):
 
         line_re = re.compile(r'^(?:\d{4}-\d{2}-\d{2} )?(\d{2}:\d{2}:\d{2})\.\d{3}\s+T:\d+\s+(\w+)\s+<[^>]*>:\s?(.*)$')
         ansi_re = re.compile(r'\x1b\[[0-9;]*m')
+        # Redact secrets before they reach the UI / forum posts
+        uuid_re  = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', re.IGNORECASE)
+        bearer_re = re.compile(r'Bearer\s+\S+')
         # Log lines read '{ADDON_ID}-{ADDON_VERSION}-{Module}: msg' — strip the
         # addon id + version prefix so the module/message remains.
         project_prefix = re.compile(r'^%s-%s-' % (re.escape(ADDON_ID), re.escape(ADDON_VERSION)))
@@ -1439,6 +1444,8 @@ class Builtin(object):
             line = ansi_re.sub('', raw.strip())
             if not line:
                 continue
+            line = uuid_re.sub('[REDACTED-UUID]', line)
+            line = bearer_re.sub('Bearer [REDACTED]', line)
             m = line_re.match(line)
             if m:
                 ts, lvl, msg = m.groups()
@@ -1578,10 +1585,15 @@ class Dialog(object):
     def qrDialog(self, url: str, msg: str, heading: str = '%s - %s'%(ADDON_NAME,LANGUAGE(30158)), autoclose: int = AUTOCLOSE_DELAY) -> Optional[bool]:
         class QRCode(xbmcgui.WindowXMLDialog):
             def __init__(self, *args: Any, **kwargs: Any):
-                self.header    = kwargs["header"]
-                self.image     = kwargs["image"]
-                self.text      = kwargs["text"]
-                self.acThread  = Timer(kwargs["atclose"], self.onClose)
+                self.header    = kwargs.pop("header", '')
+                self.image     = kwargs.pop("image", '')
+                self.text      = kwargs.pop("text", '')
+                atclose        = kwargs.pop("atclose", AUTOCLOSE_DELAY)
+                super().__init__(*args, **kwargs) # required or the window/XML never initializes
+                self.acThread  = Timer(atclose, self.onClose)
+
+            def log(self, msg: str, level: int = xbmc.LOGDEBUG):
+                LOG('QRCode: %s' % msg, level)
 
             def onInit(self):
                 self.getControl(40000).setLabel(self.header)
@@ -1620,40 +1632,11 @@ class Dialog(object):
     def _closeTextViewer(self):
         if self.builtin.getInfoBool('Window.IsActive(textviewer)'):
             self.builtin.executebuiltin('Dialog.Close(textviewer)')
-        
-    def _customTextViewer():
-        class TEXTVIEW(xbmcgui.WindowXMLDialog):
-            textbox = None
-            def __init__(self, *args: Any, **kwargs: Any):
-                self.head = kwargs.get('head','')
-                self.text = kwargs.get('text','')
-                self.doModal()
-            
-            def onInit(self):
-                self.getControl(1).setLabel(self.head)
-                self.textbox = self.getControl(5)
-
-            def onClick(self, control_id: int): pass
-            
-            def onFocus(self, control_id: int): pass
-            
-            def onAction(self, action: Any):
-                if action in [xbmcgui.ACTION_PREVIOUS_MENU, xbmcgui.ACTION_NAV_BACK]: self.close()
-
-            def _updateText(self, txt: str):
-                try:
-                    self.textbox.setText(txt)
-                    self.builtin.executebuiltin('SetFocus(3000)')
-                    self.builtin.executebuiltin('AlarmClock(down,Action(down),.5,true,false)')
-                except Exception as e: self.log('_updateText failed: %s' % e, xbmc.LOGDEBUG)
-                
-        return TEXTVIEW("DialogTextViewer.xml", os.getcwd(), "Default")
 
     def _textViewer(self, msg: str, heading: str, usemono: bool, autoclose: int) -> Any:
         return timerit(self.textviewer)(0.1,*(msg, heading, usemono, autoclose))
         
-    def textviewer(self, msg: str, heading: str = ADDON_NAME, usemono: bool = False, autoclose: int = AUTOCLOSE_DELAY, usethread: bool = False, custom: bool = False) -> bool:
-        # if custom: return self._customTextViewer(msg,heading,autoclose)
+    def textviewer(self, msg: str, heading: str = ADDON_NAME, usemono: bool = False, autoclose: int = AUTOCLOSE_DELAY, usethread: bool = False) -> bool:
         if usethread: return self._textViewer(msg, heading, usemono, autoclose)
         else:
             if autoclose > 0: timerit(self._closeTextViewer)(autoclose)

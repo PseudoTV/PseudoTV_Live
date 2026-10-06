@@ -81,6 +81,7 @@ class Background(xbmcgui.WindowXMLDialog):
         super().__init__(*args, **kwargs)
         
         self.player  = self.service.player if self.service else None
+        self.monitor = (self.service.monitor if self.service else None) or xbmc.Monitor() # shared, not per-animation-step
         playing_item = self.player.playingItem if (self.player and hasattr(self.player, 'playingItem')) else {}
         self.citem   = playing_item.get('citem', {})
         self.fitem   = playing_item.get('fitem', {})
@@ -104,7 +105,7 @@ class Background(xbmcgui.WindowXMLDialog):
             nextTime  = ""
             start_val = self.nitem.get('start')
             if start_val:
-                try: nextTime = Globals._epochTime(start_val).strftime('%I:%M%p')
+                try: nextTime = Globals._epochTime(start_val, tz=False).strftime('%I:%M%p')
                 except Exception: 
                     self.log(f'onInit, failed to format nextTime from {start_val}', xbmc.LOGDEBUG)
                     nextTime = ""
@@ -165,7 +166,7 @@ class Background(xbmcgui.WindowXMLDialog):
                 self.videoWindow.setPosition(x, y)
                 self.videoWindow.setWidth(w)
                 self.videoWindow.setHeight(h)
-                xbmc.Monitor().waitForAbort(0.015)
+                self.monitor.waitForAbort(0.015)
         except Exception as e:
             self.log(f"_shrink: {e}", xbmc.LOGDEBUG)
 
@@ -188,7 +189,7 @@ class Background(xbmcgui.WindowXMLDialog):
                 self.videoWindow.setPosition(x, y)
                 self.videoWindow.setWidth(w)
                 self.videoWindow.setHeight(h)
-                xbmc.Monitor().waitForAbort(0.015)
+                self.monitor.waitForAbort(0.015)
         except Exception as e:
             self.log(f"_expand: {e}", xbmc.LOGDEBUG)
 
@@ -252,9 +253,10 @@ class Replay(xbmcgui.WindowXMLDialog):
             xpos = control.getX()
             
             while not self.monitor.abortRequested():
+                # _shutdown(CPU_CYCLE) is also the 16ms tick (waitForAbort inside);
+                # service.sleep() loops until interrupt -> busy spin here.
                 if self.service._shutdown(CPU_CYCLE) or self._isVisible(control) or self.closing: 
                     break
-                self.service.sleep(int(CPU_CYCLE * 1000))
                     
             while not self.monitor.abortRequested():
                 if self.service._shutdown(CPU_CYCLE) or wait < 0 or self.closing or not self.player.isPlayingPseudoTV(): 
@@ -265,7 +267,6 @@ class Replay(xbmcgui.WindowXMLDialog):
                     control.setAnimations([('Conditional', f'effect=zoom start={prog-20},100 end={prog},100 time=1000 center={xpos},100 tween="out" condition=True')])
                 
                 wait -= CPU_CYCLE
-                self.service.sleep(int(CPU_CYCLE * 1000))
             
             control.setAnimations([('Conditional', f'effect=fade start={prog if "prog" in locals() else 100} end=0 time=240 delay=0.240 condition=True')])
             control.setVisible(False)
@@ -344,7 +345,7 @@ class Overlay(xbmcgui.WindowXMLDialog):
         
         # Channel bug
         self.enableChannelBug = Globals.settings.getSettingBool('Enable_ChannelBug')
-        self.forceBugDiffuse  = Globals.settings.getSettingBool('Force_Diffuse')
+        self.channelBugDiffuse = Globals.settings.getSettingBool('Force_Diffuse') # named for ShowChannelBug rule read/write (was forceBugDiffuse - rule attr never matched)
         self.channelBugColor  = f"0x{Globals.settings.getSetting('ChannelBug_Color') or 'FFFFFFFF'}"
         self.channelBugFade   = Globals.settings.getSettingInt('ChannelBug_Transparency')
         self.channelBugX, self.channelBugY = _parse_position(Globals.settings.getSetting("Channel_Bug_Position_XY"), _channel_bug_position())
@@ -416,7 +417,7 @@ class Overlay(xbmcgui.WindowXMLDialog):
                 self._addControl(self.channelBug)
                 
                 logo = self.citem.get('logo') or Globals.builtin.getInfoLabel('Player.Art(icon)') or LOGO
-                if   self.forceBugDiffuse:        self.channelBug.setColorDiffuse(self.channelBugColor)
+                if   self.channelBugDiffuse:     self.channelBug.setColorDiffuse(self.channelBugColor)
                 elif self.resources.isMono(logo): self.channelBug.setColorDiffuse(self.channelBugColor)
                     
                 cid  = self.channelBug.getId()
@@ -482,7 +483,8 @@ class Overlay(xbmcgui.WindowXMLDialog):
     def showOnNext(self, mode: Optional[int] = None):
         """Show on-next notification. Mode: 1=text, 2=text+thumb+sfx, 3=toggleInfo, 4=UpNext signal."""
         self.log(f"showOnNext: mode = {mode}", xbmc.LOGDEBUG)
-        if mode is None: mode = Globals.settings.getSettingInt('OnNext_Mode')
+        if mode is None: mode = getattr(self.player, 'OnNextMode', None) # ShowOnNext rule override...
+        if mode is None: mode = Globals.settings.getSettingInt('OnNext_Mode') # ...then global setting
         if mode == 0 or self._onnext_visible: return
 
         if mode == 3:
@@ -521,9 +523,10 @@ class Overlay(xbmcgui.WindowXMLDialog):
             nowTitle  = self.fitem.get('label') or Globals.builtin.getInfoLabel('VideoPlayer.Title')
             nextTitle = self.nitem.get('showlabel') or Globals.builtin.getInfoLabel('VideoPlayer.NextTitle') or chname
             onNextX, onNextY = _parse_position(
-                Globals.settings.getSetting("OnNext_Position_XY"), _on_next_position())
+                getattr(self.player, 'onNextPosition', None) or Globals.settings.getSetting("OnNext_Position_XY"),
+                _on_next_position()) # player attr first — ShowOnNext rule override
 
-            try:    nextTime = Globals._epochTime(self.nitem['start']).strftime('%I:%M%p')
+            try:    nextTime = Globals._epochTime(self.nitem['start'], tz=False).strftime('%I:%M%p')
             except: nextTime = Globals.builtin.getInfoLabel('VideoPlayer.NextStartTime')
 
             if not nextTime: return False

@@ -65,6 +65,24 @@ class FileAccess(object):
         return hashlib.md5(data).hexdigest()
 
     @staticmethod
+    def stat(path: str) -> Optional[Tuple[int, int]]:
+        """(size, mtime) for a VFS/local path, or None when unstatable.
+
+        Used to fingerprint cached parsed durations: if the file's size/mtime
+        changed, the cached duration no longer applies. Returns None on any
+        failure (missing file, SMB credential flake, mock) so callers treat
+        'cannot verify' as 'trust the cache' rather than re-probing.
+        """
+        try:
+            st = xbmcvfs.Stat(path)
+            size = int(st.st_size())
+            mtime = int(st.st_mtime())
+            if size <= 0: return None
+            return (size, mtime)
+        except Exception:
+            return None
+
+    @staticmethod
     def _encodeString(data: str = "") -> str:
         """Compress and base64-encode a value for safe storage."""
         if not data:

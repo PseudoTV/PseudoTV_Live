@@ -175,6 +175,8 @@
     const horizontalBools = ['radio', 'favorite', 'changed', 'enabled'];
     let activeRules = {}, currentPaths = [], hasChanges = false;
 
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
     function formatTime12h(date) {
         let h = date.getHours(), m = date.getMinutes(), ampm = h >= 12 ? 'PM' : 'AM';
         h = h % 12 || 12;
@@ -269,14 +271,14 @@
         }
         xmlDoc.querySelectorAll('channel').forEach(ch => {
             const chId = ch.getAttribute('id');
-            document.getElementById('epg-channel-list').innerHTML += `<div class="epg-channel-item">${ch.querySelector('display-name').textContent}</div>`;
+            document.getElementById('epg-channel-list').innerHTML += `<div class="epg-channel-item">${esc(ch.querySelector('display-name').textContent)}</div>`;
             const row = document.createElement('div'); row.className = 'epg-row';
             xmlDoc.querySelectorAll(`programme[channel="${chId}"]`).forEach(p => {
                 const start = parseDate(p.getAttribute('start')), stop = parseDate(p.getAttribute('stop'));
                 const duration = (stop - start) / 60000;
                 const prog = document.createElement('div'); prog.className = 'epg-program';
                 prog.style.width = (duration * 6) + 'px';
-                prog.innerHTML = `<span class="epg-prog-title">${p.querySelector('title').textContent}</span><span class="epg-prog-time">${formatTime12h(start)}</span>`;
+                prog.innerHTML = `<span class="epg-prog-title">${esc(p.querySelector('title').textContent)}</span><span class="epg-prog-time">${formatTime12h(start)}</span>`;
                 row.appendChild(prog);
             });
             document.getElementById('epg-rows-container').appendChild(row);
@@ -300,7 +302,7 @@
         const vals = activeRules[rId].values || {};
         for (let vKey in vals) {
             const div = document.createElement('div'); div.className = 'control-group';
-            div.innerHTML = `<label>Value ${vKey}</label><input type="text" name="rules.${rId}.values.${vKey}" value='${JSON.stringify(vals[vKey])}'>`;
+            div.innerHTML = `<label>Value ${vKey}</label><input type="text" name="rules.${rId}.values.${vKey}" value='${esc(JSON.stringify(vals[vKey]))}'>`;
             container.appendChild(div);
         }
     }

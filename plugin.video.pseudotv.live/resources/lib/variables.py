@@ -479,7 +479,11 @@ class Globals:
 
     @staticmethod
     def _getTimeoffset() -> int:
-        return (int((datetime.datetime.now() - datetime.datetime.utcnow()).days * 86400 + round((datetime.datetime.now() - datetime.datetime.utcnow()).seconds, -1)))
+        from datetime import timezone
+        now_local = datetime.datetime.now().replace(tzinfo=None)
+        now_utc    = datetime.datetime.now(timezone.utc).replace(tzinfo=None)
+        delta = now_local - now_utc
+        return int(delta.total_seconds())
         
     @staticmethod
     def _getUTCstamp() -> float:
@@ -645,6 +649,10 @@ class Globals:
 
     @staticmethod
     def getChannelKey():
-        """Return the active channel key based on Enable_Autotune setting."""
-        try: return CHANNEL_KEY_AUTOTUNE if REAL_SETTINGS.getSettingBool('Enable_Autotune') else CHANNEL_KEY_USER
+        """Return the active channel key based on Enable_Autotune setting.
+
+        Fresh Addon handle: a long-lived one never sees the setting toggled
+        from Kodi's settings dialog (forum thread 356746) and would keep
+        routing channels to the wrong key after the user switches modes."""
+        try: return CHANNEL_KEY_AUTOTUNE if xbmcaddon.Addon(id=ADDON_ID).getSettingBool('Enable_Autotune') else CHANNEL_KEY_USER
         except Exception: return CHANNEL_KEY_USER

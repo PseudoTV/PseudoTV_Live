@@ -126,12 +126,14 @@ class MyHandler(BaseHTTPRequestHandler):
         self.cm         = ChannelManager(service)
         self.wp         = WebPoint(service)
         # Cache the rule dispatcher on the service keyed by (channel key, channel
-        # count) — rebuilding RulesList (loadRules over every channel) on each HTTP
+        # content hash) — rebuilding RulesList (loadRules over every channel) on each HTTP
         # request was wasteful under pvr.iptvsimple polling. Channels are reloaded
         # per request so autotune/build results show up even when the key is stable.
+        # Content hash (not just count) catches rule edits without channel count change.
         ch_key = Globals.getChannelKey()
         self.channels = Channels(ch_key).getChannels()
-        sig = (ch_key, len(self.channels))
+        ch_content = hash(FileAccess.dumpJSON(self.channels, sortkey=True))
+        sig = (ch_key, ch_content)
         cached = getattr(service, '_serve_rules', None)
         if not cached or cached[0] != sig:
             service._serve_rules = (sig, RulesList(self.channels).runActions, self.channels)
@@ -476,8 +478,11 @@ class MyHandler(BaseHTTPRequestHandler):
         serves fresh content. The chkPVRRefresh trigger forces pvr.iptvsimple to
         re-fetch immediately via the useEpgGenreText flip.
         """
-        from xmltvs import _XMLTV_RENDER_CACHE
-        _XMLTV_RENDER_CACHE['sig'] = None
+        from xmltvs import _M3U_RENDER_CACHE, _XMLTV_RENDER_CACHE
+        # Zero sig AND ts: sig alone isn't enough - the build-time stale-serve
+        # window is ts-bounded and would still hand back the old render.
+        for cache in (_M3U_RENDER_CACHE, _XMLTV_RENDER_CACHE):
+            cache['sig'], cache['ts'] = None, 0
         Globals.properties.setPropTimer('chkPVRRefresh')
         self.log('_refreshCache, XMLTV render cache invalidated + PVR refresh queued')
         return {'status': 'ok', 'message': 'render cache invalidated + PVR refresh queued'}
@@ -582,7 +587,13 @@ class MyHandler(BaseHTTPRequestHandler):
             if path.startswith('/remote/'):
                 rel = Globals._unquoteString(path.split('/remote/', 1)[1])
                 if '..' in rel: return self._sendError(400, 'Invalid path')
-                full = os.path.join(REMOTE_LOC, rel)
+                full = os.path.realpath(os.path.join(REMOTE_LOC, rel))
+                # os.path.join returns `rel` directly when `rel` is absolute —
+                # verify the resolved path stays under REMOTE_LOC to prevent
+                # arbitrary file read (e.g. GET /remote/C:/...).
+                remote_real = os.path.realpath(REMOTE_LOC)
+                if not full.startswith(remote_real + os.sep) and full != remote_real:
+                    return self._sendError(400, 'Invalid path')
                 if not FileAccess.exists(full): return self._sendError(404, 'File Not Found [%s]' % self.path)
                 return self._sendFile(full, compress)
 

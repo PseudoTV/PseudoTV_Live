@@ -10,6 +10,10 @@ v.0.8.0+nightly
 - Refined AI cache retry logic with empty cache detection
 - Added Thread exception hook for Python 3.8+ daemon threads to prevent Kodi crashes
 - Tweaked Version bump to 0.8.0+nightly
+- Fixed Corrupt cache.db is now renamed to .bak and recreated instead of running cache-less silently
+- Fixed Build state no longer stuck "running" after a channel build exception, restoring throttle and webpoint status
+- Optimized Shared probe pool across Builder instances prevents thread stacking on rapid re-queues
+- Tweaked Miscellaneous improvements and tweaks.
 v.0.7.9+nightly
 - Improved build logging with timestamped output and file persistence
 - Enhanced OpenCode integration with automatic PATH detection and timeout handling

@@ -44,7 +44,7 @@ class Player(xbmc.Player):
         self.lastSubState   = False
         self.background     = None
         self.overlay        = None
-        self._overlay_lock  = Lock()  # serializes overlay open/close (prevents logo stacking)
+        self._overlay_lock  = RLock()  # serializes overlay/background open/close (prevents logo stacking + dialog leaks); RLock allows nested calls (toggleBackground → toggleOverlay)
         self.replay         = None
         self.runActions     = None
         self.playingThread  = None
@@ -53,6 +53,8 @@ class Player(xbmc.Player):
         self._lastPlayTime  = {}  # {chid: timestamp} — rapid channel-switch debounce
         self._pvrRetried    = set()  # {chid} — channels already retried this session (prevents infinite loop)
         self._pvrFailCount  = {}  # {chid: count} — consecutive PVR stream failures per channel
+        self._lastStallPos  = -1     # last known playback position (seconds)
+        self._lastStallTime = 0.0    # when _lastStallPos was last updated
         
         self.enableOverlay     = Globals.settings.getSettingBool('Overlay_Enable')
         self.infoOnChange      = Globals.settings.getSettingBool('Enable_OnInfo')
@@ -213,7 +215,11 @@ class Player(xbmc.Player):
         if playingItem is None: playingItem = self.getplayingItem()
         if self.isPlayingPseudoTV() and not self.isPlayingFiller() and playingItem.get('isPlaylist', False):
             playingFile = self.getPlayerFile()
-            if self.pendingItem.get('item', {}).get('file') == playingItem.get('item', {}).get('file') == playingFile:
+            # pendingItem['item'] is never populated (always {}), so the old
+            # three-way comparison was always False. Verify against the actual
+            # file from the playing item's fitem directly.
+            fitem_file = playingItem.get('fitem', {}).get('file', '')
+            if fitem_file and fitem_file == playingFile:
                     resume = { "file"    : playingFile,
                                "position": ceil(self.getPlayedTime()),
                                "total"   : self.getPlayerTime(),
@@ -234,6 +240,10 @@ class Player(xbmc.Player):
             elif _remaining >= (OSD_TIMER * 2):
                 self.toggleBackground(False)
                 _played = ceil(self.getPlayedTime())
+                # Track position for stall detection (SMB disconnect mid-play)
+                if _played != self._lastStallPos:
+                    self._lastStallPos = _played
+                    self._lastStallTime = time.time()
                 # On new channel change, show overlay immediately — don't wait
                 # for minDuration gate (Seek_Tolerance can be 60s+, during which
                 # the channel bug is invisible to the user).
@@ -278,11 +288,15 @@ class Player(xbmc.Player):
                 # skip heavy rules/overlay to avoid player state conflicts from
                 # rapid user channel surfing.
                 now = time.time()
-                lastPlay = max(self._lastPlayTime.values()) if self._lastPlayTime else 0
+                # snapshot values to avoid RuntimeError during concurrent insert
+                lastPlay = max(list(self._lastPlayTime.values()) or [0])
                 if lastPlay and (now - lastPlay) < 3:
                     self.log(f"_onPlay, rapid switch debounce — skipping rules (last play {now - lastPlay:.1f}s ago)")
                     self._newChannel = False
                     self._lastPlayTime[chid] = now
+                    # Assign playingItem so downstream readers (overlay, Trakt,
+                    # playcount) see the new channel, not the previous one.
+                    self.playingItem = playingItem
                     return
                 self._lastPlayTime[chid] = now
                 self._newChannel = True
@@ -314,7 +328,7 @@ class Player(xbmc.Player):
             # first content of a channel.
             if self.playingThread is None or not self.playingThread.is_alive():
                 self.playingStopped.clear()
-                self.playingThread = Thread(target=self.monitor._onPlay, daemon=True)
+                self.playingThread = Thread(target=self.monitor._onPlay, name=f"{ADDON_ID}.playingLoop", daemon=True)
                 self.playingThread.start()
                     
                     
@@ -335,9 +349,11 @@ class Player(xbmc.Player):
         
         
     def _onError(self, playingItem: Optional[dict] = None):
-        self.log("_onError")
+        self.log("_onError", xbmc.LOGERROR)
         if playingItem is None: playingItem = {}
-        if self.isPseudoTV() and Globals.settings.getSettingBool('Debug_Enable'):
+        # Always act on playback errors — gating on Debug_Enable means a real
+        # stream failure with debug off is a silent no-op (no stop, no recovery).
+        if self.isPseudoTV():
             Globals.dialog.notificationDialog(LANGUAGE(32000))
             self.onPlayBackStopped()
            
@@ -407,16 +423,20 @@ class Player(xbmc.Player):
 
     def toggleBackground(self, state: bool = False):
         self.log(f"toggleBackground, state = {state}")
-        try:
-            if state and self.background is None:
-                if self.overlay: self.toggleOverlay(False)
-                self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", service=self.service)
-                self.background.show()
-            elif not state:
-                if hasattr(self.background, '_expandVideo'): self.background._expandVideo()
-                if hasattr(self.background, 'close'): self.background.close()
-                self.background = None
-        except Exception as e: self.log(f"toggleBackground, failed: {e}", xbmc.LOGERROR)
+        # Serialize open/close: two threads entering toggleBackground(True)
+        # concurrently both see `background is None`, both construct and .show()
+        # a dialog — the loser's instance is overwritten and never closable.
+        with self._overlay_lock:
+            try:
+                if state and self.background is None:
+                    if self.overlay: self.toggleOverlay(False)
+                    self.background = Background(BACKGROUND_XML, ADDON_PATH, "default", service=self.service)
+                    self.background.show()
+                elif not state:
+                    if hasattr(self.background, '_expand'): self.background._expand() # method is _expand; _expandVideo never existed
+                    if hasattr(self.background, 'close'): self.background.close()
+                    self.background = None
+            except Exception as e: self.log(f"toggleBackground, failed: {e}", xbmc.LOGERROR)
 
 
     def toggleOverlay(self, state: bool = False):
@@ -440,15 +460,19 @@ class Player(xbmc.Player):
     def toggleOnNext(self, state: bool = False):
         self.log(f"toggleOnNext, state = {state}")
         if self.overlay is None: return
-        cur_fitem = self.playingItem.get('fitem', {})
-        if cur_fitem.get('file') and cur_fitem.get('file') != self.overlay.fitem.get('file'):
-            self.overlay.update(self.playingItem)
-        total_time = self.getPlayerTime()
-        threshold = max(60, min(total_time * 0.15, 600))
-        _remaining = floor(self.getRemainingTime())
-        if threshold >= _remaining >= max(20, threshold // 3):
-            self.log(f"toggleOnNext, remaining {_remaining:.0f}s, threshold {threshold:.0f}s")
-            self.overlay.showOnNext()
+        try:
+            cur_fitem = self.playingItem.get('fitem', {})
+            if cur_fitem.get('file') and cur_fitem.get('file') != self.overlay.fitem.get('file'):
+                self.overlay.update(self.playingItem)
+            total_time = self.getPlayerTime()
+            threshold = max(60, min(total_time * 0.15, 600))
+            _remaining = floor(self.getRemainingTime())
+            if threshold >= _remaining >= max(20, threshold // 3):
+                self.log(f"toggleOnNext, remaining {_remaining:.0f}s, threshold {threshold:.0f}s")
+                self.overlay.showOnNext()
+        except AttributeError:
+            # overlay was set to None by a concurrent toggleOverlay(False)
+            pass
 
 
     # @debounceit(OSD_TIMER)
@@ -513,11 +537,32 @@ class Monitor(xbmc.Monitor):
         self.idleTime = Globals.builtin.getIdle()
         self.isIdle   = self.idleTime > OSD_TIMER
         self.log(f"__onIdle, isIdle = {self.isIdle}")
+        #chkerror — arm timeout even when AV never started (playing=False).
+        # Previously gated on isPlayingPseudoTV() which requires playing=True,
+        # so a stream that never reached AV would never trip the timeout.
+        if (self.player.pendingItem.get('invoked', -1) > 0
+                and not Globals.builtin.isBusyDialog()
+                and (time.time() - self.player.pendingItem.get('invoked', -1)) > self.player.playbackTimeout):
+            self.player.onPlayBackError()
+        #chkstall — detect playback position stuck (SMB disconnect mid-play).
+        # If position hasn't advanced in 30s while playing, the stream is dead.
+        # _lastStallPos is bookkeeping maintained by the _onPlaying loop, which
+        # can starve 90s+ behind a hung executeJSONRPC — confirm against the
+        # live player before firing, else a healthy stream gets a false error
+        # and _onError clears playingItem, breaking the programme-end advance.
+        if (self.player.isPlaying() and self.player._lastStallTime > 0
+                and (time.time() - self.player._lastStallTime) > 30
+                and self.player._lastStallPos >= 0):
+            current = self.player.getPlayedTime()
+            if current != self.player._lastStallPos:
+                self.log(f"_onIdle, stall bookkeeping frozen at {self.player._lastStallPos}s but player at {current}s — resync", xbmc.LOGDEBUG)
+                self.player._lastStallPos   = current
+                self.player._lastStallTime  = time.time()
+            else:
+                self.log(f"_onIdle, stall detected: position stuck at {self.player._lastStallPos}s for 30s+ — triggering error", xbmc.LOGWARNING)
+                self.player._lastStallTime = time.time()  # reset to avoid repeated triggers
+                self.player.onPlayBackError()
         if self.player.isPlayingPseudoTV():
-            #chkerror
-            if self.player.pendingItem.get('invoked', -1) > 0 and not Globals.builtin.isBusyDialog():
-                if (time.time() - self.player.pendingItem.get('invoked', -1)) > self.player.playbackTimeout:
-                    self.player.onPlayBackError()
             #chksleep
             if self.player.sleepTime > 0 and (self.idleTime > (self.player.sleepTime * MIN_EPG_DURATION)):
                     if self.player._onSleep(): self.player.stop()
@@ -681,9 +726,8 @@ class Service(object):
         self.cursettings = Globals.settings.getCurrentSettings()
 
 
-    def __del__(self):
-        self._save()
-
+    # No __del__: the run loop exits via _stop() which calls self._save() BEFORE
+    # cache.shutdown() — a GC-time save would run after the DB is closed anyway.
 
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
@@ -701,6 +745,14 @@ class Service(object):
     def hasQueued(self) -> bool:
         """True if any background queue still has consumable items."""
         return any((self.postQue, self.jsonQue, self.logoQue, self.trailerQue))
+
+    def _cappedAdd(self, queue: set, item: Any) -> bool:
+        """Add to a queue set with MAX_QUEUE_SIZE cap. Returns True if added."""
+        if len(queue) >= MAX_QUEUE_SIZE:
+            self.log(f"_cappedAdd, queue full ({len(queue)}), dropping {type(item).__name__}", xbmc.LOGWARNING)
+            return False
+        queue.add(item)
+        return True
         
         
     def _save(self) -> bool:
@@ -799,6 +851,20 @@ class Service(object):
 
 
     def _start(self) -> bool:
+        # Clear stale HTTP lifecycle locks from the previous service instance:
+        # HTTP.run() sets them via raw setRunning (never trash-registered), and
+        # window properties survive an addon disable/enable - a leftover
+        # HTTP.start.Running=True makes run() silently skip binding the server
+        # for the rest of the session (port 50001 never came back up).
+        Globals.properties.clrEXTProperty(f'{ADDON_ID}.HTTP.start.Running')
+        Globals.properties.clrEXTProperty(f'{ADDON_ID}.HTTP.run.Running')
+        Globals.properties.clrEXTProperty(f'{ADDON_ID}.HTTP.pendingRestart')
+        # Heal-before-serve: autotune disabled while the live keys were empty
+        # (stale GC-write wipe / an unmigrated disable) — copy the recovery
+        # snapshots into the user key BEFORE the HTTP render and PVR load see it,
+        # otherwise the M3U/XMLTV stay at 0 channels for the whole session.
+        from channels import migrateAutotuneToUser
+        migrateAutotuneToUser(restart=False)
         self._que(self.tasks.chkHTTP, 1) # Start HTTP server immediately — no PVR dependency
         if not self.isClient: self._que(self.tasks._host, 1)
         self._wait() # Wait for PVR Backend to initialize.
@@ -827,6 +893,12 @@ class Service(object):
         if self._save():
             self.pool.shutdown(wait=False, cancel=True)
             self.cache.shutdown()
+            # Flush pending durable duration writes (buffered in the write batch)
+            # before the DB goes away - parsed durations are expensive to re-earn.
+            try:
+                from cache import getDurationCache
+                getDurationCache()._shutdown()
+            except Exception as e: self.log('_stop, duration cache shutdown failed: %s' % e, xbmc.LOGDEBUG)
         _Service().pool.shutdown(wait=False, cancel=True)
         # Module-level pool shutdown. DaemonThreadPoolExecutor ensures worker
         # threads are daemon, so they won't block interpreter exit.

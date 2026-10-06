@@ -338,8 +338,8 @@ class Tasks(object):
                 if tvshows is None: tvshows = self.jsonRPC.getTVshows()
                 if silent is None: silent = not Globals.settings.showDialog(silent)
                 self.log('chkTrailers, movies = %s, tvshows = %s, silent = %s'%(len(movies),len(tvshows), silent))
-                for mv in movies: self.service.trailerQue.add(FileAccess.dumpJSON(mv, sortkey=True))
-                for tv in tvshows: self.service.trailerQue.add(FileAccess.dumpJSON(tv, sortkey=True))
+                for mv in movies: self.service._cappedAdd(self.service.trailerQue, FileAccess.dumpJSON(mv, sortkey=True))
+                for tv in tvshows: self.service._cappedAdd(self.service.trailerQue, FileAccess.dumpJSON(tv, sortkey=True))
                 self.service._que(self.chkTrailers,5,259200)#3DAYS
 
 
@@ -698,6 +698,15 @@ class Tasks(object):
                 self.log("chkPVRRefresh, no action needed (in sync)", xbmc.LOGDEBUG)
 
 
+    def _migrateAutotuneAndRestart(self):
+        """Enable_Autotune changed (settings dialog): copy the autotuned set to the
+        user key first (recovery-aware, no-op when nothing to copy), then reload the
+        service like the old bare setPendingRestart action did."""
+        from channels import migrateAutotuneToUser
+        migrateAutotuneToUser(restart=False)
+        Globals.properties.setPendingRestart()
+
+
     def chkSettingsChange(self, old_settings: dict = {}) -> dict:
         """Check for settings changes and trigger appropriate actions.
 
@@ -710,9 +719,13 @@ class Tasks(object):
         for setting, old_value in list(old_settings.items()):
             new_value = new_settings.get(setting)
             actions = {'User_Folder'     :{'func':self.setUserPath ,'args':(old_value,new_value)},
-                       'Debug_Enable'    :{'func':self.chkDebugging,'args':(new_value,)},
+                       'Debug_Enable'    :{'func':self.chkDebugging,'args':()}, # NOT (new_value,): getCurrentSettings
+                                                                # returns 'true'/'false' STRINGS, both truthy to
+                                                                # `if disable:` -> enabling Debug force-disabled
+                                                                # itself seconds later. No-arg runs the intended
+                                                                # flow: Keep-prompt + toggleShowLog sync.
                        'TCP_PORT'        :{'func':Globals.properties.setPendingRestart},
-                       'Enable_Autotune' :{'func':Globals.properties.setPendingRestart}}  # just reload service; the autotune->user copy happens in the Manager on open
+                       'Enable_Autotune' :{'func':self._migrateAutotuneAndRestart}} # copy autotune->user (recovery-aware) THEN reload
                        
             if setting in actions and old_value != new_value:
                 action = actions.get(setting)
@@ -739,8 +752,8 @@ class Tasks(object):
                 trailer_batch = 1
             for i in list(range(BATCH_SIZE)):
                 if len(self.service.postQue) > 0:
+                    param = None
                     try:
-                        self.log(f"chkQUES postQue {len(self.service.postQue)}")
                         param = self.service.postQue.pop()
                         # Queued as (url, params_json, payload_json, header_json, timeout, file, life)
                         url, params, payload, header, timeout, file, life = param
@@ -750,12 +763,13 @@ class Tasks(object):
                         self.service._que(self.jsonRPC.requestURL,3,0,0,url,params,payload,header,timeout,file,life)
                     except Exception as e: self.log("chkQUES failed!, queuing = %s postQue: %s\n%s"%(len(self.service.postQue),param,e))
                 if len(self.service.jsonQue) > 0:
+                    param = None
                     try:
-                        self.log(f"chkQUES jsonQue {len(self.service.jsonQue)}")
                         param = FileAccess.loadJSON(self.service.jsonQue.pop(), skip_cache=True)
                         self.service._que(self.jsonRPC.sendJSON,4,0,0,param)
                     except Exception as e: self.log("chkQUES failed!, queuing = %s jsonQue: %s\n%s"%(len(self.service.jsonQue),param,e))
                 if len(self.service.logoQue) > 0:
+                    param = None
                     try:
                         if library is None: library = Library()
                         self.log(f"chkQUES logoQue {len(self.service.logoQue)}")
@@ -763,6 +777,7 @@ class Tasks(object):
                         self.service._que(library.resources.getLogo,5,0,0,*({'name':param},library.resources.getImageCache(param),True))
                     except Exception as e: self.log("chkQUES failed!, queuing = %s logoQue: %s\n%s"%(len(self.service.logoQue),param,e))
                 if len(self.service.trailerQue) > 0:
+                    param = None
                     try:
                         self.log(f"chkQUES trailerQue {len(self.service.trailerQue)}")
                         for _ in range(trailer_batch):

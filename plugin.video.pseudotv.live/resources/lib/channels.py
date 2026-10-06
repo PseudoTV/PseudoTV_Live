@@ -57,13 +57,10 @@ class Channels(object):
             if self.writable: self._save()
         except Exception as e: self.log("__exit__ save failed: %s" % e, xbmc.LOGDEBUG)
             
-            
-    def __del__(self):
-        try:
-            if getattr(self, 'writable', False): self._save()
-            self.log('__del__, writable = %s' % (getattr(self, 'writable', False)))
-        except Exception as e: 
-            self.log("__del__ save failed: %s" % e, xbmc.LOGDEBUG)
+    # No __del__ save: GC may collect a STALE instance (loaded before another
+    # process committed newer data) and its deferred save would clobber the
+    # fresher row — that exact race wiped the autotune/user channel keys.
+    # Every mutator persists explicitly (setChannels/setImportPlugins/_save).
         
         
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
@@ -195,7 +192,42 @@ class Channels(object):
         with FileAccess.stream(MANAGERPATH, "r") as fle:
             html_content = fle.read()
         html_content = html_content.replace("{{ channel_limit }}", str(CHANNEL_LIMIT))
-        html_content = html_content.replace("{{ media_loc }}"    , MEDIA_LOC)
-        html_content = html_content.replace("{{ remote_host }}"  , Globals.properties.getRemoteHost())
+        html_content = html_content.replace("{{ media_loc }}",    MEDIA_LOC)
+        html_content = html_content.replace("{{ remote_host }}",  Globals.properties.getRemoteHost())
         return html_content.encode(encoding=DEFAULT_ENCODING)
+
+
+def migrateAutotuneToUser(restart: bool = True) -> bool:
+    """When autotune is disabled, copy the last known autotuned channel set into
+    the user key so disabling never leaves an empty manager/M3U/PVR.
+
+    Sources, in order:
+      1. the live autotune key,
+      2. the has.Channels property snapshot, keyed by the (versioned) autotune key,
+      3. the Channels.Changed backup row (last saveChanges snapshot).
+    (2) and (3) exist because a stale GC-time save used to zero the live key —
+    both keys were found emptied while the snapshots still held the channels.
+
+    Guards: never migrates while Enable_Autotune is on; never clobbers a
+    non-empty user key. Returns True when channels were copied.
+    """
+    try:
+        if Globals.settings.getSettingBool('Enable_Autotune'): return False
+        if Channels(CHANNEL_KEY_USER).getChannels():           return False # user already has channels - never clobber
+        auto = Channels(CHANNEL_KEY_AUTOTUNE)
+        src  = auto.getChannels()
+        if not src:
+            snap = Globals.settings.getCacheSetting('%s.has.Channels' % (ADDON_ID), default={}) or {}
+            src  = (snap.get(auto.channelKEY) or {}).get('channels') or []
+        if not src:
+            src = (Globals.settings.getCacheSetting(CHANNEL_KEY_CHANGED, FileAccess._getMD5(CHANNEL_KEY_CHANGED)) or {}).get('channels') or []
+        if not src: return False
+        Channels(CHANNEL_KEY_USER, writable=True).setChannels(src)
+        Globals.properties.setBackup(CHANNEL_KEY_USER, src)
+        if restart: Globals.properties.setPendingRestart()
+        LOG('migrateAutotuneToUser, copied %d channels to user config%s' % (len(src), ' + pending restart' if restart else ''), xbmc.LOGINFO)
+        return True
+    except Exception as e:
+        LOG('migrateAutotuneToUser failed: %s' % e, xbmc.LOGWARNING)
+        return False
         
