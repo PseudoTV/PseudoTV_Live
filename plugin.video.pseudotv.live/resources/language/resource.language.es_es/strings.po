@@ -1371,3 +1371,59 @@ msgstr "Modelo contextual"
 msgctxt "#30029"
 msgid "Bumper Resources"
 msgstr "Recursos de cabeceras"
+
+msgctxt "#32239"
+msgid "Clear"
+msgstr "Borrar"
+
+msgctxt "#33267"
+msgid "Leave debug logging on after restart.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: OFF except while collecting logs."
+msgstr "Dejar el registro de depuración activo después de reiniciar.\n[B]Predeterminado:[/B] [B][COLOR=white]DESACTIVADO[/COLOR][/B] - recomendado: DESACTIVADO salvo al recopilar registros."
+
+msgctxt "#34063"
+msgid "Playlist URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Used by IPTV Simple."
+msgstr "URL de la lista reproducida servida por esta instancia.\n[B]Predeterminado:[/B] [B][COLOR=white]Generada al iniciar[/COLOR][/B]\n[B]Consejo:[/B] La usa IPTV Simple."
+
+msgctxt "#32097"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi is in Windowed Display! It's recommended you switch to Fullscreen. Current Resolution ({resolution})"
+msgstr "[COLOR=yellow][B]Aviso!! [/B][/COLOR]Kodi está en modo ventana. Se recomienda cambiar a pantalla completa. Resolución actual ({resolution})"
+
+msgctxt "#34056"
+msgid "AI model used for contextual logo generation.\n[B]Default:[/B] [B][COLOR=white]gemma 4 (free)[/COLOR][/B]."
+msgstr "Modelo de IA utilizado para la generación contextual de logotipos.\n[B]Predeterminado:[/B] [B][COLOR=white]gemma 4 (gratuito)[/COLOR][/B]."
+
+msgctxt "#32130"
+msgid "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled. It's recommended you re-enable when finished debugging."
+msgstr "[COLOR=red][B]Advertencia!! [/B][/COLOR]Caché de archivos desactivada. Se recomienda volver a activarla cuando termine la depuración."
+
+msgctxt "#34065"
+msgid "Genre mapping URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Enables EPG colors."
+msgstr "URL de asignación de géneros servida por esta instancia.\n[B]Predeterminado:[/B] [B][COLOR=white]Generada al iniciar[/COLOR][/B]\n[B]Consejo:[/B] Activa los colores de la guía."
+
+msgctxt "#30011"
+msgid "[COLOR=orange][B]Important:[/B][/COLOR] Flash/SSD users should change the cache path to an HDD or RAM disk."
+msgstr "[COLOR=orange][B]Importante:[/B][/COLOR] Los usuarios con disco Flash/SSD deben cambiar la ruta de la caché a un disco HDD o a un disco RAM."
+
+msgctxt "#32098"
+msgid "Validating"
+msgstr "Validando"
+
+msgctxt "#32132"
+msgid "Default device name [B]{name}[/B] detected! Please change your instance name to something unique this will assure proper multi-room functionality."
+msgstr "¡Se ha detectado el nombre de dispositivo predeterminado [B]{name}[/B]! Cambie el nombre de su instancia por uno único; esto asegurará el correcto funcionamiento en varias habitaciones."
+
+msgctxt "#34064"
+msgid "Guide URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Used by IPTV Simple."
+msgstr "URL de la guía servida por esta instancia.\n[B]Predeterminado:[/B] [B][COLOR=white]Generada al iniciar[/COLOR][/B]\n[B]Consejo:[/B] La usa IPTV Simple."
+
+msgctxt "#32131"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi's Webserver is disabled. It's recommended you enable."
+msgstr "[COLOR=yellow][B]Aviso!! [/B][/COLOR]El servidor web de Kodi está desactivado. Se recomienda activarlo."
+
+msgctxt "#34055"
+msgid "Key for OpenRouter AI services.\n[B]Default:[/B] [B][COLOR=white]None (required for AI)[/COLOR][/B]\n[B]Tip:[/B] Get one at openrouter.ai."
+msgstr "Clave para los servicios de IA de OpenRouter.\n[B]Predeterminado:[/B] [B][COLOR=white]Ninguna (necesaria para la IA)[/COLOR][/B]\n[B]Consejo:[/B] Obténgala en openrouter.ai."
+
+msgctxt "#32238"
+msgid "Autotuned Channels must be disabled in settings."
+msgstr "Los canales autoajustados deben desactivarse en la configuración."

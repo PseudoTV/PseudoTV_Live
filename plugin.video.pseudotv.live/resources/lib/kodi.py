@@ -242,7 +242,11 @@ class Settings(object):
                             return isEnabled
                     self.dialog.builtin.executebuiltin(f'EnableAddon({id})',wait=True)
                 elif notify: self.dialog.notificationDialog(LANGUAGE(32264).format(name=id))
-            elif install: self.dialog.builtin.executebuiltin(f'InstallAddon({id})',wait=True)
+            elif install:
+                # ponytail: wait=False - a blocking InstallAddon wedged the builtin
+                # lock, CustomQueue and HTTP for ~95min when no repo could satisfy a
+                # binary addon; callers already tolerate the False re-check below.
+                self.dialog.builtin.executebuiltin(f'InstallAddon({id})',wait=False)
             elif notify:  self.dialog.notificationDialog(LANGUAGE(32034).format(name=id))
             return self.dialog.builtin.getInfoBool(f'System.HasAddon({id})')
         

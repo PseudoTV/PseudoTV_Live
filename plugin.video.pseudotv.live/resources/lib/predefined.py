@@ -36,7 +36,7 @@ class Predefined(object):
     @staticmethod
     def createMixedRecent() -> list:
         param = Predefined.getTemplete()
-        tv = param.copy()
+        tv = Predefined.getTemplete() # fresh template - param.copy() shares the order dict
         tv["order"]["method"] = "episode"
         return ['videodb://recentlyaddedepisodes/?xsp=%s'%(FileAccess.dumpJSON(tv)),
                 'videodb://recentlyaddedmovies/?xsp=%s'%(FileAccess.dumpJSON(param))]

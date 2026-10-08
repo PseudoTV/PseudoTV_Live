@@ -105,6 +105,11 @@ RENDER_STALE_SECS = 60
 # every core and hanging Kodi's UI on weak SoC boxes. Renders hold the lock so
 # only one runs at a time; the rest block and reuse its output.
 _RENDER_LOCK = RLock()
+# Bounded wait: a holder stuck past this is a bug (seen once as the
+# guide-expired hasProgrammes loop). Render unlocked rather than blacking
+# out pvr.iptvsimple forever — a duplicate render costs CPU, no response
+# costs the lineup.
+RENDER_LOCK_TIMEOUT = 30
 
 
 def m3u_render_signature() -> tuple:
@@ -230,7 +235,10 @@ def renderFilteredM3U(channels: list, runActions, compress: bool = False) -> byt
     cached = _cached_bytes(_M3U_RENDER_CACHE, sig, compress)
     if cached is not None:
         return cached
-    with _RENDER_LOCK:
+    locked = _RENDER_LOCK.acquire(timeout=RENDER_LOCK_TIMEOUT)
+    if not locked:
+        LOG('renderFilteredM3U, render lock busy >%ss, rendering unlocked' % RENDER_LOCK_TIMEOUT, xbmc.LOGERROR)
+    try:
         # Another request rendered while we waited on the lock — reuse it.
         cached = _cached_bytes(_M3U_RENDER_CACHE, sig, compress)
         if cached is not None:
@@ -263,6 +271,8 @@ def renderFilteredM3U(channels: list, runActions, compress: bool = False) -> byt
         # combined-over-budget stashes.
         _storeRender(_M3U_RENDER_CACHE, sig, data, 'renderFilteredM3U')
         return _cached_bytes(_M3U_RENDER_CACHE, sig, compress)
+    finally:
+        if locked: _RENDER_LOCK.release()
 
 
 def renderFilteredXMLTV(channels: list, runActions, compress: bool = False) -> bytes:
@@ -279,7 +289,10 @@ def renderFilteredXMLTV(channels: list, runActions, compress: bool = False) -> b
     cached = _cached_bytes(_XMLTV_RENDER_CACHE, sig, compress)
     if cached is not None:
         return cached
-    with _RENDER_LOCK:
+    locked = _RENDER_LOCK.acquire(timeout=RENDER_LOCK_TIMEOUT)
+    if not locked:
+        LOG('renderFilteredXMLTV, render lock busy >%ss, rendering unlocked' % RENDER_LOCK_TIMEOUT, xbmc.LOGERROR)
+    try:
         # Another request rendered while we waited on the lock — reuse it.
         cached = _cached_bytes(_XMLTV_RENDER_CACHE, sig, compress)
         if cached is not None:
@@ -311,6 +324,8 @@ def renderFilteredXMLTV(channels: list, runActions, compress: bool = False) -> b
         # don't cache implausibly large / empty renders (shared render budget cap)
         _storeRender(_XMLTV_RENDER_CACHE, sig, data, 'renderFilteredXMLTV')
         return _cached_bytes(_XMLTV_RENDER_CACHE, sig, compress)
+    finally:
+        if locked: _RENDER_LOCK.release()
 
 
 def getFilteredGenres() -> bytes:
@@ -1045,14 +1060,18 @@ class XMLTVS(object):
 
     def hasProgrammes(self, channels: list=None, programmes: list=None, now: Optional[str] = None) -> Generator:
         if channels is None:   channels   = []
-        if programmes is None: programmes = []
         if not channels:   channels   = self.getChannels()
         if not now: now = Globals._epochTime(Globals._roundTimeDown(Globals._getGMTstamp(),offset=60),tz=False).strftime(DTFORMAT)
         # Phase 2: prefer the indexed table; fall back to a single-pass scan.
         max_stops = self._db_max_stops()
         if max_stops is None:
+            # None = caller didn't supply programmes -> fetch; an explicit [] is
+            # authoritative (cleanProgrammes expired everything). Fetching on []
+            # re-entered getProgrammes->_clean->cleanStations->here and looped
+            # forever while holding the render lock once the guide aged out.
+            if programmes is None: programmes = self.getProgrammes()
             max_stops = {}
-            for program in (programmes or self.getProgrammes()):
+            for program in programmes:
                 if self._isPlaceholder(program): continue
                 ch_id = program.get('channel')
                 if ch_id is None: continue

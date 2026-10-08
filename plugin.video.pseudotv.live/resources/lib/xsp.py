@@ -89,6 +89,17 @@ class XSP(object):
             except Exception:
                 param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":f"{operator}","value":[Globals._quoteString(tvshow)]})
             return param
+        def _parseOrder(dom) -> dict:
+            # ponytail: shared <order> reader for both playlist types; empty attrs
+            # are dropped so callers fall back to their own defaults.
+            sort = {}
+            try:    order = dom.getElementsByTagName("order")[0]
+            except Exception: return sort # no <order> element
+            try:    sort.update({'order':order.getAttribute("direction")})
+            except Exception as e: self.log('parseXSP order direction failed: %s' % e, xbmc.LOGDEBUG)
+            try:    sort.update({'method':order.firstChild.data})
+            except Exception as e: self.log('parseXSP order method failed: %s' % e, xbmc.LOGDEBUG)
+            return {k:v for k,v in sort.items() if v}
         if incExtras is None:
             incExtras = Globals.settings.getSettingBool('Enable_Extras')
         try: 
@@ -101,13 +112,7 @@ class XSP(object):
             if type.lower() in map(str.lower,MUSIC_TYPES): return []
             else:
                 if type.lower() == "tvshows":
-                    sort  = {}
-                    order = dom.getElementsByTagName("order")
-                    if order: 
-                        try: sort.update({'order':order[0].getAttribute("direction")})
-                        except Exception as e: self.log('parseXSP order direction failed: %s' % e, xbmc.LOGDEBUG)
-                        try: sort.update({'method':order[0].firstChild.data})
-                        except Exception as e: self.log('parseXSP order method failed: %s' % e, xbmc.LOGDEBUG)
+                    sort = _parseOrder(dom)
 
                     paths = []
                     for rule in dom.getElementsByTagName("rule"):
@@ -147,8 +152,9 @@ class XSP(object):
                         rules["and"].extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
                                              {"field":"episode","operator":"greaterthan","value":"0"}])
 
+                    sort = _parseOrder(dom)
                     params = {"type":"episodes","rules":rules,
-                              "order":{"direction":"ascending","method":"episode","ignorearticle":True,"useartistsortname":True}}
+                              "order":{"direction":sort.get('order','ascending'),"method":sort.get('method','episode'),"ignorearticle":True,"useartistsortname":True}}
                     out = 'videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(FileAccess.dumpJSON(params))
                     self.log("[%s] parseXSP [%s], type = episodes -> %s"%(id,file,out))
                     return [out]

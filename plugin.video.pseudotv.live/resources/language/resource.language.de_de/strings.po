@@ -1371,3 +1371,59 @@ msgstr "TV-Serien in Blöcken gruppieren"
 msgctxt "#33153"
 msgid "Offer to restart when progress passes this percent.\n[B]Default:[/B] [B][COLOR=white]55%[/COLOR][/B] - 0 disables."
 msgstr "Neustart anbieten, wenn der Fortschritt diesen Prozentsatz überschreitet.\n[B]Standard:[/B] [B][COLOR=white]55%[/COLOR][/B] - 0 deaktiviert."
+
+msgctxt "#32239"
+msgid "Clear"
+msgstr "Löschen"
+
+msgctxt "#33267"
+msgid "Leave debug logging on after restart.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: OFF except while collecting logs."
+msgstr "Debug-Protokollierung nach dem Neustart aktiviert lassen.\n[B]Standard:[/B] [B][COLOR=white]AUS[/COLOR][/B] - Empfohlen: AUS, außer beim Sammeln von Protokollen."
+
+msgctxt "#34063"
+msgid "Playlist URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Used by IPTV Simple."
+msgstr "Playlist-URL, die von dieser Instanz bereitgestellt wird.\n[B]Standard:[/B] [B][COLOR=white]Beim Start generiert[/COLOR][/B]\n[B]Tipp:[/B] Wird von IPTV Simple verwendet."
+
+msgctxt "#32097"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi is in Windowed Display! It's recommended you switch to Fullscreen. Current Resolution ({resolution})"
+msgstr "[COLOR=yellow][B]Hinweis!! [/B][/COLOR]Kodi befindet sich im Fenstermodus! Es wird empfohlen, auf Vollbild umzuschalten. Aktuelle Auflösung ({resolution})"
+
+msgctxt "#34056"
+msgid "AI model used for contextual logo generation.\n[B]Default:[/B] [B][COLOR=white]gemma 4 (free)[/COLOR][/B]."
+msgstr "KI-Modell für die kontextbasierte Logo-Generierung.\n[B]Standard:[/B] [B][COLOR=white]gemma 4 (kostenlos)[/COLOR][/B]."
+
+msgctxt "#32130"
+msgid "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled. It's recommended you re-enable when finished debugging."
+msgstr "[COLOR=red][B]Warnung!! [/B][/COLOR]Datei-Caching deaktiviert. Es wird empfohlen, es nach dem Debuggen wieder zu aktivieren."
+
+msgctxt "#34065"
+msgid "Genre mapping URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Enables EPG colors."
+msgstr "Genre-Zuordnungs-URL, die von dieser Instanz bereitgestellt wird.\n[B]Standard:[/B] [B][COLOR=white]Beim Start generiert[/COLOR][/B]\n[B]Tipp:[/B] Ermöglicht EPG-Farben."
+
+msgctxt "#30011"
+msgid "[COLOR=orange][B]Important:[/B][/COLOR] Flash/SSD users should change the cache path to an HDD or RAM disk."
+msgstr "[COLOR=orange][B]Wichtig:[/B][/COLOR] Nutzer mit Flash/SSD sollten den Cache-Pfad auf eine HDD oder RAM-Disk ändern."
+
+msgctxt "#32098"
+msgid "Validating"
+msgstr "Wird validiert"
+
+msgctxt "#32132"
+msgid "Default device name [B]{name}[/B] detected! Please change your instance name to something unique this will assure proper multi-room functionality."
+msgstr "Standard-Gerätename [B]{name}[/B] erkannt! Bitte ändern Sie Ihren Instanznamen in etwas Einzigartiges, um eine korrekte Mehrzimmer-Funktionalität zu gewährleisten."
+
+msgctxt "#34064"
+msgid "Guide URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Used by IPTV Simple."
+msgstr "Guide-URL, die von dieser Instanz bereitgestellt wird.\n[B]Standard:[/B] [B][COLOR=white]Beim Start generiert[/COLOR][/B]\n[B]Tipp:[/B] Wird von IPTV Simple verwendet."
+
+msgctxt "#32131"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi's Webserver is disabled. It's recommended you enable."
+msgstr "[COLOR=yellow][B]Hinweis!! [/B][/COLOR]Kodis Webserver ist deaktiviert. Es wird empfohlen, ihn zu aktivieren."
+
+msgctxt "#34055"
+msgid "Key for OpenRouter AI services.\n[B]Default:[/B] [B][COLOR=white]None (required for AI)[/COLOR][/B]\n[B]Tip:[/B] Get one at openrouter.ai."
+msgstr "Schlüssel für OpenRouter-KI-Dienste.\n[B]Standard:[/B] [B][COLOR=white]Keiner (für KI erforderlich)[/COLOR][/B]\n[B]Tipp:[/B] Unter openrouter.ai erhalten."
+
+msgctxt "#32238"
+msgid "Autotuned Channels must be disabled in settings."
+msgstr "Automatisch abgestimmte Kanäle müssen in den Einstellungen deaktiviert werden."

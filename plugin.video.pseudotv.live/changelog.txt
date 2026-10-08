@@ -14,6 +14,9 @@ v.0.8.0+nightly
 - Fixed Build state no longer stuck "running" after a channel build exception, restoring throttle and webpoint status
 - Optimized Shared probe pool across Builder instances prevents thread stacking on rapid re-queues
 - Tweaked Miscellaneous improvements and tweaks.
+- Added Durable durations.db store so parsed durations survive cache wipes, with one-time migration from legacy cache.db rows
+- Fixed Cache purge and WAL checkpoint now actually run (invalid PRAGMA and reset purge marker), preventing unbounded cache.db growth
+- Tweaked Miscellaneous improvements and tweaks.
 v.0.7.9+nightly
 - Improved build logging with timestamped output and file persistence
 - Enhanced OpenCode integration with automatic PATH detection and timeout handling

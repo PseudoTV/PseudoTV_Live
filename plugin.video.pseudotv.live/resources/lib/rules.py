@@ -1463,12 +1463,14 @@ class HandleMethodOrder(BaseRule):
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, builder: Any) -> Any:
         if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedValues[0] = builder.sort
+            # snapshot, never alias: builder.sort is shared across channels,
+            # an in-place update would leak this override into every later build.
+            self.storedValues[0] = dict(builder.sort)
             builder.sort.update({"method":self.optionValues[0],"order":self.optionValues[1],"ignorearticle":self.optionValues[2],"useartistsortname":self.optionValues[3]})
             self.log("runAction, setting sort to %s"%(builder.sort))
 
         elif actionid == RULES_ACTION_CHANNEL_STOP:
-            builder.sort = self.storedValues[0]
+            builder.sort = dict(self.storedValues[0])
             self.log("runAction, restoring sort to %s"%(builder.sort))
 
         return parameter
@@ -1656,13 +1658,13 @@ class ForceRandom(BaseRule):
     def runAction(self, actionid: str, citem: dict, fileList: Any, builder: Any) -> Any:
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
             self.updateProgress(builder, LANGUAGE(32349))
-            self.storedValues[0] = builder.sort
+            self.storedValues[0] = dict(builder.sort) # copy, not alias - see rule 505
             builder.sort.update({"method":"random"})
             self.log("runAction, setting sort to %s"%(builder.sort))
 
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
             self.updateProgress(builder, LANGUAGE(32350))
-            builder.sort = self.storedValues[0]
+            builder.sort = dict(self.storedValues[0])
             self.log("runAction, restoring sort and forcing random shuffle of %s items"%(len(fileList)))
             return Globals._randomShuffle(fileList)
         return fileList

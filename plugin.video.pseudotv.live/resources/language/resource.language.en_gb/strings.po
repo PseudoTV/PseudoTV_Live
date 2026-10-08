@@ -63,7 +63,7 @@ msgid "Options"
 msgstr ""
 
 msgctxt "#30011"
-msgid "[COLOR=orange][B]Notice!! [/B]It's Recommend Flash/SSD users change path to a HDD or PMem.[/COLOR]"
+msgid "[COLOR=orange][B]Important:[/B][/COLOR] Flash/SSD users should change the cache path to an HDD or RAM disk."
 msgstr ""
 
 msgctxt "#30012"
@@ -1388,7 +1388,7 @@ msgid "Position Changed, Do you want to save?"
 msgstr ""
 
 msgctxt "#32097"
-msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi is in Windowed Display! It's recommend you switch to Fullscreen. Current Resolution ({resolution})"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi is in Windowed Display! It's recommended you switch to Fullscreen. Current Resolution ({resolution})"
 msgstr ""
 
 msgctxt "#32098"
@@ -1516,11 +1516,11 @@ msgid "{name} is busy, Try again later..."
 msgstr ""
 
 msgctxt "#32130"
-msgid "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled It's recommended you re-enable when finished debugging"
+msgid "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled. It's recommended you re-enable when finished debugging."
 msgstr ""
 
 msgctxt "#32131"
-msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi's Webserver is disabled. It's recommend you enable."
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi's Webserver is disabled. It's recommended you enable."
 msgstr ""
 
 msgctxt "#32132"
@@ -1941,7 +1941,7 @@ msgid "Waiting for Background Service to idle..."
 msgstr ""
 
 msgctxt "#32238"
-msgid "Autotuned Channels must be  disabled in settings."
+msgid "Autotuned Channels must be disabled in settings."
 msgstr ""
 
 msgctxt "#32239"
@@ -2122,7 +2122,7 @@ msgid "AutoTune from Recommended (Supported) services installed on Kodi and supp
 msgstr ""
 
 msgctxt "#33015"
-msgid "Items requested per library scan call.\n[B]Default:[/B] [B][COLOR=white]25[/COLOR][/B] - 0 = unlimited."
+msgid "Items requested per library scan call.\n[B]Default:[/B] [B][COLOR=white]25[/COLOR][/B] - 0 = unlimited; recommended: keep 25 on low-power devices."
 msgstr ""
 
 msgctxt "#33016"
@@ -2198,7 +2198,7 @@ msgid "Choose which discovered servers to use.\n[B]Default:[/B] [B][COLOR=white]
 msgstr ""
 
 msgctxt "#33049"
-msgid "Where runtime comes from.\n[B]Kodi metadata:[/B] faster. [B]File metadata:[/B] precise but slower."
+msgid "Where runtime comes from.\n[B]Default:[/B] [B][COLOR=white]Kodi metadata[/COLOR][/B] - faster; [B]File metadata:[/B] precise but slower."
 msgstr ""
 
 msgctxt "#33050"
@@ -2210,15 +2210,15 @@ msgid "Write file-parsed runtimes to Kodi's database.\n[B]Default:[/B] [B][COLOR
 msgstr ""
 
 msgctxt "#33053"
-msgid "Include Season 00 and movie extras.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgid "Include Season 00 and movie extras.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: OFF so specials don't pad the guide."
 msgstr ""
 
 msgctxt "#33054"
-msgid "Include .strm stream files in channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgid "Include .strm stream files in channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: OFF unless you rely on .strm links."
 msgstr ""
 
 msgctxt "#33055"
-msgid "Include 3D content when building channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgid "Include 3D content when building channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: OFF unless you have 3D content."
 msgstr ""
 
 msgctxt "#33056"
@@ -2226,7 +2226,7 @@ msgid "Insert bumpers, ratings, adverts, and trailers between programs.\n[B]Defa
 msgstr ""
 
 msgctxt "#33058"
-msgid "How channels are sent to the player.\n[B]PVR Callback:[/B] plays via PVR. [B]Playlist:[/B] queues a playlist."
+msgid "How channels are sent to the player.\n[B]Default:[/B] [B][COLOR=white]PVR Callback[/COLOR][/B] - plays via PVR; [B]Playlist:[/B] queues a playlist instead."
 msgstr ""
 
 msgctxt "#33061"
@@ -2242,7 +2242,7 @@ msgid "Group guide entries by category in the XMLTV output.\n[B]Default:[/B] [B]
 msgstr ""
 
 msgctxt "#33065"
-msgid "Path to a YouTube cookies.txt exported from a logged-in browser session (Netscape format).\n[B]Tip:[/B] A valid session cookie avoids yt-dlp bot checks so durations resolve."
+msgid "Path to a YouTube cookies.txt exported from a logged-in browser session (Netscape format).\n[B]Default:[/B] [B][COLOR=white]profile www.youtube.com_cookies.txt[/COLOR][/B]\n[B]Tip:[/B] A valid session cookie avoids yt-dlp bot checks so durations resolve."
 msgstr ""
 
 msgctxt "#33064"
@@ -2250,7 +2250,7 @@ msgid "Enter custom guide data categories for use in the channel manager."
 msgstr ""
 
 msgctxt "#33068"
-msgid "Advance seasonal holiday channels to the nearest upcoming holiday.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgid "Advance seasonal holiday channels to the nearest upcoming holiday.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - recommended: ON so holiday channels stay current."
 msgstr ""
 
 msgctxt "#33070"
@@ -2266,7 +2266,7 @@ msgid "Allow PseudoTV to adjust Kodi settings.\n[B]Default:[/B] [B][COLOR=white]
 msgstr ""
 
 msgctxt "#33078"
-msgid "Stop playback after the system is idle for this long.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - 0 disables."
+msgid "Stop playback after the system is idle for this long.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - 0 disables; recommended: leave OFF unless you schedule automated stops."
 msgstr ""
 
 
@@ -2291,7 +2291,7 @@ msgid "Configure multiroom settings to share channels across network."
 msgstr ""
 
 msgctxt "#33098"
-msgid "Port for the HTTP server.\n[B]Default:[/B] [B][COLOR=white]50001[/COLOR][/B] - change only if in use."
+msgid "Port for the HTTP server.\n[B]Default:[/B] [B][COLOR=white]50001[/COLOR][/B] - recommended: keep 50001 unless the port is in use."
 msgstr ""
 
 msgctxt "#33100"
@@ -2303,7 +2303,7 @@ msgid "AutoTune from SmartPlaylists from Kodi."
 msgstr ""
 
 msgctxt "#33105"
-msgid "Scan for addons that can provide channel content.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgid "Scan for addons that can provide channel content.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - recommended: ON so AutoTune can discover plugin sources."
 msgstr ""
 
 msgctxt "#33108"
@@ -2315,7 +2315,7 @@ msgid "Save your channels and rules as a backup file.\n[B]Tip:[/B] Keep a copy b
 msgstr ""
 
 msgctxt "#33111"
-msgid "Seconds between Kodi API calls.\n[B]Default:[/B] [B][COLOR=white]2[/COLOR][/B] - higher = more stable, slower."
+msgid "Seconds between Kodi API calls.\n[B]Default:[/B] [B][COLOR=white]2[/COLOR][/B] - higher = more stable, slower; recommended: keep 2 unless API errors appear."
 msgstr ""
 
 msgctxt "#33112"
@@ -2335,7 +2335,7 @@ msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33121"
-msgid "Group episodes in blocks for even scheduling.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgid "Group episodes in blocks for even scheduling.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: ON for balanced show rotation."
 msgstr ""
 
 msgctxt "#33125"
@@ -2355,11 +2355,11 @@ msgid ""
 msgstr ""
 
 msgctxt "#33131"
-msgid "Don't send PseudoTV playback to Trakt.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - scrobbling active."
+msgid "Don't send PseudoTV playback to Trakt.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - scrobbling active; recommended: leave OFF."
 msgstr ""
 
 msgctxt "#33132"
-msgid "Restore playcount and resume point when playback ends.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgid "Restore playcount and resume point when playback ends.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - recommended: ON so PseudoTV playback never alters library playcounts."
 msgstr ""
 
 msgctxt "#33137"
@@ -2375,7 +2375,7 @@ msgid "Chance a random video is used when none matches.\n[B]Default:[/B] [B][COL
 msgstr ""
 
 msgctxt "#33140"
-msgid "Create per-channel filler folders under the cache folder.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgid "Create per-channel filler folders under the cache folder.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: leave OFF unless you use per-channel filler folders."
 msgstr ""
 
 msgctxt "#33149"
@@ -2451,7 +2451,7 @@ msgid "Build Filler Template folders based on your channels."
 msgstr ""
 
 msgctxt "#33181"
-msgid "Prefer episode order over playlist sorting.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgid "Prefer episode order over playlist sorting.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - recommended: ON for episodic channels; OFF to keep playlist order."
 msgstr ""
 
 msgctxt "#33182"
@@ -2475,7 +2475,7 @@ msgid "Vignette Non-Linear Stretch"
 msgstr ""
 
 msgctxt "#33198"
-msgid "Speeds up builds and menu loading by running several tasks at once. Uses more CPU and memory.\nEnable on desktop PCs with 4+ cores and plenty of RAM. Keep off on low-power devices (Shield, Fire Stick, SoC boxes) - it can cause lockups and crashes there. [B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgid "Speeds up builds and menu loading by running several tasks at once. Uses more CPU and memory.\nEnable on desktop PCs with 4+ cores and plenty of RAM. Keep off on low-power devices (Shield, Fire Stick, SoC boxes) - it can cause lockups and crashes there. [B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: OFF on low-power devices, ON on desktop PCs with 4+ cores."
 msgstr ""
 
 msgctxt "#33201"
@@ -2495,11 +2495,11 @@ msgid "Show popup notifications while media plays.\n[B]Default:[/B] [B][COLOR=wh
 msgstr ""
 
 msgctxt "#33213"
-msgid "Run this instance as a client with no local channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgid "Run this instance as a client with no local channels.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: ON only on dedicated client boxes."
 msgstr ""
 
 msgctxt "#33214"
-msgid "Rebuild channels when a playlist file changes.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgid "Rebuild channels when a playlist file changes.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - recommended: ON so playlist edits rebuild automatically."
 msgstr ""
 
 msgctxt "#33219"
@@ -2507,7 +2507,7 @@ msgid "[COLOR=red][B]Warning:[/B][/COLOR] AI features may incur API costs.\n[B]D
 msgstr ""
 
 msgctxt "#33220"
-msgid "Describes how you want your generated logos to look - style, colors, and mood. These attributes shape each logo the AI creates.\n[B]Tip:[/B] The channel name, theme, and rendering format are handled automatically, so just describe the look you want."
+msgid "Describes how you want your generated logos to look - style, colors, and mood. These attributes shape each logo the AI creates.\n[B]Default:[/B] [B][COLOR=white]Built-in clearlogo prompt[/COLOR][/B]\n[B]Tip:[/B] The channel name, theme, and rendering format are handled automatically, so just describe the look you want."
 msgstr ""
 
 msgctxt "#33222"
@@ -2519,7 +2519,7 @@ msgid "Subfolder levels to scan.\n[B]Default:[/B] [B][COLOR=white]1[/COLOR][/B] 
 msgstr ""
 
 msgctxt "#33225"
-msgid "Parse additional media metadata during builds.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgid "Parse additional media metadata during builds.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: OFF; enable only when runtimes are missing."
 msgstr ""
 
 msgctxt "#33226"
@@ -2558,7 +2558,7 @@ msgid "Install Log Uploader."
 msgstr ""
 
 msgctxt "#34050"
-msgid "Add discovered instances without asking.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B]"
+msgid "Add discovered instances without asking.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - recommended: leave ON on trusted networks."
 msgstr ""
 
 msgctxt "#34051"
@@ -2578,7 +2578,7 @@ msgid "Addons providing trailer videos.\n[B]Default:[/B] [B][COLOR=white]None[/C
 msgstr ""
 
 msgctxt "#34055"
-msgid "Key for OpenRouter AI services.\n[B]Tip:[/B] Get one at openrouter.ai."
+msgid "Key for OpenRouter AI services.\n[B]Default:[/B] [B][COLOR=white]None (required for AI)[/COLOR][/B]\n[B]Tip:[/B] Get one at openrouter.ai."
 msgstr ""
 
 msgctxt "#34056"
@@ -2610,15 +2610,15 @@ msgid "Name shown for this instance on the network.\n[B]Default:[/B] [B][COLOR=w
 msgstr ""
 
 msgctxt "#34063"
-msgid "Playlist URL served by this instance.\n[B]Tip:[/B] Used by IPTV Simple."
+msgid "Playlist URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Used by IPTV Simple."
 msgstr ""
 
 msgctxt "#34064"
-msgid "Guide URL served by this instance.\n[B]Tip:[/B] Used by IPTV Simple."
+msgid "Guide URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Used by IPTV Simple."
 msgstr ""
 
 msgctxt "#34065"
-msgid "Genre mapping URL served by this instance.\n[B]Tip:[/B] Enables EPG colors."
+msgid "Genre mapping URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Enables EPG colors."
 msgstr ""
 
 msgctxt "#34066"
@@ -3108,5 +3108,5 @@ msgid "Image generation failed - the API returned no usable image. Check the API
 msgstr ""
 
 msgctxt "#33267"
-msgid "Leave debug logging on after restart.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B]"
+msgid "Leave debug logging on after restart.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: OFF except while collecting logs."
 msgstr ""

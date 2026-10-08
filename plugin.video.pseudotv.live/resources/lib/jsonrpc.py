@@ -23,6 +23,7 @@ from videoparser import VideoParser
 from _services   import _Service
 from cache       import getDurationCache # after variables -> cache is fully loaded
 import ratings
+import socket
 
 # Lazy import to avoid circular dependency (variables.py defines Globals after kodi.py loads)
 _Globals = None
@@ -126,6 +127,27 @@ class JSONRPC(object):
         finally: #retry failed post
             if request_failed and payload: __setQueue()
         return results 
+
+
+    def sendRemote(self, param: dict, ip: Optional[str] = None, timeout: Optional[int] = None) -> Optional[dict]:
+        """Send JSON-RPC command via raw TCP socket to Kodi webserver."""
+        if ip is None: ip = (xbmc.getIPAddress() or gethostbyname(gethostname()) or '0.0.0.0')
+        if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
+        sock = None
+        try:
+            command = param
+            command["jsonrpc"] = "2.0"
+            command["id"] = f"{ADDON_ID}.remote"
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(float(timeout))
+            sock.connect((ip, 9090))
+            sock.sendall(FileAccess.dumpJSON(command).encode(DEFAULT_ENCODING))
+            return FileAccess.loadJSON(sock.recv(4096).decode(DEFAULT_ENCODING), skip_cache=True)
+        except socket.timeout:
+            self.log("sendRemote to %s timed out (timeout=%ds)" % (ip, timeout), xbmc.LOGERROR)
+            return None
+        finally:
+            if sock is not None: sock.close()
 
 
     def _webServerURL(self) -> Optional[str]:
@@ -972,7 +994,9 @@ class JSONRPC(object):
                 "end": start + page
             }
             
-        param["sort"] = sort
+        # omit empty sort - Kodi must fall back to the directory's own order
+        # (an embedded ?xsp= smart playlist's <order>) unless a rule set one.
+        if sort: param["sort"] = sort
         self.log(f'[{ch_id}] requestList, page = {page}\nparam = {param}')
         
         items, errors = [], {}

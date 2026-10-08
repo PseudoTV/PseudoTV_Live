@@ -1223,3 +1223,71 @@ msgstr "CPUベンチマークを実行"
 msgctxt "#30029"
 msgid "Bumper Resources"
 msgstr "バンパーリソース"
+
+msgctxt "#32239"
+msgid "Clear"
+msgstr "クリア"
+
+msgctxt "#33267"
+msgid "Leave debug logging on after restart.\n[B]Default:[/B] [B][COLOR=white]OFF[/COLOR][/B] - recommended: OFF except while collecting logs."
+msgstr "再起動後もデバッグログを有効にしたままにします。\n[B]デフォルト:[/B] [B][COLOR=white]OFF[/COLOR][/B] - 推奨: ログ収集中以外はOFFを推奨します。"
+
+msgctxt "#34063"
+msgid "Playlist URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Used by IPTV Simple."
+msgstr "このインスタンスが提供するプレイリストURL。\n[B]デフォルト:[/B] [B][COLOR=white]起動時に生成[/COLOR][/B]\n[B]ヒント:[/B] IPTV Simpleで使用されます。"
+
+msgctxt "#34066"
+msgid "Show a QR to install Bonjour on Windows.\n[B]Tip:[/B] Needed for zero-config discovery."
+msgstr "WindowsでBonjourをインストールするためのQRコードを表示します。\n[B]ヒント:[/B] ゼロコンフィグ発見には必要です。"
+
+msgctxt "#32097"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi is in Windowed Display! It's recommended you switch to Fullscreen. Current Resolution ({resolution})"
+msgstr "[COLOR=yellow][B]注意!! [/B][/COLOR]Kodiがウィンドウモードで表示されています。フルスクリーンに切り替えることを推奨します。現在の解像度 ({resolution})"
+
+msgctxt "#34056"
+msgid "AI model used for contextual logo generation.\n[B]Default:[/B] [B][COLOR=white]gemma 4 (free)[/COLOR][/B]."
+msgstr "コンテキストに基づくロゴ生成に使用するAIモデル。\n[B]デフォルト:[/B] [B][COLOR=white]gemma 4 (無料)[/COLOR][/B]。"
+
+msgctxt "#32130"
+msgid "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled. It's recommended you re-enable when finished debugging."
+msgstr "[COLOR=red][B]警告!! [/B][/COLOR]ファイルキャッシュが無効になっています。デバッグが終わったら再び有効にすることを推奨します。"
+
+msgctxt "#34050"
+msgid "Add discovered instances without asking.\n[B]Default:[/B] [B][COLOR=white]ON[/COLOR][/B] - recommended: leave ON on trusted networks."
+msgstr "検出したインスタンスを確認なしで追加します。\n[B]デフォルト:[/B] [B][COLOR=white]ON[/COLOR][/B] - 推奨: 信頼できるネットワークではONのままにしてください。"
+
+msgctxt "#34051"
+msgid "Addons that provide bumper videos.\n[B]Default:[/B] [B][COLOR=white]PseudoTV + Kodi bumpers[/COLOR][/B]."
+msgstr "バンパービデオを提供するアドオン。\n[B]デフォルト:[/B] [B][COLOR=white]PseudoTV + Kodiバンパー[/COLOR][/B]。"
+
+msgctxt "#34065"
+msgid "Genre mapping URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Enables EPG colors."
+msgstr "このインスタンスが提供するジャンルマッピングURL。\n[B]デフォルト:[/B] [B][COLOR=white]起動時に生成[/COLOR][/B]\n[B]ヒント:[/B] EPGの色を有効にします。"
+
+msgctxt "#30011"
+msgid "[COLOR=orange][B]Important:[/B][/COLOR] Flash/SSD users should change the cache path to an HDD or RAM disk."
+msgstr "[COLOR=orange][B]重要:[/B][/COLOR] Flash/SSDユーザーはキャッシュパスをHDDまたはRAMディスクに変更してください。"
+
+msgctxt "#32098"
+msgid "Validating"
+msgstr "検証中"
+
+msgctxt "#32132"
+msgid "Default device name [B]{name}[/B] detected! Please change your instance name to something unique this will assure proper multi-room functionality."
+msgstr "デフォルトのデバイス名 [B]{name}[/B] が検出されました！ インスタンス名を固有のものに変更してください。これによりマルチルーム機能が正常に動作します。"
+
+msgctxt "#34064"
+msgid "Guide URL served by this instance.\n[B]Default:[/B] [B][COLOR=white]Generated at startup[/COLOR][/B]\n[B]Tip:[/B] Used by IPTV Simple."
+msgstr "このインスタンスが提供するガイドURL。\n[B]デフォルト:[/B] [B][COLOR=white]起動時に生成[/COLOR][/B]\n[B]ヒント:[/B] IPTV Simpleで使用されます。"
+
+msgctxt "#32131"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi's Webserver is disabled. It's recommended you enable."
+msgstr "[COLOR=yellow][B]注意!! [/B][/COLOR]KodiのWebサーバーが無効になっています。有効にすることを推奨します。"
+
+msgctxt "#34055"
+msgid "Key for OpenRouter AI services.\n[B]Default:[/B] [B][COLOR=white]None (required for AI)[/COLOR][/B]\n[B]Tip:[/B] Get one at openrouter.ai."
+msgstr "OpenRouter AIサービス用のキー。\n[B]デフォルト:[/B] [B][COLOR=white]なし (AIには必須)[/COLOR][/B]\n[B]ヒント:[/B] openrouter.aiで取得できます。"
+
+msgctxt "#32238"
+msgid "Autotuned Channels must be disabled in settings."
+msgstr "オートチューンチャンネルは設定で無効にする必要があります。"
