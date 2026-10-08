@@ -1244,7 +1244,7 @@ class JSONRPC(object):
                          'duration':dur, 
                          'file':fitem.get('trailer'),
                          'added':time.time()})#todo remove old entries.
-            self.log(f'addTrailer [{key}] {fitem.get('duration',0)}, {fitem.get('file')}')
+            self.log(f'addTrailer [{key}] {fitem.get("duration",0)}, {fitem.get("file")}')
             for genre in (fitem.get('genre',[]) or ['resources']):
                 if fitem not in trailers.setdefault(key,{}).setdefault(genre.lower(),[]):
                     trailers.setdefault(key,{}).setdefault(genre.lower(),[]).append(fitem)
@@ -1262,16 +1262,16 @@ class JSONRPC(object):
                 
     def setTrailers(self, trailers: Optional[dict] = None) -> bool:
         if trailers is None: trailers = {'movies':{},'tvshows':{}}
-        self.log(f'setTrailers [Movies] = {len(trailers.get('movies',{}))}')
-        self.log(f'setTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
+        self.log(f'setTrailers [Movies] = {len(trailers.get("movies",{}))}')
+        self.log(f'setTrailers [TVShows] = {len(trailers.get("tvshows",{}))}')
         return self.cache.set('trailers', trailers, expiration=datetime.timedelta(days=365))
                                 
                         
     def getTrailers(self, genre: Optional[str] = None) -> Any:
         #todo clean old trailers by "added" epoch
         trailers = self.cache.get('trailers') or {'movies':{},'tvshows':{}}
-        self.log(f'getTrailers [Movies] = {len(trailers.get('movies',{}))}')
-        self.log(f'getTrailers [TVShows] = {len(trailers.get('tvshows',{}))}')
+        self.log(f'getTrailers [Movies] = {len(trailers.get("movies",{}))}')
+        self.log(f'getTrailers [TVShows] = {len(trailers.get("tvshows",{}))}')
         if not genre is None: return trailers.get(genre,[])
         return trailers #return all
         
