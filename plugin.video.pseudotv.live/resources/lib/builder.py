@@ -256,6 +256,16 @@ class Builder(object):
                                 if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
                                 break
 
+                            # Memory budget: the build is the host's biggest memory
+                            # consumer. Re-queue before the device runs out of
+                            # reclaimable RAM — the OOM killer takes Kodi down whole,
+                            # a deferred channel only resumes next cycle.
+                            if isMemPressure():
+                                self.log(f"buildChannels, low memory — re-queuing {len(channels)-idx} remaining channels")
+                                self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
+                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                                break
+
                             self._buildIdx = idx
                             self.pHeader = ADDON_NAME
                             self.pName   = citem.get('name', '')

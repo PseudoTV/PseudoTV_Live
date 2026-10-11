@@ -17,6 +17,11 @@ v.0.8.0+nightly
 - Added Durable durations.db store so parsed durations survive cache wipes, with one-time migration from legacy cache.db rows
 - Fixed Cache purge and WAL checkpoint now actually run (invalid PRAGMA and reset purge marker), preventing unbounded cache.db growth
 - Tweaked Miscellaneous improvements and tweaks.
+- Added Channel builds now pause and re-queue remaining channels when memory is low, preventing OOM crashes that take Kodi down
+- Fixed Channel builds use a single shared cache database connection, eliminating "database is locked" errors mid-build
+- Fixed Shared probe pool is reset after shutdown so subsequent builds recreate it instead of reusing a dead pool
+- Improved Add-on release zips now respect .gitignore, keeping ignored files out of packaged builds
+- Tweaked Miscellaneous improvements and tweaks.
 v.0.7.9+nightly
 - Improved build logging with timestamped output and file persistence
 - Enhanced OpenCode integration with automatic PATH detection and timeout handling

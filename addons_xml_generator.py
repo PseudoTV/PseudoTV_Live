@@ -118,9 +118,25 @@ if os.path.isdir(_opencode_dir) and _opencode_dir not in os.environ.get('PATH', 
     os.environ['PATH'] = _opencode_dir + os.pathsep + os.environ.get('PATH', '')
 DELETE_EXT = ('.pyc', '.pyo', '.db')
 DELETE_FOLDERS = {'__pycache__', '.idea', 'Corel Auto-Preserve', 'venv'}
-ZIP_SKIP_DIRS = {'tests', 'graphify-out', '.opencode', '.github', 'wiki', '__pycache__', '.pytest_cache', '.git', '.idea'}
+ZIP_SKIP_DIRS = {'tests', 'tools', 'graphify-out', '.opencode', '.github', 'wiki', '__pycache__', '.pytest_cache', '.git', '.idea'}
 ZIP_SKIP_FILES = {'todo.md', 'generator.log', 'AGENTS.md', 'SESSION_BACKUP.md', 'task_plan.md',
                   'progress.md', 'findings.md', 'pytest.ini', '.gitignore', '.gitattributes', '.project'}
+
+
+def _gitignored_paths(paths):
+    """Subset of repo-relative paths that git reports as ignored (respects .gitignore)."""
+    if not paths:
+        return set()
+    try:
+        # binary stdin: text mode would translate \n to \r\n on Windows and corrupt paths
+        result = subprocess.run(['git', 'check-ignore', '--no-index', '--stdin'],
+                                input=('\n'.join(paths) + '\n').encode('utf-8'),
+                                capture_output=True, cwd=GITPATH, timeout=30)
+    except Exception:
+        return set()
+    if result.returncode not in (0, 1):  # git missing / not a repo
+        return set()
+    return {line.decode('utf-8', 'replace').strip() for line in result.stdout.splitlines() if line.strip()}
 ADDON_DIR = os.path.join(GITPATH, 'plugin.video.pseudotv.live')
 TEST_DIR = os.path.join(ADDON_DIR, 'tests')
 CHANGELOG = os.path.join(ADDON_DIR, 'changelog.txt')
@@ -720,16 +736,22 @@ class Generator:
             else:
                 break
 
-        # Create zip
+        # Create zip — respects .gitignore via one batched git check-ignore call
         zip_path = os.path.join(ZIPPATH, addon, f'{addon}-{version}.zip')
+        candidates = []
+        for root, dirs, files in os.walk(addon):
+            # Prune skipped directories in-place so os.walk skips them
+            dirs[:] = [d for d in dirs if d not in ZIP_SKIP_DIRS]
+            for file_path in files:
+                if file_path.endswith('.zip') or file_path in ZIP_SKIP_FILES:
+                    continue
+                candidates.append(os.path.join(root, file_path))
+        normalized = [p.replace(os.sep, '/') for p in candidates]
+        ignored = _gitignored_paths(normalized)
         with ZipFile(zip_path, 'w') as addonzip:
-            for root, dirs, files in os.walk(addon):
-                # Prune skipped directories in-place so os.walk skips them
-                dirs[:] = [d for d in dirs if d not in ZIP_SKIP_DIRS]
-                for file_path in files:
-                    if file_path.endswith('.zip') or file_path in ZIP_SKIP_FILES:
-                        continue
-                    addonzip.write(os.path.join(root, file_path))
+            for relpath, arcpath in zip(candidates, normalized):
+                if arcpath not in ignored:
+                    addonzip.write(relpath)
 
         os.chdir(home)
 

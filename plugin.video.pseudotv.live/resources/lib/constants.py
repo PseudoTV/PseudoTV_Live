@@ -98,6 +98,32 @@ def _getFreeMEM() -> int:
         return int("".join(c for c in raw_mem if c.isdigit()))
     except Exception:
         return 1024
+
+# Build guard: stop building when reclaimable RAM falls below this. Kodi was
+# OOM-killed at 183MB MemAvailable mid-build; healthy builds sit at 384-625MB,
+# so 256MB leaves margin on both sides. Sibling of builder.BUILD_BUDGET.
+MEM_PRESSURE_LIMIT = 256 * 1024 * 1024
+
+def _getAvailMEM(path: str = '/proc/meminfo') -> int:
+    """MemAvailable in bytes, -1 when unreadable (guard then stays open).
+
+    MemAvailable, not System.FreeMemory: that reports MemFree, which on
+    Android excludes reclaimable cache and reads ~2x low (170MB vs 384MB
+    idle on a Shield), tripping the guard permanently."""
+    try:
+        with open(path, 'r') as f:
+            for line in f:
+                if line.startswith('MemAvailable:'):
+                    return int(line.split()[1]) * 1024
+    except Exception:
+        pass
+    return -1
+
+def isMemPressure(limit: int = MEM_PRESSURE_LIMIT) -> bool:
+    avail = _getAvailMEM()
+    LOG('isMemPressure, available = %d, limit = %d' % (avail, limit), xbmc.LOGDEBUG)
+    return 0 <= avail < limit
+
 # =============================================================================
 # Performance & Threading
 # =============================================================================

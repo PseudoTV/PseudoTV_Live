@@ -307,6 +307,7 @@ class Resources(object):
         # skipped and the lookup falls through to the next source.
         cacheName     = 'getLogoResources.v3.%s.%s' % (FileAccess._getMD5(citem.get('name')), select)
         cacheResponse = self.cache.get(cacheName, checksum=checksum)
+        if cacheResponse == '__nomatch__': return None
         if not cacheResponse:
             logos = []
             names = self.getNames(citem.get('name'), citem.get('type'))
@@ -324,6 +325,9 @@ class Resources(object):
                                     if not select:
                                         return self.cache.set(cacheName, logo, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
             if logos: cacheResponse = self.cache.set(cacheName, logos, checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            else:
+                self.cache.set(cacheName, '__nomatch__', checksum=checksum, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                return None
         return cacheResponse
 
 

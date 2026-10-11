@@ -128,10 +128,20 @@ class MemoryBudget(object):
                 for a in self._owners.values(): a['used'] = 0
 
 
+_CACHE_SINGLETON = None
+
 class Cache(object):
     def __init__(self, mem_cache: bool = False, disable_cache: bool = False):
         self.monitor = MONITOR()
-        self.cache   = _Cache(monitor=self.monitor)
+        # One _Cache — one sqlite3 connection, one RLock — per process. The
+        # three Cache() construction sites each used to open cache.db with a
+        # private lock, so their writers could not serialize against each other
+        # and SQLite returned "database is locked" mid-build. Same pattern
+        # getDurationCache() already uses for durations.db.
+        global _CACHE_SINGLETON
+        if _CACHE_SINGLETON is None:
+            _CACHE_SINGLETON = _Cache(monitor=self.monitor)
+        self.cache   = _CACHE_SINGLETON
         self.cache.enable_mem_cache = mem_cache
         self.disable_cache = (disable_cache or REAL_SETTINGS.getSetting('Disable_Cache') == 'true')
         self.log('__init__, mem_cache=%s, disable_cache=%s, db=%s' % (mem_cache, self.disable_cache, self.cache.dbfile), xbmc.LOGINFO)

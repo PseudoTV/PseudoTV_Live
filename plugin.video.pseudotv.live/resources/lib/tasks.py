@@ -154,7 +154,7 @@ class Tasks(object):
                 # idx, channel = channels.findChannel(citem, chanLST)
                 # chanLST[idx].update({'enabled':False})
                 # if channels.setChannels(chanLST):
-                    # Globals.dialog.okDialog(f'Kodi encountered a fatal crash while parsing a [B]{ADDON_NAME}[\B] channel.\nPlease check the channel configuration for [B]{citem.get('name')}[\B]\n Channel [B]{citem.get('number')}[\B] temporarily disabled!', usethread=False)
+                    # Globals.dialog.okDialog(f'Kodi encountered a fatal crash while parsing a [B]{ADDON_NAME}[\B] channel.\nPlease check the channel configuration for [B]{citem.get("name")}[\B]\n Channel [B]{citem.get("number")}[\B] temporarily disabled!', usethread=False)
                 # del channels
 
 
