@@ -27,10 +27,21 @@ from library        import Library
 from builder        import Builder
 from channels       import Channels
 from multiroom      import Multiroom
+from pool           import DaemonThreadPoolExecutor
 from server         import HTTP, Discovery
 from context_create import _autotune
 
 _VERSION_RE = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME))
+
+# Warm trailer durations off the serial queue thread - see chkQUES.
+_TRAILER_PROBE_POOL = None
+
+
+def _trailerProbePool():
+    global _TRAILER_PROBE_POOL
+    if _TRAILER_PROBE_POOL is None:
+        _TRAILER_PROBE_POOL = DaemonThreadPoolExecutor(max_workers=min(8, CPU_COUNT))
+    return _TRAILER_PROBE_POOL
 
 class Tasks(object):
     citems = []
@@ -126,7 +137,7 @@ class Tasks(object):
                     self.log('_chkDebugging, disabling debugging.')
                     Globals.settings.setSettingBool('Debug_Enable',False)
                 else: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True) # Auto disable.
-        if kodi_access: self.jsonRPC.toggleShowLog(Globals.settings.getSettingBool('Debug_Enable'))
+        if kodi_access: pass # ponytail: temp disabled - advancedsettings.xml already sets <loglevel>1</loglevel>, so flipping debug.showloginfo over JSON just toggles the on-screen overlay for no gain (and is UI noise to dismiss). Restore when debug moves off advancedsettings.xml.
                     
              
     def chkDiscovery(self):
@@ -780,9 +791,24 @@ class Tasks(object):
                     param = None
                     try:
                         self.log(f"chkQUES trailerQue {len(self.service.trailerQue)}")
+                        batch = []
                         for _ in range(trailer_batch):
                             if not self.service.trailerQue: break
                             param = FileAccess.loadJSON(self.service.trailerQue.pop(), skip_cache=True)
+                            batch.append(param)
+                        # Warm trailer durations in parallel first: each YouTube probe
+                        # costs ~1s of network and addTrailer below drains off the
+                        # serial priority queue, so a batch of N trailers otherwise
+                        # blocks the queue for ~N seconds. yt.duration.* then serves
+                        # the addTrailer pass from cache (YTParser.determineLength).
+                        try:
+                            futs = [_trailerProbePool().submit(self.jsonRPC.getDuration, it.get('trailer'), None, False, False)
+                                    for it in batch if isinstance(it, dict) and it.get('trailer')]
+                            for f in futs:
+                                try: f.result(timeout=30)
+                                except Exception: pass
+                        except Exception as e: self.log(f"chkQUES trailer pre-probe failed: {e}", xbmc.LOGWARNING)
+                        for param in batch:
                             # defer_save batches in-memory; flushTrailers writes once below
                             self.service._que(self.jsonRPC.addTrailer,5,0,0,param,defer_save=True)
                         # Write the whole batch to the trailers cache in one SQLite op.

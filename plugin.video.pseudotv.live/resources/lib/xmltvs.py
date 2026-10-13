@@ -437,6 +437,32 @@ _PROG_DDL = (
     "CREATE INDEX IF NOT EXISTS idx_prog_stop ON programmes(stop)",
 )
 
+# Distinct channel-IDs-with-guide-data, served without touching the DB.
+# Measured: the DISTINCT query blocks ~2-6s per PVR poll during a build, because
+# the builder is writing to the same SQLite handle and the serve path queues
+# behind its write lock — that was the entire cost of the m3u stall.
+# ponytail: 600s TTL, deliberately far longer than the ~126s m3u render cadence
+# (RENDER_STALE_SECS=60). A 120s TTL still missed every render and paid the ~2s
+# XMLTVS() constructor each time, which reproduced the stall. A channel that
+# gains guide data may be absent from the served M3U for up to this long —
+# raise only if the stall probe shows the constructor again.
+_PROG_CHAN_IDS = {'ids': None, 'ts': 0}
+PROG_CHAN_IDS_TTL = 600
+
+
+def getProgrammeChannelIds() -> set:
+    """Serve-path entry: distinct channel IDs that have guide data.
+
+    ponytail: XMLTVS.__init__ alone costs ~2s (measured — it loads the holder),
+    so the serve path must not construct an instance on every PVR poll. Only a
+    memo miss pays the constructor and the DB. XMLTVS is resolved at call time,
+    which is why this may sit above the class definition.
+    """
+    cached = _PROG_CHAN_IDS
+    if cached['ids'] is not None and (time.time() - cached['ts']) < PROG_CHAN_IDS_TTL:
+        return set(cached['ids'])
+    return XMLTVS().getProgrammeChannelIds()
+
 
 def _xmltv_cache_sig():
     """Return the current XMLTV cache version token, or None if never saved."""
@@ -1180,6 +1206,32 @@ class XMLTVS(object):
         return self.sortChannels(self.XMLTVDATA.get('channels',[]))
         
         
+    def getProgrammeChannelIds(self) -> set:
+        """Distinct channel IDs that have guide data — membership set only.
+
+        ponytail: getFilteredStations needs only this set, not the programme
+        list. Loading the list to build it unpickled + re-sorted the 40MB+ XMLTV
+        on every PVR poll, and the DISTINCT query that replaced it still blocked
+        ~2-6s per poll behind the builder's SQLite write lock. Memoised for
+        PROG_CHAN_IDS_TTL so the serve path never waits on the DB during a build.
+        The DB is also the fuller source when the in-memory holder is capped
+        (see getProgrammes).
+        """
+        cached = _PROG_CHAN_IDS
+        if cached['ids'] is not None and (time.time() - cached['ts']) < PROG_CHAN_IDS_TTL:
+            return set(cached['ids'])
+        try:
+            db = self._programme_db()
+            cur = db.execute("SELECT DISTINCT channel FROM programmes") if db else None
+            ids = {row[0] for row in (cur.fetchall() if cur else []) if row and row[0]}
+        except Exception as e:
+            self.log(f"getProgrammeChannelIds, DB query failed: {e}", xbmc.LOGDEBUG)
+            ids = set()
+        if not ids:
+            return {p.get('channel') for p in self.getProgrammes() if p.get('channel')}
+        _PROG_CHAN_IDS['ids'], _PROG_CHAN_IDS['ts'] = ids, time.time()
+        return ids
+
     def getProgrammes(self) -> list:
         self.log('getProgrammes')
         programmes = self.XMLTVDATA.get('programmes', [])

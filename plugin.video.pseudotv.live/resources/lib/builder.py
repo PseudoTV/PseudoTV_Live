@@ -140,18 +140,20 @@ class Builder(object):
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
         LOG(f"{self.__class__.__name__}: {msg}", level)
 
-    def probeTrailers(self, items: list) -> dict:
-        """Parallelize YouTube trailer duration probes on _probe_pool. Returns {item: duration}."""
-        futures = {}
-        for item in items:
-            path = item.get('trailer') if isinstance(item, dict) else None
-            if path:
-                futures[item] = self._probe_pool.submit(self.jsonRPC.getDuration, path, None, False, False)
-        results = {}
-        for item, f in futures.items():
-            try: results[item] = f.result(timeout=30)
-            except Exception: results[item] = 0
-        return results
+    def probeTrailers(self, items: list) -> None:
+        """Parallelize YouTube trailer duration probes on _probe_pool.
+
+        Side-effect only: warms the duration cache so the serial addTrailer path
+        doesn't pay ~3s per YouTube probe. Results are deliberately discarded, so
+        futures are collected positionally — keying them by item raised
+        "unhashable type: 'dict'" and aborted the whole pre-probe, forcing every
+        trailer back onto the serial path.
+        """
+        futures = [self._probe_pool.submit(self.jsonRPC.getDuration, item.get('trailer'), None, False, False)
+                   for item in items if isinstance(item, dict) and item.get('trailer')]
+        for f in futures:
+            try: f.result(timeout=30)
+            except Exception: pass
 
     def getVerifiedChannels(self, channels: Optional[list] = None) -> list:
         if channels is None: 
@@ -356,9 +358,12 @@ class Builder(object):
 
                             _changed = citem.get('changed', False)
                             if not _changed and getattr(self, 'enableChanged', False):
-                                    paths = citem.get('path', [])
-                                    valid_extensions = tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)
-                                    _changed = any(Globals.settings.getFileCRC(f) for f in paths if f.endswith(valid_extensions))
+                                paths = citem.get('path', [])
+                                if isinstance(paths, (str, bytes)):
+                                    paths = [paths]
+                                valid_extensions = tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)
+                                _changed = any(self._playlistChanged(citem, idx, f, valid_extensions)
+                                               for idx, f in enumerate(paths) if isinstance(f, str))
                         
                             if _changed:
                                     self.log(f"[{citem.get('id')}] Playlist signature mutation caught; flushing target datasets.")
@@ -488,6 +493,20 @@ class Builder(object):
         )
         
         
+    def _playlistChanged(self, citem: dict, idx: int, path: str, valid_extensions: tuple) -> bool:
+        """True when a channel's playlist definition changed since the last build.
+
+        File playlists (.xsp/.xml/.m3u/...) CRC their on-disk content. Inline DXSP
+        channels (videodb://...?xsp={json}) have no file - the ?xsp= payload is the
+        whole definition - so CRC that against a stable per-channel key instead.
+        """
+        if path.endswith(valid_extensions):
+            return Globals.settings.getFileCRC(path)
+        if self.xsp.isDXSP(path):
+            return Globals.settings.getStringCRC('channelCRC.%s.%s' % (citem.get('id'), idx), path.split('?xsp=', 1)[-1])
+        return False
+
+
     def buildVideo(self, citem: dict, validate: bool = False) -> Any:
         paths = citem.get('path', [])
         if isinstance(paths, (str, bytes)):

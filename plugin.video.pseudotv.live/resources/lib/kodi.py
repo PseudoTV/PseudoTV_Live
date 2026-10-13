@@ -476,6 +476,26 @@ class Settings(object):
             self.setCacheSetting(name, crc, checksum=crc)
             return True
         return False
+
+
+    def getStringCRC(self, key: str, data: str) -> bool:
+        """True when data changed since last seen under a stable caller key.
+
+        Mirrors getFileCRC for content that has no file to read - notably inline
+        DXSP channels (videodb://...?xsp={json}), where the ?xsp= payload IS the
+        playlist definition. Keyed by a stable id because the data itself is the
+        varying half, so keying by content would never compare against the old one.
+        """
+        try:
+            crc = binascii.crc32(data.encode(DEFAULT_ENCODING))
+        except Exception as e:
+            self.log("getStringCRC, failed! %s %s"%(key,e), xbmc.LOGERROR)
+            return False
+        cache = self.getCacheSetting(key, checksum=crc)
+        if not cache or cache != crc:
+            self.setCacheSetting(key, crc, checksum=crc)
+            return True
+        return False
             
     def getLogs(self, time: Optional[datetime.datetime] = None) -> dict:
         if time is None: time = datetime.datetime.fromtimestamp(time.time())

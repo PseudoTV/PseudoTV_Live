@@ -22,6 +22,10 @@ v.0.8.0+nightly
 - Fixed Shared probe pool is reset after shutdown so subsequent builds recreate it instead of reusing a dead pool
 - Improved Add-on release zips now respect .gitignore, keeping ignored files out of packaged builds
 - Tweaked Miscellaneous improvements and tweaks.
+- Fixed Trailer pre-probe no longer aborts on unhashable dict items, restoring parallel duration probing instead of falling back to slow serial probes
+- Fixed Inline smart playlist channels (videodb://…?xsp=) now detect definition changes and trigger a rebuild instead of being skipped
+- Optimized Failed JSON-RPC responses are cached for 5 minutes, preventing erroring queries from re-running per channel during builds
+- Tweaked Miscellaneous improvements and tweaks.
 v.0.7.9+nightly
 - Improved build logging with timestamped output and file persistence
 - Enhanced OpenCode integration with automatic PATH detection and timeout handling

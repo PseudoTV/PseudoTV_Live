@@ -559,9 +559,15 @@ class M3U(object):
 
         # Filter 2: Only stations with at least one XMLTV programme (drop no-guide channels)
         if programmes is None:
-            from xmltvs import XMLTVS
-            programmes = XMLTVS().getProgrammes()
-        channel_ids_with_programmes = {p.get('channel') for p in programmes if p.get('channel')}
+            # Only the membership set below is used. XMLTVS.__init__ costs ~2s
+            # (loads the holder) and used to also unpickle + re-sort the 40MB+
+            # programme list — that was the entire cost of the m3u serve stall.
+            # The module-level wrapper answers from a memo and never constructs
+            # an instance on the hot path.
+            from xmltvs import getProgrammeChannelIds
+            channel_ids_with_programmes = getProgrammeChannelIds()
+        else:
+            channel_ids_with_programmes = {p.get('channel') for p in programmes if p.get('channel')}
         stations = self._filterM3UByXMLTV(stations, channel_ids_with_programmes)
 
         return stations
