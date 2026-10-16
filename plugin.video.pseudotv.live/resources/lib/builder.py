@@ -362,8 +362,11 @@ class Builder(object):
                                 if isinstance(paths, (str, bytes)):
                                     paths = [paths]
                                 valid_extensions = tuple(KODI_PLAYLISTS + BASIC_PLAYLISTS)
-                                _changed = any(self._playlistChanged(citem, idx, f, valid_extensions)
-                                               for idx, f in enumerate(paths) if isinstance(f, str))
+                                # materialise the list: any() on a generator short-circuits,
+                                # leaving later paths' stored CRC unrefreshed so they report
+                                # "changed" again on the next build (repeated over-flush).
+                                _changed = any([self._playlistChanged(citem, idx, f, valid_extensions)
+                                                for idx, f in enumerate(paths) if isinstance(f, str)])
                         
                             if _changed:
                                     self.log(f"[{citem.get('id')}] Playlist signature mutation caught; flushing target datasets.")

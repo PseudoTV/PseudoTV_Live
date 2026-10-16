@@ -223,6 +223,39 @@ class JSONRPC(object):
             return None
 
 
+    def _playerPlaying(self) -> bool:
+        """True while any media is playing.
+
+        Uses the addon's Player instance - the codebase's established idiom
+        (see manager.py, plugin.py, rules.py, webpoint.py) - falling back to the
+        raw condition when no service is attached. Deliberately NOT
+        service._isPlaying(): that is gated on Run_While_Playing and would go
+        False whenever the setting is on (its default), which is exactly when
+        background work is still running and still janking.
+        """
+        player = getattr(getattr(self, 'service', None), 'player', None)
+        if player is not None:
+            return bool(player.isPlaying())
+        return bool(xbmc.getCondVisibility('Player.Playing'))
+
+    def _throttleDelay(self) -> float:
+        """Seconds to space JSON-RPC dispatches apart right now.
+
+        Playback beats build throughput: a dispatch that misses the
+        Files.GetDirectory HTTP path marshals onto Kodi's main Application
+        thread (see sendJSON), so during playback we back off instead of
+        competing with the decoder.
+        """
+        delay = float(REAL_SETTINGS.getSetting('API_Delay') or "1")
+        if self._playerPlaying():
+            return delay * PLAYBACK_DELAY_MULT
+        svc = getattr(self, 'service', None)
+        if svc and getattr(getattr(svc, 'buildState', None), 'running', False):
+            # During channel builds, use 1/4 the delay — the JSON-RPC server can
+            # handle the faster rate and builds are the main bottleneck on SOC.
+            return max(0.5, delay * 0.25)
+        return delay
+
     def _throttle(self):
         """Enforce API_Delay seconds between consecutive JSON-RPC dispatches.
 
@@ -231,12 +264,7 @@ class JSONRPC(object):
         shared class lock so multiple JSONRPC instances / pool workers serialize
         to a single global rate instead of each bypassing the limit.
         """
-        delay = float(REAL_SETTINGS.getSetting('API_Delay') or "1")
-        # During channel builds, use 1/4 the delay — the JSON-RPC server can
-        # handle the faster rate and builds are the main bottleneck on SOC.
-        svc = getattr(self, 'service', None)
-        if svc and getattr(getattr(svc, 'buildState', None), 'running', False):
-            delay = max(0.5, delay * 0.25)
+        delay = self._throttleDelay()
         if delay <= 0: return
         with JSONRPC._sendLock:
             now = time.time()

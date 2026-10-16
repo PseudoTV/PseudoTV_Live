@@ -131,6 +131,10 @@ def isMemPressure(limit: int = MEM_PRESSURE_LIMIT) -> bool:
 TOTAL_RAM_GB        = _getTotalMEM()
 IS_CONSTRAINED_SOC  = TOTAL_RAM_GB <= 2.5
 CPU_COUNT           = os.cpu_count() or 1                   # Number of CPU cores
+# Playback backoff: JSON-RPC dispatches are spaced this multiple of API_Delay
+# while a video is playing. Keyed on raw Player.Playing, not _isPlaying(), so it
+# still applies when Run_While_Playing leaves background work enabled.
+PLAYBACK_DELAY_MULT = 1.5
 if TOTAL_RAM_GB <= 2.5:                                      # Low-End SoC: Fire Stick, low-RAM boxes
     CPU_CYCLE      = 0.016
     THREAD_WORKERS = min(2, CPU_COUNT)

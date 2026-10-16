@@ -26,6 +26,7 @@ v.0.8.0+nightly
 - Fixed Inline smart playlist channels (videodb://…?xsp=) now detect definition changes and trigger a rebuild instead of being skipped
 - Optimized Failed JSON-RPC responses are cached for 5 minutes, preventing erroring queries from re-running per channel during builds
 - Tweaked Miscellaneous improvements and tweaks.
+- Optimized Background queue tasks and JSON-RPC calls now yield while video is playing, reducing playback jank and CPU contention with the decoder.
 v.0.7.9+nightly
 - Improved build logging with timestamped output and file persistence
 - Enhanced OpenCode integration with automatic PATH detection and timeout handling

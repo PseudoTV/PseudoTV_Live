@@ -350,10 +350,13 @@ class ExecutorPool:
         if now - self._executor_settings['last_check'] > self._SETTINGS_TTL:
             self._executor_settings['timeout'] = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
             self._executor_settings['enabled'] = REAL_SETTINGS.getSetting('Enable_Executor') == 'true'
-            # Auto-enable while playing gives concurrent JSONRPC — enable on
-            # mid-range SOC (Shield Pro 3-5GB) but not low-end (<2.5GB).
-            if not self._executor_settings['enabled'] and TOTAL_RAM_GB > 2.5 and xbmc.getCondVisibility('Player.Playing'):
-                self._executor_settings['enabled'] = True
+            # ponytail: deliberately NO auto-enable during playback (it used to
+            # force-enable here for "concurrent JSONRPC"). pool.executor only moves
+            # the call off the calling thread - Kodi still runs it on its main
+            # Application thread - so stacking dispatches while playing stacked
+            # main-thread marshals and janked the video. It also flipped
+            # CustomQueue into fire-and-forget mode, draining its backlog in one
+            # burst. Explicit Enable_Executor=true above still honours the user.
             self._executor_settings['last_check'] = now
         return self._executor_settings
             

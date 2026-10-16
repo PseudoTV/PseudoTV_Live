@@ -43,6 +43,7 @@ class CustomQueue(object):
     AGE_BOOST_STEP     = 1.0 # priority levels boosted per interval
     MAX_HEAP_SIZE      = 500 # hard limit to prevent memory growth
     LOG_THROTTLE       = 5.0 # seconds between repeated log messages per task
+    PLAYBACK_TASK_GAP  = 0.5 # seconds to yield between tasks while a video is playing
 
     def __init__(self, service: Any, workers: int = THREAD_WORKERS):
         self.service  = service
@@ -212,6 +213,21 @@ class CustomQueue(object):
         with self.lock:
             return {dk for dk in self._dedup_registry if dk.startswith(key_prefix)}
 
+    def _playerPlaying(self) -> bool:
+        """True while any media is playing.
+
+        Uses the addon's Player instance - the codebase's established idiom
+        (see manager.py, plugin.py, rules.py, webpoint.py) - falling back to the
+        raw condition if the service has no player yet. Deliberately NOT
+        service._isPlaying(): that is gated on Run_While_Playing and would go
+        False whenever the setting is on (its default), which is exactly when
+        the queue is still draining and still janking.
+        """
+        player = getattr(self.service, 'player', None)
+        if player is not None:
+            return bool(player.isPlaying())
+        return bool(xbmc.getCondVisibility('Player.Playing'))
+
     def execute(self):
         self.log("execute, Thread execution loop active.", xbmc.LOGINFO)
         while not self.monitor.abortRequested():
@@ -249,7 +265,16 @@ class CustomQueue(object):
                 if not ready:
                     if wait > 0: self.monitor.waitForAbort(wait)
                     continue
-                
+
+                # Playback: pace the drain. The loop otherwise fires ready tasks
+                # back-to-back (and with the executor on, submits them all in one
+                # burst) - that competes with the decoder for CPU and the main
+                # thread.
+                if self._playerPlaying():
+                    if self.monitor.waitForAbort(self.PLAYBACK_TASK_GAP):
+                        break
+                    continue   # re-evaluate; task stays in the heap, nothing is dropped
+
                 task = self.pop()
                 if task is None:
                     self.monitor.waitForAbort(SERVICE_INTERVAL)

@@ -137,7 +137,10 @@ class Tasks(object):
                     self.log('_chkDebugging, disabling debugging.')
                     Globals.settings.setSettingBool('Debug_Enable',False)
                 else: self.service._que(self.chkDebugging,0,DEBUG_TIMEOUT,0,True) # Auto disable.
-        if kodi_access: pass # ponytail: temp disabled - advancedsettings.xml already sets <loglevel>1</loglevel>, so flipping debug.showloginfo over JSON just toggles the on-screen overlay for no gain (and is UI noise to dismiss). Restore when debug moves off advancedsettings.xml.
+        # ponytail: temp disabled - advancedsettings.xml already sets <loglevel>1</loglevel>,
+        # so flipping debug.showloginfo over JSON just toggles the on-screen overlay for no
+        # gain (and is UI noise to dismiss). Restore when debug moves off advancedsettings.xml.
+        # if kodi_access: self.jsonRPC.toggleShowLog(Globals.settings.getSettingBool('Debug_Enable'))
                     
              
     def chkDiscovery(self):

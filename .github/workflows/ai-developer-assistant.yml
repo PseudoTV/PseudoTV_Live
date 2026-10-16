@@ -20,7 +20,7 @@ concurrency:
 jobs:
   changes:
     name: Detect Changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       python: ${{ steps.check.outputs.python }}
       xml: ${{ steps.check.outputs.xml }}
@@ -91,7 +91,7 @@ jobs:
 
   check-prev:
     name: Check Previous Run
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       prev_failed: ${{ steps.check.outputs.prev_failed }}
       prev_has_code: ${{ steps.check.outputs.prev_has_code }}
@@ -160,7 +160,7 @@ jobs:
 
   addon-check:
     name: Kodi Addon Checker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       errors: ${{ steps.kodi-check.outputs.errors }}
       warnings: ${{ steps.kodi-check.outputs.warnings }}
@@ -219,7 +219,7 @@ jobs:
 
   lint-ruff:
     name: Ruff Linter
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       has_errors: ${{ steps.check-ruff.outputs.has_errors }}
     steps:
@@ -270,7 +270,7 @@ jobs:
 
   lint-xml:
     name: XML Validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       has_errors: ${{ steps.check-xml.outputs.has_errors }}
     steps:
@@ -331,7 +331,7 @@ jobs:
 
   lint-json:
     name: JSON Validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       has_errors: ${{ steps.check-json.outputs.has_errors }}
     steps:
@@ -393,7 +393,7 @@ jobs:
 
   fstring-check:
     name: F-String Validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       has_errors: ${{ steps.check-fstring.outputs.has_errors }}
     steps:
@@ -438,7 +438,7 @@ jobs:
 
   lint:
     name: OpenCode Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [changes]
     if: needs.changes.outputs.python == 'true'
     outputs:
@@ -507,7 +507,7 @@ jobs:
 
   ai-review:
     name: AI Code Review
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, check-prev]
     if: |
       always() && needs.changes.outputs.any_code == 'true' && (
@@ -606,7 +606,7 @@ jobs:
 
   report:
     name: Generate Report
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: always()
     needs: [changes, addon-check, lint-ruff, lint-xml, lint-json, fstring-check, lint, ai-review, check-prev]
     steps:
@@ -726,7 +726,7 @@ jobs:
 
   wiki-update:
     name: Update Wiki
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name == 'push' && needs.changes.outputs.any_code == 'true'
     needs: [changes]
     steps:

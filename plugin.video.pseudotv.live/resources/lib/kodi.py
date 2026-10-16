@@ -82,7 +82,7 @@ class Settings(object):
             if _LOG_SETTINGS['enable']:
                 self.log(f'[{ADDON_ID}] {func.__name__}, key = {key}, value = {str(value)[:128]}, type = {type(value).__name__}')
             return value
-        except Exception as e:
+        except Exception:
             # ponytail: Kodi 22 Beta's CAddonSettings model can lose a setting's type
             # (throws "Invalid setting type" despite a valid settings.xml). Coerce the
             # string form instead of surfacing the error each read. Upstream Kodi fix
