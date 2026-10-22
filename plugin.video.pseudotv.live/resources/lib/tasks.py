@@ -43,6 +43,16 @@ def _trailerProbePool():
         _TRAILER_PROBE_POOL = DaemonThreadPoolExecutor(max_workers=min(8, CPU_COUNT))
     return _TRAILER_PROBE_POOL
 
+
+def _sortByMissingFromM3U(channels, m3u_names):
+    """New-first ordering: channels absent from the M3U sort before members.
+
+    chkChannels chunks by QUEUE_CHUNK and the queue runs FIFO — extension
+    chunks need the fresh low-RSS window after a restart, while new-channel
+    chunks hit the entry guard on a hot process.
+    """
+    return sorted(channels, key=lambda ch: not (ch.get('name') and ch['name'] not in m3u_names))
+
 class Tasks(object):
     citems = []
     
@@ -173,14 +183,19 @@ class Tasks(object):
 
 
     def chkSyncCrash(self):
-        """Detect SyncChannelJobService crash loops on Android TV.
-        
-        Tracks boot timestamps in cache. If 5+ boots happen within 10 minutes,
-        it's a crash loop — notify the user with a wiki link for the fix.
+        """Detect Android TV channel-sync crash loops (known Kodi issue).
+
+        5+ boots within 10 minutes = crash loop; usual culprit is Live Channels
+        respawning Kodi via SyncProgramsJobService/SyncChannelJobService and
+        racing its startup. Notify at most once/day with self-fix steps: a
+        one-tap shortcut that opens Live Channels (UI path described in the
+        message) plus the adb component commands shown for the user to run
+        themselves - PseudoTV never executes adb against a user's device.
         """
         WINDOW = 600  # 10 minutes
         THRESHOLD = 5
         CACHE_KEY = 'KODI.SYNC_CRASH.TIMESTAMPS'
+        NOTIFY_KEY = 'KODI.SYNC_CRASH.NOTIFIED'
         try:
             timestamps = Globals.settings.getCacheSetting(CACHE_KEY, default=[])
             if not isinstance(timestamps, list): timestamps = []
@@ -193,13 +208,23 @@ class Tasks(object):
             if len(timestamps) >= THRESHOLD:
                 self.log(f'chkSyncCrash, crash loop detected ({len(timestamps)} boots in {WINDOW}s)', xbmc.LOGWARNING)
                 Globals.settings.setCacheSetting(CACHE_KEY, [])  # reset
-                Globals.dialog.okDialog(
-                    'Kodi is crash-looping on Android TV channel sync.\n\n'
-                    'This is a known Kodi issue — PseudoTV is not affected.\n'
-                    'To fix, disable the sync service via ADB:\n\n'
-                    '[B]adb shell pm disable-user --user 0 org.xbmc.kodi/.channels.SyncChannelJobService[/B]\n\n'
-                    'See the PseudoTV wiki for full instructions.',
-                    usethread=False)
+                last = Globals.settings.getCacheSetting(NOTIFY_KEY, default=0) or 0
+                if now - float(last) < 86400: return  # already told them today
+                Globals.settings.setCacheSetting(NOTIFY_KEY, now, life=datetime.timedelta(days=2))
+                message = ('Android TV is crash-looping Kodi through channel sync\n'
+                           '(SyncProgramsJobService / SyncChannelJobService).\n'
+                           'PseudoTV is not affected.\n\n'
+                           'Fix on this device:\n'
+                           '1. Open Live Channels and remove Kodi from:\n'
+                           '   Guide  Channel sources\n'
+                           '2. Or run these yourself in a terminal/ADB session\n'
+                           '   (PseudoTV never runs ADB for you):\n\n'
+                           'adb shell pm disable-user --user 0 org.xbmc.kodi/.channels.SyncProgramsJobService\n'
+                           'adb shell pm disable-user --user 0 org.xbmc.kodi/.channels.SyncChannelJobService\n\n'
+                           'Re-enable later with: pm enable <component>')
+                Globals.dialog.textviewer('%s, Android TV sync issue' % ADDON_NAME, message, usemono=True, autoclose=0)
+                if Globals.dialog.yesnoDialog('Open Live Channels settings now?', yeslabel='Yes', nolabel='Not now'):
+                    Globals.builtin.executebuiltin('StartAndroidActivity(com.google.android.tv)')
         except Exception as e:
             self.log(f'chkSyncCrash, failed: {e}', xbmc.LOGDEBUG)
   
@@ -389,7 +414,27 @@ class Tasks(object):
         
         
     def chkChannels(self, channels: Optional[list] = None, silent: Optional[bool] = None):
-        if channels is None: channels = self.getChannels()
+        # Floor guard: after a build leg the process parks at a high RSS floor
+        # (teardown + EPG reimport); full library dumps on that floor overflow
+        # the kill zone. Canonical (None, silent) args collapse retries into one
+        # pending task (sliced args re-queue per slice). ceiling - teardown
+        # headroom: this task launches builds whose save window needs the room.
+        if isMemPressure(rss_limit=RSS_PRESSURE_LIMIT - MEM_TEARDOWN_HEADROOM):
+            # bounce band: queue runs but every task guard bounces — trim here
+            # or the 120s retry loop never reclaims.
+            try: self.log('chkChannels, memory pressure — trimMalloc -> %d bytes reclaimed, re-queueing in 120s' % trimMalloc())
+            except Exception as e: self.log('chkChannels, memory pressure — trim failed: %s, re-queueing in 120s' % e)
+            self.service._que(self.chkChannels,3,120,0,*(None,silent))
+            return
+        if channels is None:
+            channels = self.getChannels()
+            # Fresh-window priority — see _sortByMissingFromM3U.
+            try:
+                with M3U() as m3u:
+                    m3u_names = {s.get('name') for s in m3u.getStations() if s.get('name')}
+                channels = _sortByMissingFromM3U(channels, m3u_names)
+            except Exception as e:
+                self.log('chkChannels, membership sort skipped: %s' % e, xbmc.LOGDEBUG)
         if silent is None: silent = not Globals.settings.showDialog(silent)
         self.log("chkChannels, channels = %s, silent = %s"%(len(channels),silent))
         if len(channels) > 0:
@@ -491,8 +536,12 @@ class Tasks(object):
         # briefly clears between chunks, opening a race window for a toggle).
         build_pending = (Globals.properties.isRunning('Builder.buildChannels')
                          or len(self.service.queue.get_queued_dedup_keys('build.')) > 0)
-        if build_pending or self.service._isPlaying():
-            self.log("chkPVRRefresh, deferred (build running or media playing), retrying in 5 min", xbmc.LOGDEBUG)
+        # isMemPressure: a toggle/reload re-parses the full EPG — on a
+        # post-teardown high-RSS floor that overflows the kill zone. The
+        # deferred retry at priority 1 re-checks, so refreshes resume when RSS
+        # falls. ceiling - teardown headroom: the reload is a heavy write window.
+        if build_pending or self.service._isPlaying() or isMemPressure(rss_limit=RSS_PRESSURE_LIMIT - MEM_TEARDOWN_HEADROOM):
+            self.log("chkPVRRefresh, deferred (build running, media playing, or memory pressure), retrying in 5 min", xbmc.LOGDEBUG)
             # re-queue directly at priority 1 instead of relying on the
             # prop-timer. The prop-timer pushes at priority 4, which the queue drops
             # whenever the startup push (priority 2) is still pending/running — so the
@@ -785,7 +834,12 @@ class Tasks(object):
                 if len(self.service.logoQue) > 0:
                     param = None
                     try:
-                        if library is None: library = Library()
+                        # Share the main service so Resources.imageCache is the SAME
+                        # OrderedDict the /logos/ endpoint serves (server.py MyHandler).
+                        # A bare Library() builds a fresh _Service() with its own
+                        # imageCache, so resolved logos landed in a cache nobody read
+                        # and /logos/{name} kept returning the default.
+                        if library is None: library = Library(service=self.service)
                         self.log(f"chkQUES logoQue {len(self.service.logoQue)}")
                         param = FileAccess.loadJSON(self.service.logoQue.pop(), skip_cache=True)
                         self.service._que(library.resources.getLogo,5,0,0,*({'name':param},library.resources.getImageCache(param),True))

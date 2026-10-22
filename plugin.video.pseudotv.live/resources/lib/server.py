@@ -258,28 +258,14 @@ class MyHandler(BaseHTTPRequestHandler):
 
 
     # ======================= HTML templating =======================
-    @staticmethod
-    def _jsonScript(obj: Any) -> str:
-        """JSON literal safe to inject into an inline <script> block."""
-        s = FileAccess.dumpJSON(obj, sortkey=True)
-        return s.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')\
-                .replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
-
-
     def _templateHTML(self, html: str, name: str) -> bytes:
-        remote   = Globals.properties.getRemoteHost()
-        channels = Channels(Globals.getChannelKey())
-        html = html.replace('{{ remote_host }}', remote)
+        # Only remote_host / media_loc remain. The old channels_json, template_json,
+        # servers_json, CHANNEL_LIMIT and xmltv_data substitutions existed for the
+        # deleted legacy pages - xmltv_data rendered the whole 40MB+ XMLTV on every
+        # single HTML page load, and a Channels() + Multiroom() were constructed just
+        # to build payloads nothing consumes. The live pages fetch /api/* instead.
+        html = html.replace('{{ remote_host }}', Globals.properties.getRemoteHost())
         html = html.replace('{{ media_loc }}', MEDIA_LOC)
-        html = html.replace('{{ channel_limit }}', str(CHANNEL_LIMIT))
-        html = html.replace('{{ CHANNEL_LIMIT|safe }}', str(CHANNEL_LIMIT))
-        html = html.replace('{{ servers_json|safe }}', self._jsonScript(Multiroom(service=self.service).serverData))
-        html = html.replace('{{ channels_json|safe }}', self._jsonScript(channels.getChannels()))
-        html = html.replace('{{ template_json|safe }}', self._jsonScript(channels.getTemplate()))
-        if '{{ xmltv_data|safe }}' in html:
-            xml = renderFilteredXMLTV(self.channels, self.runActions).decode(DEFAULT_ENCODING, 'replace')
-            xml = xml.replace('\\', '\\\\').replace('`', '\\`').replace('${', '\\${').replace('</script', '<\\/script')
-            html = html.replace('{{ xmltv_data|safe }}', xml)
         html = html.replace('{json}', '{}')
         html = html.replace('{uuid}', Globals.settings.getMYUUID())
         return html.encode(DEFAULT_ENCODING)
@@ -308,7 +294,7 @@ class MyHandler(BaseHTTPRequestHandler):
 
 
     def do_OPTIONS(self):
-        """CORS preflight for the browser API clients (channels_new.html, etc.)."""
+        """CORS preflight for the browser API clients (manager.html, payload.html)."""
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -356,7 +342,7 @@ class MyHandler(BaseHTTPRequestHandler):
         if path.startswith('/api/'):
             return self._apiPOST(path, incoming)
 
-        if path == '/remote/form.json':  # generic payload editor (form.html)
+        if path == '/remote/payload.json':  # raw payload editor (payload.html)
             payload = incoming.get('payload')
             if isinstance(payload, list):
                 p, code = self.cm.saveChannels(payload)
@@ -583,7 +569,7 @@ class MyHandler(BaseHTTPRequestHandler):
                 if not FileAccess.exists(full): return self._sendError(404, 'File Not Found [%s]' % self.path)
                 return self._sendFile(full, compress)
 
-            # --- remotes static: /remote/... (form.html payload editor, etc.) ---
+            # --- remotes static: /remote/... (payload.html, etc.) ---
             if path.startswith('/remote/'):
                 rel = Globals._unquoteString(path.split('/remote/', 1)[1])
                 if '..' in rel: return self._sendError(400, 'Invalid path')
@@ -625,9 +611,13 @@ class MyHandler(BaseHTTPRequestHandler):
                 return self._apiGET(path, query, compress)
 
             # --- HTML pages ---
+            # manager.html is the canonical UI. The legacy channels.html /
+            # channels_new.html were removed once their features (create-channel,
+            # unsaved-changes guard, manual path entry) and control styles were
+            # ported into manager.html.
             if path in ('', '/') or path.endswith('.html'):
                 name = 'manager.html'
-                for candidate in (MANAGERFLE, 'channels.html', 'channels_new.html', 'form.html'):
+                for candidate in (MANAGERFLE, 'payload.html'):
                     if path.endswith('/' + candidate) or path == '/' + candidate:
                         name = candidate
                         break
@@ -651,7 +641,7 @@ class HTTP(Thread):
     httpd = None
 
     def __init__(self, service: Any = None):
-        Thread.__init__(self)
+        Thread.__init__(self, name=f"{ADDON_ID}.HTTP.service")
         self.daemon = True
         self.service = service
         self.monitor = service.monitor
@@ -745,6 +735,10 @@ class HTTP(Thread):
                     self.monitor.waitForAbort(5)
                     self.log("run, _shutdown/pendingRestart", xbmc.LOGERROR)
                     break
+                else:
+                    # this while had no else — once HTTP.run is set the
+                    # supervisor would hot-spin on property getters.
+                    self.monitor.waitForAbort(0.5)
 
             try: self._server.shutdown()
             except Exception as e: self.log('server shutdown failed: %s' % e, xbmc.LOGDEBUG)

@@ -134,7 +134,8 @@ class Builder(object):
         self.holiday   = self.seasonal.getHoliday()
         self.channels  = Channels(Globals.getChannelKey(), writable=True)
         self.resources = Resources(service)
-        self.runActions = RulesList(self.channels.getChannels()).runActions
+        self.rulesList  = RulesList(self.channels.getChannels())
+        self.runActions = self.rulesList.runActions
 
 
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
@@ -209,8 +210,24 @@ class Builder(object):
         if preview and write: write = False
         self.log('buildChannels, channels=%d, preview=%s, silent=%s, write=%s' % (len(channels), preview, silent, write))
         
-        if Globals.properties.isRunning('Builder.buildChannels'): return
-        with Globals.properties.legacy(), Globals.properties.chkRunning('Builder.buildChannels'):
+        # Guard BEFORE setup: setup costs ~+250MB, don't start it on a hot process.
+        # ceiling - teardown headroom: the save window needs room.
+        if isMemPressure(rss_limit=RSS_PRESSURE_LIMIT - MEM_TEARDOWN_HEADROOM):
+            self.log('buildChannels, memory pressure before setup — re-queueing %d channels in 120s' % len(channels))
+            # Canonical args (None, silent): one fixed task_key, so guard retries
+            # collapse into a single pending chkChannels (sliced args re-queue per slice).
+            if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,120,0,*(None,silent))
+            return
+        with Globals.properties.legacy(), Globals.properties.chkRunning('Builder.buildChannels') as _busy:
+            if _busy:
+                # Another build owns the flag (queued chunks race the first run).
+                # Requeue instead of drop — a dropped chunk would wait for the
+                # next full chkLibrary cycle.
+                self.log('buildChannels, busy — requeueing %d channels in 60s' % len(channels))
+                # carry the keys: the continuation (same task_key) must free them
+                # on final completion, or chkChannels can never re-push this chunk.
+                if hasattr(self.service,'_que'): self.service._que(self.buildChannels,3,60,0,*(channels,preview,silent,write),dedup_keys={f"build.{c.get('id')}" for c in channels if c.get('id')})
+                return
             channels = self.getVerifiedChannels(channels)
             if not channels: return
             changes  = set()
@@ -244,7 +261,15 @@ class Builder(object):
                     if self.enableBCTs:
                         self.log('buildChannels, pre-computing filler sources')
                         Fillers({}, self)
-                    
+
+                    # loadStopTimes/hasProgrammes/Fillers run between the setup
+                    # guard and this loop's own check (~+450MB). Bail before
+                    # building channels onto an already-high process.
+                    if isMemPressure(rss_limit=RSS_PRESSURE_LIMIT - MEM_TEARDOWN_HEADROOM):
+                        self.log('buildChannels, low memory after precompute — re-queuing %d channels in 120s' % len(channels))
+                        if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,120,0,*(None,silent))
+                        return
+
                     build_start = time.time()
                     BUILD_BUDGET = 600  # 10 minute build budget — re-queues remaining channels
 
@@ -255,17 +280,24 @@ class Builder(object):
                             if idx > 0 and (time.time() - build_start) > BUILD_BUDGET:
                                 self.log(f"buildChannels, budget exceeded after {int(time.time() - build_start)}s — re-queuing {len(channels)-idx} remaining channels")
                                 self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
-                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                                # delay 60s (3rd arg is delay, 4th is timer!): our build.* dedup
+                                # keys release only at task finish, and the M3U/XMLTV teardown
+                                # write takes ~30s — chkChannels must see the keys gone.
+                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,60,0,*(channels[idx:],silent))
                                 break
 
                             # Memory budget: the build is the host's biggest memory
                             # consumer. Re-queue before the device runs out of
                             # reclaimable RAM — the OOM killer takes Kodi down whole,
                             # a deferred channel only resumes next cycle.
-                            if isMemPressure():
+                            # ceiling - teardown headroom: the save window needs room.
+                            if isMemPressure(rss_limit=RSS_PRESSURE_LIMIT - MEM_TEARDOWN_HEADROOM):
                                 self.log(f"buildChannels, low memory — re-queuing {len(channels)-idx} remaining channels")
                                 self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
-                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                                # delay 120s (delay is 3rd arg, timer 4th): RSS takes
+                                # time to fall after the build stops, and our build.*
+                                # keys release only at task finish (~30s teardown).
+                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,120,0,*(channels[idx:],silent))
                                 break
 
                             self._buildIdx = idx
@@ -279,7 +311,7 @@ class Builder(object):
                             if self.service.interrupt():
                                 self.log(f"[{citem.get('id')}] buildChannels, _interrupt")
                                 self.pDialog = Globals.dialog._updateProgress(self.pDialog, self.pCount, message=f"{LANGUAGE(32144)}: {LANGUAGE(32213)}", header=self.pHeader)
-                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                                if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,60,0,*(channels[idx:],silent))  # 60s: own dedup keys release at task finish (~30s teardown)
                                 break
                             elif self.service.suspend():
                                 self.log(f"[{citem.get('id')}] buildChannels, _suspend")
@@ -392,7 +424,7 @@ class Builder(object):
                                 
                                 if fileList is None:
                                     self.log(f"[{citem.get('id')}] buildChannels, suspended, requeueing remaining")
-                                    if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,0,0,*(channels[idx:],silent))
+                                    if hasattr(self.service,'_que'): self.service._que(self.service.tasks.chkChannels,3,60,0,*(channels[idx:],silent))  # 60s: own dedup keys release at task finish
                                     break
                                 elif isinstance(fileList, list) and fileList:
                                     total_dur = sum(item.get('duration', 0) for item in fileList if isinstance(item, dict))
@@ -518,17 +550,24 @@ class Builder(object):
 
         tmp_citem = citem.copy()
         tmp_citem['rules'] = dict(citem.get('rules', {}))
+        injected = False
         if paths == ["{Seasonal}"]:
             nrules = {600: {"values": {0: list(self.seasonal.buildSeasonal(self.holiday))}}}
             tmp_citem['rules'].update(nrules)
+            injected = True
             self.log(f" [{citem.get('id')}] buildVideo: Seasonal Content, new rules = {nrules}")
             
         if self.enableEven and not tmp_citem.get('rules', {}).get(701):
             nrules = {701: {"values": {0: Globals.settings.getSettingInt('Enable_Even'), 1: self.evenEpisode, 2: self.evenShuffle}}}
             tmp_citem['rules'].update(nrules)
+            injected = True
             self.log(f" [{citem.get('id')}] buildVideo: Even Show Distribution, new rules = {nrules}")
             
         citem = tmp_citem
+        # runActions serves the ruleItems snapshot taken at construction, so a rule
+        # injected here would never dispatch. An auto-created {Seasonal} channel has
+        # no persisted rule 600 at all, so SeasonalRule used to never fire.
+        if injected: self.rulesList.setChannelRules(citem)
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self) 
         self.log(f"[{citem.get('id')}] buildVideo, channel pre fileArray items = {len(fileArray)}", xbmc.LOGINFO)
         

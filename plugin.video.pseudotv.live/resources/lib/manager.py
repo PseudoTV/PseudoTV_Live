@@ -438,9 +438,13 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getLogoColor, id = %s' % (citem.get('id', -1)))
         if not citem.get('logo') or not citem.get('name'): 
             return 'FFFFFFFF'
-        elif citem.get('rules', {}).get(200):  # ShowChannelBug (myId 200)
-            if self.getRuleAbbr(citem, 200, 4) or self.resources.isMono(citem['logo']):
-                return self.getRuleAbbr(citem, 200, 3)
+        elif citem.get('rules', {}).get(200):  # ShowChannelBug (myId 200) - options [2]=color [3]=force-diffuse
+            # was reading [4] (transparency, truthy by default) and returning [3]
+            # (a bool), so the per-channel colour never applied and this could hand
+            # the overlay True/False instead of a hex colour.
+            if self.getRuleAbbr(citem, 200, 3) or self.resources.isMono(citem['logo']):
+                color = self.getRuleAbbr(citem, 200, 2)
+                if isinstance(color, str) and color: return color
         return Globals.settings.getSetting('ChannelBug_Color')
         
     def buildChannelItem(self, citem: dict={}, focuskey: str='path'):
@@ -630,7 +634,10 @@ class Manager(xbmcgui.WindowXMLDialog):
         else:            
             select  = -1
             erules  = rules.copy()
-            ruleLST = rules.copy()
+            # Normalize to int keys: ruleLST is keyed by str in one branch and int in
+            # another, and crules from loadRules is int-keyed - so any str/int mix
+            # silently breaks ruleLST.get() lookups (e.g. the arules filter below).
+            ruleLST = {int(k) if str(k).isdigit() else k: v for k, v in rules.items()}
             lastIDX = None
             lastXID = None
             while not self.monitor.abortRequested() and select is not None:
@@ -663,15 +670,15 @@ class Manager(xbmcgui.WindowXMLDialog):
                                 lastXID = -1
                             nrule, citem = self.getRule(citem, arules[lastXID])
                             if nrule is not None: 
-                                ruleLST.update({str(nrule.myId): nrule})
+                                ruleLST.update({nrule.myId: nrule})
                     elif key == 'save':
                         rules = ruleLST
                         break
-                    elif ruleLST.get(str(myId)):
+                    elif ruleLST.get(myId):
                         with self.toggleSpinner(condition=(Globals.properties.isRunning('Manager.toggleSpinner') == False)):
                             retval = Globals.dialog.yesnoDialog(LANGUAGE(32175), customlabel=LANGUAGE(32176))
                             if retval in [1, 2]: 
-                                ruleLST.pop(str(myId))
+                                ruleLST.pop(myId, None)
                             if retval == 2: 
                                 nrule, citem = self.getRule(citem, crules.get(myId, {}))
                                 if nrule is not None: 

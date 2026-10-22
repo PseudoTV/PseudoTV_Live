@@ -186,6 +186,12 @@ class ChannelManager(object):
             # Verify config through the manager.py flow: _verify fills template keys
             # + rules migration, _validateChannel sanitizes name/setName/groups, then
             # addChannel dedups by id. Full-list save so manager deletions persist.
+            # Assign ids BEFORE _verify: it skips channels with an empty id, so a
+            # brand-new channel created in the web UI was silently dropped on save.
+            for c in payload:
+                if isinstance(c, dict) and not c.get('id'):
+                    c['id'] = Globals._getChannelID(c.get('name', ''), c.get('path', []), c.get('number', 0))
+                    self.log('saveChannels, assigned new channel id %s' % c['id'], xbmc.LOGDEBUG)
             cleaned = [self.validateChannel(c) for c in chan._verify(payload)]
             chan.channelDATA['channels'] = []
             for citem in cleaned:

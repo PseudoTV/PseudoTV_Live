@@ -37,8 +37,10 @@ never the MPAA "R" folder).
 import re
 
 # Canonical MPAA severity ordering ('' = unrated/unknown, kept at 0 so an
-# unrecognized label never gets filtered out).
-MPAA_RANK = {'': 0, 'G': 1, 'PG': 2, 'PG-13': 3, 'R': 4, 'NC-17': 5, 'NR': 6}
+# unrecognized label never gets filtered out). 'NR' (explicitly Not Rated) sits
+# with them: ranking it 6 made every NR programme MORE severe than NC-17, so
+# RatingFilter dropped all unrated content whenever any max rating was set.
+MPAA_RANK = {'': 0, 'NR': 0, 'G': 1, 'PG': 2, 'PG-13': 3, 'R': 4, 'NC-17': 5}
 
 # Named rating systems: system name -> {label: canonical MPAA label}.
 _SYSTEMS = {

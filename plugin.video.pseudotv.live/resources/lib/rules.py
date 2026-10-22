@@ -93,6 +93,7 @@ class RulesList(object):
 
         if channels: self.ruleItems = self.loadRules(channels)
         else:        self.ruleItems = {}
+        self._sortedCache = {} #cid -> [myId, rule] ordered once per load, not per dispatch
 
 
     def log(self, msg: str, level: int = xbmc.LOGDEBUG):
@@ -122,7 +123,14 @@ class RulesList(object):
         #load channel rules and their instances. append = full rule list.
         def __load(ruleList, citem={}):
             tmpruleList = {}
-            if not append and len(citem.get('rules',{})) == 0:
+            # Rule ids are ints in memory, but ANY json round-trip turns dict keys
+            # into strings - and the in-memory cache tier is json-encoded while the
+            # sqlite tier is pickled (cache.py:_setMEM vs _setDB), so which key type
+            # you get back depends on whether the mem tier is warm. A .get(int) against
+            # a str-keyed dict silently misses and drops every channel rule, so re-key
+            # once here rather than trusting the caller to have normalized it.
+            crules = {int(k) if str(k).isdigit() else k: v for k, v in (citem.get('rules') or {}).items()}
+            if not append and len(crules) == 0:
                 # Rule-less channel — still register an empty entry so runActions
                 # finds it in ruleItems and skips the expensive per-dispatch reload.
                 rules[citem.get('id')] = {}
@@ -134,13 +142,13 @@ class RulesList(object):
                     if isinstance(idx, str): idx = int(idx) #temp correct format change
                     tmpritem["values"][idx] = value
 
-                if citem.get('rules',{}).get(rule.myId):
-                    for key, value in list(citem['rules'][rule.myId].get('values',{}).items()): #load channel rule
+                if crules.get(rule.myId):
+                    for key, value in list(crules[rule.myId].get('values',{}).items()): #load channel rule
                         try:
                             if isinstance(key, str): key = int(key) #temp correct format change
                             tmpritem["values"].update({key:value}) #update default rule value with channel value.
                             ruleInstance.optionValues[key] = tmpritem["values"][key] #load values to rule instance
-                        except Exception as e: log('[%s] loadRules, failed! %s\nrule = %s'%(citem['id'],e,citem['rules'][rule.myId]), xbmc.LOGERROR)
+                        except Exception as e: log('[%s] loadRules, failed! %s\nrule = %s'%(citem['id'],e,crules[rule.myId]), xbmc.LOGERROR)
                     tmpruleList[rule.myId] = ruleInstance
 
                 elif append: #append missing default rule values
@@ -153,6 +161,7 @@ class RulesList(object):
         ruleList = self.ruleList.copy()
         ruleList.pop(0) #remove boilerplate baseRule()
         [__load(ruleList,channel) for channel in channels]
+        self._sortedCache = {} #per-channel sort order is stale once rules reload
         return rules
 
 
@@ -161,6 +170,23 @@ class RulesList(object):
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate baseRule()
         return [rule.copy() for rule in tmpruleList]
+
+
+    def setChannelRules(self, citem: dict = {}) -> dict:
+        """Reload one channel's rules from its (possibly just-mutated) citem.
+
+        Dispatch normally serves the ruleItems snapshot taken at construction, so a
+        caller that injects rules mid-build - the builder's {Seasonal} holiday queries
+        and the global EvenShowDistribution default - would dispatch against stale
+        values, or (for an auto-created {Seasonal} channel that never persisted rule
+        600) against nothing at all. Call this right after mutating citem['rules'].
+        """
+        cid = citem.get('id', '')
+        rules = (self.loadRules([citem]).get(cid) or {})
+        self.ruleItems[cid] = rules
+        self._sortedCache.pop(cid, None)
+        self.log('[%s] setChannelRules: rule myIds = %s'%(cid, list(rules.keys())))
+        return rules
 
 
     def runActions(self, action: str, citem: dict = {}, parameter: Any = None, inherited: Any = None) -> Any:
@@ -187,11 +213,14 @@ class RulesList(object):
         if cid not in self.ruleItems:
             rules = (self.loadRules([citem]).get(cid) or {})
             self.ruleItems[cid] = rules
-        # Pre-sort by myId once per loadRules call (cached in ruleItems)
-        sorted_rules = rules.get('_sorted')
+        # Pre-sort by myId once per loadRules call (cached per channel). Kept off
+        # the per-channel dict so that dict holds real rules only - anything that
+        # iterates ruleItems[cid] expecting (myId, rule) pairs must not trip over
+        # a synthetic cache key carrying rule objects.
+        sorted_rules = self._sortedCache.get(cid)
         if sorted_rules is None:
             sorted_rules = list(sorted(rules.items()))
-            rules['_sorted'] = sorted_rules
+            self._sortedCache[cid] = sorted_rules
         for myId, rule in sorted_rules:
             if action in rule.actions:
                 self.log("[%s] runActions, %s performing channel rule: %s"%(citem.get('id'),inherited.__class__.__name__,rule.name))
@@ -519,7 +548,11 @@ class ShowOnNext(BaseRule):
         if self.optionValues[optionindex] == self.selectBoxOptions[optionindex][1]:
             from overlaytool import OverlayTool
             overlaytool = None # or `del` in finally raises UnboundLocalError, masking the original error
-            try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=0, OnNext_Position_XY=self.optionValues[optionindex], OnNext_Color=self.optionValues[2])
+            # Focus_IDX=2 = the on-next control (0 is the vignette, which is what the
+            # old value focused - the wrong handle got dragged around). OnNext_Color
+            # was also passed but is not an OverlayTool kwarg at all, and option[2]
+            # is the on-next MODE, not a colour - dropped.
+            try: overlaytool = OverlayTool(OVERLAYTOOL_XML, ADDON_PATH, "default", ADV_RULES=True, Focus_IDX=2, OnNext_Position_XY=self.optionValues[optionindex])
             except Exception as e: self.log("getPosition, failed! %s"%(e), xbmc.LOGERROR)
             finally: del overlaytool
             value = Globals.properties.getProperty("OnNext_Position_XY")
@@ -539,7 +572,11 @@ class ShowOnNext(BaseRule):
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, player: Any) -> Any:
         if actionid == RULES_ACTION_PLAYER_START:
-            self.storedValues[0]  = bool(player.OnNextMode)
+            # option[0] 'enabled' was never read, so toggling the rule off did nothing.
+            # storedValues[0] now doubles as the applied-flag so a STOP after a skipped
+            # START never writes stale values back over the player.
+            if not self.optionValues[0]: return parameter
+            self.storedValues[0]  = True
             self.storedValues[1]  = player.onNextPosition
             self.storedValues[2]  = player.OnNextMode # attr is OnNextMode - lowercase raised AttributeError, killing the rule
             player.onNextPosition = self.optionValues[1]
@@ -547,6 +584,8 @@ class ShowOnNext(BaseRule):
             self.log("runAction, setting onNextPosition = %s, OnNextMode = %s"%(player.onNextPosition, player.OnNextMode))
 
         elif actionid == RULES_ACTION_PLAYER_STOP:
+            if not self.storedValues[0]: return parameter #never applied this session
+            self.storedValues[0]  = False
             player.onNextPosition = self.storedValues[1]
             player.OnNextMode     = self.storedValues[2]
             self.log("runAction, restoring onNextPosition = %s, OnNextMode = %s"%(player.onNextPosition, player.OnNextMode))
@@ -578,7 +617,7 @@ class SetScreenVingette(BaseRule):
 
 
     def getTitle(self) -> str:
-        return '%s (%s)'%(self.name,self.optionValues)
+        return '%s (%s)'%(self.name,{True:LANGUAGE(30184),False:LANGUAGE(30021)}[bool(self.optionValues[0])]) #was the raw list, unlike every other rule
 
             # todo set viewmode as {} response from json.
 
@@ -633,8 +672,17 @@ class SetScreenVingette(BaseRule):
 # myId=202 OVERLAY - MST3K silhouette animation (cycles 2 gifs on a 5s self-timer via fractional action 30.1). OPEN saves, CLOSE restores.
 class MST3k(BaseRule):
     """USAGE: Mystery Science Theater 3000 silhouette animation on the overlay.
-    PARAMS (options): [0] enabled bool. Cycles two gifs on a 5s self-timer that
-    fires the fractional action 30.1 via overlay.runActions; restores on close."""
+    PARAMS (options): [0] enabled bool.
+    HOW IT WORKS: the silhouette IS the vignette - both gifs are full-frame theater
+    images stretched edge to edge (aspectRatio=0), so no extra control is needed.
+    OPEN saves Overlay.enableVignette/vinImage/vinView, ENABLES the vignette so
+    onInit (overlay.py:402) actually creates the ControlImage, paints frame 0, then
+    arms a SERVICE_INTERVAL timer that re-enters through the fractional action
+    OPEN+.1 (30.1) to swap frames. CLOSE cancels the timer and restores all three.
+    Overlay dispatches rules BEFORE it creates the control (overlay.py:399 vs 405),
+    so setting the attrs during OPEN is enough for frame 0; only later frames need
+    the control to already exist. overlay.vinView is deliberately never touched -
+    a full-frame silhouette wants the default zoom/shift."""
 
 
     def __init__(self):
@@ -645,9 +693,8 @@ class MST3k(BaseRule):
         self.optionValues       = [False]
         self.optionDescriptions = ["Enable Silhouette"]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_OPEN+.1,RULES_ACTION_OVERLAY_CLOSE]
-        self.storedValues       = [[],[],[]]
-        self.threadTimer        = Timer(SERVICE_INTERVAL, self.runAction)
-        self.threadTimer.daemon = True
+        self.storedValues       = [False,'',{}] #[0]=enableVignette [1]=vinImage [2]=vinView
+        self.threadTimer        = None
         self.optionImages       = [os.path.join(MEDIA_LOC,'overlays','MST3K_1.gif'), os.path.join(MEDIA_LOC,'overlays','MST3K_2.gif')]
 
 
@@ -660,7 +707,9 @@ class MST3k(BaseRule):
 
 
     def setImage(self, actionid: str, citem: dict, overlay: Any, image: str) -> str:
-        if not self.threadTimer.is_alive():
+        # Re-arm only once the previous tick has fired - a still-live timer would
+        # stack a second thread and double the frame rate each cycle.
+        if self.threadTimer is None or not self.threadTimer.is_alive():
             self.threadTimer = Timer(SERVICE_INTERVAL, overlay.runActions,[actionid, citem, None, overlay])
             self.threadTimer.name = 'MST3k.setImage'
             self.threadTimer.daemon = True
@@ -676,30 +725,28 @@ class MST3k(BaseRule):
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, overlay: Any) -> Any:
         if actionid == RULES_ACTION_OVERLAY_OPEN:
-            self.storedValues[0] = overlay.vinImage
-            self.storedValues[1] = overlay._vinOffsetXY
-            self.storedValues[2] = overlay._vinZoom
-
-            overlay.vinImage    = self.setImage(actionid+.1, citem, overlay, self.optionImages[0])
-            overlay._vinOffsetXY = (0,0)
-            overlay._vinZoom     = 1.0
-            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay.vinImage, overlay._vinOffsetXY, overlay._vinZoom))
+            self.storedValues = [overlay.enableVignette, overlay.vinImage, overlay.vinView]
+            overlay.enableVignette = True                   #the gate onInit checks - without this no control is ever drawn
+            overlay.vinImage        = self.optionImages[0]
+            self.log("runAction, enabling vignette, image %s"%(overlay.vinImage))
+            self.setImage(actionid+.1, citem, overlay, overlay.vinImage)
 
         elif actionid == RULES_ACTION_OVERLAY_OPEN+.1:
-            overlay.vinImage = self.setImage(actionid, citem, overlay, self.optionImages[1])
-            overlay._setImage(overlay.vignette,overlay.vinImage)
-            self.log("runAction, setting overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay.vinImage, overlay._vinOffsetXY, overlay._vinZoom))
+            image = self.optionImages[1] if overlay.vinImage != self.optionImages[1] else self.optionImages[0]
+            overlay.vinImage = image
+            if getattr(overlay, 'vignette', None) is not None: overlay.vignette.setImage(image)
+            self.log("runAction, cycling vignette image %s"%(image))
+            self.setImage(actionid, citem, overlay, image)
 
         elif actionid == RULES_ACTION_OVERLAY_CLOSE:
-            overlay.vinImage    = self.storedValues[0]
-            overlay._vinOffsetXY = self.storedValues[1]
-            overlay._vinZoom     = self.storedValues[2]
-            self.log("runAction, restoring overlay enabled = %s, image %s @ (%s) X %s"%(overlay.enableVignette, overlay.vinImage, overlay._vinOffsetXY, overlay._vinZoom))
+            overlay.enableVignette, overlay.vinImage, overlay.vinView = self.storedValues
+            self.log("runAction, restoring vignette image = %s\nmode = %s"%(overlay.vinImage,overlay.vinView))
 
-            if self.threadTimer.is_alive():
+            if self.threadTimer is not None and self.threadTimer.is_alive():
                 if hasattr(self.threadTimer, 'cancel'): self.threadTimer.cancel()
                 try: self.threadTimer.join()
                 except Exception as e: self.log('threadTimer join failed: %s' % e, xbmc.LOGDEBUG)
+            self.threadTimer = None
         return parameter
 
 
@@ -970,7 +1017,7 @@ class PinLockRule(BaseRule): #PLAYER RULES [100-199]
     interpreted to MPAA). On PLAYER_START a locked programme prompts for the
     PIN: correct plays, wrong leaves current playback untouched, and with
     nothing playing opens the channel list. Approval is per-channel and
-    resets on CHANNEL_STOP."""
+    resets on PLAYER_STOP (and CHANNEL_STOP)."""
 
 
     def __init__(self):
@@ -980,7 +1027,10 @@ class PinLockRule(BaseRule): #PLAYER RULES [100-199]
         self.optionLabels       = [LANGUAGE(32332),LANGUAGE(32333),LANGUAGE(32334)]
         self.optionValues       = ['',False,0]
         self.optionDescriptions = [LANGUAGE(32331),LANGUAGE(32331),LANGUAGE(32331)]
-        self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_CHANNEL_STOP]
+        # PLAYER_STOP too: approval is granted at playback time, but the reset used
+        # to live only on CHANNEL_STOP (build time). A channel that never rebuilds
+        # stayed unlocked forever after a single PIN entry.
+        self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = ["",'',{'Off':0,'G':1,'PG':2,'PG-13':3,'R':4,'NC-17':5}]
         self.storedValues       = [False]
 
@@ -1013,14 +1063,16 @@ class PinLockRule(BaseRule): #PLAYER RULES [100-199]
 
 
     def onAction(self, optionindex: int) -> Any:
-        if   optionindex == 0: self.onActionTextBox(optionindex)
+        if   optionindex == 0:
+            self.onActionTextBox(optionindex)
+            self.validateTextBox(optionindex, 32)
         elif optionindex == 1: self.onActionToggleBool(optionindex)
         elif optionindex == 2: self.onActionSelect(optionindex, LANGUAGE(32334))
         return self.optionValues[optionindex]
 
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, player: Any) -> Any:
-        if actionid == RULES_ACTION_CHANNEL_STOP:
+        if actionid in [RULES_ACTION_PLAYER_STOP, RULES_ACTION_CHANNEL_STOP]:
             self.storedValues[0] = False  # reset per-channel approval
             return parameter
         if actionid != RULES_ACTION_PLAYER_START:
@@ -1068,7 +1120,7 @@ class ForceRebuild(BaseRule):
 
 
     def getTitle(self) -> str:
-        return '%s (%s)'%(self.name,self.optionValues)
+        return '%s (%s)'%(self.name,{True:LANGUAGE(30184),False:LANGUAGE(30021)}[bool(self.optionValues[0])]) #was the raw list, '[False]', unlike every other rule
 
 
     def onAction(self, optionindex: int) -> Any:
@@ -1097,7 +1149,7 @@ class DurationOptions(BaseRule): #BUILD_SOURCE RULES [500-507]
         self.description        = "Duration Options"
         self.optionLabels       = [LANGUAGE(30049),LANGUAGE(30052),LANGUAGE(32233)]
         self.optionValues       = [Globals.settings.getSettingInt('Duration_Type'),Globals.settings.getSettingBool('Store_Duration'),Globals.settings.getSettingInt('Seek_Tolerance')]
-        self.optionDescriptions = [LANGUAGE(33015),LANGUAGE(33049),LANGUAGE(33052),LANGUAGE(32233)]
+        self.optionDescriptions = [LANGUAGE(33049),LANGUAGE(33052),LANGUAGE(32233)] #one per label - a 4th entry here was read against a 3-option rule
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30050):0,LANGUAGE(30051):1},[],list(range(0,900,5))]
         self.storedValues       = [[],[],[]]
@@ -1115,6 +1167,8 @@ class DurationOptions(BaseRule): #BUILD_SOURCE RULES [500-507]
         if optionindex == 0:
             self.onActionSelect(optionindex, LANGUAGE(30049))
             self.validateRange(optionindex, 0, 1, 0)
+        elif optionindex == 2:
+            self.onActionSelect(optionindex) #minDuration is an int from selectBoxOptions, not a bool - toggling turned 150 into False
         else:
             self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
@@ -1228,8 +1282,12 @@ class PreRoll(BaseRule):
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, builder: Any) -> Any:
         if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedValues[0] = builder.bctTypes.get('bumpers',{})
-            self.storedValues[1] = builder.bctTypes.get('ratings',{})
+            # dict() copies: .get() hands back the LIVE sub-dict, so the update()
+            # below mutated the snapshot in place and the STOP restore was a no-op.
+            # bctTypes is shared across every channel in a build, so per-channel
+            # preroll overrides used to leak into all later channels.
+            self.storedValues[0] = dict(builder.bctTypes.get('bumpers',{}))
+            self.storedValues[1] = dict(builder.bctTypes.get('ratings',{}))
             builder.bctTypes['bumpers'].update({"max":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[2].split('|'),"paths":self.optionValues[4]}})
             builder.bctTypes['ratings'].update({"max":self.optionValues[0], "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[3].split('|'),"paths":self.optionValues[5]}})
             self.log("runAction, setting bctTypes = %s"%(builder.bctTypes))
@@ -1259,7 +1317,7 @@ class PostRoll(BaseRule):
         self.optionDescriptions = [LANGUAGE(33019),LANGUAGE(33139),LANGUAGE(33030),"",LANGUAGE(33031),"",LANGUAGE(33126),LANGUAGE(33233)]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30022):-1,LANGUAGE(30021):0,LANGUAGE(30026):1,LANGUAGE(30024):2,LANGUAGE(30025):3},list(range(0,101,1)),[]]
-        self.storedValues       = [{},{}]
+        self.storedValues       = [{},{},{}] #[0]=adverts [1]=trailers [2]=extras - extras is mutated by runAction and must be restorable too
 
 
     def copy(self) -> 'PostRoll':
@@ -1280,8 +1338,11 @@ class PostRoll(BaseRule):
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, builder: Any) -> Any:
         if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedValues[0] = builder.bctTypes.get('adverts',{})
-            self.storedValues[1] = builder.bctTypes.get('trailers',{})
+            # dict() copies - see PreRoll: .get() aliases the live sub-dict, so the
+            # update() below mutated the snapshot and STOP restored nothing.
+            self.storedValues[0] = dict(builder.bctTypes.get('adverts',{}))
+            self.storedValues[1] = dict(builder.bctTypes.get('trailers',{}))
+            self.storedValues[2] = dict(builder.bctTypes.get('extras',{})) #extras is mutated below but had no snapshot at all, so its changes persisted for the rest of the build
             builder.bctTypes['adverts'].update({"min":self.optionValues[0] , "max":builder.limit, "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[2].split('|'),"paths":self.optionValues[3]}})
             builder.bctTypes['trailers'].update({"min":self.optionValues[0], "max":builder.limit, "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":self.optionValues[4].split('|'),"paths":self.optionValues[5]},"incKODI":self.optionValues[6]})
             builder.bctTypes['extras'].update({"min":self.optionValues[0]  , "max":builder.limit, "auto":self.optionValues[0] == -1, "enabled":bool(self.optionValues[0]), "chance":self.optionValues[1],"sources":{"ids":[]                             ,"paths":[]}                  ,"incKODI":self.optionValues[7]})
@@ -1290,6 +1351,7 @@ class PostRoll(BaseRule):
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             builder.bctTypes['adverts'].update(self.storedValues[0])
             builder.bctTypes['trailers'].update(self.storedValues[1])
+            builder.bctTypes['extras'].update(self.storedValues[2])
             self.log("runAction, restoring bctTypes = %s"%(builder.bctTypes))
         return parameter
 
@@ -1515,7 +1577,7 @@ class HandleLimits(BaseRule):
     def runAction(self, actionid: str, citem: dict, parameter: Any, builder: Any) -> Any:
         if actionid == RULES_ACTION_CHANNEL_START:
             self.storedValues[0] = builder.limit
-            self.storedValues[1] = builder.limits
+            self.storedValues[1] = dict(builder.limits) #copy - builder.limits is a shared dict the update() below would otherwise mutate in place, making the restore a no-op and leaking end/start into later channels
             builder.limit = self.optionValues[0]
             builder.limits.update({"end":self.optionValues[1],"start":self.optionValues[2]})
             self.log("runAction, setting limit to %s, limits to %s"%(builder.limit,builder.limits))
@@ -1528,11 +1590,20 @@ class HandleLimits(BaseRule):
         return parameter
 
 
-# myId=700 BUILD - force episode ordering (superseded by EvenShowsRule; partially implemented).
+# myId=700 BUILD - force season/episode order on the interleaved filelist.
 class ForceEpisodeOrder(BaseRule):
-    """USAGE: Force episode ordering during the build.
-    PARAMS (options): [0] enabled bool. NOTE: largely superseded by
-    EvenShowsRule(1000) and only partially implemented."""
+    """USAGE: Force season/episode order during the build, regardless of the order
+    the playlist/folder handed the files over.
+    PARAMS (options): [0] enabled bool. [B]Default:[/B] OFF - EvenShowDistribution(701)
+    already interleaves, so enable this only when you want S/E order without the
+    even-chunking.
+    HOW IT WORKS: one FILELIST_PRE hook - the only dispatch point where an ordering
+    rule may legally rewrite the list (builder.py). Stable-sorts the whole list so
+    each show's episodes land in S/E order, then round-robin merges the shows with
+    movies interleaved by COMPOSING EvenShowsRule's working _sortShows/_mergeShows
+    rather than reimplementing them. No builder state is touched, so there is nothing
+    to restore on CHANNEL_STOP. Dispatch is sorted by myId, so 700 runs before 701
+    and 701 consumes 700's already-ordered output."""
 
 
     def __init__(self):
@@ -1540,11 +1611,10 @@ class ForceEpisodeOrder(BaseRule):
         self.name               = LANGUAGE(30181)
         self.description        = LANGUAGE(33181)
         self.optionLabels       = [LANGUAGE(30181)]
-        self.optionValues       = [False]  # superseded by EvenShowsRule (701) - disabled by default
+        self.optionValues       = [False]
         self.optionDescriptions = [LANGUAGE(33181)]
-        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE,RULES_ACTION_CHANNEL_STOP]
-        self.storedValues       = [[],[],{},[],[],[]]
-        self.selectBoxOptions   = []
+        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
+        self.storedValues       = []
 
 
     def copy(self) -> 'ForceEpisodeOrder':
@@ -1556,72 +1626,31 @@ class ForceEpisodeOrder(BaseRule):
 
 
     def onAction(self, optionindex: int) -> Any:
+        self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
 
 
-    def _episodeSort(self, showArray: dict = {}) -> list:
-        try:
-            for show, fileItems in list(showArray.items()):
-                self.storedValues[4] = []
-                for item in fileItems:
-                    if (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: #episode
-                        self.storedValues[4].append([int(item.get("season","0")), int(item.get("episode","0")), item])
-                    else:
-                        self.storedValues[3].append(item) #movie
-                self.storedValues[4].sort(key=lambda seep: seep[1])
-                self.storedValues[4].sort(key=lambda seep: seep[0])
-                for seepitem in self.storedValues[4]: self.storedValues[5].append(seepitem[2])
-            return self.storedValues[5]
-        except Exception as e: self.log("runAction, _episodeSort failed! %s"%(e), xbmc.LOGERROR)
-        return []
-
-
-    def _sortShows(self, fileList: list = []) -> tuple:
-        try:
-            for fileItem in fileList:
-                if fileItem.get('type').startswith(tuple(TV_TYPES)) and fileItem.get('showtitle'):
-                    if fileItem not in self.storedValues[2].setdefault(fileItem['showtitle'],[]):
-                        self.storedValues[2].setdefault(fileItem['showtitle'],[]).append(fileItem)
-                elif fileItem not in self.storedValues[3]:
-                    self.storedValues[3].append(fileItem) #Movies/Other no duplicates allowed
-            return self._episodeSort(self.storedValues[2]), sorted(self.storedValues[3], key=lambda k: k.get('year',0))
-        except Exception as e: self.log("runAction, _sortShows failed! %s"%(e), xbmc.LOGERROR)
-        return []
+    def _sortKey(self, item: dict) -> tuple:
+        # TV grouped by show then season/episode; everything else (movies, music,
+        # bumpers) to the tail. int(... or 0) tolerates the '' season/episode some
+        # scrapers emit - int('') would raise and abort the whole rule.
+        if item.get('showtitle') and str(item.get('type','')).startswith(tuple(TV_TYPES)):
+            return (0, str(item.get('showtitle')), int(item.get('season',0) or 0), int(item.get('episode',0) or 0))
+        return (1, '', 0, 0, item.get('year',0))
 
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, builder: Any) -> Any:
-        if bool(self.optionValues[0]):
-            if actionid == RULES_ACTION_CHANNEL_START:
-                self.storedValues[0] = builder.enableEven
-                self.storedValues[1] = builder.evenEpisode
-                self.storedValues[2] = builder.evenShuffle
-                builder.enableEven   = self.optionValues[0]
-                builder.evenEpisode  = self.optionValues[1]
-                builder.evenShuffle  = self.optionValues[2]
-                self.log("runAction, setting enableEven = %s, evenEpisode = %s, evenShuffle = %s"%(builder.enableEven,builder.evenEpisode,builder.evenShuffle))
-
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE:
-                if len(parameter) > 0:
-                    self.updateProgress(builder, LANGUAGE(32336))
-                    episode_order = False if self.optionValues[2] else self.optionValues[1]
-                    random_order  = False if self.optionValues[1] else self.optionValues[2]
-                    if episode_order:
-                                       fileItems = list(sorted(parameter, key=lambda k: k.get('year',0)))    #force year ordering
-                                       fileItems = list(sorted(fileItems, key=lambda k: k.get('episode',0))) #force episode ordering
-                                       fileItems = list(sorted(fileItems, key=lambda k: k.get('season',0)))  #force season ordering
-                    elif random_order: fileItems = Globals._randomShuffle(parameter)
-                    else:              fileItems = parameter
-                    sortShows, sortMovies = self._sortShows(fileItems, episode_order, random_order)
-                    self.log('runAction, episode_order %s, random_order %s, tvshows = %s, movies = %s'%(episode_order, random_order, len(list(sortShows.keys())), len(sortMovies)))
-                    return self._mergeShows(sortShows,sortMovies,builder)
-
-            elif actionid == RULES_ACTION_CHANNEL_STOP:
-                builder.enableEven  = self.storedValues[0]
-                builder.evenEpisode = self.storedValues[1]
-                builder.evenShuffle = self.storedValues[2]
-                self.storedValues = [[],[],{},[],[],[]]  # clear memory from show/movie partitioning
-                self.log("runAction, restoring enableEven = %s, evenEpisode = %s, evenShuffle = %s"%(builder.enableEven,builder.evenEpisode,builder.evenShuffle))
-
+        if actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE and self.optionValues[0] \
+           and isinstance(parameter, list) and parameter:
+            self.updateProgress(builder, LANGUAGE(32336))
+            sortedList = list(sorted(parameter, key=self._sortKey)) #stable - ties keep arrival order
+            # Throwaway EvenShowsRule so its storedValues[3]/[4] partition is fresh per
+            # dispatch. Chunk size 1 = classic one-episode-per-show-per-pass cadence.
+            helper = EvenShowsRule()
+            helper.optionValues = [1, False, False]
+            shows, movies = helper._sortShows(sortedList, False, False)
+            self.log('runAction, ordered %s items into %s shows + %s movies'%(len(parameter), len(shows), len(movies)))
+            return helper._mergeShows(shows, movies, builder)
         return parameter
 
 
@@ -1652,10 +1681,12 @@ class ForceRandom(BaseRule):
 
 
     def onAction(self, optionindex: int) -> Any:
-        return self.optionValues[optionindex]
+        # was a bare return: the 'enabled' bool could never be toggled off
+        return self.onActionToggleBool(optionindex)
 
 
     def runAction(self, actionid: str, citem: dict, fileList: Any, builder: Any) -> Any:
+        if not self.optionValues[0]: return fileList #option[0] was never read, so toggling the rule off did nothing
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
             self.updateProgress(builder, LANGUAGE(32349))
             self.storedValues[0] = dict(builder.sort) # copy, not alias - see rule 505
@@ -1839,7 +1870,8 @@ class PadScheduling(BaseRule):
 
 
     def onAction(self, optionindex: int) -> Any:
-        return self.optionValues[optionindex]
+        # was a bare return: the single 'enabled' bool could never be toggled off
+        return self.onActionToggleBool(optionindex)
 
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, inherited: Any) -> Any:
@@ -1856,22 +1888,27 @@ class PadScheduling(BaseRule):
             # to reduce log spam.
             if inherited.padScheduling and len(parameter) > 0:
                 iters  = cycle(parameter)
+                added  = 0
                 totDur = 0
-                start  = parameter[-1]['stop']
+                # .get: a list not yet time-stamped by an earlier rule has no 'stop'
+                # and the raw ['stop'] raised KeyError, killing the whole build step.
+                start  = parameter[-1].get('stop', 0)
                 idx    = len(parameter)
                 now    = Globals._getGMTstamp()
                 target = now + (MIN_GUIDEDAYS * 86400)
                 while not inherited.monitor.abortRequested() and start < target:
-                    idx += 1
-                    item = next(iters).copy()
+                    idx    += 1
+                    item    = next(iters).copy()
+                    dur     = int(item.get('duration') or 0)
                     item["idx"]   = idx
                     item['start'] = start
-                    item['stop']  = start + item['duration']
-                    start = item['stop']
-                    totDur += item['duration']
+                    item['stop']  = start + dur
+                    start   = item['stop']
+                    totDur += dur
+                    added  += 1
                     parameter.append(item)
                     self.updateProgress(inherited, LANGUAGE(32337))
-                self.log("[%s] addScheduling, padded %s items, totDur = %s/%s"%(citem['id'],idx-len(parameter)+1,totDur,MIN_EPG_DURATION))
+                self.log("[%s] addScheduling, padded %s items, totDur = %s"%(citem['id'],added,totDur))
 
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             inherited.padScheduling = self.storedValues[0]
@@ -1909,7 +1946,8 @@ class PauseRule(BaseRule): #PRE-BUILD RULES [300]
 
 
     def onAction(self, optionindex: int) -> Any:
-        return self.optionValues[optionindex]
+        # was a bare return: option[0] 'enabled' could never be toggled off
+        return self.onActionToggleBool(optionindex)
 
 
     def _getURL(self, id: int) -> str:
@@ -2036,9 +2074,16 @@ class PauseRule(BaseRule): #PRE-BUILD RULES [300]
 
         elif actionid == RULES_ACTION_CHANNEL_BUILD_TIME_PRE:
             if len(parameter) > 0:
-                if inherited.xmltv.clrProgrammes(citem):
+                # Builder carries no .xmltv handle, so the original
+                # inherited.xmltv.clrProgrammes() raised AttributeError on every build
+                # and was eaten by runActions' blanket except - the paused channel's
+                # single-entry schedule never got built. Guarded now so the gap is
+                # explicit instead of a silent crash.
+                clrProgrammes = getattr(getattr(inherited, 'xmltv', None), 'clrProgrammes', None)
+                if clrProgrammes is not None and clrProgrammes(citem):
                     self.updateProgress(inherited, LANGUAGE(32352))
                     return self._buildSchedule(citem, parameter, inherited)
+                self.log("[%s] runAction, no xmltv handle to clear programmes - paused schedule skipped"%(citem.get('id')), xbmc.LOGDEBUG)
 
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             inherited.padScheduling = self.storedValues[0]
@@ -2052,9 +2097,12 @@ class PauseRule(BaseRule): #PRE-BUILD RULES [300]
             self.storedValues[1] = self._getFilelist(citem.get('id'))
 
         elif actionid in [RULES_ACTION_PLAYER_CHANGE, RULES_ACTION_PLAYER_STOP]:
-            if parameter.get('resume').get('updated'):
-                self.log("[%s] runAction, updating resume = %s"%(citem.get('id'),parameter.get('resume')))
-                self._setResume(citem.get('id'),self.storedValues[1],parameter.get('resume'))
+            # 'resume' only exists once a checkpoint has run - a bare .get().get()
+            # chain raised AttributeError on the first change/stop of a session.
+            resume = (parameter or {}).get('resume') or {}
+            if resume.get('updated'):
+                self.log("[%s] runAction, updating resume = %s"%(citem.get('id'),resume))
+                self._setResume(citem.get('id'),self.storedValues[1],resume)
 
         return parameter
 
@@ -2146,7 +2194,9 @@ class Dayparting(BaseRule): #BUILD_SOURCE [500-507]
             self.storedValues[0] = citem.get('path', [])
             hour = int(datetime.datetime.now().strftime('%H'))
             ns, ne = int(self.optionValues[2]), int(self.optionValues[3])
-            night = (hour >= ns) if ns > ne else (ns <= hour < ne)
+            # Wrap-around (ns > ne, e.g. 22->6) must cover BOTH sides of midnight.
+            # The old `(hour >= ns) if ns > ne else ...` left 00:00-05:59 as daytime.
+            night = (hour >= ns or hour < ne) if ns > ne else (ns <= hour < ne)
             path = self.optionValues[1] if night else self.optionValues[0]
             if path:
                 self.updateProgress(inherited, LANGUAGE(32351))
@@ -2170,7 +2220,7 @@ class PathKeywordFilter(BaseRule): #BUILD_SELECT [600-699]
         self.optionValues       = [0,'']
         self.optionDescriptions = [LANGUAGE(33290),LANGUAGE(33290)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
-        self.selectBoxOptions   = [{LANGUAGE(30021):0,LANGUAGE(30184):1}]
+        self.selectBoxOptions   = [{'Exclude':0,'Include':1}] #was Disabled/Enabled - this is a mode, not a toggle (runAction: 1=keep matches, 0=drop them)
         self.storedValues       = [[]]
 
 
@@ -2184,7 +2234,9 @@ class PathKeywordFilter(BaseRule): #BUILD_SELECT [600-699]
 
     def onAction(self, optionindex: int) -> Any:
         if   optionindex == 0: self.onActionSelect(optionindex, LANGUAGE(32291))
-        elif optionindex == 1: self.onActionTextBox(optionindex)
+        elif optionindex == 1:
+            self.onActionTextBox(optionindex)
+            self.validateTextBox(optionindex, 500)
         return self.optionValues[optionindex]
 
 
@@ -2269,6 +2321,7 @@ class AudioLangPreference(BaseRule): #BUILD_SELECT [600-699]
 
     def onAction(self, optionindex: int) -> Any:
         self.onActionTextBox(optionindex)
+        self.validateTextBox(optionindex, 32)
         return self.optionValues[optionindex]
 
 
@@ -2313,7 +2366,9 @@ class RatingFilter(BaseRule): #BUILD_SELECT [600-699]
 
     def onAction(self, optionindex: int) -> Any:
         if   optionindex == 0: self.onActionSelect(optionindex, LANGUAGE(32297))
-        elif optionindex == 1: self.onActionTextBox(optionindex)
+        elif optionindex == 1:
+            self.onActionTextBox(optionindex)
+            self.validateTextBox(optionindex, 500)
         return self.optionValues[optionindex]
 
 
@@ -2436,7 +2491,7 @@ class SeriesMarathon(BaseRule): #BUILD_SCHEDULE [700-799]
         self.optionValues       = [0]
         self.optionDescriptions = [LANGUAGE(33304)]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
-        self.selectBoxOptions   = [list(range(1,26,1))]
+        self.selectBoxOptions   = [{LANGUAGE(30021):0, **{str(i):i for i in range(1,26)}}] #Off must be selectable, otherwise the cap could be set but never cleared
         self.storedValues       = [[]]
 
 
@@ -2545,7 +2600,9 @@ class GenreWeighting(BaseRule): #BUILD_SCHEDULE [700-799]
 
 
     def onAction(self, optionindex: int) -> Any:
-        if   optionindex == 0: self.onActionTextBox(optionindex)
+        if   optionindex == 0:
+            self.onActionTextBox(optionindex)
+            self.validateTextBox(optionindex, 100)
         elif optionindex == 1: self.onActionSelect(optionindex, LANGUAGE(32310))
         return self.optionValues[optionindex]
 
@@ -2559,7 +2616,11 @@ class GenreWeighting(BaseRule): #BUILD_SCHEDULE [700-799]
         extra = []
         for item in parameter:
             if any(kw in str(g).lower() for g in (item.get('genre') or [])):
-                extra.extend([item] * (boost - 1))
+                # Copies, not the same dict object: builder stamps start/stop/idx in
+                # place per list position, so appended aliases would overwrite each
+                # other's timestamps and the boost would never materialize (one hole
+                # plus two overlapping entries at the tail).
+                extra.extend([dict(item) for _ in range(boost - 1)])
         return parameter + extra
 
 
@@ -2600,16 +2661,27 @@ class ProgrammeSpacing(BaseRule): #BUILD_SCHEDULE [700-799]
         if not interval or not bumper_dir or not isinstance(parameter, list):
             return parameter
         self.updateProgress(inherited, LANGUAGE(32347))
-        # Re-stamp: insert a 20s bumper after every `interval` seconds of content.
+        # Re-stamp: insert a bumper after every `interval` seconds of content.
         result, elapsed, idx = [], 0, 0
         start = float(parameter[0].get('start', 0)) if parameter and parameter[0].get('start') else 0
         for item in parameter:
             dur = int(item.get('duration') or 0)
-            if elapsed and elapsed // interval > (elapsed - dur) // interval and dur:
-                result.append({'title': 'Bumper', 'file': bumper_dir, 'duration': 20,
-                               'start': start, 'stop': start + 20, 'idx': idx, 'filler': True})
-                start += 20
-                idx += 1
+            if not dur: continue #zero-length item would stamp start == stop and never advance elapsed
+            if elapsed and elapsed // interval > (elapsed - dur) // interval:
+                # Build through buildCells exactly like fillers.py does. The previous
+                # hand-rolled dict had no label/type/genre/art and used the bumper
+                # FOLDER as its file, so it rendered as a blank EPG entry pointing at
+                # something unplayable.
+                info = {'title':'Bumper','label':'Bumper','episodetitle':'Bumper',
+                        'genre':['Fillers','Bumper'],'path':bumper_dir,'plot':bumper_dir,
+                        'art':{"thumb":LOGO,"poster":LOGO_POSTER,"fanart":LOGO_LANDSCAPE,"landscape":LOGO_LANDSCAPE,"logo":LOGO,"icon":LOGO}}
+                cells = inherited.buildCells(citem, 20, type='video', entries=1, info=info) if getattr(inherited, 'buildCells', None) else []
+                for cell in cells:
+                    cell.update({'start':start, 'stop':start + 20, 'idx':idx, 'filler':True})
+                    result.append(cell)
+                    start += 20
+                    idx += 1
+                    elapsed += 20 #count the bumper too, otherwise spacing drifts 20s every insert
             item['start'] = start
             item['stop'] = start + dur
             item['idx'] = idx
@@ -2648,21 +2720,43 @@ class PrimeTimeBlock(BaseRule): #BUILD_SCHEDULE [700-799]
         if   optionindex in (0,1):
             self.onActionTimeBox(optionindex)
             self.validateTimeBox(optionindex)
-        elif optionindex == 2:    self.onActionTextBox(optionindex)
+        elif optionindex == 2:
+            self.onActionTextBox(optionindex)
+            self.validateTextBox(optionindex, 200)
         return self.optionValues[optionindex]
 
 
     def runAction(self, actionid: str, citem: dict, parameter: Any, inherited: Any) -> Any:
-        kw = str(self.optionValues[2]).lower()
-        if not kw or not isinstance(parameter, list):
+        if not isinstance(parameter, list) or len(parameter) < 2:
             return parameter
+        kw = str(self.optionValues[2]).lower()
+        if not kw: return parameter
+        matches, rest = [], []
+        for i in parameter:
+            if kw in str(i.get('title','')).lower() or any(kw in str(g).lower() for g in (i.get('genre') or [])):
+                matches.append(i)
+            else: rest.append(i)
+        if not matches: return parameter
         self.updateProgress(inherited, LANGUAGE(32348))
-        # Move matching items to the front so they air as early as possible;
-        # slot-exact placement is refined by the schedule machinery later.
-        matches = [i for i in parameter if kw in str(i.get('title','')).lower() or
-                   any(kw in str(g).lower() for g in (i.get('genre') or []))]
-        rest = [i for i in parameter if i not in matches]
-        return matches + rest
+        # [0]=start HH:MM was previously read by onAction but never applied here - the
+        # rule only keyword-front-moved, so the time window was pure decoration. Rotate
+        # the non-matching content so the match block begins at the first slot at/after
+        # the configured start time. [1]=end is informational: stop times are owned by
+        # the schedule re-stamp, not by a pre-reorder.
+        try:
+            hh, mm = str(self.optionValues[0]).split(':')
+            anchor = int(hh) * 3600 + int(mm) * 60
+        except Exception:
+            anchor = None
+        if anchor is None: return matches + rest
+        now     = float(parameter[0].get('start') or 0) or Globals._getGMTstamp()
+        offset  = (anchor - (now % 86400)) % 86400 #seconds from now until the next occurrence of start HH:MM
+        pre, post, cursor = [], [], 0
+        for i in rest:
+            (pre if cursor < offset else post).append(i)
+            cursor += int(i.get('duration') or 0)
+        self.log('[%s] runAction, placing %d match(es) at +%ss of a %ss schedule'%(citem.get('id'),len(matches),offset,cursor))
+        return pre + matches + post
 
 
 class GroupHide(BaseRule): #SERVE [1100-1199]
@@ -2691,6 +2785,7 @@ class GroupHide(BaseRule): #SERVE [1100-1199]
 
     def onAction(self, optionindex: int) -> Any:
         self.onActionTextBox(optionindex)
+        self.validateTextBox(optionindex, 500)
         return self.optionValues[optionindex]
 
 
@@ -2712,7 +2807,7 @@ class LogoOverride(BaseRule): #SERVE [1100-1199]
         self.optionLabels       = [LANGUAGE(32321)]
         self.optionValues       = ['']
         self.optionDescriptions = [LANGUAGE(33320)]
-        self.actions            = [RULES_ACTION_XMLTV_FILTER]
+        self.actions            = [RULES_ACTION_M3U_FILTER,RULES_ACTION_XMLTV_FILTER] #M3U too, else the playlist kept the original logo while the guide showed the override
         self.storedValues       = [[]]
 
 
@@ -2788,7 +2883,7 @@ class GuideLabel(BaseRule): #SERVE [1100-1199]
         self.optionLabels       = [LANGUAGE(32325)]
         self.optionValues       = ['']
         self.optionDescriptions = [LANGUAGE(33324)]
-        self.actions            = [RULES_ACTION_XMLTV_FILTER]
+        self.actions            = [RULES_ACTION_M3U_FILTER,RULES_ACTION_XMLTV_FILTER] #M3U too, else the playlist kept the original name while the guide showed the override
         self.storedValues       = [[]]
 
 
@@ -2802,6 +2897,7 @@ class GuideLabel(BaseRule): #SERVE [1100-1199]
 
     def onAction(self, optionindex: int) -> Any:
         self.onActionTextBox(optionindex)
+        self.validateTextBox(optionindex, 200)
         return self.optionValues[optionindex]
 
 
@@ -2861,7 +2957,7 @@ class ExternalFeed(BaseRule): #FEED [1200-1299]
         now = time.time()
         try:
             cached = Globals.settings.getCacheSetting(cid, default={}) or {}
-            if cached.get('ts') and now - cached.get('ts', 0) < interval:
+            if cached.get('ts') and now - cached.get('ts', 0) < (interval * 60): #optionValues[1] is MINUTES - comparing raw against epoch seconds made the default 60 read as 60s, refetching every minute
                 return cached.get('items', [])
         except Exception:
             cached = {}

@@ -21,6 +21,7 @@ from typing import Optional
 from variables  import *
 from manager    import Manager
 from backup     import Backup
+from utilities  import Utilities
 
 @threadit
 def _open(fitem: Optional[dict] = {}):
@@ -76,6 +77,9 @@ def _autotune(start: int = 1, count: int = -1, automatic: bool = False):
     LOG(f'Create: _autotune, auto_tune = {auto_tune}, hasLibrary = {hasLibrary}, hasChannels = {hasChannels}, hasImport = {hasImports}, hasBackups = {hasBackups}, hasServers = {hasServers}')
     if not hasChannels and hasLibrary:
         if not auto_tune: #prompt user to autotune.
+            # First-run welcome: expanded text + QR to the web manager, shown in
+            # the existing QR dialog before the Autotune choice.
+            Utilities.qrWelcome()
             while not MONITOR().abortRequested():
                 wait   = AUTOCLOSE_DELAY
                 retval = Globals.dialog.yesnoDialog(message='%s %s'%(LANGUAGE(32042).format(name=ADDON_NAME),LANGUAGE(32255)),customlabel=LANGUAGE(32254),autoclose=wait)

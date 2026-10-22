@@ -1291,3 +1291,15 @@ msgstr "OpenRouter AIサービス用のキー。\n[B]デフォルト:[/B] [B][CO
 msgctxt "#32238"
 msgid "Autotuned Channels must be disabled in settings."
 msgstr "オートチューンチャンネルは設定で無効にする必要があります。"
+
+msgctxt "#33246"
+msgid "Image generation failed - the API returned no usable image. Check the API key, model, or try again later."
+msgstr "画像生成に失敗しました - APIから使用可能な画像が返されませんでした。APIキー、モデルを確認するか、後でもう一度お試しください。"
+
+msgctxt "#34182"
+msgid "[B]Welcome to {name}![/B][CR][CR]PseudoTV Live turns the movies, shows and music you already own into a live TV channel lineup, complete with a rolling schedule and TV guide.[CR][CR][B]Getting started[/B][CR][B]1[/B] Choose [B]Autotune[/B] to build a lineup from your library, or [B]Channel Manager[/B] to build channels by hand.[CR][B]2[/B] Add rules to a channel to control sorting, length, fillers and scheduling.[CR][B]3[/B] Scan the code beside this message to open the [B]Web Channel Manager[/B] in a browser and edit your channels from any device.[CR][CR]Step-by-step guides live on the project wiki.[CR][CR][B][I]{author}[/I][/B]"
+msgstr "[B]{name} へようこそ！[/B][CR][CR]PseudoTV Live は、すでに所有している映画、番組、音楽を、ローティングするスケジュールや TV ガイド付きのライブテレビチャンネルラインナップに変換します。[CR][CR][B]はじめかた[/B][CR][B]1[/B] [B]オートチューン[/B] を選択してライブラリからラインナップを構築するか、[B]チャンネルマネージャー[/B] を選択して手動でチャンネルを作成します。[CR][B]2[/B] チャンネルにルールを追加して、並び替え、長さ、フィラー、スケジュールを制御します。[CR][B]3[/B] このメッセージの横にあるコードをスキャンして、ブラウザで [B]Web チャンネルマネージャー[/B] を開き、どのデバイスからでもチャンネルを編集できます。[CR][CR]ステップごとのガイドはプロジェクトの wiki にあります。[CR][CR][B][I]{author}[/I][/B]"
+
+msgctxt "#33247"
+msgid "System memory is running low. Please restart Kodi to prevent a crash."
+msgstr "システムメモリの残り容量が少なくなっています。クラッシュを防ぐため、Kodi を再起動してください。"

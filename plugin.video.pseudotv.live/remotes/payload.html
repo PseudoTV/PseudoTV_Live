@@ -1,0 +1,284 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>PseudoTV Remote Payload Editor</title>
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        margin: 16px
+      }
+
+      h1 {
+        font-size: 18px;
+        margin-bottom: 6px
+      }
+
+      .controls {
+        margin: 8px 0 12px 0
+      }
+
+      button {
+        margin-right: 8px;
+        padding: 6px 10px
+      }
+
+      textarea {
+        width: 100%;
+        height: 45vh;
+        font-family: monospace;
+        font-size: 13px;
+        box-sizing: border-box
+      }
+
+      .formarea {
+        display: flex;
+        gap: 12px;
+        flex-direction: column
+      }
+
+      .output {
+        margin-top: 8px;
+        color: #666;
+        font-size: 13px
+      }
+
+      .small {
+        font-size: 12px;
+        color: #888
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PseudoTV Payload Editor</h1>
+    <div class="controls"><button id="toForm">Auto-build fields</button><button id="toJSON">Show raw JSON</button><button id="validateBtn">Validate JSON</button><button id="submitBtn">Validate & Submit</button><button id="downloadBtn">Download JSON</button></div>
+    <div class="formarea"><textarea id="jsonArea" spellcheck="false">{json}</textarea>
+      <div id="fieldContainer"></div>
+    </div>
+    <div class="output"><span class="small">Status:</span><span id="status">Ready</span></div>
+    <script>
+      (function() {
+        var jsonArea = document.getElementById('jsonArea');
+        var status = document.getElementById('status');
+        var fieldContainer = document.getElementById('fieldContainer');
+        var serverUUID = "{uuid}";
+
+        function setStatus(msg, err) {
+          status.textContent = msg;
+          status.style.color = err ? 'crimson' : '#333';
+        }
+
+        function tryParse() {
+          try {
+            return JSON.parse(jsonArea.value);
+          } catch (e) {
+            setStatus('JSON parse error: ' + e.message, true);
+            return null;
+          }
+        }
+
+        function downloadText(filename, text) {
+          var blob = new Blob([text], {
+            type: 'application/json'
+          });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function() {
+            URL.revokeObjectURL(url);
+            try {
+              document.body.removeChild(a);
+            } catch (e) {}
+          }, 1000);
+        }
+
+        function buildFieldsFromObj(obj, container, path) {
+          container.innerHTML = '';
+          for (var key in obj) {
+            if (!obj.hasOwnProperty(key)) continue;
+            var val = obj[key];
+            var id = (path ? path + '.' : '') + key;
+            var wrapper = document.createElement('div');
+            wrapper.style.marginBottom = '6px';
+            var label = document.createElement('label');
+            label.style.display = 'block';
+            label.style.fontSize = '13px';
+            label.style.marginBottom = '2px';
+            label.textContent = key;
+            wrapper.appendChild(label);
+            if (val === null) {
+              var inp = document.createElement('input');
+              inp.type = 'text';
+              inp.value = '';
+              inp.dataset.path = id;
+              wrapper.appendChild(inp);
+            } else if (Array.isArray(val)) {
+              // Join primitive arrays into comma separated list for quick edit
+              if (val.every(function(e) {
+                  return ['string', 'number', 'boolean'].indexOf(typeof e) !== -1 || e === null;
+                })) {
+                var ta = document.createElement('input');
+                ta.type = 'text';
+                ta.value = val.join(', ');
+                ta.dataset.path = id;
+                ta.dataset.type = 'array_primitive';
+                wrapper.appendChild(ta);
+                var hint = document.createElement('div');
+                hint.className = 'small';
+                hint.textContent = 'Array of primitives: comma separated';
+                wrapper.appendChild(hint);
+              } else {
+                var ta2 = document.createElement('textarea');
+                ta2.value = JSON.stringify(val, null, 2);
+                ta2.dataset.path = id;
+                ta2.dataset.type = 'array_json';
+                ta2.style.height = '80px';
+                wrapper.appendChild(ta2);
+              }
+            } else if (typeof val === 'object') {
+              var sub = document.createElement('div');
+              sub.style.borderLeft = '2px solid #eee';
+              sub.style.paddingLeft = '8px';
+              buildFieldsFromObj(val, sub, id);
+              wrapper.appendChild(sub);
+            } else if (typeof val === 'boolean') {
+              var sel = document.createElement('select');
+              sel.dataset.path = id;
+              var o1 = document.createElement('option');
+              o1.value = 'true';
+              o1.text = 'true';
+              var o2 = document.createElement('option');
+              o2.value = 'false';
+              o2.text = 'false';
+              sel.appendChild(o1);
+              sel.appendChild(o2);
+              sel.value = val ? 'true' : 'false';
+              wrapper.appendChild(sel);
+            } else {
+              var inp2 = document.createElement('input');
+              inp2.type = 'text';
+              inp2.value = String(val);
+              inp2.dataset.path = id;
+              wrapper.appendChild(inp2);
+            }
+            container.appendChild(wrapper);
+          }
+        }
+
+        function setValueAtPath(obj, path, value) {
+          var parts = path.split('.');
+          var cur = obj;
+          for (var i = 0; i < parts.length - 1; i++) {
+            var p = parts[i];
+            if (!(p in cur) || typeof cur[p] !== 'object' || cur[p] === null) cur[p] = {};
+            cur = cur[p];
+          }
+          cur[parts[parts.length - 1]] = value;
+        }
+
+        function collectFieldsToObj(baseObj, container) {
+          var inputs = container.querySelectorAll('input, textarea, select');
+          inputs.forEach(function(el) {
+            var p = el.dataset.path;
+            if (!p) return;
+            if (el.dataset.type === 'array_primitive') {
+              var raw = el.value.trim();
+              if (raw === '') setValueAtPath(baseObj, p, []);
+              else {
+                var items = raw.split(',').map(function(s) {
+                  return s.trim();
+                });
+                // try coerce numbers/booleans/null
+                items = items.map(function(it) {
+                  if (it === 'null') return null;
+                  if (it === 'true') return true;
+                  if (it === 'false') return false;
+                  if (it.match(/^\d+$/)) return parseInt(it, 10);
+                  if (it.match(/^\d+\.\d+$/)) return parseFloat(it);
+                  return it;
+                });
+                setValueAtPath(baseObj, p, items);
+              }
+            } else if (el.dataset.type === 'array_json') {
+              try {
+                var v = JSON.parse(el.value);
+                setValueAtPath(baseObj, p, v);
+              } catch (e) {
+                throw new Error('Invalid JSON in ' + p + ': ' + e.message);
+              }
+            } else if (el.tagName.toLowerCase() === 'select') {
+              var vv = el.value === 'true' ? true : (el.value === 'false' ? false : el.value);
+              setValueAtPath(baseObj, p, vv);
+            } else {
+              var txt = el.value;
+              // coerce numbers/null/boolean if possible
+              if (txt === 'null') setValueAtPath(baseObj, p, null);
+              else if (txt === 'true') setValueAtPath(baseObj, p, true);
+              else if (txt === 'false') setValueAtPath(baseObj, p, false);
+              else if (txt.match(/^\d+$/)) setValueAtPath(baseObj, p, parseInt(txt, 10));
+              else if (txt.match(/^\d+\.\d+$/)) setValueAtPath(baseObj, p, parseFloat(txt));
+              else setValueAtPath(baseObj, p, txt);
+            }
+          });
+        }
+        document.getElementById('toForm').addEventListener('click', function() {
+          var obj = tryParse();
+          if (!obj) return;
+          fieldContainer.innerHTML = '';
+          buildFieldsFromObj(obj, fieldContainer, '');
+          setStatus('Form built from JSON', false);
+        });
+        document.getElementById('toJSON').addEventListener('click', function() {
+          fieldContainer.innerHTML = '';
+          setStatus('Showing raw JSON', false);
+        });
+        document.getElementById('validateBtn').addEventListener('click', function() {
+          var o = tryParse();
+          if (o) setStatus('Valid JSON', false);
+        });
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+          downloadText('pseudotv_payload.json', jsonArea.value);
+        });
+        document.getElementById('submitBtn').addEventListener('click', function() {
+          var base = tryParse();
+          if (!base) return;
+          // if custom fields present, collect and merge
+          if (fieldContainer.children.length > 0) {
+            try {
+              collectFieldsToObj(base, fieldContainer);
+            } catch (e) {
+              setStatus(e.message, true);
+              return;
+            }
+          }
+          var body = {
+            uuid: serverUUID,
+            payload: base
+          };
+          setStatus('Submitting...', false);
+          fetch('/remote/payload.json', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          }).then(function(r) {
+            if (r.ok) {
+              setStatus('Submitted successfully', false);
+              alert('Payload submitted successfully');
+            } else {
+              r.text().then(function(t) {
+                setStatus('Error: ' + r.status + ' ' + t, true);
+              });
+            }
+          }).catch(function(e) {
+            setStatus('Network error: ' + e.message, true);
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

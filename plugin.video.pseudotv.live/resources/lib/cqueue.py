@@ -20,6 +20,7 @@
 from variables import *
 from typing    import Any, Optional, Callable
 from concurrent.futures import CancelledError
+import gc
 
 class Task(object):
     def __init__(self, func: Callable, args: tuple = (), kwargs: Optional[dict] = None, priority: int = 3, execute_at: float = 0):
@@ -102,9 +103,9 @@ class CustomQueue(object):
         task.cancel()
         task_key = self._get_task_key(task.func, task.args, task.kwargs)
         self.pending.pop(task_key, None)
-        # Clear dedup keys for evicted task
+        # Clear dedup keys for evicted task — only if this task still owns them
         for dk in getattr(task, 'dedup_keys', set()):
-            self._dedup_registry.pop(dk, None)
+            if self._dedup_registry.get(dk) == task_key: self._dedup_registry.pop(dk, None)
         self.heap[worst_idx] = self.heap[-1]
         self.heap.pop()
         if self.heap: heapq.heapify(self.heap)
@@ -152,9 +153,12 @@ class CustomQueue(object):
                     new_task.task_key = task_key
                     new_task.dedup_keys = dedup_keys or set()
                     self.pending[task_key] = new_task
-                    # Register dedup keys for this task — enables cross-task deduplication
+                    # Register dedup keys for this task — enables cross-task deduplication.
+                    # setdefault: a later push with the same keys (different task_key,
+                    # e.g. chkChannels vs Case 2b direct-push) must not steal ownership
+                    # from the task that still holds them.
                     for dk in new_task.dedup_keys:
-                        self._dedup_registry[dk] = task_key
+                        self._dedup_registry.setdefault(dk, task_key)
                     if new_task.dedup_keys:
                         self.log(f"push, {func.__name__} registered {len(new_task.dedup_keys)} dedup keys", xbmc.LOGDEBUG)
                     self.counter += 1
@@ -174,9 +178,9 @@ class CustomQueue(object):
                 task_key = self._get_task_key(task.func, task.args, task.kwargs)
                 if task.is_cancelled:
                     self.pending.pop(task_key, None)
-                    # Clear dedup keys for cancelled task
+                    # Clear dedup keys for cancelled task — only if it still owns them
                     for dk in getattr(task, 'dedup_keys', set()):
-                        self._dedup_registry.pop(dk, None)
+                        if self._dedup_registry.get(dk) == task_key: self._dedup_registry.pop(dk, None)
                     continue
                 if self.pending.get(task_key) is task:
                     self.pending.pop(task_key, None)
@@ -190,10 +194,15 @@ class CustomQueue(object):
         if task and task.task_key:
             with self.lock:
                 self.running.pop(task.task_key, None)
-                # Clear dedup keys for completed task
+                # Clear dedup keys for completed task — only if it still owns them
+                # (a non-owner finishing early must not free the live owner's keys,
+                # or chkChannels re-queues channels mid-build and builds stack).
                 dedup_keys = getattr(task, 'dedup_keys', set())
                 for dk in dedup_keys:
-                    self._dedup_registry.pop(dk, None)
+                    # A pending task with the same task_key is this task's requeued
+                    # continuation (busy/guard chains) — it still needs the keys.
+                    if self._dedup_registry.get(dk) == task.task_key and task.task_key not in self.pending:
+                        self._dedup_registry.pop(dk, None)
                 if dedup_keys:
                     self.log(f"_finish, {task.func.__name__} cleared {len(dedup_keys)} dedup keys", xbmc.LOGDEBUG)
 
@@ -246,6 +255,31 @@ class CustomQueue(object):
                 while self.service.interrupt():
                     if self.service.pendingShutdown: break
                     if self.monitor.abortRequested(): break
+                    self.monitor.waitForAbort(1)
+                continue
+            elif isMemPressure():
+                # RSS above the ceiling (constants RSS_PRESSURE_LIMIT): yield the
+                # whole queue until pressure clears — tasks requeue themselves,
+                # nothing is lost by idling.
+                # ponytail: idle-until-clear + checkpoint to help the floor decay;
+                # per-task priority gates here only if idle-until-clear stalls too long
+                self.log("execute, Memory pressure. Idling execution loop...", xbmc.LOGDEBUG)
+                try: self.cache.checkpoint()
+                except Exception as e: self.log(f"execute, pressure checkpoint failed! {e}", xbmc.LOGDEBUG)
+                # reclaim build-churn cycles so the idle floor can actually drop
+                try: self.log(f"execute, pressure gc.collect() -> {gc.collect()} unreachable", xbmc.LOGDEBUG)
+                except Exception as e: self.log(f"execute, pressure gc failed! {e}", xbmc.LOGDEBUG)
+                # after gc: freed pages may need a bionic trim to leave the RSS
+                try: self.log(f"execute, pressure trimMalloc -> {trimMalloc()} bytes reclaimed", xbmc.LOGDEBUG)
+                except Exception as e: self.log(f"execute, pressure trim failed! {e}", xbmc.LOGDEBUG)
+                trimTick = 0
+                while isMemPressure():
+                    if self.service.pendingShutdown: break
+                    if self.monitor.abortRequested(): break
+                    trimTick += 1
+                    if trimTick % 60 == 0:
+                        try: trimMalloc()
+                        except Exception: pass
                     self.monitor.waitForAbort(1)
                 continue
             else:

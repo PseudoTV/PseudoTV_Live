@@ -1427,3 +1427,15 @@ msgstr "Schlüssel für OpenRouter-KI-Dienste.\n[B]Standard:[/B] [B][COLOR=white
 msgctxt "#32238"
 msgid "Autotuned Channels must be disabled in settings."
 msgstr "Automatisch abgestimmte Kanäle müssen in den Einstellungen deaktiviert werden."
+
+msgctxt "#33246"
+msgid "Image generation failed - the API returned no usable image. Check the API key, model, or try again later."
+msgstr "Bildgenerierung fehlgeschlagen – die API hat kein verwendbares Bild zurückgegeben. Überprüfe den API-Schlüssel, das Modell oder versuche es später erneut."
+
+msgctxt "#34182"
+msgid "[B]Welcome to {name}![/B][CR][CR]PseudoTV Live turns the movies, shows and music you already own into a live TV channel lineup, complete with a rolling schedule and TV guide.[CR][CR][B]Getting started[/B][CR][B]1[/B] Choose [B]Autotune[/B] to build a lineup from your library, or [B]Channel Manager[/B] to build channels by hand.[CR][B]2[/B] Add rules to a channel to control sorting, length, fillers and scheduling.[CR][B]3[/B] Scan the code beside this message to open the [B]Web Channel Manager[/B] in a browser and edit your channels from any device.[CR][CR]Step-by-step guides live on the project wiki.[CR][CR][B][I]{author}[/I][/B]"
+msgstr "[B]Willkommen bei {name}![/B][CR][CR]PseudoTV Live verwandelt die Filme, Serien und Musik, die du bereits besitzt, in einen Live-TV-Kanalplan mit laufendem Sendeplan und TV-Guide.[CR][CR][B]Erste Schritte[/B][CR][B]1[/B] Wähle [B]Autotune[/B], um aus deiner Bibliothek einen Plan zu erstellen, oder [B]Kanal-Manager[/B], um Kanäle manuell aufzubauen.[CR][B]2[/B] Füge einem Kanal Regeln hinzu, um Sortierung, Länge, Filler und Planung zu steuern.[CR][B]3[/B] Scanne den Code neben dieser Nachricht, um den [B]Web-Kanal-Manager[/B] im Browser zu öffnen und deine Kanäle von jedem Gerät aus zu bearbeiten.[CR][CR]Schritt-für-Schritt-Anleitungen findest du im Projekt-Wiki.[CR][CR][B][I]{author}[/I][/B]"
+
+msgctxt "#33247"
+msgid "System memory is running low. Please restart Kodi to prevent a crash."
+msgstr "Der Systemspeicher ist knapp. Bitte starte Kodi neu, um Abstürze zu verhindern."

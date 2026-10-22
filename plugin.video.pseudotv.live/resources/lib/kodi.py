@@ -38,6 +38,7 @@ _ADDON_HOME_RE     = re.compile(r'special://home/addons/(.*?)/resources', re.IGN
 _ADDON_PROTO_RE    = re.compile(r'(.*)://(.*?)/', re.IGNORECASE)
 _PROGRESS_RE       = re.compile(r'(.*?):\s+(\d+)\%', re.IGNORECASE)
 _PROGRESS_THROTTLE = {}
+_GUARD_LOCK        = threading.Lock()  # serializes check-and-set of the *Activity/Running exclusive guards
 
 class Settings(object):
     dialog = None
@@ -161,6 +162,25 @@ class Settings(object):
     #SET
     def _setSetting(self, func: Callable, key: str, value: Any):
         try:
+            # Skip a write Kodi already holds. setSetting() rewrites ALL of
+            # settings.xml, and a reader parsing that file mid-write is what the
+            # "failed to load addon settings" bursts were - ~9 of the 10 settings
+            # writes in a run were no-ops (Remote_*, Select_server, Update_Status).
+            # Read from the same transient handle this call is about to write
+            # through (_getRealSettings: fresh Addon, read-now/write-one-key),
+            # never the TTL read cache, so a stale cache cannot skip a write that
+            # is still needed. Uncertain (read failed, or func is not a handle's
+            # bound method) -> fall through and write, the old behaviour.
+            try:
+                owner = getattr(func, '__self__', None)
+                stored = str(owner.getSetting(key)) if hasattr(owner, 'getSetting') else None
+            except Exception:
+                stored = None
+            if stored is not None:
+                same = str(value).lower() == stored.lower() if isinstance(value, bool) else str(value) == stored
+                if same:
+                    self.log(f'[{ADDON_ID}] {func.__name__}, key = {key} unchanged; write skipped')
+                    return
             func(key, value)
             # Invalidate the read cache so subsequent reads see the new value.
             import sys
@@ -240,12 +260,17 @@ class Settings(object):
                         if not self.dialog.yesnoDialog(message=LANGUAGE(32156).format(name=id)):
                             self.log('[%s] hasAddon, (Not Enabled!)'%(id))
                             return isEnabled
-                    self.dialog.builtin.executebuiltin(f'EnableAddon({id})',wait=True)
+                    # ponytail: wait=False - EnableAddon(pvr.*) with wait=True holds
+                    # this lock while Kodi's main thread enables the PVR client, whose
+                    # callbacks re-enter the same lock: deadlock. Enable proceeds
+                    # async; callers only re-check HasAddon, and PVR readiness is
+                    # polled elsewhere (togglePVRBackend phase 2).
+                    self.dialog.builtin.executebuiltin(f'EnableAddon({id})',wait=False)
                 elif notify: self.dialog.notificationDialog(LANGUAGE(32264).format(name=id))
             elif install:
                 # ponytail: wait=False - a blocking InstallAddon wedged the builtin
-                # lock, CustomQueue and HTTP for ~95min when no repo could satisfy a
-                # binary addon; callers already tolerate the False re-check below.
+                # lock, CustomQueue and HTTP when no repo could satisfy a binary
+                # addon; callers already tolerate the False re-check below.
                 self.dialog.builtin.executebuiltin(f'InstallAddon({id})',wait=False)
             elif notify:  self.dialog.notificationDialog(LANGUAGE(32034).format(name=id))
             return self.dialog.builtin.getInfoBool(f'System.HasAddon({id})')
@@ -854,14 +879,18 @@ class Properties(object):
 
     @contextmanager
     def chkRunning(self, key: str) -> Iterator[bool]:
+        # ponytail: check-and-set is atomic and ONLY the acquirer clears —
+        # the old unconditional finally-clear let a losing racer wipe the
+        # winner's flag, so a third caller could enter concurrently
+        # (two buildChannels loops ran at once this way, OOM-killing Kodi).
+        with _GUARD_LOCK:
+            acquired = not self.isRunning(key)
+            if acquired: self.setRunning(key, True)
         try:
-            if not self.isRunning(key):
-                self.setRunning(key,True)
-                yield False
-            else:
-                yield True
+            yield not acquired
         finally:
-            self.setRunning(key,False)
+            if acquired:
+                with _GUARD_LOCK: self.setRunning(key, False)
             
     def setRunning(self, key: str, state: bool = True) -> Any:
         return self.setEXTProperty('%s.%s.Running'%(ADDON_ID,key),state)
@@ -871,14 +900,14 @@ class Properties(object):
 
     @contextmanager
     def lockActivity(self, state: bool = True) -> Iterator[bool]:
+        with _GUARD_LOCK:  # same acquire/clear race as chkRunning — only the acquirer clears
+            acquired = not self.isLockActivity()
+            if acquired: self.setLockActivity(True)
         try:
-            if not self.isLockActivity():
-                self.setLockActivity(True)
-                yield True
-            else:
-                yield False
+            yield acquired
         finally:
-            self.setLockActivity(False)
+            if acquired:
+                with _GUARD_LOCK: self.setLockActivity(False)
             
     def setLockActivity(self, state: bool = True) -> Any:
         """Context state for locking activity."""
@@ -944,14 +973,14 @@ class Properties(object):
     @contextmanager
     def legacy(self) -> Iterator[bool]:
         """Toggle legacy property from older pseudotv project that may still be used by third-party plugins."""
-        try: 
-            if not self.isPseudoTVRunning():
-                self.setEXTProperty('PseudoTVRunning',True)
-                yield True
-            else:
-                yield False
-        finally: 
-            self.setEXTProperty('PseudoTVRunning',False)
+        with _GUARD_LOCK:  # same acquire/clear race as chkRunning — only the acquirer clears
+            acquired = not self.isPseudoTVRunning()
+            if acquired: self.setEXTProperty('PseudoTVRunning',True)
+        try:
+            yield acquired
+        finally:
+            if acquired:
+                with _GUARD_LOCK: self.setEXTProperty('PseudoTVRunning',False)
 
     def isPseudoTVRunning(self) -> bool:
         return self.getEXTProperty('PseudoTVRunning',False)
@@ -1661,6 +1690,9 @@ class Dialog(object):
         return timerit(self.textviewer)(0.1,*(msg, heading, usemono, autoclose))
         
     def textviewer(self, msg: str, heading: str = ADDON_NAME, usemono: bool = False, autoclose: int = AUTOCLOSE_DELAY, usethread: bool = False) -> bool:
+        # short text doesn't need the scrollable viewer - an ok dialog is friendlier
+        if len(msg or '') <= TEXTVIEWER_MIN:
+            return self.okDialog(msg, heading, autoclose, usethread)
         if usethread: return self._textViewer(msg, heading, usemono, autoclose)
         else:
             if autoclose > 0: timerit(self._closeTextViewer)(autoclose)

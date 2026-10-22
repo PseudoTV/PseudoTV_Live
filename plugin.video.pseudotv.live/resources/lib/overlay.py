@@ -320,6 +320,9 @@ class Overlay(xbmcgui.WindowXMLDialog):
         self.onnext       = None
         self._onnext_visible = False
         self._onnext_sending = False
+        self._onnext_cycles = 0          # display cycles used for the current programme
+        self._onnext_cooldown = 0.0      # earliest time of the next cycle
+        self._onnext_cycle_file = None   # programme the cycle budget belongs to
         
         self.monitor      = self.service.monitor if self.service else None
         self.player       = self.service.player if self.service else None
@@ -436,9 +439,25 @@ class Overlay(xbmcgui.WindowXMLDialog):
             self.onNextGroup = xbmcgui.ControlGroup(onNextX, onNextY, 960, 380)
             self._addControl(self.onNextGroup)
             self.onNextThumb = xbmcgui.ControlImage(0, 0, 240, 135, '', aspectRatio=2)
-            self.onNextGroup.addControl(self.onNextThumb)
-            self.onNextText = xbmcgui.ControlLabel(0, 140, 960, 70, '', font='font27', textColor='0xFFFFFFFF', shadowColor='0x80000000')
-            self.onNextGroup.addControl(self.onNextText)
+            try:
+                self.onNextText = xbmcgui.ControlLabel(0, 140, 960, 70, '', font='font27', textColor='0xFFFFFFFF', shadowColor='0x80000000')
+            except TypeError:
+                self.onNextText = xbmcgui.ControlLabel(0, 140, 960, 70, '', font='font27', textColor='0xFFFFFFFF')
+            try:
+                self.onNextGroup.addControl(self.onNextThumb)
+                self.onNextGroup.addControl(self.onNextText)
+            except Exception:
+                # Kodi builds without ControlGroup.addControl: window-level
+                # children positioned at the group origin; keep hidden until
+                # showOnNext, but track for cleanup like any other control.
+                self.onNextThumb.setPosition(onNextX, onNextY)
+                self.onNextText.setPosition(onNextX, onNextY + 140)
+                self.onNextThumb.setVisible(False)
+                self.onNextText.setVisible(False)
+                self.cntrlManager[self.onNextThumb] = False
+                self.cntrlManager[self.onNextText] = False
+                self.window.addControl(self.onNextThumb)
+                self.window.addControl(self.onNextText)
         except Exception as e:
             self.log(f"_open, onNext controls: {e}", xbmc.LOGERROR)
            
@@ -481,7 +500,12 @@ class Overlay(xbmcgui.WindowXMLDialog):
 
 
     def showOnNext(self, mode: Optional[int] = None):
-        """Show on-next notification. Mode: 1=text, 2=text+thumb+sfx, 3=toggleInfo, 4=UpNext signal."""
+        """Show on-next notification. Mode: 1=text, 2=text+thumb+sfx, 3=toggleInfo, 4=UpNext signal.
+
+        Text modes cycle: visible ONNEXT_TIMER, sleep ONNEXT_GAP, repeat — capped
+        at ONNEXT_MAX_CYCLES per programme so the popup pulses a few times before
+        the conclusion instead of showing continuously.
+        """
         self.log(f"showOnNext: mode = {mode}", xbmc.LOGDEBUG)
         if mode is None: mode = getattr(self.player, 'OnNextMode', None) # ShowOnNext rule override...
         if mode is None: mode = Globals.settings.getSettingInt('OnNext_Mode') # ...then global setting
@@ -495,6 +519,15 @@ class Overlay(xbmcgui.WindowXMLDialog):
             self._sendUpNextSignal()
             return
 
+        # cycle budget belongs to one programme - reset when the watched item changes
+        cur = self.fitem.get('file') or self.fitem.get('label', '')
+        if self._onnext_cycle_file != cur:
+            self._onnext_cycle_file = cur
+            self._onnext_cycles = 0
+            self._onnext_cooldown = 0.0
+        if self._onnext_cycles >= ONNEXT_MAX_CYCLES: return
+        if time.time() < self._onnext_cooldown: return
+
         # Modes 1, 2: populate controls
         if not self._populateOnNext():
             # overlay window not ready (closing / not yet open) — skip
@@ -504,9 +537,10 @@ class Overlay(xbmcgui.WindowXMLDialog):
         if mode == 2:
             try: xbmc.playSFX(BING_WAV)
             except: pass
-            # Auto-hide after ONNEXT_TIMER
-            timerit(self.hideOnNext)(float(ONNEXT_TIMER))
+        # all text modes auto-hide; hideOnNext opens the sleep window for the next cycle
+        timerit(self.hideOnNext)(float(ONNEXT_TIMER))
 
+        self._onnext_cycles += 1
         self._onnext_visible = True
 
 
@@ -567,6 +601,8 @@ class Overlay(xbmcgui.WindowXMLDialog):
             self.onNextText.setVisible(False)
             self.onNextThumb.setVisible(False)
             self._onnext_visible = False
+            if self._onnext_cycles < ONNEXT_MAX_CYCLES:
+                self._onnext_cooldown = time.time() + ONNEXT_GAP
         except Exception: pass
 
 

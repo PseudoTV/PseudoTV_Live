@@ -24,6 +24,7 @@ from _services   import _Service
 from cache       import getDurationCache # after variables -> cache is fully loaded
 import ratings
 import socket
+from urllib.parse import quote as _quoteURI
 
 # Lazy import to avoid circular dependency (variables.py defines Globals after kodi.py loads)
 _Globals = None
@@ -47,11 +48,83 @@ def _fileQueryFields(jsonRPC: Any) -> list:
         pass
     return []
 
+# VideoLibrary.* full-library dump property list. `streamdetails` is dropped for
+# the same reason _fileQueryFields drops it from Files.GetDirectory, but the cost
+# differs: these are DB-backed, so Kodi does not re-probe files - it pays a
+# per-item DB fan-out and payload weight instead (measured on the Shield: 100
+# movies 737KB/0.72s with it vs 679KB/0.58s without; the libraries are 3359
+# movies / 1379 shows / 41620 episodes). builder backfills it per file anyway
+# (see the "Kodi JSON-RPC bug workaround" in buildFiles), and getStreamDetails
+# caches by file md5. Falls back to [] like the above, which Kodi accepts - it
+# then returns just label+id.
+def _libraryQueryFields(jsonRPC: Any, enum: str) -> list:
+    try:
+        fields = jsonRPC.getEnums(enum, type='items')
+        if isinstance(fields, list):
+            return [f for f in fields if f != 'streamdetails'] or fields
+    except Exception:
+        pass
+    return []
+
+# Library dumps are large (3359 movies / 1379 shows / 41620 episodes measured on
+# the Shield) and change rarely — cache them like a shadow copy of the library:
+# long life, invalidation by checksum rotation (not TTL lapse) via libDirty.
+LIBRARY_CACHE_LIFE = datetime.timedelta(hours=24)
+
 # ponytail: failed responses are cached, but only this long. A failure has no
 # useful lifetime — this just stops an erroring query from being re-executed
 # once per caller (per-channel during a build). Capped so a transient failure
 # self-heals instead of sticking for the caller's full `life` (up to MAX_GUIDEDAYS).
 ERROR_CACHE_LIFE = datetime.timedelta(minutes=5)
+
+def _libraryChecksum() -> str:
+    """Cache checksum for library queries — rotates when services.Monitor
+    bumps the libDirty stamp on VideoLibrary scan/clean events."""
+    return '%s.lib.%s' % (ADDON_VERSION, _globals().settings.getCacheSetting('libDirty', default=0) or 0)
+
+def _pruneFilter(command: dict) -> dict:
+    """Drop an unusable library `filter` before dispatch.
+
+    Kodi's library filter is a *union type*: either {field,operator,value} or
+    {and|or|not}. Callers pass a placeholder to mean "no filter" ({} from
+    getEpisode(episode=None), or field:"" from seasonal.FILTER), which matches
+    neither arm and is rejected with "Invalid params" (verified on Kodi 23.0-ALPHA1:
+    "Received value does not match any of the union type definitions").
+    Pruned at the single dispatch point so every caller is covered.
+    Scoped to *Library.* so JSONRPC.Introspect/Settings.getSettings keep their own,
+    differently-shaped `filter` argument.
+    """
+    if 'Library.' not in str(command.get('method', '')): return command
+    params = command.get('params')
+    if not isinstance(params, dict): return command
+    rule = params.get('filter')
+    if isinstance(rule, dict) and not (rule.get('field') or rule.get('and') or rule.get('or') or rule.get('not')):
+        params.pop('filter', None)
+    return command
+
+def _encodeXsp(command: dict) -> dict:
+    """Percent-encode the ?xsp= payload of a directory URI before dispatch.
+
+    Kodi parses `directory` as a URI, so a raw '&' inside the smart-playlist JSON
+    terminates the query string and Kodi answers "Invalid params". Minimal repro:
+    an exclude-list containing the show "Law & Order" (verified on Kodi 23.0-ALPHA1;
+    Kodi percent-decodes the option back, so filtering stays correct). Full-quote the
+    payload rather than only '&' so '#', '+', spaces and non-ASCII titles survive too.
+
+    Non-destructive by design: every builder hands back a raw dumpJSON payload and
+    upstream code does path.split('?xsp=') for channel CRCs, so encode a copy at the
+    dispatch point instead of mutating the caller's dict (mutation would double-encode
+    on a re-query).
+    """
+    params = command.get('params')
+    if not isinstance(params, dict): return command
+    directory = params.get('directory')
+    if not isinstance(directory, str) or '?xsp=' not in directory: return command
+    path, payload = directory.split('?xsp=', 1)
+    command = dict(command)
+    command['params'] = dict(params, directory='%s?xsp=%s' % (path, _quoteURI(payload, safe='')))
+    return command
+
 
 class JSONRPC(object):
 
@@ -284,6 +357,8 @@ class JSONRPC(object):
         command = param
         command["jsonrpc"] = "2.0"
         command["id"] = f"{ADDON_ID}.local"
+        command = _pruneFilter(command)
+        command = _encodeXsp(command)
         if timeout is None: timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
         # Rate-limit dispatch: space calls API_Delay seconds apart so a heavy build
         # can't flood Kodi's JSON-RPC engine (main-thread marshaled). Interruptible
@@ -331,6 +406,19 @@ class JSONRPC(object):
             if cacheResponse.get('result',{}): self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life)
             elif cacheResponse:                self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=min(life, ERROR_CACHE_LIFE))
         return cacheResponse
+
+
+    def _libraryQuery(self, param: dict, timeout: Optional[int] = None) -> dict:
+        """Bulk/single library query with long TTL + event-rotated checksum.
+
+        Default cacheJSON life is 5min — every build cycle past that re-serializes
+        the whole library over JSON-RPC into Kodi's DB (MySQL on NAS here); when
+        the NAS sleeps, queries hit the 30s timeout. Library content changes
+        rarely and is already evented (VideoLibrary.* notifications bump libDirty,
+        see services.Monitor._onLibraryEvent), so: 24h life, checksum rotates on
+        the dirty stamp — bump = one automatic re-query, stale rows age out.
+        """
+        return self.cacheJSON(param, life=LIBRARY_CACHE_LIFE, checksum=_libraryChecksum(), timeout=timeout)
 
 
     def walkFileDirectory(self, path: str, media: str = 'video', limit: Optional[int] = None, depth: Optional[int] = None, checksum: Optional[str] = None, expiration: Optional[datetime.timedelta] = None, dir: Optional[dict] = None) -> dict:
@@ -543,34 +631,34 @@ class JSONRPC(object):
         if not episode is None: filter = {"field":"episode","operator":"is","value":str(episode)}
         else:                   filter = {}
         param = {"method":"VideoLibrary.GetEpisodes","params":{"tvshowid":tvshowid,"season":season,"properties":self.getEnums("Video.Fields.Episode", type='items'),"filter":filter}}
-        if cache: return self.cacheJSON(param).get('result',{}).get('episodes', [])
+        if cache: return self._libraryQuery(param).get('result',{}).get('episodes', [])
         else:     return self.sendJSON(param).get('result',{}).get('episodes', [])
-  
-  
+
+
     def getEpisodes(self, cache: bool = True) -> list:
-        param = {"method":"VideoLibrary.GetEpisodes","params":{"properties":self.getEnums("Video.Fields.Episode", type='items')}}
+        param = {"method":"VideoLibrary.GetEpisodes","params":{"properties":_libraryQueryFields(self, "Video.Fields.Episode")}}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: return self.cacheJSON(param, timeout=timeout).get('result',{}).get('episodes', [])
+        if cache: return self._libraryQuery(param, timeout=timeout).get('result',{}).get('episodes', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('episodes', [])
 
 
     def getTVshows(self, cache: bool = True) -> list:
-        param = {"method":"VideoLibrary.GetTVShows","params":{"properties":self.getEnums("Video.Fields.TVShow", type='items')}}
+        param = {"method":"VideoLibrary.GetTVShows","params":{"properties":_libraryQueryFields(self, "Video.Fields.TVShow")}}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: return self.cacheJSON(param, timeout=timeout).get('result',{}).get('tvshows', [])
+        if cache: return self._libraryQuery(param, timeout=timeout).get('result',{}).get('tvshows', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('tvshows', [])
 
 
     def getMovie(self, uniqueid: Any, title: str, year: int, cache: bool = True) -> list:
         param = {"method":"VideoLibrary.GetMovies","params":{"properties":self.getEnums("Video.Fields.Movie", type='items'),"filter":{"and":[{"field":"title","operator":"is","value":title},{"field":"year","operator":"is","value":str(year)}]}}}
-        if cache: return self.cacheJSON(param).get('result',{}).get('movies', [])
+        if cache: return self._libraryQuery(param).get('result',{}).get('movies', [])
         else:     return self.sendJSON(param).get('result',{}).get('movies', [])
 
 
     def getMovies(self, cache: bool = True) -> list:
-        param = {"method":"VideoLibrary.GetMovies","params":{"properties":self.getEnums("Video.Fields.Movie", type='items')}}
+        param = {"method":"VideoLibrary.GetMovies","params":{"properties":_libraryQueryFields(self, "Video.Fields.Movie")}}
         timeout = int(REAL_SETTINGS.getSetting('API_Timeout') or "10")
-        if cache: return self.cacheJSON(param, timeout=timeout).get('result',{}).get('movies', [])
+        if cache: return self._libraryQuery(param, timeout=timeout).get('result',{}).get('movies', [])
         else:     return self.sendJSON(param, timeout).get('result',{}).get('movies', [])
 
 
@@ -1078,16 +1166,22 @@ class JSONRPC(object):
 
     @contextmanager
     def detectRPCCrash(self, citem: dict) -> Iterator[None]:
-        """Context manager to save/restore channel item on JSON-RPC crash."""
-        # _globals() not bare Globals: jsonrpc is imported mid variables-cycle and
-        # misses the name (forum-informed lazy pattern at the top of this file);
-        # a raw REAL_SETTINGS write here would also flush a stale settings
-        # snapshot (forum thread 356746).
-        _globals().settings.setSetting('KODI.CRASH.JSONRPC.CITEM', FileAccess.dumpJSON(citem))
+        """Context manager to save/restore channel item on JSON-RPC crash.
+
+        Marker goes in the cache DB - the store chkCrash reads it from
+        (tasks.py getCacheSetting, which is the consume-and-clear marker pattern
+        cache.py documents). It used to go through setSetting, which rewrote the
+        whole of Kodi's settings.xml twice per requestList: the biggest settings
+        writer in a run, racing Kodi's own settings loader ("failed to load addon
+        settings" bursts) - and the reader never saw it there anyway.
+        _globals() not bare Globals: jsonrpc is imported mid variables-cycle and
+        misses the name (forum-informed lazy pattern at the top of this file)."""
+        settings = _globals().settings
+        settings.setCacheSetting('KODI.CRASH.JSONRPC.CITEM', citem)
         try: yield
         except Exception as e: self.log('detectRPCCrash: %s' % e, xbmc.LOGDEBUG)
         finally:
-            _globals().settings.setSetting('KODI.CRASH.JSONRPC.CITEM', '')
+            settings.setCacheSetting('KODI.CRASH.JSONRPC.CITEM', None)
 
 
     def getLocalHost(self, local: bool = False) -> str:
@@ -1227,24 +1321,24 @@ class JSONRPC(object):
         
         
     def getNextItem(self, citem: Optional[dict] = None, nitem: Optional[dict] = None) -> dict:
+        """Skip filler cells (bumpers/ads/ratings) and return the next REAL
+        programme's item - its meta and air time are what OnNext must display."""
         if citem is None: citem = {}
         if nitem is None: nitem = {}
         if not _globals()._isFiller(nitem): return nitem
-            
-        n_id = _globals()._decodePlot(nitem.get('plot', '')).get('id')
-        next_items = self.matchChannel(citem.get('name', ''), citem.get('id', ''), citem.get('radio', False)).get('broadcastnext', [])
-        found_idx = -1
-        for i, item in enumerate(next_items):
-            fitem = _globals()._decodePlot(item.get('plot', ''))
-            if fitem.get('start') == nitem.get('start') and fitem.get('id') == n_id:
-                found_idx = i
-                break
-                
-        if found_idx != -1:
-            for i in range(found_idx, len(next_items)):
-                candidate = next_items[i]
-                if not _globals()._isFiller(candidate):
-                    return _globals()._decodePlot(candidate.get('plot', ''))
+
+        # Match by epoch start only: the passed nitem is an already-decoded item
+        # (no original plot to re-decode for an id). broadcastnext is the sorted
+        # future window - take the first non-filler starting at/after it, which
+        # skips any run of consecutive filler cells.
+        nstart = _globals()._epoch(nitem.get('start', 0))
+        next_items = (self.matchChannel(citem.get('name', ''), citem.get('id', ''),
+                                        citem.get('radio', False), extend=True) or {}).get('broadcastnext', [])
+        if nstart > 0:
+            for item in next_items:
+                candidate = _globals()._decodePlot(item.get('plot', ''))
+                if _globals()._epoch(candidate.get('start', 0)) >= nstart and not _globals()._isFiller(candidate):
+                    return candidate
         return {}
         
 
@@ -1256,6 +1350,11 @@ class JSONRPC(object):
 
 
     def addTrailer(self, item: dict, defer_save: bool = False) -> Optional[bool]:
+        # The serial trailer drain can climb straight through the ceiling
+        # between per-item queue checks; trip at the teardown headroom like
+        # the build guards. Skipped trailers just miss the duration cache and
+        # retry on the next build.
+        if isMemPressure(rss_limit=RSS_PRESSURE_LIMIT - MEM_TEARDOWN_HEADROOM): return
         if   'movieid' in item: key = 'movies'
         elif 'tvshowid'in item: key = 'tvshows'
         else: return

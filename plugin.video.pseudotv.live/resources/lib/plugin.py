@@ -40,9 +40,8 @@ class Plugin(object):
             self._update()
 
         # keep vid mirroring the (possibly refreshed) fitem.file. When
-        # pvr.iptvsimple left {catchup-id} unresolved the strip path blanked vid;
-        # a blank vid then made isVOD (fitem.file != vid) True, routing live playback
-        # to playVOD's branch which zeroes seek and skips _setResume.
+        # pvr.iptvsimple left {catchup-id} unresolved the strip path blanked vid,
+        # which broke downstream playback paths expecting a valid source.
         if not self.sysInfo.get('vid') or self.sysInfo.get('vid') in ('', '-1'):
             self.sysInfo['vid'] = self.sysInfo.get('fitem', {}).get('file', '-1')
 
@@ -55,15 +54,15 @@ class Plugin(object):
         if self.sysInfo['seek'] < 0 and not self.sysInfo.get('_skipRecover'):
             self._recover()
             
-        # isVOD: a standalone video request (play from the start) vs the channel's
-        # current live broadcast. Only when the requested path differs AND `now` is
-        # outside the fitem's [start, stop) window is it a one-off VOD — an
-        # in-progress programme is the live broadcast (its vid may be the catchup
-        # URL, so the path comparison alone would misfire).
+        # isVOD: a programme airing now is the channel's live broadcast (seek
+        # applies); a programme outside its own [start, stop) window — past or
+        # future — is a one-off request and plays from the start. The window
+        # drives the decision; path comparison (file != vid) misfired once vid
+        # mirrored fitem.file (context menu, widgets, unresolved-catchup retry).
         fstart = Globals._epoch(self.sysInfo.get('fitem', {}).get('start', 0))
         fstop  = Globals._epoch(self.sysInfo.get('fitem', {}).get('stop', 0))
         in_window = fstart > 0 and fstop > 0 and fstart <= int(time.time()) < fstop
-        self.sysInfo['isVOD']      = self.sysInfo.get('fitem',{}).get('file','-1') != self.sysInfo.get('vid','-1') and not in_window
+        self.sysInfo['isVOD']      = fstart > 0 and fstop > 0 and not in_window
         self.sysInfo['isSTRM']     = self.sysInfo.get('fitem').get('file','').endswith('.strm')
         self.sysInfo['isPlaylist'] = bool(Globals.settings.getSettingInt('Playback_Method'))
         # isPlaylist only applies to VOD/STRM content — not normal live channels.
@@ -97,7 +96,9 @@ class Plugin(object):
                 
     def _quePlaylist(self, listitems: list, pltype: int = xbmc.PLAYLIST_VIDEO, shuffle: Optional[bool] = None) -> Optional[Tuple[xbmc.PlayList, xbmcgui.ListItem]]:
         def __add(listitem: xbmcgui.ListItem):
-            if listitem.getPath():
+            if listitem is None:
+                self.log('[%s] _quePlaylist, skipping None listitem' % (self.sysInfo.get('chid')), xbmc.LOGWARNING)
+            elif listitem.getPath():
                 playlist.add(listitem.getPath(),listitem,listitems.index(listitem))
                 
         if listitems:
@@ -111,7 +112,7 @@ class Plugin(object):
             self.log('[%s] _quePlaylist, Playlist size = %s, shuffle = %s'%(self.sysInfo.get('chid'), playlist.size(),shuffle))
             if shuffle: playlist.shuffle()
             else:       playlist.unshuffle()
-            return playlist, listitems[0]
+            return playlist, next((li for li in listitems if li is not None), xbmcgui.ListItem())
 
     def _getPVRItems(self) -> list:
         def __findCurrent(items: list, byFile: bool = True, found: int = -1) -> list:
@@ -193,11 +194,15 @@ class Plugin(object):
                 self.log('[%s] _recover, start=%s stop=%s duration=%s seek=%s' % (
                     self.sysInfo.get('chid'), start_epoch, stop_epoch, duration, self.sysInfo['seek']))
 
-            # 1. fitem start/stop (epoch, from ListItem properties)
-            fstart = self.sysInfo.get('fitem', {}).get('start')
-            fstop  = self.sysInfo.get('fitem', {}).get('stop')
-            if fstart and fstop and int(fstart) <= now < int(fstop):
-                _apply(int(fstart), int(fstop))
+            # 1. fitem start/stop (epoch or DTFORMAT, from ListItem properties)
+            fstart = Globals._epoch(self.sysInfo.get('fitem', {}).get('start', 0))
+            fstop  = Globals._epoch(self.sysInfo.get('fitem', {}).get('stop', 0))
+            if fstart > 0 and fstop > 0:
+                if fstart <= now < fstop:
+                    _apply(fstart, fstop)
+                    return
+                # selected programme has its own window (past/future) — don't
+                # borrow the live broadcast's timeline, it poisons seek
                 return
 
             # 2. XMLTV (UTC DTFORMAT strings)
@@ -284,18 +289,19 @@ class Plugin(object):
             sysInfo = self.sysInfo.copy()
             sysInfo['isPlaylist'] = True
             listitem = Globals.listitems.buildItemListItem(item,'video')
-            if FileAccess.exists(listitem.getPath()):  #todo insert missing media placeholder
-                if item.get('file') == item.get('resume',{}).get('file',str(random.random())):
-                    seektime = int(item.get('resume',{}).get('position',0.0))
-                    runtime  = int(item.get('resume',{}).get('total',0.0))
-                    self.log('[%s] __buildfItem, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(chid, runtime, seektime))
-                    listitem.setProperty('startoffset', str(seektime)) #secs
-                    infoTag = ListItemInfoTag(listitem, 'video')
-                    infoTag.set_resume_point({'ResumeTime':seektime, 'TotalTime':runtime * 60})
-                    
-                sysInfo.update({'fitem':item,'resume':{"idx":lizLST.index(item)}})
-                listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
-                return listitem
+            if not FileAccess.exists(listitem.getPath()):
+                # queue as-is, see playPlaylist.__buildfItem
+                self.log('[%s] __buildfItem, missing media queued as-is: %s' % (self.sysInfo.get('chid'), listitem.getPath()), xbmc.LOGWARNING)
+            elif item.get('file') == item.get('resume',{}).get('file',str(random.random())):
+                seektime = int(item.get('resume',{}).get('position',0.0))
+                runtime  = int(item.get('resume',{}).get('total',0.0))
+                self.log('[%s] __buildfItem, within seek tolerance setting seek totaltime = %s, resumetime = %s'%(self.sysInfo.get('chid'), runtime, seektime))
+                listitem.setProperty('startoffset', str(seektime)) #secs
+                infoTag = ListItemInfoTag(listitem, 'video')
+                infoTag.set_resume_point({'ResumeTime':seektime,'TotalTime':runtime * 60})
+            sysInfo.update({'fitem':item,'resume':{"idx":0}}) # poolit map passes no index; rules default to 0
+            listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
+            return listitem
             
         def __buildPlaylist(chid: str, name: str) -> list:
             lizLST = RulesList([self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid}))
@@ -326,12 +332,17 @@ class Plugin(object):
             idx      = nextitems.index(nextitem)
             fitem    = Globals._decodePlot(nextitem.get('plot',''))
             listitem = Globals.listitems.buildItemListItem(fitem,'video')
-            if FileAccess.exists(listitem.getPath()): #todo insert missing media placeholder
-                if not self.sysInfo['isVOD']:
-                    listitem = self._setResume(Globals.listitems.buildItemListItem(self.sysInfo.get('fitem')))
-                sysInfo.update({'fitem':fitem,'resume':{"idx":idx}})
-                listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
-                return listitem
+            if not FileAccess.exists(listitem.getPath()):
+                # Queue it anyway: a missing/failed stat (smb under load) must not
+                # drop the entry - the player errors naturally on a real miss.
+                # Returning None here landed in _quePlaylist.__add, killed the
+                # executor loop, truncated the queue and stalled channel advance.
+                self.log('[%s] __buildfItem, missing media queued as-is: %s' % (self.sysInfo.get('chid'), listitem.getPath()), xbmc.LOGWARNING)
+            elif not self.sysInfo['isVOD']:
+                listitem = self._setResume(Globals.listitems.buildItemListItem(self.sysInfo.get('fitem')))
+            sysInfo.update({'fitem':fitem,'resume':{"idx":idx}})
+            listitem.setProperty('sysInfo',FileAccess._encodeString(sysInfo))
+            return listitem
             
         self.log('[%s] playPlaylist, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
         Globals.dialog.notificationDialog(f"{LANGUAGE(32185).format(name='Playlist')}: [B]{self.sysInfo['name']}[/B]\n{self.sysInfo['fitem'].get('label')}")

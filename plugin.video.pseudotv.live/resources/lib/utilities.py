@@ -108,9 +108,10 @@ class Utilities(object):
     
     @staticmethod
     def qrWelcome():
-        # Welcome text + a QR code linking to this box's local manager UI.
+        # New-user welcome: expanded first-run text + a QR to this box's web UI.
+        # 34182 (not 32216) - qrWiki shares 32216 and needs its own shorter copy.
         manager = 'http://%s/manager.html'%(Globals.properties.getRemoteHost())
-        Globals.dialog.qrDialog(manager, LANGUAGE(32216).format(name=ADDON_NAME,author=ADDON_AUTHOR))
+        Globals.dialog.qrDialog(manager, LANGUAGE(34182).format(name=ADDON_NAME,author=ADDON_AUTHOR))
 
     @staticmethod
     def qrWiki():

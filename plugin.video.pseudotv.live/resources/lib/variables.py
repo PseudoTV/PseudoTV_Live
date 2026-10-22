@@ -161,7 +161,7 @@ class Globals:
     @staticmethod  
     def _getThumb(item: dict = {}, opt: int = 0) -> str: #unify thumbnail artwork
         art  = None
-        keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
+        keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart','icon'],
                 1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
         for key in keys:
             art = (item.get('art',{}).get('album.%s'%(key))       or 

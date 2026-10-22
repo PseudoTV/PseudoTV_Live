@@ -244,22 +244,38 @@ class Resources(object):
         return None
 
 
-    def _staticLogo(self, name: Optional[str]) -> str:
-        """The stable, self-hosted icon URL for a named item. Every consumer
-        (channel/library/m3u/xmltv) stores this static URL; the /logos/{name}
+    def _staticLogo(self, name: Optional[str], version: str = '') -> str:
+        """The self-hosted icon URL for a named item. Every consumer
+        (channel/library/m3u/xmltv) stores this URL; the /logos/{name}
         endpoint serves whatever the in-memory imageCache holds, so the icon
-        updates dynamically once the logo queue resolves it — no config rewrites."""
+        updates dynamically once the logo queue resolves it - no config rewrites.
+        version fingerprints the resolved image so a swapped logo changes the
+        URL - Kodi caches images keyed by URL and never revalidates, so a
+        name-only URL freezes the first art it ever saw."""
         remote = Globals.properties.getEXTProperty('%s.Remote_Host'%(ADDON_ID))
-        return f'http://{remote}/logos/{Globals._quoteString(name)}'
+        url = f'http://{remote}/logos/{Globals._quoteString(name)}'
+        return f'{url}?v={version}' if version else url
+
+
+    def _logoVersion(self, image: Optional[str]) -> str:
+        if not image: return ''
+        try:
+            key = image
+            if not image.startswith(('http://', 'https://')):
+                try: key = '%s|%s' % (image, int(os.path.getmtime(image)))
+                except Exception: pass
+            return FileAccess._getMD5(key)[:8]
+        except Exception: return ''
 
 
     def _buildWebImage(self, name: Optional[str], image: Optional[str] = None, fallback: str = LOGO) -> str:
         # Every named item resolves through the self-hosted /logos/{name} cache
         # endpoint, which serves whatever the in-memory imageCache holds (filling
-        # via queueLogo when missing). The URL never changes — only the cache does,
-        # so channels/library/m3u/xmltv all get dynamic logos without rewriting.
+        # via queueLogo when missing). The path stays stable - only the cache and
+        # the ?v= fingerprint change - so channels/library/m3u/xmltv pick up new
+        # logos without config rewrites while Kodi's URL-keyed image cache busts.
         if name:
-            return self._staticLogo(name)
+            return self._staticLogo(name, self._logoVersion(image))
         # Unnamed fallback: serve the LOGO var through the image endpoint.
         return f'http://{Globals.properties.getEXTProperty("%s.Remote_Host"%(ADDON_ID))}/image/{Globals._quoteString(fallback or LOGO)}'
         

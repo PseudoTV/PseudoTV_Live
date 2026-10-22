@@ -24,7 +24,7 @@ import random, base64, binascii, hashlib, heapq, zlib
 import time, datetime, calendar, sqlite3
 import requests, traceback, threading
 import codecs, shutil, errno, copy
-import pyqrcode, socket
+import pyqrcode, socket, ctypes
 
 from functools             import partial, reduce, update_wrapper, wraps
 from six.moves             import urllib 
@@ -119,10 +119,53 @@ def _getAvailMEM(path: str = '/proc/meminfo') -> int:
         pass
     return -1
 
-def isMemPressure(limit: int = MEM_PRESSURE_LIMIT) -> bool:
+# Self-RSS ceiling — the guard MemAvailable can't provide (zram keeps that
+# reading healthy; /proc/pressure is absent on some devices). Watch our own
+# VmRSS and requeue below the measured kill zone. Calibrate via the
+# isMemPressure debug log (rss=) or `grep VmRSS /proc/self/status`.
+RSS_PRESSURE_LIMIT = 1408 * 1024 * 1024
+# The M3U/XMLTV teardown write merges old+new programmes in memory, so a build
+# that trips the ceiling can still die during its own save window. Build-path
+# guards stop at ceiling-headroom so the save has room; general work keeps the
+# full ceiling.
+MEM_TEARDOWN_HEADROOM = 256 * 1024 * 1024
+# Planned idle process restart (services._idleRestart): CPython arenas hold the
+# post-build RSS floor and texture churn keeps climbing — only a Kodi process
+# restart resets both. Minimum spacing between planned restarts; persisted so
+# it survives the restart itself.
+IDLE_RESTART_COOLDOWN = 6 * 60 * 60
+
+def _getSelfRSS(path: str = '/proc/self/status') -> int:
+    """Process VmRSS in bytes, 0 when unreadable (guard then stays open)."""
+    try:
+        with open(path, 'r') as f:
+            for line in f:
+                if line.startswith('VmRSS:'):
+                    return int(line.split()[1]) * 1024
+    except Exception:
+        pass
+    return 0
+
+def isMemPressure(limit: int = MEM_PRESSURE_LIMIT, rss_limit: int = RSS_PRESSURE_LIMIT) -> bool:
     avail = _getAvailMEM()
-    LOG('isMemPressure, available = %d, limit = %d' % (avail, limit), xbmc.LOGDEBUG)
+    rss   = _getSelfRSS() if rss_limit > 0 else 0
+    LOG('isMemPressure, available = %d/%d, rss = %d/%d' % (avail, limit, rss, rss_limit), xbmc.LOGDEBUG)
+    if rss_limit > 0 and rss >= rss_limit: return True
     return 0 <= avail < limit
+
+def trimMalloc() -> int:
+    """Release allocator-cached pages via malloc_trim(0); returns bytes reclaimed.
+
+    gc.collect() reclaims objects, not the pages they lived on. Returns 0 on
+    builds without the symbol or when nothing reclaims."""
+    before = _getSelfRSS()
+    try:
+        ctypes.CDLL('libc.so').malloc_trim(0)
+    except Exception:
+        return 0
+    after  = _getSelfRSS()
+    LOG('trimMalloc, rss %d -> %d' % (before, after), xbmc.LOGDEBUG)
+    return max(0, before - after)
 
 # =============================================================================
 # Performance & Threading
@@ -187,6 +230,8 @@ MIN_EPG_DURATION    = 10800  # Minimum EPG guide duration (3 hours in seconds)
 TIMEOUT_EXECUTOR    = 1800   # Single executor task timeout (30 min)
 TIMEOUT_EXECUTORS   = 300    # Total executor shutdown timeout (5 min)
 ONNEXT_TIMER        = 15     # OnNext notification display duration (seconds)
+ONNEXT_GAP          = 15     # sleep between OnNext cycles while hidden
+ONNEXT_MAX_CYCLES   = 3      # display cycles per programme before the conclusion
 DEBUG_TIMEOUT       = 900    # Debug log retention timeout (15 min)
 YESNO_TIMEOUT       = 30     # YesNo Dialog timeout (30 Secs)
 
@@ -222,6 +267,7 @@ NOTIFY_AI_DAILY_MAX  = 2     # Max AI failure dialogs per day (any AI error path
 AI_IMAGE_TIMEOUT    = 120    # OpenRouter image-generation request timeout (seconds)
 AI_IMAGE_MAX_TOKENS = 4096   # Cap output tokens so image requests fit small key budgets
 AUTOCLOSE_DELAY     = 300    # Auto-close timeout for dialogs (5 minutes)
+TEXTVIEWER_MIN      = 400    # char threshold; shorter text uses okDialog instead of the scrollable viewer
 SELECT_DELAY        = 900    # Selection dialog timeout (15 minutes)
 RADIO_ITEM_LIMIT    = 250    # Maximum radio/music items per channel
 CHANNEL_LIMIT       = 999    # Maximum number of channels allowed
@@ -411,6 +457,7 @@ CHANNEL_KEY_BACKUP   = f'{CHANNEL_KEY}.Backup'       # Backup snapshot key
 CHANNEL_KEY_CHANGED  = f'{CHANNEL_KEY}.Changed'      # Dirty flag for pending changes
 CHANNEL_KEY_LATEST   = f'{CHANNEL_KEY}.Latest'       # Latest build timestamp
 CHANNEL_KEY_AUTOTUNE = f'{CHANNEL_KEY}.Autotune'     # Autotune status key
+CHANNELS_AUTOTUNE_TTL_DAYS = 30 # autotune channel-list cache life; EPG Max_Days (MAX_GUIDEDAYS=3) wiped 185->11 on idle expiry (2026-10-19)
 RESUME_INDEX         = 'Resume.Filelist.Index'       # Playback resume position index
 
 SERVERS_KEY          = 'Servers'

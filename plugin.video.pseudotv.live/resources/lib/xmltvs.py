@@ -159,6 +159,26 @@ def applyGrouping(stations: list, channels: list) -> list:
     return stations
 
 
+# ponytail: display-only fat keys already projected onto top-level programme
+# fields at build time (cast->credits, art/thumb->icon, originalpath->file);
+# the desc decode path (playback, catchup, jsonrpc citem lookups) only needs
+# file/citem/id/labels. Slimming desc removes ~70% of the blob — Kodi's EPG
+# importer holds every decoded programme in native RSS.
+_FITEM_SLIM_KEYS = {'cast', 'art', 'thumbnail', 'fanart', 'originalpath'}
+
+
+def _slimFitem(fitem: dict) -> dict:
+    fitem = fitem or {}
+    out   = {k: v for k, v in fitem.items() if k not in _FITEM_SLIM_KEYS}
+    # keep ONE resolved artwork url: OnNext/_getThumb read art from decoded
+    # plots, and dropping 'art' entirely left the popup with no real artwork.
+    # Rewritten to HTTP so Kodi's image loader never opens smb:// directly.
+    thumb = (fitem.get('art') or {}).get('thumb') or fitem.get('thumbnail')
+    if thumb:
+        out['thumb'] = Globals._toWebImage(thumb)
+    return out
+
+
 def _storeRender(cache: dict, sig: tuple, data: bytes, name: str) -> bool:
     """Cache rendered bytes under the shared 'render' MemoryBudget owner.
 
@@ -314,7 +334,11 @@ def renderFilteredXMLTV(channels: list, runActions, compress: bool = False) -> b
                 stations = runActions(RULES_ACTION_XMLTV_FILTER, citem, stations)
             return stations
         buf = BytesIO()
-        xmltv_obj.renderWithPlaceholders(buf, stations=_filter(xmltv_obj.m3u.getFilteredStations(programmes=xmltv_obj.getProgrammes())))
+        # Same on-the-fly re-grouping the M3U path applies (see renderFilteredM3U):
+        # without it the guide kept stale group names until the next rebuild while
+        # the playlist updated immediately.
+        stations = applyGrouping(xmltv_obj.m3u.getFilteredStations(programmes=xmltv_obj.getProgrammes()), channels)
+        xmltv_obj.renderWithPlaceholders(buf, stations=_filter(stations))
         data = buf.getvalue()
         # Append version comment — unique per data version forces pvr.iptvsimple
         # to detect a change on its next poll without a PVR toggle.
@@ -632,6 +656,13 @@ class XMLTVS(object):
             ))
             
             if self.writable:
+                # ponytail: same gate as m3u._save — the version bump below
+                # invalidates the HTTP render cache, iptvsimple re-fetches
+                # pseudotv.xml and reloads the entire EPG on a hot process.
+                # Guide data regenerates next pass.
+                if isMemPressure(rss_limit=RSS_PRESSURE_LIMIT - MEM_TEARDOWN_HEADROOM):
+                    self.log('_save, skipped under memory pressure — guide unchanged', xbmc.LOGWARNING)
+                    return False
                 # Guard against clobbering existing guide data with an empty dataset:
                 # a failed/partial _load or an orphan-cleanup over a narrowed channel
                 # set can leave 0 channels, which would wipe the XMLTV mid-build.
@@ -1369,7 +1400,7 @@ class XMLTVS(object):
             pitem = {'channel'     : id,
                      'category'    : [(self.cleanString(genre.replace(LANGUAGE(32105),'Undefined')),LANG) for genre in item['categories']],
                      'title'       : [(self.cleanString(item['title']), LANG)],
-                     'desc'        : [(Globals._encodePlot(self.cleanString(item['desc']),item['fitem']), LANG) if encodeDESC else (self.cleanString(item['desc']), LANG)],
+                     'desc'        : [(Globals._encodePlot(self.cleanString(item['desc']), _slimFitem(item['fitem'])), LANG) if encodeDESC else (self.cleanString(item['desc']), LANG)],
                      'stop'        : (Globals._epochTime(float(item['stop']),tz=False).strftime(DTFORMAT)),
                      'start'       : (Globals._epochTime(float(item['start']),tz=False).strftime(DTFORMAT)),
                      'icon'        : [{'src': item['thumb']}],

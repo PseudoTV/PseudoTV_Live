@@ -73,6 +73,15 @@ class Channels(object):
         # (each HTTP M3U/XMLTV poll, rules load, etc.) and setSetting rewrites
         # settings.xml from disk each time. The display count is refreshed in
         # setChannels() (the write path) instead — a read must not write.
+        for citem in channelDATA.get('channels',[]):
+            rules = citem.get('rules')
+            # The cache MEM tier is JSON (_encodeString -> dumpJSON), so int rule ids
+            # come back as strings. _verify re-keys but only runs on the write path,
+            # so every citem['rules'].get(<int>) in manager/builder/rules silently
+            # missed while the MEM cache was warm. Re-key at the load choke point so
+            # all readers get consistent int keys.
+            if isinstance(rules, dict) and rules:
+                citem['rules'] = {int(k) if str(k).isdigit() else k: v for k, v in rules.items()}
         self.log('_load, channels=%d' % len(channelDATA.get('channels',[])))
         return channelDATA
     
@@ -101,7 +110,7 @@ class Channels(object):
     def _save(self, expiration=-1) -> bool:
         if self.writable:
             if self.isAutotune:
-                expiration = datetime.timedelta(days=MAX_GUIDEDAYS)
+                expiration = datetime.timedelta(days=CHANNELS_AUTOTUNE_TTL_DAYS)
                 FileAccess.setJSON(CHANNEL_EXPORT_FLE,self.channelDATA)
             Globals.properties.notifyDataChanged('channels')
             self.log('_save, channels=%d, expiration=%s' % (len(self.channelDATA['channels']), expiration))

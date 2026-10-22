@@ -26,6 +26,62 @@ from overlay    import Background, Overlay, Replay
 from rules      import RulesList
 from tasks      import Tasks
 from jsonrpc    import JSONRPC
+from constants  import _getAvailMEM, _getSelfRSS # underscore-private: not in variables' star export
+import gc, sys
+
+def _idleRestart(service) -> bool:
+    """Planned process restart for constrained devices.
+
+    The post-build RSS floor and texture-rotation climber only reset when the
+    Kodi PROCESS restarts — CPython arenas hold RSS (gc reclaims objects, not
+    memory). pendingRestart is NOT this: it only recycles the in-process
+    service loop so tasks pick up settings changes.
+
+    Only USER activity blocks a restart (playback, busy dialog, settings open,
+    library scan); queue/interrupt state does not, because RestartApp is a
+    clean teardown (_stop persists the queues). Vitals + hold reasons log
+    every tick (debug). No-op on boxes that never reach the RSS ceiling.
+
+    Android: RestartApp quits without relaunching (a dark box), so the Android
+    path notifies the user instead (house inform-only convention); desktop
+    platforms keep RestartApp.
+    """
+    try:
+        avail, rss = _getAvailMEM(), _getSelfRSS()
+        LOG('_idleRestart vitals, rss=%d avail=%d postQue=%d jsonQue=%d logoQue=%d trailerQue=%d pyb=%d pyo=%d' % (
+            rss, avail, len(getattr(service, 'postQue', ())), len(getattr(service, 'jsonQue', ())),
+            len(getattr(service, 'logoQue', ())), len(getattr(service, 'trailerQue', ())),
+            sys.getallocatedblocks(), len(gc.get_objects())), xbmc.LOGDEBUG)
+        if service._isPlaying() or service.player.isPlaying():
+            service.log('_idleRestart, held: playing', xbmc.LOGDEBUG); return False
+        if service.suspend() or Globals.builtin.isBusyDialog() or Globals.builtin.isScanning():
+            service.log('_idleRestart, held: settings/busy/scanning', xbmc.LOGDEBUG); return False
+        if rss < RSS_PRESSURE_LIMIT: return False
+        now  = time.time()
+        last = float(Globals.settings.getCacheSetting('idleRestart', default=0) or 0)
+        if now - last < IDLE_RESTART_COOLDOWN:
+            service.log('_idleRestart, held: cooldown (%.0fm left)' % ((IDLE_RESTART_COOLDOWN - (now - last)) / 60), xbmc.LOGDEBUG)
+            return False
+        Globals.settings.setCacheSetting('idleRestart', now)
+        if xbmc.getCondVisibility('System.Platform.Android'):
+            # RestartApp on Android quits WITHOUT relaunching — a dark box,
+            # worse than the memory pressure it tried to prevent. Inform
+            # instead (house convention) and let the pressure guards quarantine
+            # PTV's own work.
+            service.log('_idleRestart, critical rss >= %dMB — Android cannot self-restart, notifying user' % (RSS_PRESSURE_LIMIT // (1024 * 1024)), xbmc.LOGWARNING)
+            Globals.dialog.notificationDialog(LANGUAGE(33247), time=10)
+        else:
+            service.log('_idleRestart, idle with rss >= %dMB — restarting Kodi to reclaim memory' % (RSS_PRESSURE_LIMIT // (1024 * 1024)), xbmc.LOGINFO)
+            Globals.builtin.executebuiltin('RestartApp')
+        return True
+    except Exception as e:
+        service.log('_idleRestart, failed: %s' % (e), xbmc.LOGDEBUG)
+        return False
+
+def _libDirtyBump(force: bool, now: float, last: float, cooldown: float = 60.0) -> bool:
+    """Debounce for library cache invalidation — OnUpdate storms during scans
+    coalesce into one checksum bump per cooldown; scan-end/clean always bump."""
+    return bool(force) or (now - last) >= cooldown
 
 class Player(xbmc.Player):
     """
@@ -111,7 +167,12 @@ class Player(xbmc.Player):
     def onPlayBackEnded(self):
         self.pendingItem.update({'invoked': -1, 'pending': False, 'item': {}, 'last': self.playingItem})
         self.log("onPlayBackEnded")
-        self.pool.submit(self._onChange,self.playingItem)
+        # Dedicated thread, not the shared pool: _onChange carries the advance to
+        # the next programme, and pool submit was observed landing 3 minutes late
+        # at EOF (backlogged behind parser/logo/trailer work) - black screen until
+        # a backlog slot freed up.
+        Thread(target=self._onChange, args=(self.playingItem,),
+               name=f"{ADDON_ID}.advance", daemon=True).start()
         
         
     def onPlayBackStopped(self):
@@ -128,9 +189,16 @@ class Player(xbmc.Player):
                 nitem = Globals._combineDicts(playingItem.get('nitem', {}), Globals._decodePlot(Globals.builtin.getInfoLabel('VideoPlayer.NextPlot')))
                 citem = Globals._combineDicts(fitem.get('citem', {}), next((item for item in getattr(self.service, 'curchannels', []) if item.get('id', -1) == playingItem.get('chid', 0)), {}))
                 
-                fitem['runtime']  = self.getPlayerTime()
-                fitem['isfiller'] = Globals._isFiller(fitem)
+            fitem['runtime']  = self.getPlayerTime()
+            fitem['isfiller'] = Globals._isFiller(fitem)
+            nitem['isfiller'] = Globals._isFiller(nitem)
+            if nitem['isfiller'] and self.jsonRPC:
+                # OnNext must show the next REAL programme - skip filler cells
+                # (bumpers/ads/ratings/breaks) to its meta and air time.
+                nitem = self.jsonRPC.getNextItem(citem, nitem) or nitem
                 nitem['isfiller'] = Globals._isFiller(nitem)
+                self.log('getplayingItem, OnNext skip fillers -> [%s] %s @ %s' % (
+                    nitem.get('showlabel') or nitem.get('label', '?'), nitem.get('genre'), nitem.get('start')))
                 
                 playingItem['isPseudoTV'] = True
                 playingItem['chfile']     = Globals.builtin.getInfoLabel('Player.Filename')
@@ -339,10 +407,24 @@ class Player(xbmc.Player):
         self.toggleBackground(False)
         if playingItem:
             if not playingItem.get('isPlaylist', False):
-                # Prefer direct PVR playback by channelid (reliable channel targeting);
-                # fall back to the resolved pvr:// path when the channel can't be matched.
-                if not (self.jsonRPC and self.jsonRPC.playChannel(playingItem)):
-                    Globals.builtin.executebuiltin(f"PlayMedia({playingItem.get('callback')})")
+                # The item's pvr:// callback is instant and targets the same
+                # channel; prefer it. The channelid RPC path costs cold-cache
+                # round-trips (three JSON-RPC calls, 90s+ each while Kodi's RPC
+                # worker is saturated at a programme boundary) and Player.Open
+                # with channelid is rejected as "Invalid params" on Kodi 23 -
+                # the advance sat on black screen until the fallback fired.
+                callback = playingItem.get('callback')
+                if callback:
+                    # direct xbmc.executebuiltin: Globals.builtin.executebuiltin
+                    # acquires the shared Builtin lock with a 3s timeout and
+                    # silently RETURNS when contended - at a busy programme
+                    # boundary that skipped the advance entirely (observed: EOF
+                    # with no PlayMedia at all). The advance must not be
+                    # skippable; call the Kodi API straight from this thread.
+                    self.log(f"_onChange, PlayMedia({callback})")
+                    xbmc.executebuiltin(f"PlayMedia({callback})")
+                elif not (self.jsonRPC and self.jsonRPC.playChannel(playingItem)):
+                    self.log('_onChange, no callback and playChannel failed', xbmc.LOGWARNING)
             self._runActions(RULES_ACTION_PLAYER_CHANGE, playingItem.get('citem', {}), playingItem, inherited=self)
         else:
             self.toggleBackground(False)
@@ -381,7 +463,11 @@ class Player(xbmc.Player):
                 if fail_count < 3 and chid not in self._pvrRetried:
                     self.log(f"_onStop, retrying {chid} in 2s")
                     self._pvrRetried.add(chid)
-                    timerit(self.service.jsonRPC.playChannel)(2.0, playingItem)
+                    # callback-first, same rationale as _onChange (direct call:
+                    # the Builtin lock can silently skip a contended builtin)
+                    callback = playingItem.get('callback')
+                    if callback: timerit(xbmc.executebuiltin)(2.0, f"PlayMedia({callback})")
+                    else:        timerit(self.service.jsonRPC.playChannel)(2.0, playingItem)
                 elif fail_count >= 3:
                     self.log(f"_onStop, {chid} failed {fail_count} times — triggering PVR refresh")
                     self._pvrFailCount[chid] = 0
@@ -574,8 +660,24 @@ class Monitor(xbmc.Monitor):
         self.log(f"onNotification received -> Sender: {sender} | Method: {method} | Data: {data}")
         if 'pvr' in sender.lower() or 'PVR' in method:
             self._logEvents(method, data)
+        elif 'VideoLibrary' in method:
+            self._onLibraryEvent(method)
         elif sender == ADDON_ID and ADDON_NAME in method:
             self._onDataChanged(data)
+
+
+    def _onLibraryEvent(self, method: str):
+        """Rotate the library cache checksum (jsonrpc._libraryChecksum) so the
+        next build re-queries the library once instead of waiting out a TTL."""
+        try:
+            force = ('OnScanFinished' in method) or ('OnCleanFinished' in method)
+            now   = time.time()
+            last  = float(Globals.settings.getCacheSetting('libDirty', default=0) or 0)
+            if _libDirtyBump(force, now, last):
+                Globals.settings.setCacheSetting('libDirty', int(now))
+                self.log(f"_onLibraryEvent, {method} -> libDirty bumped")
+        except Exception as e:
+            self.log(f"_onLibraryEvent, error: {e}", xbmc.LOGDEBUG)
 
 
     def _onDataChanged(self, data):
@@ -848,6 +950,7 @@ class Service(object):
         if now - getattr(self, '_lastTaskRun', 0) >= TASK_INTERVAL:
             self._lastTaskRun = now
             self.tasks.chkQueTimer()
+            _idleRestart(self)
 
 
     def _start(self) -> bool:

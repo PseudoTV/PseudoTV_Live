@@ -327,6 +327,37 @@
         .path-browser .pb-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.72rem; }
         .path-browser .pb-row:hover { background: rgba(255,255,255,0.06); }
         .path-browser .pb-row .pb-icon { opacity: 0.6; }
+
+        /* ===== Preserved from the legacy channels.html / channels_new.html look =====
+           Kept so the older control styling is not lost when those files go. The
+           palette is identical to the :root vars above (same hex values, legacy
+           prefixed them --pstv-). Nothing here is forced on existing controls -
+           these are available classes to apply when comparing the two looks. */
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        .switch input:checked + .slider { background-color: var(--success); }
+        .switch input:checked + .slider:before { transform: translateX(22px); }
+
+        select.legacy-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat; background-position: right 1rem top 50%;
+            background-size: 0.65rem auto; padding-right: 2.5rem;
+        }
+
+        .config-header { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 25px; }
+        .config-item-small { flex: 1; max-width: 250px; }
+        .config-item-large { flex: 2; }
+
+        .nested-section { margin: 20px 0 20px 20px; padding: 15px; border-left: 2px solid var(--focus); background: rgba(255,255,255,0.03); border-radius: 0 8px 8px 0; }
+        .section-label { font-size: 0.7rem; color: var(--focus); font-weight: bold; margin-bottom: 15px; display: block; }
+
+        input[readonly] { background-color: rgba(0,0,0,0.2); color: var(--dim); cursor: not-allowed; }
+
+        .toggle-item { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+        .button-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 40px; }
     </style>
 </head>
 <body>
@@ -377,6 +408,10 @@
         <div id="btn-info" class="tab" onclick="navigateTab('info')">INFO</div>
         <div class="tab-spacer"></div>
         <div id="btn-seasons" class="tab" onclick="navigateTab('seasons')">Seasons</div>
+        <div id="btn-settings" class="tab" onclick="navigateTab('settings')">Settings</div>
+        <div id="btn-imports" class="tab" onclick="navigateTab('imports')">Imports</div>
+        <div id="btn-backups" class="tab" onclick="navigateTab('backups')">Backups</div>
+        <div id="btn-groups" class="tab" onclick="navigateTab('groups')">Groups</div>
     </div>
 
     <div class="container">
@@ -398,9 +433,12 @@
                 <div class="frame-body">
                     <div>
                         <label for="channelSelector">Select Channel</label>
-                        <select id="channelSelector" onchange="channelSelectionChanged()">
-                            <option value="">-- Select Channel --</option>
-                        </select>
+                        <div class="field-row">
+                            <select id="channelSelector" onchange="channelSelectionChanged()">
+                                <option value="">-- Select Channel --</option>
+                            </select>
+                            <button type="button" class="btn-action" onclick="createChannel()" title="Add a new channel from the blank template">+ New</button>
+                        </div>
                     </div>
                     <div id="channelForm" class="hidden">
                         <div class="channel-head">
@@ -540,6 +578,55 @@
                 <div class="debug-body" id="logsBody"></div>
             </div>
             <div id="remotesSection" class="remote-section"></div>
+        </div>
+
+        <!-- ============ SETTINGS ============ -->
+        <div id="tab-settings" class="tab-content">
+            <div id="settingsStatus" class="status-line"></div>
+            <div class="debug-panel">
+                <div class="debug-header">
+                    <div class="frame-title">Global Settings</div>
+                    <input id="settingsFilter" type="text" placeholder="Filter settings..." oninput="renderSettings()">
+                </div>
+                <div class="debug-body" id="settingsBody"></div>
+            </div>
+            <div class="btn-bar"><button type="button" class="btn-action" onclick="saveSettings()">Save Settings</button></div>
+        </div>
+
+        <!-- ============ IMPORTS ============ -->
+        <div id="tab-imports" class="tab-content">
+            <div id="importsStatus" class="status-line"></div>
+            <div class="debug-panel">
+                <div class="debug-header"><div class="frame-title">Importable Channel Files</div></div>
+                <div class="debug-body" id="importsBody"></div>
+            </div>
+        </div>
+
+        <!-- ============ BACKUPS ============ -->
+        <div id="tab-backups" class="tab-content">
+            <div id="backupsStatus" class="status-line"></div>
+            <div class="debug-panel">
+                <div class="debug-header">
+                    <div class="frame-title">Channel Backups</div>
+                    <button type="button" class="btn-action" onclick="createBackup()">Backup Now</button>
+                </div>
+                <div class="debug-body" id="backupsBody"></div>
+            </div>
+        </div>
+
+        <!-- ============ GROUPS ============ -->
+        <div id="tab-groups" class="tab-content">
+            <div id="groupsStatus" class="status-line"></div>
+            <div class="debug-panel">
+                <div class="debug-header">
+                    <div class="frame-title">Channel Groups</div>
+                    <div class="field-row">
+                        <input id="newGroup" type="text" placeholder="New group name..." onkeydown="if(event.key==='Enter')addGroup()">
+                        <button type="button" class="btn-action" onclick="addGroup()">Add</button>
+                    </div>
+                </div>
+                <div class="debug-body" id="groupsBody"></div>
+            </div>
         </div>
     </div>
 
@@ -808,7 +895,16 @@
     function selectServer(name) {
         const srv = serverData[name];
         if (!srv) return;
+        // Switching instance rebuilds the channel list, dropping any in-progress edit.
+        if (activeInstance && activeInstance.name !== name && formDirty() &&
+            !confirm('You have unsaved channel edits.\n\nOK discards them and switches instance.')) return;
         activeInstance = { name, host: srv.host, uuid: srv.uuid };
+        // A dismissed widget used to stay dismissed for the whole page session,
+        // so switching instances left Now Playing / Build Status permanently gone.
+        npDismissed = false;
+        bsDismissed = false;
+        document.getElementById('nowPlaying').style.display = 'none';
+        document.getElementById('buildStatus').style.display = 'none';
         document.querySelectorAll('#serverBar .tab').forEach(t => t.classList.toggle('active', t.textContent === name));
         // Probe reachability async; tabs dim + fall back to cached data if offline.
         hostOnline(srv.host).then(online => setInstanceOffline(!online));
@@ -1003,21 +1099,6 @@
         if (url !== null) document.getElementById('logo').value = url;
     }
 
-    async function lookupLogo() {
-        const ch = channels[editingIndex];
-        if (!ch) return;
-        const q = prompt('Resolve logo for:', ch.name || '');
-        if (!q) return;
-        setBusy(true, 'LOOKING UP LOGO...');
-        try {
-            const r = await fetch(`http://${activeInstance.host}/api/logo_lookup?name=${encodeURIComponent(q)}&type=${encodeURIComponent(ch.type || '')}`);
-            const d = await r.json();
-            if (d.url) { document.getElementById('logo').value = d.url; renderLogoPreview(d.url); }
-            else alert('No logo found for "' + q + '"');
-        } catch (e) { alert('Logo lookup failed: ' + e.message); }
-        finally { setBusy(false); }
-    }
-
     function renderFields(obj, container, prefix) {
         container.innerHTML = '';
         // The logo field is handled in the channel head (preview + buttons) — skip it.
@@ -1030,9 +1111,7 @@
             const wrap = document.createElement('div');
             wrap.className = 'form-field' + (full ? ' full' : '');
             if (key === 'path') {
-                wrap.innerHTML = `<label>path</label><div class="field-row"><select id="${fieldId}" name="${fieldId}">${currentPaths.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select><button type="button" class="btn-action" onclick="addNewPath()">+ Add</button></div>`;
-            } else if (key === 'number') {
-                wrap.innerHTML = `<label>number</label><input type="number" id="${fieldId}" name="${fieldId}" value="${esc(val)}" min="1" max="{{ CHANNEL_LIMIT|safe }}">`;
+                wrap.innerHTML = `<label>path</label><div class="field-row"><select id="${fieldId}" name="${fieldId}">${currentPaths.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select><button type="button" class="btn-action" onclick="addNewPath()">+ Add</button><button type="button" class="btn-action" onclick="addManualPath()" title="Type a path the browser cannot reach (plugin://, multipath, http)">Manual</button></div>`;
             } else if (key === 'name') {
                 wrap.innerHTML = `<label>name</label><input type="text" id="${fieldId}" name="${fieldId}" value="${esc(val)}">`;
             } else if (key === 'group') {
@@ -1042,7 +1121,10 @@
                 sec.innerHTML = `<div style="border-left:2px solid var(--focus);padding-left:10px;"><label>${key}</label></div>`;
                 container.appendChild(sec);
                 renderFields(val, sec, fieldId);  // nested object
-                return;
+                // NOT return: returning dropped every remaining field, and the
+                // recursive call appended an EMPTY #logo, so saveChannel silently
+                // blanked the channel's logo.
+                continue;
             } else {
                 wrap.innerHTML = `<label>${key}</label><input type="text" id="${fieldId}" name="${fieldId}" value="${esc(val)}">`;
             }
@@ -1051,7 +1133,7 @@
         // A hidden logo field still holds the URL value for saveChannel().
         const logoInput = document.createElement('input');
         logoInput.type = 'hidden'; logoInput.id = 'logo'; logoInput.name = 'logo';
-        logoInput.value = esc(obj.logo || '');
+        logoInput.value = obj.logo || ''; //raw: esc() is for HTML text/attrs - assigning it to .value HTML-escaped the URL, so any logo with '&' was persisted as '&amp;'
         container.appendChild(logoInput);
     }
 
@@ -1105,6 +1187,17 @@
     function pbSelect() {
         if (!pbCurrent) return;
         pbPick(pbCurrent);
+    }
+
+    function addManualPath() {
+        // /api/browse only descends Files.GetSources/Files.GetDirectory, so plugin://,
+        // multipath and other non-browsable sources could not be entered at all.
+        const p = prompt('Enter path (plugin://, multipath, http, or filesystem):', '');
+        if (p === null) return;
+        const v = p.trim();
+        if (!v) return;
+        if (!currentPaths.includes(v)) currentPaths.push(v);
+        onChannelSelect();
     }
     async function searchLogo() {
         const ch = channels[editingIndex];
@@ -1214,17 +1307,21 @@
     }
 
     function collectRules() {
-        // Value inputs update the active rule's values; the rest come from
+        // Value inputs overlay the active rule's values; the rest come from
         // activeRules (the channel's rule set). Builds the {rid: {values}} map.
+        // Works on a copy: formState()/formDirty() call this on every keystroke,
+        // and writing back into activeRules meant a CANCELLED edit was already
+        // absorbed into the model and got posted with the next unrelated save.
+        const out = JSON.parse(JSON.stringify(activeRules || {}));
         document.querySelectorAll('#ruleValueFields input').forEach(el => {
             const m = el.name.match(/^rules\.(.+)\.values\.(.+)$/);
             if (!m) return;
             let val;
             try { val = JSON.parse(el.value); } catch (e) { val = el.value; }
-            activeRules[m[1]] = activeRules[m[1]] || { values: {} };
-            activeRules[m[1]].values[m[2]] = val;
+            out[m[1]] = out[m[1]] || { values: {} };
+            out[m[1]].values[m[2]] = val;
         });
-        return JSON.parse(JSON.stringify(activeRules || {}));
+        return out;
     }
 
     async function saveChannel() {
@@ -1275,6 +1372,32 @@
     function cancelEdit() {
         document.getElementById('channelForm').classList.add('hidden');
         document.getElementById('channelSelector').value = '';
+    }
+
+    async function createChannel() {
+        // Seed from /api/template like clearChannel does, then append a fresh slot.
+        // saveChannel() posts the whole array and webpoint.saveChannels() assigns the
+        // missing id, so the new channel persists on the next Save.
+        if (formDirty() && !confirm('Discard unsaved changes to the current channel?')) return;
+        let blank = {};
+        try { blank = await fetch(`http://${activeInstance.host}/api/template`).then(r => r.json()); } catch (e) {}
+        blank = (blank && typeof blank === 'object' && !Array.isArray(blank)) ? Object.assign({}, blank) : {};
+        blank.name = '';
+        blank.path = []; blank.group = []; blank.logo = '';
+        blank.rules = {}; blank.radio = false; blank.favorite = false; blank.enable = true;
+        blank.id = ''; blank.changed = true;
+        const used = new Set(channels.map(c => c && c.number).filter(n => n != null && !isNaN(n)));
+        let n = 1;
+        while (used.has(n) && n <= 999) n++;
+        blank.number = n;
+        channels.push(blank);
+        const sel = document.getElementById('channelSelector');
+        sel.innerHTML = '<option value="">-- Select Channel --</option>';
+        channels.forEach((ch, i) => sel.add(new Option(`Ch ${ch.number}: ${ch.name || 'New Channel'}`, i)));
+        sel.value = String(channels.length - 1);
+        onChannelSelect();
+        const nameEl = document.getElementById('name');
+        if (nameEl) nameEl.focus();
     }
 
     async function clearChannel() {
@@ -1716,18 +1839,9 @@
             fetch(url).then(r => r.text()).then(text => {
                 let pretty = text;
                 let kind = 'text';
-                // JSON is always shown in full — never truncated.
+                // JSON is shown in full - never truncated. ('logs' is link-only above,
+                // so the old log-truncation branch that lived here never ran.)
                 try { pretty = JSON.stringify(JSON.parse(text), null, 2); kind = 'json'; } catch (e) {}
-                // Only log entries are ever truncated (kept to the latest N entries).
-                if (key === 'logs') {
-                    try {
-                        const arr = JSON.parse(text);
-                        const shown = Array.isArray(arr) ? arr.slice(-200) : arr;
-                        pretty = JSON.stringify(shown, null, 2);
-                        if (Array.isArray(arr) && arr.length > 200) pretty += '\n... (latest 200 of ' + arr.length + ' entries)';
-                        kind = 'json';
-                    } catch (e) { pretty = text.slice(-8000); }
-                }
                 frame.querySelector('pre').textContent = pretty;
                 frame.querySelector('.remote-status').textContent = `${(text.length/1024).toFixed(1)} KB · ${kind}`;
             }).catch(e => {
@@ -1740,6 +1854,9 @@
 
     function navigateTab(t) {
         // Row-2 content tabs only — the server bar (row 1) keeps its own active tab.
+        // The Channels form is index-based: fetchChannels() rebuilds it, so leaving
+        // with edits used to silently discard them.
+        if (formDirty() && !confirm('You have unsaved channel edits.\n\nOK discards them and continues.')) return;
         if (t !== 'guide') stopNowBar();
         document.querySelectorAll('.tab-bar .tab, .tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById('btn-'+t).classList.add('active');
@@ -1750,6 +1867,205 @@
         if (t === 'library') loadLibrary();
         if (t === 'resume') loadResume();
         if (t === 'seasons') loadSeasons();
+        if (t === 'settings') loadSettings();
+        if (t === 'imports') loadImports();
+        if (t === 'backups') loadBackups();
+        if (t === 'groups') loadGroups();
+    }
+
+    // ============ SETTINGS / IMPORTS / BACKUPS / GROUPS ============
+    // Thin wrappers over the four admin endpoints. Every route already existed
+    // server-side (/api/settings, /api/imports, /api/backups, /api/groups) - only
+    // the UI was missing. {payload: ...} is understood by all four POST handlers.
+    async function getAPI(path) {
+        const res = await fetch(`http://${activeInstance.host}${path}`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json().catch(() => ({}));
+    }
+
+    async function postAPI(path, body) {
+        const res = await fetch(`http://${activeInstance.host}${path}`, {
+            method: 'POST', headers: authHeaders(), body: JSON.stringify({ payload: body })
+        });
+        return { ok: res.ok, data: await res.json().catch(() => ({})) };
+    }
+
+    // ---- settings -----------------------------------------------------------
+    let settingsData = {};     // raw GET /api/settings (string values, bools forced)
+    let settingsChanged = {};  // key -> new value; only these get POSTed
+
+    async function loadSettings() {
+        if (!activeInstance) return;
+        setBusy(true, 'LOADING SETTINGS...');
+        try {
+            settingsData = await getAPI('/api/settings') || {};
+            document.getElementById('settingsStatus').innerText = 'Global settings for ' + activeInstance.name;
+            renderSettings();
+        } catch (e) {
+            document.getElementById('settingsStatus').innerText = 'Settings unavailable: ' + e.message;
+        } finally { setBusy(false); }
+    }
+
+    function isBoolSetting(v) {
+        return typeof v === 'boolean' || v === 'true' || v === 'false';
+    }
+
+    function renderSettings() {
+        const q = (document.getElementById('settingsFilter').value || '').toLowerCase();
+        const keys = Object.keys(settingsData).filter(k => !q || k.toLowerCase().indexOf(q) !== -1);
+        settingsChanged = {};  // a re-render discards un-saved edits on purpose
+        const body = document.getElementById('settingsBody');
+        body.innerHTML = keys.length ? keys.map(k => {
+            const v = settingsData[k];
+            const on = (v === true || v === 'true');
+            const val = (v === true || v === false) ? String(v) : String(v == null ? '' : v);
+            const input = isBoolSetting(v)
+                ? `<input type="checkbox" data-k="${esc(k)}" ${on ? 'checked' : ''} onchange="markSetting(this)">`
+                : `<input type="text" data-k="${esc(k)}" value="${esc(val)}" oninput="markSetting(this)">`;
+            return `<div class="field-row" style="justify-content:space-between;margin-bottom:8px">
+                <label style="font-size:0.7rem;opacity:0.7">${esc(k)}</label>${input}</div>`;
+        }).join('') : '<div style="opacity:0.6">No settings match that filter.</div>';
+    }
+
+    function markSetting(el) {
+        settingsChanged[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value;
+    }
+
+    async function saveSettings() {
+        const keys = Object.keys(settingsChanged);
+        if (!keys.length) { alert('No settings have been changed.'); return; }
+        setBusy(true, 'SAVING SETTINGS...');
+        try {
+            // Booleans stay booleans so the server takes setSettingBool; everything
+            // else round-trips as the same string it was read as.
+            const payload = {};
+            keys.forEach(k => { payload[k] = settingsChanged[k]; });
+            const r = await postAPI('/api/settings', payload);
+            if (r.ok && r.data.status === 'ok') { settingsChanged = {}; alert('Settings saved'); }
+            else alert('Save failed: ' + (r.data.error || r.data.status || 'unknown'));
+        } catch (e) { alert('Save error: ' + e.message); }
+        finally { setBusy(false); }
+    }
+
+    // ---- imports ------------------------------------------------------------
+    let importsData = {};   // {DisplayName: {name: path, channels: [], updated: }}
+    let importsList = [];   // display-name keys, index-addressed (paths are not JS-safe)
+
+    async function loadImports() {
+        if (!activeInstance) return;
+        setBusy(true, 'LOADING IMPORTS...');
+        try {
+            const d = await getAPI('/api/imports') || {};
+            importsData = d.imports || {};
+            importsList = Object.keys(importsData);
+            document.getElementById('importsStatus').innerText = importsList.length
+                ? `${importsList.length} importable file(s) on ${activeInstance.name}`
+                : 'No import files found on ' + activeInstance.name;
+            document.getElementById('importsBody').innerHTML = importsList.length
+                ? importsList.map((n, i) => {
+                    const f = importsData[n] || {};
+                    const nCh = Array.isArray(f.channels) ? f.channels.length : 0;
+                    return `<div class="field-row" style="justify-content:space-between;margin-bottom:8px">
+                        <div style="font-size:0.75rem"><b>${esc(n)}</b>
+                            <span style="opacity:0.6">&nbsp;${nCh} channel(s) &middot; ${esc(String(f.updated || 'unknown date'))}</span>
+                        </div>
+                        <button type="button" class="btn-action" onclick="importFile(${i})">Import</button></div>`;
+                }).join('')
+                : '<div style="opacity:0.6">Nothing to import. Create a backup first.</div>';
+        } catch (e) {
+            document.getElementById('importsStatus').innerText = 'Imports unavailable: ' + e.message;
+        } finally { setBusy(false); }
+    }
+
+    async function importFile(i) {
+        const f = importsList[i];
+        const file = f ? (importsData[f] || {}).name : '';
+        if (!file) return;
+        // The server also asks for confirmation on the Kodi side - this only stops
+        // a mis-click from reaching it.
+        if (!confirm(`Replace your current channels with "${f}"?`)) return;
+        setBusy(true, 'IMPORTING...');
+        try {
+            const r = await postAPI('/api/imports', { file });
+            if (r.ok && r.data.status === 'ok') { alert('Import complete'); loadImports(); }
+            else alert('Import failed: ' + (r.data.error || r.data.status || 'unknown'));
+        } catch (e) { alert('Import error: ' + e.message); }
+        finally { setBusy(false); }
+    }
+
+    // ---- backups ------------------------------------------------------------
+    async function loadBackups() {
+        if (!activeInstance) return;
+        setBusy(true, 'LOADING BACKUPS...');
+        try {
+            const d = await getAPI('/api/backups') || {};
+            const list = d.backups || [];
+            document.getElementById('backupsStatus').innerText =
+                `${list.length} backup(s) stored on ${activeInstance.name}`;
+            document.getElementById('backupsBody').innerHTML = list.length
+                ? list.map((b, i) => {
+                    const chs = Array.isArray(b) ? b : [];
+                    const first = chs[0] ? `${chs[0].number}. ${chs[0].name}` : '';
+                    const last  = chs.length ? chs[chs.length - 1] : null;
+                    return `<div class="field-row" style="justify-content:space-between;margin-bottom:8px">
+                        <div style="font-size:0.75rem"><b>Backup ${i + 1}</b>
+                            <span style="opacity:0.6">&nbsp;${chs.length} channel(s)${first ? ' &middot; ' + esc(first) : ''}${last ? ' &hellip; ' + esc(`${last.number}. ${last.name}`) : ''}</span>
+                        </div></div>`;
+                }).join('')
+                : '<div style="opacity:0.6">No backups yet. Use Backup Now to create one.</div>';
+        } catch (e) {
+            document.getElementById('backupsStatus').innerText = 'Backups unavailable: ' + e.message;
+        } finally { setBusy(false); }
+    }
+
+    async function createBackup() {
+        setBusy(true, 'CREATING BACKUP...');
+        try {
+            const r = await postAPI('/api/backups', {});
+            if (r.ok && r.data.status === 'ok') { alert('Backup created'); loadBackups(); }
+            else alert('Backup failed: ' + (r.data.error || r.data.status || 'unknown'));
+        } catch (e) { alert('Backup error: ' + e.message); }
+        finally { setBusy(false); }
+    }
+
+    // ---- groups -------------------------------------------------------------
+    let groupData = { types: [], user: [] };
+
+    async function loadGroups() {
+        if (!activeInstance) return;
+        setBusy(true, 'LOADING GROUPS...');
+        try {
+            const d = await getAPI('/api/groups') || {};
+            groupData = { types: d.types || [], user: d.user || [] };
+            document.getElementById('groupsStatus').innerText =
+                `${groupData.types.length} built-in + ${groupData.user.length} custom group(s)`;
+            renderGroups();
+        } catch (e) {
+            document.getElementById('groupsStatus').innerText = 'Groups unavailable: ' + e.message;
+        } finally { setBusy(false); }
+    }
+
+    function renderGroups() {
+        const chips = arr => arr.map(g =>
+            `<span class="btn-toggle" style="display:inline-block;margin:0 6px 6px 0">${esc(g)}</span>`).join('');
+        document.getElementById('groupsBody').innerHTML =
+            `<div class="section-label">Built-in groups</div>
+             <div style="margin-bottom:12px">${groupData.types.length ? chips(groupData.types) : '<span style="opacity:0.6">None.</span>'}</div>
+             <div class="section-label">Your groups</div>
+             <div>${groupData.user.length ? chips(groupData.user) : '<span style="opacity:0.6">None yet - type a name above to add one.</span>'}</div>`;
+    }
+
+    async function addGroup() {
+        const el = document.getElementById('newGroup');
+        const g = (el.value || '').trim();
+        if (!g) return;
+        setBusy(true, 'ADDING GROUP...');
+        try {
+            const r = await postAPI('/api/groups', { group: g });
+            if (r.ok && r.data.status === 'ok') { el.value = ''; loadGroups(); }
+            else alert('Could not add group: ' + (r.data.status || 'unknown'));
+        } catch (e) { alert('Add group error: ' + e.message); }
+        finally { setBusy(false); }
     }
 
     // ===================== LIBRARY =====================
@@ -1851,6 +2167,7 @@
     // ===================== SEASONS (calendar + holiday editor) =====================
     let seasonsData = {};
     let holidaysData = {};
+    let holidaySnapshot = null; //deep copy taken when the season editor opens - cancelSeasonEdit() restores it
     let seasonsEditKey = null;   // "Month|day"
     let editingHoliday = null;
     let calYear = 0, calMonth = 0;
@@ -1942,6 +2259,7 @@
 
     function editSeasonDay(m, day, info) {
         seasonsEditKey = `${m}|${day}`;
+        holidaySnapshot = JSON.parse(JSON.stringify(holidaysData)); //pre-edit snapshot for cancelSeasonEdit()
         document.getElementById('editDayLabel').textContent = `${m} ${day}`;
         document.getElementById('editName').value = info.name || '';
         document.getElementById('editTagline').value = info.tagline || '';
@@ -2121,6 +2439,10 @@
     }
 
     function cancelSeasonEdit() {
+        // The holiday builder mutates holidaysData in place (add/removeHolidayQuery)
+        // and saveSeasonEdit posts the WHOLE object, so a cancelled edit used to be
+        // silently written on the next save of any day. Restore the snapshot.
+        if (holidaySnapshot) { holidaysData = holidaySnapshot; holidaySnapshot = null; }
         seasonsEditKey = null;
         editingHoliday = null;
         document.getElementById('seasonEdit').classList.add('hidden');
@@ -2203,7 +2525,6 @@
         } catch (e) { /* keep previous state on transient errors */ }
     }
     setInterval(pollNowPlaying, 3000);
-    if (activeInstance) pollNowPlaying();
 
     // ===================== BUILD STATUS =====================
     let bsDismissed = false;
@@ -2241,7 +2562,6 @@
         } catch (e) { /* keep previous state on transient errors */ }
     }
     setInterval(pollBuildStatus, 3000);
-    if (activeInstance) pollBuildStatus();
 
     window.onload = init;
 </script>

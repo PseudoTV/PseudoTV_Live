@@ -253,6 +253,13 @@ class M3U(object):
         ))
         
         if self.writable:
+            # ponytail: writing the PVR-facing playlist makes pvr.iptvsimple
+            # refetch + reload the whole guide while the process is already over
+            # the build ceiling. Stations regenerate on the next pass;
+            # Channels.Autotune still persists channel state.
+            if isMemPressure(rss_limit=RSS_PRESSURE_LIMIT - MEM_TEARDOWN_HEADROOM):
+                self.log('_save, skipped under memory pressure — PVR files unchanged', xbmc.LOGWARNING)
+                return False
             # Persist to the SQLite cache (transactional; avoids file-lock races with
             # the HTTP server / pvr.iptvsimple polling). Version token bumps on every
             # save so the HTTP render cache invalidates.
