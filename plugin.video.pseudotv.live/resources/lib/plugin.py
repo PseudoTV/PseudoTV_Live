@@ -306,14 +306,14 @@ class Plugin(object):
         def __buildPlaylist(chid: str, name: str) -> list:
             lizLST = RulesList([self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid})]).runActions(RULES_ACTION_PLAYBACK_RESUME, self.sysInfo.get('fitem',{}).get('citem',{'name':name,'id':chid}))
             if lizLST:
-                lizLST = nextitems[:Globals.settings.getSettingInt('Page_Limit')]
+                lizLST = lizLST[:Globals.settings.getSettingInt('Page_Limit')]
                 self.log('[%s] __buildPlaylist, building lizLST (%s)'%(chid, len(lizLST)))
                 return poolit(__buildfItem)(lizLST)
             else: Globals.dialog.notificationDialog(LANGUAGE(32000))
             return []
         
         self.log('[%s] playPaused, name = %s'%(self.sysInfo.get('chid'), self.sysInfo.get('name')))
-        listitems = self.__buildPlaylist(self.sysInfo.get('chid'), self.sysInfo.get('name'))
+        listitems = __buildPlaylist(self.sysInfo.get('chid'), self.sysInfo.get('name'))
         self._play(*(self._quePlaylist(listitems, pltype=xbmc.PLAYLIST_VIDEO, shuffle=False)))
             
     @threadit         

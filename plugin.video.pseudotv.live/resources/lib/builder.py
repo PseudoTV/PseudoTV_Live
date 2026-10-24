@@ -593,7 +593,7 @@ class Builder(object):
                 sub_path_len = len(sub_paths)
                 for cnt, path in enumerate(sub_paths):
                     if sub_path_len > 1:
-                        self.pName = f"{citem.get('name', '')} {idx + 1}/{path_len}\n{cnt + 1}/{sub_path_len}"
+                        self.pName = f"{citem.get('name', '')} {idx + 1}/{path_len} {cnt + 1}/{sub_path_len}"
                         
                     self.pDialog = Globals.dialog._updateProgressThrottled(self.pDialog, self.pCount, message=f'{self.pName}', header=self.pHeader)
                     processed_path = self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, path, inherited=self)
